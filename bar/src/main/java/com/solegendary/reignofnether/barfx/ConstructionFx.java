@@ -18,39 +18,41 @@ import java.util.WeakHashMap;
  * Each faction builds its own way (claude/faction-construction-oct29.md; lovish, Oct 29: "Building looks fake, each
  * race could get their own method of building"). The White Angel pilot, approved from a paintover ("i loveeee"):
  * <ul>
- *   <li>a cloud RING hugging the layer being built - not a cloud overhead, the RTS camera looks down - just under the
- *   build front and climbing with it: overlapping top-lit puffs with a cool shaded underside on one continuous band;</li>
- *   <li>the part still to come is a gold GHOST of its steps (a ~0.3 gold silhouette with 1 px gold edges), so the
- *   gold-vs-stone split says how far along it is at a glance;</li>
- *   <li>the build front's cut line: a white-gold core in a gold glow, with a bright knot running round it;</li>
- *   <li>light from above: one or two soft wide shafts landing in a pool on the cut, slow gold motes rising;</li>
- *   <li>golden hammers and a chisel move from spot to spot on the wall course being laid and strike it: sparks, a
- *   flash on the struck face, a puff of dust;</li>
- *   <li>done: the ring swells and fades, a flash on the top, a light ring runs out over the ground, the tools fly up.</li>
+ *   <li>a cloud HALO hugging the layer being built - not a cloud overhead, the RTS camera looks down - lying flat just
+ *   under the build front and climbing with it, a cool shadow band under it;</li>
+ *   <li>the part still to come is a pale white-stone GHOST (future wall: a faint course hatch, 1 px gold silhouette
+ *   edges), so the ghost-vs-stone split says how far along it is at a glance;</li>
+ *   <li>the build front's cut line, the one gold rectangle: a white-gold core in a gold glow, a bright bead running
+ *   round it;</li>
+ *   <li>light from above: one broad soft cone, seen as a bright cap on the ghost and a cool pool on the cut;</li>
+ *   <li>a golden hammer and a chisel move along the cut line and strike the wall: the struck block flashes white,
+ *   sparks, a puff of dust;</li>
+ *   <li>done: the halo swells and fades, a flash on the top, a light ring runs out over the ground, the tools fly up.</li>
  * </ul>
  * Building-agnostic: everything comes from the placement's own blocks (the buildings are being reworked). Pure client
  * rendering through BarFxClient's passes; thinner when zoomed out; nothing allocated per frame once a site's shape is
  * cached (one ConstructionShape per placement, built from its blocks the first time it is seen rising). Glow budget
  * (round 6 critic): the ghost, cloud, cut line and tools are normal-blended; only small or soft parts are additive, so
- * the built white stone keeps its edges, and the effect stays warm gold - the builders' cool-white beams are the only
- * white line family.
+ * the built white stone keeps its edges; the effect is white and gold with one cool accent (the halo's shadow, the
+ * light's pool), and has no thin lines but the cut line - the builders' cool-white beams stay their own family.
  */
 final class ConstructionFx {
 
     private ConstructionFx() { }
 
     private static final int CLOUD = 0xFFFBF2, GOLD = 0xFFD27A, LIGHT = 0xFFF3D2;
-    /** The cloud's underside: a cool shade so the cloud separates from the white stone (round 6 critic). */
-    private static final int UNDER = 0xB9C3D6;
-    /** The cut line: a white-gold core (round 6: 2 px) in a #F0B840 glow; the knot running round it. */
-    private static final int CUT_CORE = 0xFFF8E0, CUT_GLOW = 0xF0B840, CUT_KNOT = 0xFFE7A8;
-    /** The ghost of the part still to come (round 6 critic: #E8C25A at ~0.3) - its top a shade lighter than its sides -
-     *  and its 1 px edges. */
-    private static final int GHOST_TOP = 0xEDCB68, GHOST_SIDE = 0xE0B64C, GHOST_EDGE = 0xD99A1E;
-    /** The light from above: a warm gold-white, additive. */
+    /** The one cool counterpoint, in exactly two places - the cloud's shadow band and the pool where the light lands -
+     *  so the gold reads holy (round 7 critic); everything else is white and gold. */
+    private static final int COOL = 0xCFDDF7;
+    /** The cut line, the one gold rectangle: a white-gold core in a soft #F0B840 glow, and its travelling bead. */
+    private static final int CUT_CORE = 0xFFF8E0, CUT_GLOW = 0xF0B840, BEAD = 0xFFF6D8;
+    /** The ghost of the part still to come: pale white stone (round 7 critic: the gold ghost read as amber glass and
+     *  would hide units), a faint course hatch, 1 px true-gold silhouette edges. */
+    private static final int GHOST = 0xEEF2FA, HATCH = 0xB9BEC6, GHOST_EDGE = 0xE0A82E;
+    /** The light from above: a warm gold-white, additive and capped. */
     private static final int RAY = 0xFFE9B8;
-    /** Sparks at each blow: a gold fading to transparent; the struck face's flash; the blow's dust. */
-    private static final int SPARK = 0xFFE08A, STRUCK_FLASH = 0xFFF6D8, DUST = 0xD9D3C6;
+    /** Sparks at each blow; the struck block brightening; the blow's dust. */
+    private static final int SPARK = 0xFFE08A, STRUCK = 0xFFFFFF, DUST = 0xD9D3C6;
     /** The tools, normal-blended: a gold head and an ivory handle inside a dark rim inside a 1 px gold outline, so a
      *  tool reads on the white walls and on the lawn alike (rounds 3-6). */
     private static final int TOOL_BODY = 0xE0A83A, TOOL_HANDLE = 0xF1E7CF, TOOL_RIM = 0x3A2710, TOOL_OUTLINE = 0xF0B840;
@@ -58,10 +60,11 @@ final class ConstructionFx {
     private static final float DONE_SECONDS = 0.8f;
     /** Past this RTS zoom (strategic) the ring keeps fewer puffs, the tools become glints and the light stops. */
     private static final float FAR_ZOOM = 70;
-    /** The cloud ring stands this far outside the layer's footprint (round 6 critic: at most a block). */
-    private static final float RING_PAD = 0.5f;
-    /** The cloud ring's centre sits this far below the cut line (round 6 critic: ~0.5 block). */
-    private static final float RING_DROP = 0.5f;
+    /** The cloud halo reaches ~1 block outside the layer's footprint (round 7 critic). */
+    private static final float RING_PAD = 1.0f;
+    /** The cloud halo lies this far below the cut plane (round 7 critic: 0.5-1 block), never lower than this above the
+     *  building's foot (it must not touch the ground). */
+    private static final float RING_DROP = 0.7f, RING_FLOOR = 0.35f;
     /** The cut line sits this far inside the wall faces, never on the selection box's edge (round 6 critic). */
     private static final float CUT_INSET = 0.05f;
     /** Seconds between recounts of what stands in each layer (a few hundred block-state reads per site). */
@@ -79,12 +82,13 @@ final class ConstructionFx {
         final float[] pt = new float[4];               // ringPoint / perimeterPoint results {x, z, nx, nz}
         final float[] pt2 = new float[4];
         final float[] beat = new float[4];             // a tool's strikeBeat
-        final float[] heads = new float[9];            // each tool's working end this frame {x, y, z} (for its glint)
+        final float[] heads = new float[6];            // each tool's working end this frame {x, y, z} (for its glint)
         final int[] standing;     // blocks standing per layer, recounted every RECOUNT seconds
         float countedAt = -1;
         float shown;
         float doneAt = -1;
         float lastFront;
+        float ghostTop = Float.NaN, ghostX, ghostZ, ghostR;   // the ghost's highest top this frame (the light's cap)
         Site(ConstructionShape s) { shape = s; outline = new float[6 * s.maxOutlineBoxes()]; standing = new int[s.layers()]; }
     }
     private static final Map<BuildingPlacement, Site> SITES = new WeakHashMap<>();
@@ -167,7 +171,7 @@ final class ConstructionFx {
                 }
                 if (!far && k < 0.6f) {
                     boxes(s, s.lastFront);
-                    for (int i = 0; i < 3; i++)
+                    for (int i = 0; i < TOOLS; i++)
                         drawTool(s, i, s.doneAt + i * 0.37f, 1 - k / 0.6f, 4 * k * k / 0.36f, true);
                 }
                 continue;
@@ -196,8 +200,9 @@ final class ConstructionFx {
             drawGhost(s, front, far);
             drawCut(s, front, far);
             if (!far)
-                for (int i = 0; i < 3; i++) {
+                for (int i = 0; i < TOOLS; i++) {
                     float t = clock + i * 0.37f;
+                    drawStruck(s, i, t);
                     drawDust(s, i, t);
                     // a faint trail: three fading copies a moment behind (they coincide when the tool is still)
                     drawTool(s, i, t - 0.12f, 0.1f, 0, false);
@@ -208,8 +213,8 @@ final class ConstructionFx {
         }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
 
-        // additive, kept small and soft: the cut line's running knot, the shafts and their pool, the motes, the tools'
-        // glints, sparks and struck-face flashes, the completion flash and ground ring
+        // additive, kept small and soft (round 6/7: budget the glow): the cut line's bead, the light's cone, cap and pool,
+        // the motes, the tools' glints, sparks and blow flashes, the completion flash and ground ring
         BarFxClient.begin(buffers, BarFxRenderTypes.ADDITIVE, mat);
         for (BuildingPlacement p : scratch) {
             Site s = SITES.get(p);
@@ -220,14 +225,14 @@ final class ConstructionFx {
                 continue;
             }
             float front = s.lastFront;
-            drawKnot(s, front, clock, far);
+            drawBead(s, front, clock, far);
             if (far) {
                 drawGlints(s, front, clock);
                 continue;
             }
-            drawShafts(s, front, clock);
+            drawLight(s, front, clock);
             drawMotes(s, front, clock);
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < TOOLS; i++)
                 drawToolLight(s, i, clock + i * 0.37f);
         }
         buffers.endBatch(BarFxRenderTypes.ADDITIVE);
@@ -237,35 +242,35 @@ final class ConstructionFx {
     // ------------------------------------------------------------------ the cloud ring
 
     /**
-     * The cloud ring hugging the layer (ConstructionShape.ringPoint: the footprint grown by RING_PAD, rounded corners),
-     * centred RING_DROP under the cut line. Round 6 critic: the puffs framed the building but their white merged with
-     * the white stone. Now one continuous soft band (so it can never become a necklace again) under overlapping puffs -
-     * each overlapping its neighbours by ~40%, in three sizes (1.5 / 1.0 / 0.6 blocks across), a cool #B9C3D6 underside
-     * at 0.5 under a white top at 0.75 falling to nothing, breathing +-10% at 0.4 Hz and bobbing +-0.15 on its own
-     * phase, the whole ring orbiting once in 12 s - and a few small flecks drifting off it.
-     * {@code grow} scales the ring about its centre (the completion swell).
+     * The cloud halo: a thin, mostly horizontal ring RING_DROP below the cut plane reaching ~1 block outside the
+     * layer's footprint (ConstructionShape.ringPoint, rounded corners) - a halo disc seen from above, with the cool
+     * shadow band under it. Round 7 critic: the camera-facing puffs read as mist leaking from the base and fogged the
+     * built stone. Now every part lies flat: one continuous soft band (so it can never become a necklace) with flat
+     * lumps on it overlapping ~40% (three sizes, breathing +-10% at 0.4 Hz), a lit top on each, the whole halo
+     * orbiting once in 12 s. Never lower than RING_FLOOR above the building's foot. {@code grow} scales it about its
+     * centre (the completion swell).
      */
     static void drawRing(Site s, float front, float clock, boolean far, float alpha, float grow) {
         float[] box = s.tmp, pt = s.pt;
         float mx = (s.ring[0] + s.ring[1]) * 0.5f, mz = (s.ring[2] + s.ring[3]) * 0.5f;
         box[0] = mx + (s.ring[0] - mx) * grow; box[1] = mx + (s.ring[1] - mx) * grow;
         box[2] = mz + (s.ring[2] - mz) * grow; box[3] = mz + (s.ring[3] - mz) * grow;
-        float pad = RING_PAD * grow, y = front - RING_DROP;
-        // the band: a flat soft strip along the rounded rectangle, sampled every ~0.8 block
+        float pad = RING_PAD * grow, y = Math.max(front - RING_DROP, s.shape.minY() + RING_FLOOR);
         float len = ConstructionShape.ringLength(box, pad);
         int n = Math.max(24, Math.min(96, Math.round(len / 0.8f)));
         float px = 0, pz = 0, pnx = 0, pnz = 0;
         for (int k = 0; k <= n; k++) {
             ConstructionShape.ringPoint(box, pad, (float) k / n, pt);
             if (k > 0) {
-                band(px, pz, pnx, pnz, pt[0], pt[1], pt[2], pt[3], y - 0.2f, 0.8f, UNDER, 0.4f * alpha);
-                band(px, pz, pnx, pnz, pt[0], pt[1], pt[2], pt[3], y, 0.6f, CLOUD, 0.45f * alpha);
+                // the cool shadow a little under and outside, then the white band
+                band(px + pnx * 0.15f, pz + pnz * 0.15f, pnx, pnz, pt[0] + pt[2] * 0.15f, pt[1] + pt[3] * 0.15f, pt[2],
+                        pt[3], y - 0.15f, 0.85f, COOL, 0.38f * alpha);
+                band(px, pz, pnx, pnz, pt[0], pt[1], pt[2], pt[3], y, 0.65f, CLOUD, 0.5f * alpha);
             }
             px = pt[0]; pz = pt[1]; pnx = pt[2]; pnz = pt[3];
         }
-        // the puffs: placed along the ring so neighbours overlap ~40% (centres 0.6 x the sum of their radii apart),
-        // the spacing stretched a little so the last meets the first. Two passes (sum the spacing, then draw), no
-        // allocation. Strategic zoom: every other puff.
+        // flat lumps along the band, neighbours overlapping ~40% (centres 0.6 x the sum of their radii, stretched so
+        // the last meets the first); two passes, no allocation; strategic zoom: every other one
         int puffs = Math.max(12, Math.min(110, Math.round(len / 0.68f)));
         float sum = 0;
         for (int k = 0; k < puffs; k++)
@@ -278,23 +283,11 @@ final class ConstructionFx {
             along += 0.6f * (puffRadius(k) + puffRadius((k + 1) % puffs)) * stretch;
             if (far && (k & 1) == 1)
                 continue;
-            ConstructionShape.ringPoint(box, pad + 0.1f * hash(k * 13 + 5), u, pt);
-            float py = y + r * 0.3f + 0.15f * (float) Math.sin(clock * 0.8f + k * 2.1f);
-            BarFxClient.softDisc(pt[0], py - r * 0.35f, pt[1], r * 1.15f, UNDER, 0.5f * a, UNDER, 0, 10, k, 0.1f);
-            BarFxClient.softDisc(pt[0], py + r * 0.1f, pt[1], r, CLOUD, 0.75f * a, CLOUD, 0, 12, k * 1.3f, 0.12f);
-            BarFxClient.softDisc(pt[0], py + r * 0.4f, pt[1], r * 0.5f, 0xFFFFFF, 0.4f * a, 0xFFFFFF, 0, 8, k * 2.1f, 0);
-        }
-        if (far)
-            return;
-        // flecks: five small wisps leaving the band, drifting out and up over 3 s
-        for (int f = 0; f < 5; f++) {
-            float t = clock / 3f + f / 5f;
-            int cyc = (int) Math.floor(t);
-            float k = t - cyc;
-            ConstructionShape.ringPoint(box, pad, hash(cyc * 17 + f * 97), pt);
-            float fx = pt[0] + pt[2] * 0.7f * k, fz = pt[1] + pt[3] * 0.7f * k;
-            BarFxClient.softDisc(fx, y + 0.3f + 0.6f * k, fz, 0.12f, CLOUD, 0.55f * alpha * (float) Math.sin(Math.PI * k),
-                    CLOUD, 0, 8, f, 0);
+            // the lump's centre wanders a little across the band, never in over the walls
+            ConstructionShape.ringPoint(box, pad + (0.2f * hash(k * 13 + 5) - 0.1f), u, pt);
+            float py = y + 0.04f + 0.05f * (float) Math.sin(clock * 0.8f + k * 2.1f);
+            flatDisc(pt[0], py, pt[1], r, CLOUD, 0.55f * a, 12);
+            flatDisc(pt[0] - pt[2] * r * 0.15f, py + 0.05f, pt[1] - pt[3] * r * 0.15f, r * 0.5f, 0xFFFFFF, 0.35f * a, 8);
         }
     }
 
@@ -320,41 +313,59 @@ final class ConstructionFx {
     // ------------------------------------------------------------------ the part still to come
 
     /**
-     * The unbuilt part as a gold GHOST. Round 6 critic: at ~45% the Barracks "reads fully built", no gold above the
-     * cut. Root cause (eyes 41060902092, log "320 blocks"; barracks.nbt per layer): the front was right - layers 0-2,
-     * the courtyard floor and the hall's 3-block plinth, are 47% of the blocks and stood; the hall above was unbuilt -
-     * but the ghost drawn over it was every face of every box at 0.065, warm-light gold over the white stone and the
-     * lawn, so it vanished, and the plinth read as a finished building. Now only the faces turned to the camera are
-     * drawn (a box's front faces never overlap on screen, so the silhouette has one even alpha): ~0.3 #E8C25A, the
-     * top a shade lighter than the sides, with 1 px gold edges (the top rim and the visible corners; no bottom edge,
-     * which is the cut line). Everything still to come is ghosted, so there are always as many ghost courses above
-     * the cut as the building has left.
+     * The unbuilt part as a pale WHITE-STONE ghost - future wall. History: round 6 drew it at 0.065 a face and it
+     * vanished (the front was right: barracks.nbt's layers 0-2, 47% of its 320 blocks, are the courtyard floor and
+     * the hall's plinth, which stood); round 7's 0.3 gold read as amber glass with saturated edges, and its nested
+     * boxes as clutter (critic, eyes 41071233154). Now:
+     * <ul>
+     *   <li>only where blocks are still missing: from the TOP of the layer being laid (that layer stands in part - the
+     *   cut line marks it), so the ghost never runs down beside the built part;</li>
+     *   <li>the hull only: the faces turned to the camera, and of each box's top only the ledge the box above leaves
+     *   uncovered, so no face lies inside another on screen - one even ~0.2 #EEF2FA fill units show through;</li>
+     *   <li>a faint course hatch in the fill (a line per course, staggered joints, a grid on the tops);</li>
+     *   <li>1 px true-gold edges at 0.6 on the silhouette: the corner verticals and the top box's rim only - the lower
+     *   ledges get none, so the cut line stays the only gold rectangle.</li>
+     * </ul>
      */
     static void drawGhost(Site s, float front, boolean far) {
-        int n = s.shape.outline(front, s.outline);
+        s.ghostTop = Float.NaN;
+        float from = (float) Math.floor(front) + 1;
+        int n = s.shape.outline(from, s.outline);
         if (n == 0)
             return;
         float[] o = s.outline;
         float lx = BarFxClient.lookX, lz = BarFxClient.lookZ;
         boolean showMinX = lx > 0, showMaxX = lx < 0, showMinZ = lz > 0, showMaxZ = lz < 0;   // faces turned to us
-        float aSide = far ? 0.34f : 0.3f, aTop = far ? 0.3f : 0.26f;
+        float aSide = 0.2f, aTop = 0.18f, w = far ? 0.07f : 0.035f, ea = 0.6f;
         for (int i = 0; i < n; i++) {
             int b = i * 6;
             float x0 = o[b], x1 = o[b + 1], z0 = o[b + 2], z1 = o[b + 3], y0 = o[b + 4] + 0.02f, y1 = o[b + 5];
-            if (showMinZ) face(x0, z0, x1, z0, y0, y1, GHOST_SIDE, aSide);
-            if (showMaxZ) face(x1, z1, x0, z1, y0, y1, GHOST_SIDE, aSide);
-            if (showMinX) face(x0, z1, x0, z0, y0, y1, GHOST_SIDE, aSide * 0.9f);
-            if (showMaxX) face(x1, z0, x1, z1, y0, y1, GHOST_SIDE, aSide * 0.9f);
-            BarFxClient.v(x0, y1, z0, GHOST_TOP, aTop);
-            BarFxClient.v(x1, y1, z0, GHOST_TOP, aTop);
-            BarFxClient.v(x1, y1, z1, GHOST_TOP, aTop);
-            BarFxClient.v(x0, y1, z1, GHOST_TOP, aTop);
-            // the 1 px edges: the top rim, and each corner vertical next to a face turned to us
-            float w = far ? 0.08f : 0.04f, ea = 0.9f;
-            line(x0, y1, z0, x1, y1, z0, w, GHOST_EDGE, ea);
-            line(x1, y1, z0, x1, y1, z1, w, GHOST_EDGE, ea);
-            line(x1, y1, z1, x0, y1, z1, w, GHOST_EDGE, ea);
-            line(x0, y1, z1, x0, y1, z0, w, GHOST_EDGE, ea);
+            if (showMinZ) wall(x0, z0, x1, z0, y0, y1, aSide, far);
+            if (showMaxZ) wall(x1, z1, x0, z1, y0, y1, aSide, far);
+            if (showMinX) wall(x0, z1, x0, z0, y0, y1, aSide * 0.85f, far);
+            if (showMaxX) wall(x1, z0, x1, z1, y0, y1, aSide * 0.85f, far);
+            // the top: all of it for the highest box, else the ledge round the box above (it stands on this top)
+            boolean last = i == n - 1 || o[b + 6 + 4] > y1 + 1e-3f;
+            if (last) {
+                top(x0, x1, z0, z1, y1, aTop, far);
+            } else {
+                float ux0 = Math.min(x1, Math.max(x0, o[b + 6])), ux1 = Math.max(ux0, Math.min(x1, o[b + 7]));
+                float uz0 = Math.min(z1, Math.max(z0, o[b + 8])), uz1 = Math.max(uz0, Math.min(z1, o[b + 9]));
+                top(x0, x1, z0, uz0, y1, aTop, far);         // the four ledge strips round the covered part
+                top(x0, x1, uz1, z1, y1, aTop, far);
+                top(x0, ux0, uz0, uz1, y1, aTop, far);
+                top(ux1, x1, uz0, uz1, y1, aTop, far);
+            }
+            if (i == n - 1) {
+                line(x0, y1, z0, x1, y1, z0, w, GHOST_EDGE, ea);
+                line(x1, y1, z0, x1, y1, z1, w, GHOST_EDGE, ea);
+                line(x1, y1, z1, x0, y1, z1, w, GHOST_EDGE, ea);
+                line(x0, y1, z1, x0, y1, z0, w, GHOST_EDGE, ea);
+                s.ghostTop = y1;
+                s.ghostX = (x0 + x1) * 0.5f;
+                s.ghostZ = (z0 + z1) * 0.5f;
+                s.ghostR = 0.5f * Math.min(x1 - x0, z1 - z0) + 0.5f;
+            }
             if (showMinX || showMinZ) line(x0, y0, z0, x0, y1, z0, w, GHOST_EDGE, ea);
             if (showMaxX || showMinZ) line(x1, y0, z0, x1, y1, z0, w, GHOST_EDGE, ea);
             if (showMaxX || showMaxZ) line(x1, y0, z1, x1, y1, z1, w, GHOST_EDGE, ea);
@@ -362,26 +373,60 @@ final class ConstructionFx {
         }
     }
 
-    private static void face(float xa, float za, float xb, float zb, float y0, float y1, int c, float a) {
-        BarFxClient.v(xa, y0, za, c, a);
-        BarFxClient.v(xb, y0, zb, c, a);
-        BarFxClient.v(xb, y1, zb, c, a);
-        BarFxClient.v(xa, y1, za, c, a);
+    /** A ghost wall from (xa, za) to (xb, zb), y0..y1: the fill, then the course hatch (none at strategic zoom). */
+    private static void wall(float xa, float za, float xb, float zb, float y0, float y1, float a, boolean far) {
+        BarFxClient.v(xa, y0, za, GHOST, a);
+        BarFxClient.v(xb, y0, zb, GHOST, a);
+        BarFxClient.v(xb, y1, zb, GHOST, a);
+        BarFxClient.v(xa, y1, za, GHOST, a);
+        if (far)
+            return;
+        float len = Math.abs(xb - xa) + Math.abs(zb - za);
+        if (len <= 0)
+            return;
+        float tx = (xb - xa) / len, tz = (zb - za) / len, ha = 0.16f;
+        int c0 = (int) Math.ceil(y0), c1 = (int) Math.floor(y1);
+        for (int c = c0; c <= c1; c++)
+            if (c > y0 + 0.05f && c < y1 - 0.05f)
+                line(xa, c, za, xb, c, zb, 0.025f, HATCH, ha);         // a course
+        for (int c = (int) Math.floor(y0); c < y1; c++) {             // the joints, staggered course by course
+            float lo = Math.max(y0, c), hi = Math.min(y1, c + 1);
+            if (hi - lo < 0.2f)
+                continue;
+            for (float d = (c & 1) == 0 ? 1f : 0.5f; d < len - 0.1f; d += 1f)
+                line(xa + tx * d, lo, za + tz * d, xa + tx * d, hi, za + tz * d, 0.025f, HATCH, ha);
+        }
+    }
+
+    /** A flat piece of ghost top, with a faint block grid (none at strategic zoom). */
+    private static void top(float x0, float x1, float z0, float z1, float y, float a, boolean far) {
+        if (x1 - x0 < 1e-3f || z1 - z0 < 1e-3f)
+            return;
+        BarFxClient.v(x0, y, z0, GHOST, a);
+        BarFxClient.v(x1, y, z0, GHOST, a);
+        BarFxClient.v(x1, y, z1, GHOST, a);
+        BarFxClient.v(x0, y, z1, GHOST, a);
+        if (far)
+            return;
+        for (float x = (float) Math.ceil(x0 + 0.05f); x < x1 - 0.05f; x += 1f)
+            line(x, y, z0, x, y, z1, 0.025f, HATCH, 0.12f);
+        for (float z = (float) Math.ceil(z0 + 0.05f); z < z1 - 0.05f; z += 1f)
+            line(x0, y, z, x1, y, z, 0.025f, HATCH, 0.12f);
     }
 
     // ------------------------------------------------------------------ the cut line
 
     /**
-     * The cut line, normal-blended, CUT_INSET inside the wall faces (so it never lies on the selection box's edge): a
-     * soft #F0B840 glow round a 2 px #FFF8E0 core (round 6 critic). Normal-blended so it adds no glare to the stone.
+     * The cut line - the ONE gold rectangle (round 7 critic) - normal-blended, CUT_INSET inside the wall faces (never
+     * on the selection box's edge): a 2 px #FFF8E0 core in a 2 px soft #F0B840 glow.
      */
     static void drawCut(Site s, float front, boolean far) {
         float x0 = s.cutIn[0], x1 = s.cutIn[1], z0 = s.cutIn[2], z1 = s.cutIn[3], y = front + 0.04f;
-        float wg = far ? 0.34f : 0.22f, wc = far ? 0.12f : 0.07f;
-        BarFxClient.streak(x0, y, z0, x1, y, z0, wg, CUT_GLOW, 0.6f, 0.6f);
-        BarFxClient.streak(x1, y, z0, x1, y, z1, wg, CUT_GLOW, 0.6f, 0.6f);
-        BarFxClient.streak(x1, y, z1, x0, y, z1, wg, CUT_GLOW, 0.6f, 0.6f);
-        BarFxClient.streak(x0, y, z1, x0, y, z0, wg, CUT_GLOW, 0.6f, 0.6f);
+        float wg = far ? 0.2f : 0.1f, wc = far ? 0.12f : 0.07f;
+        BarFxClient.streak(x0, y, z0, x1, y, z0, wg, CUT_GLOW, 0.7f, 0.7f);
+        BarFxClient.streak(x1, y, z0, x1, y, z1, wg, CUT_GLOW, 0.7f, 0.7f);
+        BarFxClient.streak(x1, y, z1, x0, y, z1, wg, CUT_GLOW, 0.7f, 0.7f);
+        BarFxClient.streak(x0, y, z1, x0, y, z0, wg, CUT_GLOW, 0.7f, 0.7f);
         line(x0, y, z0, x1, y, z0, wc, CUT_CORE, 1f);
         line(x1, y, z0, x1, y, z1, wc, CUT_CORE, 1f);
         line(x1, y, z1, x0, y, z1, wc, CUT_CORE, 1f);
@@ -389,51 +434,43 @@ final class ConstructionFx {
     }
 
     /**
-     * The running knot: a bright 2-block stretch of the cut line travelling round it at 6 blocks a second, +60%
-     * (additive) - motion the static selection rings never have. Walked with perimeterPoint; a step that crosses a
-     * corner goes by the corner, so the knot bends round it.
+     * The travelling bead: a bright 6-8 px bead (0.13 block) running round the cut line at 6 blocks a second, with a
+     * short fading tail - round 7 critic: the 2-block knot did not exist at 30 px a block; a bead does.
      */
-    static void drawKnot(Site s, float front, float clock, boolean far) {
-        float[] box = s.cutIn, a = s.pt, b = s.pt2;
+    static void drawBead(Site s, float front, float clock, boolean far) {
+        float[] box = s.cutIn, pt = s.pt;
         float per = 2 * (Math.max(0, box[1] - box[0]) + Math.max(0, box[3] - box[2]));
         if (per <= 0)
             return;
-        float y = front + 0.05f, w = far ? 0.4f : 0.22f;
-        float centre = clock * 6f;
-        int steps = 8;
-        ConstructionShape.perimeterPoint(box, (centre - 1f) / per, a);
-        for (int j = 1; j <= steps; j++) {
-            ConstructionShape.perimeterPoint(box, (centre - 1f + 2f * j / steps) / per, b);
-            float al = 0.6f * (float) Math.sin(Math.PI * (j - 0.5f) / steps);
-            if (a[2] != b[2] || a[3] != b[3]) {   // round the corner between two sides
-                float cx = a[2] != 0 ? a[0] : b[0], cz = a[3] != 0 ? a[1] : b[1];
-                BarFxClient.streak(a[0], y, a[1], cx, y, cz, w, CUT_KNOT, al, al);
-                BarFxClient.streak(cx, y, cz, b[0], y, b[1], w, CUT_KNOT, al, al);
-            } else
-                BarFxClient.streak(a[0], y, a[1], b[0], y, b[1], w, CUT_KNOT, al, al);
-            a[0] = b[0]; a[1] = b[1]; a[2] = b[2]; a[3] = b[3];
+        float y = front + 0.06f, at = clock * 6f;
+        float r = far ? 0.22f : 0.13f;
+        for (int j = 3; j >= 0; j--) {   // the tail, then the bead over it
+            ConstructionShape.perimeterPoint(box, (at - j * 0.25f) / per, pt);
+            float k = 1 - j / 4f;
+            BarFxClient.softDisc(pt[0], y, pt[1], r * (j == 0 ? 1.8f : 1.2f * k), j == 0 ? BEAD : CUT_GLOW,
+                    j == 0 ? 1f : 0.35f * k, CUT_GLOW, j == 0 ? 0.25f : 0, 10, 0, 0);
         }
+        ConstructionShape.perimeterPoint(box, at / per, pt);
+        BarFxClient.softDisc(pt[0], y, pt[1], r * 0.7f, 0xFFFFFF, 1f, 0xFFFFFF, 0.6f, 8, 0, 0);
     }
 
     // ------------------------------------------------------------------ light from above
 
     /**
-     * Shafts, not rain (round 6 critic: the thin vertical streaks read as gold rain and merged with the builders' beam
-     * fan): two soft shafts ~1.8 blocks wide at the top tapering to ~0.6 at the cut, 0.2 at most, drifting slowly over
-     * the footprint, each landing in a soft bright pool on the cut plane.
+     * Light from above, with no lines at all (round 7 critic: anything under ~6 px at the RTS zoom reads as a builder
+     * beam): one broad soft cone 8 blocks wide at its top narrowing onto the site at a low capped alpha, seen mostly as
+     * a brightened cap on the ghost's top and a soft COOL pool on the cut plane (the second of the two cool accents).
      */
-    static void drawShafts(Site s, float front, float clock) {
+    static void drawLight(Site s, float front, float clock) {
         float mx = (s.cut[0] + s.cut[1]) * 0.5f, mz = (s.cut[2] + s.cut[3]) * 0.5f;
-        float hx = Math.max(0, (s.cut[1] - s.cut[0]) * 0.5f - 1f), hz = Math.max(0, (s.cut[3] - s.cut[2]) * 0.5f - 1f);
-        for (int i = 0; i < 2; i++) {
-            float x = mx + hx * 0.7f * (float) Math.sin(clock * 0.07f + i * 2.5f);
-            float z = mz + hz * 0.7f * (float) Math.cos(clock * 0.05f + i * 1.7f);
-            float pulse = 0.85f + 0.15f * (float) Math.sin(clock * 0.6f + i * 3.1f);
-            float yb = front + 0.05f, ym = front + 3f, yt = front + 8f;
-            taper(x, yt, z, 0.9f, 0f, x, ym, z, 0.6f, 0.17f * pulse);
-            taper(x, ym, z, 0.6f, 0.17f * pulse, x, yb, z, 0.3f, 0.2f * pulse);
-            flatDisc(x, yb + 0.02f, z, 1.0f, RAY, 0.18f * pulse, 14);
-        }
+        float hx = Math.max(0, (s.cut[1] - s.cut[0]) * 0.5f - 1.5f), hz = Math.max(0, (s.cut[3] - s.cut[2]) * 0.5f - 1.5f);
+        float x = mx + hx * 0.4f * (float) Math.sin(clock * 0.07f), z = mz + hz * 0.4f * (float) Math.cos(clock * 0.05f);
+        float pulse = 0.85f + 0.15f * (float) Math.sin(clock * 0.6f);
+        float land = Float.isNaN(s.ghostTop) ? front : s.ghostTop;
+        taper(x, land + 10f, z, 4f, 0f, x, land + 0.1f, z, 2f, 0.06f * pulse);
+        if (!Float.isNaN(s.ghostTop))
+            flatDisc(s.ghostX, s.ghostTop + 0.03f, s.ghostZ, Math.min(3f, s.ghostR), RAY, 0.12f * pulse, 16);
+        flatDisc(x, front + 0.06f, z, 1.8f, COOL, 0.16f * pulse, 16);
     }
 
     /** A soft camera-facing band from p to q: half-width hp / hq, centre alpha ap / aq, nothing at its sides. */
@@ -455,11 +492,11 @@ final class ConstructionFx {
         BarFxClient.v(qx, qy, qz, RAY, aq);
     }
 
-    /** Slow gold motes rising inside the footprint: eight at a time, 0.3 block a second, each living 6 s. */
+    /** Slow gold motes rising inside the footprint: six at a time, 0.3 block a second, each living 6 s. */
     static void drawMotes(Site s, float front, float clock) {
         float x0 = s.course[0], x1 = s.course[1], z0 = s.course[2], z1 = s.course[3];
-        for (int j = 0; j < 8; j++) {
-            float t = clock / 6f + j / 8f;
+        for (int j = 0; j < 6; j++) {
+            float t = clock / 6f + j / 6f;
             int cyc = (int) Math.floor(t);
             float k = t - cyc;
             float x = x0 + (x1 - x0) * hash(cyc * 7 + j * 131) + 0.15f * (float) Math.sin(clock * 0.9f + j);
@@ -471,44 +508,47 @@ final class ConstructionFx {
 
     // ------------------------------------------------------------------ the tools
 
+    /** Tools in view at once (round 7 critic: at most 2 at the RTS zoom): a hammer and a chisel. */
+    private static final int TOOLS = 2;
     /** Hammer / chisel parts (blocks; ~30 px a block at the RTS zoom): ~1.0-1.1 blocks long (round 6 critic). */
     private static final float HANDLE = 0.85f, HANDLE_W = 0.14f, HEAD_L = 0.55f, HEAD_W = 0.26f;
     private static final float CHISEL_GRIP = 0.4f, CHISEL_GRIP_W = 0.2f, CHISEL_BLADE = 0.6f;
     /** The 1 px gold outline outside a 1 px dark rim (blocks). */
     private static final float OUTLINE = 0.07f, RIM = 0.035f;
-    /** Struck (head on the course, the handle leaning in over the building) and the wind-up: back ~40 degrees. */
-    private static final float STRUCK = 0.35f, WIND_BACK = 0.7f;
-    /** The tools are pulled this far toward the camera so the course they strike never hides their heads. */
+    /** The wind-up: back ~40 degrees. */
+    private static final float WIND_BACK = 0.7f;
+    /** The tools are pulled this far toward the camera so the wall top they strike never hides their heads. */
     private static final float NUDGE = 0.6f;
-    /** How far round the course a tool moves between blows (a fraction of it), plus a little jitter. */
-    private static final float STEP = 0.06f;
+    /** How far round the cut line a tool moves between blows (a fraction of it), plus a little jitter. */
+    private static final float STEP = 0.07f;
 
     /**
-     * Tool {@code i}'s spot at time {@code t} into {@code s.pt} (with the strikeBeat in {@code s.beat}): on the MIDDLE
-     * of the wall course being laid (s.course, half a block in from the faces - round 6 critic: tools hovered over the
-     * air outside the wall), gliding between blows from its last spot to the next one a little further round. Returns
-     * the lift (blocks) of that hop.
+     * Tool {@code i}'s spot at time {@code t} into {@code s.pt} (with the strikeBeat in {@code s.beat}): a point ON the
+     * cut line with the wall's outward normal (round 7 critic: anchor each tool to the cut line, perpendicular to the
+     * wall face), gliding between blows from its last spot to the next one a little further round. Returns the lift
+     * (blocks) of that hop.
      */
     private static float toolSpot(Site s, int i, float t) {
         ConstructionShape.strikeBeat(t, s.beat);
         float c = s.beat[0], m = s.beat[1];
         float e = m * m * (3 - 2 * m);
         float uPrev = spotU(i, (int) c - 1), uNext = spotU(i, (int) c);
-        ConstructionShape.perimeterPoint(s.course, uPrev + (uNext - uPrev) * e, s.pt);
-        return 0.4f * (float) Math.sin(Math.PI * m);
+        ConstructionShape.perimeterPoint(s.cutIn, uPrev + (uNext - uPrev) * e, s.pt);
+        return 0.35f * (float) Math.sin(Math.PI * m);
     }
 
     private static float spotU(int i, int cycle) {
-        return i / 3f + cycle * STEP + 0.03f * hash(cycle * 31 + i * 977);
+        return (float) i / TOOLS + 0.13f + cycle * STEP + 0.03f * hash(cycle * 31 + i * 977);
     }
 
     /**
      * One tool at time {@code t}: a hard-edged silhouette in the SCREEN plane (camera left / up), so it always shows
-     * full length with its head across the handle (round 4: soft streaks swinging in a world plane went edge-on and
-     * vanished). It hops to a spot, winds back ~40 degrees (0.3 s), strikes (0.1 s) and moves on
-     * (ConstructionShape.strikeBeat), its handle leaning in over the building. {@code full}: the 1 px gold outline,
-     * the dark rim and the body (the tool itself); without it, only a faint fill (a trail copy). {@code fly}: blocks it
-     * has risen (the completion beat).
+     * full length with its head across the handle (round 4: soft streaks in a world plane went edge-on and vanished).
+     * Its working end lands on the cut line and its handle points out along the wall's normal as the screen shows it
+     * (and a little up), so it strikes the wall square, from outside. It hops to a spot, winds back ~40 degrees
+     * (0.3 s), strikes (0.1 s) and moves on (ConstructionShape.strikeBeat). {@code full}: the 1 px gold outline, the
+     * dark rim and the body (the tool itself); without it, only a faint fill (a trail copy). {@code fly}: blocks it has
+     * risen (the completion beat).
      */
     static void drawTool(Site s, int i, float t, float alpha, float fly, boolean full) {
         if (alpha <= 0.01f)
@@ -516,21 +556,23 @@ final class ConstructionFx {
         boolean chisel = i == 1;
         float lift = toolSpot(s, i, t);
         float[] pt = s.pt, b = s.beat;
-        // the inside of the wall, in screen terms: +1 when it is toward screen-left
-        float in = pt[2] * BarFxClient.leftX + pt[3] * BarFxClient.leftZ >= 0 ? -1 : 1;
-        float lo = chisel ? 0.2f : STRUCK;
+        // the wall's outward normal on screen (up, left), and the strike direction: into the wall and down a little
+        float nu = pt[2] * BarFxClient.upX + pt[3] * BarFxClient.upZ, nl = pt[2] * BarFxClient.leftX + pt[3] * BarFxClient.leftZ;
+        float su = -nu * 0.8f - 0.6f, sl = -nl * 0.8f;
+        float sn = (float) Math.sqrt(su * su + sl * sl);
+        su /= sn; sl /= sn;
+        float struck = (float) Math.atan2(sl, su);                         // du = cos, dl = sin
+        float back = struck > 0 ? -1 : 1;                                  // the way that lifts the head
         float since = b[3];
-        float theta = lo + (chisel ? 0.5f : 1f) * WIND_BACK * b[2] + 0.3f * (float) Math.sin(Math.PI * b[1])
-                + (since >= 0 && since < 0.25f && b[1] >= 1 ? 0.15f * (float) Math.sin(Math.PI * since / 0.25f) : 0);
+        float theta = struck + back * ((chisel ? 0.5f : 1f) * WIND_BACK * b[2] + 0.3f * (float) Math.sin(Math.PI * b[1])
+                + (since >= 0 && since < 0.25f && b[1] >= 1 ? 0.15f * (float) Math.sin(Math.PI * since / 0.25f) : 0));
         float reach = chisel ? CHISEL_GRIP + CHISEL_BLADE : HANDLE;
-        // struck, the working end sits on the spot and the grip is up and IN from it
-        float su = (float) -Math.cos(lo), sl = (float) -Math.sin(lo) * in;
         float px = pt[0] - BarFxClient.lookX * NUDGE, py = s.lastFront + 0.04f + lift + fly - BarFxClient.lookY * NUDGE,
                 pz = pt[1] - BarFxClient.lookZ * NUDGE;
         float gx = px - (su * BarFxClient.upX + sl * BarFxClient.leftX) * reach;
         float gy = py - (su * BarFxClient.upY + sl * BarFxClient.leftY) * reach;
         float gz = pz - (su * BarFxClient.upZ + sl * BarFxClient.leftZ) * reach;
-        float du = (float) -Math.cos(theta), dl = (float) -Math.sin(theta) * in;   // grip -> working end
+        float du = (float) Math.cos(theta), dl = (float) Math.sin(theta);   // grip -> working end
         for (int pass = full ? 0 : 2; pass < 3; pass++) {   // the gold outline, the dark rim, then the fill
             float e = pass == 0 ? OUTLINE : pass == 1 ? RIM : 0;
             int c0 = pass == 0 ? TOOL_OUTLINE : pass == 1 ? TOOL_RIM : TOOL_HANDLE;
@@ -555,8 +597,9 @@ final class ConstructionFx {
     }
 
     /**
-     * Where tool {@code i}'s last blow landed into {@code s.pt}, and how long ago (seconds, -1 for none): this cycle's
-     * spot if it has struck in it, else the last cycle's (sparks and dust outlive the cycle).
+     * Where tool {@code i}'s last blow landed into {@code s.pt} (with the wall's normal), and how long ago (seconds,
+     * -1 for none): this cycle's spot if it has struck in it, else the last cycle's (the aftermath outlives the cycle).
+     * The cycle the blow belongs to is left in {@code s.beat[0]}.
      */
     private static float lastBlow(Site s, int i, float t) {
         ConstructionShape.strikeBeat(t, s.beat);
@@ -565,9 +608,40 @@ final class ConstructionFx {
             return -1;
         float hit = ConstructionShape.BEAT_MOVE + ConstructionShape.BEAT_WIND + ConstructionShape.BEAT_STRIKE;
         int sc = (int) (t - c * ConstructionShape.BEAT_CYCLE >= hit ? c : c - 1);
-        ConstructionShape.perimeterPoint(s.course, spotU(i, sc), s.pt);
+        ConstructionShape.perimeterPoint(s.cutIn, spotU(i, sc), s.pt);
         s.beat[0] = sc;
         return since;
+    }
+
+    /**
+     * The block being made (round 7 critic: a strike needs a visible consequence): for 0.3 s after a blow, a 1-block
+     * patch of the wall at the cut - its outer face just under the cut line and its top - brightens to white and
+     * fades; over it a 4-6 px white flash (0.15 s), the thing the camera should notice. Normal-blended, so it reads on
+     * the lawn-coloured and the white stone alike without adding glare.
+     */
+    static void drawStruck(Site s, int i, float t) {
+        float since = lastBlow(s, i, t);
+        if (since < 0 || since >= 0.3f)
+            return;
+        float[] pt = s.pt;
+        float k = 1 - since / 0.3f, a = 0.65f * k * k;
+        float tx = -pt[3] * 0.5f, tz = pt[2] * 0.5f;                        // half a block along the wall
+        float ox = pt[0] + pt[2] * (CUT_INSET + 0.03f), oz = pt[1] + pt[3] * (CUT_INSET + 0.03f);   // just outside it
+        float y1 = s.lastFront, y0 = Math.max(s.shape.minY(), y1 - 1f);
+        BarFxClient.v(ox - tx, y0, oz - tz, STRUCK, a);
+        BarFxClient.v(ox + tx, y0, oz + tz, STRUCK, a);
+        BarFxClient.v(ox + tx, y1, oz + tz, STRUCK, a);
+        BarFxClient.v(ox - tx, y1, oz - tz, STRUCK, a);
+        float ix = pt[0] - pt[2], iz = pt[1] - pt[3];                       // the top: a block in from the face
+        BarFxClient.v(ox - tx, y1 + 0.03f, oz - tz, STRUCK, a);
+        BarFxClient.v(ox + tx, y1 + 0.03f, oz + tz, STRUCK, a);
+        BarFxClient.v(ix + tx, y1 + 0.03f, iz + tz, STRUCK, a);
+        BarFxClient.v(ix - tx, y1 + 0.03f, iz - tz, STRUCK, a);
+        if (since < 0.15f) {
+            float x = pt[0] - BarFxClient.lookX * NUDGE, y = y1 + 0.06f - BarFxClient.lookY * NUDGE;
+            float z = pt[1] - BarFxClient.lookZ * NUDGE, f = 1 - since / 0.15f;
+            BarFxClient.softDisc(x, y, z, 0.1f, 0xFFFFFF, f, 0xFFFFFF, f, 10, 0, 0);   // hard-edged: a crisp dot
+        }
     }
 
     /** A blow's dust: three small soft puffs of stone dust swelling and rising off the struck face (0.5 s). */
@@ -581,13 +655,13 @@ final class ConstructionFx {
             float ang = (float) (hash(sc * 41 + i * 7 + j * 3) * 2 * Math.PI);
             float d = 0.15f + 0.3f * e;
             BarFxClient.softDisc(s.pt[0] + (float) Math.cos(ang) * d, y + 0.35f * e, s.pt[1] + (float) Math.sin(ang) * d,
-                    0.18f + 0.22f * e, DUST, 0.4f * (1 - e), DUST, 0, 8, j, 0.15f);
+                    0.16f + 0.2f * e, DUST, 0.35f * (1 - e), DUST, 0, 8, j, 0.15f);
         }
     }
 
     /**
      * A tool's light: a small glint on its head and, after each blow, 8 gold sparks from where it landed (0.4 s,
-     * #FFE08A fading out) over a small flash flat on the struck face (0.25 s).
+     * #FFE08A fading out) over a small warm glow (0.15 s).
      */
     static void drawToolLight(Site s, int i, float t) {
         float tw = 0.75f + 0.25f * (float) Math.sin(t * 5 + i * 2.1f);
@@ -598,15 +672,15 @@ final class ConstructionFx {
             return;
         int sc = (int) s.beat[0];
         float[] pt = s.pt;
-        float fx = pt[0], fz = pt[1], fy = s.lastFront + 0.06f;
-        if (since < 0.25f)
-            flatDisc(fx, fy, fz, 0.3f + 0.2f * since / 0.25f, STRUCK_FLASH, 0.7f * (1 - since / 0.25f), 12);
-        float x = fx - BarFxClient.lookX * NUDGE, y = fy - BarFxClient.lookY * NUDGE, z = fz - BarFxClient.lookZ * NUDGE;
+        float x = pt[0] - BarFxClient.lookX * NUDGE, y = s.lastFront + 0.06f - BarFxClient.lookY * NUDGE;
+        float z = pt[1] - BarFxClient.lookZ * NUDGE;
+        if (since < 0.15f)
+            BarFxClient.softDisc(x, y, z, 0.3f, GOLD, 0.5f * (1 - since / 0.15f), GOLD, 0, 10, 0, 0);
         float f = 1 - since / 0.4f;
         for (int j = 0; j < 8; j++) {
             float ang = (float) (hash(sc * 131 + i * 17 + j * 7) * 2 * Math.PI);
             float sp = 1.2f + 1.3f * hash(sc * 57 + j * 29 + i);
-            float vx = (float) Math.cos(ang) * sp, vz = (float) Math.sin(ang) * sp;
+            float vx = (float) Math.cos(ang) * sp + pt[2], vz = (float) Math.sin(ang) * sp + pt[3];
             float vy = 2f + 1.5f * hash(sc * 23 + j * 3 + i * 5);
             float sx = x + vx * since, sy = y + vy * since - 6 * since * since, sz = z + vz * since;
             float vyNow = vy - 12 * since, l = 0.04f;
@@ -617,7 +691,7 @@ final class ConstructionFx {
     /** Strategic zoom: the tools shrink to golden glints walking the course. */
     static void drawGlints(Site s, float front, float clock) {
         for (int i = 0; i < 2; i++) {
-            ConstructionShape.perimeterPoint(s.course, i / 2f + clock * 0.05f, s.pt);
+            ConstructionShape.perimeterPoint(s.cutIn, i / 2f + clock * 0.05f, s.pt);
             BarFxClient.softDisc(s.pt[0], front + 0.6f, s.pt[1], 0.32f, LIGHT, 0.8f, GOLD, 0.2f, 10, 0, 0);
         }
     }
