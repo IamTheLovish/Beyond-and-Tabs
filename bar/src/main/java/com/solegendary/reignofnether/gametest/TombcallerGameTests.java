@@ -181,6 +181,33 @@ public class TombcallerGameTests {
         return base <= 0 ? 0 : le.getAttributeValue(Attributes.MOVEMENT_SPEED) / base;
     }
 
+    /** DIAGNOSTIC (full-suite shard 1 only): what slows a unit. */
+    private static String why(LivingEntity le) {
+        StringBuilder sb = new StringBuilder(" [diag effects ");
+        sb.append(le.getActiveEffects().stream().map(e -> e.getEffect().getDescriptionId() + "/" + e.getAmplifier() + "/" + e.getDuration()).toList());
+        net.minecraft.world.entity.ai.attributes.AttributeInstance a = le.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (a != null)
+            sb.append(" modifiers ").append(a.getModifiers().stream().map(m -> m.getName() + " " + m.getAmount() + " " + m.getOperation()).toList());
+        sb.append(" base ").append(le.getAttributeBaseValue(Attributes.MOVEMENT_SPEED)).append(" owner ").append(le instanceof Unit u ? u.getOwnerName() : "-");
+        sb.append(" at ").append(le.blockPosition().toShortString()).append(" in ").append(le.level().getBlockState(le.blockPosition()))
+            .append(" on ").append(le.level().getBlockState(le.blockPosition().below()));
+        return sb.append(around(le.level(), le.blockPosition())).append("]").toString();
+    }
+
+    /** DIAGNOSTIC: the block column at a spot and every entity near it. */
+    private static String around(net.minecraft.world.level.Level level, BlockPos p) {
+        StringBuilder sb = new StringBuilder(" column");
+        for (int dy = -2; dy <= 3; dy++)
+            sb.append(" ").append(p.getY() + dy).append("=").append(level.getBlockState(p.above(dy)).getBlock().getDescriptionId().replace("block.minecraft.", ""));
+        sb.append(" near ");
+        sb.append(level.getEntities((Entity) null, new net.minecraft.world.phys.AABB(p).inflate(16)).stream()
+            .map(e -> e.getType().toShortString() + (e instanceof Unit u ? "(" + u.getOwnerName() + ")" : "") + "@" + e.blockPosition().toShortString()).toList());
+        sb.append(" raining ").append(level.isRaining()).append(" day ").append(level.getDayTime());
+        sb.append(" buildings ").append(com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().stream()
+            .filter(b -> b.centrePos != null && b.centrePos.distSqr(p) < 48 * 48).map(b -> b.getBuilding().name + "@" + b.centrePos.toShortString()).toList());
+        return sb.toString();
+    }
+
     private static List<Mob> spawned(List<Mob> units) {
         return units.stream().filter(Objects::nonNull).toList();
     }
@@ -439,7 +466,7 @@ public class TombcallerGameTests {
                         stones.add(s);   // cleaned up even if stonesOf missed it
                 if (TombcallerServerEvents.stonesOf(caller).size() != 1) {
                     problems.add("the caster keeps " + TombcallerServerEvents.stonesOf(caller).size() + " stones after one cast, expected 1"
-                        + " (refused: " + RaiseTombstone.lastRefusal + ")");
+                        + " (refused: " + RaiseTombstone.lastRefusal + ")" + around(level, helper.absolutePos(new BlockPos(9, 2, 3))));
                 } else {
                     TombstoneUnit s = TombcallerServerEvents.stonesOf(caller).get(0);
                     Vec3 want = cell(helper, 9, 3);
@@ -607,7 +634,7 @@ public class TombcallerGameTests {
                 if (fresh != null)
                     stones.add(fresh);
                 if (fresh == null || Essence.get(caller) != 30 - RaiseTombstone.ESSENCE_COST)
-                    problems.add("with one stone possessed a new one was refused (" + RaiseTombstone.lastRefusal + ")");
+                    problems.add("with one stone possessed a new one was refused (" + RaiseTombstone.lastRefusal + ")" + around(level, helper.absolutePos(new BlockPos(8, 2, 11))));
             } catch (RuntimeException ex) {
                 problems.add("threw " + ex);
             } finally {
@@ -818,7 +845,7 @@ public class TombcallerGameTests {
                 if (Math.abs(speedFactor(enemyOn) - 1.0) > 0.005)
                     problems.add("the enemy moved off the creep still moves at " + speedFactor(enemyOn) + " of its speed");
                 if (Math.abs(speedFactor(spiderOn) - 1.0) > 0.005)
-                    problems.add("the creep changed a friend's speed (" + speedFactor(spiderOn) + ")");
+                    problems.add("the creep changed a friend's speed (" + speedFactor(spiderOn) + ")" + why(spiderOn));
             } finally {
                 discardAll(all);
                 clearStones(level, List.of(s), owner);
@@ -1082,7 +1109,7 @@ public class TombcallerGameTests {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (Math.abs(speedFactor(near) - 1.0) > 0.005)
-                    problems.add("8.6 s after Grave Tide the near spider still moves at " + speedFactor(near) + " of its speed");
+                    problems.add("8.6 s after Grave Tide the near spider still moves at " + speedFactor(near) + " of its speed" + why(near));
                 if (Math.abs(speedFactor(onCreep) - 1.3) > 0.005)
                     problems.add("the creep spider's 12 s tide ended early (" + speedFactor(onCreep) + ")");
             } finally {
