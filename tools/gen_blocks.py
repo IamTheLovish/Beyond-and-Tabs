@@ -522,6 +522,30 @@ SEED_ORDER = (
     "basalt_top_v4",
     "basalt_top_v5",
     "basalt_top_v6",
+    # round 33 (lovish: break the tiling of the big repeated building blocks - PROC_VARIANT_OF): two more textures
+    # per block, their own seeds, appended last
+    "stone_bricks_v2",
+    "stone_bricks_v3",
+    "cobblestone_v2",
+    "cobblestone_v3",
+    "quartz_block_top_v2",
+    "quartz_block_top_v3",
+    "quartz_block_side_v2",
+    "quartz_block_side_v3",
+    "quartz_block_bottom_v2",
+    "quartz_block_bottom_v3",
+    "oak_planks_v2",
+    "oak_planks_v3",
+    "spruce_planks_v2",
+    "spruce_planks_v3",
+    "dark_oak_planks_v2",
+    "dark_oak_planks_v3",
+    "birch_planks_v2",
+    "birch_planks_v3",
+    "deepslate_bricks_v2",
+    "deepslate_bricks_v3",
+    "polished_blackstone_bricks_v2",
+    "polished_blackstone_bricks_v3",
 )
 
 
@@ -1114,6 +1138,35 @@ for _base in ("stone", "dirt", "grass_block_top", "grass_block_side", "grass_blo
         TARGETS["%s_v%d" % (_base, _k)] = dict(TARGETS[_base])
 SCAN_VARIANT_OF["grass_block_top_v2"] = "grass_block_top"
 GRASS_TOPS = GRASS_TOPS + tuple("grass_block_top_v%d" % k for k in range(3, 7))
+# Round 33 (lovish chose variants to break the tiling of the big repeated blocks): the procedural building blocks
+# get PROC_VARIANTS textures each - the same recipe on its own seed inside variant_mask's blob, the base tile in the
+# border band (proc_variant), so neighbours always meet as the seamless tile meets itself; each is fitted to the
+# base's targets, so a wall of variants keeps one mean value and saturation (no checkerboard). Only FULL-CUBE blocks
+# (their blockstate is a single "" variant with no turns): the pack's blockstate picks one model per block at random
+# (write_models); stairs, slabs and walls keep the base texture through vanilla's own models.
+PROC_VARIANTS = 3
+# block -> (the cube's model parent, its texture slots -> base texture); the variants replace every slot
+PROC_VARIANT_BLOCKS = {
+    "stone_bricks": ("cube_all", {"all": "stone_bricks"}),
+    "cobblestone": ("cube_all", {"all": "cobblestone"}),
+    "quartz_block": ("cube_column", {"end": "quartz_block_top", "side": "quartz_block_side"}),
+    "smooth_quartz": ("cube_all", {"all": "quartz_block_bottom"}),
+    "oak_planks": ("cube_all", {"all": "oak_planks"}),
+    "spruce_planks": ("cube_all", {"all": "spruce_planks"}),
+    "dark_oak_planks": ("cube_all", {"all": "dark_oak_planks"}),
+    "birch_planks": ("cube_all", {"all": "birch_planks"}),
+    "deepslate_bricks": ("cube_all", {"all": "deepslate_bricks"}),
+    "polished_blackstone_bricks": ("cube_all", {"all": "polished_blackstone_bricks"}),
+}
+PROC_VARIANT_OF = {}
+for _parent, _slots in PROC_VARIANT_BLOCKS.values():
+    for _base in _slots.values():
+        for _k in range(2, PROC_VARIANTS + 1):
+            PROC_VARIANT_OF["%s_v%d" % (_base, _k)] = _base
+            TARGETS["%s_v%d" % (_base, _k)] = dict(TARGETS[_base])
+# the planks' boards run on from block to block (two of the four rows have no butt joint in the tile): their blob
+# edge is feathered over 12 texels, so a board's tone drifts along its length instead of stepping
+PROC_FEATHER = {b: 12.0 for b in ("oak_planks", "spruce_planks", "dark_oak_planks", "birch_planks")}
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2906,30 +2959,26 @@ def turned(scalars, vec, k, mirror=False, roll=False):
     return [np.rot90(a, k) for a in scalars], (np.rot90(nx, k), np.rot90(ny, k))
 
 
-def variant_mask(n, i):
+def variant_mask(n, i, feather=3.0):
     """Where variant i shows its own copy: 1 inside an irregular blob, 0 in a thin border band (4-11% of the block
-    from each edge, its width wandering), soft over ~3 texels. Variant 0 is the tile itself (all 0). The band is
-    thin so the share of every block that is the same tile stays small (S4: the repeat at one block)."""
+    from each edge, its width wandering), soft over `feather` texels. Variant 0 is the tile itself (all 0). The band
+    is thin so the share of every block that is the same tile stays small (S4: the repeat at one block)."""
     if i == 0:
         return np.zeros((n, n))
     F = Field(n, 2800 + 31 * i)                      # its own seed: the same blob for every scan material
     edge = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
     margin = np.clip(0.075 + 0.03 * F.noise(1, 6, 0.6) + 0.012 * F.noise(6, 20, 0.3), 0.04, 0.11)
-    return smoothstep(margin, margin + 3.0 / n, edge)
+    return smoothstep(margin, margin + feather / n, edge)
 
 
-def variant_maps(alb, n_img, s_img, i):
-    """Variant i of a scan material's FINAL maps (albedo, LabPBR _n and _s of the tile): its own transformed copy
-    inside variant_mask's blob, the tile itself in the border band - bit for bit, so two neighbours always meet as the
+def blend_maps(alb, n_img, s_img, other, m):
+    """The tile's FINAL maps (albedo, LabPBR _n and _s) with `other` = (alb2, (nx2, ny2), ao2, h2, s2) shown where
+    mask m is 1 and the tile itself where it is 0 - bit for bit in the band, so two neighbours always meet as the
     seamless tile meets itself (colour, normals, AO, height and smoothness alike)."""
-    if i == 0:
-        return alb, n_img, s_img
-    n = alb.shape[0]
-    m = variant_mask(n, i)
     nf = n_img.astype(np.float64) / 255.0
     sf = s_img.astype(np.float64)
     vec = (nf[..., 0] * 2 - 1, nf[..., 1] * 2 - 1)
-    (alb2, ao2, h2, s2), (nx2, ny2) = turned([alb, nf[..., 2], nf[..., 3], sf], vec, *VARIANT_TRANSFORMS[i])
+    alb2, (nx2, ny2), ao2, h2, s2 = other
 
     def mix(a, b):
         w = m if a.ndim == 2 else m[..., None]
@@ -2940,6 +2989,51 @@ def variant_maps(alb, n_img, s_img, i):
     out_n[keep] = n_img[keep]                          # the band exactly as the tile (no re-encoding round-off)
     out_s = np.clip(np.rint(mix(sf, s2)), 0, 255).astype(np.uint8)
     return mix(alb, alb2), out_n, out_s
+
+
+def variant_maps(alb, n_img, s_img, i):
+    """Variant i of a scan material's FINAL maps: its own transformed copy inside variant_mask's blob, the tile
+    itself in the border band (blend_maps)."""
+    if i == 0:
+        return alb, n_img, s_img
+    n = alb.shape[0]
+    nf = n_img.astype(np.float64) / 255.0
+    vec = (nf[..., 0] * 2 - 1, nf[..., 1] * 2 - 1)
+    (alb2, ao2, h2, s2), nxy2 = turned([alb, nf[..., 2], nf[..., 3], s_img.astype(np.float64)], vec,
+                                       *VARIANT_TRANSFORMS[i])
+    return blend_maps(alb, n_img, s_img, (alb2, nxy2, ao2, h2, s2), variant_mask(n, i))
+
+
+def finished(name, seed, n):
+    """A procedural texture's finished maps on a given seed: dict(alb, H, n_img, s_img, k) - what make() computes
+    before it writes (the recipe, then the LabPBR maps). Round 33: the procedural variants' building block."""
+    t = targets_for(name)
+    F = Field(n, seed)
+    r = RECIPES[name](F, n, t)
+    for key in ("f0", "smooth", "emit"):
+        if key in r:
+            t = dict(t, **{key + "_map": r[key]})
+    n_img, s_img, k = maps(F, r["H"], t, r.get("alpha"), r.get("nxy"))
+    return dict(alb=r["alb"], H=r["H"], n_img=n_img, s_img=s_img, k=k)
+
+
+def proc_variant(base, i):
+    """Round 33: variant i (1, 2, ...) of a procedural block texture - the base's finished maps on the variant's own
+    seed inside variant_mask's blob, the base tile in the border band (so a wall never shows a cut stone or board at
+    a block edge). Both are fitted to the same targets: one mean value and saturation across the variants."""
+    name = "%s_v%d" % (base, i + 1)
+
+    def r(F, n, t):
+        b = finished(base, SEEDS[base], n)
+        v = finished(base, SEEDS[name], n)
+        vf = v["n_img"].astype(np.float64) / 255.0
+        other = (v["alb"], (vf[..., 0] * 2 - 1, vf[..., 1] * 2 - 1), vf[..., 2], vf[..., 3],
+                 v["s_img"].astype(np.float64))
+        m = variant_mask(n, i, PROC_FEATHER.get(base, 3.0))
+        alb, n_img, s_img = blend_maps(b["alb"], b["n_img"], b["s_img"], other, m)
+        H = b["H"] * (1 - m) + v["H"] * m
+        return dict(H=H, alb=alb, maps=(n_img, s_img), k=v["k"])
+    return r
 
 
 def m_scan_stone(F, n):
@@ -3498,6 +3592,15 @@ def write_models():
     # basalt: vanilla's axis turns of the column, the same turn for every variant (the shared band stays shared)
     turn = {"axis=x": {"x": 90, "y": 90}, "axis=y": {}, "axis=z": {"x": 90}}
     blockstate("basalt", {k: [dict({"model": "minecraft:block/" + m}, **r) for m in basalt] for k, r in turn.items()})
+    # round 33: the procedural variants - a model per variant on its textures, the blockstate a weighted pick (equal
+    # weights: the tiling-breaker; the base is the texture the block's stairs / slabs / walls draw, through vanilla's
+    # own models, which this pack does not touch). Full cubes only: no turn, no uvlock.
+    for block, (parent, slots) in PROC_VARIANT_BLOCKS.items():
+        picks = [{"model": "minecraft:block/" + block, "weight": 1}]
+        for k in range(2, PROC_VARIANTS + 1):
+            model("%s_v%d" % (block, k), "minecraft:block/" + parent, {s: "%s_v%d" % (b, k) for s, b in slots.items()})
+            picks.append({"model": "minecraft:block/%s_v%d" % (block, k), "weight": 1})
+        blockstate(block, {"": picks})
     for name in ROTATED_BLOCKSTATES:
         models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
         turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
@@ -3788,6 +3891,8 @@ def recipes():
             R[name] = _scan_grass_side(i)
         else:
             R[name] = _scan_grass_overlay(i)
+    for name, base in PROC_VARIANT_OF.items():        # round 33: variant k is index k - 1 (its own seed)
+        R[name] = proc_variant(base, int(name.rsplit("_v", 1)[1]) - 1)
     return R
 
 
