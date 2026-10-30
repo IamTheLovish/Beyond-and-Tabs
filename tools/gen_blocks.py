@@ -210,7 +210,8 @@ TARGETS = {
     "stripped_dark_oak_log": dict(luma=0.20, std=0.027, sat=0.56, tilt=14.0, smooth=34, pore=30),
     "stripped_mangrove_log": dict(luma=0.26, std=0.045, sat=0.60, tilt=14.0, smooth=34, pore=30),
     # r31 (art director: "dull red-brown"): pinkish salmon, lighter (0.44 -> 0.52), the spread in the crystals
-    "polished_granite": dict(luma=0.54, std=0.050, sat=0.36, tilt=4.0, smooth=140, pore=4),   # r31b: calmer, sheen
+    # r32 (critic: "1.5 stops too dark / red"): 0.54 -> 0.68, pinker (sat 0.36 -> 0.26), the quartz grains' spread
+    "polished_granite": dict(luma=0.68, std=0.055, sat=0.26, tilt=4.0, smooth=140, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
     "blackstone": dict(luma=0.18, std=0.035, sat=0.10, tilt=24.0, smooth=12, pore=12),
     # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
@@ -2088,8 +2089,10 @@ def m_polished_granite(F, n):
     and lower contrast than the rough block (a polished face is one calm stone), inside a bevelled block rim."""
     # r31b (eyes 41023221433: "confetti speckle - halve the speckle contrast, larger crystals, a faint sheen"):
     # per_side 20 -> 15 (~8.5 texels), contrast 0.7 -> 0.35, the bevel a clear edge; smoothness up in TARGETS
-    H, alb = m_crystal(F, n, [((0.82, 0.60, 0.52), 0.60), ((0.26, 0.23, 0.23), 0.08), ((0.60, 0.58, 0.58), 0.22),
-                              ((0.90, 0.84, 0.80), 0.10)], per_side=15, cluster=0.5, contrast=0.35, mottle=0.05,
+    # r32 (critic: "still ~1.5 stops too dark / red - lift it toward a pink-salmon granite with grey-white quartz
+    # grains"): a paler pink feldspar, the quartz grains grey-WHITE and clearer (contrast 0.35 -> 0.5), less mica
+    H, alb = m_crystal(F, n, [((0.88, 0.68, 0.62), 0.58), ((0.30, 0.27, 0.27), 0.06), ((0.80, 0.80, 0.80), 0.26),
+                              ((0.94, 0.90, 0.88), 0.10)], per_side=15, cluster=0.5, contrast=0.5, mottle=0.05,
                        drift_base=3)
     bev = frame(F, 0.06, 0.012)
     return 0.35 + 0.5 * bev + 0.1 * (H - 0.6), alb * (0.72 + 0.28 * bev)[..., None]
