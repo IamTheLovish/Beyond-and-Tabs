@@ -52,7 +52,7 @@ public class ProductionPlacement extends BuildingPlacement {
     protected ArrayList<BlockPos> rallyPoints = new ArrayList<>();
     protected LivingEntity rallyPointEntity;
     public List<Button> productionButtons;
-    // counts its changes, so the per-tick queue population (QueuePopulation) is never stale
+    // counts its changes, so a per-tick cache over the queues is never stale
     public final List<ActiveProduction> productionQueue = new ProductionQueueList<>();
     /**
      * Depth of one building's production queue (BAR factories take a long queue; RoN had no cap at all, so a held
@@ -658,19 +658,10 @@ public class ProductionPlacement extends BuildingPlacement {
                         ResourcesServerEvents.addSubtractResources(Resources.emeralds(ownerName, -emeraldCost));
                     success = true;
                 }
-                else {
-                    if (!prodItem.isBelowMaxPopulation(this))
-                        ResourcesClientboundPacket.warnMaxPopulation(ownerName);
-                    else if (!prodItem.canAffordPopulation(this)) {
-                        if (prodItem instanceof GraveyardUnitProductionItem && this instanceof GraveyardPlacement gy && gy.getUpgradeLevel() > 0) {
-                            ResourcesClientboundPacket.warnFullGraveyard(ownerName);
-                        } else {
-                            ResourcesClientboundPacket.warnInsufficientPopulation(ownerName);
-                        }
-                    }
-                    else if (!ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald))
-                        // only emeralds are still paid upfront; metal and energy never block queueing
-                        ResourcesClientboundPacket.warnInsufficientResources(ownerName, true, true, true, false);
+                else if (!ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald)) {
+                    // only emeralds are still paid upfront; metal and energy never block queueing, and there is no
+                    // population limit (lovish, Oct 29)
+                    ResourcesClientboundPacket.warnInsufficientResources(ownerName, true, true, true, false);
                 }
             }
         }

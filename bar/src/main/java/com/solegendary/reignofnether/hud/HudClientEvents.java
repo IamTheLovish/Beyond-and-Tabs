@@ -760,12 +760,6 @@ public class HudClientEvents {
                     float percentageDoneInv = firstProdItem.ticksLeft / firstProdItem.item.getCost(true, selProdBuilding.ownerName).ticks;
 
                     int colour = 0xFFFFFF;
-                    if (!firstProdItem.item.isBelowPopulationSupply(selProdBuilding)) {
-                        colour = 0xFF0000;
-                        if (percentageDoneInv <= 0) {
-                            percentageDoneInv = 0.01f;
-                        }
-                    }
                     // "Pause unit production": the head unit is on hold (research and upgrades are never paused)
                     boolean unitsPaused = com.solegendary.reignofnether.building.production.UnitProductionPause
                         .blocks(firstProdItem.item, selProdBuilding);
