@@ -50,8 +50,7 @@ public class BrassworksGameTests {
             com.solegendary.reignofnether.building.production.ProductionItems.GYROCOPTER_GUNSHIP,
             com.solegendary.reignofnether.building.production.ProductionItems.DRILL_BURROWER,
             com.solegendary.reignofnether.building.production.ProductionItems.REPAIR_CRAWLER,
-            com.solegendary.reignofnether.building.production.ProductionItems.CLOCKWORK_SPIDER,
-            com.solegendary.reignofnether.building.production.ProductionItems.SOUL_ENGINEER);
+            com.solegendary.reignofnether.building.production.ProductionItems.CLOCKWORK_SPIDER);
         for (var item : expected)
             if (!lab.productions.get().contains(item))
                 helper.fail("the Assembly Works does not train " + item.getItemName());
@@ -95,10 +94,10 @@ public class BrassworksGameTests {
             if (e != null)
                 e.discard();
         }
-        // beasts-2 added the Steam Hauler (T2 beast, design/big_units.md 1.7); the Soul Engineer is the Brassworks essence
-        // caster (design/essence_casters.md), a person, so the heaters stay five
-        if (units != 9)
-            helper.fail("the Assembly Works should train nine units, found " + units);
+        // beasts-2 added the Steam Hauler (T2 beast, design/big_units.md 1.7); the Soul Engineer, the essence caster, is
+        // tier 1 and trains at the Machine Shop (lovish, Oct 29)
+        if (units != 8)
+            helper.fail("the Assembly Works should train eight units, found " + units);
         if (heaters != 5)
             helper.fail("five of the T2 units heat (Juggernaut, Tesla Walker, Gunship, Drill Burrower, Clockwork Spider), found " + heaters);
         var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
