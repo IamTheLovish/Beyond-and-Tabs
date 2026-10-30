@@ -197,7 +197,8 @@ TARGETS = {
     "stripped_acacia_log": dict(luma=0.44, std=0.040, sat=0.64, tilt=14.0, smooth=34, pore=30),
     "stripped_dark_oak_log": dict(luma=0.20, std=0.027, sat=0.56, tilt=14.0, smooth=34, pore=30),
     "stripped_mangrove_log": dict(luma=0.26, std=0.045, sat=0.60, tilt=14.0, smooth=34, pore=30),
-    "polished_granite": dict(luma=0.44, std=0.060, sat=0.37, tilt=4.0, smooth=125, pore=4),
+    # r31 (art director: "dull red-brown"): pinkish salmon, lighter (0.44 -> 0.52), the spread in the crystals
+    "polished_granite": dict(luma=0.52, std=0.065, sat=0.38, tilt=4.0, smooth=125, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
     "blackstone": dict(luma=0.18, std=0.035, sat=0.10, tilt=24.0, smooth=12, pore=12),
     # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
@@ -1800,6 +1801,18 @@ def m_granite(F, n):
                      drift_base=3)
 
 
+def m_polished_granite(F, n):
+    """Round 31 (art director: "dull red-brown"): polished granite is a pinkish-salmon crystal mosaic - salmon
+    orthoclase feldspar, smoky-grey quartz, black mica flakes, a few white plagioclase - with the crystals large
+    enough to read at 30 px (~6 texels, per_side 20; the rough granite's 4-texel grains average to mud at RTS zoom)
+    and lower contrast than the rough block (a polished face is one calm stone), inside a bevelled block rim."""
+    H, alb = m_crystal(F, n, [((0.82, 0.58, 0.50), 0.58), ((0.24, 0.21, 0.21), 0.09), ((0.58, 0.57, 0.57), 0.22),
+                              ((0.90, 0.84, 0.80), 0.11)], per_side=20, cluster=0.5, contrast=0.7, mottle=0.06,
+                       drift_base=3)
+    bev = frame(F, 0.06, 0.012)
+    return 0.35 + 0.5 * bev + 0.1 * (H - 0.6), alb * (0.78 + 0.22 * bev)[..., None]
+
+
 def m_diorite(F, n):
     """Diorite: white plagioclase with dark hornblende gathered in flecks and streaks (not even pepper)."""
     # round 19b: the dark minerals back to clear flecks (contrast 0.5 -> 0.7, spread out - cluster 0.45): under shaders
@@ -3294,7 +3307,7 @@ def recipes():
         "stripped_acacia_log": lambda F, n: m_stripped(F, n, (0.75, 0.40, 0.22)),
         "stripped_dark_oak_log": lambda F, n: m_stripped(F, n, (0.32, 0.22, 0.14)),
         "stripped_mangrove_log": lambda F, n: m_stripped(F, n, (0.52, 0.22, 0.20)),
-        "polished_granite": lambda F, n: m_polished(F, n, (0.62, 0.42, 0.36), 0.10, 0.08),
+        "polished_granite": m_polished_granite,     # r31: a salmon crystal mosaic, not a red-brown mottle
         # r21: 20-56 per block flecks read as pepper at RTS zoom - fewer, larger dark crystal clusters
         "polished_diorite": lambda F, n: m_polished(F, n, (0.84, 0.84, 0.82), 0.08, 0.16, fleck=(6, 18)),
         # r21 (reviewer: "high-contrast light speckle on black, pepper at RTS"): crystals closer in tone and larger
