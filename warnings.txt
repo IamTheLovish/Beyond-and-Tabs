@@ -1,0 +1,34 @@
+(2593 first-launch config/mod-loading notices filtered out)
+[13:52:13] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[13:52:20] [Render thread/ERROR]: Failed to verify authentication
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+[13:52:30] [Worker-ResourceReload-0/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_pattern.png
+[13:52:30] [Worker-ResourceReload-0/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_nopattern.png
+[13:52:34] [Worker-ResourceReload-2/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[13:52:34] [Worker-ResourceReload-2/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[13:52:39] [Worker-ResourceReload-2/WARN]: Missing textures in model supplementaries:confetti_popper#inventory:
+[13:52:40] [Render thread/WARN]: Missing sound for event: minecraft:item.goat_horn.play
+[13:52:40] [Render thread/WARN]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[13:52:41] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+[13:52:41] [Render thread/WARN]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[13:52:41] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find sampler named Sampler2 in the specified shader program.
+[13:52:41] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named IViewRotMat in the specified shader program.
+[13:52:41] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named FogShape in the specified shader program.
+[13:52:41] [Render thread/WARN]: Shader supplementaries:static_noise could not find sampler named Sampler1 in the specified shader program.
+[13:52:41] [Render thread/WARN]: Shader supplementaries:spherify could not find sampler named Sampler1 in the specified shader program.
+[13:52:41] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseSpeed in the specified shader program.
+[13:52:41] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseScale in the specified shader program.
+[13:52:41] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named Intensity in the specified shader program.
+[13:52:41] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named CameraPos in the specified shader program.
+[13:52:43] [Render thread/WARN]: Game took 39.855 seconds to start
+[13:54:17] [Render thread/WARN]: Initial datapack load took 1.866 s
+[13:54:20] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-0 absolute]
+[13:54:20] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-15 absolute]
+[13:54:26] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[13:54:30] [Render thread/WARN]: Time from main menu to in-game was 12.835573 seconds
+[13:54:30] [Render thread/WARN]: Total time to load game and open world was 52.690575 seconds
+[13:54:35] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2118ms or 42 ticks behind
+[13:57:56] [Render thread/WARN]: [Eyes] 07t_bone_dragon_close: no BoneDragonUnit left in the army (the battle took them); summoned a stand-in at -208 70 14
+[13:58:08] [Render thread/WARN]: [Eyes] 07w_mossback_bison_close: no MossbackBisonUnit left in the army (the battle took them); summoned a stand-in at -208 70 14
+[14:00:38] [Render thread/WARN]: Block entity minecraft:campfire @ BlockPos{x=-263, y=81, z=50} state Block{minecraft:air} invalid for ticking:
+[14:00:49] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
