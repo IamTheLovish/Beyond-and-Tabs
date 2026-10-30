@@ -32,8 +32,9 @@ import java.util.List;
  * <ul>
  * <li>ours: the Storm Witch holding her first ability point, the Warchief and the Ash Shaman side by side (the Horde's two
  *     heroes), and a cloaked Corsair Captain;</li>
- * <li>the enemy's: a Dawn Paladin holding its point, a cloaked Thornheart Druid, and a Gravecaller 48 blocks out, beyond
- *     the sight of everything of ours, for the fog still.</li>
+ * <li>the enemy's: a Dawn Paladin, a cloaked Thornheart Druid, and a Gravecaller 34 blocks out, beyond the sight of
+ *     everything of ours, for the fog still. (A client knows another player's points only for its own side: an enemy
+ *     hero's count there is the client's default, so the badge rule - our heroes only - never reads it.)</li>
  * </ul>
  * Stills: 19_heroes_mid (all of them at a mid zoom; the Witch and the Paladin each hold a point), 19_heroes_spent (the
  * Witch's point spent, as the rank-up button spends it), 19_heroes_horde_pair (close on the Warchief and the Ash Shaman),
@@ -45,7 +46,7 @@ final class EyesHeroesScene {
     private EyesHeroesScene() { }
 
     private static final int ZOOM_MID = 30, ZOOM_CLOSE = 14;
-    private static final int OFFSET = 60, FAR = 48;
+    private static final int OFFSET = 60, FAR = 34;
     private static final String CLOAK = "ActiveEffects:[{Id:14,Amplifier:0b,Duration:999999,ShowParticles:0b}]";
 
     private static int phase = 0;
@@ -161,7 +162,8 @@ final class EyesHeroesScene {
     }
 
     private static void summonAll(Minecraft mc) {
-        summon(mc, me, HeroKits.STORM_WITCH, centre.add(-4, 0, 0), "");
+        // a summoned hero loads its points from the summon's nbt (none written = 0): the Witch is given her first point
+        summon(mc, me, HeroKits.STORM_WITCH, centre.add(-4, 0, 0), "skillPoints:1");
         summon(mc, me, HeroKits.HORDE_WARCHIEF, hordePair.add(-1, 0, 0), "");
         summon(mc, me, HeroKits.ASH_SHAMAN, hordePair.add(1, 0, 0), "");
         summon(mc, me, HeroKits.CORSAIR_CAPTAIN, centre.add(-4, 0, 5), CLOAK);
@@ -216,5 +218,18 @@ final class EyesHeroesScene {
                 le.isInvisible(), UnitClientEvents.isHiddenFromLocalPlayer(le), FogOfWarClientEvents.isInBrightChunk(le));
         }
         ReignOfNether.LOGGER.info("[Eyes] {}: {} heroes on the client, zoom {}", still, n, Math.round(OrthoviewClientEvents.getZoom()));
+        // what the server holds (one machine: the integrated server), so a hero missing on the client is told from one
+        // that was never summoned
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        if (server != null) {
+            int s = 0;
+            for (var e : server.overworld().getAllEntities())
+                if (e instanceof HeroUnit && e instanceof Unit u && e.isAlive() && e.position().distanceTo(centre) < 64) {
+                    s++;
+                    ReignOfNether.LOGGER.info("[Eyes] {}: server has {} of '{}' at {}", still, e.getType().getDescriptionId(),
+                        u.getOwnerName(), EyesDirector.fmt(e.position()));
+                }
+            ReignOfNether.LOGGER.info("[Eyes] {}: {} heroes on the server within 64 of the scene", still, s);
+        }
     }
 }
