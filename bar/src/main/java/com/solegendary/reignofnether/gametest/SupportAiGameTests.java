@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.AutocastState;
 import com.solegendary.reignofnether.ability.abilities.CapturedSpark;
+import com.solegendary.reignofnether.bot.BotPlayer;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.essence.Essence;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
@@ -26,6 +27,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -703,4 +705,244 @@ public class SupportAiGameTests {
         });
     }
 
+    // ------------------------------------------------------------------ E: the smarter healer (lovish, Oct 30)
+
+    /**
+     * lovish, Oct 30: "heal low hp units not full hp units". A medic with three friends in reach, each on its own (no
+     * splash reaches two of them): an Iron Golem at 80% (24 of 120 missing, and a costly unit), a vindicator at 60% (30
+     * of 75 missing) and a full vindicator. Her first heal goes to the vindicator, the lowest on health; the old score
+     * (missing health x cost) sent it to the golem.
+     */
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 500)
+    public static void healer_heals_the_lowest_hp_fraction_first(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos p = ArenaReady.pad(helper, 272);
+        List<Entity> made = new ArrayList<>();
+        String mine = owner(helper, "lowest");
+        ResearchServerEvents.addResearch(mine, ProductionItems.RESEARCH_HEALING_POTIONS);
+        Mob medic = spawn(level, EntityRegistrar.WITCH_UNIT.get(), mine, p, 8.5, 8.5, made);
+        Mob golem = spawn(level, EntityRegistrar.IRON_GOLEM_UNIT.get(), mine, p, 8.5, 2.5, made);
+        Mob low = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 8.5, 14.5, made);
+        Mob full = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 14.5, 8.5, made);
+        if (medic == null || golem == null || low == null || full == null) {
+            cleanUp(made, mine);
+            helper.fail("could not create the medic and her three friends");
+            return;
+        }
+        for (Mob m : List.of(golem, low, full)) {
+            m.setNoAi(true);
+            AutocastState.setAll((Unit) m, false);
+        }
+        int[] start = { -1 }, firstAt = { -1 };
+        float[] hp = new float[3];
+        double[] first = new double[2];
+        boolean[] done = { false };
+        ArenaReady.whenTicking(helper, made, 150, tick -> {
+            golem.setHealth(golem.getMaxHealth() * 0.8f);
+            low.setHealth(low.getMaxHealth() * 0.6f);
+            hp[0] = golem.getHealth();
+            hp[1] = low.getHealth();
+            hp[2] = full.getHealth();
+            start[0] = tick;
+        });
+        helper.onEachTick(() -> {
+            if (start[0] < 0 || done[0])
+                return;
+            int t = (int) (helper.getTick() - start[0]);
+            SupportState s = state(medic);
+            if (firstAt[0] < 0 && s.heals + s.areaHeals > 0) {
+                firstAt[0] = t;
+                first[0] = s.lastCastX;
+                first[1] = s.lastCastZ;
+            }
+            if (firstAt[0] < 0 && t < 300)
+                return;
+            if (firstAt[0] >= 0 && t < firstAt[0] + 40 && t < 300)
+                return;   // let the first splash land
+            done[0] = true;
+            try {
+                String where = "after " + t + " ticks: heals " + s.heals + " + area " + s.areaHeals + ", first at tick "
+                    + firstAt[0] + " aimed " + f(first[0] - p.getX()) + " / " + f(first[1] - p.getZ())
+                    + ", hp: golem " + f(hp[0]) + " -> " + f(golem.getHealth()) + ", low vindicator " + f(hp[1]) + " -> "
+                    + f(low.getHealth()) + ", full vindicator " + f(hp[2]) + " -> " + f(full.getHealth());
+                ReignOfNether.LOGGER.info("[SupportAI] lowest first: {}", where);
+                List<String> problems = new ArrayList<>();
+                if (firstAt[0] < 0) {
+                    problems.add("the medic threw no heal at all");
+                } else {
+                    double toLow = Math.hypot(first[0] - low.getX(), first[1] - low.getZ());
+                    double toGolem = Math.hypot(first[0] - golem.getX(), first[1] - golem.getZ());
+                    if (toLow > 2.0)
+                        problems.add("her first heal was not aimed at the vindicator at 60% (" + f(toLow) + " off it, "
+                            + f(toGolem) + " off the golem at 80%)");
+                }
+                if (low.getHealth() <= hp[1])
+                    problems.add("the vindicator at 60% was not healed");
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems) + " (" + where + ")");
+            } finally {
+                cleanUp(made, mine);
+            }
+        });
+    }
+
+    /** A glass floor {@code lenX} blocks long and 16 across at height y, put back when the test ends: room for a march. */
+    static BlockPos longPad(GameTestHelper helper, int y, int lenX) {
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        TestCleanup.BlockUndo pad = TestCleanup.blocks(helper);
+        for (int dx = 0; dx < lenX; dx++)
+            for (int dz = 0; dz < 16; dz++) {
+                pad.set(new BlockPos(corner.getX() + dx, y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState());
+                for (int dy = 1; dy <= 6; dy++)
+                    pad.set(new BlockPos(corner.getX() + dx, y + dy, corner.getZ() + dz), Blocks.AIR.defaultBlockState());
+            }
+        return new BlockPos(corner.getX(), y + 1, corner.getZ());
+    }
+
+    /**
+     * lovish, Oct 30: "stay behind units". Four slow vindicators and a medic 4 blocks ahead of them get one Fight order
+     * at an enemy line 18 blocks off (three vindicators, standing, unkillable so the fight lasts), and the click is past
+     * it. While the army marches up she must keep behind it: at least 2 blocks further from the enemy than our nearest
+     * vindicator in 80% of the looks, never within the danger radius of an enemy, and still behind the front once it
+     * fights. The old Fight walked her straight to her rear-rank spot by the click, ahead of the army and into the
+     * enemy, because "the front" only counted once a vindicator was within 6 of an enemy.
+     */
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 1200)
+    public static void healer_stays_behind_a_marching_front(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos p = longPad(helper, 284, 40);
+        List<Entity> made = new ArrayList<>();
+        String mine = owner(helper, "march"), theirs = mine + "_foe";
+        List<Mob> line = new ArrayList<>(), foes = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            Mob v = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 10.5, 5.5 + i * 2, made);
+            if (v != null)
+                line.add(v);
+        }
+        Mob medic = spawn(level, EntityRegistrar.WITCH_UNIT.get(), mine, p, 14.5, 8.5, made);
+        for (int i = 0; i < 3; i++) {
+            Mob foe = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, p, 28.5, 6.5 + i * 2, made);
+            if (foe != null)
+                foes.add(foe);
+        }
+        if (line.size() != 4 || foes.size() != 3 || medic == null) {
+            cleanUp(made);
+            helper.fail("could not create the army, the medic and the enemy line");
+            return;
+        }
+        for (Mob v : line)
+            ReactionGameTests.speedTo(v, 0.1);   // a slow march: the test watches the medic, not a race
+        for (Mob foe : foes) {
+            foe.setNoAi(true);
+            AutocastState.setAll((Unit) foe, false);
+            foe.addEffect(new MobEffectInstance(MobEffectRegistrar.INVINCIBLE.get(), 1200));
+        }
+        double startX = p.getX() + 10.5, foeX = p.getX() + 28.5;
+        int[] start = { -1 }, samples = { 0 }, behind = { 0 }, engagedAt = { -1 };
+        double[] closest = { Double.MAX_VALUE };
+        boolean[] done = { false };
+        ArenaReady.whenTicking(helper, made, 150, tick -> {
+            start[0] = tick;
+            Mob[] all = new Mob[line.size() + 1];
+            for (int i = 0; i < line.size(); i++)
+                all[i] = line.get(i);
+            all[line.size()] = medic;
+            order(level, mine, UnitAction.ATTACK_MOVE, -1, p.offset(34, -1, 8), all);
+        });
+        helper.onEachTick(() -> {
+            if (start[0] < 0 || done[0])
+                return;
+            int t = (int) (helper.getTick() - start[0]);
+            double dMe = Double.MAX_VALUE, dFront = Double.MAX_VALUE, headX = -Double.MAX_VALUE;
+            for (Mob foe : foes) {
+                dMe = Math.min(dMe, flat(medic, foe));
+                for (Mob v : line)
+                    dFront = Math.min(dFront, flat(v, foe));
+            }
+            for (Mob v : line)
+                headX = Math.max(headX, v.getX());
+            closest[0] = Math.min(closest[0], dMe);
+            // the march: the army is on its way (5 blocks on) and not yet at the enemy (5 off)
+            if (t % 2 == 0 && headX >= startX + 5 && headX <= foeX - 5) {
+                samples[0]++;
+                if (dMe >= dFront + 2.0)
+                    behind[0]++;
+            }
+            if (engagedAt[0] < 0 && dFront <= 2.5)
+                engagedAt[0] = t;
+            if ((engagedAt[0] < 0 || t < engagedAt[0] + 60) && t < 900)
+                return;
+            done[0] = true;
+            try {
+                String where = "after " + t + " ticks: behind the front in " + behind[0] + " of " + samples[0]
+                    + " looks on the march, closest to an enemy " + f(closest[0]) + ", now " + f(dMe) + " from the enemy (front "
+                    + f(dFront) + "), medic at x " + f(medic.getX() - p.getX()) + ", army head at x " + f(headX - p.getX())
+                    + ", fight from tick " + engagedAt[0] + ", mode " + state(medic).mode() + ", danger steps " + state(medic).kites;
+                ReignOfNether.LOGGER.info("[SupportAI] marching front: {}", where);
+                List<String> problems = new ArrayList<>();
+                if (engagedAt[0] < 0)
+                    problems.add("the army never reached the enemy line");
+                if (samples[0] < 8)
+                    problems.add("the march gave only " + samples[0] + " looks to judge");
+                else if (behind[0] < samples[0] * 0.8)
+                    problems.add("the medic was behind the front in only " + behind[0] + " of " + samples[0] + " looks on the march");
+                if (closest[0] < SupportBrain.DANGER_RADIUS)
+                    problems.add("the medic came within " + f(closest[0]) + " blocks of an enemy");
+                if (engagedAt[0] >= 0 && dMe < dFront + 2.0)
+                    problems.add("the medic is not behind the front in the fight");
+                if (!medic.isAlive())
+                    problems.add("the medic died");
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems) + " (" + where + ")");
+            } finally {
+                cleanUp(made);
+            }
+        });
+    }
+
+    /**
+     * A bot walks its non-fighters with its army (BotPlayer.followsArmy): every support unit - the Field Medic too, a
+     * villager bot's healer, which the old hand-written list left idling at the lab - and not a fighter.
+     */
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 300)
+    public static void bot_support_units_follow_the_army(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos p = ArenaReady.pad(helper, 296);
+        List<Entity> made = new ArrayList<>();
+        String mine = owner(helper, "botfollow");
+        List<EntityType<? extends Mob>> kinds = List.of(EntityRegistrar.WITCH_UNIT.get(),
+            EntityRegistrar.MOONWELL_BEARER_UNIT.get(), EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(),
+            EntityRegistrar.TIDE_PRIEST_UNIT.get(), EntityRegistrar.INK_SCRIBE_UNIT.get(), EntityRegistrar.SPARK_SAGE_UNIT.get());
+        List<Mob> supports = new ArrayList<>();
+        for (int i = 0; i < kinds.size(); i++) {
+            Mob m = spawn(level, kinds.get(i), mine, p, 2.5 + i * 2, 4.5, made);
+            if (m != null)
+                supports.add(m);
+        }
+        Mob fighter = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 2.5, 10.5, made);
+        try {
+            if (supports.size() != kinds.size() || fighter == null) {
+                helper.fail("could not create the support units and the fighter");
+                return;
+            }
+            List<String> problems = new ArrayList<>();
+            for (Mob m : supports)
+                if (!(m instanceof SupportUnit))
+                    problems.add(EntityType.getKey(m.getType()).getPath() + " is not a support unit");
+                else if (!BotPlayer.followsArmy(m))
+                    problems.add(EntityType.getKey(m.getType()).getPath() + " does not follow a bot's army");
+            if (BotPlayer.followsArmy(fighter))
+                problems.add("a vindicator (a fighter) is in the follow list");
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            cleanUp(made);
+        }
+    }
 }

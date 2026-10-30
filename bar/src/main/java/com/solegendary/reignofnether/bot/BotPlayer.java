@@ -1379,15 +1379,7 @@ public class BotPlayer {
             BlockPos centre = null;
             List<LivingEntity> lagging = new ArrayList<>();
             for (LivingEntity le : mine) {
-                // Moonwell Bearers and Bloom Priestesses: healers, not fighters (neither is an AttackerUnit, so the
-                // army list never holds them and they would otherwise idle at the lab)
-                if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit)    // the Fortress shields it
-                        && !(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))   // essence casters follow the army too
+                if (!followsArmy(le))
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
@@ -2226,6 +2218,21 @@ public class BotPlayer {
         choke = best;
         chokeAcrossX = ax;
         chokeAcrossZ = az;
+    }
+
+    /**
+     * The bot's units that are not fighters but walk with its army (none is an AttackerUnit, so the army list never
+     * holds them and they would otherwise idle at the lab): the healers, the Ink Scribe that seals from the line, the
+     * Seer that watches from it, the Lantern Fortress that shields it, and the essence casters.
+     */
+    public static boolean followsArmy(LivingEntity le) {
+        return le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit
+            || le instanceof com.solegendary.reignofnether.essence.EssenceCarrier;
     }
 
     /** The top solid block of a column from the heightmap (a single read, unlike a scan down from build height). */
