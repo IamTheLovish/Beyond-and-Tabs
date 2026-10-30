@@ -55,6 +55,8 @@ public class MachineShop extends ProductionBuilding {
         // the faction hero and its revive share a slot (the revive only shows while the hero is dead): design/hero_mode.md
         this.productions.add(ProductionItems.ARCH_ENGINEER, Keybindings.abilitySlot8);
         this.productions.add(ProductionItems.ARCH_ENGINEER_REVIVE, Keybindings.abilitySlot8);
+        this.productions.add(ProductionItems.STEAM_LOBBER, Keybindings.abilitySlot9);   // T1 siege lobber (design/siege_t1.md)
+        this.productions.add(ProductionItems.SOUL_ENGINEER, Keybindings.abilitySlot10);   // essence caster, tier 1 (design/essence_casters.md; lovish, Oct 29)
         this.productions.add(ProductionItems.MORTAR_CRAWLER, Keybindings.abilitySlot5);
         this.productions.add(ProductionItems.SHIELD_PROJECTOR, Keybindings.abilitySlot6);
         this.productions.add(ProductionItems.SAPPER, Keybindings.abilitySlot7);

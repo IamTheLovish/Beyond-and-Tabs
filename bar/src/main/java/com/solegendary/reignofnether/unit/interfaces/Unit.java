@@ -102,7 +102,7 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
 public interface Unit {
 
-    int DEFAULT_SIGHT_RANGE = 16;
+    int DEFAULT_SIGHT_RANGE = 16;   // base: the fog a unit reveals is its sight times the Vision multiplier (getSightRange)
     int ANCHOR_RETREAT_RANGE = 30;
 
     int PIGLIN_HEALING_TICKS = 8 * ResourceCost.TICKS_PER_SECOND;
@@ -207,7 +207,15 @@ public interface Unit {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(Attributes.MAX_HEALTH);
         return (float) (attr != null ? attr.getValue() : Attributes.MAX_HEALTH.getDefaultValue()) + bonus;
     }
+    /** How far the unit reveals fog: its designed sight ({@link #getBaseSightRange}) times the global Vision multiplier. */
     public default int getSightRange() {
+        if (this instanceof IndirectFire && this instanceof AttackerUnit gun)   // artillery: short of its gun, unscaled
+            return com.solegendary.reignofnether.fogofwar.Vision.artillery(getBaseSightRange(), gun.getAttackRange());
+        return com.solegendary.reignofnether.fogofwar.Vision.scaled(getBaseSightRange());
+    }
+
+    /** The designed sight, from the SIGHT_RANGE attribute; units with a sight bonus override this, not getSightRange. */
+    public default int getBaseSightRange() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.SIGHT_RANGE.get());
         return (int) Math.round(attr != null ? attr.getValue() : AttributeRegistrar.SIGHT_RANGE.get().getDefaultValue());
     }
@@ -1098,6 +1106,21 @@ public interface Unit {
 
     default float getBonusMeleeRangeForAttackers() {
         return 0.4f;
+    }
+
+    /**
+     * A flyer that hovers this many blocks over the ground, low enough to be fought from it: melee units target it,
+     * retaliate on it and take it like a walker (MiscUtil, AttackerUnit), chase it to the ground under it (Engage.melee)
+     * and reach up to it (the flyer adds the height to getBonusMeleeRangeForAttackers). 0 - every other unit - for
+     * none. lovish (Oct 29): the Seraph Archer "flies low (3 blocks up) so melee and ground towers can hit it".
+     */
+    default float meleeReachableHeight() {
+        return 0;
+    }
+
+    /** In the air and out of melee's reach: a flying unit that is not a low flyer ({@link #meleeReachableHeight}). */
+    default boolean isFlyingOutOfMelee() {
+        return isFlyingUnit() && meleeReachableHeight() <= 0;
     }
 
     default boolean hasAnyEnchants() {

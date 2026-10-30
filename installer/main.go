@@ -6,9 +6,9 @@
 //  3. Reads the live modpack (the packwiz pack the game's builds publish) for its Minecraft and Forge versions
 //  4. Creates a Prism instance that updates itself from that pack before every launch (packwiz), so a tester always
 //     runs the same build as the host's server - the mods are fetched on the first launch
-//  5. Puts a "lovish" shortcut (his cat as the icon) on the Desktop and in the Start Menu
-//  6. Sets up the cat bubble: a round, always-on-top bubble that starts the game when clicked (bubble/bubble.ps1),
-//     with a "Beyond and Tabs bubble" Desktop shortcut to bring it back
+//  5. Puts a "lovish" shortcut (his cat as the icon) in the Start Menu, opening the launcher
+//  6. Sets up the cat bubble: a round, always-on-top bubble that opens the launcher when clicked (bubble/bubble.ps1);
+//     the one Desktop icon, "lovish", brings it back (lovish, Oct 28)
 //  7. Opens Prism Launcher so you can sign in with your Microsoft account and play
 //
 // Re-running it is safe: anything already in place is kept, anything missing is fetched.
@@ -184,7 +184,7 @@ func run() error {
 	} else {
 		fmt.Println("      Shortcuts not changed: there is no launcher to point them at. Run the installer again.")
 	}
-	if err := bubble(root, filepath.Join(prismDir, shortcutName+".ico")); err != nil {
+	if err := bubble(root, filepath.Join(prismDir, shortcutName+".ico"), launcher, prismExe); err != nil {
 		fmt.Println("      (could not set up the cat bubble:", err, ")")
 	}
 
@@ -193,8 +193,8 @@ func run() error {
 	fmt.Println("then select \"" + instanceName + "\" and click Launch. The first start takes a few minutes")
 	fmt.Println("while Java, Minecraft and the mods are fetched (a small updater window shows the mods).")
 	fmt.Println("Every later launch updates the game to the newest build automatically.")
-	fmt.Println("\nNext time, click the cat bubble on your screen (or the \"" + shortcutName + "\" shortcut on your Desktop):")
-	fmt.Println("both open the " + appName + " launcher (what's new, your build, PLAY). Drag the bubble to move it; right-click it to start it with Windows or close it.")
+	fmt.Println("\nNext time, click the cat bubble on your screen: it opens the " + appName + " launcher (what's new, your build, PLAY).")
+	fmt.Println("Closed it? The \"" + shortcutName + "\" icon on your Desktop brings it back. Drag the bubble to move it; right-click it to start it with Windows or close it.")
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command(prismExe)
 	cmd.Dir = prismDir
@@ -524,18 +524,20 @@ func installBrand(prismDir string) (string, error) {
 // psq quotes a value for a single-quoted PowerShell string (a ' in a user name would otherwise end the string).
 func psq(s string) string { return strings.ReplaceAll(s, "'", "''") }
 
-// shortcutScript makes the "lovish" shortcuts (Desktop + Start Menu) with the cat icon, opening the launcher
-// (launcher.exe --launch, minimised console). A "lovish" shortcut is only rewritten when it is missing, already opens
-// this launcher, or is the one earlier installers made (this Prism with -l "BeyondAndTabs-test"). The old
-// "Beyond and Tabs" shortcuts from earlier installers are removed.
+// shortcutScript makes the Start Menu "lovish" shortcut with the cat icon, opening the launcher (launcher.exe
+// --launch, minimised console); the Desktop "lovish" is the bubble's (bubbleShortcutScript, lovish Oct 28: one Desktop
+// icon). The shortcut is only rewritten when it is missing, already opens this launcher, or is the one earlier
+// installers made (this Prism with -l "BeyondAndTabs-test"). The old "Beyond and Tabs" shortcuts from earlier
+// installers are removed from the Desktop and the Start Menu.
 func shortcutScript(launcherExe, prismExe, prismDir, icoPath string) string {
 	return `
 $exe = '` + psq(launcherExe) + `'
 $prism = '` + psq(prismExe) + `'
 $ws = New-Object -ComObject WScript.Shell
-foreach ($dir in @([Environment]::GetFolderPath('Desktop'), (Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs'))) {
+$start = Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs'
+foreach ($dir in @([Environment]::GetFolderPath('Desktop'), $start)) {
   $lnk = Join-Path $dir '` + shortcutName + `.lnk'
-  if ((-not (Test-Path -LiteralPath $lnk)) -or ($ws.CreateShortcut($lnk).TargetPath -eq $exe) -or (($ws.CreateShortcut($lnk).TargetPath -eq $prism) -and ($ws.CreateShortcut($lnk).Arguments -eq '-l "` + instanceName + `"'))) {
+  if (($dir -eq $start) -and ((-not (Test-Path -LiteralPath $lnk)) -or ($ws.CreateShortcut($lnk).TargetPath -eq $exe) -or (($ws.CreateShortcut($lnk).TargetPath -eq $prism) -and ($ws.CreateShortcut($lnk).Arguments -eq '-l "` + instanceName + `"')))) {
     $s = $ws.CreateShortcut($lnk)
     $s.TargetPath = $exe
     $s.Arguments = '--launch'

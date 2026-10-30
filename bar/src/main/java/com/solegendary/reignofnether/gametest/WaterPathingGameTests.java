@@ -67,8 +67,12 @@ public class WaterPathingGameTests {
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
         final int cx = corner.getX(), cz = corner.getZ();
         build(level, cx, cz);
+        // the basin (abs y 132-141, in this column) goes when the test ends, however it ends: a whenTicking throw
+        // left it for the next test at this slot (ArenaReady.pad(135) stands inside it)
+        TestCleanup.atEnd(helper, () -> clear(level, cx, cz));
         List<String> problems = new ArrayList<>();
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
 
         // the cells: a ford is wading water, the channel and the pool are deep, the bank is land
         expectKind(level, problems, "a ford cell", cx + 13, G, cz + 7, WalkabilityBuilder.KIND_SHALLOW_WATER);

@@ -205,6 +205,8 @@ public class CombatEngageGameTests {
         String a = "gametest_engage_idle_a_" + helper.absolutePos(BlockPos.ZERO).asLong();
         String b = "gametest_engage_idle_b_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Mob> made = new ArrayList<>();
+        // units and pad chunks go when the test ends, however it ends (whenReady throws; asserts sit before cleanUp)
+        TestCleanup.atEnd(helper, () -> cleanUp(made, level, pad));
         List<List<Mob>> sides = new ArrayList<>();
         helper.runAfterDelay(SETUP, () -> {
             sides.add(block(level, pad, a, 8, 4, 11.4, true, false, made));
@@ -230,6 +232,8 @@ public class CombatEngageGameTests {
         Pad pad = pad(helper, 1, 32, 16);
         String a = "gametest_engage_amove_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Mob> made = new ArrayList<>();
+        // units and pad chunks go when the test ends, however it ends (whenReady throws; asserts sit before cleanUp)
+        TestCleanup.atEnd(helper, () -> cleanUp(made, level, pad));
         Mob[] units = new Mob[2];
         helper.runAfterDelay(SETUP, () -> {
             units[0] = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), a, pad.x(3.5), pad.z(5.5), -90, made);
@@ -262,6 +266,8 @@ public class CombatEngageGameTests {
         Pad pad = pad(helper, 2, 24, 16);
         String a = "gametest_engage_ret_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Mob> made = new ArrayList<>();
+        // units and pad chunks go when the test ends, however it ends (whenReady throws; asserts sit before cleanUp)
+        TestCleanup.atEnd(helper, () -> cleanUp(made, level, pad));
         Mob[] units = new Mob[2];
         helper.runAfterDelay(SETUP, () -> {
             units[0] = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), a, pad.x(4.5), pad.z(8.5), -90, made);
@@ -300,6 +306,8 @@ public class CombatEngageGameTests {
         Pad pad = pad(helper, 3, 32, 16);
         String a = "gametest_engage_block_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Mob> made = new ArrayList<>();
+        // units and pad chunks go when the test ends, however it ends (whenReady throws; asserts sit before cleanUp)
+        TestCleanup.atEnd(helper, () -> cleanUp(made, level, pad));
         Mob[] units = new Mob[2];
         long[] contactAt = { -1 };
         String[] failed = { null };
@@ -371,6 +379,8 @@ public class CombatEngageGameTests {
         String a = "gametest_engage_big_a_" + helper.absolutePos(BlockPos.ZERO).asLong();
         String b = "gametest_engage_big_b_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Mob> made = new ArrayList<>();
+        // units and pad chunks go when the test ends, however it ends (whenReady throws; asserts sit before cleanUp)
+        TestCleanup.atEnd(helper, () -> cleanUp(made, level, pad));
         List<List<Mob>> sides = new ArrayList<>();
         Map<Mob, Long> firstTarget = new HashMap<>();
         List<Mob> inRange = new ArrayList<>();
@@ -455,6 +465,8 @@ public class CombatEngageGameTests {
         String a = "gametest_engage_wave_a_" + helper.absolutePos(BlockPos.ZERO).asLong();
         String b = "gametest_engage_wave_b_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Mob> made = new ArrayList<>();
+        // units and pad chunks go when the test ends, however it ends (whenReady throws; asserts sit before cleanUp)
+        TestCleanup.atEnd(helper, () -> cleanUp(made, level, pad));
         List<List<Mob>> sides = new ArrayList<>();
         Map<Mob, Long> firstTarget = new HashMap<>();
         long[] start = { -1 };

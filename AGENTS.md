@@ -210,8 +210,8 @@ All run on GitHub Actions, never on anyone's PC:
   plays a scripted tour (build menu, army, box select, fights at two zooms, capitol, river crossing, domes...) and
   publishes stills **and a 10-second video clip per still** to the `eyes` branch. Add a scene when a feature has no
   shot that shows it. A feature nobody has seen is not done.
-  Dispatch inputs: `shaders` (Oculus + Embeddium + a shader pack: `shader_pack` complementary - the pick for lovish's
-  PC - or bliss, which fogs out the RTS view; `rp` labpbr / integrated; `shader_options` KEY=VALUE;... for a pack
+  Dispatch inputs: `shaders` (Oculus + Embeddium + a shader pack: `shader_pack` complementary - screenshots in CI only: its author refused us
+  permission to ship it (Oct 29), so no pack we publish may contain it (tools/test_pack_no_complementary.py) - or bliss, which fogs out the RTS view; `rp` labpbr / integrated; `shader_options` KEY=VALUE;... for a pack
   setting A/B), `pack` ours / none, `look` (the world look), `build_run` (a BUILD run id whose jar to test). Each
   variant publishes to its own branch; `eyes-approve.yml` copies a lane's stills to `<lane>-approved`, the baseline
   of the picture regression (tools/eyes_diff.py).

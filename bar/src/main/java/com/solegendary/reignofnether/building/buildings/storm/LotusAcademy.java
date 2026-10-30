@@ -61,6 +61,8 @@ public class LotusAcademy extends ProductionBuilding {
         // the faction hero and its revive share a slot (the revive only shows while the hero is dead): design/hero_mode.md
         this.productions.add(ProductionItems.STORM_WITCH, Keybindings.abilitySlot8);
         this.productions.add(ProductionItems.STORM_WITCH_REVIVE, Keybindings.abilitySlot8);
+        this.productions.add(ProductionItems.THUNDERSTONE_MONK, Keybindings.abilitySlot9);   // T1 siege lobber (design/siege_t1.md)
+        this.productions.add(ProductionItems.SPARK_SAGE, Keybindings.hotkey11);   // essence caster, tier 1 (design/essence_casters.md; lovish, Oct 29)
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
         this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);

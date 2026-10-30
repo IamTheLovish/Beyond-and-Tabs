@@ -441,7 +441,7 @@ public class TierGateGameTests {
         // the soak's own scan (16 steps along each of 8 lines): the first step of each line alone never held a dry row
         Vec3[] starts = SkirmishGameTests.soakAnyRow(level, origin.getX() + 1500, origin.getZ(), 3);
         if (starts == null) {
-            helper.fail("no dry ground for three bot bases near x=" + (origin.getX() + 1500) + " (8 lines x 16 steps tried)");
+            helper.fail("no dry ground for three bot bases near x=" + (origin.getX() + 1500) + " (8 lines x 16 steps, in 3 regions, tried)");
             return;
         }
         var bots = BotServerEvents.brains;
@@ -580,10 +580,11 @@ public class TierGateGameTests {
         for (Resources r : ResourcesServerEvents.resourcesList)
             if (owner.equals(r.ownerName))
                 res = r;
-        return String.format("[T2Snap] %s min %d fighters %d metal/s %.1f energy/s %.0f (wind x%.2f) pool %.0f/%.0f winds %d/%d lab %d/%d t1req %d/%d t2lab %d/%d%s stall %.2f mex %d/%d blk %s",
+        return String.format("[T2Snap] %s min %d fighters %d metal/s %.1f energy/s %.0f (wind x%.2f) pool %.0f/%.0f winds %d/%d lab %d/%d t1req %d/%d t2lab %d/%d%s stall %.2f mex %d/%d tech %s blk %s",
             owner.substring(12).toLowerCase(java.util.Locale.ROOT), now / 1200, fighters, eco.effectiveMetalIncome(), eco.energyIncome,
             com.solegendary.reignofnether.resources.Wind.multiplier(), res == null ? 0f : res.getMetal(), res == null ? 0f : res.getEnergy(),
-            c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], t2Site, eco.stall, c[8], c[9], bot == null ? "?" : bot.lastBlockedReason.substring(0, Math.min(70, bot.lastBlockedReason.length())));
+            c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], t2Site, eco.stall, c[8], c[9], bot == null ? "?" : bot.techDiag,
+            bot == null ? "?" : bot.lastBlockedReason.substring(0, Math.min(160, bot.lastBlockedReason.length())));
     }
 
     private static String minutes(long ticks) {

@@ -32,7 +32,6 @@ col[...] = (0.33, 0.42, 0.19)
 col[sand] = (0.76, 0.68, 0.50); col[water] = (0.33, 0.43, 0.62)
 rng = np.random.default_rng(1); col *= (0.93 + 0.14 * rng.random((H, W)))[..., None]
 # ValleyField (python port: blocks grid at 2-block step, then upsampled bilinear)
-import importlib.util
 def valley():
     step = 2; gx = np.arange(-40, 120, step); gz = np.arange(-20, 140, step)
     GX, GZ = np.meshgrid(gx, gz)

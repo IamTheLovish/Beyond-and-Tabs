@@ -77,6 +77,13 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.CutlassRaiderUnit.createAttributes().build());
         evt.put(EntityRegistrar.REEF_GUARD_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.ReefGuardUnit.createAttributes().build());
         evt.put(EntityRegistrar.BOMBARD_CREW_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SUNFIRE_MANGONEL_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SKULL_HURLER_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BOULDER_CHUCKER_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BURL_SLINGER_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.POWDER_MONKEY_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.THUNDERSTONE_MONK_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.STEAM_LOBBER_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
         evt.put(EntityRegistrar.TIDE_PRIEST_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.TidePriestUnit.createAttributes().build());
         evt.put(EntityRegistrar.HARPOONER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.HarpoonerUnit.createAttributes().build());
         evt.put(EntityRegistrar.FLAK_SWIVEL_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit.createAttributes().build());
@@ -101,6 +108,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.EARTHSHAKER_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.EarthshakerUnit.createAttributes().build());
         evt.put(EntityRegistrar.GRAVITY_MONK_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.GravityMonkUnit.createAttributes().build());
         evt.put(EntityRegistrar.MIRROR_MAGE_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.MirrorMageUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SPARK_SAGE_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.SparkSageUnit.createAttributes().build());
         evt.put(EntityRegistrar.SEER_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.SeerUnit.createAttributes().build());
         evt.put(EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit.createAttributes().build());
         evt.put(EntityRegistrar.PHOENIX_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.PhoenixUnit.createAttributes().build());
@@ -125,6 +133,10 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit.createAttributes().build());
         evt.put(EntityRegistrar.WITCH_UNIT.get(), WitchUnit.createAttributes().build());
         evt.put(EntityRegistrar.EVOKER_UNIT.get(), EvokerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ANGEL_CALLER_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.AngelCallerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.MENDER_ANGEL_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.MenderAngelUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SERAPH_ARCHER_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.SeraphArcherUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SWORD_SERAPH_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.SwordSeraphUnit.createAttributes().build());
         evt.put(EntityRegistrar.ENDERMAN_UNIT.get(), EndermanUnit.createAttributes().build());
         evt.put(EntityRegistrar.WARDEN_UNIT.get(), WardenUnit.createAttributes().build());
         evt.put(EntityRegistrar.RAVAGER_UNIT.get(), RavagerUnit.createAttributes().build());
@@ -161,6 +173,8 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipUnit.createAttributes().build());
         evt.put(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.createAttributes().build());
         evt.put(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.RepairCrawlerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SOUL_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.SoulEngineerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GHOST_FURNACE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.GhostFurnaceUnit.createAttributes().build());
         evt.put(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderUnit.createAttributes().build());
         // hero slice 2: the seven faction heroes (their body's attributes plus the hero set and the kit's stats)
         evt.put(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.DawnPaladinUnit.createAttributes().build());
@@ -265,6 +279,13 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.CUTLASS_RAIDER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.REEF_GUARD_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.BOMBARD_CREW_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SUNFIRE_MANGONEL_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SKULL_HURLER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.BOULDER_CHUCKER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.BURL_SLINGER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.POWDER_MONKEY_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.THUNDERSTONE_MONK_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.STEAM_LOBBER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.TIDE_PRIEST_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.HARPOONER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FLAK_SWIVEL_UNIT_SPAWN_EGG);
@@ -288,6 +309,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.EARTHSHAKER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.GRAVITY_MONK_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MIRROR_MAGE_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SPARK_SAGE_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SEER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.LANTERN_FORTRESS_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.PHOENIX_UNIT_SPAWN_EGG);
@@ -315,6 +337,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.GYROCOPTER_GUNSHIP_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.DRILL_BURROWER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.REPAIR_CRAWLER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SOUL_ENGINEER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.CLOCKWORK_SPIDER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.IRON_LEVIATHAN_ENGINE_UNIT_SPAWN_EGG);
         }
