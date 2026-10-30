@@ -58,8 +58,8 @@ TARGETS = {
     # in-game stdev at 0.036 vs the benchmark's 0.057): procedural clover (clover_lawn) - std 0.045 -> 0.065 in 2-3
     # value bands of plants plus the clump shadows, a warm-cool hue spread (sat 0.05 -> 0.08), the mean unchanged
     # (the environment palette); soften 2.4 -> 1.0 and no mid boost (no scan grain to tame)
-    "grass_block_top":  dict(luma=0.645, std=0.065, sat=0.08, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=0.6,
-                             shoulder=0.82),
+    "grass_block_top":  dict(luma=0.645, std=0.065, sat=0.08, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=0.4,
+                             shoulder=0.82),   # r36: soften 0.6 -> 0.4, crisper leaflet rims
     "grass_block_side": dict(luma=0.31, std=0.050, sat=0.34, lf=0.0, tilt=14.0, smooth=26, pore=48, toe=0.235),
     # r34: tilt 16 -> 8 - the turf lip is a rounded roll with hanging blades; at 16 the solver's strength (the band is
     # thin, so its mip tilt is small) made every blade edge a wall whose normals drew a black line under the lip
@@ -281,7 +281,9 @@ TARGETS = {
     "emerald_block": dict(luma=0.58, std=0.100, sat=0.72, tilt=14.0, smooth=253, pore=0, f0=15),
     # r33 (critic, eyes 41029731853: the blues "crushed"): lapis lifted to a deep ultramarine that reads blue from
     # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
-    "lapis_block": dict(luma=0.30, std=0.050, sat=0.72, tilt=7.6, smooth=60, pore=0, f0=15),
+    # r36 (lovish lifted its protection; in game it read darker and duller than vanilla): a saturated, brighter
+    # ultramarine (0.30 -> 0.38, sat 0.72 -> 0.86) with more gold pyrite
+    "lapis_block": dict(luma=0.38, std=0.060, sat=0.86, tilt=7.6, smooth=70, pore=0, f0=15),
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     # r33 (critic, eyes 41029731853: 206/204/188 "greenish grey, not white"): neutral (sat 0 = greyscale - the old
     # 0.04 fit blew a near-grey base's green up), luma 0.80 -> 0.87, a faint concrete mottle (std 0.008 -> 0.012)
@@ -1236,6 +1238,70 @@ PROC_VARIANT_BLOCKS["bricks"] = ("cube_all", {"all": "bricks"})
 for _k in range(2, PROC_VARIANTS + 1):
     PROC_VARIANT_OF["bricks_v%d" % _k] = "bricks"
     TARGETS["bricks_v%d" % _k] = dict(TARGETS["bricks"])
+# round 36: the dyed families (DYES, colour_targets) and the bookshelf - appended last; red_ / blue_terracotta and
+# terracotta keep their r31-r33 entries above (the family's anchors)
+DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
+    "white":      ((0.91, 0.91, 0.90), (0.82, 0.84, 0.84), (0.82, 0.70, 0.63)),
+    "light_gray": ((0.58, 0.58, 0.55), (0.50, 0.50, 0.46), (0.54, 0.43, 0.39)),
+    "gray":       ((0.28, 0.30, 0.31), (0.23, 0.24, 0.25), (0.26, 0.20, 0.17)),
+    "black":      ((0.11, 0.11, 0.12), (0.07, 0.07, 0.09), (0.16, 0.10, 0.08)),
+    "brown":      ((0.45, 0.29, 0.17), (0.38, 0.24, 0.13), (0.31, 0.21, 0.14)),
+    "red":        ((0.64, 0.17, 0.15), (0.57, 0.14, 0.13), (0.57, 0.25, 0.19)),
+    "orange":     ((0.94, 0.48, 0.10), (0.88, 0.40, 0.03), (0.64, 0.34, 0.15)),
+    "yellow":     ((0.96, 0.78, 0.18), (0.94, 0.70, 0.10), (0.73, 0.53, 0.15)),
+    "lime":       ((0.48, 0.76, 0.14), (0.40, 0.68, 0.11), (0.42, 0.47, 0.20)),
+    "green":      ((0.33, 0.44, 0.12), (0.29, 0.37, 0.14), (0.30, 0.33, 0.17)),
+    "cyan":       ((0.11, 0.58, 0.60), (0.09, 0.50, 0.56), (0.34, 0.38, 0.38)),
+    "light_blue": ((0.26, 0.70, 0.86), (0.16, 0.56, 0.78), (0.45, 0.43, 0.54)),
+    "blue":       ((0.22, 0.26, 0.66), (0.18, 0.19, 0.58), (0.30, 0.36, 0.52)),
+    "purple":     ((0.55, 0.28, 0.76), (0.43, 0.14, 0.64), (0.47, 0.28, 0.35)),
+    "magenta":    ((0.76, 0.28, 0.72), (0.68, 0.19, 0.64), (0.59, 0.35, 0.43)),
+    "pink":       ((0.93, 0.56, 0.68), (0.85, 0.40, 0.56), (0.63, 0.31, 0.31)),
+}
+
+
+def colour_targets(rgb, std, **kw):
+    """TARGETS entry for a painted colour: its own luma and saturation (the fit keeps the hue), the given spread."""
+    rgb = np.asarray(rgb, dtype=np.float64)
+    L = float(rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722)
+    sat = float((rgb.max() - rgb.min()) / max(rgb.max(), 1e-6))
+    return dict(luma=L, std=std, sat=sat, **kw)
+
+
+R36_FAMILY = []
+for _c, (_w, _k, _t) in DYES.items():
+    TARGETS[_c + "_wool"] = colour_targets(_w, 0.030, tilt=6.0, smooth=8, pore=48)
+    R36_FAMILY.append(_c + "_wool")
+for _c, (_w, _k, _t) in DYES.items():
+    if _c + "_concrete" not in TARGETS:              # white_concrete keeps its r33 entry (m_clayish, neutral)
+        TARGETS[_c + "_concrete"] = colour_targets(_k, 0.018, tilt=3.0, smooth=64, pore=10)
+        R36_FAMILY.append(_c + "_concrete")
+for _c, (_w, _k, _t) in DYES.items():
+    if _c + "_terracotta" not in TARGETS:
+        TARGETS[_c + "_terracotta"] = colour_targets(_t, 0.022, tilt=3.5, smooth=36, pore=30, soften=1.0)
+        R36_FAMILY.append(_c + "_terracotta")
+TARGETS["bookshelf"] = dict(luma=0.36, std=0.090, sat=0.42, tilt=14.0, smooth=40, pore=24)
+R36_FAMILY.append("bookshelf")
+SEED_ORDER = SEED_ORDER + tuple(R36_FAMILY)       # (the order check in build(): appended last)
+# round 37: the 14 other stained glasses (+ pane tops) from the DYES wool hues, chiseled quartz, the chiseled
+# bookshelf's four textures, and smooth stone's flagstone sheet (GIANT) - appended last
+R37 = []
+for _c, (_w, _k, _t) in DYES.items():
+    if _c in ("red", "cyan"):
+        continue
+    _rgb = tuple(min(1.0, 0.25 + 0.75 * v) for v in _w)
+    TARGETS[_c + "_stained_glass"] = dict(colour_targets(_rgb, 0.030, tilt=4.0, smooth=235, pore=0, hspan=0.05))
+    TARGETS[_c + "_stained_glass_pane_top"] = dict(colour_targets(_rgb, 0.030, tilt=4.0, smooth=200, pore=0))
+    R37 += [_c + "_stained_glass", _c + "_stained_glass_pane_top"]
+TARGETS["chiseled_quartz_block"] = dict(luma=0.90, std=0.030, sat=0.0, tilt=10.0, smooth=140, pore=4)
+TARGETS["chiseled_quartz_block_top"] = dict(luma=0.90, std=0.025, sat=0.0, tilt=6.0, smooth=140, pore=4)
+TARGETS["chiseled_bookshelf_top"] = dict(luma=0.50, std=0.055, sat=0.40, tilt=8.0, smooth=45, pore=24)
+TARGETS["chiseled_bookshelf_side"] = dict(luma=0.46, std=0.070, sat=0.40, tilt=12.0, smooth=45, pore=24)
+TARGETS["chiseled_bookshelf_empty"] = dict(luma=0.36, std=0.090, sat=0.40, tilt=14.0, smooth=40, pore=24)
+TARGETS["chiseled_bookshelf_occupied"] = dict(luma=0.38, std=0.090, sat=0.42, tilt=14.0, smooth=40, pore=24)
+R37 += ["chiseled_quartz_block", "chiseled_quartz_block_top", "chiseled_bookshelf_top", "chiseled_bookshelf_side",
+        "chiseled_bookshelf_empty", "chiseled_bookshelf_occupied"]
+SEED_ORDER = SEED_ORDER + tuple(R37)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1536,8 +1602,8 @@ def m_lapis(F, n):
     shade = 0.85 + 0.25 * norm01(mott)
     alb = tint((0.10, 0.20, 0.62), shade)                    # r33: a cleaner ultramarine (less green in the blue)
     alb = alb * (1 - 0.5 * wisp[..., None]) + 0.5 * wisp[..., None] * np.array([0.55, 0.58, 0.62])   # calcite veins
-    fleck = F.noise(40, 90, 0.0) > 2.6
-    alb[fleck] = (0.85, 0.70, 0.30)
+    fleck = smoothstep(2.0, 2.6, F.noise(30, 70, 0.0))      # r36: more, larger pyrite flecks (2-3 texels)
+    alb = alb * (1 - fleck[..., None]) + fleck[..., None] * np.array([0.78, 0.60, 0.20])
     b = frame(F, 0.06, 0.012)
     return 0.6 + 0.1 * mott * b, alb * (0.8 + 0.2 * b)[..., None]
 
@@ -1846,8 +1912,11 @@ def m_copper(F, n, stage):
     face = smoothstep(0.005, 0.026, edge)
     ham = F.noise(4, 14, 0.6)
     br = brushed(F, 0.8)
-    H = 0.35 + 0.5 * smoothstep(0.005, 0.016, edge) + 0.02 * ham + 0.010 * (br - 0.5)
-    metal = tint((0.82, 0.46, 0.30), (0.95 + 0.06 * ham + 0.03 * (br - 0.5)) * (0.60 + 0.40 * face))
+    # r36 (lovish: "copper rims brighter - the cut seams catch the light"): a chamfered arris round each plate, a
+    # step lighter in the colour and raised in the height, so the seams draw a bright line under the sun
+    arris = smoothstep(0.016, 0.026, edge) * (1 - smoothstep(0.026, 0.050, edge))
+    H = 0.35 + 0.5 * smoothstep(0.005, 0.016, edge) + 0.06 * arris + 0.02 * ham + 0.010 * (br - 0.5)
+    metal = tint((0.82, 0.46, 0.30), (0.95 + 0.06 * ham + 0.03 * (br - 0.5) + 0.22 * arris) * (0.60 + 0.40 * face))
     smooth_metal = np.clip(170 + 40 * (br - 0.5) - 20 * (1 - face), 40, 235)
     if stage == 0:
         return H, metal, np.full(H.shape, 234), smooth_metal
@@ -2159,6 +2228,19 @@ def m_quartz(F, n, kind):
         flutes = np.sin(math.pi * sc) ** 2 * (x > fillet / 2) * (x < 1 - fillet / 2)   # 1 deep in the scoop
         H = 0.62 - 0.09 * flutes - 0.015 * vein
         shade = 0.95 - 0.025 * flutes - 0.06 * vein
+    elif kind == "chiseled":
+        # round 37: a carved panel - a raised border with a chamfer, a recessed field with a raised diamond boss
+        bev = frame(F, 0.10, 0.025)                                    # 1 inside the border
+        du, dv = np.abs(F.u - 0.5), np.abs(F.v - 0.5)
+        diamond = 1 - smoothstep(0.17, 0.21, du + dv)                  # the boss
+        dedge = smoothstep(0.13, 0.17, du + dv) * diamond
+        H = 0.70 - 0.18 * bev + 0.16 * diamond - 0.015 * vein
+        shade = (0.95 - 0.05 * vein) * (1 - 0.05 * bev + 0.04 * diamond + 0.03 * dedge)
+    elif kind == "chiseled_top":
+        bev = frame(F, 0.08, 0.02)
+        ring = frame(F, 0.20, 0.16)
+        H = 0.55 + 0.25 * bev - 0.12 * ring
+        shade = (0.95 - 0.05 * vein) * (0.96 + 0.04 * bev - 0.03 * ring)
     elif kind == "pillar_top":
         bev = frame(F, 0.10, 0.02)
         inner = frame(F, 0.22, 0.17)
@@ -2496,6 +2578,164 @@ def m_clay_bricks(F, n):
     alb = base * shade[..., None]
     mortar = np.array([0.66, 0.62, 0.55]) * (0.80 + 0.06 * grain)[..., None]
     alb = alb * face[..., None] + mortar * (1 - face[..., None])
+    return H, np.clip(alb, 0, 1)
+
+
+# ------------------------------------------------------------------ round 36: the dyed families -------------------
+# The build census's most-used blocks still vanilla's: wool, concrete and the coloured terracottas, 16 colours each -
+# ONE recipe per family, the colour from a table (our own hues, kept natural: lime a clean lime, purple a lavender-
+# purple, cyan mid-bright, orange clean), the values stepped so neighbours separate at 32 px. The targets are the
+# table colour's own luma and saturation (colour_targets), so the fit keeps the hue and sets only the spread.
+def m_wool(F, n, rgb):
+    """Wool: a felted nap - matted fibre with no direction (round 37: a plain weave of 22 or 14 yarns per block both
+    read as STRIPES at 32 px in the lit preview, wool_compare.png; the felt reads as cloth), soft tufts under it, a
+    slow drift of tone; soft and matte (the smoothness and tilt from TARGETS: no specular)."""
+    nap = F.noise(10, 36, 0.4)
+    fibre = F.noise(30, 80, 0.2)
+    tuft = F.fbm(5, 3, 0.55)
+    drift = F.fbm(2, 3, 0.5)
+    H = 0.5 + 0.06 * nap + 0.02 * fibre + 0.05 * tuft
+    shade = 0.92 + 0.06 * nap + 0.015 * fibre + 0.06 * tuft + 0.04 * drift
+    return H, tint(rgb, shade)
+
+
+def m_concrete(F, n, rgb):
+    """Concrete: a smooth cast face - faint form marks (a few broad straight bands where the shuttering boards met),
+    a soft cloud of tone, sparse small air pores; slightly satin (TARGETS)."""
+    boards = np.floor(F.v * 3 + 0.3).astype(int)
+    mark = 1 - smoothstep(0.0, 0.012, np.abs(((F.v * 3 + 0.3) % 1.0) - 0.5) / 3)     # a hairline where boards met
+    btone = (F.rng.random(4) - 0.5)[boards % 4] * 0.03
+    cloud = F.fbm(2, 3, 0.55)
+    pores = smoothstep(0.90, 1.0, norm01(F.noise(14, 36, 0.3))) * smoothstep(0.3, 0.7, norm01(F.noise(1, 4, 0.5)))
+    fine = F.noise(20, 60, 0.3)
+    H = 0.6 + 0.02 * cloud + 0.006 * fine - 0.06 * pores - 0.015 * mark
+    shade = 0.94 + 0.05 * cloud + btone + 0.004 * fine - 0.12 * pores - 0.04 * mark
+    return H, tint(rgb, shade)
+
+
+def m_bookshelf(F, n):
+    """Bookshelf (the side): three shelves of books in an oak frame - spines of varied width, colour and height,
+    some leaning, a pale title band on each, the shelf and the books' tops in real depth (the books recessed from
+    the frame, AO in the gaps, the gap between two books a shadow, never a black hole)."""
+    rng = F.rng
+    plank = tint((0.66, 0.51, 0.31), 0.9 + 0.08 * F.noise(2, 40, 0.8, sx=10.0, sy=1.0))
+    H = np.full((n, n), 0.85)
+    alb = plank.copy()
+    shelves = [(0.06, 0.34), (0.39, 0.66), (0.71, 0.95)]       # (top, bottom) of each books row, v
+    side = 0.04                                                 # the frame's uprights
+    palette = [(0.55, 0.18, 0.16), (0.20, 0.30, 0.55), (0.25, 0.42, 0.25), (0.48, 0.32, 0.18), (0.72, 0.62, 0.42),
+               (0.30, 0.22, 0.40), (0.62, 0.45, 0.20), (0.18, 0.18, 0.20), (0.60, 0.30, 0.35), (0.35, 0.50, 0.55)]
+    for top, bot in shelves:
+        u = side
+        while u < 1 - side - 0.02:
+            w = 0.035 + 0.06 * rng.random()
+            w = min(w, 1 - side - u)
+            if w < 0.02:
+                break
+            col = np.array(palette[rng.integers(len(palette))]) * (0.85 + 0.3 * rng.random())
+            h = 0.72 + 0.28 * rng.random()                      # the book's height: a share of the shelf
+            lean = (rng.random() - 0.5) * 0.02 * (rng.random() < 0.3)
+            bt = bot - h * (bot - top)
+            depth = 0.55 + 0.15 * rng.random()                  # how far back the spine sits
+            uu = F.u - lean * (F.v - bot) / (bot - top)
+            inb = (uu >= u) & (uu < u + w - 0.006) & (F.v >= bt) & (F.v < bot)
+            # the spine: rounded across its width, a pale title band near the top, bands at the head and tail
+            x = (uu - u) / max(w - 0.006, 1e-6)
+            round_ = np.sqrt(np.clip(1 - (2 * x - 1) ** 2, 0, 1))
+            band = smoothstep(0.0, 0.03, (F.v - bt) / (bot - bt) - 0.12) * (1 - smoothstep(0.0, 0.03, (F.v - bt) / (bot - bt) - 0.22))
+            sp = col * (0.75 + 0.35 * round_)[..., None] * (1 + 0.5 * band[..., None] * np.array([1.1, 1.0, 0.8]))
+            alb = np.where(inb[..., None], np.clip(sp, 0, 1), alb)
+            H = np.where(inb, depth + 0.10 * round_, H)
+            # the gap beside it: the shelf back in shadow
+            gap = (uu >= u + w - 0.006) & (uu < u + w) & (F.v >= top) & (F.v < bot)
+            alb = np.where(gap[..., None], np.array([0.12, 0.09, 0.06]), alb)
+            H = np.where(gap, 0.25, H)
+            # above a short book: the shelf back (dark wood) above it
+            above = (uu >= u) & (uu < u + w - 0.006) & (F.v >= top) & (F.v < bt)
+            alb = np.where(above[..., None], plank * 0.35, alb)
+            H = np.where(above, 0.25, H)
+            u += w
+        # the shelf board's front edge under the books
+        lip = (F.v >= bot) & (F.v < bot + 0.05)
+        alb = np.where(lip[..., None], plank * 1.05, alb)
+        H = np.where(lip, 0.9, H)
+    grain = F.noise(20, 60, 0.3)
+    return H + 0.01 * grain, np.clip(alb, 0, 1)
+
+
+# ------------------------------------------------------------------ round 37: chiseled bookshelf, flagstones -------
+def m_chiseled_bookshelf(F, n, face):
+    """Chiseled bookshelf (vanilla's UV: six slots, three across in two rows, x 1-5 / 6-10 / 11-15, y 1-7 / 9-15 of
+    16). 'empty': the slots are shallow recesses showing the shelf's dark oak back - a recess with AO, never a black
+    hole (the critic on sampler 3); 'occupied': each slot holds three or four books; 'side': the oak frame with the
+    two shelf grooves; 'top': planks with a border."""
+    x, y = F.u * 16, F.v * 16
+    grain = F.noise(2, 40, 0.8, sx=10.0, sy=1.0)
+    plank = tint((0.66, 0.51, 0.31), 0.9 + 0.08 * grain)
+    H = np.full((n, n), 0.85) + 0.01 * F.noise(20, 60, 0.3)
+    alb = plank.copy()
+    if face == "top":
+        bev = frame(F, 0.06, 0.012)
+        return H - 0.08 * (1 - bev), alb * (0.92 + 0.08 * bev)[..., None]
+    if face == "side":
+        groove = ((np.abs(y - 8.0) < 0.5) | (y < 0.6) | (y > 15.4)).astype(np.float64)
+        return H - 0.15 * groove, alb * (1 - 0.18 * groove)[..., None]
+    rng = F.rng
+    palette = [(0.55, 0.18, 0.16), (0.20, 0.30, 0.55), (0.25, 0.42, 0.25), (0.48, 0.32, 0.18), (0.72, 0.62, 0.42),
+               (0.30, 0.22, 0.40), (0.62, 0.45, 0.20), (0.60, 0.30, 0.35), (0.35, 0.50, 0.55)]
+    for row, (y0, y1) in enumerate(((1.0, 7.0), (9.0, 15.0))):
+        for col, (x0, x1) in enumerate(((1.0, 5.0), (6.0, 10.0), (11.0, 15.0))):
+            slot = (x >= x0) & (x < x1) & (y >= y0) & (y < y1)
+            inset = np.minimum(np.minimum(x - x0, x1 - x), np.minimum(y - y0, y1 - y))
+            shadow = 1 - smoothstep(0.0, 1.2, inset)                   # the recess's walls in shadow
+            back = plank * 0.45 * (1 - 0.35 * shadow)[..., None]
+            alb = np.where(slot[..., None], back, alb)
+            H = np.where(slot, 0.45, H)
+            if face == "occupied":
+                u = x0 + 0.2
+                while u < x1 - 0.5:
+                    w = 0.8 + 1.2 * rng.random()
+                    w = min(w, x1 - 0.2 - u)
+                    colr = np.array(palette[rng.integers(len(palette))]) * (0.85 + 0.3 * rng.random())
+                    h = (y1 - y0) * (0.70 + 0.30 * rng.random())
+                    book = (x >= u) & (x < u + w - 0.15) & (y >= y1 - h) & (y < y1)
+                    t = (x - u) / max(w - 0.15, 1e-6)
+                    round_ = np.sqrt(np.clip(1 - (2 * t - 1) ** 2, 0, 1))
+                    band = ((y - (y1 - h)) / h > 0.12) & ((y - (y1 - h)) / h < 0.22)
+                    sp = colr * (0.75 + 0.35 * round_)[..., None] * (1 + 0.5 * band[..., None])
+                    alb = np.where(book[..., None], np.clip(sp, 0, 1), alb)
+                    H = np.where(book, 0.62 + 0.10 * round_, H)
+                    u += w
+    return H, np.clip(alb, 0, 1)
+
+
+def m_flagstone_sheet(F, blocks):
+    """Round 37: smooth stone as a FLAGSTONE floor over a sheet of blocks x blocks (Athena's giant model): large
+    irregular pale limestone slabs (~3 per block across, many straddling the block edges - no block grid), set with
+    wider dark gaps, each slab its own subtle tone, its edges worn and slightly domed, hairline dark cracks across
+    some slabs, a fine sawn grain. F is a Field of the sheet's size; the single-block smooth_stone texture stays the
+    slab's and the particle's."""
+    n = F.n
+    cells = int(round((1.6 * blocks) ** 2))              # ~1.6 slabs across per block: large flags
+    f1, f2, idx, k = F.voronoi(cells, 1.0)
+    wu, wv = 0.004 * F.noise(1 * blocks, 3 * blocks, 0.6), 0.004 * F.noise(1 * blocks, 3 * blocks, 0.6)
+    f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
+    idx = idx[(np.round((F.v + wv) * n).astype(int)) % n, (np.round((F.u + wu) * n).astype(int)) % n]
+    edge = f2 - f1
+    gap_w = 0.008 / blocks                                # ~0.008 block: a wide joint
+    slab = smoothstep(gap_w, gap_w + 0.02 / blocks, edge)
+    worn = smoothstep(gap_w, gap_w + 0.10 / blocks, edge)   # the domed, worn edge: a soft shoulder
+    tone = (0.93 + 0.12 * F.rng.random(k))[idx]
+    cloud = F.fbm(2 * blocks, 3, 0.6)
+    grain = F.noise(6 * blocks, 20 * blocks, 0.4)
+    pores = smoothstep(1.9, 2.6, F.noise(10 * blocks, 30 * blocks, 0.0))
+    line = np.abs(F.warp(F.noise(1 * blocks, 4 * blocks, 1.0), 0.02 * F.noise(3, 9), 0.02 * F.noise(3, 9)))
+    where = smoothstep(0.55, 0.85, norm01(F.noise(1, 3 * blocks, 0.5)))
+    crack = (1 - smoothstep(0.0, 0.05, line)) * where * slab
+    H = 0.30 + 0.55 * np.sqrt(worn) * slab + 0.015 * grain - 0.03 * pores - 0.12 * crack
+    shade = tone * (0.82 + 0.16 * worn) * (0.95 + 0.05 * cloud + 0.02 * grain - 0.08 * pores - 0.30 * crack)
+    joint = np.array([0.40, 0.39, 0.38]) * (0.9 + 0.1 * grain)[..., None]
+    alb = tint((0.55, 0.57, 0.61), shade) * slab[..., None] + joint * (1 - slab[..., None])
     return H, np.clip(alb, 0, 1)
 
 
@@ -3060,6 +3300,9 @@ def m_stem(F, n, base, vein):
 
 # ------------------------------------------------------------------ round 16: cut-out and see-through blocks ------
 STAINED = {"red": (0.62, 0.12, 0.10), "cyan": (0.10, 0.48, 0.55)}   # the stained glass the buildings use
+# round 37: the other 14 stained glasses, their tint from the wool hue of DYES (a glass is a lighter, cleaner veil
+# of the dye); red and cyan keep their r16 colours above
+STAINED_R37 = {}
 
 
 def periodic_path(F, along, count=3, amp=0.06):
@@ -3100,10 +3343,14 @@ def m_glass(F, n, rgb, kind):
     """Glass: a pane with a thin bevelled edge and a few faint diagonal glints. kind 'clear' = the plain glass block
     (vanilla draws it CUT-OUT: alpha 0 or 1, so only the edge and the glints show), 'stained' and 'tinted' are
     translucent (the alpha blends: stained a coloured veil, tinted nearly opaque and dark). 'edge' = a pane's top
-    strip (glass_pane_top: the edge of the sheet seen end-on - all glass, opaque)."""
+    strip (glass_pane_top: the edge of the sheet seen end-on - all glass, opaque).
+    Round 36 (lovish: "faint frost and droplets, high smoothness for the sky reflection, dark slim frame lines,
+    still clearly see-through"): a slimmer, darker frame line; a faint FROST creeping in from the corners (a feathery
+    noise, pale, in the alpha on the cut-out block) and a few round DROPLETS (a bright rim, a dark heart, a dome in
+    the normal), the rest of the pane open; glass-smooth (235) everywhere but the frame."""
     uc, vc = F.u + 0.5 / n, F.v + 0.5 / n                      # texel centres: the same rim width on every side
     d = np.minimum(np.minimum(uc, 1 - uc), np.minimum(vc, 1 - vc))
-    rim = 1 - smoothstep(0.03, 0.045, d)                       # ~1/25 block
+    rim = 1 - smoothstep(0.018, 0.030, d)                      # ~1/40 block: slim
     g = ((F.u + F.v) * 1.0 + 0.15 * F.noise(1, 3, 0.5) * 0.1) % 1.0
     glint = (1 - smoothstep(0.004, 0.012, np.abs(g - 0.30))) + 0.6 * (1 - smoothstep(0.003, 0.009, np.abs(g - 0.36)))
     glint *= smoothstep(0.2, 0.6, F.noise(1, 3, 0.5) * 0.5 + 0.5) * (1 - rim)
@@ -3112,17 +3359,36 @@ def m_glass(F, n, rgb, kind):
     if kind == "edge":
         shade = 0.9 + 0.05 * F.noise(2, 8, 0.6, sx=1.0, sy=6.0)   # streaks along v: the model maps column u 7-9
         return dict(H=0.5 + 0.02 * smudge, alb=tint(base * 0.85, shade))
+    # frost: feathery, from the corners, thinning toward the middle of the pane
+    corner = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
+    feather = norm01(F.blur(F.fbm(6, 3, 0.6) + 0.5 * F.noise(14, 40, 0.3), 1.2))
+    frost = smoothstep(0.62, 0.9, feather * (0.2 + 1.1 * smoothstep(0.38, 0.70, corner))) * (1 - rim)
+    # droplets: a few round drops, each a dome with a bright rim and a darker heart
+    f1, f2, idx, k = F.voronoi(60, 1.0)
+    on = (F.rng.random(k) < 0.22)[idx]
+    rad = (0.012 + 0.012 * F.rng.random(k))[idx]
+    dr = np.clip(1 - (f1 / np.maximum(rad, 1e-6)) ** 2, 0, 1) * on * (1 - rim)
+    drop = dr > 0.02
+    drop_rim = smoothstep(0.0, 0.35, dr) * (1 - smoothstep(0.35, 0.8, dr))
     alb = tint(base, 0.95 + 0.03 * smudge)
-    alb = alb * (1 - 0.25 * rim[..., None]) + 0.25 * rim[..., None] * (base * 0.6)   # the edge reads darker
+    alb = alb * (1 - 0.45 * rim[..., None]) + 0.45 * rim[..., None] * (base * 0.35)   # the frame line dark
     alb = np.clip(alb + 0.35 * glint[..., None], 0, 1)
+    alb = alb * (1 - frost[..., None]) + frost[..., None] * np.clip(base * 1.08, 0, 1)   # frost pale
+    alb = np.where(drop[..., None], np.clip(base * (0.75 + 0.45 * drop_rim)[..., None], 0, 1), alb)
+    if kind == "stained":
+        # round 37 (cathedral-window richness at 32 px): a faint inner lead line a tenth of the block in from the
+        # frame, and a slow mottle of the tint (hand-blown glass is never one even colour)
+        lead = (1 - smoothstep(0.004, 0.010, np.abs(d - 0.10))) * (1 - rim)
+        mottle = 1 + 0.10 * F.noise(2, 6, 0.6) + 0.04 * F.noise(6, 16, 0.4)
+        alb = np.clip(alb * mottle[..., None] * (1 - 0.55 * lead[..., None]), 0, 1)
     if kind == "clear":
-        alpha = ((rim > 0.5) | (glint > 0.35)).astype(np.float64)
+        alpha = ((rim > 0.5) | (glint > 0.35) | (frost > 0.5) | drop).astype(np.float64)
     elif kind == "stained":
-        alpha = np.clip(0.42 + 0.03 * smudge + 0.45 * rim + 0.3 * glint, 0, 1)
+        alpha = np.clip(0.52 + 0.03 * smudge + 0.40 * rim + 0.3 * glint + 0.2 * frost + 0.3 * dr, 0, 1)   # r37: a richer veil
     else:   # tinted
-        alpha = np.clip(0.80 + 0.02 * smudge + 0.15 * rim + 0.1 * glint, 0, 1)
-    H = 0.5 + 0.35 * rim + 0.02 * smudge
-    return dict(H=H, alb=alb, alpha=alpha, smooth=np.where(rim > 0.5, 190.0, 235.0))
+        alpha = np.clip(0.80 + 0.02 * smudge + 0.15 * rim + 0.1 * glint + 0.1 * frost, 0, 1)
+    H = 0.5 + 0.35 * rim + 0.02 * smudge + 0.12 * np.sqrt(dr) + 0.03 * frost
+    return dict(H=H, alb=alb, alpha=alpha, smooth=np.where(rim > 0.5, 150.0, np.where(frost > 0.5, 120.0, 235.0)))
 
 
 def m_ladder(F, n):
@@ -3547,6 +3813,8 @@ def clover_lawn(F, n):
     tone = np.array([0.84, 1.0, 1.16])[band] * (0.97 + 0.06 * rng.random(count))
     lean = rng.standard_normal(count)
     rot = rng.random(count) * 2 * math.pi
+    tilt_a = rng.random(count) * 2 * math.pi          # r36: each plant leans toward its own light direction
+    tx, ty = np.cos(tilt_a), np.sin(tilt_a)
     scale = 0.8 + 0.4 * rng.random(count)
     order = np.argsort(level)               # back to front
     r0 = int(leaf_r * 1.6) + 3
@@ -3574,9 +3842,10 @@ def clover_lawn(F, n):
             above = inside & (h > sub)
             H[np.ix_(win_y, win_x)] = np.where(above, h, sub)
             # the leaflet's shade: its tone band, a lit centre, a darker rim (self-shadow of the leaf above)
-            rim = 1 - 0.30 * (1 - smoothstep(0.0, 0.25, dome))        # a dark rim: the leaf's edge over its neighbour
+            rim = 1 - 0.42 * (1 - smoothstep(0.0, 0.30, dome))        # a dark rim: the leaf's edge over its neighbour
             vein = 1 + 0.10 * (1 - smoothstep(0.0, 0.12, np.abs(across))) * (along > -0.2)
-            lit = tone[i] * (0.70 + 0.40 * dome) * (1 + 0.12 * (along * ox - across * oy)) * rim * vein
+            tiltl = (dx * tx[i] + dy * ty[i]) / R                       # r36: the leaf's own tilt (one side lit)
+            lit = tone[i] * (0.70 + 0.40 * dome) * (1 + 0.20 * tiltl) * rim * vein
             s_sub = shade[np.ix_(win_y, win_x)]
             shade[np.ix_(win_y, win_x)] = np.where(above, lit, s_sub)
             w_sub = warm[np.ix_(win_y, win_x)]
@@ -4061,7 +4330,7 @@ PNG_OPTS = dict(compress_level=6)
 CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"}   # alpha-cut leaves (azalea is never tinted)
 # round 16: textures with holes or see-through parts (previewed over a dark backdrop, like the leaves)
 CUTOUT |= {"mangrove_roots_side", "mangrove_roots_top", "ladder", "iron_bars", "lantern", "soul_lantern", "cobweb",
-           "glass"} | {c + "_stained_glass" for c in STAINED} | {"tinted_glass"}
+           "glass"} | {c + "_stained_glass" for c in STAINED} | {c + "_stained_glass" for c in DYES} | {"tinted_glass"}
 
 
 # Vanilla draws these blocks CUT-OUT WITHOUT MIPMAPS (RenderType.cutout binds the atlas with mipmap off): fine for its
@@ -4170,7 +4439,7 @@ def write_models():
         blockstate(block, {"": picks})
     # round 35: the giant sheets (GIANT) - Athena's loader in the blockstate, the sprites 1..N*N, the vanilla model as
     # the fallback (no turns: the sheet's position does the variation)
-    for name, (_base, blocks) in GIANT.items():
+    for name, (_recipe, blocks, _tilt_k) in GIANT.items():
         ctm = {"particle": "minecraft:block/" + name}
         for i in range(1, blocks * blocks + 1):
             ctm[str(i)] = "minecraft:block/%s_g%d" % (name, i)
@@ -4465,6 +4734,25 @@ def recipes():
     R["shroomlight"] = _parts(m_shroomlight, fit=False)
     R["sea_lantern"] = _parts(m_sea_lantern, fit=False)
     R["bricks"] = _plain(m_clay_bricks)                        # round 35
+    for colour, (w_rgb, k_rgb, t_rgb) in DYES.items():         # round 36: the dyed families
+        R[colour + "_wool"] = _plain(lambda F, n, c=w_rgb: m_wool(F, n, c))
+        if colour + "_concrete" not in R:
+            R[colour + "_concrete"] = _plain(lambda F, n, c=k_rgb: m_concrete(F, n, c))
+        if colour + "_terracotta" not in R:
+            R[colour + "_terracotta"] = _plain(lambda F, n, c=t_rgb: m_terracotta(F, n, c))
+    R["bookshelf"] = _plain(m_bookshelf)
+    for colour, (w_rgb, _k, _t) in DYES.items():                # round 37: the other stained glasses
+        if colour in STAINED:
+            continue
+        rgb = tuple(min(1.0, 0.25 + 0.75 * v) for v in w_rgb)
+        R[colour + "_stained_glass"] = _parts(lambda F, n, c=rgb: m_glass(F, n, c, "stained"), fit=False)
+        R[colour + "_stained_glass_pane_top"] = _parts(lambda F, n, c=rgb: m_glass(F, n, c, "edge"), fit=False)
+    R["chiseled_quartz_block"] = _plain(lambda F, n: m_quartz(F, n, "chiseled"))
+    R["chiseled_quartz_block_top"] = _plain(lambda F, n: m_quartz(F, n, "chiseled_top"))
+    R["chiseled_bookshelf_top"] = _plain(lambda F, n: m_chiseled_bookshelf(F, n, "top"))
+    R["chiseled_bookshelf_side"] = _plain(lambda F, n: m_chiseled_bookshelf(F, n, "side"))
+    R["chiseled_bookshelf_empty"] = _plain(lambda F, n: m_chiseled_bookshelf(F, n, "empty"))
+    R["chiseled_bookshelf_occupied"] = _plain(lambda F, n: m_chiseled_bookshelf(F, n, "occupied"))
     R["exposed_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 1)))
     R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
     for name, base in SCAN_VARIANT_OF.items():        # round 28: variant k is SCAN index k - 1
@@ -4579,19 +4867,25 @@ def make(name, res, preview_dir):
 # blockstate names a width x height grid of sprites and each block shows the one at its world (x, z) on the top -
 # (x | z, y) on the sides - so a pattern larger than a block (wind ripples across a dune) carries on from block to
 # block. Square sizes only (the 1.20.1 code indexes with height). Its quads carry no biome tint: never grass.
-GIANT = {"sand": ((0.86, 0.78, 0.58), 4)}     # (red_sand is on the "beat the benchmark" list: untouched for now)
+GIANT = {   # name: (sheet recipe(F, blocks) -> (H, alb), blocks per side, tilt factor)
+    "sand": (lambda F, b: m_sand_sheet(F, b, (0.86, 0.78, 0.58)), 4, 1.3),
+    "red_sand": (lambda F, b: m_sand_sheet(F, b, (0.75, 0.42, 0.18)), 4, 1.3),     # r36: protection lifted
+    # round 37: smooth stone as a flagstone floor (the full cube only: smooth_stone_slab's own model draws the single
+    # smooth_stone.png for its top and bottom, which stays as it is, and smooth_stone_slab_side for its side)
+    "smooth_stone": (m_flagstone_sheet, 4, 0.6),
+}
 
 
 def write_giant(name, res, preview_dir=None):
     """The sheet of `name` (GIANT): one Field over blocks x blocks, fitted and solved once (one mean, one normal
     strength), cut into blocks * blocks tiles <name>_g1.. (row-major from the sheet's top left, Athena's order:
     1 + x + z * N) with their _n and _s. The single-block texture (make) stays as the particle and the fallback."""
-    base, blocks = GIANT[name]
+    recipe, blocks, tilt_k = GIANT[name]
     t = targets_for(name)
-    t = dict(t, tilt=t["tilt"] * 1.3)                    # the ripples want a lower sun than the flat grains did
+    t = dict(t, tilt=t["tilt"] * tilt_k)                 # the ripples want a lower sun than the flat grains did
     big = res * blocks
     F = Field(big, SEEDS[name] + 7)
-    H, alb = m_sand_sheet(F, blocks, base)
+    H, alb = recipe(F, blocks)
     alb = soften(F, fit_albedo(alb, t), t)
     n_img, s_img, k = maps(F, H, t)
     for z in range(blocks):
