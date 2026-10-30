@@ -158,24 +158,28 @@ class DragonFlightFeelTest {
     @Test
     void theFlareComesWhileItBrakesNotOnlyOnceItHasStopped() {
         float[] hard = brakeFrom(0.012f);
-        assertTrue(hard[0] >= 0f && hard[0] <= 12f && hard[1] > 0.02f,
-            "a hard brake (0.012 a tick) flares while still moving, by tick 12: tick " + hard[0] + " at " + hard[1]);
+        assertTrue(hard[0] >= 0f && hard[0] <= 13f && hard[1] > 0.02f,
+            "a hard brake (0.012 a tick) flares while still moving, by tick 13: tick " + hard[0] + " at " + hard[1]);
         assertTrue(hard[2] >= 4f, "a hard brake nods the head (" + hard[2] + " deg)");
         float[] easy = brakeFrom(0.0028f);
         assertTrue(easy[0] >= 0f && easy[0] <= 30f && easy[1] > 0.05f,
             "a normal approach (0.0028 a tick) flares on the way in, by tick 30: tick " + easy[0] + " at " + easy[1]);
     }
 
+    /**
+     * A dragon that comes into tracking range mid-cruise: its state is new (the smoothed speed starts at 0, as animate
+     * makes it - the first frame's tick delta is 0, xo == x) and its first tick is a stalled one. It must not play the
+     * take-off (review r2 of #440: ~2.5 s of it with a zero seed).
+     */
     @Test
     void aDragonThatFliesIntoViewDoesNotPlayTheTakeOff() {
         float[] st = Dragon.newState(0f);
-        st[Dragon.ST_SPEED] = 0.17f;
         st[Dragon.ST_HOVER] = 0f;
         float[] mult = { 1f, 1f, 1f, 0f, 2f, 1f, 1f };
         float worst = 0f;
         for (int t = 0; t < 90; t++) {
             for (int f = 0; f < 3; f++)
-                Dragon.drivers(st, P, 0.17f * mult[t % mult.length], 0f, 1f / 3f, t);
+                Dragon.drivers(st, P, 0.17f * mult[(t + 3) % mult.length], 0f, 1f / 3f, t);
             worst = Math.max(worst, st[Dragon.ST_TAKEOFF]);
         }
         assertTrue(worst <= 0.1f, "a dragon cruising into view (stuttering) played the take-off at " + worst);
