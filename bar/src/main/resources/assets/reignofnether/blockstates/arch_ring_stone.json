@@ -1,0 +1,79 @@
+{
+  "variants": {
+    "facing=east,piece=crown": {
+      "model": "reignofnether:block/arch_ring_stone_crown",
+      "y": 90
+    },
+    "facing=east,piece=left_haunch": {
+      "model": "reignofnether:block/arch_ring_stone_left_haunch",
+      "y": 90
+    },
+    "facing=east,piece=left_springer": {
+      "model": "reignofnether:block/arch_ring_stone_left_springer",
+      "y": 90
+    },
+    "facing=east,piece=right_haunch": {
+      "model": "reignofnether:block/arch_ring_stone_right_haunch",
+      "y": 90
+    },
+    "facing=east,piece=right_springer": {
+      "model": "reignofnether:block/arch_ring_stone_right_springer",
+      "y": 90
+    },
+    "facing=north,piece=crown": {
+      "model": "reignofnether:block/arch_ring_stone_crown"
+    },
+    "facing=north,piece=left_haunch": {
+      "model": "reignofnether:block/arch_ring_stone_left_haunch"
+    },
+    "facing=north,piece=left_springer": {
+      "model": "reignofnether:block/arch_ring_stone_left_springer"
+    },
+    "facing=north,piece=right_haunch": {
+      "model": "reignofnether:block/arch_ring_stone_right_haunch"
+    },
+    "facing=north,piece=right_springer": {
+      "model": "reignofnether:block/arch_ring_stone_right_springer"
+    },
+    "facing=south,piece=crown": {
+      "model": "reignofnether:block/arch_ring_stone_crown",
+      "y": 180
+    },
+    "facing=south,piece=left_haunch": {
+      "model": "reignofnether:block/arch_ring_stone_left_haunch",
+      "y": 180
+    },
+    "facing=south,piece=left_springer": {
+      "model": "reignofnether:block/arch_ring_stone_left_springer",
+      "y": 180
+    },
+    "facing=south,piece=right_haunch": {
+      "model": "reignofnether:block/arch_ring_stone_right_haunch",
+      "y": 180
+    },
+    "facing=south,piece=right_springer": {
+      "model": "reignofnether:block/arch_ring_stone_right_springer",
+      "y": 180
+    },
+    "facing=west,piece=crown": {
+      "model": "reignofnether:block/arch_ring_stone_crown",
+      "y": 270
+    },
+    "facing=west,piece=left_haunch": {
+      "model": "reignofnether:block/arch_ring_stone_left_haunch",
+      "y": 270
+    },
+    "facing=west,piece=left_springer": {
+      "model": "reignofnether:block/arch_ring_stone_left_springer",
+      "y": 270
+    },
+    "facing=west,piece=right_haunch": {
+      "model": "reignofnether:block/arch_ring_stone_right_haunch",
+      "y": 270
+    },
+    "facing=west,piece=right_springer": {
+      "model": "reignofnether:block/arch_ring_stone_right_springer",
+      "y": 270
+    }
+  }
+}
