@@ -18,6 +18,9 @@ func TestBubbleScriptIsEmbedded(t *testing.T) {
 		"'BeyondAndTabsBubble'",             // one bubble at a time
 		"'" + bubbleImage + "'",             // the cat it draws is the file installBubble writes
 		"'lovish.lnk'",                      // the Desktop play shortcut comes first (lovish's own starts his server)
+		"-like '*bubble.ps1*'",              // ...unless it is the bubble's own shortcut (that would only reopen the bubble)
+		"'launcher.exe'",                    // then the launcher next to the bubble folder (what's new, your build, PLAY)
+		"'--launch'",
 		`'PrismLauncher\prismlauncher.exe'`, // and the installed Prism is the fallback
 		`'-l "` + instanceName + `"'`,       // launching this installer's instance
 		"Application]::Run",                 // it is a window that stays up
@@ -64,9 +67,9 @@ func TestInstallBubbleWritesScriptAndCat(t *testing.T) {
 }
 
 func TestBubbleShortcutStartsTheBubbleHidden(t *testing.T) {
-	ps := bubbleShortcutScript(`C:\B`, `C:\P\lovish.ico`)
+	ps := bubbleShortcutScript(`C:\B`, `C:\P\lovish.ico`, `C:\L\launcher.exe`, `C:\P\prismlauncher.exe`)
 	for _, want := range []string{
-		"'" + bubbleShortcut + ".lnk'",
+		"'" + shortcutName + ".lnk'", // lovish, Oct 28: one Desktop icon, "lovish", and it brings the bubble back
 		"-WindowStyle Hidden",
 		`-File "C:\B\bubble.ps1"`,
 		`$s.IconLocation = 'C:\P\lovish.ico,0'`,
@@ -77,7 +80,38 @@ func TestBubbleShortcutStartsTheBubbleHidden(t *testing.T) {
 			t.Fatalf("bubble shortcut script lost %q:\n%s", want, ps)
 		}
 	}
-	if strings.Contains(ps, "'"+shortcutName+".lnk'") {
-		t.Fatal("the bubble step must not touch the lovish play shortcut")
+}
+
+func TestTheBubbleIsTheOnlyDesktopIcon(t *testing.T) {
+	// lovish, Oct 28: "the launcher should be called lovish, not Beyond and Tabs bubble" - one Desktop icon
+	if bubbleShortcut != shortcutName {
+		t.Fatalf("the bubble's Desktop shortcut is %q, lovish asked for %q", bubbleShortcut, shortcutName)
+	}
+	ps := bubbleShortcutScript(`C:\B`, `C:\P\lovish.ico`, `C:\L\launcher.exe`, `C:\P\prismlauncher.exe`)
+	for _, want := range []string{
+		// only a "lovish" shortcut this installer made becomes the bubble one: missing, the launcher's, the earlier
+		// installers' (this Prism, -l the instance) or already the bubble's - never lovish's own (it starts his server)
+		"(-not (Test-Path -LiteralPath $lnk))",
+		"$t.TargetPath -eq $exe",
+		`($t.TargetPath -eq $prism) -and ($t.Arguments -eq '-l "` + instanceName + `"')`,
+		"$t.Arguments -like '*bubble.ps1*'",
+		// the "Beyond and Tabs bubble" shortcut earlier installers made goes, when it is the bubble's
+		"'Beyond and Tabs bubble.lnk'",
+		"Remove-Item",
+	} {
+		if !strings.Contains(ps, want) {
+			t.Fatalf("bubble shortcut script lacks %q:\n%s", want, ps)
+		}
+	}
+	// the play shortcut step leaves the Desktop to the bubble: the launcher "lovish" lives in the Start Menu
+	sc := shortcutScript(`C:\L\launcher.exe`, `C:\P\prismlauncher.exe`, `C:\P`, `C:\P\lovish.ico`)
+	if !strings.Contains(sc, "GetFolderPath('StartMenu')") {
+		t.Fatalf("the launcher shortcut is not in the Start Menu:\n%s", sc)
+	}
+	if strings.Contains(sc, "foreach ($dir in @([Environment]::GetFolderPath('Desktop'), (Join-Path") {
+		t.Fatalf("the launcher step still writes a Desktop shortcut:\n%s", sc)
+	}
+	if got := bubbleShortcutScript(`C:\Users\O'Neil\B`, `i`, `e`, `p`); !strings.Contains(got, `O''Neil`) {
+		t.Fatalf("a ' in the path is not escaped:\n%s", got)
 	}
 }
