@@ -20,7 +20,7 @@ public class NeutralTransportPortal extends PortalTransport {
     public final static String buildingName = "Neutral Transport Portal";
     public final static String structureName = "neutral_transport_portal";
 
-    public final static ResourceCost cost = ResourceCost.Building(0,0,0,0);
+    public final static ResourceCost cost = ResourceCost.Building(0,0,0);
 
     public NeutralTransportPortal() {
         this.name = buildingName;

@@ -31,6 +31,28 @@ class ResourceCostConfigEntryTest {
     private static final int RELOADERS = 4;
     private static final int READERS = 4;
 
+    /**
+     * lovish, Oct 29: "beyond all reason doesnt use supply or unit cap". A building's entry defines no population, so
+     * an old config file that still gives a building a "Population value" (a house's 10) is ignored: it reads 0.
+     */
+    @Test
+    void aBuildingReadsNoPopulationEvenFromAnOldConfigFile() {
+        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        ResourceCostConfigEntry entry = ResourceCostConfigEntry.Building(100, 50, 0,
+            new ResourceCost("test", "old_supply_house"), "Old supply house");
+        entry.define(builder);
+        ForgeConfigSpec spec = builder.build();
+        CommentedConfig old = CommentedConfig.inMemory();
+        old.set(List.of("Old supply house", "Food cost"), 100);
+        old.set(List.of("Old supply house", "Wood cost"), 50);
+        old.set(List.of("Old supply house", "Ore cost"), 0);
+        old.set(List.of("Old supply house", "Time to create"), 0);
+        old.set(List.of("Old supply house", "Population value"), 10);
+        spec.setConfig(old);
+        assertEquals(0, entry.getPopulation(), "a building's population from an old config file");
+        assertEquals(100, entry.getFood());
+    }
+
     @Test
     void aReloadOnAnotherThreadNeverMakesACostReadNull() throws InterruptedException {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
