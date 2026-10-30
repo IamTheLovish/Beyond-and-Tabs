@@ -47,7 +47,8 @@ public abstract class PathNavigationMixin implements WidePathMemo.Holder {
     }
 
     // Distance-scaled vanilla search for units (VanillaPathBudget): a short search first, the stock full-range one only
-    // when the short one finds no complete path. Every public createPath overload funnels through this one.
+    // when the short one finds no complete path - and for a wide body, not again while the same full search failed
+    // a moment ago (WidePathMemo). Every public createPath overload funnels through this one.
     @Inject(method = "createPath(Ljava/util/Set;IZI)Lnet/minecraft/world/level/pathfinder/Path;", at = @At("HEAD"), cancellable = true)
     private void reignofnether$scaledSearch(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy,
                                             CallbackInfoReturnable<Path> cir) {
@@ -79,6 +80,13 @@ public abstract class PathNavigationMixin implements WidePathMemo.Holder {
         }
         BlockPos from = mob.blockPosition();
         long now = mob.level().getGameTime();
+        // a wide body that searched the whole range for these targets from here a moment ago and found no way: the
+        // same answer again, for 12-33 ms on the server thread (WidePathMemo) - keep the short search's
+        if (wide && reignofnether$wideMemo.failedLately(from, targets, now)) {
+            VanillaPathBudget.wideRepeats++;
+            cir.setReturnValue(p);
+            return;
+        }
         VanillaPathBudget.fallbacks++;
         VanillaPathBudget.fallbacksTotal++;
         Path again = createPath(targets, regionOffset, offsetUpward, accuracy, full);
