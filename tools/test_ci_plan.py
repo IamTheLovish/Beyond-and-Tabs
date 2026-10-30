@@ -57,5 +57,35 @@ class PlanCode(unittest.TestCase):
         self.assertEqual(ci_plan.plan_code(True, "push", tagged), "true")
 
 
+class MainWiring(unittest.TestCase):
+    """main() writes plan_code's value to GITHUB_OUTPUT, and reads the head message only for a PR with code changes."""
+    def run_main(self, event, code, message):
+        import tempfile
+        out = tempfile.NamedTemporaryFile(delete=False, suffix=".txt"); out.close()
+        env = {"GITHUB_EVENT_NAME": event, "GITHUB_OUTPUT": out.name, "SHARD_2": "x", "SHARD_3": "y"}
+        asked = []
+        old = (os.environ.copy(), ci_plan.decide, ci_plan.head_message)
+        try:
+            os.environ.clear(); os.environ.update(env)
+            ci_plan.decide = lambda e: (code, "stub")
+            ci_plan.head_message = lambda repo, sha: asked.append(sha) or message
+            ci_plan.main()
+        finally:
+            os.environ.clear(); os.environ.update(old[0]); ci_plan.decide, ci_plan.head_message = old[1], old[2]
+        lines = dict(ln.split("=", 1) for ln in open(out.name).read().split(NL) if "=" in ln)
+        os.unlink(out.name)
+        return lines, asked
+
+    def test_compile_on_a_tagged_pr(self):
+        lines, asked = self.run_main("pull_request", True, "Tests first [compile-only]")
+        self.assertEqual((lines["code"], lines["matrix"], lines["shards"]), ("compile", "[2, 3]", "3"))
+        self.assertEqual(len(asked), 1)
+
+    def test_docs_only_and_push_never_ask(self):
+        for event, code, want in [("pull_request", False, "false"), ("push", True, "true")]:
+            lines, asked = self.run_main(event, code, "x [compile-only]")
+            self.assertEqual((lines["code"], asked), (want, []), event)
+
+
 if __name__ == "__main__":
     unittest.main()
