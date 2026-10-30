@@ -289,6 +289,79 @@ class ConstructionGridTest {
         for (int k = 0; k < 4; k++) assertEquals(2.99f, a[k * 3], 1e-6);
     }
 
+    /**
+     * Round 14 critic: the front was a 3-5 px orange edge on scattered block tops at many heights ("orange-trimmed
+     * blocks", not "the row being laid"). Now ONE course per wall face: the highest course partly laid on that face
+     * (with none, the lowest still missing there), and the band runs along that course's whole OUTER edge at its bed -
+     * laid and missing cells alike, one height, nothing on any other block.
+     */
+    @Test
+    void theFrontIsOneCoursePerWallFace() {
+        ConstructionGrid g = wall();
+        // dirs: 0 -z, 1 +x, 2 +z, 3 -x
+        assertEquals(1f, g.courseFront(0), 1e-4, "-z: the second course, begun at x 0");
+        assertEquals(1f, g.courseFront(2), 1e-4, "+z: the same course");
+        assertEquals(1f, g.courseFront(1), 1e-4, "+x end: nothing partly laid there, the lowest missing course");
+        assertEquals(2f, g.courseFront(3), 1e-4, "-x end: over the stand at x 0, the third course");
+        int perSide[] = new int[4];
+        for (int i = 0; i < g.courseEdgeCount(); i++) {
+            int side = g.courseSide(i);
+            perSide[side]++;
+            assertEquals(g.courseFront(side), g.courseY(i), 1e-4, "every edge of a face at that face's one height");
+            float len = Math.abs(g.courseX1(i) - g.courseX0(i)) + Math.abs(g.courseZ1(i) - g.courseZ0(i));
+            assertEquals(1f, len, 1e-4, "one block edge, axis-aligned");
+        }
+        assertEquals(6, perSide[0], "the whole -z face of the course, the laid block and the five missing");
+        assertEquals(6, perSide[2]);
+        assertEquals(1, perSide[1]);
+        assertEquals(1, perSide[3]);
+        assertTrue(hasCourse(g, 0, 0, 1, 0, 1), "-z bed edge of the laid block (0, 1, 0)");
+        assertTrue(hasCourse(g, 5, 0, 6, 0, 1), "-z bed edge of the missing block (5, 1, 0)");
+        assertTrue(hasCourse(g, 6, 0, 6, 1, 1), "+x end's bed edge");
+
+        // the ring site: +x and +z still lack the corner of layer 65, -z and -x are laid to the top of 65
+        ConstructionGrid s = site();
+        assertEquals(65f, s.courseFront(1), 1e-4);
+        assertEquals(65f, s.courseFront(2), 1e-4);
+        assertEquals(66f, s.courseFront(0), 1e-4, "laid up: the next course's bed");
+        assertEquals(66f, s.courseFront(3), 1e-4);
+        for (int i = 0; i < s.courseEdgeCount(); i++) {
+            int side = s.courseSide(i);
+            float out = side == 0 ? s.courseZ0(i) : side == 2 ? s.courseZ0(i) : s.courseX0(i);
+            float want = side == 0 ? 20 : side == 2 ? 23 : side == 1 ? 13 : 10;
+            assertEquals(want, out, 1e-4, "on the OUTER face, never the court's inner one: side " + side);
+        }
+        assertEquals(12, s.courseEdgeCount(), "3 a side, one course each");
+
+        // a scattered high block does not drag a second band onto the face: one height per face, always
+        List<int[]> b = new ArrayList<>();
+        for (int y = 0; y < 4; y++) for (int x = 0; x < 4; x++) b.add(new int[] { x, y, 0 });
+        ConstructionGrid h = ConstructionGrid.of(b);
+        h.clear();
+        for (int[] p : b) h.mark(p[0], p[1], p[2], p[1] == 0 || (p[1] == 1 && p[0] < 2) || (p[1] == 2 && p[0] == 0));
+        h.finish();
+        assertEquals(2f, h.courseFront(0), 1e-4, "the highest course partly laid");
+        int n0 = 0;
+        for (int i = 0; i < h.courseEdgeCount(); i++)
+            if (h.courseSide(i) == 0) { n0++; assertEquals(2f, h.courseY(i), 1e-4); }
+        assertEquals(4, n0);
+
+        // all laid on a face: no front there
+        h.clear();
+        for (int[] p : b) h.mark(p[0], p[1], p[2], true);
+        h.finish();
+        assertTrue(Float.isNaN(h.courseFront(0)));
+        assertEquals(0, h.courseEdgeCount());
+    }
+
+    private static boolean hasCourse(ConstructionGrid g, float x0, float z0, float x1, float z1, float y) {
+        for (int i = 0; i < g.courseEdgeCount(); i++)
+            if (g.courseX0(i) == x0 && g.courseZ0(i) == z0 && g.courseX1(i) == x1 && g.courseZ1(i) == z1
+                    && g.courseY(i) == y)
+                return true;
+        return false;
+    }
+
     @Test
     void anEmptySiteNeverThrows() {
         ConstructionGrid g = ConstructionGrid.of(List.of());

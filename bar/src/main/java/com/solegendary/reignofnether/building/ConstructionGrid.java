@@ -46,6 +46,13 @@ public final class ConstructionGrid {
     private float frontRow = Float.NaN;
     private int nextRow = Integer.MIN_VALUE;
     private final int[] perRow;                        // rim edges per height, scratch for frontRow
+    // the front course per wall face: its layer (or MIN_VALUE), its edges {x0, z0, x1, z1, y} and their sides; the
+    // outer cells standing / missing per (side, layer), scratch
+    private final int[] courseL = new int[4];
+    private final float[] course = new float[MAX_EDGES * 5];
+    private final int[] courseSide = new int[MAX_EDGES];
+    private int courseN;
+    private final int[] onFace, offFace;
 
     private ConstructionGrid(int x0, int y0, int z0, int w, int h, int d) {
         this.x0 = x0; this.y0 = y0; this.z0 = z0; this.w = w; this.h = h; this.d = d;
@@ -56,6 +63,7 @@ public final class ConstructionGrid {
         volumeList = new int[w * h * d];
         rowLo = new int[h * d]; rowHi = new int[h * d]; colLo = new int[h * w]; colHi = new int[h * w];
         topMissing = new int[w * d];
+        onFace = new int[4 * h]; offFace = new int[4 * h];
     }
 
     /** @param blocks the site's (non-air) block positions as {x, y, z} */
@@ -117,6 +125,67 @@ public final class ConstructionGrid {
         fronts();
         volume();
         findFrontRow();
+        courses();
+    }
+
+    /** Cell (i, j, k) (local; part of the site) is on the OUTER face of its course on {@code side}: no site block
+     *  beyond it that way in its row or column (never a wall's inner face onto a court or a room). */
+    private boolean outer(int i, int j, int k, int side) {
+        return switch (side) {
+            case 0 -> k == colLo[j * w + i];
+            case 1 -> i == rowHi[j * d + k];
+            case 2 -> k == colHi[j * w + i];
+            default -> i == rowLo[j * d + k];
+        };
+    }
+
+    /** The front course per wall face and its edges (needs {@link #volume}'s row / column extents). */
+    private void courses() {
+        java.util.Arrays.fill(onFace, 0);
+        java.util.Arrays.fill(offFace, 0);
+        for (int j = 0; j < h; j++)
+            for (int k = 0; k < d; k++)
+                for (int i = 0; i < w; i++) {
+                    byte c = cells[(j * d + k) * w + i];
+                    if (c == EMPTY)
+                        continue;
+                    for (int side = 0; side < 4; side++)
+                        if (outer(i, j, k, side)) {
+                            if (c == STANDING) onFace[side * h + j]++;
+                            else offFace[side * h + j]++;
+                        }
+                }
+        courseN = 0;
+        for (int side = 0; side < 4; side++) {
+            int l = Integer.MIN_VALUE;
+            for (int j = h - 1; j >= 0 && l == Integer.MIN_VALUE; j--)
+                if (onFace[side * h + j] > 0 && offFace[side * h + j] > 0)
+                    l = j;
+            for (int j = 0; j < h && l == Integer.MIN_VALUE; j++)
+                if (offFace[side * h + j] > 0)
+                    l = j;
+            courseL[side] = l;
+            if (l == Integer.MIN_VALUE)
+                continue;
+            float y = y0 + l;
+            for (int k = 0; k < d; k++)
+                for (int i = 0; i < w && courseN < MAX_EDGES; i++) {
+                    if (cells[(l * d + k) * w + i] == EMPTY || !outer(i, l, k, side))
+                        continue;
+                    int x = x0 + i, z = z0 + k, r = courseN * 5;
+                    switch (side) {
+                        case 0 -> setCourse(r, x, z, x + 1, z, y);
+                        case 1 -> setCourse(r, x + 1, z, x + 1, z + 1, y);
+                        case 2 -> setCourse(r, x + 1, z + 1, x, z + 1, y);
+                        default -> setCourse(r, x, z + 1, x, z, y);
+                    }
+                    courseSide[courseN++] = side;
+                }
+        }
+    }
+
+    private void setCourse(int r, float ax, float az, float bx, float bz, float y) {
+        course[r] = ax; course[r + 1] = az; course[r + 2] = bx; course[r + 3] = bz; course[r + 4] = y;
     }
 
     /** The front row (the rim height with the most edges, ties to the higher) and the next course on it. */
@@ -326,6 +395,24 @@ public final class ConstructionGrid {
                 return y + 1;
         return Float.NaN;
     }
+
+    /**
+     * The build front of wall face {@code side} (0 -z, 1 +x, 2 +z, 3 -x): the bed of the course being laid there - the
+     * HIGHEST course partly laid on that face (some of its outer cells standing, some missing), with none the lowest
+     * course still missing on it - as a height (block edges); NaN when the face is laid to the top. Round 14 critic:
+     * the old front edged every rim at or above the front row, a 3-5 px orange edge on scattered block tops at many
+     * heights ("orange-trimmed blocks"); this is ONE course a face.
+     */
+    public float courseFront(int side) { return courseL[side] == Integer.MIN_VALUE ? Float.NaN : y0 + courseL[side]; }
+    /** The front's edges: every outer cell of each face's front course (laid or missing - the whole course, not only
+     *  where it is laid), the edge at its bed, wound like the rim (the face on its right). */
+    public int courseEdgeCount() { return courseN; }
+    public float courseX0(int i) { return course[i * 5]; }
+    public float courseZ0(int i) { return course[i * 5 + 1]; }
+    public float courseX1(int i) { return course[i * 5 + 2]; }
+    public float courseZ1(int i) { return course[i * 5 + 3]; }
+    public float courseY(int i) { return course[i * 5 + 4]; }
+    public int courseSide(int i) { return courseSide[i]; }
 
     /** The site's bounds (block coordinates, inclusive minimum, exclusive maximum). */
     public int minX() { return x0; }
