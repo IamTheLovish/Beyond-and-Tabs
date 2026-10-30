@@ -156,10 +156,15 @@ public abstract class PathNavigationMixin {
     // Straight lines (LineOfWalk; troop animation gain 2, lovish Oct 30 "Smooth the real path"): after vanilla's own
     // step, a ground unit aims at the farthest of the next few nodes its whole body can walk to in a straight line, so
     // it walks an off-axis route straight instead of zig-zagging node to node (and its body stops rocking). Judged
-    // when the path's next node changes and every LineOfWalk.REAIM_TICKS ticks on the way (from where it is then, so a
-    // long route is aimed further along it), not every tick.
+    // when the path changes, when the unit reaches the node it aimed at, and every LineOfWalk.REAIM_TICKS ticks on the
+    // way (from where it is then, so a long route is aimed further along it) - not every tick, and not on every node it
+    // passes while no line is clear (in a town that would be every 3-4 ticks a unit). At each re-aim the line to the
+    // node it aims at is judged again from where it now is: a unit pushed off it (a crowd, a knockback) walks on from
+    // the nearest node it skipped instead of through cells nobody checked.
     @Unique private Path reignofnether$linedPath = null;
+    @Unique private int reignofnether$linedFrom = -1;
     @Unique private int reignofnether$linedTo = -1;
+    @Unique private boolean reignofnether$linedFound = false;
     @Unique private long reignofnether$linedAt = 0;
 
     @Inject(method = "followThePath", at = @At("TAIL"))
@@ -170,13 +175,26 @@ public abstract class PathNavigationMixin {
             return;
         int next = p.getNextNodeIndex();
         long now = mob.level().getGameTime();
-        if (p == reignofnether$linedPath && next <= reignofnether$linedTo
-                && now - reignofnether$linedAt < LineOfWalk.REAIM_TICKS)
+        boolean samePath = p == reignofnether$linedPath;
+        if (samePath && now - reignofnether$linedAt < LineOfWalk.REAIM_TICKS
+                && (next <= reignofnether$linedTo || !reignofnether$linedFound))
             return;
-        int to = LineOfWalk.farthest(mob, p);
+        if (!samePath || next > reignofnether$linedTo)
+            reignofnether$linedFrom = next;
         reignofnether$linedPath = p;
-        reignofnether$linedTo = to;
         reignofnether$linedAt = now;
+        // aiming past nodes it skipped, and the line there is lost: back to the nearest of them
+        if (next > reignofnether$linedFrom && !LineOfWalk.canWalkTo(mob, p, next)) {
+            int back = LineOfWalk.nearest(mob, p, reignofnether$linedFrom, next);
+            p.setNextNodeIndex(back);
+            reignofnether$linedFrom = reignofnether$linedTo = back;
+            reignofnether$linedFound = false;
+            return;
+        }
+        int to = next >= p.getNodeCount() - 1 ? next : LineOfWalk.farthest(mob, p);
+        reignofnether$linedTo = Math.max(to, next);
+        // walking a line (now or since linedFrom): at its end the next is judged at once, not REAIM_TICKS later
+        reignofnether$linedFound = reignofnether$linedTo > reignofnether$linedFrom;
         if (to > next)
             p.setNextNodeIndex(to);
     }

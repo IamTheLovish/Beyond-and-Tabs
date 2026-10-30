@@ -146,6 +146,85 @@ public class WalkLineGameTests {
         });
     }
 
+    /** Average nanoseconds a tick LineOfWalk may take for the crowd below (CI runners: a loose bound; the log has the figures). */
+    static final long CROWD_MAX_NANOS_PER_TICK = 2_000_000;
+    static final int CROWD = 32, CROWD_TICKS = 200;
+
+    /**
+     * The cost: a crowd of {@link #CROWD} Vindicators ordered across a pad strewn with azalea bushes (where lines often
+     * fail, so the re-aim throttle and the per-tick cell reads matter). Over {@link #CROWD_TICKS} ticks after the order,
+     * LineOfWalk's lines judged, cells read from the level and time taken a tick are logged; the time must stay under
+     * {@link #CROWD_MAX_NANOS_PER_TICK} on average, and the crowd must have walked.
+     */
+    @GameTest(template = ARENA, timeoutTicks = SETUP + CROWD_TICKS + 60, batch = BATCH)
+    public static void a_crowd_walking_lines_costs_little(GameTestHelper helper) {
+        Pad pad = Pad.lay(helper, 6);
+        for (int dx = 14; dx <= 34; dx += 4)
+            for (int dz = 3 + (dx / 4) % 3; dz <= D - 4; dz += 5) {
+                pad.set(dx, 0, dz, Blocks.DIRT.defaultBlockState());
+                pad.set(dx, 1, dz, Blocks.AZALEA.defaultBlockState());
+            }
+        ServerLevel level = pad.level;
+        String owner = "gametest_walk_crowd_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        List<Mob> made = new ArrayList<>();
+        TestCleanup.atEnd(helper, () -> {
+            for (Mob m : made) {
+                UnitServerEvents.clearQueuedActions(m.getId());
+                m.discard();
+            }
+        });
+        helper.runAfterDelay(SETUP, () -> {
+            for (int i = 0; i < CROWD; i++) {
+                Mob m = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+                if (m == null)
+                    throw new GameTestAssertException("could not create a Vindicator");
+                m.moveTo(pad.x0 + 3.5 + (i % 8), PAD_Y + 1, pad.z0 + 3.5 + (i / 8) * 1.5, -90, 0);
+                ((Unit) m).setOwnerName(owner);
+                level.addFreshEntity(m);
+                made.add(m);
+            }
+        });
+        int[] ordered = { -1 };
+        long[] from = new long[3];
+        double[] startX = new double[CROWD];
+        helper.onEachTick(() -> {
+            if (made.size() < CROWD)
+                return;
+            if (ordered[0] < 0) {
+                for (Mob m : made)
+                    if (m.tickCount < ArenaReady.TICKS)
+                        return;
+                ordered[0] = (int) helper.getTick();
+                int[] ids = made.stream().mapToInt(Mob::getId).toArray();
+                for (int i = 0; i < CROWD; i++)
+                    startX[i] = made.get(i).getX();
+                UnitServerEvents.addActionItem(owner, UnitAction.MOVE, -1, ids,
+                    new BlockPos(pad.x0 + 40, PAD_Y + 1, pad.z0 + 18), BlockPos.ZERO);
+                System.arraycopy(LineOfWalk.counts(), 0, from, 0, 3);
+                return;
+            }
+            if (helper.getTick() - ordered[0] < CROWD_TICKS)
+                return;
+            long[] now = LineOfWalk.counts();
+            double lines = (now[0] - from[0]) / (double) CROWD_TICKS, cells = (now[1] - from[1]) / (double) CROWD_TICKS;
+            double nanos = (now[2] - from[2]) / (double) CROWD_TICKS, walked = 0;
+            for (int i = 0; i < CROWD; i++)
+                walked += made.get(i).getX() - startX[i];
+            walked /= CROWD;
+            // other tests in the batch walk too (their counts land here as well): an upper bound on this crowd's cost
+            String line = String.format(Locale.ROOT, "[Walk] a crowd of %d Vindicators through azaleas, %d ticks: %.1f"
+                + " lines judged a tick, %.1f cells read a tick, %.3f ms a tick in LineOfWalk (bound %.1f); walked %.1f"
+                + " blocks east on average", CROWD, CROWD_TICKS, lines, cells, nanos / 1e6,
+                CROWD_MAX_NANOS_PER_TICK / 1e6, walked);
+            ReignOfNether.LOGGER.warn(line);
+            if (walked < 15)
+                throw new GameTestAssertException("the crowd did not walk: " + line);
+            if (nanos > CROWD_MAX_NANOS_PER_TICK)
+                throw new GameTestAssertException("straight lines cost too much a tick: " + line);
+            helper.succeed();
+        });
+    }
+
     // a staircase of stone 3 high, 3 cells south of the straight line from the start to the goal, over its middle
     // stretch: off every route a wide body takes, but where a line checked to the wrong end point would brush it
     private static void wallBeside(Pad pad) {
@@ -246,6 +325,7 @@ public class WalkLineGameTests {
         float[] turn = { 0f, Float.NaN, Float.NaN, 0f };
         int[] worstTick = { -1 };
         int[] touch = { 0, -1 };   // ticks touching a keep-off cell, the first of them
+        long[] cost = new long[3];   // LineOfWalk's counts at the order (lines, cells, nanos)
         StringBuilder trace = new StringBuilder();
         boolean[] done = { false };
         helper.onEachTick(() -> {
@@ -261,6 +341,7 @@ public class WalkLineGameTests {
                 ordered[0] = (int) helper.getTick();
                 UnitServerEvents.addActionItem(owner, UnitAction.MOVE, -1, new int[] { m.getId() },
                     BlockPos.containing(gx, PAD_Y + 1, gz), BlockPos.ZERO);
+                System.arraycopy(LineOfWalk.counts(), 0, cost, 0, 3);
                 return;
             }
             int t = (int) helper.getTick() - ordered[0];
@@ -303,11 +384,13 @@ public class WalkLineGameTests {
             done[0] = true;
             float net = Float.isNaN(turn[1]) ? 0f : Math.abs(turn[2] - turn[1]);
             float rock = turn[0] - net;
+            long[] now = LineOfWalk.counts();
             String line = String.format(Locale.ROOT, "[Walk] %s (%s pathing): arrived in %d ticks, turned %.1f degrees for"
                 + " a net %.1f - rocking %.1f (bound %.0f%s); largest swing off the bearing %.1f (t%d; bound %.0f%s);"
-                + " touched a keep-off cell %d ticks (bound %d); yaw/bearing:%s", what, rts ? "RTS" : "vanilla", t,
-                turn[0], net, rock, MAX_ROCK, pad.bends ? ", waived: the walk bends" : "", turn[3], worstTick[0], MAX_OFF,
-                pad.bends ? ", waived" : "", touch[0], MAX_TOUCH, trace);
+                + " touched a keep-off cell %d ticks (bound %d); lines judged %d, cells read %d, %.3f ms (with any test"
+                + " beside it); yaw/bearing:%s", what, rts ? "RTS" : "vanilla", t, turn[0], net, rock, MAX_ROCK,
+                pad.bends ? ", waived: the walk bends" : "", turn[3], worstTick[0], MAX_OFF, pad.bends ? ", waived" : "",
+                touch[0], MAX_TOUCH, now[0] - cost[0], now[1] - cost[1], (now[2] - cost[2]) / 1e6, trace);
             ReignOfNether.LOGGER.warn(line);
             if (Float.isNaN(turn[1]))
                 throw new GameTestAssertException("the walk was too short to judge: " + line);
