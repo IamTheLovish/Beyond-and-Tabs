@@ -33,3 +33,21 @@ judged against lovish's references (`design/refs/vehicle_labs/`, 28 images) and 
 | tower r6 (dda31dab) | fresh Fable, in game, Oct 28 | 6 | 6 | the granite ticks at every tier corner (y 11, 15, 19, 23) put a pink rim on each 4-row box - the ziggurat read is not resolution; the top a 3x3 red stub under a copper block; no door glow at dusk (door cell luma median 34, no warm pixels). In game the cone is one red mass (red 38 -> 69 %), the shed holds. Verdict: freeze T1 after these fixes; the rest of ref18 belongs to T2 / T3. | as r5's keeps, plus the shed gable |
 | tower r7 (c42900b5) | lovish, in game, Oct 28 22:30 | - | - | lovish: "its missing enough detail to satisify my requirements. There isnt a cool roof tiling system, could be more refined and articulate especially for that size. I think your having trouble mimicing the references art detail and making it to your own thing. Maybe you need to think more like an artichetcture professional and study how they make buildings". Method change: an architecture detail study (roof tiling system, facade articulation grammar, Brassworks identity) before any r8. | massing r7: cone outline, 5x8 lane, granite slab treads, needle point, jamb lanterns, shed gable |
 | roofs+walls r8 (96a7798) | fresh Fable, in game plain + shaders, Oct 29 | realism 3 | detail 4 | squint: a black pagoda on a black barn with mint stickers. Roof median luma 61 < walls 78 (deepslate tiles read as a hole, not a sky-lit plane; striped eave-to-ridge, not courses); tower a 5-step pyramid, copper patches on 3 of 5 stages; main roof empty (no dormers / roof lights); ~1.5 points better than r7 (palette now industrial). Scores: roof 3, tower 3, cohesion 4. | red brick body + stone plinth; the big door bay; the banded chimney; chain downpipes; slab eaves; green copper on the tower |
+
+## Engine Shed r12 (lovish's four picks on r11, Oct 30; PR #411) - two fresh API critics per round, one fixed rubric
+Each round photographed with its control in ONE eyes run (build 4528552, branch pack, plain lane); scores critic A / B.
+Measured numbers: design/vehicle_labs/r12_expected.md (expected written before each round's stills).
+
+| Round | Eyes run | RTS | Close | Towers | Gate | Roofs | Weathering | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| r11 round 3 (control) | 03:35Z | 6 | 5 | 4 | 3 | 6 | 2 | 3 | ring-stack chimneys, mint stepped pyramid, white-cool glowing panes, black gate, no soot | - |
+| r12 round 1 (1d512ead) | 41022055197 | 7 / 6.5 | 6 / 6 | 6 / 6 | 4 / 4 | 6 / 6 | 3 / 3 | 4 / 4 | brick wash reads as a second ring; spire pale (value 0.54) with a dotted hip seam; rooms not lit; the dark lump may be another mass | one crown, no glowing panes, stone gate jambs |
+| r12 round 2 (7ad66c9a) | 41026048601 | 6.5 / 6.5 | 6 / 6 | 6 / 6 | 4 / 4 | 6 / 6 | 4 / 3 | 4 / 4 | grey drips = "a mint arrow on dark grey"; dusk unchanged; coal stage now the darkest lump | one step-in shaft, stone gantry |
+| r12 round 3 A spire (f5d3cc8b) | 41034045196 | 7 / 7 | 6.5 / 6.5 | 7 / 7 | 5 / 5 | 6.5 / 6 | 3 / 3 | 5.5 / 5.5 | weathering clean and new; coal heap reads grey, not coal; dusk "cream" | both picked A over the cupola B (RTS 6.5 / 6, towers 6.5 / 6) |
+| r12 round 4 (9d3280f7) | 41039523394 | 7 / 6.5 | 6.5 / 6.5 | 6.5 / 6 | 5 / 5 | 6.5 / 6.5 | 4 / 3 | 5 / 5 | fine-grain spire weathering = "a dark V"; acacia rooms no warmer at dusk; both: keep round 3 | pier streaks gone (A: weathering +1) |
+| r12 final (f96e1648) | 41044327198 | 7 | 6.5 | 7 | 5 | 6.5 | 3 | 5.5 | one critic, vs round 3: "no pixel difference ... ship the final"; open: dusk warmth (hue 266 in that run), the soot does not read, a dark mass still read at the front yard (the chassis), the spire's cyan vs the team-colour rule (lovish's call) | round 3's spire and dusk + round 4's weathering and gantry |
+
+Lessons (r12): the 3/4 camera model was 1.2x too big (FOV 70, the game draws 77 in creative flight) and the colour
+table's hue median was wrong - fix the camera before judging; dusk light differs between eyes runs (compare dusk only
+inside one run); a second material on a small roof reads as a pattern at RTS whichever way it is placed (clusters ->
+arrow, fine grain -> V); the 3/4 camera looks down so steeply that a lamp more than 1 block behind a pane is never seen.
