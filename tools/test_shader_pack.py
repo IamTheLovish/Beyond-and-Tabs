@@ -653,6 +653,18 @@ class ShaderPack(unittest.TestCase):
         self.assertAlmostEqual(sum(a * b for a, b in zip(cool, (0.2126, 0.7152, 0.0722))), 1.0, delta=0.01)
         self.assertTrue(cool[2] > cool[1] > cool[0], cool)
         self.assertIn("light = mix(light, WHITE_SHADE_COOL * dot(light, LUMA), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);", lit)
+        # light pass 18: the shade side read from the sun's facing over WHITE_SHADE_SUN_* (the cubes' east face, grazed at
+        # N.L ~0.26 by the 5000 sun, counted as fully sunlit under min(facing * 4, 1) and never took the cool); the probe
+        # ships off
+        self.assertIn("smoothstep(WHITE_SHADE_SUN_LO, WHITE_SHADE_SUN_HI, facing)", lit)
+        self.assertTrue(0.26 < _const("WHITE_SHADE_SUN_HI") <= 0.48)
+        self.assertLess(_const("WHITE_SHADE_SUN_LO"), 0.26)
+        self.assertIn("#define SHADE_PROBE_WHITE 0", settings)
+        # light pass 18: the broad AO stops at AO_SHADOW_FLOOR where no sun arrives (lp17's cube shadows on the pad 0.55-
+        # 0.62 of lit against 0.78 on open lawn); the contact crease stays
+        self.assertTrue(0.88 <= _const("AO_SHADOW_FLOOR") <= 0.97)
+        self.assertGreater(_const("AO_SHADOW_FLOOR"), _const("CONTACT_AO_FLOOR"))
+        self.assertIn("occ = mix(occ, max(occ, AO_SHADOW_FLOOR), smoothstep(0.70, 0.85, skyShare));", _read("composite.fsh"))
         self.assertIn("mix(mix(ROUGH_GLINT_CAP, 1.0, glossy), 1.0, mat.metal)", lit)
 
     def test_the_sky_has_a_sun(self):

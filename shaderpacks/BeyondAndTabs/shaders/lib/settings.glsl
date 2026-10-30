@@ -150,6 +150,11 @@ const float PENUMBRA_MIN_BLOCKS = 0.18;
 // top / side ratio of 3.3; the benchmark 1.9). The block feet's crease is the short contact term's job now
 // (composite.fsh contactOcclusion: CONTACT_RADIUS blocks, CONTACT_GAIN, never below CONTACT_FLOOR)
 const float CONTACT_AO_FLOOR = 0.85;
+// light pass 18: where no sun arrives (the sky's share of the light past ~0.8) the broad occlusion stops at this
+// instead: lp17's cube shadows on the pad read 0.55-0.62 of the lit lawn against 0.78 for a shadow on open lawn - a
+// sun shadow next to a block took the 1.5-block AO (to 0.85) and the contact crease (to 0.75) on top of the shadow.
+// 0.78 x 0.93 = 0.73 of lit away from the foot; the contact crease (CONTACT_FLOOR) is kept at the foot
+const float AO_SHADOW_FLOOR = 0.93;
 const float CONTACT_SUN_SHARE = 0.0;
 // light pass 10: a softer crease (critic: "a little hard"): 0.12 -> 0.16 block, taps at three radii, gain 1.2 -> 1.0
 // light pass 14 (critic on pass 12: a 1-2 px hard band at the pillars' feet; target a 3-5 px gradient): 0.16 -> 0.26
@@ -447,7 +452,7 @@ const float FOLIAGE_LUMA_KNEE = 0.80;
 // And no plant's green texel past PLANT_MAX_SAT (flowers keep their petals: green hues only)
 const float PLANT_MAX_LUMA = 0.47;
 const float PLANT_LUMA_KNEE = 0.80;
-const float PLANT_MAX_SAT = 0.52;
+const float PLANT_MAX_SAT = 0.48;   // light pass 18: 0.52 -> 0.48 (lp17's untagged sprites sat p50 0.61, p90 0.63)
 // light pass 17: the same caps on any other cutout terrain sprite (lit.fsh: its mip-4 alpha under PLANT_CUTOUT_COVER,
 // not a plant id, not biome-tinted). lp16's neon sprites (green 236-252, luma 0.78-0.90, sat ~0.6) are no 10001
 // plant: the foliage path cannot pass ~0.66 display green after the caps; they are drawn with a sideways normal and
@@ -508,13 +513,25 @@ const float WHITE_WALL_NEUTRAL = 0.50;
 // light pass 16: and a near-white ALBEDO on a side the sun does not reach loses this share of its own cast under a high
 // sun (lit.fsh), so every white wall's shade is the sky's cool: lp15's quartz shade faces read b-r +22 on a blue-white
 // texture, +6..+8 on the creamy ones (the model: +19 / +5 at SHADE_TINT_WALL). Model at 0.8: +16..+21
-const float WHITE_SHADE_NEUTRAL = 0.80;
+// light pass 18: 0.80 -> 0.90, with the side's shade read from the sun's facing (WHITE_SHADE_SUN_*)
+const float WHITE_SHADE_NEUTRAL = 0.90;
+// light pass 18: how much sun a white side may take and still count as the shade side (lit.fsh). Pass 16-17's test was
+// the shade tint's min(facing * 4, 1): any face past N.L 0.25 counted as fully sunlit. The cubes' screen-left face is
+// the EAST face (it is the dark one at t11800, sun in the west; the screen-right one, south, is lit at both times), and
+// at 5000 the morning sun grazes it at N.L ~0.26: the cool never applied and WHITE_WALL_NEUTRAL greyed its light
+// instead (lp16 / lp17 b-r +6..+9, unchanged by either pass). Now the sun counts from 0.20 to 0.45 of N.L: the east
+// face (0.26) is ~0.86 shade, the south face (0.48) none
+const float WHITE_SHADE_SUN_LO = 0.20;
+const float WHITE_SHADE_SUN_HI = 0.45;
+// SHADE_PROBE_WHITE 1: magenta where a white side takes the cool (weight > 0.5), yellow where a white side (whiteness
+// and side > 0.5) does not - what the cubes' shade faces show answers whether the path runs
+#define SHADE_PROBE_WHITE 0 // [0 1]
 // light pass 17: and the LIGHT on such a side goes the same share to WHITE_SHADE_COOL at its own luma. lp16 kept b-r
 // +6..+9 on 4 of 5 white sides, +16 on one: the albedo neutral had nothing to take (gen_blocks paints quartz at sat
 // 0.03-0.04); the cast is the light's - the sky's part (the cool) scales with the vertex and material AO, the warm
 // ground bounce only BOUNCE_AO of it, so it varies by block. Model: +20.5 at a neutral 0.86 white, ~+18-20 with the
 // residual 0.2 of today's cast
-const vec3 WHITE_SHADE_COOL = vec3(0.92, 1.007, 1.17);
+const vec3 WHITE_SHADE_COOL = vec3(0.92, 1.005, 1.19);   // light pass 18: blue 1.17 -> 1.19
 // and under a low sun every near-white face, tops too, by this much (light pass 7: t11800's whites read 235/221/213, a
 // 22 spread; target <= 12 while the lawn keeps the warm light)
 const float WHITE_LOW_NEUTRAL = 0.55;

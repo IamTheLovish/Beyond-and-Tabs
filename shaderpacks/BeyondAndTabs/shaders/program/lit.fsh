@@ -285,10 +285,21 @@ void main() {
         light = mix(light, vec3(dot(light, LUMA)), neutral * whiteness);
         // light pass 16: on a side the sun does not reach, a near-white albedo loses WHITE_SHADE_NEUTRAL of its own cast
         // under a high sun, so the shade of every white wall is the sky's cool (cream and blue-white quartz alike)
-        float shadeSide = side * (1.0 - clamp(shadow * min(facing * 4.0, 1.0), 0.0, 1.0)) * highSunTint();
+        // light pass 18: the sun's share read by WHITE_SHADE_SUN_* (a grazing morning sun no longer makes it a lit side)
+        float sunOnSide = clamp(shadow * smoothstep(WHITE_SHADE_SUN_LO, WHITE_SHADE_SUN_HI, facing), 0.0, 1.0);
+        float shadeSide = side * (1.0 - sunOnSide) * highSunTint();
         lin = mix(lin, vec3(dot(lin, LUMA)), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);
         // light pass 17: and its light to the same cool on every block (the warm bounce's share varies with the AO)
         light = mix(light, WHITE_SHADE_COOL * dot(light, LUMA), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);
+#if SHADE_PROBE_WHITE == 1
+        if (WHITE_SHADE_NEUTRAL * whiteness * shadeSide > 0.5) {
+            lin = vec3(1.0, 0.0, 1.0);
+            light = vec3(1.0);
+        } else if (whiteness > 0.5 && side > 0.5) {
+            lin = vec3(1.0, 1.0, 0.0);
+            light = vec3(1.0);
+        }
+#endif
     }
     vec3 c = lin * light;
 #ifdef LIT_TERRAIN
