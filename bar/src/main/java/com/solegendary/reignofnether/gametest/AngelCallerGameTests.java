@@ -998,8 +998,6 @@ public class AngelCallerGameTests {
                 // review r7: the foe kept whole, so it never dies and drops its own wisp beside the Seraph (1 in 8 its
                 // death wisp lay outside the caster's gather range and was read as one the faded Seraph left)
                 if (foe[0] != null) {
-                    if (foe[0].isAlive())
-                        foe[0].setHealth(foe[0].getMaxHealth());
                     foeHp[0] = foe[0].getHealth();
                 }
                 if (tick >= cast + life - 20 && tick < cast + life - 10 && alive)
