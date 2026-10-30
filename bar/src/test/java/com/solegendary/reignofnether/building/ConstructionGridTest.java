@@ -128,6 +128,119 @@ class ConstructionGridTest {
         assertTrue(Float.isNaN(g.columnTop(0, 0)), "outside");
     }
 
+    /**
+     * A wall 6 long (x 0-5, z 0), 3 high, origin (0, 0, 0): the foot course stands, the second course only at x 0, the
+     * third nothing - the builders started the next course at one end.
+     */
+    private static ConstructionGrid wall() {
+        List<int[]> b = new ArrayList<>();
+        for (int y = 0; y < 3; y++) for (int x = 0; x < 6; x++) b.add(new int[] { x, y, 0 });
+        ConstructionGrid g = ConstructionGrid.of(b);
+        g.clear();
+        for (int[] p : b)
+            g.mark(p[0], p[1], p[2], p[1] == 0 || (p[1] == 1 && p[0] == 0));
+        g.finish();
+        return g;
+    }
+
+    /**
+     * Round 13 critic: the build front read as a short orange tick - it was drawn on the HIGHEST rim row only, which is
+     * the few blocks the builders have started on the next course, not the course the wall is at. The front row is the
+     * rim row with the most edges (ties: the higher); the front runs along it and steps up over whatever already stands
+     * above it, never down into a lagging hole.
+     */
+    @Test
+    void theFrontRowIsTheCourseMostOfTheWallIsAt() {
+        ConstructionGrid g = wall();
+        // the foot course x 1-5: -z and +z each, and +x at x 5 = 11 edges at y 1; x 0 of the second course: 3 at y 2
+        assertEquals(1f, g.frontRow(), 1e-4, "the dominant course, not the 3-edge start on the next one");
+        int front = 0;
+        for (int i = 0; i < g.rimCount(); i++)
+            if (g.isFront(i)) front++;
+        assertEquals(14, front, "the front row and the stand above it: one band along the whole top");
+        assertEquals(66f, site().frontRow(), 1e-4, "the ring site: 14 edges at 66 beat the corner's 2 at 65");
+        int low = 0;
+        ConstructionGrid s = site();
+        for (int i = 0; i < s.rimCount(); i++)
+            if (!s.isFront(i)) { low++; assertEquals(65f, s.rimY(i), 1e-4, "only the lagging hole is left out"); }
+        assertEquals(2, low);
+    }
+
+    /**
+     * Round 13 critic: make the NEXT ghost row read as next - the missing blocks sitting on the front row, and only
+     * those. With nothing standing yet (no rim), the lowest missing course.
+     */
+    @Test
+    void theNextRowIsTheMissingCourseOnTheFront() {
+        ConstructionGrid g = wall();
+        for (int x = 1; x < 6; x++) assertTrue(g.isNextRow(x, 1, 0), "the second course's missing blocks: " + x);
+        assertTrue(!g.isNextRow(0, 1, 0), "standing");
+        assertTrue(!g.isNextRow(0, 2, 0) && !g.isNextRow(3, 2, 0), "the third course is not next");
+        ConstructionGrid s = site();
+        assertTrue(s.isNextRow(10, 66, 20), "the ring's top course");
+        assertTrue(!s.isNextRow(12, 65, 22), "the lagging corner is under the front, not next");
+        List<int[]> b = new ArrayList<>();
+        for (int y = 0; y < 2; y++) for (int x = 0; x < 3; x++) b.add(new int[] { x, 70 + y, 0 });
+        ConstructionGrid e = ConstructionGrid.of(b);
+        e.clear();
+        for (int[] p : b) e.mark(p[0], p[1], p[2], false);
+        e.finish();
+        assertTrue(Float.isNaN(e.frontRow()));
+        assertTrue(e.isNextRow(1, 70, 0), "nothing stands: the lowest missing course is next");
+        assertTrue(!e.isNextRow(1, 71, 0));
+    }
+
+    /**
+     * Round 13 critic: the ghost read as a lattice of translucent cubes. One volume: a missing block's face is drawn only
+     * where the block beyond it is not part of the site (air or outside) - never between two missing blocks, never
+     * against standing stone.
+     */
+    @Test
+    void theGhostHasOnlyItsExteriorFaces() {
+        ConstructionGrid g = wall();
+        // dirs: 0 -z, 1 +x, 2 +z, 3 -x, 4 +y, 5 -y
+        assertTrue(g.ghostFace(2, 1, 0, 0) && g.ghostFace(2, 1, 0, 2), "the wall's two long faces");
+        assertTrue(!g.ghostFace(2, 1, 0, 1) && !g.ghostFace(2, 1, 0, 3), "between two missing blocks");
+        assertTrue(!g.ghostFace(2, 1, 0, 4), "under the missing course above");
+        assertTrue(!g.ghostFace(2, 1, 0, 5), "on standing stone");
+        assertTrue(!g.ghostFace(1, 1, 0, 3), "against the standing block at x 0");
+        assertTrue(g.ghostFace(5, 2, 0, 4) && g.ghostFace(5, 2, 0, 1), "the top course's top and end");
+        assertTrue(g.ghostFace(0, 2, 0, 3) && !g.ghostFace(0, 2, 0, 5), "over the stand at x 0: its end, not its foot");
+        assertTrue(!g.ghostFace(0, 0, 0, 4), "a standing block has no ghost face");
+        int faces = 0;
+        for (int i = 0; i < g.missingCount(); i++)
+            for (int dir = 0; dir < 6; dir++)
+                if (g.ghostFace(g.missingX(i), g.missingY(i), g.missingZ(i), dir)) faces++;
+        // the 11 missing blocks' hull: -z and +z 11 each, the top 6, the ends: +x 2 (courses 1, 2), -x 1 (course 2)
+        assertEquals(11 + 11 + 6 + 2 + 1, faces);
+    }
+
+    /**
+     * The seams between ghost cells (round 13 critic: inner cube seams visible): a face lies GHOST inset inside its cell
+     * (never on a standing block's plane) but spans its whole cell in its own plane, so two neighbouring faces meet edge
+     * to edge with no gap. Corners in the order a quad is wound.
+     */
+    @Test
+    void ghostFacesSpanTheirCellAndMeetEdgeToEdge() {
+        float[] a = new float[12], b = new float[12];
+        ConstructionGrid.ghostQuad(2, 1, 0, 0, 0.01f, a);   // -z face of (2, 1, 0)
+        ConstructionGrid.ghostQuad(3, 1, 0, 0, 0.01f, b);   // ... of its +x neighbour
+        float ax0 = 9, ax1 = -9, bx0 = 9, bx1 = -9;
+        for (int k = 0; k < 4; k++) {
+            assertEquals(0.01f, a[k * 3 + 2], 1e-6, "the plane, inset into the cell");
+            ax0 = Math.min(ax0, a[k * 3]); ax1 = Math.max(ax1, a[k * 3]);
+            bx0 = Math.min(bx0, b[k * 3]); bx1 = Math.max(bx1, b[k * 3]);
+            assertTrue(a[k * 3 + 1] == 1f || a[k * 3 + 1] == 2f, "full height in its plane");
+        }
+        assertEquals(2f, ax0, 1e-6);
+        assertEquals(3f, ax1, 1e-6, "no gap to its neighbour");
+        assertEquals(3f, bx0, 1e-6);
+        ConstructionGrid.ghostQuad(2, 1, 0, 4, 0.01f, a);   // the top
+        for (int k = 0; k < 4; k++) assertEquals(1.99f, a[k * 3 + 1], 1e-6);
+        ConstructionGrid.ghostQuad(2, 1, 0, 1, 0.01f, a);   // +x
+        for (int k = 0; k < 4; k++) assertEquals(2.99f, a[k * 3], 1e-6);
+    }
+
     @Test
     void anEmptySiteNeverThrows() {
         ConstructionGrid g = ConstructionGrid.of(List.of());

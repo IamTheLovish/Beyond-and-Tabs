@@ -262,6 +262,19 @@ class ConstructionShapeTest {
             assertEquals(want[k], o[i * 6 + k], 1e-4, "box " + i + " field " + k);
     }
 
+    /**
+     * Round 13 critic: lines measured in pixels (the front 2 px, the beams 2 px, the ghost's outline 1 px). The RTS view
+     * is {@code zoom} blocks tall, so a pixel is zoom / screen height blocks; first person: the 36 px a block the RTS
+     * default shows. Never zero, whatever the window reports.
+     */
+    @Test
+    void pixelsBecomeBlocksAtTheRtsZoom() {
+        assertEquals(2 * 30f / 1080, ConstructionShape.pxToBlocks(2, true, 30, 1080), 1e-6);
+        assertEquals(2 * 70f / 1080, ConstructionShape.pxToBlocks(2, true, 70, 1080), 1e-6, "zoomed out: wider in the world");
+        assertEquals(1 / 36f, ConstructionShape.pxToBlocks(1, false, 30, 1080), 1e-6);
+        assertTrue(ConstructionShape.pxToBlocks(1, true, 30, 0) > 0, "a zero-height window");
+    }
+
     @Test
     void anEmptyOrOddBuildingNeverThrows() {
         ConstructionShape e = ConstructionShape.of(List.of());

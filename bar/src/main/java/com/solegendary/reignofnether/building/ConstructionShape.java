@@ -334,4 +334,14 @@ public final class ConstructionShape {
             return MIN_RING;
         return Math.max(MIN_RING, halfDiag[layerOf(front)] * RING_STANDOFF);
     }
+    /**
+     * {@code px} screen pixels in blocks (round 13 critic: lines sized in pixels - the front 2 px, the beams 2 px, the
+     * ghost's outline 1 px). The RTS view is {@code zoom} blocks tall; first person (or no window height): the 36 px a
+     * block the default RTS zoom shows.
+     */
+    public static float pxToBlocks(float px, boolean ortho, float zoom, int screenH) {
+        if (!ortho || screenH <= 0 || zoom <= 0)
+            return px / 36f;
+        return px * zoom / screenH;
+    }
 }
