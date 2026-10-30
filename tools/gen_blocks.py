@@ -132,7 +132,9 @@ TARGETS = {
     "deepslate":                  dict(luma=0.19, std=0.045, sat=0.05, tilt=21.0, smooth=12, pore=10),
     "deepslate_top":              dict(luma=0.19, std=0.040, sat=0.05, tilt=18.0, smooth=15, pore=10),
     "polished_deepslate":         dict(luma=0.31, std=0.030, sat=0.02, tilt=4.5, smooth=90, pore=4),
-    "cobbled_deepslate":          dict(luma=0.24, std=0.075, sat=0.03, tilt=21.0, smooth=23, pore=16),
+    # r31: blue-grey slate (sat 0.03 -> 0.10), a touch lighter (0.24 -> 0.27), joints lower in contrast (std 0.075
+    # -> 0.060), flatter flakes (tilt 21 -> 16)
+    "cobbled_deepslate":          dict(luma=0.27, std=0.060, sat=0.10, tilt=16.0, smooth=26, pore=14),
     "cut_copper":                 dict(luma=0.50, std=0.058, sat=0.55, tilt=12.0, smooth=104, pore=0),
     "oxidized_cut_copper":        dict(luma=0.55, std=0.065, sat=0.45, tilt=12.0, smooth=12, pore=20),
     "azalea_leaves":              dict(luma=0.43, std=0.080, sat=0.65, tilt=16.5, smooth=70, pore=180),
@@ -664,6 +666,41 @@ def m_cobblestone(F, n, cells=22, contrast=0.45, fine=0.05):
     hue = (tone[idx] - 0.5)
     jit = np.stack([0.04 * hue, 0.0 * hue, -0.04 * hue], -1)
     return H, tint((0.52, 0.52, 0.51), shade, jit)
+
+
+def m_cobbled_slate(F, n, cells=16):
+    """Round 31 (art director: cobbled deepslate's stones "far too large (3-4 per face) with high-contrast cartoon
+    edges"): a rubble wall of SLATE - flat angular flakes, 4x4 per face, each a plane at its own slight tilt with a
+    narrow chipped bevel (not a dome), set in a thin dark joint that is only a little darker than the stone. The
+    stones are blue-grey, each its own tone, with faint lamination lines (slate splits in layers) in the relief."""
+    f1, f2, idx, k = F.voronoi(cells, 0.85)
+    wu, wv = 0.006 * F.noise(4, 12, 0.5), 0.006 * F.noise(4, 12, 0.5)
+    f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
+    idx = idx[(np.round((F.v + wv) * n).astype(int)) % n, (np.round((F.u + wu) * n).astype(int)) % n]
+    edge = f2 - f1
+    stone = smoothstep(0.004, 0.030, edge)                # the stone's flat top: a narrow bevel, then flat
+    rng = F.rng
+    tone = rng.uniform(0.80, 1.15, k)[idx]
+    # each flake a plane at its own slight tilt (the chipped cleavage face), its own level
+    ang = 2 * math.pi
+    cx = np.arctan2(np.bincount(idx.ravel(), np.sin(ang * F.u).ravel(), k),
+                    np.bincount(idx.ravel(), np.cos(ang * F.u).ravel(), k)) / ang
+    cy = np.arctan2(np.bincount(idx.ravel(), np.sin(ang * F.v).ravel(), k),
+                    np.bincount(idx.ravel(), np.cos(ang * F.v).ravel(), k)) / ang
+    dx = (F.u - cx[idx] + 0.5) % 1.0 - 0.5
+    dy = (F.v - cy[idx] + 0.5) % 1.0 - 0.5
+    gx, gy, lvl = rng.standard_normal(k), rng.standard_normal(k), rng.uniform(-0.03, 0.03, k)
+    plane = lvl[idx] + 0.25 * (gx[idx] * dx + gy[idx] * dy)
+    lam = 0.5 * np.sin(2 * math.pi * (F.u * 14 + F.v * 9 + 0.6 * F.noise(2, 6, 0.5)))   # lamination lines
+    lam = lam * smoothstep(0.4, 0.8, norm01(F.noise(2, 5, 0.5)))                          # only on some flakes
+    grit = F.noise(20, 50, 0.3)
+    H = 0.35 + 0.5 * stone + plane * stone + 0.015 * grit + 0.012 * lam * stone
+    shade_stone = tone * (0.95 + 0.04 * grit + 0.05 * lam) * (0.9 + 0.1 * stone)
+    shade = np.where(stone > 0.05, shade_stone, 0.62 + 0.3 * stone)        # the joint: a little darker, not black
+    shade = shade_stone * stone + (0.66 + 0.1 * grit) * (1 - stone) * tone
+    hue = tone - 1.0
+    jit = np.stack([-0.10 * hue, -0.03 * hue, 0.08 * hue], -1)                # lighter flakes bluer, darker warmer
+    return H, tint((0.31, 0.34, 0.39), shade, jit)
 
 
 def m_gravel(F, n):
@@ -3161,7 +3198,8 @@ def recipes():
         "deepslate_top": lambda F, n: m_deepslate(F, n, top=True),
         "polished_deepslate": lambda F, n: m_polished(F, n, (0.32, 0.32, 0.34), 0.06, 0.04),
         # r21: 22 small high-contrast stones read as salt-and-pepper on the dark base - fewer, larger, calmer stones
-        "cobbled_deepslate": lambda F, n: m_cobblestone(F, n, cells=11, contrast=0.18, fine=0.03),
+        # r31: m_cobbled_slate - 16 flat angular flakes per face, soft joints (3-4 domed stones read as cartoon)
+        "cobbled_deepslate": lambda F, n: m_cobbled_slate(F, n, cells=16),
         "netherrack": m_netherrack,
         "nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.12, 0.14), pits=0.05),
         "prismarine_bricks": lambda F, n: m_bricks(F, n, 2, 2, (0.42, 0.66, 0.58), tone_amp=0.10),
