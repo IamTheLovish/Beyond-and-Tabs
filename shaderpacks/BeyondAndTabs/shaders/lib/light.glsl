@@ -32,6 +32,8 @@ const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
 const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;
 // torch, lantern and fire light (vanilla's block light)
 const vec3 BLOCK_LIGHT = vec3(1.00, 0.70, 0.40) * 1.60;
+// share of the sun bounced off the ground onto vertical faces (about the ground's albedo times the sun's spread)
+const float GROUND_BOUNCE = 0.20;
 // so the darkest cave is never pure black
 const vec3 MIN_LIGHT = vec3(0.012);
 // the sky's fill under a sky light of 0 as a share of the open sky's: the fill falls off with the sky light linearly
@@ -70,14 +72,32 @@ float sunFacing(vec3 n, vec3 l) {
     return mix(ndl, sqrt(ndl), 0.5);
 }
 
+// the sun's light reaching a surface before its facing: the colour, the shadow, and the fade where the sky light says
+// the surface is indoors. The specular highlight (lib/pbr.glsl) takes the same light, so a glint never shows in shade
+vec3 sunArriving(float shadow, vec2 levels, vec3 sunColour) {
+    return sunColour * (shadow * smoothstep(0.05, 0.45, levels.y));
+}
+
 // the light falling on a surface with view-space normal n: shadow (0..1) from lib/shadow.glsl, levels from lightLevels,
-// ao the vertex ambient occlusion (1 = open)
-vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, vec3 sunColour, vec3 skyColour) {
+// ao the vertex ambient occlusion (1 = open), texAo the material's own (the _n map's blue, slice 2; 1 = open): it
+// darkens the sky's fill fully and the sun at half strength - a crevice still catches some of a direct sun
+vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, float texAo, vec3 sunColour,
+                  vec3 skyColour) {
     vec3 up = normalize(upPosition);
     float sky = levels.y;
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
-    vec3 light = sunColour * (facing * shadow * smoothstep(0.05, 0.45, sky));
-    light += skyColour * ((0.75 + 0.25 * dot(n, up)) * mix(SKY_FILL_FLOOR, 1.0, sky) * ao);
+    vec3 light = sunArriving(shadow, levels, sunColour) * (facing * mix(1.0, texAo, 0.5));
+    float upness = dot(n, up);
+    light += skyColour * ((0.75 + 0.25 * upness) * mix(SKY_FILL_FLOOR, 1.0, sky) * ao * texAo);
+    // light bounced off the sunlit ground onto walls (block critic vs the Complementary benchmark, Oct 30: our wall
+    // faces sat at ~1/3 of the tops - quartz sides 68 vs the benchmark's 126 - so every block's shaded side read near
+    // black). Only faces that look sideways or down take it, so a building's cast shadow on the ground (the judged
+    // shadow / lit band) is untouched; it carries the sun's colour, dimmed by the sky light so caves stay dark
+    light += sunColour * (GROUND_BOUNCE * clamp(1.0 - upness, 0.0, 1.0) * sky * ao * texAo);
     light += BLOCK_LIGHT * (pow(levels.x, 3.0) * mix(1.0, 0.35, daylight) * mix(0.6, 1.0, ao));
     return light + MIN_LIGHT;
+}
+
+vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, vec3 sunColour, vec3 skyColour) {
+    return surfaceLight(n, facing, shadow, levels, ao, 1.0, sunColour, skyColour);
 }
