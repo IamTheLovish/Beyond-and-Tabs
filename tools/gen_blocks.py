@@ -208,7 +208,7 @@ TARGETS = {
     # game the r30b block still read near-black (its top face measured 0.053 on screen vs the benchmark's 0.11 base
     # with glints at 0.32 over a quarter of the face); the lift lives in the sheen bands, the glass between stays dark
     # r31b: brighter, more numerous glints (eyes 41018675091: the benchmark's top face glitters) - std 0.075 -> 0.09
-    "obsidian": dict(luma=0.16, std=0.090, sat=0.30, tilt=10.0, smooth=228, pore=0),
+    "obsidian": dict(luma=0.16, std=0.090, sat=0.20, tilt=10.0, smooth=228, pore=0),   # r31c: chroma cut (0.30 -> 0.20)
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
     "dirt_path_top": dict(luma=0.47, std=0.050, sat=0.44, tilt=15.0, smooth=29, pore=50),
@@ -1322,31 +1322,39 @@ def m_obsidian_glass(F, n, cells=4):
     # (a lens is finite) and catching more on some faces than others. Five bands at their own spacing and strength
     # make a stripe set, not a blob; the lift to the benchmark's values (base ~0.11, glints ~0.32 over a quarter of
     # the face) goes through TARGETS (luma / std).
-    flowc = F.v + 0.035 * F.noise(1, 3, 0.5) + 0.010 * F.noise(3, 9, 0.5)  # the flow layers: wavy, run along u
+    # r31c (eyes 41023221433: the bands "line up as parallel diagonal bands on the top and horizontal bands on the
+    # sides; clusters repeat per tile"): each fracture FACE cuts the layering at its own angle, so the band set is
+    # laid per face - its own direction, phase and spacing - and no band runs as one line across the tile
+    wob = 0.015 * F.noise(1, 3, 0.5) + 0.006 * F.noise(3, 9, 0.5)
+    th = rng.uniform(0, math.pi, m)
+    ph = rng.uniform(0, 1, m)
+    sp = rng.uniform(3.5, 6.0, m)                                            # band sets per block on that face
+    flowc = (np.cos(th[idx]) * (U - 0.5) + np.sin(th[idx]) * (V - 0.5)) * sp[idx] + ph[idx] + wob * sp[idx]
     bands = np.zeros((n, n))
-    nb = 6
-    centres = (np.arange(nb) + 0.5 + 0.5 * (rng.random(nb) - 0.5)) / nb     # spread over the block, jittered
-    widths = rng.uniform(0.010, 0.040, nb)                                   # 1.3-5 texels sigma at 128x: varied
+    nb = 2
+    centres = (np.arange(nb) + 0.5 + 0.5 * (rng.random(nb) - 0.5)) / nb     # the band set, repeating every 1.0
+    widths = rng.uniform(0.05, 0.16, nb)                                     # in band-spacing units: 1-4 texels
     strength = rng.uniform(0.65, 1.0, nb)
     for c, w, s in zip(centres, widths, strength):
         d = (flowc - c + 0.5) % 1.0 - 0.5
         bands += s * np.exp(-(d / w) ** 2)
-    along = 0.35 + 0.65 * smoothstep(0.0, 0.6, norm01(F.noise(1, 4, 0.6, sx=3.0, sy=1.0)))   # a lens fades along u
+    along = 0.15 + 0.85 * smoothstep(0.25, 0.7, norm01(F.noise(2, 6, 0.6)))   # the bands break into lenses
     streak = 0.8 + 0.2 * norm01(F.noise(12, 32, 0.3, sx=4.0, sy=1.0))           # fibrous inside the band
     # the sheen is seen only where the fracture face meets the layers at the right angle: some faces show the whole
     # band set, others almost none - so a wall is not zebra-striped, the stripes come in patches
     dim = np.zeros(m, bool)
     dim[rng.permutation(m)[:max(1, m // 3)]] = True                           # a third of the faces (one of four)
-    face_catch = np.where(dim, rng.uniform(0.05, 0.2, m), rng.uniform(0.6, 1.0, m))[idx]
+    face_catch = np.where(dim, rng.uniform(0.08, 0.25, m), rng.uniform(0.45, 1.0, m))[idx]
     sheen = np.clip(bands * along * streak * face_catch * (1 - arete), 0, 0.85)
     # r31b (eyes 41018675091, r30b beside the benchmark: our sheen "dimmer and duller - mauve, not lavender", the
     # benchmark's glints "brighter and more numerous, its top face glitters"): sharper bright CORES inside the soft
     # bands - where a mid-scale fibre noise peaks along the band the inclusions lie densest, 2-6 texels, of varied
     # size, lavender (hue ~265) - the glitter; they sit in the bands, so no polka dots on the dark glass
-    fibre = norm01(F.warp(F.noise(6, 18, 0.4, sx=3.0, sy=1.0), 0.0, 0.01 * F.noise(3, 8, 0.5)))
+    fibre = norm01(F.warp(F.noise(6, 18, 0.4), 0.01 * F.noise(3, 8, 0.5), 0.01 * F.noise(3, 8, 0.5)))
     core = smoothstep(0.55, 0.85, fibre) * smoothstep(0.15, 0.5, sheen) * (1 - arete)
-    alb = alb * (1 - sheen[..., None]) + sheen[..., None] * np.array([0.40, 0.32, 0.58])   # hue ~258: lavender
-    alb = alb * (1 - core[..., None]) + core[..., None] * np.array([0.62, 0.50, 0.86])     # hue ~260, the glints
+    # r31c: "pink too bright / saturated for black glass" - chroma halved, the lavender cooler and greyer
+    alb = alb * (1 - sheen[..., None]) + sheen[..., None] * np.array([0.37, 0.33, 0.50])   # grey-lavender
+    alb = alb * (1 - core[..., None]) + core[..., None] * np.array([0.60, 0.55, 0.76])     # the glints, cool
     smooth = 228 - 95 * arete - 4 * np.abs(ripple) + 22 * sheen + 5 * core    # the bands and cores glint
     return dict(H=H, alb=alb, smooth=smooth)
 
