@@ -5,6 +5,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -12,9 +14,11 @@ import java.util.function.BooleanSupplier;
  * thrust is an 18-tick clip whose blade arrives at THRUST_HIT_P (0.27, tick 5), and with the damage on the swing's
  * tick the target flinched ~5 ticks before the blade got there (lovish, PR 342: "Move the hit"). Only the damage
  * waits: the swing, its animate packet and the attack cooldown still start on the swing's tick, so the attack rate
- * is unchanged. The attacker ticks it (server side) before its own tick, so the blow lands exactly keyedHitTicks
- * ticks after the swing. The blow is dropped if the attacker or the target dies, the attack loses its order, or the
- * target steps more than {@link #REACH_TOLERANCE} past the reach it was struck at.
+ * is unchanged. The attacker ticks it (server side), so the blow lands exactly keyedHitTicks ticks after the swing.
+ * Every other melee body holds its blow the same way to the frame its weapon strikes (BlowTiming; lovish, Oct 30:
+ * "hit on the strike"), on a HeldBlow kept here and ticked from AttackerUnit's tick. The blow is dropped if the
+ * attacker or the target dies, the attack loses its order, or the target steps more than {@link #REACH_TOLERANCE}
+ * past the reach it was struck at.
  */
 public final class HeldBlow {
 
@@ -23,6 +27,7 @@ public final class HeldBlow {
 
     @Nullable private LivingEntity target;
     private int ticksLeft;
+    private int heldAt = Integer.MIN_VALUE;
     private double maxDist;
     private BooleanSupplier ordered = () -> false;
 
@@ -31,10 +36,29 @@ public final class HeldBlow {
      * centre-to-centre distance the attack reached from; {@code ordered} says whether the attack still stands.
      */
     public static void strike(Mob attacker, LivingEntity target, double reach, BooleanSupplier ordered) {
-        if (attacker instanceof KeyedSwing keyed && keyed.keyedHitTicks() > 0 && keyed.heldBlow() != null)
-            keyed.heldBlow().hold(attacker, target, keyed.keyedHitTicks(), reach, ordered);
+        if (attacker instanceof KeyedSwing keyed && keyed.heldBlow() != null) {
+            if (keyed.keyedHitTicks() > 0)
+                keyed.heldBlow().hold(attacker, target, keyed.keyedHitTicks(), reach, ordered);
+            else
+                attacker.doHurtTarget(target);
+            return;
+        }
+        // any other body: held to the frame its weapon strikes (BlowTiming), ticked by AttackerUnit's tick
+        int ticks = BlowTiming.hitTicks(attacker);
+        if (ticks > 0 && !attacker.level().isClientSide())
+            HELD.computeIfAbsent(attacker, m -> new HeldBlow()).hold(attacker, target, ticks, reach, ordered);
         else
             attacker.doHurtTarget(target);
+    }
+
+    /** The blows of attackers with no HeldBlow of their own (not a KeyedSwing): one each, kept while it lives. */
+    private static final Map<Mob, HeldBlow> HELD = new WeakHashMap<>();
+
+    /** Ticks {@code attacker}'s blow held by {@link #strike}, if any (AttackerUnit's tick, server side). */
+    public static void tickHeld(Mob attacker) {
+        HeldBlow blow = HELD.get(attacker);
+        if (blow != null)
+            blow.tick(attacker);
     }
 
     /** Holds a blow for {@code ticks}; one still held lands first if it still may (no swing loses its damage). */
@@ -47,14 +71,15 @@ public final class HeldBlow {
         }
         this.target = target;
         this.ticksLeft = ticks;
+        this.heldAt = attacker.tickCount;
         this.maxDist = reach + REACH_TOLERANCE;
         this.ordered = ordered;
     }
 
-    /** Called once a tick from the attacker's tick, before the rest of it (server side only). */
+    /** Called once a tick from the attacker's tick (server side only); a blow held this tick waits for the next. */
     public void tick(Mob attacker) {
-        if (target == null)
-            return;
+        if (target == null || attacker.tickCount == heldAt)
+            return;   // (a blow held earlier in this same tick - by a goal, before the attacker's tick ran - waits)
         if (!stands(attacker)) {
             cancel();
             return;
