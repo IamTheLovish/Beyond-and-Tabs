@@ -12,5 +12,7 @@ public enum HeroAction {
     REQUEST_SYNC,
     // the sender's Hero AI switch (ReignOfNetherClientConfigs.HERO_AI): unitId unused
     HERO_AI_ON,
-    HERO_AI_OFF
+    HERO_AI_OFF,
+    // the sender selected their hero (D030: a select hands a fleeing hero back to the player's order): unitId = the hero
+    HERO_SELECTED
 }

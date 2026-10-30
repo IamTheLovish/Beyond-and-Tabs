@@ -37,6 +37,8 @@ public class ResourceCosts {
     public static final ResourceCost VINDICATOR = new ResourceCost(ID, "VINDICATOR");
     public static final ResourceCost WITCH = new ResourceCost(ID, "WITCH");
     public static final ResourceCost EVOKER = new ResourceCost(ID, "EVOKER");
+    public static final ResourceCost ANGEL_CALLER = new ResourceCost(ID, "ANGEL_CALLER");   // Sunforged essence caster
+    public static final ResourceCost ANGEL = new ResourceCost(ID, "ANGEL");   // its summons: free, no population
     public static final ResourceCost RAVAGER = new ResourceCost(ID, "RAVAGER");
     public static final ResourceCost WAR_MAMMOTH = new ResourceCost(ID, "WAR_MAMMOTH");
     public static final ResourceCost BONEWRIGHT = new ResourceCost(ID, "BONEWRIGHT");
@@ -63,6 +65,8 @@ public class ResourceCosts {
     public static final ResourceCost CUTLASS_RAIDER = new ResourceCost(ID, "CUTLASS_RAIDER");
     public static final ResourceCost REEF_GUARD = new ResourceCost(ID, "REEF_GUARD");
     public static final ResourceCost BOMBARD_CREW = new ResourceCost(ID, "BOMBARD_CREW");
+    /** Every faction's T1 siege lobber (design/siege_t1.md): one shared price. */
+    public static final ResourceCost SIEGE_LOBBER = new ResourceCost(ID, "SIEGE_LOBBER");
     public static final ResourceCost TIDE_PRIEST = new ResourceCost(ID, "TIDE_PRIEST");
     public static final ResourceCost HARPOONER = new ResourceCost(ID, "HARPOONER");
     public static final ResourceCost FLAK_SWIVEL = new ResourceCost(ID, "FLAK_SWIVEL");
@@ -95,6 +99,7 @@ public class ResourceCosts {
     public static final ResourceCost EARTHSHAKER = new ResourceCost(ID, "EARTHSHAKER");
     public static final ResourceCost GRAVITY_MONK = new ResourceCost(ID, "GRAVITY_MONK");
     public static final ResourceCost MIRROR_MAGE = new ResourceCost(ID, "MIRROR_MAGE");
+    public static final ResourceCost SPARK_SAGE = new ResourceCost(ID, "SPARK_SAGE");
     public static final ResourceCost CELESTIAL_OBSERVATORY = new ResourceCost(ID, "CELESTIAL_OBSERVATORY");
     // Stormcallers slice 4 (the rest of T2, Heaven's Gate and the Celestial Dragon)
     public static final ResourceCost SEER = new ResourceCost(ID, "SEER");
@@ -292,6 +297,7 @@ public class ResourceCosts {
     public static final ResourceCost DRILL_BURROWER = new ResourceCost(ID, "DRILL_BURROWER");
     public static final ResourceCost REPAIR_CRAWLER = new ResourceCost(ID, "REPAIR_CRAWLER");
     public static final ResourceCost CLOCKWORK_SPIDER = new ResourceCost(ID, "CLOCKWORK_SPIDER");
+    public static final ResourceCost SOUL_ENGINEER = new ResourceCost(ID, "SOUL_ENGINEER");
     public static final ResourceCost ASSEMBLY_WORKS = new ResourceCost(ID, "ASSEMBLY_WORKS");
     public static final ResourceCost RAIL_BATTERY = new ResourceCost(ID, "RAIL_BATTERY");
     public static final ResourceCost IRON_LEVIATHAN_ENGINE = new ResourceCost(ID, "IRON_LEVIATHAN_ENGINE");
@@ -397,6 +403,8 @@ public class ResourceCosts {
         VINDICATOR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.VINDICATOR);
         WITCH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WITCH);
         EVOKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EVOKER);
+        ANGEL_CALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ANGEL_CALLER);
+        ANGEL.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ANGEL);
         RAVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.RAVAGER);
         WAR_MAMMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WAR_MAMMOTH);
         BONEWRIGHT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONEWRIGHT);
@@ -419,6 +427,7 @@ public class ResourceCosts {
         CUTLASS_RAIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CUTLASS_RAIDER);
         REEF_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REEF_GUARD);
         BOMBARD_CREW.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BOMBARD_CREW);
+        SIEGE_LOBBER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SIEGE_LOBBER);
         TIDE_PRIEST.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TIDE_PRIEST);
         HARPOONER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.HARPOONER);
         FLAK_SWIVEL.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FLAK_SWIVEL);
@@ -447,6 +456,7 @@ public class ResourceCosts {
         EARTHSHAKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EARTHSHAKER);
         GRAVITY_MONK.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GRAVITY_MONK);
         MIRROR_MAGE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MIRROR_MAGE);
+        SPARK_SAGE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SPARK_SAGE);
         CELESTIAL_OBSERVATORY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CELESTIAL_OBSERVATORY);
         SEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEER);
         LANTERN_FORTRESS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.LANTERN_FORTRESS);
@@ -631,6 +641,7 @@ public class ResourceCosts {
         DRILL_BURROWER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.DRILL_BURROWER);
         REPAIR_CRAWLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REPAIR_CRAWLER);
         CLOCKWORK_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CLOCKWORK_SPIDER);
+        SOUL_ENGINEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SOUL_ENGINEER);
         ASSEMBLY_WORKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ASSEMBLY_WORKS);
         RAIL_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.RAIL_BATTERY);
         IRON_LEVIATHAN_ENGINE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.IRON_LEVIATHAN_ENGINE);

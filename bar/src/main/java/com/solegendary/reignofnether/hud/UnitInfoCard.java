@@ -84,11 +84,15 @@ public final class UnitInfoCard {
         Map.entry("ShadeRangerUnit", Role.ARTILLERY),
         // the Wisp Choir is a ranged skirmisher (its anti-air bonus is on the damage line), the Bloom Priestess a healer
         Map.entry("WispChoirUnit", Role.SKIRMISHER), Map.entry("BloomPriestessUnit", Role.SUPPORT),
+        // the Sunforged essence caster does not fight (its angels do); its Mender Angel is a healer
+        Map.entry("AngelCallerUnit", Role.SUPPORT), Map.entry("MenderAngelUnit", Role.SUPPORT),
         // Tidewrought: the Reef Guard (80 HP, shield) holds the line, the Bombard Crew is splash artillery, the Tide
         // Priest a non-fighting support, the Cutlass Raider and the Gull Spotter raiders; the Shipwright is a worker
         Map.entry("ReefGuardUnit", Role.TANK), Map.entry("BombardCrewUnit", Role.ARTILLERY),
         Map.entry("TidePriestUnit", Role.SUPPORT), Map.entry("CutlassRaiderUnit", Role.RAIDER),
         Map.entry("GullSpotterUnit", Role.RAIDER),
+        // every faction's T1 siege lobber (design/siege_t1.md)
+        Map.entry("SiegeLobberUnit", Role.ARTILLERY),
         // slice 2: the Harpooner and the Flak Swivel are ranged skirmishers (the pull and the anti-air bonus are on the
         // damage line), the Mudskipper Sloop a raider
         Map.entry("HarpoonerUnit", Role.SKIRMISHER), Map.entry("FlakSwivelUnit", Role.SKIRMISHER),
@@ -115,7 +119,7 @@ public final class UnitInfoCard {
         // supports; the Engineer-Captain falls to the worker rule
         Map.entry("SteamJuggernautUnit", Role.TANK), Map.entry("TeslaWalkerUnit", Role.SKIRMISHER),
         Map.entry("GyrocopterGunshipUnit", Role.SKIRMISHER), Map.entry("DrillBurrowerUnit", Role.RAIDER),
-        Map.entry("RepairCrawlerUnit", Role.SUPPORT), Map.entry("ClockworkSpiderUnit", Role.SKIRMISHER),
+        Map.entry("RepairCrawlerUnit", Role.SUPPORT), Map.entry("SoulEngineerUnit", Role.SUPPORT), Map.entry("ClockworkSpiderUnit", Role.SKIRMISHER),
         // slice 2: the Ink Scribe is a controller (its Seal), the Frost Adept a skirmisher, the Rocket Battery artillery
         Map.entry("InkScribeUnit", Role.SUPPORT), Map.entry("FrostAdeptUnit", Role.SKIRMISHER),
         Map.entry("RocketBatteryUnit", Role.ARTILLERY),
@@ -123,6 +127,8 @@ public final class UnitInfoCard {
         // Gravity Monk and the Mirror Mage are controllers; the Ley Master falls to the worker rule
         Map.entry("ThunderDragonUnit", Role.SKIRMISHER), Map.entry("EarthshakerUnit", Role.TANK),
         Map.entry("GravityMonkUnit", Role.SUPPORT), Map.entry("MirrorMageUnit", Role.SUPPORT),
+        // the essence caster: a blink, chain lightning and a storm cloud, never a weapon of its own
+        Map.entry("SparkSageUnit", Role.SUPPORT),
         // slice 4: the Seer watches, the Lantern Fortress shields (both support), the Phoenix dives (a raider), the
         // Celestial Dragon is the faction's experimental
         Map.entry("SeerUnit", Role.SUPPORT), Map.entry("LanternFortressUnit", Role.SUPPORT),

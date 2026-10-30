@@ -367,7 +367,7 @@ public class MiscUtil {
      * their sort key is the distance plus 100 (findClosestAttackableEntity, both scans).
      */
     public static boolean isDeprioritisedTarget(LivingEntity e, boolean attackerIsMelee) {
-        boolean isMeleeAgainstFlyer = attackerIsMelee && e instanceof Unit unit && unit.isFlyingUnit();
+        boolean isMeleeAgainstFlyer = attackerIsMelee && e instanceof Unit unit && unit.isFlyingOutOfMelee();
         return e instanceof PhantomSummon || (e instanceof Unit scout && scout.isScout()) || isMeleeAgainstFlyer
             || e instanceof BeeUnit;
     }
@@ -420,6 +420,10 @@ public class MiscUtil {
      * change the two together.
      */
     public static boolean isIdleOrMoveAttackable(Mob unitMob, LivingEntity targetEntity, boolean neutralAggro) {
+        // a hero the v2 AI drives picks its own fights round enemy towers and while near death (hero/HeroBot)
+        if (unitMob instanceof com.solegendary.reignofnether.hero.FactionHero hero
+                && !com.solegendary.reignofnether.hero.HeroBot.mayAutoTarget(hero, unitMob, targetEntity))
+            return false;
         Relationship rs = Relationship.NEUTRAL;
         if (unitMob instanceof Unit) {
             rs = UnitServerEvents.getUnitToEntityRelationship((Unit) unitMob, targetEntity);
@@ -444,11 +448,14 @@ public class MiscUtil {
 
         // Prevents certain attacks based on specific unit and goal conditions
         if (targetEntity instanceof Unit unit &&
-                unit.isFlyingUnit() &&
+                unit.isFlyingOutOfMelee() &&
                 unitMob instanceof AttackerUnit attackerUnit &&
                 attackerUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal) {
             return false;
         }
+        // nor a unit that cannot hit air (the field artillery): both scans, attack-move and idle aggro skip the flyer
+        if (AttackerUnit.refusesTarget(unitMob, targetEntity))
+            return false;
         boolean isPassiveNonUnit = isPassiveNonUnit(targetEntity);
 
 

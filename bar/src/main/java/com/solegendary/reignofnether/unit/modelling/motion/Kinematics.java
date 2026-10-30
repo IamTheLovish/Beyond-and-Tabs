@@ -29,6 +29,8 @@ public final class Kinematics {
     public static final int SIZE_WINDOW = 3;
     /** Impulses (degrees per tick) a hit gives the flinch and stagger springs. */
     public static final float FLINCH_KICK = 9f, STAGGER_KICK = 10f;
+    /** The impulse a landed blow gives its attacker's recoil spring (degrees per tick), and that spring's stiffness and damping. */
+    public static final float RECOIL_KICK = 18f, RECOIL_OMEGA = 1.1f, RECOIL_ZETA = 0.3f;
 
     /**
      * @param dx,dy,dz   the unit's movement this tick (x - xo ...), blocks
@@ -37,6 +39,11 @@ public final class Kinematics {
      * @param attacking  swinging or drawing this tick (counts as exertion)
      * @param fresh      the slot's first tick: seed it, no motion
      */
+    /** Ticks per breath at an exertion: 60 at rest (a man standing), 25 when blown. */
+    public static float breathPeriod(float exertion) {
+        return Mth.lerp(Mth.clamp(exertion, 0f, 1f), 60f, 25f);
+    }
+
     public static void step(float[] s, int b, float dx, float dy, float dz, float dYawDeg, float health, float maxHealth,
                             boolean attacking, boolean fresh) {
         if (fresh) {
@@ -70,6 +77,10 @@ public final class Kinematics {
         }
         float e = s[b + EXERTION];
         s[b + EXERTION] = speed > RUN_SPEED || attacking ? e + (1f - e) * 0.02f : e * 0.99f;
+        // the breath runs on its own phase: exertion changes how fast it turns, never where it is (Motion.pose)
+        float tempo = s[b + TEMPO] > 0f ? s[b + TEMPO] : 1f;
+        s[b + BREATH_PREV] = s[b + BREATH_PHASE];
+        s[b + BREATH_PHASE] = Life.advance(s[b + BREATH_PHASE], tempo / breathPeriod(s[b + EXERTION]));
 
         s[b + HIT_AGE] = Math.min(s[b + HIT_AGE] + 1f, 1000f);
         if (Float.isFinite(health) && Float.isFinite(maxHealth) && maxHealth > 0f) {
@@ -90,6 +101,7 @@ public final class Kinematics {
         Life.spring(s, b + SP_FLINCH_X, 0f, 0.9f, 0.5f, 1f);
         Life.spring(s, b + SP_FLINCH_Z, 0f, 0.9f, 0.5f, 1f);
         Life.spring(s, b + SP_STAGGER, 0f, 0.5f, 0.55f, 1f);
+        Life.spring(s, b + SP_RECOIL, 0f, RECOIL_OMEGA, RECOIL_ZETA, 1f);
 
         for (int i = 0; i < STRIDE; i++)
             if (!Float.isFinite(s[b + i])) {
@@ -109,6 +121,53 @@ public final class Kinematics {
         s[b + HIT_HEALTH0] = s[b + LAST_HEALTH];
         s[b + SP_FLINCH_X + 1] -= Mth.cos(dirRad) * FLINCH_KICK;   // from the front: bent back
         s[b + SP_FLINCH_Z + 1] -= Mth.sin(dirRad) * FLINCH_KICK;   // from the right: bent to the left
+    }
+
+    /** The look's spring (arrives late, settles without a wobble) and how fast a ranged unit's aim eases in / out. */
+    public static final float LOOK_OMEGA = 0.45f, LOOK_ZETA = 0.8f, AIM_RATE = 0.2f;
+
+    /**
+     * One tick of the look (the shared look solver's input, {@link Life#look}): the head's world yaw and its pitch, as
+     * the server's LookControl turned them, into springs - the head arrives late and settles - and the aim blend.
+     * The yaw spring follows the angle the short way round and is kept within a turn of zero.
+     *
+     * @param headYawDeg the head's world yaw (yHeadRot), pitchDeg its pitch (xRot, + = down)
+     * @param aiming     a ranged unit drawing on a target (aggressive)
+     * @param fresh      the slot's first tick: start on the head, no swing in from zero
+     */
+    public static void look(float[] s, int b, float headYawDeg, float pitchDeg, boolean aiming, boolean fresh) {
+        if (!Float.isFinite(headYawDeg))
+            headYawDeg = s[b + SP_LOOK_YAW];
+        if (!Float.isFinite(pitchDeg))
+            pitchDeg = 0f;
+        int y = b + SP_LOOK_YAW, p = b + SP_LOOK_PITCH;
+        if (fresh) {
+            s[y] = s[y + 2] = Mth.wrapDegrees(headYawDeg);
+            s[p] = s[p + 2] = pitchDeg;
+            s[y + 1] = s[p + 1] = 0f;
+            s[b + AIM] = aiming ? 1f : 0f;
+            return;
+        }
+        float cur = s[y];
+        Life.spring(s, y, cur + Mth.wrapDegrees(headYawDeg - cur), LOOK_OMEGA, LOOK_ZETA, 1f);
+        if (Math.abs(s[y]) > 360f) {      // back within a turn: the value and the previous step together
+            float turn = 360f * Math.signum(s[y]);
+            s[y] -= turn;
+            s[y + 2] -= turn;
+        }
+        Life.spring(s, p, Mth.clamp(pitchDeg, -90f, 90f), LOOK_OMEGA, LOOK_ZETA, 1f);
+        float a = s[b + AIM];
+        s[b + AIM] = a + ((aiming ? 1f : 0f) - a) * AIM_RATE;
+    }
+
+    /**
+     * The contact event, attacker side: this unit's blow landed (the client's damage event names it as the direct
+     * source - for a keyed swing that is HeldBlow's hit key, the frame the blade arrives). The weapon stops on the
+     * target: the arms and torso jolt back and shudder still. Stamped in the same call as the target's {@link #onHit},
+     * so the two show on the same frame.
+     */
+    public static void onContact(float[] s, int b) {
+        s[b + SP_RECOIL + 1] += RECOIL_KICK;
     }
 
     /**

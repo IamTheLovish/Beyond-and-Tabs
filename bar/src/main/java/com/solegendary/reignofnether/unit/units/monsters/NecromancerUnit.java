@@ -233,8 +233,8 @@ public class NecromancerUnit extends Skeleton implements Unit, AttackerUnit, Ran
     final static public float attackDamage = 4.0f;
     final static public float attackBonusPerLevel = 0.4f;
     final static public float attacksPerSecond = 0.35f;
-    final static public float maxHealth = 100.0f;
-    final static public float maxHealthBonusPerLevel = 12.0f;
+    final static public float maxHealth = 110.0f;
+    final static public float maxHealthBonusPerLevel = 13.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.25f;
     final static public float attackRange = 12.0F; // only used by ranged units or melee building attackers

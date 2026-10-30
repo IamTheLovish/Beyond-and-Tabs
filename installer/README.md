@@ -6,10 +6,12 @@
 2. downloads `BeyondAndTabs-test.mrpack` from the `test-pack` release of this repo
 3. writes a Prism instance (`BeyondAndTabs-test`) for Minecraft 1.20.1 + Forge, copies the pack overrides
    (our jar) and downloads every Modrinth mod listed in the pack, checking each sha1
-4. copies itself to `%LOCALAPPDATA%\BeyondAndTabs\launcher.exe` and puts a "lovish" shortcut (lovish's cat as the icon, `brand/cat.ico`) on the Desktop and in the Start Menu (`launcher.exe --launch`, see "Launcher" below), removing the old "Beyond and Tabs" one; the instance icon in Prism is the cat too (`brand/cat.png` -> `icons/lovish_cat.png`)
+4. copies itself to `%LOCALAPPDATA%\BeyondAndTabs\launcher.exe` and puts a "lovish" shortcut (lovish's cat as the icon, `brand/cat.ico`) in the Start Menu (`launcher.exe --launch`, see "Launcher" below), removing the old "Beyond and Tabs" one; the instance icon in Prism is the cat too (`brand/cat.png` -> `icons/lovish_cat.png`)
 5. sets up the cat bubble (`bubble/bubble.ps1` + `brand/cat.png` -> `%LOCALAPPDATA%\BeyondAndTabs\Bubble`): a round,
-   always-on-top bubble that opens the launcher when clicked (the Desktop "lovish" shortcut, else Prism directly), drags
-   to move, and right-clicks for Play / Start with Windows / Close; a "Beyond and Tabs bubble" Desktop shortcut brings it back
+   always-on-top bubble that opens the launcher when clicked (a Desktop "lovish" shortcut that is not the bubble's own,
+   else `launcher.exe --launch`, else Prism directly), drags to move, and right-clicks for Play / Start with Windows /
+   Close. The one Desktop icon is "lovish" (lovish, Oct 28) and brings the bubble back; it replaces only a "lovish"
+   shortcut the installer made, and the "Beyond and Tabs bubble" shortcut of earlier installers is removed
 6. opens Prism Launcher, which asks for the Microsoft account and then launches
 
 Re-running it is safe and is the "repair / update to the current pack" path: existing files are kept, missing or

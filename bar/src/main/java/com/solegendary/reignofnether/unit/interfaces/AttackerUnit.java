@@ -153,8 +153,32 @@ public interface AttackerUnit {
     public EnemySearchBehaviour getEnemySearchBehaviour(); // not necessarily the same goal, eg. could be melee or ranged
     public void setEnemySearchBehaviour(EnemySearchBehaviour behaviour);
 
+    /**
+     * False for a unit that cannot hit air (the field artillery, {@link FieldArtillery}): a flyer
+     * ({@link #isAirTarget}) is never its target - not picked by itself, not in retaliation, and an attack order on one
+     * is ignored ({@link #refusesTarget}; checked in setUnitAttackTarget, SelectedTargetGoal.setTarget and
+     * MiscUtil.isIdleOrMoveAttackable, so the scans never even offer it).
+     */
+    default boolean canTargetAir() {
+        return true;
+    }
+
+    /** In the air for {@link #canTargetAir}: a flying unit (a grounded Celestial Dragon is not), or a vanilla flyer. */
+    static boolean isAirTarget(@Nullable Entity e) {
+        if (e instanceof Unit u)
+            return u.isFlyingUnit();
+        return e != null && com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.isFlyer(e);
+    }
+
+    /** Would this attacker refuse this target (it cannot hit air and the target is in the air)? */
+    static boolean refusesTarget(@Nullable Object attacker, @Nullable Entity target) {
+        return attacker instanceof AttackerUnit a && !a.canTargetAir() && isAirTarget(target);
+    }
+
     // chase and attack the target ignoring all else until it is dead or out of sight
     public default void setUnitAttackTarget(@Nullable LivingEntity target) {
+        if (refusesTarget(this, target))
+            return;   // cannot hit air: the order is ignored, whatever the unit was doing carries on
         if (target != null) {
             MiscUtil.addUnitCheckpoint(((Unit) this), target.getId(), false);
             Goal attackBuildingGoal = this.getAttackBuildingGoal();
@@ -168,6 +192,8 @@ public interface AttackerUnit {
 
     // chase and attack the target ignoring all else until it is dead or out of sight
     public default void setUnitAttackTargetForced(@Nullable LivingEntity target) {
+        if (refusesTarget(this, target))
+            return;
         setUnitAttackTarget(target);
         if (target != null) {
             Goal attackBuildingGoal = this.getAttackBuildingGoal();
@@ -434,8 +460,10 @@ public interface AttackerUnit {
             boolean forced3 = attackBuildingGoal instanceof MeleeAttackBuildingGoal mabg && mabg.forced;
             boolean forced = forced1 || forced2 || forced3;
 
-            // a plain move that ran into something and stopped getting closer (the contact rule, blockedOnMove)
-            boolean blocked = !isCasting && blockedOnMove(attackerUnit);
+            // a plain move that ran into something and stopped getting closer (the contact rule, blockedOnMove); a
+            // hero the v2 AI is running away is never "blocked": it would stop, fight and start the run again
+            boolean blocked = !isCasting && blockedOnMove(attackerUnit)
+                && !com.solegendary.reignofnether.hero.HeroBot.fleeing(unitMob);
 
             // retaliate against a mob that damaged us UNLESS already on another command - and a command waiting in the
             // unit's queue counts: see ordersWaiting. A move order that is blocked does not count (the contact rule)
@@ -448,7 +476,7 @@ public interface AttackerUnit {
 
                 boolean isMeleeAttackedByFlyingOrGarrisoned = false;
                 if (lastDSEntity instanceof Unit unitDS &&
-                    (unitDS.isFlyingUnit() ||
+                    (unitDS.isFlyingOutOfMelee() ||
                         GarrisonableBuildingAddon.getGarrison(unitDS) != null ||
                         unitDS instanceof PhantomSummon ||
                         unitDS instanceof Vex) &&
@@ -457,7 +485,9 @@ public interface AttackerUnit {
                 }
                 Relationship rs = UnitServerEvents.getUnitToEntityRelationship(unit, lastDSEntity);
 
-                if (!isMeleeAttackedByFlyingOrGarrisoned &&
+                // artillery cannot hit a flyer: no retaliation on it, so a blocked move is not stopped for a target
+                // it would refuse (it stood with no order and no target and died, issue #35 on #222)
+                if (!isMeleeAttackedByFlyingOrGarrisoned && !refusesTarget(attackerUnit, lastDSEntity) &&
                     lastDSEntity instanceof LivingEntity &&
                     !(lastDSEntity instanceof Player player && player.isCreative()) &&
                     (rs == Relationship.NEUTRAL || rs == Relationship.HOSTILE)) {

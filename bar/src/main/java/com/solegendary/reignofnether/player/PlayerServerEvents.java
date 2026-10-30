@@ -173,8 +173,7 @@ public class PlayerServerEvents {
         RTSPlayerSaveData data = RTSPlayerSaveData.getInstance(serverLevel);
         data.rtsPlayers.clear();
         data.rtsPlayers.addAll(rtsPlayers);
-        data.save();
-        serverLevel.getDataStorage().save();
+        data.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     @SubscribeEvent
@@ -201,8 +200,6 @@ public class PlayerServerEvents {
         }
     }
 
-    private static final int SAVE_TICKS_MAX = 1200;
-    private static int saveTicks = 0;
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         saveRTSPlayers();
@@ -270,16 +267,7 @@ public class PlayerServerEvents {
                 }
             }
         }
-        if (evt.phase == TickEvent.Phase.END) {
-            saveTicks += 1;
-            if (saveTicks >= SAVE_TICKS_MAX) {
-                ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
-                if (level != null) {
-                    saveRTSPlayers();
-                    saveTicks = 0;
-                }
-            }
-        }
+        // the RTS players reach the disk with Minecraft's world save (persistence/RtsSaves, plan 014), not every 60 s
     }
 
     // what a player who just logged in needs about every unit; the per-unit part goes to that player only
@@ -741,6 +729,51 @@ public class PlayerServerEvents {
      * lost: lovish's Oct 12 Watch Battle had three of four bots sit at +0 income with untouched pools). Returns how
      * many joined the level.
      */
+    /**
+     * The top block a start unit is dropped on: its own column (x, z) when that is solid, dry ground, else the nearest
+     * such column within 4 blocks (rings outward), else its own column as before. getHighestNonAirBlock stops at a
+     * fluid, so a lava pool beside a seat took a start worker before the bot's first think (build 40632885850: "the
+     * Verdant bot should start with 3 Seedshapers, got 2", "court seedshaper_unit died t10 lava"). A column whose eight
+     * neighbours are dry too is preferred (the three units shove each other apart as they land), then any dry one.
+     */
+    static BlockPos dryStartColumn(ServerLevel level, int x, int z) {
+        BlockPos own = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z));
+        for (int pass = 0; pass < 2; pass++)
+            for (int r = 0; r <= 4; r++)
+                for (int dx = -r; dx <= r; dx++)
+                    for (int dz = -r; dz <= r; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != r)
+                            continue;
+                        BlockPos top = r == 0 ? own : MiscUtil.getHighestNonAirBlock(level, new BlockPos(x + dx, 0, z + dz));
+                        if (dryTop(level, top) && (pass == 1 || dryAround(level, top)))
+                            return top;
+                    }
+        return own;
+    }
+
+    private static boolean dryAround(ServerLevel level, BlockPos top) {
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+                if ((dx != 0 || dz != 0)
+                        && !dryTop(level, MiscUtil.getHighestNonAirBlock(level, new BlockPos(top.getX() + dx, 0, top.getZ() + dz))))
+                    return false;
+        return true;
+    }
+
+    /** A top block a unit can stand on: no fluid in it or the two blocks above, and not a fire or magma block. */
+    private static boolean dryTop(ServerLevel level, BlockPos top) {
+        var state = level.getBlockState(top);
+        if (!state.getFluidState().isEmpty() || state.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK)
+                || state.is(net.minecraft.tags.BlockTags.FIRE))
+            return false;
+        for (int up = 1; up <= 2; up++) {
+            var above = level.getBlockState(top.above(up));
+            if (!above.getFluidState().isEmpty() || above.is(net.minecraft.tags.BlockTags.FIRE))
+                return false;
+        }
+        return true;
+    }
+
     public static int spawnBotStartUnits(ServerLevel level, String owner, Faction faction, Vec3 pos, boolean withCommander) {
         EntityType<?> entityType = faction == null ? null : ForgeRegistries.ENTITY_TYPES.getValue(faction.workerEntityType);
         UnitChunkLoader.holdArea(level, BlockPos.containing(pos.x, pos.y, pos.z));
@@ -749,9 +782,7 @@ public class PlayerServerEvents {
         for (int i = -1; i <= 1; i++) {
             Entity entity = entityType != null ? entityType.create(level) : null;
             if (entity instanceof Unit unit) {
-                BlockPos bp = MiscUtil.getHighestNonAirBlock(level, new BlockPos((int) (pos.x + i), 0, (int) pos.z))
-                    .above()
-                    .above();
+                BlockPos bp = dryStartColumn(level, (int) (pos.x + i), (int) pos.z).above().above();
                 unit.setOwnerName(owner);
                 entity.moveTo(bp, 0, 0);
                 if (first) {
@@ -1033,7 +1064,8 @@ public class PlayerServerEvents {
                 GameType originalGameType = playerDefaultGameModes.remove(playerName);
 
                 if (originalGameType != null) {
-                    serverPlayer.setGameMode(originalGameType);
+                    // a watcher stays a spectator, hidden from the players (Spectators.modeAfterLeavingRtsView)
+                    serverPlayer.setGameMode(com.solegendary.reignofnether.match.Spectators.modeAfterLeavingRtsView(playerName, originalGameType));
                 } else {
                     ReignOfNether.LOGGER.warn("No original game mode found for player {}", playerName);
                 }
@@ -1260,7 +1292,16 @@ public class PlayerServerEvents {
     }
 
     public static int resetRTS(boolean hardReset) {
-        ReignOfNether.LOGGER.info("[Player] resetRTS: hardReset={}", hardReset);
+        return resetRTS(hardReset, false);
+    }
+
+    /**
+     * {@code retireOverTicks}: a new match on fresh ground (maps.NewMatch) is leaving this arena behind, so its units
+     * and buildings are unregistered at once but taken down over the next ticks (maps.ArenaRetirement) instead of
+     * killed and blown up in this one - a big end-of-match would otherwise stall the server tick.
+     */
+    public static int resetRTS(boolean hardReset, boolean retireOverTicks) {
+        ReignOfNether.LOGGER.info("[Player] resetRTS: hardReset={} retireOverTicks={}", hardReset, retireOverTicks);
         ResignVoteServerEvents.clear();   // a vote from the match being reset has nothing left to decide
         MultiplayerLobby.onReset();          // the lobby match is over too: nobody is refused a start any more
         lastBeaconTicksSent.clear();
@@ -1281,6 +1322,11 @@ public class PlayerServerEvents {
         com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearAll();
         com.solegendary.reignofnether.mana.TempestServerEvents.clearAll();
         com.solegendary.reignofnether.mana.FrostServerEvents.clearAll();
+
+        // the arena is being left behind: unregister it all now, take it down over the next ticks (the loops below
+        // then find nothing to do)
+        if (retireOverTicks && !isSandboxOrScenario)
+            com.solegendary.reignofnether.maps.ArenaRetirement.retireAll(serverLevel);
 
         for (LivingEntity entity : UnitServerEvents.getAllUnits())
             if (hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario))

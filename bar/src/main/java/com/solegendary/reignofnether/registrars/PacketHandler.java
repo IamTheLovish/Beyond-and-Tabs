@@ -709,6 +709,18 @@ public final class PacketHandler {
                 .consumerMainThread(com.solegendary.reignofnether.building.ExitArrowClientboundPacket::handle)
                 .add();
 
+        // Lovish's Wager Book (hero/wager): a written page to the server, the toggle and his reply back
+        register(com.solegendary.reignofnether.hero.wager.WagerServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.hero.wager.WagerServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.hero.wager.WagerServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.hero.wager.WagerServerboundPacket::handle)
+                .add();
+        register(com.solegendary.reignofnether.hero.wager.WagerClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.hero.wager.WagerClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.hero.wager.WagerClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.hero.wager.WagerClientboundPacket::handle)
+                .add();
+
         // a packet registered with INSTANCE.messageBuilder directly would be missing from the hash: two jars that
         // differ in it would connect again. Fail at startup (every GameTest run) instead.
         if (TABLE.size() != index || PENDING.size() != index)
