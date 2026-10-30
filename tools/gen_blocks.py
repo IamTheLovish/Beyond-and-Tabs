@@ -105,8 +105,10 @@ TARGETS = {
     "barrel_side":      dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
     "barrel_top":       dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
     "barrel_bottom":    dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
-    "hay_block_side":   dict(luma=0.54, std=0.085, sat=0.51, tilt=21.4, smooth=20, pore=50),
-    "hay_block_top":    dict(luma=0.54, std=0.085, sat=0.51, tilt=21.4, smooth=20, pore=50),
+    # r31 (art director: "reads as packed dirt"): straw is pale gold - luma 0.54 -> 0.62, more spread (stalk-to-stalk
+    # contrast), satin stalks (smooth 20 -> 42)
+    "hay_block_side":   dict(luma=0.62, std=0.100, sat=0.56, tilt=21.4, smooth=42, pore=40),
+    "hay_block_top":    dict(luma=0.60, std=0.085, sat=0.56, tilt=21.4, smooth=38, pore=40),
     # round 8: every wood's bark and end grain (pack-study 38743610740, single blocks; the reference's log tops carry
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
@@ -1290,25 +1292,66 @@ def m_barrel_end(F, n, hole):
     return H, np.where(ring[..., None], iron, alb), np.where(ring, IRON, 10)
 
 
+def hay_twine(F, centres=(0.25, 0.75), half=0.03):
+    """Two baler-twine bands round the bale at v = centres: a twisted cord (a diagonal twist along u), sunk a little
+    into the straw, with two edges. Returns (band mask 0-1, twist tone 0-1)."""
+    d = np.min(np.abs((F.v[..., None] - np.array(centres)[None, None, :] + 0.5) % 1.0 - 0.5), -1)
+    band = 1 - smoothstep(half - 0.006, half + 0.004, d)
+    twist = 0.5 + 0.5 * np.sin(2 * math.pi * (F.u * 24 + F.v * 8))        # the lay of the cord
+    return band, twist
+
+
 def m_hay_side(F, n):
-    strands = F.noise(10, 60, 0.4, sx=1.0, sy=12.0)     # long straws along v
-    clump = F.noise(3, 8, 0.6, sx=1.0, sy=4.0)
-    band = (np.abs(F.v - 0.25) < 0.045) | (np.abs(F.v - 0.75) < 0.045)   # two cords round the bale
-    H = 0.45 + 0.25 * norm01(strands) + 0.1 * clump
-    H = np.where(band, H - 0.15, H)
-    shade = 0.80 + 0.25 * norm01(strands) + 0.08 * clump
-    alb = tint((0.86, 0.70, 0.30), shade)
-    cord = tint((0.55, 0.22, 0.14), 0.85 + 0.15 * norm01(strands))
-    return H, np.where(band[..., None], cord, alb)
+    """Round 31 (art director: "reads as packed dirt"): a bale side is a wall of straw stalks - long, straight, each
+    2-5 texels wide and running the length of the face, each its own value (sun-bleached gold, dull straw, a shadowed
+    gap between two), a few lying at a slight angle across the others, with two dark twine bands round the bale.
+    The colour contrast is stalk-to-stalk (what the RTS camera keeps); the relief is each stalk's round profile."""
+    # stalks: a band of 16-40 cycles across u (3-8 texels per stalk), very long along v, with a slow wobble so no
+    # stalk is a ruler line; plus a second thinner layer of stalks that cross at a slight angle
+    wob = 0.005 * F.noise(1, 3, 0.5, sx=1.0, sy=3.0)
+    stalk = F.warp(F.noise(16, 40, 0.3, sx=1.0, sy=40.0), wob, 0.0)
+    fine = F.warp(F.noise(40, 64, 0.0, sx=1.0, sy=40.0), wob, 0.0)
+    cross = F.warp(F.noise(14, 36, 0.3, sx=1.0, sy=20.0), 0.18 * F.v, 0.0)    # stalks lying at ~10 degrees
+    where_cross = smoothstep(0.5, 0.9, norm01(F.noise(1, 4, 0.5, sx=1.0, sy=2.0)))
+    stalk = stalk * (1 - 0.5 * where_cross) + cross * 0.5 * where_cross
+    clump = F.noise(2, 6, 0.6, sx=1.0, sy=3.0)                                 # the bale's loose and packed patches
+    prof = norm01(stalk)                                                       # 0 in the gap, 1 on a stalk's crest
+    band, twist = hay_twine(F)
+    H = 0.45 + 0.28 * prof + 0.04 * fine + 0.08 * clump
+    H = H - 0.12 * band + 0.03 * band * twist
+    # value: stalk-to-stalk - each stalk's crest gold, the gaps between stalks a deep ochre shadow
+    tone = 0.62 + 0.55 * prof + 0.06 * fine + 0.10 * clump
+    # some stalks bleached pale, some still green-grey: a slow hue drift along the stalks
+    bleach = norm01(F.noise(6, 20, 0.4, sx=1.0, sy=30.0))
+    base = np.array([0.88, 0.70, 0.30])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
+        * np.array([1.0, 1.06, 1.3])[None, None, :] ** (bleach - 0.5)[..., None]     # bleached: paler, less orange
+    alb = np.clip(base * tone[..., None], 0, 1)
+    cord = tint((0.34, 0.20, 0.10), 0.75 + 0.35 * twist)                         # dark sisal twine
+    a = band[..., None]
+    return H, alb * (1 - a) + cord * a
 
 
 def m_hay_top(F, n):
-    f1, f2, idx, k = F.voronoi(400, 1.0)                  # the cut ends of the straws, packed
-    end = smoothstep(0.0, 0.012, f2 - f1)
-    tone = F.rng.random(k)[idx]
-    H = 0.3 + 0.5 * end + 0.05 * tone
-    shade = (0.75 + 0.3 * tone) * (0.5 + 0.5 * end)
-    return H, tint((0.86, 0.70, 0.30), shade)
+    """Round 31: the cut end of a bale - the ends of the stalks, packed: each a hollow tube (a pale ring round a
+    dark hole), 6-9 texels across, at its own tone and its own size, with a few stalks lying across the ends. The
+    ring-and-hole profile is what makes it straw and not cobbles."""
+    f1, f2, idx, k = F.voronoi(230, 1.0)
+    cell = 1.0 / math.sqrt(230)
+    r = f1 / cell                                          # 0 at the stalk's centre, ~0.5 at its wall
+    size = F.rng.uniform(0.30, 0.46, k)[idx]               # each tube its own radius
+    wall = np.exp(-((r - size) / 0.10) ** 2)               # the tube wall: a ring
+    hole = 1 - smoothstep(size - 0.20, size - 0.08, r)     # the hollow inside
+    gap = 1 - smoothstep(0.0, 0.025, f2 - f1)              # the crevice between neighbouring stalks
+    tone = F.rng.uniform(0.75, 1.15, k)[idx]
+    clump = F.noise(2, 6, 0.6)
+    H = 0.35 + 0.45 * wall + 0.25 * (1 - hole) * smoothstep(0, 0.12, f2 - f1) - 0.3 * hole - 0.25 * gap + 0.04 * clump
+    shade = tone * (0.6 + 0.5 * wall + 0.15 * (1 - gap)) * (1 - 0.35 * hole) * (1 + 0.10 * clump)
+    alb = tint((0.88, 0.70, 0.30), shade)
+    # a few loose stalks lying across the ends (long along u)
+    loose = smoothstep(0.80, 0.95, norm01(F.noise(2, 5, 0.5, sx=12.0, sy=1.0))) * smoothstep(0.3, 0.7, norm01(F.noise(1, 2, 0.5)))
+    H = H + 0.25 * loose
+    alb = alb * (1 - loose[..., None]) + loose[..., None] * tint((0.92, 0.76, 0.36), 0.95 + 0.1 * F.noise(30, 60, 0.0, sx=10.0))
+    return H, alb
 
 
 def m_birch_log(F, n):
