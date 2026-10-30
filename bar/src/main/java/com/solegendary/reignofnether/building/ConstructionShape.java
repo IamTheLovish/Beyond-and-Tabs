@@ -15,8 +15,11 @@ public final class ConstructionShape {
 
     /** The smallest ring (blocks): a spire's ring must still read as a ring. */
     public static final float MIN_RING = 1.6f;
-    /** How far the ring stands off the layer's own footprint (x its half-diagonal). */
-    public static final float RING_STANDOFF = 1.18f;
+    /**
+     * How far the ring stands off the layer's own footprint (x its half-diagonal). 1.18 -> 1.10 after the first stills
+     * (eyes 41003840710): a fresh critic read the wider ring as a halo round the site, not a band at the build height.
+     */
+    public static final float RING_STANDOFF = 1.10f;
 
     private final int minY;
     private final int[] perLayer;      // blocks in each layer, bottom up

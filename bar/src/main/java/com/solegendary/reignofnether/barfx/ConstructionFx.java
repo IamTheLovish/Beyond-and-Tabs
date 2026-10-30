@@ -114,6 +114,9 @@ final class ConstructionFx {
             s.lastRadius = s.lastRadius <= 0 ? r : s.lastRadius + (r - s.lastRadius) * Math.min(1, dt * 2.5f);
             s.lastFront = front;
             drawRing(s.shape.centreX(), front, s.shape.centreZ(), s.lastRadius, clock, far, 1f);
+            // the cut line's core, normal-blended: additive gold alone over the lawn read olive (eyes 41003840710)
+            BarFxClient.flatRing(s.shape.centreX(), front + 0.04f, s.shape.centreZ(),
+                    s.lastRadius / ConstructionShape.RING_STANDOFF * 0.92f, far ? 0.4f : 0.25f, LIGHT, 0.85f, 36);
         }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
 
@@ -136,7 +139,7 @@ final class ConstructionFx {
             }
             float front = s.lastFront, r = s.lastRadius;
             // the cut line: a soft ring of light just inside the walls, where blocks are being set
-            BarFxClient.flatRing(cx, front + 0.05f, cz, r / ConstructionShape.RING_STANDOFF * 0.9f, 0.45f, GOLD, 0.45f, 36);
+            BarFxClient.flatRing(cx, front + 0.05f, cz, r / ConstructionShape.RING_STANDOFF * 0.92f, 0.5f, GOLD, 0.8f, 36);
             if (!far)
                 drawShafts(cx, front, cz, r, clock);
             drawOutline(s, front, far);
@@ -151,22 +154,26 @@ final class ConstructionFx {
         int n = Math.max(6, Math.min(26, Math.round((float) (2 * Math.PI * r / 1.5f))));
         if (far)
             n = Math.max(6, n / 2);
-        float size = Math.min(1.5f, 0.7f + r * 0.09f);
+        // a tighter, brighter band than the first stills (eyes 41003840710: a fresh critic read 1.5-block puffs at 0.55
+        // as grey-green haze over the lawn - smoke, not cloud): smaller puffs, a whiter top, a darker belly under it
+        float size = Math.min(1.0f, 0.5f + r * 0.06f);
         for (int k = 0; k < n; k++) {
             float ang = (float) (k * 2 * Math.PI / n + clock * 0.06f);
             float wob = 0.18f * (float) Math.sin(clock * 0.7f + k * 1.7f);
             float x = cx + (float) Math.cos(ang) * (r + wob), z = cz + (float) Math.sin(ang) * (r + wob);
             float y = front + 0.55f + 0.2f * (float) Math.sin(clock * 0.9f + k * 2.3f);
             float s = size * (0.85f + 0.3f * hash(k));
-            BarFxClient.softDisc(x, y - s * 0.28f, z, s * 1.05f, BELLY, 0.30f * alpha, BELLY, 0, 12, k, 0.08f);
-            BarFxClient.softDisc(x, y + s * 0.12f, z, s, CLOUD, 0.55f * alpha, CLOUD, 0, 12, k * 1.3f, 0.12f);
+            BarFxClient.softDisc(x, y - s * 0.3f, z, s * 1.05f, BELLY, 0.42f * alpha, BELLY, 0, 12, k, 0.08f);
+            BarFxClient.softDisc(x, y + s * 0.12f, z, s, CLOUD, 0.8f * alpha, CLOUD, 0.25f * alpha, 12, k * 1.3f, 0.12f);
         }
     }
 
-    /** Three shafts at a time, each landing on the front for ~0.7 s at its own spot round the walls. */
+    /** Two shafts at a time, each landing on the front for ~0.7 s at its own spot round the walls. */
     static void drawShafts(float cx, float front, float cz, float r, float clock) {
-        for (int i = 0; i < 3; i++) {
-            float t = clock / 0.7f + i / 3f;
+        // two at a time, each ending in a clear flash on one spot (eyes 41003840710: three thin shafts plus the tool
+        // trails read as a tangle of lines, with no visible landing)
+        for (int i = 0; i < 2; i++) {
+            float t = clock / 0.7f + i / 2f;
             int cycle = (int) Math.floor(t);
             float k = t - cycle;
             float ang = (float) (hash(cycle * 7 + i * 131) * Math.PI * 2);
@@ -174,7 +181,7 @@ final class ConstructionFx {
             float x = cx + (float) Math.cos(ang) * rr, z = cz + (float) Math.sin(ang) * rr;
             float a = (float) Math.sin(Math.PI * k);   // fades in and out
             BarFxClient.streak(x, front + 4.5f, z, x, front + 0.05f, z, 0.28f, LIGHT, 0.10f * a, 0.85f * a);
-            BarFxClient.softDisc(x, front + 0.1f, z, 0.45f, LIGHT, 0.9f * a, GOLD, 0, 10, 0, 0);
+            BarFxClient.softDisc(x, front + 0.1f, z, 0.45f + 0.35f * a, LIGHT, 0.95f * a, GOLD, 0.4f * a, 12, 0, 0);
         }
     }
 
