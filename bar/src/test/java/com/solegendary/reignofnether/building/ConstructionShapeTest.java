@@ -130,6 +130,29 @@ class ConstructionShapeTest {
         assertEquals(100f, r[0], 1e-4);
     }
 
+    /**
+     * Round 3 (eyes 41023134378): at "39% laid" the walls stood well above the front the COUNT implied, so the gold
+     * outline wrapped built walls. Builders mostly go bottom-up, but stragglers (a jammed pool's water, blocks the
+     * placement skips) hold the count back. The front now comes from what is actually standing per layer: the lowest
+     * layer that is less than half placed.
+     */
+    @Test
+    void theFrontFollowsTheLayersActuallyStandingNotTheCount() {
+        ConstructionShape s = tower();
+        int[] placed = new int[s.layers()];
+        assertEquals(64f, s.frontFromLayers(placed), 1e-4, "nothing standing");
+        placed[0] = 81; placed[1] = 81; placed[2] = 70;            // the base's top layer 70 of 81: done enough
+        placed[3] = 10;                                            // the middle's first layer barely begun
+        assertEquals(67f + 10f / 25f, s.frontFromLayers(placed), 1e-4, "the middle's first layer, 10 of 25 in");
+        placed[0] = 60;                                            // a straggling base layer (60 of 81) does not hold it
+        assertEquals(67f + 10f / 25f, s.frontFromLayers(placed), 1e-4);
+        for (int l = 0; l < s.layers(); l++) placed[l] = 10_000;
+        assertEquals(74f, s.frontFromLayers(placed), 1e-4, "all standing: the top");
+        assertEquals(1, s.layerOf(65.2f));
+        assertEquals(0, s.layerOf(10f));
+        assertEquals(s.layers() - 1, s.layerOf(500f));
+    }
+
     private static void assertBox(float[] o, int i, float x0, float x1, float z0, float z1, float y0, float y1) {
         float[] want = { x0, x1, z0, z1, y0, y1 };
         for (int k = 0; k < 6; k++)

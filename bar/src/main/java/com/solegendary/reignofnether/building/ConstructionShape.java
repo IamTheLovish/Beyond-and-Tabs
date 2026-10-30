@@ -148,6 +148,38 @@ public final class ConstructionShape {
         System.arraycopy(layerBoxes, 4 * l, out, 0, 4);
     }
 
+    /** Layers from the bottom of the building to its top (some may be empty). */
+    public int layers() {
+        return perLayer.length;
+    }
+
+    /** The layer a world height falls in, clamped to the building. */
+    public int layerOf(float y) {
+        return Math.max(0, Math.min(perLayer.length - 1, (int) Math.floor(y - minY)));
+    }
+
+    /** The minimum y of the building: {@link #layerOf} is relative to it. */
+    public int minY() {
+        return minY;
+    }
+
+    /**
+     * The build front from what actually stands in each layer ({@code placed[l]} blocks of layer l): the lowest layer
+     * less than half placed, plus how far through it the builders are. A straggling lower layer (a jammed pool's
+     * water) no longer holds the front down while the walls rise (round 3, eyes 41023134378).
+     */
+    public float frontFromLayers(int[] placed) {
+        for (int l = 0; l < perLayer.length; l++) {
+            int n = perLayer[l];
+            if (n == 0)
+                continue;
+            float f = Math.min(1f, (float) placed[l] / n);
+            if (f < 0.5f)
+                return minY + l + f;
+        }
+        return minY + perLayer.length;
+    }
+
     /** How many boxes {@link #outline} can write at most (size its buffer 6x this, once). */
     public int maxOutlineBoxes() {
         return boxes.length / 6;
@@ -199,9 +231,13 @@ public final class ConstructionShape {
 
     /** The ring's radius round the layer being built: just wider than that layer's footprint, never under MIN_RING. */
     public float ringRadius(int placed) {
+        return ringRadiusAt(frontY(placed));
+    }
+
+    /** {@link #ringRadius} for a front height. */
+    public float ringRadiusAt(float front) {
         if (perLayer.length == 0)
             return MIN_RING;
-        int l = Math.min(perLayer.length - 1, (int) Math.floor(frontY(placed) - minY));
-        return Math.max(MIN_RING, halfDiag[l] * RING_STANDOFF);
+        return Math.max(MIN_RING, halfDiag[layerOf(front)] * RING_STANDOFF);
     }
 }
