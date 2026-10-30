@@ -80,8 +80,14 @@ final class EyesHeroesScene {
                 summonAll(mc);
                 next(2);
             }
-            case 2 -> {   // wait for them on the client (and the enemy's thicket to grow and hide its Engineer), then the first still
-                if ((ownHeroes().size() < 4 && seconds() < 30) || seconds() < 9)
+            case 2 -> {   // wait for them on the client and the enemy's thicket to grow; then the Engineer stops fighting
+                if ((ownHeroes().size() < 4 && seconds() < 30) || seconds() < 6)
+                    return false;
+                holdFire(mc);
+                next(7);
+            }
+            case 7 -> {   // a fighting unit is never hidden (ThicketCover: "engaged"); past its 3 s reveal, then the first still
+                if (seconds() < 5)
                     return false;
                 EyesDirector.shot(mc, "19_heroes_mid");
                 log("19_heroes_mid");
@@ -190,6 +196,26 @@ final class EyesHeroesScene {
         ReignOfNether.LOGGER.info("[Eyes] 19_heroes: summoned 4 heroes for '{}' round {}, 4 for '{}' ({} far out at {}, {} in a thicket at {})",
             me, EyesDirector.fmt(centre), enemy, HeroKits.GRAVECALLER.itemName, EyesDirector.fmt(far),
             HeroKits.ARCH_ENGINEER.itemName, EyesDirector.fmt(bush));
+    }
+
+    /**
+     * The enemy's heroes on Hold fire with no target, on the server's thread: the run before showed them "engaged"
+     * (ThicketCover.diagnose) - a unit with a target is never hidden - so the thicket could not take the Engineer.
+     */
+    private static void holdFire(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        if (server == null)
+            return;
+        server.execute(() -> {
+            for (var e : server.overworld().getAllEntities())
+                if (e instanceof HeroUnit && e instanceof Unit u && enemy.equals(u.getOwnerName()) && e instanceof LivingEntity le) {
+                    com.solegendary.reignofnether.unit.EngagementStance.set(le, com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE);
+                    if (le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit a)
+                        a.setUnitAttackTarget(null);
+                    var feet = server.overworld().getBlockState(le.blockPosition());
+                    ReignOfNether.LOGGER.info("[Eyes] 19_heroes: {} put on Hold fire; block at its feet {}", le.getType().getDescriptionId(), feet);
+                }
+        });
     }
 
     private static List<LivingEntity> ownHeroes() {
