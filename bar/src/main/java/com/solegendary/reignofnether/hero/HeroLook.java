@@ -12,9 +12,14 @@ public final class HeroLook {
     /** Every faction hero is drawn this much bigger than the unit its body is built on (was 1.1). */
     public static final float SCALE = 1.25f;
 
-    /** The ring and the crest: on heroes only, and only in the RTS view (never in first person). */
-    public static boolean showMarker(boolean isHero, boolean rtsView) {
-        return isHero && rtsView;
+    /**
+     * The ring and the crest: on heroes only, only in the RTS view (never in first person), and only on a hero the
+     * viewer can see - in sight (not under the fog of war) and not cloaked from them (an own or allied cloaked hero is
+     * seen by its side and keeps its marker). A marker on a hero in the fog would give away its exact spot (review r1 on
+     * PR 424).
+     */
+    public static boolean showMarker(boolean isHero, boolean rtsView, boolean inSight, boolean hiddenFromViewer) {
+        return isHero && rtsView && inSight && !hiddenFromViewer;
     }
 
     /**

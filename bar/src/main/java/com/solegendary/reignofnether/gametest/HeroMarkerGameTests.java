@@ -32,23 +32,38 @@ public class HeroMarkerGameTests {
             float scale = look.getField("SCALE").getFloat(null);
             if (Math.abs(scale - 1.25f) > 1e-4)
                 problems.add("heroes are drawn at " + scale + "x, not 1.25x");
-            var show = look.getMethod("showMarker", boolean.class, boolean.class);
-            if (!(boolean) show.invoke(null, true, true))
-                problems.add("no marker on a hero in the RTS view");
-            if ((boolean) show.invoke(null, false, true))
+            var show = look.getMethod("showMarker", boolean.class, boolean.class, boolean.class, boolean.class);
+            // (is a hero, RTS view, in the viewer's sight, cloaked from the viewer)
+            if (!(boolean) show.invoke(null, true, true, true, false))
+                problems.add("no marker on a hero in the RTS view, in sight");
+            if ((boolean) show.invoke(null, false, true, true, false))
                 problems.add("a marker on a unit that is not a hero");
-            if ((boolean) show.invoke(null, true, false))
+            if ((boolean) show.invoke(null, true, false, true, false))
                 problems.add("a marker on a hero outside the RTS view (first person)");
+            if ((boolean) show.invoke(null, true, true, false, false))
+                problems.add("a marker on a hero under the fog of war (it gives away its spot)");
+            if ((boolean) show.invoke(null, true, true, true, true))
+                problems.add("a marker on a hero cloaked from the viewer");
             var badge = look.getMethod("showPointBadge", boolean.class, int.class);
             if (!(boolean) badge.invoke(null, true, 1))
                 problems.add("no unspent-point badge on the viewer's own hero holding a point");
-            if ((boolean) badge.invoke(null, true, 0) || (boolean) badge.invoke(null, false, 2))
+            if (!(boolean) badge.invoke(null, true, 5))
+                problems.add("no unspent-point badge on the viewer's own hero holding five points");
+            if ((boolean) badge.invoke(null, true, 0) || (boolean) badge.invoke(null, false, 2) || (boolean) badge.invoke(null, false, 0))
                 problems.add("an unspent-point badge on a hero with no point, or on another player's hero");
             var ring = look.getMethod("ringRadius", float.class);
+            var crest = look.getMethod("crestHeight", float.class);
             for (float width : new float[] { 0.6f, 1.0f, 1.4f }) {
+                // the drawn body is the hitbox times the scale: the ring sits just outside it (up to a block out)
                 float r = (float) ring.invoke(null, width), body = width * scale / 2;
                 if (r <= body || r > body + 1)
                     problems.add(String.format("the ring (radius %.2f) does not sit just outside a drawn body %.2f wide", r, width * scale));
+            }
+            for (float height : new float[] { 1.8f, 2.4f }) {
+                // over the drawn head (hitbox height times the scale), and not lost far above it
+                float c = (float) crest.invoke(null, height), head = height * scale;
+                if (c <= head || c > head + 1.5f)
+                    problems.add(String.format("the crest floats at %.2f over the feet, not just over a drawn head at %.2f", c, head));
             }
         } catch (ClassNotFoundException e) {
             problems.add("there is no hero/HeroLook: heroes are 1.1x and unmarked");

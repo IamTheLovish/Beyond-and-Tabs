@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.hero;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.barfx.BarFxRenderTypes;
+import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
@@ -27,7 +28,8 @@ import org.joml.Vector3f;
  * thin ring in its owner's colour on the ground round its feet and a small crest over its head - a camera-facing
  * diamond, gold rim round the owner's colour - so a hero is found in a crowd at a glance. The viewer's own hero with
  * an unspent ability point also shows a pulsing gold "+" beside its crest (HeroLook.showPointBadge). One translucent batch a frame
- * for all heroes (a handful per match); cloaked heroes are skipped.
+ * for all heroes (a handful per match). Heroes under the fog of war, or cloaked from the viewer, get none
+ * (HeroLook.showMarker).
  */
 @OnlyIn(Dist.CLIENT)
 public final class HeroMarkerClientEvents {
@@ -49,8 +51,8 @@ public final class HeroMarkerClientEvents {
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays())
                 return;   // shader pack shadow map: overlays cast no shadow
-            if (!HeroLook.showMarker(true, OrthoviewClientEvents.isEnabled()))
-                return;
+            if (!OrthoviewClientEvents.isEnabled())
+                return;   // HeroLook.showMarker: the RTS view only
             render(evt.getPoseStack(), evt.getCamera(), evt.getPartialTick());
         } catch (Exception e) {
             // never take the game down over a marker
@@ -74,7 +76,8 @@ public final class HeroMarkerClientEvents {
         String me = Minecraft.getInstance().player == null ? null : Minecraft.getInstance().player.getName().getString();
         float pulse = 0.65f + 0.35f * (float) Math.sin(System.currentTimeMillis() / 160.0);
         for (LivingEntity e : UnitClientEvents.getAllUnits()) {
-            if (!(e instanceof HeroUnit) || !(e instanceof Unit u) || !e.isAlive() || e.isInvisible())
+            if (!(e instanceof Unit u) || !e.isAlive() || !HeroLook.showMarker(e instanceof HeroUnit, true,
+                    FogOfWarClientEvents.isInBrightChunk(e), UnitClientEvents.isHiddenFromLocalPlayer(e)))
                 continue;
             if (!begun) {
                 vc = buffers.getBuffer(BarFxRenderTypes.TRANSLUCENT);
