@@ -138,7 +138,10 @@ class ShaderPack(unittest.TestCase):
         # 0.22-0.25 under a 0.43-0.46 lawn (>= 1.8:1). By the model of the chain (scratch, calibrated on the pass-11
         # stills) 0.34 gives ~0.242 / ~0.442; the sky a third of the light, as the benchmark's ambient. A cast shadow
         # still keeps >= 0.30 of the light (Erin, #386 r5: shadowed light ~35-45% of lit)
-        self.assertTrue(0.30 <= share <= 0.40, share)
+        # Retired pin (light pass 15): "0.30-0.40" - the first stills with our own pack (lp14o) put the 5000 cast shadow at
+        # 0.22 under a 0.49 lawn (0.44 on screen; Complementary ~0.78): on screen a shadow keeps ~half its share in light
+        # (sky light floor, broad AO, the grade's contrast). Target 0.6-0.65 of the lawn: 0.55-0.70
+        self.assertTrue(0.55 <= share <= 0.70, share)
         # Retired pin (light pass 5): "1.2 <= LIGHT_OPEN_GROUND <= 1.4" - it was set for a lawn ~0.42-0.43 on screen, but
         # with the S-curve, the meadow and pass 4 on top the pass-4 noon stills measured the lit lawn at 0.45-0.47. The
         # target is the lawn, so the band follows it: 1.05-1.20 (1.12 takes 0.46 back to ~0.42 through the curve)
@@ -194,7 +197,9 @@ class ShaderPack(unittest.TestCase):
         px = 33.0
         along = 1.0 / math.sin(math.radians(58.0))            # day time 5000
         contact = _const("PENUMBRA_MIN_BLOCKS") * px
-        self.assertTrue(2.5 <= contact <= 4.5, contact)
+        # Retired pin (light pass 15): "the contact 2.5-4.5 px" - lp14o: the shadow at a pillar's foot jumps 0.21 -> 0.49
+        # in 2-3 px, Complementary grades it over ~12; target 4-8 px
+        self.assertTrue(4.0 <= contact <= 8.0, contact)
         shadow_src = _read("lib", "shadow.glsl")
         self.assertGreaterEqual(_const("PENUMBRA_MIN_TEXELS", shadow_src), 1.0)
         self.assertGreaterEqual(_const("PENUMBRA_MIN_TEXELS_PERSPECTIVE", shadow_src), 2.0)
@@ -202,7 +207,8 @@ class ShaderPack(unittest.TestCase):
         def edge(height, spread=1.0):
             return max(height * along * _const("SUN_SPREAD") * spread, _const("PENUMBRA_MIN_BLOCKS")) * px
 
-        self.assertTrue(7.0 <= edge(5.0) <= 11.0, edge(5.0))  # a 5-block wall at 5000
+        # Retired pin (light pass 15): "a 5-block wall 7-11 px" - lp14o measured the edges at 6-9 px, target 10-14
+        self.assertTrue(10.0 <= edge(5.0) <= 15.0, edge(5.0))  # a 5-block wall at 5000
         low = 1.0 + _const("LOW_SUN_SPREAD")
         tip = 3.0 / math.sin(math.radians(13.0)) * _const("SUN_SPREAD") * low * px
         self.assertTrue(8.0 <= tip <= 14.0, tip)
@@ -415,7 +421,10 @@ class ShaderPack(unittest.TestCase):
         sky = lum(vec3("SKY_LOW")) * (1.0 - high) + sky_high * high
         k = min(0.5 + 0.5 * _const("LOW_SUN_RAKE") * (1.0 - high), 1.0)      # sunFacingRaked: the grass
         facing = (1.0 - k) * h + k * math.sqrt(h)
-        self.assertGreaterEqual((sun * facing + sky) / sky, 2.4)
+        # Retired pin (light pass 15): ">= 2.4" - lp14o's t11800 measured the lit lawn 0.43 over shadows ~0.20 (> 5:1 in
+        # light: the model's shadow over-reads, as at 5000), Complementary 0.35; the sun's part comes down (SUN_LOW x2.94,
+        # LOW_SUN_RAKE 0). The model's ratio stays >= 2.0
+        self.assertGreaterEqual((sun * facing + sky) / sky, 2.0)
         # light pass 4: only the grass rakes (block tops keep the plain facing, so a white top under the low shoulder
         # stays under ~0.90 against a ~0.37 lawn), and the low sun's shoulder sits lower
         self.assertIn("float facing = mix(sunFacing(n, l), sunFacingRaked(n, l), tinted);", _read("program", "lit.fsh"))
@@ -439,7 +448,9 @@ class ShaderPack(unittest.TestCase):
         # Retired pin (light pass 7): "blue 1.2-1.5x green" and "SHADE_TINT_WALL a 0.5-0.7 share" - the ground's
         # shadow at 5000 stayed a dimmer lawn (blue 0.51 of green, target >= 0.65) while walls need far less. The
         # ground's tint and the walls' are separate colours now: the ground's blue 1.8-2.3x green, the walls' 1.1-1.3x
-        self.assertTrue(1.8 <= tint[2] / tint[1] <= 2.3, tint)
+        # Retired pin (light pass 15): "blue 1.8-2.3x green" - lp14o's 5000 shadow (44, 62, 26) against a target ~(55, 78,
+        # 50): the lawn has little blue to tint. 2.5-3.0 now
+        self.assertTrue(2.5 <= tint[2] / tint[1] <= 3.0, tint)
         wall = [float(x) for x in re.search(r"const vec3 SHADE_TINT_WALL = vec3\(([^)]*)\);", settings).group(1).split(",")]
         self.assertTrue(1.1 <= wall[2] / wall[1] <= 1.3, wall)
         self.assertAlmostEqual(sum(a * b for a, b in zip(wall, (0.2126, 0.7152, 0.0722))), 1.0, delta=0.01)

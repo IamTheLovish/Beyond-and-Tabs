@@ -39,7 +39,8 @@ const vec3 SKY_HIGH = SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND / S
 // By the model at t11800 (sun ~13 degrees up): lit lawn ~0.38 at hue ~68, a cast shadow ~0.13, ratio ~2.9:1
 // Light pass 4: x 3.90 -> x 3.70 (luma 2.22): the grass now takes the whole rake (LOW_SUN_RAKE 1) and everything else
 // the plain facing, so the lawn holds ~0.38 while block tops come down (a white top ~0.89 after the low shoulder)
-const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.70;
+// light pass 15: x3.70 -> x2.94, with LOW_SUN_RAKE 0 (t11800's lawn 0.43, target ~0.36: its sun part x0.6 on screen)
+const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 2.94;
 // light pass 9 (critic: the low sun's shadows ink-black, the benchmark's hazy gold): warmer and a little more of it
 // ((0.74, 0.70, 0.80) x 0.17 before). Model at t11800: a cast shadow ~0.13 -> ~0.16, the ratio ~2.9 -> ~2.4:1
 // Light pass 10: olive-gold and more of it ((0.82, 0.74, 0.70) x 0.24 before): t11800's shadow / lit ~0.6 on screen
@@ -47,7 +48,9 @@ const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.70;
 // light pass 12: redder (1.00, 0.80, 0.45) -> (1.00, 0.75, 0.40) and x0.50 -> x0.55, toward the olive ~(45, 55, 30)
 // light pass 13: x0.55 -> x0.62 - t11800 takes ~0.2 of the high row, whose sky fell with SHADOW_FILL_SHARE 0.62 -> 0.34:
 // its fill would have dropped ~15% (shadows ~(38, 54, 24) -> ~(35, 50, 22), target ~(45, 55, 30)); now ~-7%
-const vec3 SKY_LOW = vec3(1.00, 0.75, 0.40) * 0.62;
+// light pass 15: (1.00, 0.75, 0.40) x0.62 -> (0.90, 0.80, 0.75) x0.45 - t11800's shadows (44, 56, 22) had too little blue
+// (target >= 30); its level held (the high row's sky, ~0.2 of it, grew with SHADOW_FILL_SHARE 0.62)
+const vec3 SKY_LOW = vec3(0.90, 0.80, 0.75) * 0.45;
 // moonlight: cool and dim; lanterns and lit buildings carry the night (TimeOfDay: NIGHT)
 const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
 const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;

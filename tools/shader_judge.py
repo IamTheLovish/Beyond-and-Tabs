@@ -64,7 +64,9 @@ LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 # Retired day band (0.60, 0.74, 0.25, 0.45), Oct 30, light pass 13: the critic on pass 11 (5.5/10 against Complementary's
 # 7.0) wants cast shadows 0.22-0.25 under a 0.43-0.46 lawn (>= 1.8:1); SHADOW_FILL_SHARE 0.62 -> 0.34 puts a cast shadow
 # at ~0.55 of the lit lawn by the model, inside the design's 0.45-0.70. Fill 0.48-0.64, the floor unchanged
-BANDS = {"day": (0.48, 0.64, 0.25, 0.45), "dusk": (0.28, 0.42, 0.18, 0.42), "night": (0.45, 0.80, 0.35, 0.80)}
+# Retired day band (0.48, 0.64, 0.25, 0.45), Oct 30, light pass 15: the first stills with our own pack (lp14o) put the
+# 5000 cast shadow at 0.44 of the lawn; the coordinator's target is 0.6-0.65 (Complementary ~0.78). Fill 0.55-0.70
+BANDS = {"day": (0.55, 0.70, 0.25, 0.45), "dusk": (0.28, 0.42, 0.18, 0.42), "night": (0.45, 0.80, 0.35, 0.80)}
 # luma p50 of a night still: lit enough to play (lanterns, moon), dark enough to read as night (day stills sit ~0.37)
 NIGHT_LUMA = (0.10, 0.30)
 

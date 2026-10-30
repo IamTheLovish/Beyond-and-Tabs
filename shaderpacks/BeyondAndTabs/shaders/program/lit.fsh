@@ -155,6 +155,14 @@ void main() {
         float capped = hl <= knee ? hl : knee + room * (1.0 - exp(-(hl - knee) / room));
         held *= capped / max(hl, 1e-4);
         albedo = mix(albedo, held, tinted);
+        // light pass 15: the plants without a tint (flowers, saplings, crops) under their own, looser cap
+        {
+            float pl = dot(albedo, LUMA);
+            float pk = PLANT_LUMA_KNEE * PLANT_MAX_LUMA;
+            float pr = PLANT_MAX_LUMA - pk;
+            float pc = pl <= pk ? pl : pk + pr * (1.0 - exp(-(pl - pk) / pr));
+            albedo *= mix(1.0, pc / max(pl, 1e-4), 1.0 - tinted);
+        }
         // the blades crowd at the foot: a little base occlusion, as the lawn's own texture has between its clumps
         ao *= mix(FOLIAGE_BASE_AO, 1.0, plantUp);
     }
@@ -240,9 +248,23 @@ void main() {
         float whiteness = smoothstep(0.62, 0.75, dot(albedo, LUMA)) * (1.0 - smoothstep(0.06, 0.14, whiteSat));
         float side = 1.0 - clamp(dot(geomN, normalize(upPosition)), 0.0, 1.0);
         float neutral = max(WHITE_WALL_NEUTRAL * side, WHITE_LOW_NEUTRAL * lowSun());
+        // light pass 15: only where the sun arrives - a white wall in shade keeps the sky's cool (quartz's shade face read
+        // a neutral (115, 116, 112), Complementary's (119, 122, 128))
+        neutral *= clamp(shadow * min(facing * 4.0, 1.0), 0.0, 1.0);
         light = mix(light, vec3(dot(light, LUMA)), neutral * whiteness);
     }
     vec3 c = lin * light;
+#ifdef LIT_TERRAIN
+    // the grass's grain in shade (SHADE_DETAIL, light pass 15): its texel against its neighbourhood, taken further where
+    // no sun arrives. Display texels to linear by a square (close enough for a ratio near 1), kept within 0.5-2
+    if (tinted > 0.0 && foliage < 0.5) {
+        float near = dot(texture2D(texture, texcoord, lodBias + 3.0).rgb, LUMA);
+        float own = dot(tex.rgb, LUMA);
+        float grain = clamp((own * own) / max(near * near, 1e-4), 0.5, 2.0);
+        float shade = 1.0 - clamp(shadow * min(facing * 4.0, 1.0), 0.0, 1.0);
+        c *= pow(grain, SHADE_DETAIL * shade * tinted);
+    }
+#endif
     // the light that comes from the sky as a whole, which ambient occlusion shuts out (slice 3, composite.fsh): the
     // fill, and below a metal's or a gem's sky reflection
     vec3 ambient = lin * skyFill(n, levels, ao, texAo, sunColour, skyColour) * fillDirection(n);

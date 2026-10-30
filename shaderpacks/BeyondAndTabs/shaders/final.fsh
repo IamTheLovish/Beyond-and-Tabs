@@ -29,7 +29,9 @@ varying vec2 texcoord;
 
 // Enchanted (WorldLookPass, lovish's pick on Oct 28: "dim it down a bit and make it look more saturated and whimsy ...
 // fantasy esque")
-const float CONTRAST = 0.18;
+// light pass 15: 0.18 -> 0.08 - at a cast shadow's 0.22 it took ~0.024 (-11%), the main crush on screen; the lawn (~0.5)
+// and the whites barely felt it
+const float CONTRAST = 0.08;
 const float SPLIT_TONE = 1.2;
 // 1.0 -> 1.12 (slice 3, Oct 30, lovish: "richer saturation ... pop", then "hyper realism"): the richer colour a good
 // camera or slide film gives a sunny day, never cartoon. The boost is guarded (grade()): greys get none, skin and the
