@@ -40,14 +40,17 @@ public final class MotionPass {
     private static final float[] DEATH_OUT = new float[DeathFall.OUT];
     /** The offsets the placement reads: OUT, or DEATH_OUT for a fall. */
     private static float[] cur = OUT;
+    private static final float[] LOOK = new float[Motion.LOOK_LEN];
     private static final float[] SLIDERS = new float[7];
     private static final float[] SLIDERS_NO_BREATH = new float[7];   // for rigs that breathe by themselves
     private static final Quaternionf Q = new Quaternionf();   // PoseStack.mulPose copies it: one reused, no garbage
     private static int slidersTick = Integer.MIN_VALUE;
 
     /** The parts touched by the last apply (bones then the hat) and their saved pose: x, y, z, xRot, yRot, zRot. */
-    private static final ModelPart[] TOUCHED = new ModelPart[DeathFall.BONES + BoneMap.MAX_FOLLOWERS];
-    private static final float[] SAVED = new float[(DeathFall.BONES + BoneMap.MAX_FOLLOWERS) * 6];
+    private static final int MAX_TOUCHED = DeathFall.BONES + BoneMap.MAX_FOLLOWERS + BoneMap.MAX_DROPPED
+        + BoneMap.MAX_LOWERED;
+    private static final ModelPart[] TOUCHED = new ModelPart[MAX_TOUCHED];
+    private static final float[] SAVED = new float[MAX_TOUCHED * 6];
     private static int touched = 0;
 
     private static void readSliders() {
@@ -92,8 +95,15 @@ public final class MotionPass {
         try {
             readSliders();
             float zoom = OrthoviewClientEvents.isEnabled() ? OrthoviewClientEvents.getZoom() : 0f;
+            LOOK[Motion.LOOK_MODE] = map.look;
+            if (map.look != Motion.LOOK_NONE) {   // what LivingEntityRenderer gave setupAnim this frame
+                float body = Mth.rotLerp(partial, e.yBodyRotO, e.yBodyRot);
+                LOOK[Motion.LOOK_BODY_YAW] = body;
+                LOOK[Motion.LOOK_NET_YAW] = Mth.wrapDegrees(Mth.rotLerp(partial, e.yHeadRotO, e.yHeadRot) - body);
+                LOOK[Motion.LOOK_PITCH] = Mth.lerp(partial, e.xRotO, e.getXRot());
+            }
             Motion.pose(AnimStates.slab(), b, e.getId(), e.tickCount + partial, partial, zoom,
-                map.noBreath ? SLIDERS_NO_BREATH : SLIDERS, map.flinchOnly, OUT);
+                map.noBreath ? SLIDERS_NO_BREATH : SLIDERS, map.flinchOnly, LOOK, OUT);
             place(map, ps);
         } catch (RuntimeException ex) {
             restore();
@@ -131,9 +141,10 @@ public final class MotionPass {
         int b = AnimStates.base(e.getId());
         float[] s = AnimStates.slab();
         try {
-            DeathFall.pose(s, b, e.getId(), e.deathTime - 1 + partial, map.jointed, DEATH_OUT);
+            float t = e.deathTime - 1 + partial;
+            DeathFall.pose(s, b, e.getId(), t, map.jointed, DEATH_OUT);
             s[b + AnimState.DEATH_DRAWN] = 1f;
-            placeFall(map, ps);
+            placeFall(map, ps, DeathFall.dropped(t, s[b + AnimState.DEATH_KIND], e.getId()));
         } catch (RuntimeException ex) {
             restore();
             BoneMaps.disable(model.getClass(), ex);
@@ -145,8 +156,16 @@ public final class MotionPass {
         return DEATH_OUT;
     }
 
-    /** Puts {@link #fallScratch()}'s offsets on the map's death parts and the pose stack (undone by {@link #restore}). */
+    /** {@link #placeFall(BoneMap, PoseStack, float)} with any weapon beside the hand already at rest (a lying body). */
     public static void placeFall(BoneMap map, PoseStack ps) {
+        placeFall(map, ps, 1f);
+    }
+
+    /**
+     * Puts {@link #fallScratch()}'s offsets on the map's death parts and the pose stack (undone by {@link #restore});
+     * a weapon held beside the hand is {@code dropped} (0..1, {@link DeathFall#dropped}) of the way to its rest.
+     */
+    public static void placeFall(BoneMap map, PoseStack ps, float dropped) {
         cur = DEATH_OUT;
         try {
             ModelPart[] p = map.death;
@@ -154,6 +173,10 @@ public final class MotionPass {
                 keep(p[bone]);
             for (int i = 0; i < map.followerCount; i++)
                 keep(map.followers[i]);
+            for (int i = 0; i < map.droppedCount; i++)
+                keep(map.dropped[i]);
+            for (int i = 0; i < map.loweredCount; i++)
+                keep(map.lowered[i]);
             tilt(ps);
             bend(p, map.deathHierarchical, map.waistY);
             limbs(p);
@@ -161,6 +184,10 @@ public final class MotionPass {
             hanging(p[DeathFall.FORE_L], DeathFall.FORE_L);
             hanging(p[DeathFall.KNEE_R], DeathFall.KNEE_R);
             hanging(p[DeathFall.KNEE_L], DeathFall.KNEE_L);
+            for (int i = 0; i < map.droppedCount; i++)
+                settle(map.dropped[i], dropped);
+            for (int i = 0; i < map.loweredCount; i++)
+                map.lowered[i].xRot += dropped * LOWER_RAD;
             for (int i = 0; i < map.followerCount; i++)
                 map.followers[i].copyFrom(map.leaders[i]);
         } finally {
@@ -181,6 +208,31 @@ public final class MotionPass {
         limbs(map.parts);
         for (int i = 0; i < map.followerCount; i++)
             map.followers[i].copyFrom(map.leaders[i]);
+    }
+
+    /**
+     * How far a grip holding a weapon in both hands ({@link BoneMap#lowered}) tips down over the fall, radians: the
+     * weapon, out in front at rest, comes to point at the feet, lying along the body a little proud of it. Left alone
+     * it pointed forwards - at the sky once the body lay on its back (the Levy's crossbow, eyes run 40978023283).
+     */
+    static final float LOWER_RAD = 1.2f;
+
+    /**
+     * A weapon on a grip beside the hand slips k (0..1) of the way back to its planted rest, its forward offset gone:
+     * upright at rest, it lies along the fallen body in the body's plane. Left at the guard it pointed forwards - at
+     * the sky once the body lay on its back (the Halberdier's halberd stood up beside him in the captures).
+     */
+    private static void settle(ModelPart p, float k) {
+        if (!(k > 0f))
+            return;
+        float x = p.x, y = p.y, z = p.z, rx = p.xRot, ry = p.yRot, rz = p.zRot;
+        p.resetPose();
+        p.x = Mth.lerp(k, x, p.x);
+        p.y = Mth.lerp(k, y, p.y);
+        p.z = Mth.lerp(k, z, 0f);
+        p.xRot = Mth.lerp(k, rx, p.xRot);
+        p.yRot = Mth.lerp(k, ry, p.yRot);
+        p.zRot = Mth.lerp(k, rz, p.zRot);
     }
 
     /** Puts every part the last apply touched back exactly as setupAnim left it. */
@@ -255,24 +307,45 @@ public final class MotionPass {
         ps.translate(0f, -1.5f, 0f);
     }
 
-    /** The torso bends about the waist; the head (and hat) and the arms ride on it. */
+    /** The torso bends about the waist and turns about its own upright (the look); the head (and hat) and the arms ride on it. */
     private static void bend(ModelPart[] p, boolean hierarchical, float waistY) {
-        float ax = out(Motion.BODY, Motion.RX), az = -out(Motion.BODY, Motion.RZ);
-        if (ax == 0f && az == 0f)
+        float ax = out(Motion.BODY, Motion.RX), az = -out(Motion.BODY, Motion.RZ), ay = out(Motion.BODY, Motion.RY);
+        if (ax == 0f && az == 0f && ay == 0f)
             return;
         if (hierarchical) {           // the head and arms are its children: they follow the bend by themselves
             if (p[Motion.BODY] != null) {
                 p[Motion.BODY].xRot += ax;
+                p[Motion.BODY].yRot += ay;
                 p[Motion.BODY].zRot += az;
             }
             return;
         }
+        if (ay != 0f) {               // first the turn: the shoulders swing round the spine, every rider turns with it
+            float cy = Mth.cos(ay), sy = Mth.sin(ay);
+            turn(p[Motion.BODY], ay, cy, sy);
+            turn(p[Motion.HEAD], ay, cy, sy);
+            turn(p[Motion.ARM_R], ay, cy, sy);
+            turn(p[Motion.ARM_L], ay, cy, sy);
+            turn(p[Motion.ARMS], ay, cy, sy);
+        }
+        if (ax == 0f && az == 0f)
+            return;
         float cx = Mth.cos(ax), sx = Mth.sin(ax), cz = Mth.cos(az), sz = Mth.sin(az);
         ride(p[Motion.BODY], waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.HEAD], waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARM_R], waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARM_L], waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARMS], waistY, ax, az, cx, sx, cz, sz);
+    }
+
+    /** A part turned with the torso about the model's upright axis (x = z = 0): its pivot swings round, its yaw adds. */
+    private static void turn(ModelPart p, float ay, float cy, float sy) {
+        if (p == null)
+            return;
+        float x = p.x, z = p.z;
+        p.x = x * cy + z * sy;
+        p.z = -x * sy + z * cy;
+        p.yRot += ay;
     }
 
     private static void ride(ModelPart p, float waistY, float ax, float az, float cx, float sx, float cz, float sz) {

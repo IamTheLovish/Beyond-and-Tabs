@@ -32,12 +32,14 @@ New caster per race (7, T2 lab); essence drops on every death (both sides); each
 essence can also buy veterancy XP.
 
 ## Abilities, draft 2 (cheap 5 / mid 10 / big 20 essence; cooldowns 12 / 25 / 60 s)
+Sunforged was respecified by lovish (Oct 29): "the angels casters can summon three different angels that help: one that heals, one that is a flying archer and another that is a melee engager that can fly". One angel of each kind per caster: a recast while it lives is refused (nothing spent, no cooldown). Tier 1 (lovish, Oct 29 ~22:05Z: "essence casters should be tier 1 like rez bots"): the Angel Caller trains at the Barracks.
+
 Shared by every caster: **Empower** (15 essence): an ally unit within 6 gains 1 veterancy XP (one rank, +10% HP and
 damage, max rank 3).
 
 | Race | Caster | Cheap (5) | Mid (10) | Big (20) |
 |---|---|---|---|---|
-| Sunforged | Sun Cantor | Dawn Lance: beam, 60 damage (x2 vs undead) | Radiant Tithe: allies within 6 get an 80-damage golden shield, 10 s | Solar Ascension: 8 s, allies within 8 regen 5 HP/s and +15% damage |
+| Sunforged | Angel Caller | Mender Angel: a flying healer for 20 s (5 HP every 2 s to a hurt friend within 8) | Seraph Archer: a flying archer for 25 s (6 dmg, 0.6/s, range 12) | Sword Seraph: a flying melee engager for 30 s (70 HP, 9 dmg, 0.8/s) |
 | Gravebound | Soulbinder | Wail: enemies in a cone flee for 2 s | Soul Harvest: 2 spectral skeletons for 20 s | Soul Chains: up to 4 enemies linked 10 s, 50% of damage to one is shared to the others |
 | Horde | Voodoo Shaman | Hex: one enemy (T1-T2) cannot attack or cast for 4 s | Blood Totem: 15 s, allies within 8 +25% attack speed, enemies -15% speed | Spirit Puppet: take control of one enemy T1 unit for 15 s |
 | Verdant | Thornweaver | Entangling Roots: enemies within 3 rooted 3 s | Seed of Renewal: sapling heals allies within 6 for 6 HP/s, 12 s | Sprout Guardian: a sapling treant fights for you 25 s |

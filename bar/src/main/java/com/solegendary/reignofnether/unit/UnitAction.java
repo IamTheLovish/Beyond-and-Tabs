@@ -232,6 +232,10 @@ public enum UnitAction {
     PATCH_KIT,              // 5 essence: a friendly machine or building within 8 blocks is mended by 120 HP at once
     GHOST_FURNACE,          // 10 essence: a 150 HP spirit-steam furnace scalds enemies within 5 blocks for 4 a second, 20 s
     SOUL_BOILER,            // 20 essence: a friendly building within 24 blocks builds and produces 50% faster for 20 s
+    // Sunforged essence caster, the Angel Caller (ability/abilities/CallAngel): each calls one temporary flying angel
+    CALL_MENDER_ANGEL,      // 5 essence: a flying healer for 20 s
+    CALL_SERAPH_ARCHER,     // 10 essence: a flying archer for 25 s
+    CALL_SWORD_SERAPH,      // 20 essence: a flying melee engager for 30 s
     // the Horde's Voodoo Shaman (unit/units/piglins/VoodooShamanUnit)
     HEX,                    // 5 essence: an enemy T1-T2 unit can neither attack nor cast for 4 s
     BLOOD_TOTEM,            // 10 essence: a 15 s totem, allies within 8 attack 25% faster, enemies move 15% slower

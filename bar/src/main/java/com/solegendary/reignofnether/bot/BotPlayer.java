@@ -85,7 +85,9 @@ public class BotPlayer {
         if (faction.equals(Factions.VILLAGERS))
             return new Kit(Buildings.TOWN_CENTRE, null, null,   // no house or farm any more (Factions)
                 Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Buildings.BARRACKS,
-                Buildings.WATCHTOWER, ProductionItems.VILLAGER, List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER),
+                Buildings.WATCHTOWER, ProductionItems.VILLAGER,
+                List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER,
+                        ProductionItems.ANGEL_CALLER),   // the essence caster, tier 1 (lovish, Oct 29: bots build and use all 7)
                 Buildings.ARCANE_TOWER, ProductionItems.ROYAL_ARCHITECT,
                 List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER, ProductionItems.ORIFLAMME_ELEPHANT),
                 Buildings.CASTLE, ProductionItems.SUN_COLOSSUS, Buildings.ENERGY_CONVERTER_VILLAGERS);

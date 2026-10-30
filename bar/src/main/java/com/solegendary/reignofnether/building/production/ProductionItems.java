@@ -38,6 +38,7 @@ public class ProductionItems {
     public static final IronGolemProd IRON_GOLEM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "iron_golem"), new IronGolemProd());
     public static final WitchProd WITCH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "witch"), new WitchProd());
     public static final EvokerProd EVOKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "evoker"), new EvokerProd());
+    public static final com.solegendary.reignofnether.unit.units.villagers.AngelCallerProd ANGEL_CALLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "angel_caller"), new com.solegendary.reignofnether.unit.units.villagers.AngelCallerProd());
     public static final WindcallerProd WINDCALLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "windcaller"), new WindcallerProd());
     public static final SlimeProd SLIME = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "slime"), new SlimeProd());
     public static final WardenProd WARDEN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "warden"), new WardenProd());
@@ -296,6 +297,7 @@ public class ProductionItems {
         IRON_GOLEM,
         WITCH,
         EVOKER,
+        ANGEL_CALLER,
         WINDCALLER,
         SLIME,
         WARDEN,

@@ -70,6 +70,16 @@ public final class DeathFall {
         return reelTicks(kind) + fallTicks(kind, id);
     }
 
+    /**
+     * How far a weapon held on a grip beside the hand (BoneMap#dropped: the Halberdier's halberd) has slipped back to
+     * its planted rest at t ticks into the death, 0..1: none through the reel, all of it by the time the body lands.
+     */
+    public static float dropped(float t, float kind, int id) {
+        if (kind == ALIVE || !(t > 0f))
+            return 0f;
+        return Life.smooth((t - reelTicks(kind)) / fallTicks(kind, id));
+    }
+
     /** How far the blow throws the body along its fall, px. */
     public static float slidePx(float kind) {
         return kind == HEAVY ? 8f : kind == BLOW ? 3f : 0f;

@@ -178,6 +178,32 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "evoker_unit").toString()));
 
+    // Sunforged essence caster (design/essence_casters.md): the Angel Caller and its three temporary flying angels
+    // (vex-bodied for now, sized up so they can be clicked from the RTS camera)
+    public static final RegistryObject<EntityType<AngelCallerUnit>> ANGEL_CALLER_UNIT = ENTITIES.register("angel_caller_unit",
+            () -> EntityType.Builder.of(AngelCallerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.EVOKER.getWidth(), EntityType.EVOKER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "angel_caller_unit").toString()));
+
+    public static final RegistryObject<EntityType<MenderAngelUnit>> MENDER_ANGEL_UNIT = ENTITIES.register("mender_angel_unit",
+            () -> EntityType.Builder.of(MenderAngelUnit::new, MobCategory.CREATURE)
+                    .sized(0.7f, 1.1f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mender_angel_unit").toString()));
+
+    public static final RegistryObject<EntityType<SeraphArcherUnit>> SERAPH_ARCHER_UNIT = ENTITIES.register("seraph_archer_unit",
+            () -> EntityType.Builder.of(SeraphArcherUnit::new, MobCategory.CREATURE)
+                    .sized(0.7f, 1.1f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seraph_archer_unit").toString()));
+
+    public static final RegistryObject<EntityType<SwordSeraphUnit>> SWORD_SERAPH_UNIT = ENTITIES.register("sword_seraph_unit",
+            () -> EntityType.Builder.of(SwordSeraphUnit::new, MobCategory.CREATURE)
+                    .sized(0.8f, 1.3f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sword_seraph_unit").toString()));
+
     public static final RegistryObject<EntityType<EndermanUnit>> ENDERMAN_UNIT = ENTITIES.register("enderman_unit",
             () -> EntityType.Builder.of(EndermanUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.ENDERMAN.getWidth(), EntityType.ENDERMAN.getHeight())
@@ -1184,6 +1210,7 @@ public class EntityRegistrar {
             case SentinelTreantProd.itemName -> EntityRegistrar.SENTINEL_TREANT_UNIT.get();
             case WitchProd.itemName -> EntityRegistrar.WITCH_UNIT.get();
             case EvokerProd.itemName -> EntityRegistrar.EVOKER_UNIT.get();
+            case AngelCallerProd.itemName -> EntityRegistrar.ANGEL_CALLER_UNIT.get();
             case SlimeProd.itemName -> EntityRegistrar.SLIME_UNIT.get();
             case WardenProd.itemName -> EntityRegistrar.WARDEN_UNIT.get();
             case RavagerProd.itemName -> EntityRegistrar.RAVAGER_UNIT.get();
