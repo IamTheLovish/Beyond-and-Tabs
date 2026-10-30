@@ -64,6 +64,12 @@ control's 4/10 - better structure, but "a plain grey castle with a yellow square
   - the wing's and the keep's PARAPETS plain smooth-stone coping (merlons on every edge read as "stacked battlements");
     the merlons stay on the towers' crowns, the turrets and the bay - one crenel line at the tops.
 
+ROUND 3 (round 2's critics, runs 20261030-195225 / -195226: 5 / 5, no gain; per element: coping kept, the diorite
+field "zebra" against its stone-brick quoins, the dark spire an overshoot, the bare well a drain): the corners in the
+field stone (one continuous pale plane, the darker trim only the horizontal lines); the spire weathered timber
+shingles (Macaw's spruce planks steep roof, a warm mid: predicted value 0.33-0.40 from the pack texture); a quiet round
+halo of stone-brick slabs in the terrace round the well. The lancet glass and everything else as round 2.
+
 ANCHORS (structure-local x, y, z; in game these become client-drawn moving parts later):
   gate        (0..1, 1..9, 5..11) the portal; the animated gate leaf hangs in the inner order (x 1)
   spawn cell  (8, 1, 8) the lane floor under the well; the column above it is air to the sky
@@ -98,7 +104,8 @@ DRESS = "stone_bricks"
 DRESS_ST = "stone_brick_stairs"
 DRESS_SL = "stone_brick_slab"
 POST = "stone_brick_wall"
-QUOIN = ("stone_bricks", "polished_diorite")    # round 2: long and short, dark / light (was stone bricks / andesite)
+QUOIN = ("polished_diorite", "polished_diorite")   # round 3: the corners in the field stone (round 2's stone brick /
+#     diorite long-and-short read as "zebra / ladder stripes" on every tower, both critics); round 1: stone bricks / andesite
 CROWN = "stone_bricks"         # the crown course and merlons: NOT diorite - its top reads as snow from above
 CROWN_SL = "stone_brick_slab"  # (camera table: polished diorite up 0.769 / sat 0.044; diorite wall up 0.725)
 TERRACE = "smooth_stone_slab"
@@ -111,8 +118,9 @@ CORNICE = "reignofnether:cornice_stone"
 GLASS = "gray_stained_glass_pane"   # round 2 (clear panes read as "white crosses", both critics)
 ROSE = "orange_stained_glass"
 ROOM = "birch_planks"
-SPIRE = "mcwroofs:deepslate"       # round 2 (granite, salmon: "a squat hipped roof", a 2nd saturated accent)
-SPIRE_CORE = "polished_deepslate"
+SPIRE = "mcwroofs:spruce_planks"   # round 3: weathered timber shingles, a warm mid (round 2 deepslate 0.17-0.20 "overshoot
+#     into the environment darks"; round 1 granite 0.55 / sat 0.37 "salmon, a second saturated accent")
+SPIRE_CORE = "spruce_planks"
 GOLD = "gold_block"
 LOOP = "iron_bars"
 KEY = "chiseled_stone_bricks"
@@ -433,8 +441,15 @@ def spire(g, cx, cz, y_foot):
 
 
 def well(g):
+    """The spawn column open to the sky; round 3: a quiet HALO - a round ring of stone-brick slabs laid in the terrace
+    (radius 2, 12 cells; value 0.47 against the terrace's 0.55) round it. Round 1's gold ring "led at RTS, a square
+    donut"; round 2's bare hole "a drain, no circle" (critics)."""
     for y in range(1, H3):
         g.clear(SPAWN[0], y, SPAWN[2])
+    for dx in range(-2, 3):
+        for dz in range(-2, 3):
+            if dx * dx + dz * dz in (4, 5):
+                g.slab(SPAWN[0] + dx, 12, SPAWN[2] + dz, DRESS_SL)
 
 
 def lane(g):
