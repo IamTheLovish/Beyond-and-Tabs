@@ -79,12 +79,19 @@ TARGETS = {
     # r34: tilt 16 -> 8 - the turf lip is a rounded roll with hanging blades; at 16 the solver's strength (the band is
     # thin, so its mip tilt is small) made every blade edge a wall whose normals drew a black line under the lip
     "grass_block_side_overlay": dict(luma=0.56, std=0.070, sat=0.00, lf=0.0, tilt=8.0, smooth=24, pore=40),
-    "dirt":             dict(luma=0.34, std=0.045, sat=0.36, lf=0.0, tilt=12.0, smooth=26, pore=56, soften=1.4, mid=1.5,
-                             toe=0.285),
+    # r52 (lovish Oct 30 "more detailed" - Refs 5 / 15: crumbly dirt with hollows, pebbles and roots): soil_relief
+    # under the scan - std 0.045 -> 0.055 (the hollows and pebbles carry it), tilt 12 -> 14, the height a form now
+    # (hspan 0.25, as the building blocks: parallax shows the pebbles and hollows); the mean 0.34 unchanged (G5)
+    "dirt":             dict(luma=0.34, std=0.055, sat=0.36, lf=0.0, tilt=14.0, smooth=26, pore=56, soften=1.4, mid=1.5,
+                             toe=0.285, hspan=0.25),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
-    "stone":            dict(luma=0.52, std=0.050, sat=0.04, lf=0.0, ao=0.5, tilt=8.0, smooth=22, pore=12, soften=1.2,
-                             mid=0.3),
+    # r51 (lovish Oct 30 "more detailed, use the reference photos" - Ref 10, a rock wall of big angular chunks): the
+    # chunks and crevices of rock_chunks under the scan - std 0.05 -> 0.08 (the crevices carry the spread; the mean
+    # 0.52 stays on its band between stone_bricks 0.47 and smooth stone 0.63), tilt 8 -> 12, the height no longer
+    # CALM (hspan 0.30: the crevices are real depth for parallax; r18d's worms came from noise height, not a form)
+    "stone":            dict(luma=0.52, std=0.080, sat=0.04, lf=0.0, ao=0.7, tilt=12.0, smooth=22, pore=12, soften=1.2,
+                             mid=0.3, hspan=0.30),
     "cobblestone":      dict(luma=0.41, std=0.105, sat=0.08, tilt=22.0, smooth=32, pore=16),   # r48: stones apart from the mortar
     # Oct 29 (claude/environment-palette-oct29.md): luma 0.67 -> 0.50 - at 0.67 the river banks were the brightest
     # ground on screen (luma 0.72-0.75 after the grade, r54) and competed with buildings and units; the palette band
@@ -94,7 +101,7 @@ TARGETS = {
     # can ship them and keep working on them"): gravel's smoothness 50 -> 24 (a blue sky sheen at the 30-degree view)
     # and tilt 26 -> 16 (bubble wrap); oak planks sat 0.46 -> 0.40, smooth 70 -> 45 (orange, satin); oak bark sat
     # 0.38 -> 0.34 (grey-brown) and tilt 27 -> 22; `soften` (see soften()) keeps the plain game free of pepper
-    "gravel":           dict(luma=0.46, std=0.070, sat=0.07, tilt=16.0, smooth=24, pore=30, soften=0.8),
+    "gravel":           dict(luma=0.46, std=0.080, sat=0.07, tilt=18.0, smooth=24, pore=30, soften=0.8),   # r52: distinct stones
     # r35 (critic: the planks too dark and too close in value - oak ~0.55, jungle ~0.48, dark oak ~0.35): oak lifted
     "oak_planks":       dict(luma=0.55, std=0.055, sat=0.40, tilt=8.5, smooth=45, pore=24, soften=0.4, lf=0.3),
     "oak_log":          dict(luma=0.33, std=0.060, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=2.0),
@@ -252,7 +259,7 @@ TARGETS = {
     "clay": dict(luma=0.53, std=0.035, sat=0.10,   # r21: read pink-white under the warm sun - bluer
     tilt=8.9, smooth=102, pore=64),
     "red_sand": dict(luma=0.52, std=0.040, sat=0.60, tilt=12.9, smooth=34, pore=60),
-    "mud": dict(luma=0.22, std=0.045, sat=0.14, tilt=16.3, smooth=90, pore=64),   # r31: the cracks carry the spread
+    "mud": dict(luma=0.22, std=0.055, sat=0.14, tilt=18.0, smooth=90, pore=64),   # r31: the cracks carry the spread; r52: the hollows
     # r35 (calcite / diorite / snow indistinguishable at 32 px): calcite a smooth bright white (std 0.075 -> 0.035,
     # tilt 19 -> 8), diorite keeps its speckle, snow the brightest and bluish
     "calcite": dict(luma=0.64, std=0.065, sat=0.02, tilt=14.0, smooth=36, pore=10),   # r42-44: grain and pits; r48
@@ -903,25 +910,34 @@ def m_gravel(F, n):
 def m_gravel_r25(F, n):
     """Gravel, round 25 (reviewer: main's gravel read as Voronoi flagstones / bubble wrap). Gravel is MANY small
     rounded pebbles, ~2-4 cm: two sizes of soft-domed stones packed together, each its own grey (a few warm, a few
-    dark), shaded rounder than outlined - the gaps between them a soft shadow, not a black grid."""
+    dark), shaded rounder than outlined - the gaps between them a soft shadow, not a black grid.
+    Round 52 (lovish: "more detailed"; the r31 pebbles at 6-10 texels were 2 px at the RTS camera - a blue-grey mush):
+    DISTINCT stones - a third size of large cobbles (~1/6 block, one in five cells) among the medium pebbles, the
+    small ones only filling the gaps; each stone a flatter dome with a crisp shadowed edge, its own grey."""
     rng = F.rng
-    # r31 (art director: the speckle too fine - 2-3 px features at the RTS camera are fine): larger pebbles
-    f1, f2, idx, k = F.voronoi(180, 1.0)                 # ~9.5 texels: the larger pebbles
-    g1, g2, gidx, gk = F.voronoi(420, 1.0)               # ~6 texels: the small ones
-    big = (rng.random(k) < 0.5)[idx]
-    a1, a2 = np.where(big, f1, g1), np.where(big, f2, g2)
-    pid = np.where(big, idx, gidx + k)
+    b1, b2, bidx, bk = F.voronoi(36, 1.0)                 # ~21 texels at 128: the large stones
+    f1, f2, idx, k = F.voronoi(140, 1.0)                 # ~11 texels: the pebbles
+    g1, g2, gidx, gk = F.voronoi(420, 1.0)               # ~6 texels: the small fill
+    bigc = (rng.random(bk) < 0.22)[bidx]
+    medc = (rng.random(k) < 0.70)[idx]
+    a1 = np.where(bigc, b1, np.where(medc, f1, g1))
+    a2 = np.where(bigc, b2, np.where(medc, f2, g2))
+    pid = np.where(bigc, bidx, np.where(medc, idx + bk, gidx + bk + k))
     dome = np.clip(1 - (2 * a1 / np.maximum(a1 + a2, 1e-6)) ** 2, 0, 1)
-    tone = rng.random(k + gk)
-    kind = rng.random(k + gk)
+    dome = dome ** 0.6                                   # flatter tops, a crisper fall-off at the edge
+    gap = smoothstep(0.0, 0.012, a2 - a1)                # the shadowed gap between stones
+    tone = rng.random(bk + k + gk)
+    kind = rng.random(bk + k + gk)
     # r32 (critic: gravel "brown - shift toward cool grey with mixed stones"; its luma stays, it sits on the
     # environment palette): most pebbles a cool grey, some blue-grey slate, a few warm tan, the rest dark
     kk = kind[pid][..., None]
     base = np.where(kk < 0.50, np.array([0.48, 0.49, 0.50]),
                     np.where(kk < 0.66, np.array([0.45, 0.47, 0.51]),
                              np.where(kk < 0.80, np.array([0.55, 0.50, 0.43]), np.array([0.36, 0.36, 0.38]))))
-    H = 0.3 + 0.5 * np.sqrt(dome) + 0.015 * F.noise(16, 48, 0.2)
-    shade = (0.85 + 0.25 * tone[pid]) * (0.72 + 0.28 * np.sqrt(dome))
+    size_h = np.where(bigc, 1.0, np.where(medc, 0.75, 0.5))   # the large stones stand higher
+    grit = F.noise(16, 48, 0.2)
+    H = 0.25 + 0.6 * dome * size_h * gap + 0.015 * grit
+    shade = (0.85 + 0.25 * tone[pid]) * (0.60 + 0.40 * dome) * (0.7 + 0.3 * gap) * (1 + 0.03 * grit)
     return H, np.clip(base * shade[..., None], 0, 1)
 
 
@@ -2479,26 +2495,33 @@ def m_polished_basalt_top(F, n, rings=16, lobe=4.0):
 
 
 def m_mud(F, n):
-    """Round 31 (art director: mud "a flat dark slab - wet sheen via smoothness, drying cracks"): a drying mud flat -
-    a network of shrinkage cracks (Voronoi plates ~1/4 block, the crack a groove whose plate edges curl up a little),
-    the plates' tops drying pale and matte, the cracks and the low puddled hollows still wet, dark and glossy (the
-    smoothness map carries the wet / dry split; the F0 stays dielectric)."""
-    f1, f2, idx, k = F.voronoi(16, 0.9)
-    wu, wv = 0.015 * F.noise(3, 9, 0.5), 0.015 * F.noise(3, 9, 0.5)
-    f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
-    gap = f2 - f1
-    crack = 1 - smoothstep(0.0, 0.018, gap)              # the open crack
-    curl = smoothstep(0.018, 0.06, gap)                  # the plate: 0 at the curled-up lip, 1 inside
-    lip = (1 - curl) * (1 - crack)
-    wet = smoothstep(0.55, 0.9, norm01(F.fbm(2, 3, 0.55)))   # low hollows still wet
+    """Mud, round 52 (Ref 15 - wet mud with DEEP relief and hollows where puddles pool, wet darkening): churned mud -
+    soft clods and ridges pushed up between deep hollows; the hollows' floors hold standing water (dark, glossy, flat
+    in the relief), their banks wet and dark; only the highest clods have dried pale and matte, with a few shrinkage
+    cracks. The smoothness map carries the wet / dry split (the F0 stays dielectric). r31's drying crack net (kept
+    in git) read as a dark tiled slab."""
+    low = norm01(F.fbm(2, 3, 0.6))
+    puddle = smoothstep(0.80, 0.86, low)                   # standing water: the floor of a hollow
+    hollow = smoothstep(0.40, 0.82, low)                   # the hollow's slope down to it
+    f1, f2, idx, k = F.voronoi(40, 1.0)
+    cell = 1.0 / math.sqrt(40)
+    amp = F.rng.uniform(0.3, 1.0, k)[idx]
+    clod = np.clip(1 - (f1 / (0.8 * cell)) ** 2, 0, 1) * smoothstep(0.0, 0.02, f2 - f1) * amp
+    clod = clod * (1 - hollow)
+    smear = F.noise(6, 20, 0.5, sx=1.0, sy=2.5)            # drag marks across the clods
     grain = F.noise(14, 40, 0.3)
-    H = 0.55 - 0.25 * crack + 0.06 * lip + 0.01 * grain - 0.04 * wet
-    dry = (1 - wet) * (1 - crack)
-    shade = 0.80 + 0.25 * dry * (0.6 + 0.4 * curl) + 0.02 * grain - 0.35 * crack
-    alb = tint((0.30, 0.25, 0.21), shade)
+    dry = smoothstep(0.35, 0.75, (1 - low) * 0.5 + 0.5 * clod)   # the high clod tops, dried
+    c1, c2, cidx, ck = F.voronoi(30, 0.9)
+    crack = (1 - smoothstep(0.0, 0.012, c2 - c1)) * smoothstep(0.5, 0.8, dry)
+    H = 0.55 + 0.22 * clod + 0.03 * smear * (1 - hollow) - 0.30 * hollow - 0.08 * puddle + 0.01 * grain - 0.12 * crack
+    H = np.where(puddle > 0.5, 0.20, H)
+    wet = np.clip(hollow + 0.5 * (1 - dry), 0, 1)
+    shade = 0.80 + 0.40 * dry + 0.10 * clod + 0.02 * grain + 0.03 * smear - 0.30 * hollow - 0.25 * puddle - 0.30 * crack
+    alb = tint((0.32, 0.26, 0.21), shade)
     alb = alb * (1 - 0.15 * dry[..., None] * np.array([0.0, 0.2, 0.5])[None, None, :])   # dry mud: paler, greyer
-    smooth = 38 + 100 * np.clip(wet + 0.8 * crack, 0, 1) - 10 * lip
-    return dict(H=H, alb=alb, smooth=np.clip(smooth, 20, 170))
+    alb = alb * (1 + 0.08 * puddle[..., None] * np.array([-0.5, 0.0, 0.6])[None, None, :])  # the water: a sky cast
+    smooth = 36 + 90 * wet + 70 * puddle - 10 * dry
+    return dict(H=H, alb=alb, smooth=np.clip(smooth, 20, 200))
 
 
 def m_bone(F, n, top):
@@ -2756,17 +2779,17 @@ def m_podzol(F, n):
 
 
 def m_coarse_dirt(F, n):
-    """Coarse dirt: dirt with gravel worked through it."""
-    Hd, ad = m_dirt(F, n)
-    # r21 (reviewer, plain lane: "bright single-pixel pebbles on dark brown, static at RTS"): 200 grey cells per block
-    # were 1-2 texels each - fewer, larger stones in an earthy grey-brown close to the dirt's own tone
-    f1, f2, idx, k = F.voronoi(70, 1.0)
-    stone = (F.rng.random(k) < 0.22)[idx] & (f2 - f1 > 0.012)
-    dome = smoothstep(0.0, 0.05, f2 - f1)                         # each stone rounded: lit on top, dark at its rim
-    H = np.where(stone, Hd + 0.15 * dome, Hd)
-    grey = tint((0.40, 0.37, 0.33), (0.65 + 0.35 * dome) * (0.85 + 0.2 * F.rng.random(k)[idx]))
-    half = (f2 - f1 > 0.004) & ~stone & (F.rng.random(k) < 0.22)[idx]   # stones half sunk: a soil-stained rim
-    return H, np.where(stone[..., None], grey, np.where(half[..., None], ad * 0.85, ad))
+    """Coarse dirt, round 52: the dirt scan (soil_relief: hollows, clods, roots) with gravel worked through it - more
+    and larger stones than dirt's, rounded, pressed in, each its own grey (r21's flat grey polygons read as paper
+    cut-outs on orange)."""
+    d = scan_set(SCAN_SOIL, n, scale=1.5)
+    alb = no_green(flatten(F, d["alb"], 3.0, keep=0.3))
+    Hr, shade, pebble, root = soil_relief(F, n, pebbles=0.34, pebble_cells=64, roots=0.4, clods=0.08)
+    grain = d["H"] - F.blur(d["H"], n / 24)
+    grain = grain / max(grain.std(), 1e-6)
+    H = 0.6 + Hr + 0.03 * grain * (1 - pebble)
+    alb = soil_paint(np.clip(alb * shade[..., None], 0, 1), pebble, root, F)
+    return H, np.clip(alb, 0, 1)
 
 
 # ------------------------------------------------------------------ round 13: the census's long tail ------------
@@ -3837,8 +3860,70 @@ def m_oak_bark_r24(F, n, base=(0.42, 0.33, 0.21)):
     return H, alb
 
 
+# round 51 (lovish Oct 30 "more detailed, use the reference photos"; Ref 11: bark sides deeply furrowed VERTICALLY,
+# ridged plates, a rough dark rim): every wood's bark on the oak r24 habit - furrows as the zero-crossings of a noise
+# stretched up the trunk (they wander, fork and merge) - with a deep V and a dark core, the ridges between them broken
+# across into PLATES at each wood's own rate, a second, finer set of fissures on the ridge faces. m_bark's Voronoi
+# plates (r17) read as a camouflage net of blobs from the RTS camera (before_bark sheet, r51 scratch).
+# style: (furrows across the block, furrow depth, plate-break rate 0..1, scale roughness, secondary fissures,
+#         the ridge's grey-weathering 0..1)
+BARK51 = {
+    "oak": (7, 0.55, 0.22, 0.6, 0.7, 0.30),        # long deep furrows, flat rough ridges
+    "spruce": (10, 0.40, 0.55, 1.0, 0.7, 0.20),    # small scaly plates, shallower
+    "acacia": (8, 0.50, 0.10, 0.4, 0.8, 0.45),     # long fibrous strips, grey
+    "jungle": (8, 0.42, 0.15, 0.5, 0.6, 0.25),     # smoother plates, clear seams
+    "dark_oak": (6, 0.65, 0.50, 0.7, 0.5, 0.25),   # blocky, deepest, cracked across
+    "cherry": (9, 0.32, 0.08, 0.3, 0.4, 0.15),     # smoother bands, fine seams
+}
+
+
+def m_bark_r51(F, n, base=(0.42, 0.33, 0.21), style="oak"):
+    per, depth, breaks_p, scaly, fine, greying = BARK51[style]
+    warp = 0.02 * F.noise(2, 6, 0.6)
+    lo = max(1, int(round(per * 0.3)))
+    field = F.warp(F.noise(lo, per, 0.9, sx=1.0, sy=6.0), warp, 0.0)   # long along v (up the trunk)
+    gy = (np.roll(field, -1, 0) - np.roll(field, 1, 0)) / 2
+    gx = (np.roll(field, -1, 1) - np.roll(field, 1, 1)) / 2
+    a = np.abs(field) / np.maximum(np.sqrt(gx * gx + gy * gy), 0.02)   # ~distance to the furrow line, in texels
+    w = (n / (5.5 * per)) * np.clip(1.0 + 0.5 * F.noise(4, 16, 0.5) + 0.45 * F.noise(1, 3, 0.8), 0.4, 2.0)
+    furrow = 1 - smoothstep(0.0, w, a)                                 # the V: deep, dark, damp
+    furrow = furrow * furrow * (3 - 2 * furrow)
+    core = 1 - smoothstep(0.0, 0.35 * w, a)                            # its floor, a dark line
+    ridge = smoothstep(0.5 * w, 1.8 * w, a)                            # flat-topped ridges, a rounded shoulder
+    # the second, finer fissures on the ridge faces (bark splits again as the trunk grows)
+    f2 = F.warp(F.noise(per * 2, per * 5, 0.8, sx=1.0, sy=5.0), 0.01 * F.noise(3, 9), 0.0)
+    g2y = (np.roll(f2, -1, 0) - np.roll(f2, 1, 0)) / 2
+    g2x = (np.roll(f2, -1, 1) - np.roll(f2, 1, 1)) / 2
+    a2 = np.abs(f2) / np.maximum(np.sqrt(g2x * g2x + g2y * g2y), 0.02)
+    fiss = (1 - smoothstep(0.0, 0.35 * w, a2)) * ridge * fine
+    # the ridges broken ACROSS into plates: short horizontal breaks, each ridge its own rhythm
+    brk = np.abs(F.noise(3, 10, 0.6, sx=4.0, sy=1.0))
+    where = smoothstep(1.0 - breaks_p, 1.6 - breaks_p, F.noise(3, 10, 0.5))
+    breaks = F.blur((1 - smoothstep(0.0, 0.14, brk)) * where * ridge, 0.8)
+    # each plate stands at its own level: a tone and height from a blocky noise (the plate's id has no cells here)
+    plate = F.noise(2, 6, 0.6, sx=1.0, sy=3.0)
+    scale = F.noise(10, 48, 0.4)                                       # scaly roughness on the ridge tops
+    checks = smoothstep(0.7, 1.5, F.noise(8, 40, 0.5, sx=1.0, sy=0.3))  # short checks ACROSS the ridges
+    fib = F.noise(10, 48, 0.4, sx=1.0, sy=8.0)
+    H = 0.35 + 0.45 * ridge + 0.05 * plate * ridge - depth * furrow - 0.12 * core - 0.22 * fiss \
+        + 0.06 * scaly * scale * ridge - 0.08 * checks * ridge - 0.28 * breaks + 0.02 * fib
+    rgb = np.asarray(base, dtype=np.float64)
+    grey = rgb.mean()
+    weathered = rgb + (grey - rgb) * greying + 0.03                    # the faces sun-greyed
+    face = np.clip(ridge * (1 - breaks) * (1 - 0.7 * fiss), 0, 1)
+    col = rgb[None, None, :] * (1 - face[..., None]) + weathered[None, None, :] * face[..., None]
+    lichen = F.blur(smoothstep(0.9, 1.6, F.noise(3, 9, 0.6)) * face, 1.5) * 0.35
+    col = col * (1 - lichen[..., None]) + np.array([0.52, 0.55, 0.42])[None, None, :] * grey / 0.5 * lichen[..., None]
+    shade = (0.58 + 0.42 * face) * (1 + 0.06 * scaly * scale * face - 0.08 * checks * face + 0.03 * fib
+                                    + 0.05 * plate * face) - 0.14 * furrow - 0.10 * core - 0.12 * fiss
+    # the furrow floors cooler and damper (sky light), the ridge crests a hair warmer
+    col = col * (1 + 0.08 * furrow[..., None] * np.array([-1.0, -0.4, 0.6]))
+    alb = np.clip(col * shade[..., None], 0, 1)
+    return H, alb
+
+
 def m_log(F, n, base=(0.42, 0.33, 0.21), style="oak"):
-    return m_bark(F, n, base, style)
+    return m_bark_r51(F, n, base, style)
 
 
 def m_log_top(F, n, wood=(0.70, 0.56, 0.36), bark_rgb=(0.42, 0.33, 0.21), rim=(0.5, 0.2)):
@@ -4551,7 +4636,7 @@ def blend_maps(alb, n_img, s_img, other, m):
 # flattens its clump field inside the shared ring (clover_lawn: variant_frame), blends its blobs over 16 texels
 # instead of 3, and turns its copies without the half-block roll (a rolled copy would carry its calm frame through
 # the block's centre as a cross).
-VARIANT_FEATHER = {"grass_block_top": 8.0}
+VARIANT_FEATHER = {"grass_block_top": 8.0, "stone": 8.0, "dirt": 8.0}   # r51 / r52: the chunks and pebbles fade over 8 texels at the blob
 # the grass top's band is thin (2.5-5.5% of the block: the seam only needs the mips to match, 8-12 texels at 256) so
 # the calm ring that every block shares stays a couple of screen pixels wide at the RTS zoom
 VARIANT_MARGIN_OF = {"grass_block_top": (0.04, 0.012, 0.006, 0.025, 0.055)}
@@ -4614,16 +4699,147 @@ def proc_variant(base, i):
     return r
 
 
+def rock_chunks(F, n, cells=8, depth=0.55, core=0.016, shoulder=0.050, blocks=1):
+    """Round 51 (lovish Oct 30 "more detailed, use the reference photos"; Ref 10 - a rock wall of big irregular ANGULAR
+    chunks with deep crevices and strong self-shadow): the stone's MESO structure. Voronoi cells ~1/3 block across are
+    the chunks (a warped lookup bends their straight borders into meandering crevices while the junctions stay
+    angular); each chunk is a flat plane at its own level and slight tilt (a cleavage face the sun lights as one
+    piece), chipped at its arrises; between them a V-shaped crevice `shoulder` wide with a dark `core`. Returns
+    (height 0..1, a shade ~1 for the albedo, the crevice 0..1). The crevice's shade is baked lightly (the shader adds
+    the AO and the self-shadow from the normals); the arris a hair lighter (weathered edges), isotropic - no sun
+    direction is painted in, vanilla turns and the shader lights. `blocks` > 1: F spans a sheet of blocks x blocks
+    (the giant sheet) and every size is kept per block."""
+    b = blocks
+    N = lambda lo, hi, slope=1.0: F.noise(lo * b, hi * b, slope)
+    # chunks of two sizes: big blocks of rock with, here and there, a cluster of smaller pieces where one split up
+    f1, f2, idx, k = F.voronoi(cells * b * b, 1.0)
+    g1, g2, gidx, gk = F.voronoi(cells * 3 * b * b, 1.0)
+    big = (F.rng.random(k) < 0.75)[idx]
+    f1, f2 = np.where(big, f1, g1), np.where(big, f2, g2)
+    idx = np.where(big, idx, gidx + k)
+    k = k + gk
+    du = (0.020 * N(2, 5, 0.6) + 0.005 * N(8, 20, 0.4)) / b
+    dv = (0.020 * N(2, 5, 0.6) + 0.005 * N(8, 20, 0.4)) / b
+    f1, f2 = F.warp(f1, du, dv), F.warp(f2, du, dv)
+    idx = idx[(np.round((F.v + dv) * n).astype(int)) % n, (np.round((F.u + du) * n).astype(int)) % n]
+    gap = (f2 - f1) * b                                                    # in block units
+    width = np.clip(1.0 + 0.55 * N(2, 8, 0.5), 0.35, 1.8)                # crevices widen and pinch
+    # not every crevice is open: along some runs the chunks meet closely (a step, the gap a hairline)
+    open_ = 0.45 + 0.55 * smoothstep(-0.6, 0.6, N(1, 4, 0.6))
+    crevice = (1 - smoothstep(0.0, shoulder * width, gap)) * open_        # the V: 1 at the line, 0 on the chunk
+    crevice = crevice * crevice * (3 - 2 * crevice)                        # steeper walls, a flatter floor
+    dark = (1 - smoothstep(0.0, core * width, gap)) * (0.6 + 0.4 * open_)  # its floor, in shadow
+    rng = F.rng
+    ang = 2 * math.pi
+    cx = np.arctan2(np.bincount(idx.ravel(), np.sin(ang * F.u).ravel(), k),
+                    np.bincount(idx.ravel(), np.cos(ang * F.u).ravel(), k)) / ang
+    cy = np.arctan2(np.bincount(idx.ravel(), np.sin(ang * F.v).ravel(), k),
+                    np.bincount(idx.ravel(), np.cos(ang * F.v).ravel(), k)) / ang
+    dx = ((F.u - cx[idx] + 0.5) % 1.0 - 0.5) * b
+    dy = ((F.v - cy[idx] + 0.5) % 1.0 - 0.5) * b
+    gx, gy = rng.standard_normal(k), rng.standard_normal(k)
+    lvl = rng.uniform(-0.07, 0.07, k)
+    plane = lvl[idx] + 0.45 * (gx[idx] * dx + gy[idx] * dy)              # each chunk its own level and tilt
+    chips = stone_facets(F, 40 * b * b) * 0.025                            # chipped facets on every chunk face
+    # a hairline crack across some chunks (they split along a second set of planes)
+    line = np.abs(F.warp(N(3, 8, 0.5), 0.03 * N(4, 10) / b, 0.03 * N(4, 10) / b))
+    sparse = smoothstep(0.5, 1.0, N(1, 3, 0.5))
+    crack = F.blur((1 - smoothstep(0.0, 0.012, line)) * sparse, 0.8) * (1 - crevice)
+    H = 0.85 + plane + chips - depth * crevice - 0.10 * dark - 0.12 * crack
+    arris = smoothstep(0.0, 0.02, gap) * (1 - smoothstep(0.02, 0.06, gap)) \
+        * smoothstep(-0.3, 0.8, N(6, 20, 0.4))                                # the worn, lighter edge, broken by chips
+    tone = rng.uniform(0.90, 1.10, k)[idx]
+    shade = tone * (1 - 0.26 * crevice - 0.24 * dark - 0.18 * crack + 0.05 * arris) \
+        * (1 + 0.5 * (plane - plane.mean()) * 0.3)
+    return H, shade, crevice
+
+
+def stone_rock(F, n, blocks=1):
+    """Stone, round 51: Rock058's grain and colour under rock_chunks' angular chunks and deep crevices (the scan alone
+    read as a soft grey mottle from the RTS camera - no form at 1/8-1/2 block; r18b's ban on mid-scale relief was on
+    NOISE relief, which the low sun lit as foil; a crevice network is a form the eye expects shadow in). The scan's
+    displacement is the chunks' surface grain; the normals come from the composed height (nxy None), so the light,
+    the AO and the parallax agree. blocks > 1: the sheet (the scan tiled under it)."""
+    d = scan_set(SCAN_STONE, n // blocks)
+    alb, Hs = d["alb"], d["H"]
+    if blocks > 1:
+        alb, Hs = np.tile(alb, (blocks, blocks, 1)), np.tile(Hs, (blocks, blocks))
+    alb = flatten(F, alb, 3.0 * blocks, keep=0.2)
+    H, shade, crevice = rock_chunks(F, n, blocks=blocks)
+    grain = Hs - F.blur(Hs, n / (24 * blocks))                            # the scan's grain, its patches taken out
+    grain = grain / max(grain.std(), 1e-6)
+    H = H + 0.035 * grain * (1 - 0.6 * crevice)
+    alb = np.clip(alb * shade[..., None], 0, 1)
+    # the crevice floors a touch cooler (sky light, damp), the chunk faces as the scan has them
+    alb = alb * (1 + 0.06 * crevice[..., None] * np.array([-1.0, -0.3, 1.0]))
+    return H, np.clip(alb, 0, 1)
+
+
 def m_scan_stone(F, n):
-    d = scan_set(SCAN_STONE, n)
-    d["alb"] = flatten(F, d["alb"], 3.0, keep=0.35)
-    return d
+    H, alb = stone_rock(F, n)
+    return dict(alb=alb, H=H, nxy=None)
+
+
+def m_stone_sheet(F, blocks):
+    """Round 51: stone over a 4 x 4 sheet (Athena's giant model, as sand and smooth stone): the chunks and crevices
+    run on across the block edges - a cliff or a stone wall reads as one rock face, not a grid of tiles (Ref 10). The
+    single-block texture stays the stairs', slabs', walls' and the particle's."""
+    return stone_rock(F, F.n, blocks)
+
+
+def soil_relief(F, n, pebbles=0.10, pebble_cells=90, roots=0.6, hollows=0.22, clods=0.10):
+    """Round 52 (lovish Oct 30 "more detailed, use the reference photos"; Refs 5 and 15 - crumbly dirt with pebbles
+    and roots, mud with deep relief and hollows): the soil's MESO relief over a scan's grain. Low hollows (damp,
+    darker), crumb clods ~1/8 block (soft domes at their own heights), pebbles pressed half into the soil (domed,
+    grey, a shadow at the rim) and thin root bits lying on the surface (pale tan strands, raised a hair). Returns
+    (height to add, a shade ~1, the pebble 0..1, the root 0..1)."""
+    low = smoothstep(0.50, 0.90, norm01(F.fbm(2, 3, 0.55)))               # the hollows
+    f1, f2, idx, k = F.voronoi(70, 1.0)
+    cell = 1.0 / math.sqrt(70)
+    amp = F.rng.uniform(0.2, 1.0, k)[idx]
+    dome = np.clip(1 - (f1 / (0.75 * cell)) ** 2, 0, 1) * smoothstep(0.0, 0.015, f2 - f1)
+    clod = clods * dome * amp
+    p1, p2, pidx, pk = F.voronoi(pebble_cells, 1.0)
+    pcell = 1.0 / math.sqrt(pebble_cells)
+    size = F.rng.uniform(0.25, 0.55, pk)[pidx] * pcell
+    on = (F.rng.random(pk) < pebbles)[pidx]
+    pebble = np.clip(1 - (p1 / np.maximum(size, 1e-6)) ** 2, 0, 1) * on
+    pebble = np.sqrt(pebble) * on                                        # a flatter dome, a crisp edge
+    rim = (1 - smoothstep(0.0, 0.35 * pcell, p1 - size)) * (1 - (pebble > 0)) * on * 0   # (the rim is in the AO)
+    rx = F.noise(3, 9, 0.6, sx=1.0, sy=2.5)
+    rgx = (np.roll(rx, -1, 1) - np.roll(rx, 1, 1)) / 2
+    rgy = (np.roll(rx, -1, 0) - np.roll(rx, 1, 0)) / 2
+    ra = np.abs(rx) / np.maximum(np.sqrt(rgx * rgx + rgy * rgy), 0.02)
+    root = (1 - smoothstep(0.0, n / 110, ra)) * smoothstep(0.55, 0.85, norm01(F.noise(1, 4, 0.5))) * roots
+    root = root * (1 - pebble)
+    del rim
+    H = clod - hollows * low + 0.16 * pebble + 0.05 * root
+    shade = (1 - 0.18 * low) * (1 + 0.08 * (clod / max(clods, 1e-6)) * (amp - 0.6))
+    return H, shade, pebble, root
+
+
+def soil_paint(alb, pebble, root, F, pk_tone=None):
+    """The pebbles' and roots' colour over the soil (round 52)."""
+    tone = 0.9 + 0.2 * F.noise(4, 12, 0.5)
+    grey = np.array([0.50, 0.48, 0.45])[None, None, :] * (0.85 + 0.3 * tone)[..., None]
+    grey = 0.55 * grey + 0.45 * alb * 1.3                                  # soil-stained, half buried - not white
+    alb = alb * (1 - pebble[..., None]) + grey * pebble[..., None]
+    tan = np.array([0.56, 0.46, 0.32])[None, None, :] * (0.9 + 0.2 * F.noise(8, 30, 0.3))[..., None]
+    return alb * (1 - 0.8 * root[..., None]) + tan * 0.8 * root[..., None]
 
 
 def m_scan_dirt(F, n):
+    """Dirt, round 52: Ground106's grain and colour under soil_relief's hollows, clods, pebbles and roots (the scan
+    alone was a flat brown mottle from the RTS camera, tilt 8 at mip 2 - no form). The normals come from the composed
+    height (nxy None); the grass block's side soil is this texture too (_scan_grass_side)."""
     d = scan_set(SCAN_SOIL, n, scale=1.5)                # crumbs and stones half as large again (round 28b, S2)
-    d["alb"] = no_green(flatten(F, d["alb"], 3.0, keep=0.4))
-    return d
+    alb = no_green(flatten(F, d["alb"], 3.0, keep=0.3))
+    Hr, shade, pebble, root = soil_relief(F, n)
+    grain = d["H"] - F.blur(d["H"], n / 24)
+    grain = grain / max(grain.std(), 1e-6)
+    H = 0.6 + Hr + 0.03 * grain * (1 - pebble)
+    alb = soil_paint(np.clip(alb * shade[..., None], 0, 1), pebble, root, F)
+    return dict(alb=np.clip(alb, 0, 1), H=H, nxy=None)
 
 
 def m_scan_grass_top(F, n):
@@ -5541,7 +5757,7 @@ def write_models():
         blockstate(block, {"": picks})
     # round 35: the giant sheets (GIANT) - Athena's loader in the blockstate, the sprites 1..N*N, the vanilla model as
     # the fallback (no turns: the sheet's position does the variation)
-    for name, (_recipe, blocks, _tilt_k) in GIANT.items():
+    for name, (_recipe, blocks, _tilt_k, *_over) in GIANT.items():
         ctm = {"particle": "minecraft:block/" + name}
         for i in range(1, blocks * blocks + 1):
             ctm[str(i)] = "minecraft:block/%s_g%d" % (name, i)
@@ -5667,7 +5883,7 @@ def recipes():
         "basalt_side": _plain(lambda F, n: m_columnar(F, n, False, False)),
         "basalt_top": _plain(lambda F, n: m_columnar(F, n, True, False)),
         "sand": _plain(m_sand), "gravel": _plain(m_gravel_r25), "oak_planks": _plain(m_oak_planks_r24),
-        "oak_log": _plain(m_oak_bark_r24),
+        "oak_log": _plain(lambda F, n: m_bark_r51(F, n, (0.42, 0.33, 0.21), "oak")),   # r51 (r24 kept)
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
         "polished_andesite": _plain(m_polished_andesite), "smooth_stone": _plain(m_smooth_stone),
         "smooth_stone_slab_side": _plain(m_smooth_stone_slab_side), "spruce_planks": _plain(m_spruce_planks),
@@ -6015,6 +6231,9 @@ GIANT = {   # name: (sheet recipe(F, blocks) -> (H, alb), blocks per side, tilt 
     # round 37: smooth stone as a flagstone floor (the full cube only: smooth_stone_slab's own model draws the single
     # smooth_stone.png for its top and bottom, which stays as it is, and smooth_stone_slab_side for its side)
     "smooth_stone": (m_flagstone_sheet, 4, 0.6),
+    # r51: the rock face runs on across the blocks; std / tilt are compensated for the sheet's calibration mip (8 texels
+    # per block: the chunk contrast is mostly averaged away there) so one block of the sheet measures like the tile
+    "stone": (m_stone_sheet, 4, 1.0, dict(std=0.053, toe=0.25)),
 }
 
 
@@ -6022,13 +6241,15 @@ def write_giant(name, res, preview_dir=None):
     """The sheet of `name` (GIANT): one Field over blocks x blocks, fitted and solved once (one mean, one normal
     strength), cut into blocks * blocks tiles <name>_g1.. (row-major from the sheet's top left, Athena's order:
     1 + x + z * N) with their _n and _s. The single-block texture (make) stays as the particle and the fallback."""
-    recipe, blocks, tilt_k = GIANT[name]
+    recipe, blocks, tilt_k, *over = GIANT[name]
     t = targets_for(name)
-    t = dict(t, tilt=t["tilt"] * tilt_k)                 # the ripples want a lower sun than the flat grains did
+    t = dict(t, tilt=t["tilt"] * tilt_k, **(over[0] if over else {}))   # the ripples want a lower sun than the flat grains did
     big = res * blocks
     F = Field(big, SEEDS[name] + 7)
     H, alb = recipe(F, blocks)
-    alb = soften(F, fit_albedo(alb, t), t)
+    # r51: the sheet is fitted at cal_mip(big) = 8 texels per block, where a chunk pattern averages away - its
+    # per-block std (over) is set so the sheet's blocks measure as the single tile does; tone_limits as make()
+    alb = tone_limits(soften(F, fit_albedo(alb, t), t), t)
     n_img, s_img, k = maps(F, H, t)
     for z in range(blocks):
         for x in range(blocks):
