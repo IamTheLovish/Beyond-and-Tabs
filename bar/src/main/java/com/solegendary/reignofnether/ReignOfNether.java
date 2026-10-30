@@ -101,6 +101,7 @@ public class ReignOfNether {
         ContainerRegistrar.init(mlctx);
         SoundRegistrar.init(mlctx);
         BlockRegistrar.init(mlctx);
+        com.solegendary.reignofnether.blocks.arch.ArchBlocks.init(mlctx);   // our moulding blocks (tools/gen_arch_blocks.py)
         BlockEntityRegistrar.init(mlctx);
         com.solegendary.reignofnether.environment.wind.SwayBlocks.init(mlctx);   // branch wind limb blocks (design/branch_wind.md)
         GameRuleRegistrar.init();
