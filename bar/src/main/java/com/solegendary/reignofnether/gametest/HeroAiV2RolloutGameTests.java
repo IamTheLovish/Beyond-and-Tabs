@@ -456,6 +456,9 @@ public class HeroAiV2RolloutGameTests {
         castsFromItsHoldSpot(helper, HeroKits.GRAVECALLER, 0, false, 15.25, 15.25, 5.95, 5.95, "spear");
     }
 
+    /** Ticks the walk-off test watches the hero after the aim: the old cast goal walked ~1.5 blocks in about 13 ticks. */
+    static final int WALK_OFF_WATCH = 60;
+
     /** The entity the hero's cast goal is aimed at, if any (HeroCore.castGoal, read by name: the tests come first). */
     @javax.annotation.Nullable
     static net.minecraft.world.entity.LivingEntity castGoalTarget(FactionHero fh) {
@@ -474,9 +477,11 @@ public class HeroAiV2RolloutGameTests {
      * target, re-aiming at its block every tick and walking after it once it is out of range, so a held hero striking an
      * enemy that steps away followed it. The Arch-Engineer holds at block (13, 13) with an enemy dummy 5.5 blocks off;
      * the moment its Rivet Burst is aimed at the dummy (before it lands), the dummy is moved 18 blocks away, out of reach.
-     * The hero must let the strike go and move at most 0.3.
+     * The hero must let the strike go and move at most 0.3 in the {@code WALK_OFF_WATCH} ticks after (measured from the
+     * aim: when the first aim comes depends on the hero's mana, so a fixed end tick left a late aim too few ticks to walk
+     * - red 41114776771 runner 1).
      */
-    @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_holdcast_engineer_walks_off", timeoutTicks = 220)
+    @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_holdcast_engineer_walks_off", timeoutTicks = 420)
     public static void hero_ai_v2_rollout_arch_engineer_drops_a_strike_whose_target_walks_off(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2r_walkoff"), them = me + "_foe";
@@ -493,27 +498,32 @@ public class HeroAiV2RolloutGameTests {
         double[] spot = new double[2];
         double[] worst = { 0 };
         int[] aimedAt = { -1 };
+        boolean[] done = { false };
         helper.runAfterDelay(2, () -> {
             spot[0] = h.getX();
             spot[1] = h.getZ();
             HeroAiV2GameTests.order(helper, me, h, UnitAction.HOLD, BlockPos.ZERO);
         });
-        for (int t = 3; t <= 160; t++) {
+        for (int t = 3; t <= 400; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
                 worst[0] = Math.max(worst[0], HeroAiV2GameTests.flat(h, spot[0], spot[1]));
                 if (aimedAt[0] < 0 && castGoalTarget(fh) == target && ability.isOffCooldown(fh)) {
                     aimedAt[0] = tick;
                     target.teleportTo(o.getX() + 0.5, target.getY(), o.getZ() + 0.5);   // 18.4 blocks off: out of reach
                 }
-                if (tick < 160)
+                boolean watched = aimedAt[0] >= 0 && tick >= aimedAt[0] + WALK_OFF_WATCH;
+                if (!watched && tick < 400)
                     return;
+                done[0] = true;
                 List<String> problems = new ArrayList<>();
                 if (aimedAt[0] < 0)
                     problems.add("the Arch-Engineer never aimed Rivet Burst at the enemy 5.5 blocks off");
                 if (worst[0] > 0.3)
-                    problems.add(String.format("the Arch-Engineer left its hold spot by %.2f blocks after the enemy it "
-                        + "aimed Rivet Burst at walked off (allowed 0.3)", worst[0]));
+                    problems.add(String.format("the Arch-Engineer left its hold spot by %.2f blocks in the %d ticks after "
+                        + "the enemy it aimed Rivet Burst at walked off (allowed 0.3)", worst[0], WALK_OFF_WATCH));
                 HeroAiGameTests.finish(helper, problems, mobs, null);
             });
         }
