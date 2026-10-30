@@ -66,7 +66,11 @@ TARGETS = {
     # on-screen speckle in a lit mip test); the clump shadow is already painted in the albedo
     # r47 (eyes 41094085391 at 5000: salt-and-pepper, local contrast 0.025 vs the benchmark's 0.012; p5 >= 0.30 asked):
     # std 0.05 -> 0.042, tilt 9 -> 7, the clump shadow shallower (clover_lawn); the mean unchanged
-    "grass_block_top":  dict(luma=0.645, std=0.042, sat=0.11, lf=0.3, ao=0.4, tilt=7.0, smooth=24, pore=40, soften=1.2,
+    # r50 (light pass 11: the lit lawn 0.39-0.415 at sat 0.53 vs a 0.44 / 0.56 target, the speckle spread p05-p95
+    # 0.19 on screen vs <= 0.10, and the per-block repeat visible): mean +5% (0.645 -> 0.677), sat 0.11 -> 0.21, the
+    # texel contrast halved (std 0.042 -> 0.03, soften 1.2 -> 2.0, tilt 7 -> 5, ao 0.4 -> 0.25, calmer leaflets in
+    # clover_lawn), the mound mottle kept; each variant its OWN lawn (OWN_SEED_VARIANTS), not a turned copy
+    "grass_block_top":  dict(luma=0.677, std=0.024, sat=0.21, lf=0.3, ao=0.15, tilt=4.0, smooth=24, pore=40, soften=2.4,
                              shoulder=0.82),
     # r46 (eyes stack7: the sampler pads' rim - this face - was the darkest thing on screen at ~0.12 at 5000): the
     # soil is the dirt texture (_scan_grass_side), so the lift is its humus band (0.22 -> 0.10 darker) - gate G5
@@ -1492,12 +1496,12 @@ for _p in FLOWER_TEXTURES:
 # 0.68 mean: plant_sprites TIP / BASE), a dark base (~0.33 tinted), the hue ~10 degrees toward yellow (m_plant)
 for _sh in ("", "_b", "_c"):
     for _sz in ("", *PLANT_SIZES):
-        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.68, sat=0.26)
+        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.68, sat=0.16)   # r50: olive, not lime
 for _p in ("fern", "fern_b", "fern_t", "fern_b_t"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.64, sat=0.18)
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.64, sat=0.12)
 for _p in ("tall_grass_bottom", "tall_grass_top", "large_fern_bottom", "large_fern_top", "tall_grass_bottom_b",
            "tall_grass_top_b"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.66, sat=0.26)
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.66, sat=0.16)
 PLANT_SEEDS = (
     "grass",
     "tall_grass_bottom",
@@ -4310,7 +4314,9 @@ def m_plant(name, n):
         # sky shifts the hue less
         # r49 (eyes lp10: no silhouette - the tufts matched the lawn in hue and luma): the bias 10 degrees further
         # toward yellow (hue 60 in albedo -> ~70 tinted vs the lawn's 79), sat 0.26
-        rgb = np.stack([shade * 1.14, shade * 1.02, shade * 0.55], -1)
+        # r50 (the tips showed as 2-4 px lime dots at the RTS zoom): the bias toward olive - less chroma, a touch of
+        # red in it, so the bright tips are not neon
+        rgb = np.stack([shade * 1.10, shade * 1.0, shade * 0.70], -1)
     t = TARGETS[name]
     alb = ps.bleed(_plant_fit(np.clip(rgb, 0, 1), alpha > 0.05, t["luma"], t["sat"]), alpha)
     H = ps.bleed(np.where(alpha > 0, H, 0.0), alpha)
@@ -4689,7 +4695,7 @@ def clover_lawn(F, n):
     mi = mound[np.minimum((py).astype(int), n - 1), np.minimum((px).astype(int), n - 1)]
     level = 0.25 * mi + 0.20 * rng.random(count) * (0.4 + 0.6 * mi)   # r39: shallower canopy steps (0.40 / 0.35)
     band = rng.integers(3, size=count)
-    tone = np.array([0.90, 1.0, 1.10])[band] * (0.97 + 0.06 * rng.random(count))   # r39: calmer leaf-to-leaf
+    tone = np.array([0.94, 1.0, 1.06])[band] * (0.98 + 0.04 * rng.random(count))   # r39: calmer leaf-to-leaf; r50: calmer still
     lean = rng.standard_normal(count)
     rot = rng.random(count) * 2 * math.pi
     tilt_a = rng.random(count) * 2 * math.pi          # r36: each plant leans toward its own light direction
@@ -4721,10 +4727,10 @@ def clover_lawn(F, n):
             above = inside & (h > sub)
             H[np.ix_(win_y, win_x)] = np.where(above, h, sub)
             # the leaflet's shade: its tone band, a lit centre, a darker rim (self-shadow of the leaf above)
-            rim = 1 - 0.30 * (1 - smoothstep(0.0, 0.30, dome))        # a dark rim: the leaf's edge over its neighbour
+            rim = 1 - 0.18 * (1 - smoothstep(0.0, 0.30, dome))        # a dark rim (r50: 0.30 -> 0.18)
             vein = 1 + 0.10 * (1 - smoothstep(0.0, 0.12, np.abs(across))) * (along > -0.2)
             tiltl = (dx * tx[i] + dy * ty[i]) / R                       # r36: the leaf's own tilt (one side lit)
-            lit = tone[i] * (0.78 + 0.26 * dome) * (1 + 0.14 * tiltl) * rim * vein
+            lit = tone[i] * (0.86 + 0.14 * dome) * (1 + 0.08 * tiltl) * rim * vein   # r50: the leaf's own light halved
             s_sub = shade[np.ix_(win_y, win_x)]
             shade[np.ix_(win_y, win_x)] = np.where(above, lit, s_sub)
             w_sub = warm[np.ix_(win_y, win_x)]
@@ -4734,7 +4740,7 @@ def clover_lawn(F, n):
     blades = F.blur(grass_blades(F, int(1.6 * n), n / 22, max(1, n // 128)), 0.7)   # soft-edged (no black steps)
     bl = blades > 0.25
     H = np.where(bl, H + 0.10 * blades, H)              # the blades ride on the canopy (a tall ridge drew black edges)
-    shade = np.where(bl, 0.95 + 0.30 * blades, shade)
+    shade = np.where(bl, 1.0 + 0.15 * blades, shade)                 # r50: the blades half as bright
     warm = np.where(bl, warm + 0.8, warm)
     # the clumps: their crowns catch the light, the gaps between them lie in shadow (this is what the RTS camera
     # sees - 3-8 px wide at 32 px per block); plus the leaves' own self-shadow where the canopy drops
@@ -4744,7 +4750,7 @@ def clover_lawn(F, n):
     # the clumps (measured on the finished maps): 9% here is 2.5% after the fit scales the spread to its target
     rel = H - F.blur(H, n / 40)
     shadow = smoothstep(0.0, 0.25, -rel)
-    shade = shade * (1 - 0.28 * shadow)                 # r47: 0.40 -> 0.28 (the dark gaps set p5)
+    shade = shade * (1 - 0.20 * shadow)                 # r47: 0.40 -> 0.28; r50: 0.20 (the dark gaps set p5)
     # a few tiny flowers: 4-5 petals, pale, sparse
     flowers = np.zeros((n, n))
     for _ in range(int(0.00018 * n * n) + 2):
@@ -4758,7 +4764,7 @@ def clover_lawn(F, n):
             flowers = np.maximum(flowers, np.clip(1 - d2 / (pr * pr), 0, 1))
     fl = flowers > 0.15
     H = np.where(fl, np.maximum(H, 0.9), H)
-    shade = np.where(fl, 1.45, shade)
+    shade = np.where(fl, 1.25, shade)                               # r50: the flowers less of a white speck
     warm = np.where(fl, 1.5, warm)
     hue = np.clip(warm, -1.5, 1.5)
     alb = np.clip(np.stack([shade * (1 + 0.05 * hue), shade * (1 + 0.01 * hue), shade * (1 - 0.06 * hue)], -1) * 0.55, 0, 1)
@@ -4778,18 +4784,36 @@ SCAN_BASES = {"stone": m_scan_stone, "dirt": m_scan_dirt, "grass_block_top": m_c
 # (basalt left the scans in r31: m_columnar)
 
 
+# r50 (light pass 11: the per-block repeat of the lawn visible at the RTS zoom): a procedural scan base whose variants
+# are their OWN tile on another seed inside the blob (as proc_variant does for the building blocks), not a turned copy
+# of the base - a turned copy repeats the same leaflet layout four ways. The shared ring stays the base's (seamless).
+OWN_SEED_VARIANTS = {"grass_block_top"}
+
+
+def _scan_finished(base, seed, n, t):
+    F = Field(n, seed)
+    d = SCAN_BASES[base](F, n)
+    alb = tone_limits(mid_band(F, soften(F, fit_albedo(d["alb"], t), t), t), t)
+    n_img, s_img, k = maps(F, d["H"], t, None, d.get("nxy"))
+    return d, alb, n_img, s_img, k
+
+
 def scan_textures(base, i, n):
     """Variant i of a scanned material, finished: the tile is fitted to the base's targets, softened, its extremes
     eased in (tone_limits) and given its LabPBR maps (its own normals at one scale for every variant); variant_maps
     then cuts the variant from those finished maps. Returns dict(alb, H, maps=(n_img, s_img), k)."""
     t = targets_for(base)
-    F = Field(n, SEEDS[base])
-    d = SCAN_BASES[base](F, n)
-    alb = tone_limits(mid_band(F, soften(F, fit_albedo(d["alb"], t), t), t), t)
-    n_img, s_img, k = maps(F, d["H"], t, None, d.get("nxy"))
-    alb, n_img, s_img = variant_maps(alb, n_img, s_img, i, feather=VARIANT_FEATHER.get(base, 3.0),
-                                     transforms=VARIANT_TRANSFORMS_OF.get(base),
-                                     margin=VARIANT_MARGIN_OF.get(base, VARIANT_MARGIN))
+    d, alb, n_img, s_img, k = _scan_finished(base, SEEDS[base], n, t)
+    feather = VARIANT_FEATHER.get(base, 3.0)
+    margin = VARIANT_MARGIN_OF.get(base, VARIANT_MARGIN)
+    if i > 0 and base in OWN_SEED_VARIANTS:
+        _d2, alb2, n2, s2, _k2 = _scan_finished(base, SEEDS[base] + 977 * i, n, t)
+        nf2 = n2.astype(np.float64) / 255.0
+        other = (alb2, (nf2[..., 0] * 2 - 1, nf2[..., 1] * 2 - 1), nf2[..., 2], nf2[..., 3], s2.astype(np.float64))
+        alb, n_img, s_img = blend_maps(alb, n_img, s_img, other, variant_mask(n, i, feather, margin))
+    else:
+        alb, n_img, s_img = variant_maps(alb, n_img, s_img, i, feather=feather,
+                                         transforms=VARIANT_TRANSFORMS_OF.get(base), margin=margin)
     return dict(alb=alb, H=d["H"], maps=(n_img, s_img), k=k)
 
 
