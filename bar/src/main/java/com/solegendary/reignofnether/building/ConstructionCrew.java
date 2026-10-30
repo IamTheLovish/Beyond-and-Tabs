@@ -19,7 +19,7 @@ public final class ConstructionCrew {
      *  report (two beams missed, then it is gone). */
     public static final float REACH = 0.3f, SAME = 1.5f, KEEP = 1.0f;
 
-    private static final int F = 6;                       // per slot: hx, hy, hz, dx, dz, seen
+    private static final int F = 9;                       // per slot: hx, hy, hz, dx, dz, seen, tx, ty, tz
     private final float[] slot = new float[SLOTS * F];
 
     public ConstructionCrew() {
@@ -58,6 +58,23 @@ public final class ConstructionCrew {
         else if (now - slot[a + 5] <= KEEP) { dx = slot[a + 3]; dz = slot[a + 4]; }   // straight down: keep its facing
         else { dx = 0; dz = 1; }
         slot[a] = hx; slot[a + 1] = hy; slot[a + 2] = hz; slot[a + 3] = dx; slot[a + 4] = dz; slot[a + 5] = now;
+        slot[a + 6] = tx; slot[a + 7] = ty; slot[a + 8] = tz;
+    }
+
+    /**
+     * Slot {@code i}'s worker at {@code now}: the block it last aimed at ({x, y, z}, the block's centre, into
+     * {@code target}) and its hands ({@code hands}). False (both untouched) when no worker is building in that slot.
+     * Round 16 critic: the next block to be placed flashes (ConstructionGrid.nextBlock).
+     */
+    public boolean target(int i, float now, float[] target, float[] hands) {
+        if (i < 0 || i >= SLOTS)
+            return false;
+        int a = i * F;
+        if (!(now - slot[a + 5] <= KEEP))
+            return false;
+        target[0] = slot[a + 6]; target[1] = slot[a + 7]; target[2] = slot[a + 8];
+        hands[0] = slot[a]; hands[1] = slot[a + 1]; hands[2] = slot[a + 2];
+        return true;
     }
 
     /** How many slots have a worker at work at {@code now}. */

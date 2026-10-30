@@ -396,6 +396,55 @@ public final class ConstructionGrid {
     public float courseY(int i) { return course[i * 5 + 4]; }
     public int courseSide(int i) { return courseSide[i]; }
 
+    private final float[] tgt = new float[3], hands = new float[3];
+
+    /**
+     * The next block to be placed, into {@code cell} {x, y, z, valid} (round 16 critic: "being built now" read only as a
+     * faint dashed footprint outline; the next block flashes): kept while it is still missing - the builders' reports
+     * aim at a random queued block every beat, and the flash must not hop with them; else the block the builder at work
+     * nearest the camera aims at (looking along {@code lx, ly, lz}: the smallest hands . look), if that block is
+     * missing; else the front course's missing block nearest the camera. False (and {@code cell[3]} 0) when nothing is
+     * missing. Allocation-free.
+     */
+    public boolean nextBlock(ConstructionCrew crew, float now, float lx, float ly, float lz, int[] cell) {
+        if (missingN == 0) {
+            cell[3] = 0;
+            return false;
+        }
+        if (cell[3] != 0 && isMissing(cell[0], cell[1], cell[2]))
+            return true;
+        float best = Float.MAX_VALUE;
+        boolean found = false;
+        for (int i = 0; i < ConstructionCrew.SLOTS; i++) {
+            if (!crew.target(i, now, tgt, hands))
+                continue;
+            int x = (int) Math.floor(tgt[0]), y = (int) Math.floor(tgt[1]), z = (int) Math.floor(tgt[2]);
+            if (!isMissing(x, y, z))
+                continue;
+            float dd = hands[0] * lx + hands[1] * ly + hands[2] * lz;
+            if (dd < best) {
+                best = dd;
+                cell[0] = x; cell[1] = y; cell[2] = z;
+                found = true;
+            }
+        }
+        if (!found) {
+            // the front course is the lowest layer with a block missing: the missing list is layer first, so its
+            // first entries are that course's
+            int l = missing[0] / (w * d);
+            for (int i = 0; i < missingN && missing[i] / (w * d) == l; i++) {
+                int x = missingX(i), y = missingY(i), z = missingZ(i);
+                float dd = (x + 0.5f) * lx + (y + 0.5f) * ly + (z + 0.5f) * lz;
+                if (dd < best) {
+                    best = dd;
+                    cell[0] = x; cell[1] = y; cell[2] = z;
+                }
+            }
+        }
+        cell[3] = 1;
+        return true;
+    }
+
     /** The site's bounds (block coordinates, inclusive minimum, exclusive maximum). */
     public int minX() { return x0; }
     public int minZ() { return z0; }

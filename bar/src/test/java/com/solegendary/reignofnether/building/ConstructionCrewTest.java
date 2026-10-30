@@ -65,4 +65,17 @@ class ConstructionCrewTest {
         c.clear();
         assertEquals(0, c.active(6.1f));
     }
+
+    /** Round 16 critic: the next block to be placed flashes - the block the builder at work aims at (its report). */
+    @Test
+    void aSlotKeepsTheBlockItsWorkerAimsAt() {
+        ConstructionCrew c = new ConstructionCrew();
+        float[] t = new float[3], h = new float[3];
+        assertTrue(!c.target(0, 1f, t, h), "nobody at work");
+        c.report(10f, 65.2f, 20f, 13.5f, 66.5f, 24.5f, 1f);
+        assertTrue(c.target(0, 1.1f, t, h));
+        assertEquals(13.5f, t[0], 1e-6); assertEquals(66.5f, t[1], 1e-6); assertEquals(24.5f, t[2], 1e-6);
+        assertEquals(10f, h[0], 1e-6); assertEquals(65.2f, h[1], 1e-6); assertEquals(20f, h[2], 1e-6);
+        assertTrue(!c.target(0, 1f + ConstructionCrew.KEEP + 0.1f, t, h), "it stopped: no target");
+    }
 }

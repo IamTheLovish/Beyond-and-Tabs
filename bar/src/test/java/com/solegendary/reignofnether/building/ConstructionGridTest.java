@@ -374,5 +374,75 @@ class ConstructionGridTest {
         assertEquals(0, g.missingCount());
         assertEquals(0, g.rimCount());
         assertTrue(Float.isNaN(g.meanRimY()));
+        int[] cell = new int[4];
+        assertTrue(!g.nextBlock(new ConstructionCrew(), 1f, 0, -1, 0, cell), "nothing missing: no next block");
+    }
+
+    /** {@link #site} with layer 1's -x/-z corner missing too: two missing blocks in the front course. */
+    private static ConstructionGrid twoCorners(boolean farPlaced) {
+        List<int[]> b = new ArrayList<>();
+        for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++) b.add(new int[] { 10 + x, 64, 20 + z });
+        for (int y = 1; y < 3; y++)
+            for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++)
+                if (x != 1 || z != 1) b.add(new int[] { 10 + x, 64 + y, 20 + z });
+        ConstructionGrid g = ConstructionGrid.of(b);
+        g.clear();
+        for (int[] p : b) {
+            boolean corner = p[1] == 65 && ((p[0] == 12 && p[2] == 22) || (!farPlaced && p[0] == 10 && p[2] == 20));
+            g.mark(p[0], p[1], p[2], p[1] == 64 || (p[1] == 65 && !corner));
+        }
+        g.finish();
+        return g;
+    }
+
+    /**
+     * Round 16 critic: "being built now" read only as a faint dashed outline. The next block to be placed flashes: the
+     * cell the nearest builder at work aims at (its nanolathe report, ConstructionCrew) while that cell is still missing;
+     * with no builder data, the front course's missing cell nearest the camera. It stays on its cell until that block is
+     * laid (the builders' reports pick a random queued block every beat - the flash must not hop with them).
+     */
+    @Test
+    void theNextBlockIsTheBuildersCellElseTheFrontCoursesNearest() {
+        int[] cell = new int[4];
+        ConstructionCrew crew = new ConstructionCrew();
+        // no builder: the front course (layer 1) - its missing cell nearest a camera looking toward -x -z ...
+        ConstructionGrid g = twoCorners(false);
+        assertTrue(g.nextBlock(crew, 1f, -0.5f, -0.7f, -0.5f, cell));
+        assertEquals(12, cell[0]); assertEquals(65, cell[1]); assertEquals(22, cell[2]);
+        // ... or toward +x +z
+        cell[3] = 0;
+        assertTrue(g.nextBlock(crew, 1f, 0.5f, -0.7f, 0.5f, cell));
+        assertEquals(10, cell[0]); assertEquals(65, cell[1]); assertEquals(20, cell[2]);
+
+        // a builder at work on a missing block of layer 2: that block, though it is not in the front course
+        crew.report(9f, 66f, 19f, 10.5f, 66.5f, 20.5f, 2f);
+        cell[3] = 0;
+        assertTrue(g.nextBlock(crew, 2.1f, -0.5f, -0.7f, -0.5f, cell));
+        assertEquals(10, cell[0]); assertEquals(66, cell[1]); assertEquals(20, cell[2]);
+        // its next beat aims at another block: the flash stays where it is while that block is missing
+        crew.report(9f, 66f, 19f, 12.5f, 66.5f, 20.5f, 2.4f);
+        assertTrue(g.nextBlock(crew, 2.5f, -0.5f, -0.7f, -0.5f, cell));
+        assertEquals(10, cell[0]); assertEquals(66, cell[1]); assertEquals(20, cell[2]);
+
+        // two builders: the nearer the camera (looking toward -x -z: the larger x + z) wins
+        ConstructionCrew two = new ConstructionCrew();
+        two.report(9f, 66f, 19f, 10.5f, 66.5f, 20.5f, 3f);       // far
+        two.report(13f, 66f, 23f, 12.5f, 66.5f, 21.5f, 3f);      // near
+        cell[3] = 0;
+        assertTrue(g.nextBlock(two, 3.1f, -0.5f, -0.7f, -0.5f, cell));
+        assertEquals(12, cell[0]); assertEquals(66, cell[1]); assertEquals(21, cell[2]);
+
+        // a builder aiming at a STANDING block: ignored, the front course's nearest missing cell instead
+        ConstructionCrew standing = new ConstructionCrew();
+        standing.report(9f, 65f, 19f, 11.5f, 65.5f, 20.5f, 4f);
+        cell[3] = 0;
+        assertTrue(g.nextBlock(standing, 4.1f, -0.5f, -0.7f, -0.5f, cell));
+        assertEquals(12, cell[0]); assertEquals(65, cell[1]); assertEquals(22, cell[2]);
+
+        // laid: the flash moves on
+        ConstructionGrid laid = twoCorners(true);
+        int[] kept = { 10, 65, 20, 1 };
+        assertTrue(laid.nextBlock(new ConstructionCrew(), 5f, 0.5f, -0.7f, 0.5f, kept));
+        assertEquals(12, kept[0]); assertEquals(65, kept[1]); assertEquals(22, kept[2]);
     }
 }
