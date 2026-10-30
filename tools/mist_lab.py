@@ -1,4 +1,4 @@
-"""Offline mist lab (Oct 29, valley mist r11e): a numpy port of bat_mist.fsh over a synthetic ring river (Verdant's is a ring), seen at the
+"""Offline mist lab (Oct 29, valley mist r11g): a numpy port of bat_mist.fsh over a synthetic ring river (Verdant's is a ring), seen at the
 RTS still's scale (20 px per block, a 55-degree view), in ~4 s - so a mist round is judged offline before a 30-minute
 eyes run. Ported 1:1: the shader's hash / value noise / fbm, the wind-frame warp, the bank cover, body, haze and light;
 ValleyField's cover and smoothed ground (scipy stand-ins: an exact distance transform, box filters).
@@ -12,8 +12,8 @@ Not ported: the depth buffer (the terrain is a height function), fog of war (sha
 Defaults must follow bat_mist.fsh: change both together. Needs numpy, scipy, Pillow."""
 import sys, numpy as np
 from PIL import Image
-P = dict(BANK_DENSITY=2.5, DEEP_LIFT=0.9, HAZE=0.04, HAZE_HEIGHT=1.6, SIGMA=0.22, DENSITY=0.6, MAXCOVER=0.85,
-         LIT_MODE='r11c', TOP_SOFT=2.5, TOP_HARD=3.5, COV_A=2.2, COV_B=-0.6, BODY_LO=0.1, BODY_HI=0.45, CAP='clip', STEPS=12, FLOW='cells', LPOW=1.6, X0=-200.0, CELL=32.0, CF_X=0.06, CF_Z=0.45, DF_X=0.1, DF_Z=0.5)
+P = dict(BANK_DENSITY=2.0, DEEP_LIFT=0.9, HAZE=0.04, HAZE_HEIGHT=1.6, SIGMA=0.22, DENSITY=0.6, MAXCOVER=0.85,
+         LIT_MODE='r11c', TOP_SOFT=2.5, TOP_HARD=3.5, COV_A=2.2, COV_B=-0.6, BODY_LO=0.1, BODY_HI=0.45, CAP='clip', STEPS=12, FLOW='cells', LPOW=1.6, FINE=0.6, FF_X=0.16, FF_Z=1.1, X0=-200.0, CELL=32.0, CF_X=0.06, CF_Z=0.45, DF_X=0.1, DF_Z=0.5)
 for a in sys.argv[2:]:
     k, v = a.split('='); P[k] = type(P[k])(v) if not isinstance(P[k], str) else v
 W, H = 600, 360
@@ -109,6 +109,9 @@ def cov_cells(w):
         rx = w[..., 0] - cx; rz = w[..., 2] - cz
         a = rx * dx + rz * dz + 37.0 * (ix + ox) + 11.0 * (iz + oz); b = -rx * dz + rz * dx + 23.0 * (iz + oz) - 5.0 * (ix + ox)
         n = fbm(np.stack([a * P['CF_X'], np.full(a.shape, T * 0.004), b * P['CF_Z']], -1))
+        if P['FINE'] > 0:
+            fn = fbm(np.stack([a * P['FF_X'] + 13.1, np.full(a.shape, T * 0.01), b * P['FF_Z'] + 7.7], -1))
+            n = n * (1 - P['FINE'] + 2 * P['FINE'] * fn)   # shader: n *= 0.4 + 1.2 * fine (FINE 0.6)
         out = out + wt * n
     return out
 def bank(k, w=None):

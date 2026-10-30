@@ -128,6 +128,9 @@ float cellCover(vec2 xz) {
         float v = dot(r, vec2(-d.y, d.x)) + 23.0 * cell.y - 5.0 * cell.x;
         // mist lab variant b (Oct 29): strands ~17 blocks along, ~2 across
         float n = fbm(vec3(u * 0.06, Time * 0.004, v * 0.45));
+        // r11g (mist lab f1b): a finer wisp layer breaks each strand into elongated wisps (~6 blocks along, <1 across)
+        float fine = fbm(vec3(u * 0.16 + 13.1, Time * 0.01, v * 1.1 + 7.7));
+        n *= 0.4 + 1.2 * fine;
         s += n * mix(1.0 - f.x, f.x, o.x) * mix(1.0 - f.y, f.y, o.y);
     }
     return s;
@@ -143,7 +146,7 @@ float cellCover(vec2 xz) {
 //   erosion the detail noise tears the edges into wisps and gives the inside its texture
 // Lit from above: a sample near its bank's top takes LitColor, deeper inside the cool DeepColor; the bank's own top
 // shades what lies under it (no extra noise: the same cover and top a little higher).
-const float BANK_DENSITY = 2.5;     // r11b 1.7 -> 2.6: r48's banks too thin to read as mist from the RTS camera
+const float BANK_DENSITY = 2.0;     // r11g 2.5 -> 2.0: translucent wisps, the water reads through (mist lab f1b)     // r11b 1.7 -> 2.6: r48's banks too thin to read as mist from the RTS camera
 
 struct Bank { float cover; float top; };
 

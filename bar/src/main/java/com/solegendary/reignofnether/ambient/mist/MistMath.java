@@ -279,6 +279,25 @@ public final class MistMath {
         return c;
     }
 
+    /**
+     * A colour the mist pass hands on so that it leaves the world look's grade (which runs after it) as {@code want}:
+     * divided by the grade's highlight tint, then - if a channel would pass 0.97 - all three scaled down together, so
+     * the hue survives (r11f clamped each channel alone: blue / 0.85 hit the clamp and the white came out yellow-green,
+     * eyes r55). A tint of {1, 1, 1} leaves the colour as it is.
+     */
+    public static float[] preGrade(float[] want, float[] tint) {
+        float[] out = new float[3];
+        float max = 0;
+        for (int i = 0; i < 3; i++) {
+            out[i] = want[i] / Math.max(tint[i], 0.5f);
+            max = Math.max(max, out[i]);
+        }
+        if (max > 0.97f)
+            for (int i = 0; i < 3; i++)
+                out[i] *= 0.97f / max;
+        return out;
+    }
+
     // ---- reacting ----
 
     /** Units slower than this (blocks a tick) walk through without stirring it; a run (~0.3) does. */
