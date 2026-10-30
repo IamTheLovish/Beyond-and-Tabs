@@ -40,6 +40,22 @@ public class HeroServerboundPacket {
         PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(unitId, HeroAction.HERO_SELECTED));
     }
 
+    /**
+     * The server's side of RANK_MENU_OPEN / RANK_MENU_CLOSED (public for the GameTests, which drive it as the packet
+     * does): the owner's open menu holds auto-learn back for {@link HeroBot#RANK_MENU_HOLD_TICKS} - refreshed by the
+     * client while the menu stays up - and closing it lets go at once. Only the hero's owner: an ally who may command
+     * the hero cannot hold back its owner's points.
+     */
+    public static void onRankMenu(net.minecraft.server.level.ServerPlayer sender, int unitId, boolean open) {
+        if (!(sender.serverLevel().getEntity(unitId) instanceof FactionHero hero)
+                || !sender.getName().getString().equals(hero.getOwnerName()))
+            return;
+        if (open)
+            hero.heroCore().holdRankMenu(sender.serverLevel().getGameTime() + HeroBot.RANK_MENU_HOLD_TICKS);
+        else
+            hero.heroCore().releaseRankMenu();
+    }
+
     public HeroServerboundPacket(
             int unitId,
             HeroAction heroAction
@@ -81,13 +97,8 @@ public class HeroServerboundPacket {
                 return;
             }
             if (heroAction == HeroAction.RANK_MENU_OPEN || heroAction == HeroAction.RANK_MENU_CLOSED) {
-                // only a hero the sender may command: its open menu holds auto-learn back for that hero
-                if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_rank_menu", 20, 100)
-                        && sender.serverLevel().getEntity(this.unitId) instanceof FactionHero hero
-                        && hero instanceof com.solegendary.reignofnether.unit.interfaces.Unit u
-                        && com.solegendary.reignofnether.unit.UnitActionItem.mayCommand(sender.serverLevel(),
-                            sender.getName().getString(), u, false))
-                    hero.heroCore().rankUpMenuOpen = heroAction == HeroAction.RANK_MENU_OPEN;
+                if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_rank_menu", 20, 100))
+                    onRankMenu(sender, this.unitId, heroAction == HeroAction.RANK_MENU_OPEN);
                 success.set(true);
                 return;
             }

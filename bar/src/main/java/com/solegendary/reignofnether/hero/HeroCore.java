@@ -46,8 +46,10 @@ public final class HeroCore {
     public int experience = 0;
     public int skillPoints = 1;   // the first point comes with the hero (Reign of Nether's heroes do the same)
     public boolean rankUpMenuOpen = false;
-    // game time a spendable point was first seen unspent, -1 = none waiting (HeroBot.autoLearn; server only)
-    long pointsWaitingSince = -1;
+    // auto-learn (HeroBot.autoLearn; server only): the game time each unspent point was first seen, oldest first - each
+    // point waits its own 20 s - and the owner's rank-up menu hold, which lapses unless the client refreshes it
+    final java.util.ArrayDeque<Long> pointArrivals = new java.util.ArrayDeque<>();
+    long rankMenuHeldUntil = -1;
     public boolean needsStatSync = false;
     boolean clientSynced = false; // the first experience sync on a client is a load, not a boon
     public float mana;
@@ -85,6 +87,20 @@ public final class HeroCore {
     // temporary summons (Raise Dead): entity + game time it crumbles
     final List<Entity> summons = new ArrayList<>();
     final List<Long> summonEnds = new ArrayList<>();
+
+    /** The owner's rank-up menu is open (HeroServerboundPacket RANK_MENU_OPEN): auto-learn waits until {@code until}. */
+    public void holdRankMenu(long until) {
+        rankMenuHeldUntil = until;
+    }
+
+    /** The menu closed, or its player left (HeroServerEvents.onPlayerLogout): auto-learn may go on. */
+    public void releaseRankMenu() {
+        rankMenuHeldUntil = -1;
+    }
+
+    public boolean rankMenuHeld(long now) {
+        return rankMenuHeldUntil > now;
+    }
 
     public HeroCore(HeroKit kit, Mob mob) {
         this.kit = kit;

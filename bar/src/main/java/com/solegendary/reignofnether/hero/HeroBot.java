@@ -112,6 +112,11 @@ public final class HeroBot {
 
     /** Ticks a spendable point waits for the player's own pick before auto-learn spends it. */
     public static final int AUTO_LEARN_TICKS = 20 * 20;
+    /**
+     * Ticks one RANK_MENU_OPEN holds auto-learn back. The client refreshes it every 5 s while the menu is up on the
+     * selected hero (HeroRankMenuClient), so a hold the client never closed - a lost packet, a crash - lapses by itself.
+     */
+    public static final int RANK_MENU_HOLD_TICKS = 15 * 20;
 
     public static void setAutoLearn(String player, boolean on) {
         if (player == null)
@@ -137,27 +142,40 @@ public final class HeroBot {
     }
 
     /**
-     * Every second, for every player's hero (possessed or not, Hero AI on or off): a point the player has left unspent
-     * for {@link #AUTO_LEARN_TICKS} is spent as a bot's hero spends it ({@link #spendPoints}), so a hero never stays a
-     * plain unit with its abilities greyed out (design-draft-heroes-better #1). The clock waits while the rank-up menu is
-     * open, and the player's own pick inside the window always wins (no point left, nothing to do). Bots spend at once
-     * in {@link #tickHero}.
+     * Every second, for every player's hero (possessed or not, Hero AI on or off): each point the player leaves unspent
+     * for {@link #AUTO_LEARN_TICKS} from when it came is spent, one point at a time, as a bot's hero spends it
+     * ({@link #spendPoints}) - so a hero never stays a plain unit with its abilities greyed out (design-draft-heroes-better
+     * #1). A point the player spends inside its window takes the oldest waiting one off the clock. While the owner's
+     * rank-up menu is open every waiting point's 20 s start again (they run from when the menu closes). Bots spend at
+     * once in {@link #tickHero}.
      */
     static void autoLearn(Mob mob, FactionHero hero) {
         String owner = hero.getOwnerName();
         if (owner == null || owner.isBlank() || BotServerEvents.brains.containsKey(owner))
             return;
         HeroCore core = hero.heroCore();
-        if (!isAutoLearn(owner) || core.rankUpMenuOpen || !canSpend(hero)) {
-            core.pointsWaitingSince = -1;
+        java.util.ArrayDeque<Long> arrivals = core.pointArrivals;
+        if (!isAutoLearn(owner) || !canSpend(hero)) {
+            arrivals.clear();
             return;
         }
         long now = mob.level().getGameTime();
-        if (core.pointsWaitingSince < 0)
-            core.pointsWaitingSince = now;
-        else if (now - core.pointsWaitingSince >= AUTO_LEARN_TICKS) {
-            core.pointsWaitingSince = -1;
-            spendPoints(hero);
+        int points = hero.getSkillPoints();
+        while (arrivals.size() > points)
+            arrivals.pollFirst();   // the player spent some: the oldest waiting points were theirs
+        while (arrivals.size() < points)
+            arrivals.addLast(now);  // new points: their 20 s start now
+        if (core.rankMenuHeld(now)) {
+            int n = arrivals.size();
+            arrivals.clear();
+            for (int i = 0; i < n; i++)
+                arrivals.addLast(now);
+            return;
+        }
+        Long oldest = arrivals.peekFirst();
+        if (oldest != null && now - oldest >= AUTO_LEARN_TICKS) {
+            arrivals.pollFirst();
+            spendPoints(hero, 1);
         }
     }
 
@@ -181,7 +199,12 @@ public final class HeroBot {
 
     /** The utility fourth as soon as it may be ranked, then the lowest-ranked learnable of the other three. */
     public static void spendPoints(FactionHero hero) {
-        for (int guard = 0; guard < 12 && hero.getSkillPoints() > 0; guard++) {
+        spendPoints(hero, 12);
+    }
+
+    /** As {@link #spendPoints(FactionHero)}, at most {@code max} points. */
+    public static void spendPoints(FactionHero hero, int max) {
+        for (int guard = 0; guard < max && hero.getSkillPoints() > 0; guard++) {
             FactionHeroAbility best = null;
             for (FactionHeroAbility a : hero.heroCore().abilities) {
                 if (a.getRank(hero) >= a.maxRank || hero.getHeroLevel() < a.getLevelRequirement(hero))
