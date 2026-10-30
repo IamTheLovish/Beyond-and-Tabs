@@ -112,6 +112,44 @@ public class PauseUnitsGameTests {
         }
     }
 
+    // A's review of #228 (reviews/pr-228.md, finding 1): the queue only ticked its head, so a paused unit in front held
+    // up the research behind it. Runs the building's own queue step, not the item's tick.
+    @GameTest(template = ARENA, batch = "pauseunits")
+    public static void pauseunits_research_behind_a_paused_unit_in_the_same_queue_keeps_progressing(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_pauseunits_q_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        Resources pool = pool(owner);
+        try {
+            ProductionPlacement pp = barracks(level, helper, owner, 0);
+            if (!pp.startProductionItem(ProductionItems.VINDICATOR) || !pp.startProductionItem(ProductionItems.UPGRADE_LAB_L2)) {
+                helper.fail("the Barracks refused a Vindicator then a Level 2 upgrade: queue " + pp.productionQueue.size());
+                return;
+            }
+            ActiveProduction unit = pp.productionQueue.get(0), upgrade = pp.productionQueue.get(1);
+            float tU = unit.ticksLeft, tR = upgrade.ticksLeft;
+            UnitProductionPause.set(owner, true);
+            for (int i = 0; i < TICKS; i++)
+                pp.tickProductionQueue(level);
+            if (unit.ticksLeft != tU)
+                helper.fail("the paused unit at the head advanced " + (tU - unit.ticksLeft) + " ticks");
+            else if (upgrade.ticksLeft >= tR)
+                helper.fail("the upgrade behind a paused unit stood still: " + upgrade.ticksLeft + " of " + tR);
+            else if (pp.productionQueue.get(0) != unit)
+                helper.fail("the paused unit lost its place at the head of the queue");
+            else {
+                UnitProductionPause.set(owner, false);
+                pp.tickProductionQueue(level);
+                if (unit.ticksLeft >= tU)
+                    helper.fail("the unit at the head did not resume after unpausing");
+                else
+                    helper.succeed();
+            }
+        } finally {
+            UnitProductionPause.clearOwner(owner);
+            ResourcesServerEvents.resourcesList.remove(pool);
+        }
+    }
+
     @GameTest(template = ARENA, batch = "pauseunits")
     public static void pauseunits_another_players_production_is_unaffected(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();

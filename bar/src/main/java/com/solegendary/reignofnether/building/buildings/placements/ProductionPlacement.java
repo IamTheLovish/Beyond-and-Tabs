@@ -740,8 +740,22 @@ public class ProductionPlacement extends BuildingPlacement {
 
         if (!tickLevel.isClientSide())
             tickSpawnWatches();
-        if (!productionQueue.isEmpty()) {
-            ActiveProduction nextItem = productionQueue.get(0);
+        tickProductionQueue(tickLevel);
+    }
+
+    /**
+     * One production step of the queue (PauseUnitsGameTests runs it without the rest of the building's tick). Only the
+     * first item ticks, except that a unit its owner paused does not hold the queue: the first item behind it that is
+     * not paused (research, an upgrade) ticks instead, and the unit keeps its place (A's review of #228).
+     */
+    public void tickProductionQueue(Level tickLevel) {
+        ActiveProduction nextItem = null;
+        for (ActiveProduction a : productionQueue)
+            if (!com.solegendary.reignofnether.building.production.UnitProductionPause.blocks(a.item, this)) {
+                nextItem = a;
+                break;
+            }
+        if (nextItem != null) {
             completing = nextItem;   // ProductionItem.tick completes it (onComplete -> produceUnit) from in here
             boolean done;
             try {
@@ -751,7 +765,7 @@ public class ProductionPlacement extends BuildingPlacement {
             }
             if (done) {
                 if (!tickLevel.isClientSide()) {
-                    productionQueue.remove(0);
+                    productionQueue.remove(nextItem);
                     BuildingProductionClientboundPacket.completeProduction(this.ownerName, this.originPos, nextItem.item.getItemName());
                     if (repeatQueue && nextItem.item.dupeRule == com.solegendary.reignofnether.building.production.ProdDupeRule.ALLOW
                             && startProductionItem(nextItem.item))
