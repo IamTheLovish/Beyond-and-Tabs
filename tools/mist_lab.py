@@ -13,7 +13,7 @@ Defaults must follow bat_mist.fsh: change both together. Needs numpy, scipy, Pil
 import sys, numpy as np
 from PIL import Image
 P = dict(BANK_DENSITY=2.5, DEEP_LIFT=0.9, HAZE=0.04, HAZE_HEIGHT=1.6, SIGMA=0.22, DENSITY=0.6, MAXCOVER=0.85,
-         LIT_MODE='r11c', TOP_SOFT=2.5, TOP_HARD=3.5, COV_A=2.2, COV_B=-0.6, BODY_LO=0.1, BODY_HI=0.45, CAP='clip', STEPS=12, FLOW='cells', X0=-200.0, CELL=32.0, CF_X=0.06, CF_Z=0.45, DF_X=0.1, DF_Z=0.5)
+         LIT_MODE='r11c', TOP_SOFT=2.5, TOP_HARD=3.5, COV_A=2.2, COV_B=-0.6, BODY_LO=0.1, BODY_HI=0.45, CAP='clip', STEPS=12, FLOW='cells', LPOW=1.6, X0=-200.0, CELL=32.0, CF_X=0.06, CF_Z=0.45, DF_X=0.1, DF_Z=0.5)
 for a in sys.argv[2:]:
     k, v = a.split('='); P[k] = type(P[k])(v) if not isinstance(P[k], str) else v
 W, H = 600, 360
@@ -116,7 +116,7 @@ def bank(k, w=None):
         cov = COVC
     else:
         cov = fbm(np.stack([k[..., 0] * P['CF_X'], np.full(k.shape[:-1], T * 0.004), k[..., 2] * P['CF_Z']], -1))
-    c = LOCAL * (P['COV_A'] * cov + P['COV_B'])
+    c = (LOCAL ** P['LPOW']) * (P['COV_A'] * cov + P['COV_B'])
     bil = vnoise(np.stack([k[..., 0] * 0.11, np.full(k.shape[:-1], T * 0.03), k[..., 2] * 0.2], -1)) - 0.5
     top = 1.0 + 3.6 * ss(0.32, 0.78, c) + 1.4 * bil
     return c, top
