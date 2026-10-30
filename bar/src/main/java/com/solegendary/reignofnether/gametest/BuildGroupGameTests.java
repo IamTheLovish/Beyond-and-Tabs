@@ -97,7 +97,7 @@ public class BuildGroupGameTests {
         }
         // the Kingdom follows design/mockups/groups.md
         Faction k = Factions.VILLAGERS;
-        int[] expected = { 11, 5, 16, 6 };
+        int[] expected = { 13, 5, 16, 6 };   // Economy 13: + Fusion Reactor (slot 12) and Advanced Fusion Reactor (click only)
         for (BuildGroup g : BuildGroup.values())
             if (k.getBuildingsIn(g).size() != expected[g.ordinal()])
                 problems.add("villagers: the " + g + " tab has " + k.getBuildingsIn(g).size() + " buildings, groups.md says " + expected[g.ordinal()]);
