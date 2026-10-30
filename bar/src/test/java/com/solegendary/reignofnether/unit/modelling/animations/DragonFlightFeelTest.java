@@ -183,5 +183,19 @@ class DragonFlightFeelTest {
             worst = Math.max(worst, st[Dragon.ST_TAKEOFF]);
         }
         assertTrue(worst <= 0.1f, "a dragon cruising into view (stuttering) played the take-off at " + worst);
+
+        // review r3: its first moving tick may be a bunched one (0.34 b/t): seeded high, the speed decayed like a brake -
+        // the head nodded ~9 deg and the glide came in. Coming into view must neither nod nor glide at a 0.17 cruise
+        float[] b = Dragon.newState(0f);
+        b[Dragon.ST_HOVER] = 0f;
+        float nod = 0f, glide = 0f;
+        for (int t = 0; t < 90; t++) {
+            for (int f = 0; f < 3; f++)
+                Dragon.drivers(b, P, 0.17f * mult[(t + 4) % mult.length], 0f, 1f / 3f, t);
+            nod = Math.max(nod, Dragon.brakeNod(P, b[Dragon.ST_BRAKE]));
+            glide = Math.max(glide, b[Dragon.ST_GLIDE]);
+        }
+        assertTrue(nod <= 0.5f, "coming into view on a bunched tick nodded the head " + nod + " deg");
+        assertTrue(glide <= 0.1f, "coming into view on a bunched tick glided to " + glide);
     }
 }
