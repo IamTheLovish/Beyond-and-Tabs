@@ -333,6 +333,27 @@ class ShaderPack(unittest.TestCase):
             self.assertTrue(0.74 <= y <= 0.78, y)
         self.assertLess(_const("WHITE_DESATURATE_PERSPECTIVE"), _const("WHITE_DESATURATE"))
 
+    def test_the_meadow_varies_across_the_field(self):
+        # light pass 3 (round 41: the lawn read as uniform felt): a world-space low-frequency field on biome-tinted
+        # terrain. Patches ~8-16 blocks (the noise cell), a value swing that adds ~0.04 of macro std on screen (numpy
+        # model in the constant's comment: lawn std ~0.03 -> ~0.05, the 0.045-0.06 target), the mean held by the
+        # log-normal normalisation; ~+-6 degrees of hue at the extremes
+        self.assertTrue(8.0 <= _const("MEADOW_CELL") <= 16.0)
+        self.assertTrue(0.30 <= _const("MEADOW_VALUE") <= 0.45)
+        meadow = _read("lib", "meadow.glsl")
+        self.assertIn("- 0.5 * (MEADOW_VALUE * 0.4) * (MEADOW_VALUE * 0.4)", meadow)
+        lit = _read("program", "lit.fsh")
+        self.assertIn("albedo = mix(albedo, meadow(albedo, world.xz), tinted);", lit)
+
+    def test_white_sides_and_rough_glints(self):
+        # light pass 3: near-white faces turned from up lose the warm light's colour (white wool's sides read cream);
+        # a rough dielectric's glint is capped (nether bricks strobed on their bevels)
+        self.assertTrue(0.6 <= _const("WHITE_WALL_NEUTRAL") <= 1.0)
+        self.assertLessEqual(_const("ROUGH_GLINT_CAP"), 0.2)
+        lit = _read("program", "lit.fsh")
+        self.assertIn("WHITE_WALL_NEUTRAL * whiteness * side", lit)
+        self.assertIn("mix(mix(ROUGH_GLINT_CAP, 1.0, glossy), 1.0, mat.metal)", lit)
+
     def test_the_sky_has_a_sun(self):
         # light pass 3: a soft warm sun disc that blooms, vanilla's square sprite dropped only where the loader names
         # the sun's stage; a glow round the moon

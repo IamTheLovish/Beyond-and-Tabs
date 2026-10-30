@@ -13,6 +13,10 @@
 #include "/lib/shadow.glsl"
 #include "/lib/light.glsl"
 #include "/lib/pbrswitch.glsl"
+#ifdef LIT_TERRAIN
+#include "/lib/wind.glsl"
+#include "/lib/meadow.glsl"
+#endif
 #if CLOUD_SHADOWS == 1
 #include "/lib/wind.glsl"
 #include "/lib/clouds.glsl"
@@ -107,12 +111,18 @@ void main() {
     albedo = mix(albedo, entityColor.rgb, entityColor.a);
 #endif
 #ifdef LIT_TERRAIN
+    // biome-tinted terrain (a coloured vertex tint: grass, ferns, leaves, vines; a flower's is white and the fog of
+    // war's grey, so both pass through as they are)
+    float tintChroma = max(glcolor.r, max(glcolor.g, glcolor.b)) - min(glcolor.r, min(glcolor.g, glcolor.b));
+    float tinted = smoothstep(0.05, 0.15, tintChroma / max(max(glcolor.r, max(glcolor.g, glcolor.b)), 1e-3));
+    // the meadow's patches (lib/meadow.glsl, light pass 3), on the world position, so a tuft follows its patch
+    if (tinted > 0.0) {
+        vec3 world = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz + cameraPosition;
+        albedo = mix(albedo, meadow(albedo, world.xz), tinted);
+    }
     if (foliage > 0.5) {
-        // a biome-tinted plant (grass, fern: a coloured vertex tint; a flower's is white) keeps its albedo's saturation
-        // inside the lawn's band, so a tuft is not neon lime (light passes 2-3, lib/settings.glsl); the
-        // fog of war's tint is grey and passes through. Flowers keep their petals' colour
-        float tintChroma = max(glcolor.r, max(glcolor.g, glcolor.b)) - min(glcolor.r, min(glcolor.g, glcolor.b));
-        float tinted = smoothstep(0.05, 0.15, tintChroma / max(max(glcolor.r, max(glcolor.g, glcolor.b)), 1e-3));
+        // a biome-tinted plant keeps its albedo's saturation inside the lawn's band, so a tuft is not neon lime (light
+        // passes 2-3, lib/settings.glsl). Flowers keep their petals' colour
         float top = max(albedo.r, max(albedo.g, albedo.b));
         float sat = (top - min(albedo.r, min(albedo.g, albedo.b))) / max(top, 1e-4);
         float l = dot(albedo, LUMA);
@@ -169,6 +179,15 @@ void main() {
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
     vec3 light = surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
+    // near-white faces turned from up lose the light's colour (WHITE_WALL_NEUTRAL, light pass 3): white sides read
+    // white, not cream, while the ground keeps the warm sun
+    {
+        float top = max(albedo.r, max(albedo.g, albedo.b));
+        float whiteSat = (top - min(albedo.r, min(albedo.g, albedo.b))) / max(top, 1e-4);
+        float whiteness = smoothstep(0.62, 0.75, dot(albedo, LUMA)) * (1.0 - smoothstep(0.06, 0.14, whiteSat));
+        float side = 1.0 - clamp(dot(geomN, normalize(upPosition)), 0.0, 1.0);
+        light = mix(light, vec3(dot(light, LUMA)), WHITE_WALL_NEUTRAL * whiteness * side);
+    }
     vec3 c = lin * light;
     // the light that comes from the sky as a whole, which ambient occlusion shuts out (slice 3, composite.fsh): the
     // fill, and below a metal's or a gem's sky reflection
@@ -184,8 +203,12 @@ void main() {
     // the fog of war and a dark vertex colour dim the reflections as they dim the albedo (no light in the fog); the
     // brightest channel, so a biome's green tint does not count as darkening. A metal's F0 is its albedo, already tinted
     float tint = mix(max(glcolor.r, max(glcolor.g, glcolor.b)), 1.0, mat.metal);
+    // a rough dielectric never glints past ROUGH_GLINT_CAP of SPEC_MAX, and no glint where the mapped normal turns
+    // from the eye (light pass 3: nether bricks' bevels strobed white)
+    float glossy = smoothstep(0.2, 0.6, 1.0 - sqrt(mat.roughness));
+    float glintCap = SPEC_MAX * mix(mix(ROUGH_GLINT_CAP, 1.0, glossy), 1.0, mat.metal);
     vec3 reflected = min(sunSpecular(mat, v, l) * sunArriving(shadow, levels, sunColour) * terminator,
-                         vec3(SPEC_MAX));
+                         vec3(glintCap)) * smoothstep(0.0, 0.2, dot(n, v));
 #ifdef LIT_TERRAIN
     // a plant's crossed planes lit as ground have no map: GGX at roughness 1 with Schlick's grazing Fresnel put a white
     // glint on every far tuft in a perspective view, the haze's "snow" (light pass 3). Plants show no sun glint

@@ -164,6 +164,24 @@ const float DIELECTRIC_F0_MAX_CODE = 64.0;
 // lightening their albedo), and a gentler foot, FOLIAGE_BASE_AO
 const float FOLIAGE_MAX_SAT = 0.40;
 const float FOLIAGE_BASE_AO = 0.85;
+// the meadow's macro variation (lib/meadow.glsl, light pass 3): patches MEADOW_CELL blocks per noise cell (~8-16 blocks
+// across), the albedo's linear value by exp(MEADOW_VALUE x field) - by a numpy model of the field through the
+// S-curve's 1.32 slope at the lawn: a macro std of ~0.04 luma (p5-p95 ~0.36-0.49), the frame-wide lawn std ~0.03 ->
+// ~0.05, the mean unchanged (factor mean ~0.997) - and the hue by MEADOW_HUE_* (red and blue in linear light, ~+-6
+// degrees at the field's extremes, ~+-2.5 typical)
+const float MEADOW_CELL = 11.3;
+const float MEADOW_VALUE = 0.40;
+const float MEADOW_HUE_RED = 0.11;
+const float MEADOW_HUE_BLUE = 0.15;
+// near-white faces turned from the up direction lose the light's colour (light pass 3: white wool and white blocks'
+// sides read cream, H 40, S 0.07, under the warm sun while their tops stayed neutral): the light on a face of albedo
+// luma past ~0.7 and saturation under ~0.12 is pulled toward its own grey by WHITE_WALL_NEUTRAL x (1 - up). The ground
+// keeps the warm sun; coloured walls keep it too
+const float WHITE_WALL_NEUTRAL = 0.85;
+// a rough dielectric's sun glint never passes this share of SPEC_MAX (light pass 3: nether bricks strobed white on
+// their bevels' normals at smoothness ~0.1-0.2): the cap rises to the full SPEC_MAX from smoothness 0.2 to 0.6. Metals
+// keep the full cap. Also every glint fades out where the mapped normal turns from the eye (n.v under 0.2)
+const float ROUGH_GLINT_CAP = 0.12;
 // whites read white, not cream: from WHITE_GUARD_LUMA up the grade's colour is taken back by WHITE_DESATURATE
 const float WHITE_GUARD_LUMA = 0.85;
 const float WHITE_DESATURATE = 0.30;
