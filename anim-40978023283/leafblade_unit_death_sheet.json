@@ -1,0 +1,38 @@
+{
+ "title": "leafblade_unit / death   real game client   window 100 ticks (5.0 s)   views side   10 frames",
+ "views": [
+  "side"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +0.58s  (tick 12)",
+  "3  +1.16s  (tick 23)",
+  "4  +1.65s  (tick 33)",
+  "5  +2.13s  (tick 43)",
+  "6  +2.81s  (tick 56)",
+  "7  +3.33s  (tick 67)",
+  "8  +3.97s  (tick 79)",
+  "9  +4.35s  (tick 87)",
+  "10  +4.93s  (tick 99)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +0.58s  (tick 12)",
+   "3  +1.16s  (tick 23)",
+   "4  +1.65s  (tick 33)",
+   "5  +2.13s  (tick 43)",
+   "6  +2.81s  (tick 56)",
+   "7  +3.33s  (tick 67)",
+   "8  +3.97s  (tick 79)",
+   "9  +4.35s  (tick 87)",
+   "10  +4.93s  (tick 99)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}

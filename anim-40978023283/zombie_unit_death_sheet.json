@@ -1,0 +1,38 @@
+{
+ "title": "zombie_unit / death   real game client   window 100 ticks (5.0 s)   views side   10 frames",
+ "views": [
+  "side"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +0.66s  (tick 13)",
+  "3  +1.16s  (tick 23)",
+  "4  +1.61s  (tick 32)",
+  "5  +2.12s  (tick 42)",
+  "6  +2.84s  (tick 57)",
+  "7  +3.30s  (tick 66)",
+  "8  +3.77s  (tick 75)",
+  "9  +4.46s  (tick 89)",
+  "10  +4.92s  (tick 98)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +0.66s  (tick 13)",
+   "3  +1.16s  (tick 23)",
+   "4  +1.61s  (tick 32)",
+   "5  +2.12s  (tick 42)",
+   "6  +2.84s  (tick 57)",
+   "7  +3.30s  (tick 66)",
+   "8  +3.77s  (tick 75)",
+   "9  +4.46s  (tick 89)",
+   "10  +4.92s  (tick 98)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}
