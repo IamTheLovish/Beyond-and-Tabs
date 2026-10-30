@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit.goals;
 
 import com.solegendary.reignofnether.unit.Engage;
+import com.solegendary.reignofnether.unit.HeldBlow;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.SlimeUnit;
@@ -171,7 +172,11 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
         if (distSqr <= d && this.ticksUntilNextAttack <= 0) {
             this.ticksUntilNextAttack = this.adjustedTickDelay(getAttackInterval());
             this.mob.swing(InteractionHand.MAIN_HAND);
-            this.mob.doHurtTarget(target);
+            // a keyed swing (the Halberdier's thrust) lands its blow at the clip's hit key, the cooldown above still
+            // running from the swing. A cleared target (a move or stop order) drops a blow still held; a switch to a
+            // closer target (AttackerUnit's 12-tick rescan) does not - the thrust already under way still lands, or
+            // a scrum would eat blows whose cooldown was spent
+            HeldBlow.strike(this.mob, target, Math.sqrt(d), () -> this.mob.getTarget() != null);
         }
     }
 

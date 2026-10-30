@@ -30,7 +30,7 @@ Tab keys (proposed): Alt+1 Economy, Alt+2 Military, Alt+3 Defence, Alt+4 Tech. E
 | Iron Golem | Military | , | R | , |
 | Lab Annex | Military | none | T | none |
 
-## Defence (15)
+## Defence (16)
 
 | Building | Group | Current key | Proposed key (A) | Mock-up B key |
 |---|---|---|---|---|
@@ -48,6 +48,7 @@ Tab keys (proposed): Alt+1 Economy, Alt+2 Military, Alt+3 Defence, Alt+4 Tech. E
 | Fortified Rampart | Defence | none | C | none |
 | Iron Caltrop Field | Defence | none | ; | none |
 | Chain Snare Net | Defence | none | J | none |
+| Warden's Arbalest | Defence | none | none | none |
 | Ward Spire | Defence | none | K | none |
 
 ## Tech (6)
@@ -64,6 +65,6 @@ Tab keys (proposed): Alt+1 Economy, Alt+2 Military, Alt+3 Defence, Alt+4 Tech. E
 ## Notes
 
 - Why these groups: Economy = income, storage, power, trade, bridges. Military/Production = unit-producing or army-speed buildings (Shrine of Prosperity trains heroes, Iron Golem is a unit-building, Lab Annex speeds the army lab). Defence = Watchtower plus the static defences and the Ward Spire (the game-ender counter). Tech = research and upgrade buildings plus the win-condition buildings (Sun Spire, Beacon).
-- Defence has 15 entries: the third row uses ; J K (free in that tab).
+- Defence has 16 entries: the third row uses ; J K (free in that tab). The Warden's Arbalest (the anti-siege tower, Oct 29) has no key.
 - Not shown: Villager House and Wheat Farm (not registered for the Kingdom), and custom buildings (appended by Faction.addCustomBuildings).
 - Today the Defence, Ward Spire, Sun Spire, Beacon, Lab Annex, Solar and Geothermal buttons have no key at all.

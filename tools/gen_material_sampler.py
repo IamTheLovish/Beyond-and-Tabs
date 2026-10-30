@@ -54,13 +54,17 @@ BUILDING_BLOCKS = [
     "cracked_deepslate_bricks", "deepslate_tiles", "blackstone", "polished_blackstone", "polished_blackstone_bricks",
     "cracked_polished_blackstone_bricks", "chiseled_polished_blackstone", "basalt", "polished_basalt", "smooth_basalt",
     "obsidian", "netherrack", "nether_bricks", "red_nether_bricks", "chiseled_nether_bricks", "soul_sand",
-    "prismarine_bricks", "dark_prismarine", "moss_block", "end_stone", "cut_copper", "oxidized_cut_copper",
+    "prismarine_bricks", "dark_prismarine", "moss_block", "end_stone", "cut_copper", "exposed_cut_copper", "weathered_cut_copper", "oxidized_cut_copper",
     "raw_iron_block", "iron_block", "gold_block", "netherite_block", "diamond_block", "emerald_block", "lapis_block",
     "podzol", "coarse_dirt", "red_sand", "dirt", "sand", "gravel",
     ("smooth_stone_slab", {"type": "double", "waterlogged": "false"}), "dirt_path", "reinforced_deepslate",
     ("farmland", {"moisture": "0"}), ("farmland", {"moisture": "7"}),
 ]
 PER_ROW, ROWS = 7, 4
+# Round 23: the metals on their own (design/eyes/metal_sampler.nbt), a grey reference (white_concrete) beside them
+METALS = ["iron_block", "gold_block", "netherite_block", "raw_iron_block", "raw_gold_block", "raw_copper_block",
+          "white_concrete", "cut_copper", "exposed_cut_copper", "weathered_cut_copper", "oxidized_cut_copper",
+          "copper_block", "oxidized_copper", "smooth_stone"]
 
 
 def building_sampler(blocks):
@@ -87,7 +91,68 @@ def building_sampler(blocks):
     return s
 
 
+# Terrain sampler (Lane B round 24, Oct 22 2026 - lovish: "the game's graphics still look flat overall"): the blocks a
+# player sees most, each also photographed UP CLOSE (3.5 blocks; EyesDirector reads terrain_sampler.nbt.near and shoots
+# 15_terrain_sampler_near_<name>). Two-layer floor (dirt under grass) so the pond is sunk; in front (+z, the camera's
+# side) 3x3 floor patches, a pond with a sand and a grass edge, an oak with a bare trunk and a stepped grass hillside;
+# behind them a row of 3x3 wall panels of the building stones, planks and cobble.
+TERRAIN_FLOOR = ("dirt", "sand", "gravel", "stone", "cobblestone", "grass_block")
+TERRAIN_WALLS = ("stone_bricks", "deepslate", "quartz_block", "mossy_stone_bricks", "sandstone", "basalt",
+                 "cobblestone", "oak_planks", "stone")
+
+
+def terrain_sampler():
+    s = Structure(44, 12, 12)
+    near = []
+    s.fill(0, 0, 0, 43, 0, 11, "dirt")
+    s.fill(0, 1, 0, 43, 1, 11, "grass_block", snowy="false")
+    for i, name in enumerate(TERRAIN_FLOOR):
+        x0 = 1 + i * 4
+        s.fill(x0, 1, 7, x0 + 2, 1, 9, name, **({"snowy": "false"} if name == "grass_block" else {}))
+        near.append(("floor_" + name, x0 + 1.5, 2.0, 8.5))
+    # the pond: sand bottom, sand rim on the left, grass on the right
+    s.fill(25, 0, 6, 29, 0, 9, "sand")
+    s.fill(25, 1, 6, 29, 1, 9, "water", level="0")
+    s.fill(24, 1, 6, 24, 1, 10, "sand")
+    s.fill(25, 1, 10, 26, 1, 10, "sand")
+    near.append(("water_edge", 25.0, 1.9, 9.0))
+    # an oak: bare trunk to 6 blocks, a round crown
+    for y in range(2, 10):
+        s.set(33, y, 8, "oak_log", axis="y")
+    for dy in range(-2, 2):
+        y = 9 + dy
+        r = 2 if dy < 1 else 1
+        for dx in range(-r, r + 1):
+            for dz in range(-r, r + 1):
+                if dx * dx + dz * dz > r * r + 1 or (dx == 0 and dz == 0):
+                    continue
+                s.set(33 + dx, y, 8 + dz, "oak_leaves", persistent="true", distance="1", waterlogged="false")
+    s.set(33, 10, 8, "oak_leaves", persistent="true", distance="1", waterlogged="false")
+    near.append(("oak_log", 33.5, 4.0, 9.0))
+    near.append(("oak_leaves", 32.5, 8.5, 10.5))
+    # the hillside: three grass steps facing the camera
+    for x in range(37, 44):
+        for top, zmax in ((2, 9), (3, 7), (4, 5)):
+            for z in range(0, zmax + 1):
+                s.set(x, top - 1, z, "dirt")
+                s.set(x, top, z, "grass_block", snowy="false")
+    near.append(("hillside", 39.5, 2.8, 9.0))
+    # the wall panels (front face at z = 3)
+    for i, name in enumerate(TERRAIN_WALLS):
+        x0 = i * 4
+        s.fill(x0, 2, 1, x0 + 2, 4, 2, name, **({"axis": "y"} if name == "basalt" else {}))
+        near.append(("wall_" + name, x0 + 1.5, 3.5, 3.0))
+    return s, near
+
+
 def main():
+    ts, near = terrain_sampler()
+    tpath = os.path.join(os.path.dirname(OUT), "terrain_sampler.nbt")
+    ts.write(tpath)
+    with open(tpath + ".near", "w") as f:
+        f.write("# close-up points for EyesDirector (name x y z, structure-local) - tools/gen_material_sampler.py\n")
+        for name, x, y, z in near:
+            f.write("%s %.2f %.2f %.2f\n" % (name, x, y, z))
     s = Structure(17, 10, 13)
     s.fill(0, 0, 0, 16, 0, 12, "grass_block", snowy="false")
     for i, name in enumerate(("stone", "granite", "diorite", "andesite", "tuff")):
@@ -101,6 +166,7 @@ def main():
             s.set(1 + i * 3, y, 1, wood + "_log", axis="y")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     s.write(OUT)
+    building_sampler(METALS).write(os.path.join(os.path.dirname(OUT), "metal_sampler.nbt"))
     chunk = PER_ROW * ROWS
     for i in range(0, len(BUILDING_BLOCKS), chunk):
         building_sampler(BUILDING_BLOCKS[i:i + chunk]).write(

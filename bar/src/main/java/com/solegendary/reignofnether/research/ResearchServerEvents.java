@@ -26,8 +26,7 @@ public class ResearchServerEvents {
             ResearchSaveData researchData = ResearchSaveData.getInstance(serverLevel);
             researchData.researchItems.clear();
             researchData.researchItems.addAll(researchItems);
-            researchData.save();
-            serverLevel.getDataStorage().save();
+            researchData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
 
             //ReignOfNether.LOGGER.info("saved " + researchItems.size() + " researchItems in serverevents");
         }

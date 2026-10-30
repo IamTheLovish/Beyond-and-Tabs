@@ -310,6 +310,8 @@ class AnimationCostBench {
                 float v = walking ? 0.2f : 0f;
                 com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, v,
                     walking && (i % 3) == 0 ? 4f : 0f, 20f, 20f, (i % 11) == 0, false);
+                com.solegendary.reignofnether.unit.modelling.motion.Kinematics.look(slab, b, (t + i * 13) % 360,
+                    (i % 7) * 3f, (i % 4) == 0, false);
                 if ((t + i) % 97 == 0)
                     com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, (i % 8) * 0.785f);
                 com.solegendary.reignofnether.unit.modelling.motion.Idle.step(slab, b, i, t, walking, false);
@@ -357,8 +359,13 @@ class AnimationCostBench {
                     false, false);
             com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, i * 0.3f);
             com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0.1f, 2f, 16f, 20f, false, false);
+            for (int t = 0; t < 10; t++)
+                com.solegendary.reignofnether.unit.modelling.motion.Kinematics.look(slab, b, i * 7f, 10f, (i % 3) == 0,
+                    t == 0);
         }
         float[] sliders = {1, 1, 1, 1, 1, 1, 1};
+        // the look solver too, as MotionPass gives it a vanilla body: the chest's share, the head's rest, the arms' aim
+        float[] look = {com.solegendary.reignofnether.unit.modelling.motion.Motion.LOOK_FULL, 0f, 20f, 10f};
         float[] out = com.solegendary.reignofnether.unit.modelling.motion.MotionPass.scratch();
         PoseStack pose = new PoseStack();
         float before = body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot;
@@ -367,8 +374,9 @@ class AnimationCostBench {
             float time = 1000f + round * FRAMES + frame;
             long t0 = System.nanoTime();
             for (int i = 0; i < UNITS; i++) {
+                look[1] = i * 3f;
                 com.solegendary.reignofnether.unit.modelling.motion.Motion.pose(slab, i * stride, i, time + i,
-                    0.5f, 40f, sliders, false, out);
+                    0.5f, 40f, sliders, false, look, out);
                 com.solegendary.reignofnether.unit.modelling.motion.MotionPass.place(map, pose);
                 com.solegendary.reignofnether.unit.modelling.motion.MotionPass.restore();
                 pose.setIdentity();   // the render's own push/pop is vanilla's (it allocates), not the pass's
@@ -389,6 +397,51 @@ class AnimationCostBench {
         assertTrue(pass.allocationFree(), "the motion pass allocates: " + line);
         assertTrue(before == body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot,
             "restore leaves the body exactly as setupAnim left it");
+    }
+
+    /**
+     * The death-pose contract's per-frame cost (DeathFall.pose + MotionPass.placeFall + restore) for {@link #UNITS}
+     * Halberdiers all falling at once, each at its own moment of the fall - far more than ever die in one frame. Gates:
+     * under {@link #MOTION_PASS_BUDGET_US_PER_UNIT} a unit and nothing allocated.
+     */
+    @Test
+    void deathFall() throws IOException {
+        HalberdierModel<Entity> hal = new HalberdierModel<>(HalberdierModel.createBodyLayer().bakeRoot());
+        var map = com.solegendary.reignofnether.unit.modelling.motion.BoneMaps.forModel(hal);
+        assertTrue(map != null && map.deathPose(), "a Halberdier falls by itself");
+        int stride = com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE;
+        float[] slab = new float[UNITS * stride];
+        for (int i = 0; i < UNITS; i++) {
+            int b = i * stride;
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0f, 0f, 20f, 20f, false, true);
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, i * 0.3f);
+            com.solegendary.reignofnether.unit.modelling.motion.DeathFall.latch(slab, b, i, 1);
+        }
+        float[] out = com.solegendary.reignofnether.unit.modelling.motion.MotionPass.fallScratch();
+        PoseStack pose = new PoseStack();
+        BenchRounds.Result fall = BenchRounds.measure(ROUNDS, ROUND_WARMUP, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
+            long t0 = System.nanoTime();
+            for (int i = 0; i < UNITS; i++) {
+                float t = (frame * 3 + i) % 40 + 0.5f;
+                com.solegendary.reignofnether.unit.modelling.motion.DeathFall.pose(slab, i * stride, i, t, true, out);
+                com.solegendary.reignofnether.unit.modelling.motion.MotionPass.placeFall(map, pose);
+                com.solegendary.reignofnether.unit.modelling.motion.MotionPass.restore();
+                pose.setIdentity();
+            }
+            long t1 = System.nanoTime();
+            return t1 - t0;
+        });
+        double perUnitUs = fall.bestMs() * 1000.0 / UNITS;
+        String line = String.format(Locale.ROOT,
+            "[AnimBench] Death fall: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d frames: %s), bytes per round %s",
+            UNITS, fall.bestMs(), perUnitUs, MOTION_PASS_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, fall.roundsText(),
+            fall.bytesText());
+        System.out.println(line);
+        Path out3 = Path.of("build", "death-fall-bench.txt");
+        Files.createDirectories(out3.getParent());
+        Files.write(out3, List.of(line));
+        assertTrue(perUnitUs < MOTION_PASS_BUDGET_US_PER_UNIT, line);
+        assertTrue(fall.allocationFree(), "the death fall allocates: " + line);
     }
 
     private static long countVertices(net.minecraft.client.model.HierarchicalModel<Entity> model, PoseStack pose) {

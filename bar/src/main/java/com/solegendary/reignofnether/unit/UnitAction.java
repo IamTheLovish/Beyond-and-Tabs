@@ -219,5 +219,17 @@ public enum UnitAction {
     SKYWARD_SHOT,
     // Beyond and Tabs T3 roles (claude/t3-roles.md)
     DEEP_DIVE,              // Tidewrought Leviathan: dives from the water and surfaces by the aimed spot with a slam (T3)
-    GROW_GROVE              // Verdant World Tree Walker: grows temporary treants round itself, heals the shade (T3)
+    GROW_GROVE,             // Verdant World Tree Walker: grows temporary treants round itself, heals the shade (T3)
+    TAKE_ROOT,              // Verdant Rooted Treant: roots in place and bursts root-spike lines / uproots (T1 vehicle, toggle)
+    DRAGON_DIVE,            // Gravebound Bone Dragon: stoops onto the aimed spot with an impact and fights on the ground; again: take off
+    // Beyond and Tabs essence casters (design/essence_casters.md): every race caster's shared ability
+    EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    // the Stormcallers essence caster, the Spark Sage
+    STATIC_STEP,            // 5 essence: blink up to 8 blocks to a standable spot in sight
+    CAPTURED_SPARK,         // 10 essence: chain lightning, 30 damage a strike, 4 strikes, 6-block jumps
+    THUNDERHEAD,            // 20 essence: a storm cloud for 10 s strikes the enemy nearest its centre (6 blocks) for 25 a second
+    // the Brassworks essence caster, the Soul Engineer
+    PATCH_KIT,              // 5 essence: a friendly machine or building within 8 blocks is mended by 120 HP at once
+    GHOST_FURNACE,          // 10 essence: a 150 HP spirit-steam furnace scalds enemies within 5 blocks for 4 a second, 20 s
+    SOUL_BOILER             // 20 essence: a friendly building within 24 blocks builds and produces 50% faster for 20 s
 }
