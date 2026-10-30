@@ -110,8 +110,9 @@ TARGETS = {
     "barrel_bottom":    dict(luma=0.26, std=0.075, sat=0.46, tilt=12.0, smooth=57, pore=20),
     # r31 (art director: "reads as packed dirt"): straw is pale gold - luma 0.54 -> 0.62, more spread (stalk-to-stalk
     # contrast), satin stalks (smooth 20 -> 42)
-    "hay_block_side":   dict(luma=0.62, std=0.100, sat=0.56, tilt=21.4, smooth=42, pore=40),
-    "hay_block_top":    dict(luma=0.60, std=0.085, sat=0.56, tilt=21.4, smooth=38, pore=40),
+    # r31b (eyes: ours tan beside the benchmark's yellow): one step more yellow saturation (0.56 -> 0.66)
+    "hay_block_side":   dict(luma=0.63, std=0.100, sat=0.66, tilt=21.4, smooth=42, pore=40),
+    "hay_block_top":    dict(luma=0.62, std=0.095, sat=0.66, tilt=21.4, smooth=38, pore=40),
     # round 8: every wood's bark and end grain (pack-study 38743610740, single blocks; the reference's log tops carry
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
@@ -1488,9 +1489,8 @@ def m_hay_side(F, n):
     wob = 0.005 * F.noise(1, 3, 0.5, sx=1.0, sy=3.0)
     stalk = F.warp(F.noise(16, 40, 0.3, sx=1.0, sy=40.0), wob, 0.0)
     fine = F.warp(F.noise(40, 64, 0.0, sx=1.0, sy=40.0), wob, 0.0)
-    cross = F.warp(F.noise(14, 36, 0.3, sx=1.0, sy=20.0), 0.18 * F.v, 0.0)    # stalks lying at ~10 degrees
-    where_cross = smoothstep(0.5, 0.9, norm01(F.noise(1, 4, 0.5, sx=1.0, sy=2.0)))
-    stalk = stalk * (1 - 0.5 * where_cross) + cross * 0.5 * where_cross
+    # r31b (eyes 41023221433: the sides "read woven wicker"): no crossing stalks - straight, with a slow drift
+    stalk = stalk + 0.25 * F.noise(4, 12, 0.5, sx=1.0, sy=30.0)
     clump = F.noise(2, 6, 0.6, sx=1.0, sy=3.0)                                 # the bale's loose and packed patches
     prof = norm01(stalk)                                                       # 0 in the gap, 1 on a stalk's crest
     band, twist = hay_twine(F)
@@ -1509,26 +1509,32 @@ def m_hay_side(F, n):
 
 
 def m_hay_top(F, n):
-    """Round 31: the cut end of a bale - the ends of the stalks, packed: each a hollow tube (a pale ring round a
-    dark hole), 6-9 texels across, at its own tone and its own size, with a few stalks lying across the ends. The
-    ring-and-hole profile is what makes it straw and not cobbles."""
-    f1, f2, idx, k = F.voronoi(230, 1.0)
-    cell = 1.0 / math.sqrt(230)
-    r = f1 / cell                                          # 0 at the stalk's centre, ~0.5 at its wall
-    size = F.rng.uniform(0.30, 0.46, k)[idx]               # each tube its own radius
-    wall = np.exp(-((r - size) / 0.10) ** 2)               # the tube wall: a ring
-    hole = 1 - smoothstep(size - 0.20, size - 0.08, r)     # the hollow inside
-    gap = 1 - smoothstep(0.0, 0.025, f2 - f1)              # the crevice between neighbouring stalks
-    tone = F.rng.uniform(0.75, 1.15, k)[idx]
+    """Round 31b (eyes 41023221433: the r31 tube ends "read oatmeal / granola noise"; the benchmark's top reads as
+    directional streaks): the top of the bale as stalks too - lying along u, pressed flat, in a few bundles that
+    cross at slight angles, with a scatter of cut ends (small pale rings) where stalks point up out of the bale."""
+    wob = 0.004 * F.noise(1, 3, 0.5, sx=3.0, sy=1.0)
+    stalk = F.warp(F.noise(16, 40, 0.3, sx=40.0, sy=1.0), 0.0, wob)
+    stalk = stalk + 0.25 * F.noise(4, 12, 0.5, sx=30.0, sy=1.0)
+    fine = F.warp(F.noise(40, 64, 0.0, sx=40.0, sy=1.0), 0.0, wob)
+    # bundles lying at a slight angle across the rest
+    cross = F.warp(F.noise(14, 36, 0.3, sx=20.0, sy=1.0), 0.0, 0.14 * F.u)
+    where_cross = smoothstep(0.55, 0.9, norm01(F.noise(1, 4, 0.5, sx=2.0, sy=1.0)))
+    stalk = stalk * (1 - 0.6 * where_cross) + cross * 0.6 * where_cross
     clump = F.noise(2, 6, 0.6)
-    H = 0.35 + 0.45 * wall + 0.25 * (1 - hole) * smoothstep(0, 0.12, f2 - f1) - 0.3 * hole - 0.25 * gap + 0.04 * clump
-    shade = tone * (0.6 + 0.5 * wall + 0.15 * (1 - gap)) * (1 - 0.35 * hole) * (1 + 0.10 * clump)
-    alb = tint((0.88, 0.70, 0.30), shade)
-    # a few loose stalks lying across the ends (long along u)
-    loose = smoothstep(0.80, 0.95, norm01(F.noise(2, 5, 0.5, sx=12.0, sy=1.0))) * smoothstep(0.3, 0.7, norm01(F.noise(1, 2, 0.5)))
-    H = H + 0.25 * loose
-    alb = alb * (1 - loose[..., None]) + loose[..., None] * tint((0.92, 0.76, 0.36), 0.95 + 0.1 * F.noise(30, 60, 0.0, sx=10.0))
-    return H, alb
+    prof = norm01(stalk)
+    # cut ends poking up: sparse small rings
+    f1, f2, idx, k = F.voronoi(120, 1.0)
+    cell = 1.0 / math.sqrt(120)
+    on = (F.rng.random(k) < 0.18)[idx]
+    r = f1 / cell
+    ring = np.exp(-((r - 0.32) / 0.09) ** 2) * on
+    hole = (1 - smoothstep(0.12, 0.24, r)) * on
+    H = 0.45 + 0.26 * prof + 0.04 * fine + 0.08 * clump + 0.12 * ring - 0.10 * hole
+    tone = 0.62 + 0.55 * prof + 0.06 * fine + 0.10 * clump + 0.25 * ring - 0.35 * hole
+    bleach = norm01(F.noise(6, 20, 0.4, sx=30.0, sy=1.0))
+    base = np.array([0.88, 0.70, 0.30])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
+        * np.array([1.0, 1.06, 1.3])[None, None, :] ** (bleach - 0.5)[..., None]
+    return H, np.clip(base * tone[..., None], 0, 1)
 
 
 def m_birch_log(F, n):
