@@ -163,7 +163,7 @@ public final class MetalPatches {
      * Half-width of the pad {@link #stamp} levels round a patch centre (a 7x7): it clears everything above the ground
      * in it, so a pad that reached the arena wall would cut a hole in it (maps.ExtractorClearance keeps patches off it).
      */
-    public static final int PAD_HALF = 3;
+    public static final int PAD_HALF = PadHeight.PAD_HALF;
 
     /**
      * True when the 7x7 pad round (x, z) at ground height {@code padY} holds no water column: the pad leveller leaves
@@ -229,8 +229,16 @@ public final class MetalPatches {
             synchronized (existing) {
                 earlier = new java.util.ArrayList<>(existing);
             }
-        // the recorded centre is the patch block itself (real ground, not the heightmap's idea of it)
+        // the recorded centre is the patch block itself (real ground, not the heightmap's idea of it); a pad that
+        // overlaps an earlier one is levelled to that pad's height, or the shared strip it may not re-level would stand
+        // a step above or below this pad (PadHeight: a player's extractor refused, Oct 29)
         int padY = solidTop(level, x, z);
+        if (!wet) {
+            java.util.List<int[]> earlierPads = new java.util.ArrayList<>(earlier.size());
+            for (BlockPos o : earlier)
+                earlierPads.add(new int[] { o.getX(), o.getY(), o.getZ() });
+            padY = PadHeight.of(x, z, padY, earlierPads);
+        }
         if (wet) {
             // no dry ground in reach (open water): the pad becomes an island flush with the water's surface
             BlockPos.MutableBlockPos w = new BlockPos.MutableBlockPos(x, padY + 1, z);
