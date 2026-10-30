@@ -432,24 +432,25 @@ STEM = (0.19, 0.31, 0.11)
 FLOWERS = {
     # stems: (x offset from the card's middle, height of the head (of the card), lean in degrees); head: radius in
     # texels, lobes (petals; 0 = a round ragged head), lobe depth; colours of the petals and the centre (radius)
-    "dandelion": dict(stems=((0, 0.50, 4),), head=(11.0, 0, 0.18), petal=(0.94, 0.74, 0.12),
+    "dandelion": dict(stems=((0, 0.50, 4),), head=(9.0, 0, 0.18), petal=(0.86, 0.68, 0.14),
                       centre=((0.88, 0.58, 0.08), 4.0), leaves=((-1, 0.30, 62), (1, 0.26, 66), (-1, 0.20, 80))),
-    "poppy": dict(stems=((0, 0.58, -5),), head=(12.0, 4, 0.30), petal=(0.76, 0.10, 0.07),
+    "poppy": dict(stems=((0, 0.58, -5),), head=(10.0, 4, 0.30), petal=(0.66, 0.12, 0.09),
                   centre=((0.12, 0.10, 0.08), 3.5), leaves=((-1, 0.26, 55), (1, 0.30, 50))),
     "azure_bluet": dict(stems=((-6, 0.44, -14), (2, 0.52, 4), (8, 0.40, 18), (-1, 0.36, -2)), head=(6.0, 4, 0.30),
                         petal=(0.86, 0.88, 0.92), centre=((0.86, 0.74, 0.26), 2.0), leaves=((-1, 0.16, 60), (1, 0.14, 64))),
-    "cornflower": dict(stems=((0, 0.60, 3),), head=(11.0, 9, 0.38), petal=(0.24, 0.38, 0.82),
+    "cornflower": dict(stems=((0, 0.60, 3),), head=(9.0, 9, 0.38), petal=(0.26, 0.36, 0.72),
                        centre=((0.30, 0.20, 0.52), 3.5), leaves=((-1, 0.36, 25), (1, 0.32, 28))),
-    "oxeye_daisy": dict(stems=((0, 0.60, -3),), head=(13.0, 12, 0.42), petal=(0.92, 0.92, 0.88),
+    "oxeye_daisy": dict(stems=((0, 0.60, -3),), head=(11.0, 12, 0.42), petal=(0.86, 0.86, 0.82),
                         centre=((0.93, 0.70, 0.12), 4.5), leaves=((-1, 0.24, 58), (1, 0.22, 62))),
-    "allium": dict(stems=((0, 0.74, 2),), head=(15.0, 0, 0.10), petal=(0.60, 0.36, 0.76),
-                   centre=((0.50, 0.28, 0.66), 0.0), leaves=((-1, 0.40, 30), (1, 0.36, 34))),
+    "allium": dict(stems=((0, 0.74, 2),), head=(11.5, 0, 0.10), petal=(0.52, 0.34, 0.66),
+                   centre=((0.44, 0.27, 0.58), 0.0), leaves=((-1, 0.40, 30), (1, 0.36, 34))),
     "lily_of_the_valley": dict(stems=((2, 0.52, -26),), head=(4.5, 0, 0.05), petal=(0.93, 0.94, 0.90),
                                centre=((0.80, 0.84, 0.70), 0.0), leaves=((-1, 0.50, 14), (1, 0.46, 18)),
                                bells=5, leaf_w=18.0),
-    "red_tulip": dict(stems=((0, 0.56, 2),), head=(9.5, 3, 0.25), petal=(0.80, 0.16, 0.10),
+    "red_tulip": dict(stems=((0, 0.56, 2),), head=(8.0, 3, 0.25), petal=(0.70, 0.16, 0.11),
                       centre=((0.66, 0.10, 0.07), 0.0), leaves=((-1, 0.36, 20), (1, 0.32, 24)), cup=True, leaf_w=14.0),
 }
+# r42 (eyes 41058728743: at the 34 view the flowers read as confetti dots): heads ~20% smaller and a shade duller
 STEM_W = 6.5          # texels (128x): >= 1.5 texels at the RTS mip, deep green so it never reads as lime
 
 
