@@ -227,8 +227,10 @@ class ConstructionGridTest {
 
     /**
      * Round 13 critic: the ghost read as a lattice of translucent cubes. One volume: a missing block's face is drawn only
-     * where the block beyond it is not part of the site (air or outside) - never between two missing blocks, never
-     * against standing stone.
+     * where the cell beyond it is not part of the ghost's volume - never between two missing blocks. Round 15 critic:
+     * a parallelogram of grass showed through the ghost - a hull face against a standing block was skipped, and where
+     * that block is not a full cube (a lantern, a slab, a pane) the eye sees past it into the volume with no face
+     * drawn. Now the face is kept against standing blocks too: behind a full block the depth test hides it.
      */
     @Test
     void theGhostHasOnlyItsExteriorFaces() {
@@ -237,17 +239,18 @@ class ConstructionGridTest {
         assertTrue(g.ghostFace(2, 1, 0, 0) && g.ghostFace(2, 1, 0, 2), "the wall's two long faces");
         assertTrue(!g.ghostFace(2, 1, 0, 1) && !g.ghostFace(2, 1, 0, 3), "between two missing blocks");
         assertTrue(!g.ghostFace(2, 1, 0, 4), "under the missing course above");
-        assertTrue(!g.ghostFace(2, 1, 0, 5), "on standing stone");
-        assertTrue(!g.ghostFace(1, 1, 0, 3), "against the standing block at x 0");
+        assertTrue(g.ghostFace(2, 1, 0, 5), "on standing stone: kept (depth hides it behind a full block)");
+        assertTrue(g.ghostFace(1, 1, 0, 3), "against the standing block at x 0: kept");
         assertTrue(g.ghostFace(5, 2, 0, 4) && g.ghostFace(5, 2, 0, 1), "the top course's top and end");
-        assertTrue(g.ghostFace(0, 2, 0, 3) && !g.ghostFace(0, 2, 0, 5), "over the stand at x 0: its end, not its foot");
+        assertTrue(g.ghostFace(0, 2, 0, 3) && g.ghostFace(0, 2, 0, 5), "over the stand at x 0: its end and its foot");
         assertTrue(!g.ghostFace(0, 0, 0, 4), "a standing block has no ghost face");
         int faces = 0;
         for (int i = 0; i < g.missingCount(); i++)
             for (int dir = 0; dir < 6; dir++)
                 if (g.ghostFace(g.missingX(i), g.missingY(i), g.missingZ(i), dir)) faces++;
-        // the 11 missing blocks' hull: -z and +z 11 each, the top 6, the ends: +x 2 (courses 1, 2), -x 1 (course 2)
-        assertEquals(11 + 11 + 6 + 2 + 1, faces);
+        // the 11 missing blocks' hull: -z and +z 11 each, the top 6, the ends: +x 2 (courses 1, 2), -x 2 (course 2, and
+        // course 1 against the standing x 0), the feet 6 (course 1 on the foot course 5, course 2 on the stand at x 0)
+        assertEquals(11 + 11 + 6 + 2 + 2 + 6, faces);
         // a hollow hall (isVolume): the missing walls and the room they enclose are one hull - no wall's inner face
         List<int[]> b = new ArrayList<>();
         for (int y = 0; y < 4; y++)
@@ -291,23 +294,21 @@ class ConstructionGridTest {
 
     /**
      * Round 14 critic: the front was a 3-5 px orange edge on scattered block tops at many heights ("orange-trimmed
-     * blocks", not "the row being laid"). Now ONE course per wall face: the highest course partly laid on that face
-     * (with none, the lowest still missing there), and the band runs along that course's whole OUTER edge at its bed -
+     * blocks"). Round 15 critic: one course PER FACE still made 5 orange pieces over 270 px of screen height - a face's
+     * end laid a course higher than its long side put its band a course higher. Now ONE course for the whole building:
+     * the lowest layer with a block still missing, banded along that layer's whole OUTER edge at its bed on every face -
      * laid and missing cells alike, one height, nothing on any other block.
      */
     @Test
-    void theFrontIsOneCoursePerWallFace() {
+    void theFrontIsOneCourseForTheWholeBuilding() {
         ConstructionGrid g = wall();
         // dirs: 0 -z, 1 +x, 2 +z, 3 -x
-        assertEquals(1f, g.courseFront(0), 1e-4, "-z: the second course, begun at x 0");
-        assertEquals(1f, g.courseFront(2), 1e-4, "+z: the same course");
-        assertEquals(1f, g.courseFront(1), 1e-4, "+x end: nothing partly laid there, the lowest missing course");
-        assertEquals(2f, g.courseFront(3), 1e-4, "-x end: over the stand at x 0, the third course");
+        assertEquals(1f, g.courseFront(), 1e-4, "the second course: the lowest with a block missing");
         int perSide[] = new int[4];
         for (int i = 0; i < g.courseEdgeCount(); i++) {
             int side = g.courseSide(i);
             perSide[side]++;
-            assertEquals(g.courseFront(side), g.courseY(i), 1e-4, "every edge of a face at that face's one height");
+            assertEquals(1f, g.courseY(i), 1e-4, "every edge at the one height - the -x end too, laid a course up");
             float len = Math.abs(g.courseX1(i) - g.courseX0(i)) + Math.abs(g.courseZ1(i) - g.courseZ0(i));
             assertEquals(1f, len, 1e-4, "one block edge, axis-aligned");
         }
@@ -318,39 +319,42 @@ class ConstructionGridTest {
         assertTrue(hasCourse(g, 0, 0, 1, 0, 1), "-z bed edge of the laid block (0, 1, 0)");
         assertTrue(hasCourse(g, 5, 0, 6, 0, 1), "-z bed edge of the missing block (5, 1, 0)");
         assertTrue(hasCourse(g, 6, 0, 6, 1, 1), "+x end's bed edge");
+        assertTrue(hasCourse(g, 0, 1, 0, 0, 1), "-x end's bed edge, at the same course");
 
-        // the ring site: +x and +z still lack the corner of layer 65, -z and -x are laid to the top of 65
+        // the ring site: +x and +z still lack the corner of layer 65, -z and -x are laid to its top - one band, at 65,
+        // all round (never 66 on the laid faces)
         ConstructionGrid s = site();
-        assertEquals(65f, s.courseFront(1), 1e-4);
-        assertEquals(65f, s.courseFront(2), 1e-4);
-        assertEquals(66f, s.courseFront(0), 1e-4, "laid up: the next course's bed");
-        assertEquals(66f, s.courseFront(3), 1e-4);
+        assertEquals(65f, s.courseFront(), 1e-4);
         for (int i = 0; i < s.courseEdgeCount(); i++) {
             int side = s.courseSide(i);
+            assertEquals(65f, s.courseY(i), 1e-4, "one height round the whole building: side " + side);
             float out = side == 0 ? s.courseZ0(i) : side == 2 ? s.courseZ0(i) : s.courseX0(i);
             float want = side == 0 ? 20 : side == 2 ? 23 : side == 1 ? 13 : 10;
             assertEquals(want, out, 1e-4, "on the OUTER face, never the court's inner one: side " + side);
         }
-        assertEquals(12, s.courseEdgeCount(), "3 a side, one course each");
+        assertEquals(12, s.courseEdgeCount(), "3 a side, one course");
 
-        // a scattered high block does not drag a second band onto the face: one height per face, always
+        // a scattered high block does not drag the band up: the lowest course still missing, not the highest begun
         List<int[]> b = new ArrayList<>();
         for (int y = 0; y < 4; y++) for (int x = 0; x < 4; x++) b.add(new int[] { x, y, 0 });
         ConstructionGrid h = ConstructionGrid.of(b);
         h.clear();
         for (int[] p : b) h.mark(p[0], p[1], p[2], p[1] == 0 || (p[1] == 1 && p[0] < 2) || (p[1] == 2 && p[0] == 0));
         h.finish();
-        assertEquals(2f, h.courseFront(0), 1e-4, "the highest course partly laid");
+        assertEquals(1f, h.courseFront(), 1e-4, "the lowest course with a gap, under the block begun at y 2");
         int n0 = 0;
-        for (int i = 0; i < h.courseEdgeCount(); i++)
-            if (h.courseSide(i) == 0) { n0++; assertEquals(2f, h.courseY(i), 1e-4); }
+        for (int i = 0; i < h.courseEdgeCount(); i++) {
+            assertEquals(1f, h.courseY(i), 1e-4);
+            if (h.courseSide(i) == 0) n0++;
+        }
         assertEquals(4, n0);
+        assertEquals(10, h.courseEdgeCount(), "-z and +z 4 each, the two ends 1 each");
 
-        // all laid on a face: no front there
+        // all laid: no front anywhere
         h.clear();
         for (int[] p : b) h.mark(p[0], p[1], p[2], true);
         h.finish();
-        assertTrue(Float.isNaN(h.courseFront(0)));
+        assertTrue(Float.isNaN(h.courseFront()));
         assertEquals(0, h.courseEdgeCount());
     }
 

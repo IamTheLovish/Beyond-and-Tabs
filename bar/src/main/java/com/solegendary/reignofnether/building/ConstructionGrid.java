@@ -46,13 +46,11 @@ public final class ConstructionGrid {
     private float frontRow = Float.NaN;
     private int nextRow = Integer.MIN_VALUE;
     private final int[] perRow;                        // rim edges per height, scratch for frontRow
-    // the front course per wall face: its layer (or MIN_VALUE), its edges {x0, z0, x1, z1, y} and their sides; the
-    // outer cells standing / missing per (side, layer), scratch
-    private final int[] courseL = new int[4];
+    // the front course of the whole building: its layer (or MIN_VALUE), its edges {x0, z0, x1, z1, y} and their sides
+    private int courseL = Integer.MIN_VALUE;
     private final float[] course = new float[MAX_EDGES * 5];
     private final int[] courseSide = new int[MAX_EDGES];
     private int courseN;
-    private final int[] onFace, offFace;
 
     private ConstructionGrid(int x0, int y0, int z0, int w, int h, int d) {
         this.x0 = x0; this.y0 = y0; this.z0 = z0; this.w = w; this.h = h; this.d = d;
@@ -63,7 +61,6 @@ public final class ConstructionGrid {
         volumeList = new int[w * h * d];
         rowLo = new int[h * d]; rowHi = new int[h * d]; colLo = new int[h * w]; colHi = new int[h * w];
         topMissing = new int[w * d];
-        onFace = new int[4 * h]; offFace = new int[4 * h];
     }
 
     /** @param blocks the site's (non-air) block positions as {x, y, z} */
@@ -139,35 +136,19 @@ public final class ConstructionGrid {
         };
     }
 
-    /** The front course per wall face and its edges (needs {@link #volume}'s row / column extents). */
+    /**
+     * The front course of the whole building and its edges (needs {@link #volume}'s row / column extents): the lowest
+     * layer with a block still missing - the missing list is in index order, layer first, so its first entry's - and
+     * every outer cell of that layer on each side.
+     */
     private void courses() {
-        java.util.Arrays.fill(onFace, 0);
-        java.util.Arrays.fill(offFace, 0);
-        for (int j = 0; j < h; j++)
-            for (int k = 0; k < d; k++)
-                for (int i = 0; i < w; i++) {
-                    byte c = cells[(j * d + k) * w + i];
-                    if (c == EMPTY)
-                        continue;
-                    for (int side = 0; side < 4; side++)
-                        if (outer(i, j, k, side)) {
-                            if (c == STANDING) onFace[side * h + j]++;
-                            else offFace[side * h + j]++;
-                        }
-                }
         courseN = 0;
-        for (int side = 0; side < 4; side++) {
-            int l = Integer.MIN_VALUE;
-            for (int j = h - 1; j >= 0 && l == Integer.MIN_VALUE; j--)
-                if (onFace[side * h + j] > 0 && offFace[side * h + j] > 0)
-                    l = j;
-            for (int j = 0; j < h && l == Integer.MIN_VALUE; j++)
-                if (offFace[side * h + j] > 0)
-                    l = j;
-            courseL[side] = l;
-            if (l == Integer.MIN_VALUE)
-                continue;
-            float y = y0 + l;
+        courseL = missingN > 0 ? missing[0] / (w * d) : Integer.MIN_VALUE;
+        if (courseL == Integer.MIN_VALUE)
+            return;
+        int l = courseL;
+        float y = y0 + l;
+        for (int side = 0; side < 4; side++)
             for (int k = 0; k < d; k++)
                 for (int i = 0; i < w && courseN < MAX_EDGES; i++) {
                     if (cells[(l * d + k) * w + i] == EMPTY || !outer(i, l, k, side))
@@ -181,7 +162,6 @@ public final class ConstructionGrid {
                     }
                     courseSide[courseN++] = side;
                 }
-        }
     }
 
     private void setCourse(int r, float ax, float az, float bx, float bz, float y) {
@@ -350,16 +330,18 @@ public final class ConstructionGrid {
 
     /**
      * A volume cell's face toward {@code dir} (0 -z, 1 +x, 2 +z, 3 -x, 4 +y, 5 -y) belongs to the ghost's hull: the
-     * cell beyond it is neither volume nor standing stone. Never between two cells of the volume (round 13 critic: a
-     * lattice of cubes, alpha doubled at every seam; a hollow hall's walls are one hull with the room they enclose -
-     * {@link #isVolume}), never against standing stone.
+     * cell beyond it is not volume. Never between two cells of the volume (round 13 critic: a lattice of cubes, alpha
+     * doubled at every seam; a hollow hall's walls are one hull with the room they enclose - {@link #isVolume}). Kept
+     * against standing blocks (round 15 critic: grass showed through a hole in the ghost where a skipped face lay behind
+     * a block that is not a full cube - a lantern, a slab); behind a full block the depth test hides it, and it lies
+     * {@link #ghostQuad}'s inset inside its own cell, never on the standing block's face.
      */
     public boolean ghostFace(int x, int y, int z, int dir) {
         if (!isVolume(x, y, z))
             return false;
         int nx = x + (dir == 1 ? 1 : dir == 3 ? -1 : 0), ny = y + (dir == 4 ? 1 : dir == 5 ? -1 : 0);
         int nz = z + (dir == 2 ? 1 : dir == 0 ? -1 : 0);
-        return !isVolume(nx, ny, nz) && !isStanding(nx, ny, nz);
+        return !isVolume(nx, ny, nz);
     }
 
     /**
@@ -397,15 +379,15 @@ public final class ConstructionGrid {
     }
 
     /**
-     * The build front of wall face {@code side} (0 -z, 1 +x, 2 +z, 3 -x): the bed of the course being laid there - the
-     * HIGHEST course partly laid on that face (some of its outer cells standing, some missing), with none the lowest
-     * course still missing on it - as a height (block edges); NaN when the face is laid to the top. Round 14 critic:
-     * the old front edged every rim at or above the front row, a 3-5 px orange edge on scattered block tops at many
-     * heights ("orange-trimmed blocks"); this is ONE course a face.
+     * The build front of the whole building: the bed of the LOWEST layer with a block still missing, as a height (block
+     * edges); NaN when every block stands. Round 14 critic: an orange edge on scattered block tops at many heights
+     * ("orange-trimmed blocks"). Round 15 critic: one course a FACE still gave 5 orange pieces over 270 px of screen
+     * height (a face laid a course further than its neighbour carried its band a course up). Now one course, one
+     * height, for the whole building.
      */
-    public float courseFront(int side) { return courseL[side] == Integer.MIN_VALUE ? Float.NaN : y0 + courseL[side]; }
-    /** The front's edges: every outer cell of each face's front course (laid or missing - the whole course, not only
-     *  where it is laid), the edge at its bed, wound like the rim (the face on its right). */
+    public float courseFront() { return courseL == Integer.MIN_VALUE ? Float.NaN : y0 + courseL; }
+    /** The front's edges: every outer cell of the front course on each side (laid or missing - the whole course, not
+     *  only where it is laid), the edge at its bed, wound like the rim (the face on its right). */
     public int courseEdgeCount() { return courseN; }
     public float courseX0(int i) { return course[i * 5]; }
     public float courseZ0(int i) { return course[i * 5 + 1]; }
