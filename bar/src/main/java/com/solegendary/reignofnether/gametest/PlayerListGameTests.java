@@ -74,9 +74,9 @@ public class PlayerListGameTests {
         } finally {
             GameruleServerEvents.applyShowPlayerList(server, was);
         }
-        // the lobby action travels by ordinal: appended after the sun's, never inserted
-        if (MultiplayerLobby.Action.SET_PLAYER_LIST.ordinal() != MultiplayerLobby.Action.SET_CYCLE.ordinal() + 1)
-            problems.add("SET_PLAYER_LIST is not appended after SET_CYCLE (actions travel by ordinal)");
+        // the lobby action travels by ordinal: appended after the alliances option, never inserted
+        if (MultiplayerLobby.Action.SET_PLAYER_LIST.ordinal() != MultiplayerLobby.Action.SET_ALLIANCES.ordinal() + 1)
+            problems.add("SET_PLAYER_LIST is not appended after SET_ALLIANCES (actions travel by ordinal)");
         fail(helper, problems);
     }
 

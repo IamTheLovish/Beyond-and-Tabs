@@ -447,8 +447,11 @@ public class MultiplayerLobby {
             hostUuid = sp.getUUID();
             hostName = sp.getName().getString();
             MinecraftServer server = sp.getServer();
-            if (server != null)
+            if (server != null) {
                 lockAlliances = server.getGameRules().getRule(com.solegendary.reignofnether.registrars.GameRuleRegistrar.LOCK_ALLIANCES).get();
+                // the "Player list" option likewise starts from the world's saved showPlayerList rule (off by default)
+                playerList = server.getGameRules().getRule(com.solegendary.reignofnether.registrars.GameRuleRegistrar.SHOW_PLAYER_LIST).get();
+            }
             // the host first, then everyone else online, alternating teams so a 1v1 needs no clicks
             addHuman(sp);
             if (server != null)
