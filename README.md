@@ -5,3 +5,4 @@
 - anim-40978023283: spec vindicator_unit:death:side+front:0:100,zombie_unit:death:side:0:100,grunt_unit:death:side:0:100,leafblade_unit:death:side:0:100,cutlass_raider_unit:death:side:0:100,blade_dancer_unit:death:side:0:100,rifle_squad_unit:death:side:0:100,pillager_unit:death:side:0:100, build 8ed189a, 2026-10-30T00:19:55Z
 - anim-40991970032: spec pillager_unit:death:side:0:100,witch_unit:death:side:0:100,vindicator_unit:death:side+front:0:100, build aa95ea8, 2026-10-30T02:36:27Z
 - anim-41022253689: spec blade_dancer_unit:turn:rts,grunt_unit:turn:rts,rifle_squad_unit:turn:rts,windcaller_unit:turn:rts, build a22a5aa, 2026-10-30T07:59:13Z
+- anim-41050396210: spec blade_dancer_unit:turn:rts,grunt_unit:turn:rts,rifle_squad_unit:turn:rts,windcaller_unit:turn:rts, build 869dd32, 2026-10-30T12:09:56Z

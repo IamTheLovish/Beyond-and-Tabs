@@ -1,0 +1,38 @@
+{
+ "title": "windcaller_unit / turn   real game client   window 240 ticks (12.0 s)   views rts   10 frames",
+ "views": [
+  "rts"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +1.18s  (tick 24)",
+  "3  +2.70s  (tick 54)",
+  "4  +3.94s  (tick 79)",
+  "5  +5.10s  (tick 102)",
+  "6  +6.55s  (tick 131)",
+  "7  +7.70s  (tick 154)",
+  "8  +8.89s  (tick 178)",
+  "9  +10.40s  (tick 208)",
+  "10  +11.60s  (tick 232)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +1.18s  (tick 24)",
+   "3  +2.70s  (tick 54)",
+   "4  +3.94s  (tick 79)",
+   "5  +5.10s  (tick 102)",
+   "6  +6.55s  (tick 131)",
+   "7  +7.70s  (tick 154)",
+   "8  +8.89s  (tick 178)",
+   "9  +10.40s  (tick 208)",
+   "10  +11.60s  (tick 232)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}
