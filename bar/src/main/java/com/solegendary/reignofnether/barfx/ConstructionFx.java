@@ -24,7 +24,7 @@ import java.util.WeakHashMap;
  *   paintover beat the "built but foggy" one a fresh critic scored 5/10), so how much is left reads at a glance;</li>
  *   <li>the build front's cut line glows where blocks are being set;</li>
  *   <li>shafts of light land on the front, a few at a time;</li>
- *   <li>golden glints orbit on the ring (the tools; slice 2 gives them hammer and chisel models);</li>
+ *   <li>golden hammers and chisels orbit on the ring and swing down onto the front (slice 2);</li>
  *   <li>done: the ring flares into a halo and fades.</li>
  * </ul>
  * Building-agnostic: everything comes from the placement's own blocks (the buildings are being reworked). Pure client
@@ -208,18 +208,44 @@ final class ConstructionFx {
         BarFxClient.streak(x0, y0, z0, x1, y1, z1, w, GOLD, a, a);
     }
 
-    /** The tools (for now golden glints with a short trail) orbiting on the ring, dipping as they strike. */
+    /**
+     * The tools orbiting on the ring: golden hammers and chisels in turn, each swinging down onto the front as it
+     * strikes (slice 2 - they were glints). Built from soft streaks so they need no model: a hammer is a handle and a
+     * crosswise head, a chisel a tapered blade. About a block long - ~30 px at the default RTS zoom, enough to read
+     * as a tool, not a spark. A short trail behind each keeps the orbit legible.
+     */
     static void drawGlints(float cx, float front, float cz, float r, float clock, boolean far) {
         int n = far ? 2 : 4;
         for (int i = 0; i < n; i++) {
             float ang = (float) (i * 2 * Math.PI / n + clock * 0.55f);
             float strike = (float) Math.max(0, Math.sin(clock * 3.1f + i * 1.9f));   // a quick dip toward the front
             float y = front + 1.3f - 0.8f * strike * strike;
-            float x = cx + (float) Math.cos(ang) * r * 0.97f, z = cz + (float) Math.sin(ang) * r * 0.97f;
+            float ca = (float) Math.cos(ang), sa = (float) Math.sin(ang);
+            float x = cx + ca * r * 0.97f, z = cz + sa * r * 0.97f;
             float pa = ang - 0.35f;
             float px = cx + (float) Math.cos(pa) * r * 0.97f, pz = cz + (float) Math.sin(pa) * r * 0.97f;
-            BarFxClient.streak(px, front + 1.3f, pz, x, y, z, 0.12f, GOLD, 0f, 0.5f);
-            BarFxClient.softDisc(x, y, z, 0.32f, LIGHT, 1f, GOLD, 0.2f, 10, 0, 0);
+            BarFxClient.streak(px, front + 1.3f, pz, x, y, z, 0.12f, GOLD, 0f, 0.35f);
+            if (far) {
+                BarFxClient.softDisc(x, y, z, 0.32f, LIGHT, 1f, GOLD, 0.2f, 10, 0, 0);
+                continue;
+            }
+            // the tool hangs head-down toward the wall it works on; the swing tips it from raised (back) to struck
+            float swing = 1.1f - 1.4f * strike;              // radians off vertical, along the orbit
+            float tx = -sa, tz = ca;                          // the orbit's tangent
+            float hx = (float) Math.sin(swing) * tx, hy = (float) -Math.cos(swing), hz = (float) Math.sin(swing) * tz;
+            float len = 0.95f;
+            float gx = x - hx * len * 0.5f, gy = y - hy * len * 0.5f, gz = z - hz * len * 0.5f;   // the grip end
+            float bx = x + hx * len * 0.5f, by = y + hy * len * 0.5f, bz = z + hz * len * 0.5f;   // the working end
+            if ((i & 1) == 0) {
+                BarFxClient.streak(gx, gy, gz, bx, by, bz, 0.09f, GOLD, 0.9f, 0.9f);              // handle
+                // the head lies across the handle's end, perpendicular to it in the swing plane
+                float qx = tx * (float) Math.cos(swing), qy = (float) Math.sin(swing), qz = tz * (float) Math.cos(swing);
+                BarFxClient.streak(bx - qx * 0.3f, by - qy * 0.3f, bz - qz * 0.3f,
+                        bx + qx * 0.3f, by + qy * 0.3f, bz + qz * 0.3f, 0.2f, LIGHT, 1f, 1f);
+            } else {
+                BarFxClient.streak(gx, gy, gz, bx, by, bz, 0.13f, GOLD, 0.9f, 0.5f);               // chisel: tapers
+                BarFxClient.softDisc(bx, by, bz, 0.12f + 0.25f * strike, LIGHT, strike, GOLD, 0, 8, 0, 0);   // the bite
+            }
         }
     }
 
