@@ -142,7 +142,8 @@ TARGETS = {
     "deepslate_tiles":            dict(luma=0.21, std=0.045, sat=0.01, tilt=14.0, smooth=30, pore=10),
     "deepslate":                  dict(luma=0.19, std=0.045, sat=0.05, tilt=21.0, smooth=12, pore=10),
     "deepslate_top":              dict(luma=0.19, std=0.040, sat=0.05, tilt=18.0, smooth=15, pore=10),
-    "polished_deepslate":         dict(luma=0.31, std=0.030, sat=0.02, tilt=4.5, smooth=90, pore=4),
+    # r33 (critic: "brown-grey"): blue-grey - sat 0.02 -> 0.14 on a cool base
+    "polished_deepslate":         dict(luma=0.32, std=0.030, sat=0.14, tilt=4.5, smooth=90, pore=4),
     # r31: blue-grey slate (sat 0.03 -> 0.10), a touch lighter (0.24 -> 0.27), joints lower in contrast (std 0.075
     # -> 0.060), flatter flakes (tilt 21 -> 16)
     # r31b (eyes: washed-out mosaic): the joints back (std 0.06 -> 0.085, tilt 16 -> 20), cooler (sat 0.10 -> 0.12)
@@ -247,7 +248,8 @@ TARGETS = {
     "basalt_side": dict(luma=0.30, std=0.060, sat=0.05, tilt=16.0, smooth=30, pore=10, soften=1.0),
     "basalt_top": dict(luma=0.30, std=0.060, sat=0.05, tilt=14.0, smooth=26, pore=10, soften=1.0),
     # r32: a cut face - calm (std 0.06 -> 0.035), flat (tilt 13.9 -> 5), satin (25 -> 70); basalt keeps its columns
-    "smooth_basalt": dict(luma=0.30, std=0.035, sat=0.06, tilt=5.0, smooth=70, pore=8),
+    # r33 (critic: "concrete pavers"): no seam or rim - the spread in the grain only (std 0.035 -> 0.025)
+    "smooth_basalt": dict(luma=0.30, std=0.025, sat=0.04, tilt=4.0, smooth=70, pore=8),
     # r31 (art director: "reads as dirt"): grey-brown ash - sat 0.37 -> 0.20, a touch lighter, matte (smooth 60 -> 28)
     "soul_sand": dict(luma=0.28, std=0.050, sat=0.30, tilt=15.0, smooth=28, pore=48, soften=0.8),   # r31b: warmer
     # r31 (sampler 3: metals "painted stone"): chamfer + brushing in the relief (tilt 10 -> 13), smoother (147 -> 178)
@@ -1662,7 +1664,7 @@ def m_polished(F, n, base, mottle=0.10, crystals=0.10, fleck=(20, 56), seam=0.0,
     mot = F.fbm(4, 3, 0.5) if calm else F.fbm(3, 4, 0.55)
     speck = F.noise(16, 48, 0.0)
     flecks = smoothstep(1.3, 2.2, F.noise(fleck[0], fleck[1], 0.0))
-    bev = frame(F, rim[0], rim[1])
+    bev = frame(F, rim[0], rim[1]) if rim else np.ones((n, n))     # rim=None (r33): one continuous slab, no border
     H = 0.35 + 0.5 * bev + (0.015 if calm else 0.03) * mot + (0.004 if calm else 0.01) * speck
     shade = (0.88 + mottle * mot + (0.008 if calm else 0.02) * speck - crystals * flecks) * (0.75 + 0.25 * bev)
     if seam > 0:
@@ -3641,7 +3643,8 @@ def recipes():
         "deepslate": lambda F, n: m_deepslate(F, n),
         "deepslate_top": lambda F, n: m_deepslate(F, n, top=True),
         # r32 (critic: polished vs rough twins identical at RTS): a faint 2x2 seam, a tighter calmer grain
-        "polished_deepslate": lambda F, n: m_polished(F, n, (0.32, 0.32, 0.34), 0.05, 0.03, seam=0.25, calm=True),
+        # r33 (critic: "reads brown-grey"): cooled to a blue-grey slate
+        "polished_deepslate": lambda F, n: m_polished(F, n, (0.27, 0.31, 0.40), 0.05, 0.03, seam=0.25, calm=True),
         # r21: 22 small high-contrast stones read as salt-and-pepper on the dark base - fewer, larger, calmer stones
         # r31: m_cobbled_slate - 16 flat angular flakes per face, soft joints (3-4 domed stones read as cartoon)
         "cobbled_deepslate": lambda F, n: m_cobbled_slate(F, n, cells=16),
@@ -3718,8 +3721,9 @@ def recipes():
         "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
         "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
         # r32 (critic: smooth basalt vs basalt identical): a cut, calm face with a faint 2x2 seam, a hair of rim
-        "smooth_basalt": lambda F, n: m_polished(F, n, (0.28, 0.28, 0.30), 0.05, 0.03, seam=0.25, rim=(0.03, 0.006),
-                                                 calm=True),
+        # r33 (critic, eyes 41029731853: "concrete pavers" - the 2x2 seam and the rim drew a paver grid): one calm
+        # polished slab with a faint grain, no seam, no rim; a cut face still (flat, satin), basalt keeps its columns
+        "smooth_basalt": lambda F, n: m_polished(F, n, (0.28, 0.28, 0.30), 0.06, 0.03, rim=None, calm=True),
         "soul_sand": m_soul_sand,
         # r31: m_gem - 3-5 hard flat facets, deep body, bright tops (m_facets' 16-18 pyramids read as cabbage)
         "diamond_block": lambda F, n: m_gem(F, n, (0.40, 0.72, 0.82), (0.90, 0.98, 1.0)),   # r33: brighter body
