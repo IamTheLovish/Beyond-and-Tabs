@@ -48,4 +48,72 @@ class DragonFlightFeelTest {
         assertEquals(0f, Dragon.brakeNod(P, -0.008f), 1e-6f, "speeding up: no nod");
         assertTrue(Dragon.brakeNod(P, 1f) <= 12f, "capped: a sudden stop never folds the neck");
     }
+
+    // ---- lovish after a playtest, Oct 30: "the wings looked really choppy as well as the model leaned to the side
+    // while attacking and flying in a weird way" -------------------------------------------------------------------
+
+    /** The per-tick speed a client read off a cruising dragon tracked every 3rd tick: packets late, then bunched. */
+    private static final float[] JITTER = { 0.17f, 0.17f, 0.17f, 0f, 0.34f, 0.17f, 0.17f };
+
+    /**
+     * Choppy wings: the drivers read the speed off the client's own tick positions, and a stalled tick followed by a
+     * doubled one read as braking (the flare threw the wings forward) and swung the glide in and out. A cruise that
+     * stutters like that must not flare and must keep its glide steady (sampled at 3 frames a tick); a real brake
+     * still flares.
+     */
+    @Test
+    void packetJitterNeitherFlaresNorFlickersTheGlide() {
+        float[] st = Dragon.newState(0f);
+        float maxFlare = 0f, maxGlideStep = 0f, lastGlide = Float.NaN;
+        for (int t = 0; t < 240; t++) {
+            float speed = JITTER[t % JITTER.length];
+            for (int f = 0; f < 3; f++)
+                Dragon.drivers(st, P, speed, 0f, 1f / 3f);
+            if (t >= 80) {
+                maxFlare = Math.max(maxFlare, st[Dragon.ST_FLARE]);
+                if (!Float.isNaN(lastGlide))
+                    maxGlideStep = Math.max(maxGlideStep, Math.abs(st[Dragon.ST_GLIDE] - lastGlide));
+            }
+            lastGlide = st[Dragon.ST_GLIDE];
+        }
+        assertTrue(maxFlare <= 0.1f, "a stuttering cruise flared to " + maxFlare);
+        assertTrue(maxGlideStep <= 0.02f, "the glide weight swung " + maxGlideStep + " in one tick");
+        // a real brake: 0.17 b/t down to a hover at the steering's 0.012 a tick
+        float[] br = Dragon.newState(0f);
+        for (int t = 0; t < 60; t++)
+            Dragon.drivers(br, P, 0.17f, 0f, 1f);
+        float peak = 0f;
+        for (int t = 0; t < 40; t++) {
+            Dragon.drivers(br, P, Math.max(0f, 0.17f - 0.012f * t), 0f, 1f);
+            peak = Math.max(peak, br[Dragon.ST_FLARE]);
+        }
+        assertTrue(peak >= 0.5f, "a real brake still flares (peak " + peak + ")");
+    }
+
+    /**
+     * The lean while attacking: hovering, the dragon turns to face its target at 6 deg a tick, and the bank read that
+     * turn as a flight turn - a steady roll of ~13 deg while it turned on the spot. A dragon turning in place barely
+     * rolls; one turning in flight still banks into the turn.
+     */
+    @Test
+    void hoveringWhileTurningToATargetBarelyLeans() {
+        float[] st = Dragon.newState(0f);
+        float yaw = 0f, maxRoll = 0f;
+        for (int t = 0; t < 60; t++)
+            for (int f = 0; f < 3; f++) {
+                yaw += 2f;
+                Dragon.bankStep(st, P, yaw, 1f / 3f, P.bankHover, 0f);
+                maxRoll = Math.max(maxRoll, Math.abs(st[Dragon.ST_BANK]));
+            }
+        assertTrue(maxRoll <= 3f, "turning on the spot rolled " + maxRoll + " deg");
+
+        float[] fl = Dragon.newState(0f);
+        yaw = 0f;
+        for (int t = 0; t < 60; t++)
+            for (int f = 0; f < 3; f++) {
+                yaw += 4f / 3f;
+                Dragon.bankStep(fl, P, yaw, 1f / 3f, 1f, 0.167f);
+            }
+        assertTrue(fl[Dragon.ST_BANK] >= 18f, "a cruise turn at 4 deg/tick banks (" + fl[Dragon.ST_BANK] + ")");
+    }
 }
