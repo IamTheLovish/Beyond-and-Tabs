@@ -45,6 +45,10 @@ public final class KeybindMigration {
 
     static final List<Stale> STALE = List.of(
         // (Attack A -> X, layout 1, is gone with the Attack binding itself: see CARRY below, layout 3.)
+        // Oct 23 to Oct 26: the commander and idle T2 builder buttons shipped on End / Home, which the production
+        // monitor (Home) and pause unit production (End) now use. Their chords are Ctrl+C / Ctrl+Shift+B (ChordKeys).
+        new Stale(2, "key.reignofnether.select_commander", GLFW.GLFW_KEY_END, "Select commander End -> Ctrl+C"),
+        new Stale(2, "key.reignofnether.idle_t2_builder", GLFW.GLFW_KEY_HOME, "Idle T2 builder Home -> Ctrl+Shift+B"),
         // Oct 8 to Oct 11: the first WASD builds. Stop sat on Space, Patrol on Y and Guard on P; c4d0b47 moved them to
         // BAR's S / P / G and the gather toggle gave G up, but an install of those days keeps the old keys.
         new Stale(1, "key.reignofnether.stop", GLFW.GLFW_KEY_SPACE, "Stop Space -> S (BAR)"),
@@ -59,9 +63,9 @@ public final class KeybindMigration {
         new Stale(1, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_Z, "Build slot 8 Z -> . (Z is ability slot 2)"),
         new Stale(1, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_X, "Build slot 9 X -> , (X is Attack)"),
         new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)"),
-        // Oct 21 (b6e85bad): Select all military units moved K -> "-" because K is build slot 7. Layout 1 forgot the row,
-        // so every install that saved K kept it, and K picked the building instead (Lane C tester, TESTER-ASKS 16).
-        new Stale(2, "key.reignofnether.select_army", GLFW.GLFW_KEY_K, "Select army K -> - (K is build slot 7)")
+        // Oct 21 (b6e85bad): Select all military units moved K -> "-" because K is build slot 7. Layouts 1 and 2 forgot
+        // the row, so every install that saved K kept it, and K picked the building instead (Lane C tester, TESTER-ASKS 16).
+        new Stale(3, "key.reignofnether.select_army", GLFW.GLFW_KEY_K, "Select army K -> - (K is build slot 7)")
     );
 
     /**

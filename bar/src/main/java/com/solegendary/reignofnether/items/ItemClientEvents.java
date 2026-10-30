@@ -282,6 +282,11 @@ public class ItemClientEvents {
     public static void onKeyRelease(ScreenEvent.KeyReleased.KeyReleased.Post evt) {
         if (!shouldRenderUnitInventory(HudClientEvents.hudSelectedEntity))
             return;
+        // a Ctrl chord (keybinds/ChordKeys: Ctrl+C commander, Ctrl+B idle builder...) is not item slot 5 / 6 (C / B)
+        if (com.solegendary.reignofnether.keybinds.ChordKeys.of(evt.getKeyCode(), Keybindings.ctrlMod.isDown(),
+                net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())
+                != com.solegendary.reignofnether.keybinds.ChordKeys.Chord.NONE)
+            return;
         // one key press does one thing: the card's button (item3 = F is Fight) wins over an inventory slot on the key
         if (!com.solegendary.reignofnether.keybinds.KeyPress.inventoryKeyMayFire(HudClientEvents.isCardKey(evt.getKeyCode())))
             return;

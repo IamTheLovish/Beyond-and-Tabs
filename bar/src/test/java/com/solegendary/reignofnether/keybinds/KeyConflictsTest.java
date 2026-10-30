@@ -41,16 +41,15 @@ class KeyConflictsTest {
 
     @Test
     void aPanKeyMovedOntoAnOrderKeyIsFlaggedToo() {
-        // pan-up moved to X, where only the builder's energy key ships now (Attack is merged into Fight, Oct 22): it did
-        // not move, the pan key did - flagged. It is no longer an Attack key.
+        // pan-up moved to X, where the Military tab key and grid cell 10 ship (Attack is merged into Fight, Oct 22): they
+        // did not move, the pan key did - both flagged
         List<KeyConflicts.Overlap> o = overlaps(Map.of("key.reignofnether.pan_up", GLFW.GLFW_KEY_X));
-        assertEquals(1, o.size(), o.toString());
-        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_energy", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
-        // and on F, where Fight ships
-        o = overlaps(Map.of("key.reignofnether.pan_up", GLFW.GLFW_KEY_F));
-        // (F is also build slot 3 and inventory slot 3, so those are flagged too)
-        assertEquals(3, o.size(), o.toString());
-        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.fight","key.reignofnether.pan_up", GLFW.GLFW_KEY_F)), o.toString());
+        assertEquals(2, o.size(), o.toString());
+        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_tab_military", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_grid_10", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        // pan-up moved to F, where the order Fight ships: an order key under a moved pan key is flagged too
+        List<KeyConflicts.Overlap> f = overlaps(Map.of("key.reignofnether.pan_up", GLFW.GLFW_KEY_F));
+        assertTrue(f.contains(new KeyConflicts.Overlap("key.reignofnether.fight", "key.reignofnether.pan_up", GLFW.GLFW_KEY_F)), f.toString());
     }
 
     @Test

@@ -62,90 +62,110 @@ public final class HeroKits {
 
     // ------------------------------------------------------------------------------------------------ Sunforged
     public static final HeroKit DAWN_PALADIN = new HeroKit("dawn_paladin", "Dawn Paladin", "villagers", Role.VANGUARD,
-        200, 9, 4, 0.28f, 100, 8, 0.8f, HERO_COST,   // 160/7 -> 200/9 (balance-pass: a level-5 hero lost to two Iron Golems; design/balance.md "Heroes")
-        new AbilitySpec("shield_charge", "hero_shield_charge", Target.GROUND, Ai.ENGAGE, cd(14, 12, 10), v(8, 10, 12), 2.5f,
-            30, 2, v(6, 9, 12), v(0.5f, 0.75f, 1.0f), HeroKits::shieldCharge),
-        new AbilitySpec("judgement", "hero_judgement", Target.ENEMY, Ai.STRIKE, cd(12, 10, 8), v(10), 0,
+        220, 9, 4, 0.28f, 100, 8, 0.8f, HERO_COST,   // 160/7 -> 200/9 (balance-pass: a level-5 hero lost to two Iron Golems; design/balance.md "Heroes")
+        new AbilitySpec("shield_charge", "hero_shield_charge", Target.GROUND, Ai.ENGAGE, cd(13, 11, 9), v(8, 10, 12), 2.5f,
+            30, 2, v(6, 9, 12), v(0.5f, 0.75f, 1.0f), HeroKits::shieldCharge).cc(),
+        new AbilitySpec("judgement", "hero_judgement", Target.ENEMY, Ai.STRIKE, cd(11, 9, 7), v(10), 0,
             35, 6, v(10, 15, 20), v(50), HeroKits::judgement),
-        new AbilitySpec("sun_banner", "hero_sun_banner", Target.SELF, Ai.FIGHT_SELF, cd(30, 26, 22), v(0), 8,
+        new AbilitySpec("sun_banner", "hero_sun_banner", Target.SELF, Ai.FIGHT_SELF, cd(27, 23, 20), v(0), 8,
             50, 0, v(6, 8, 10), v(0, 0, 10), HeroKits::sunBanner),
-        new AbilitySpec("aegis_of_dawn", "hero_aegis_of_dawn", Target.SELF, Ai.FIGHT_SELF, cd(75, 65, 55), v(0), 14,
+        new AbilitySpec("aegis_of_dawn", "hero_aegis_of_dawn", Target.SELF, Ai.FIGHT_SELF, cd(68, 59, 50), v(0), 14,
             80, 0, v(8, 12, 16), v(12), HeroKits::aegisOfDawn));
 
     // ------------------------------------------------------------------------------------------------ Gravebound
     public static final HeroKit GRAVECALLER = new HeroKit("gravecaller", "Gravecaller", "monsters", Role.CASTER,
-        165, 8, 0, 0.26f, 140, 12, 1.2f, HERO_COST,   // 120/6 -> 165/8 (balance-pass)
-        new AbilitySpec("bone_spear", "hero_bone_spear", Target.GROUND, Ai.STRIKE, cd(8, 7, 6), v(14), 0,
+        205, 8, 0, 0.26f, 140, 12, 1.2f, HERO_COST,   // 120/6 -> 165/8 (balance-pass)
+        new AbilitySpec("bone_spear", "hero_bone_spear", Target.GROUND, Ai.STRIKE, cd(7, 6, 5), v(14), 0,
             30, 6, v(8, 12, 16), v(1, 1, 1.3f), HeroKits::boneSpear),
-        new AbilitySpec("grave_step", "hero_grave_step", Target.GROUND, Ai.NONE, cd(16, 13, 10), v(8, 11, 14), 3,
+        new AbilitySpec("grave_step", "hero_grave_step", Target.GROUND, Ai.NONE, cd(14, 12, 9), v(8, 11, 14), 3,
             25, 2, v(8, 11, 14), v(2, 2.5f, 3), HeroKits::graveStep),
-        new AbilitySpec("raise_the_fallen", "hero_raise_the_fallen", Target.GROUND, Ai.FIGHT_GROUND, cd(40, 35, 30), v(10), 2,
+        new AbilitySpec("raise_the_fallen", "hero_raise_the_fallen", Target.GROUND, Ai.FIGHT_GROUND, cd(36, 32, 27), v(10), 2,
             60, 10, v(2, 3, 4), v(20, 25, 30), HeroKits::raiseTheFallen),
-        new AbilitySpec("grave_sight", "hero_grave_sight", Target.SELF, Ai.FIGHT_SELF, cd(60, 50, 40), v(0), 24,
+        new AbilitySpec("grave_sight", "hero_grave_sight", Target.SELF, Ai.FIGHT_SELF, cd(54, 45, 36), v(0), 24,
             70, 0, v(24, 30, 36), v(8, 11, 14), HeroKits::graveSight));
 
     // ------------------------------------------------------------------------------------------------ Horde
     public static final HeroKit HORDE_WARCHIEF = new HeroKit("horde_warchief", "Warchief", "piglins", Role.RAIDER,
-        180, 9.5f, 2, 0.30f, 100, 8, 0.8f, HERO_COST,   // 150/8 -> 180/9.5 (balance-pass; at the hero test's 2.5-Tesla-Walker cap)
-        new AbilitySpec("savage_leap", "hero_savage_leap", Target.GROUND, Ai.ENGAGE, cd(14, 12, 10), v(10, 12, 14), 3,
-            30, 2, v(6, 9, 12), v(2, 2, 3), HeroKits::savageLeap),
-        new AbilitySpec("frenzy", "hero_frenzy", Target.SELF, Ai.FIGHT_SELF, cd(24, 20, 16), v(0), 0,
+        205, 9.5f, 2, 0.30f, 100, 8, 0.8f, HERO_COST,   // 150/8 -> 180/9.5 (balance-pass; at the hero test's 2.5-Tesla-Walker cap)
+        new AbilitySpec("savage_leap", "hero_savage_leap", Target.GROUND, Ai.ENGAGE, cd(13, 11, 9), v(10, 12, 14), 3,
+            30, 2, v(6, 9, 12), v(2, 2, 3), HeroKits::savageLeap).cc(),
+        new AbilitySpec("frenzy", "hero_frenzy", Target.SELF, Ai.FIGHT_SELF, cd(22, 18, 14), v(0), 0,
             40, 0, v(40, 50, 60), v(6, 7, 8), HeroKits::frenzy),
-        new AbilitySpec("cleave", "hero_cleave", Target.SELF, Ai.FIGHT_SELF, cd(9, 8, 7), v(0), 4,
+        new AbilitySpec("cleave", "hero_cleave", Target.SELF, Ai.FIGHT_SELF, cd(8, 7, 6), v(0), 4,
             25, 0, v(8, 12, 16), v(4, 4, 4.5f), HeroKits::cleave),
-        new AbilitySpec("war_drums", "hero_war_drums", Target.SELF, Ai.FIGHT_SELF, cd(70, 60, 50), v(0), 14,
+        new AbilitySpec("war_drums", "hero_war_drums", Target.SELF, Ai.FIGHT_SELF, cd(63, 54, 45), v(0), 14,
             80, 0, v(8, 10, 12), v(14, 14, 16), HeroKits::warDrums));
 
     // ------------------------------------------------------------------------------------------------ Verdant Court
     public static final HeroKit THORNHEART_DRUID = new HeroKit("thornheart_druid", "Thornheart Druid", "verdant_court", Role.SUPPORT,
-        165, 7, 0, 0.28f, 140, 12, 1.4f, HERO_COST,   // 120/5 -> 165/7 (balance-pass)
-        new AbilitySpec("thorn_volley", "hero_thorn_volley", Target.GROUND, Ai.STRIKE, cd(10, 9, 8), v(12), 3,
-            30, 6, v(5, 8, 11), v(1, 1.25f, 1.5f), HeroKits::thornVolley),
-        new AbilitySpec("root_walk", "hero_root_walk", Target.GROUND, Ai.NONE, cd(18, 15, 12), v(10, 14, 18), 3,
-            30, 4, v(10, 14, 18), v(1), HeroKits::rootWalk),
-        new AbilitySpec("rejuvenate", "hero_rejuvenate", Target.GROUND, Ai.FIGHT_GROUND, cd(20, 17, 14), v(10), 6,
+        180, 7, 0, 0.28f, 140, 12, 1.4f, HERO_COST,   // 120/5 -> 165/7 (balance-pass)
+        new AbilitySpec("thorn_volley", "hero_thorn_volley", Target.GROUND, Ai.STRIKE, cd(9, 8, 7), v(12), 3,
+            30, 6, v(5, 8, 11), v(1, 1.25f, 1.5f), HeroKits::thornVolley).cc(),
+        new AbilitySpec("root_walk", "hero_root_walk", Target.GROUND, Ai.NONE, cd(16, 14, 11), v(10, 14, 18), 3,
+            30, 4, v(10, 14, 18), v(1), HeroKits::rootWalk).cc(),
+        new AbilitySpec("rejuvenate", "hero_rejuvenate", Target.GROUND, Ai.FIGHT_GROUND, cd(18, 15, 13), v(10), 6,
             50, 6, v(8, 12, 16), v(5), HeroKits::rejuvenate),
-        new AbilitySpec("grove_seed", "hero_grove_seed", Target.GROUND, Ai.FIGHT_GROUND, cd(60, 50, 40), v(10), 3,
+        new AbilitySpec("grove_seed", "hero_grove_seed", Target.GROUND, Ai.FIGHT_GROUND, cd(54, 45, 36), v(10), 3,
             60, 10, v(1, 3, 5), v(3), HeroKits::groveSeed));
 
     // ------------------------------------------------------------------------------------------------ Tidewrought
     public static final HeroKit CORSAIR_CAPTAIN = new HeroKit("corsair_captain", "Corsair Captain", "tidewrought", Role.RAIDER,
-        185, 9, 1, 0.31f, 100, 8, 0.9f, HERO_COST,   // 140/7 -> 185/9 (balance-pass)
-        new AbilitySpec("pistol_shot", "hero_pistol_shot", Target.ENEMY, Ai.STRIKE, cd(7, 6, 5), v(12), 0,
+        215, 9, 1, 0.31f, 100, 8, 0.9f, HERO_COST,   // 140/7 -> 185/9 (balance-pass)
+        new AbilitySpec("pistol_shot", "hero_pistol_shot", Target.ENEMY, Ai.STRIKE, cd(6, 5, 4), v(12), 0,
             20, 6, v(10, 14, 18), v(0.3f, 0.4f, 0.5f), HeroKits::pistolShot),
-        new AbilitySpec("grapple_hook", "hero_grapple_hook", Target.GROUND, Ai.ENGAGE, cd(14, 11, 8), v(10, 13, 16), 0,
-            25, 2, v(10, 13, 16), v(0, 1, 1.5f), HeroKits::grappleHook),
-        new AbilitySpec("riptide", "hero_riptide", Target.SELF, Ai.FIGHT_SELF, cd(16, 14, 12), v(0), 4,
-            40, 0, v(6, 9, 12), v(4, 5, 5), HeroKits::riptide),
-        new AbilitySpec("tidepool", "hero_tidepool", Target.GROUND, Ai.FIGHT_GROUND, cd(60, 50, 40), v(10), 2,
+        new AbilitySpec("grapple_hook", "hero_grapple_hook", Target.GROUND, Ai.ENGAGE, cd(13, 10, 7), v(10, 13, 16), 0,
+            25, 2, v(10, 13, 16), v(0, 1, 1.5f), HeroKits::grappleHook).cc(),
+        new AbilitySpec("riptide", "hero_riptide", Target.SELF, Ai.FIGHT_SELF, cd(14, 13, 11), v(0), 4,
+            40, 0, v(6, 9, 12), v(4, 5, 5), HeroKits::riptide).cc(),
+        new AbilitySpec("tidepool", "hero_tidepool", Target.GROUND, Ai.FIGHT_GROUND, cd(54, 45, 36), v(10), 2,
             60, 8, v(30, 40, 60), v(2, 2, 3), HeroKits::tidepool));
 
     // ------------------------------------------------------------------------------------------------ Stormcallers
     public static final HeroKit STORM_WITCH = new HeroKit("storm_witch", "Storm Witch", "stormcallers", Role.CASTER,
-        130, 7, 0, 0.27f, 160, 14, 1.6f, HERO_COST,   // 110/6 -> 130/7 (balance-pass)
-        new AbilitySpec("chain_lightning", "hero_chain_lightning", Target.ENEMY, Ai.STRIKE, cd(9, 8, 7), v(12), 5,
+        160, 7, 0, 0.27f, 160, 14, 1.6f, HERO_COST,   // 110/6 -> 130/7 (balance-pass)
+        new AbilitySpec("chain_lightning", "hero_chain_lightning", Target.ENEMY, Ai.STRIKE, cd(8, 7, 6), v(12), 5,
             35, 6, v(10, 14, 18), v(2, 3, 4), HeroKits::chainLightning),
         new AbilitySpec("cloud_ride", "hero_cloud_ride", Target.SELF, Ai.NONE, cd(8, 6, 4), v(0), 0,
             0, 0, v(8, 6, 4), v(0), HeroKits::cloudRide),
-        new AbilitySpec("frost_nova", "hero_frost_nova", Target.SELF, Ai.FIGHT_SELF, cd(18, 15, 12), v(0), 4,
-            45, 0, v(5, 8, 11), v(4, 5, 6), HeroKits::frostNova),
-        new AbilitySpec("mana_font", "hero_mana_font", Target.SELF, Ai.FIGHT_SELF, cd(70, 60, 50), v(0), 12,
+        new AbilitySpec("frost_nova", "hero_frost_nova", Target.SELF, Ai.FIGHT_SELF, cd(16, 14, 11), v(0), 4,
+            45, 0, v(5, 8, 11), v(4, 5, 6), HeroKits::frostNova).cc(),
+        new AbilitySpec("mana_font", "hero_mana_font", Target.SELF, Ai.FIGHT_SELF, cd(63, 54, 45), v(0), 12,
             40, 0, v(100, 175, 250), v(4, 6, 8), HeroKits::manaFont));
 
     // ------------------------------------------------------------------------------------------------ Brassworks
     public static final HeroKit ARCH_ENGINEER = new HeroKit("arch_engineer", "Arch-Engineer", "brassworks", Role.SKIRMISHER,
-        130, 6, 2, 0.27f, 110, 10, 1.0f, HERO_COST,
-        new AbilitySpec("rivet_burst", "hero_rivet_burst", Target.ENEMY, Ai.STRIKE, cd(8, 7, 6), v(10), 2,
+        155, 6, 2, 0.27f, 110, 10, 1.0f, HERO_COST,
+        new AbilitySpec("rivet_burst", "hero_rivet_burst", Target.ENEMY, Ai.STRIKE, cd(7, 6, 5), v(10), 2,
             25, 6, v(3, 4.5f, 6), v(2, 2, 2.5f), HeroKits::rivetBurst),
-        new AbilitySpec("rocket_jump", "hero_rocket_jump", Target.GROUND, Ai.NONE, cd(16, 13, 10), v(8, 11, 14), 2.5f,
+        new AbilitySpec("rocket_jump", "hero_rocket_jump", Target.GROUND, Ai.NONE, cd(14, 12, 9), v(8, 11, 14), 2.5f,
             25, 2, v(3, 5, 7), v(8, 11, 14), HeroKits::rocketJump),
-        new AbilitySpec("deploy_turret", "hero_deploy_turret", Target.GROUND, Ai.FIGHT_GROUND, cd(35, 30, 25), v(8), 0,
+        new AbilitySpec("deploy_turret", "hero_deploy_turret", Target.GROUND, Ai.FIGHT_GROUND, cd(32, 27, 23), v(8), 0,
             50, 10, v(1, 1, 2), v(20), HeroKits::deployTurret),
-        new AbilitySpec("field_repair", "hero_field_repair", Target.SELF, Ai.FIGHT_SELF, cd(50, 42, 35), v(0), 10,
+        new AbilitySpec("field_repair", "hero_field_repair", Target.SELF, Ai.FIGHT_SELF, cd(45, 38, 32), v(0), 10,
             60, 0, v(30, 45, 60), v(10, 15, 20), HeroKits::fieldRepair));
 
     public static final List<HeroKit> ALL = List.of(DAWN_PALADIN, GRAVECALLER, HORDE_WARCHIEF, THORNHEART_DRUID,
         CORSAIR_CAPTAIN, STORM_WITCH, ARCH_ENGINEER);
+
+    // ------------------------------------------------------------------------------------------------ T2-lab heroes (H13)
+    // Separate from ALL on purpose: ALL is "the one hero per faction" the T1 labs train (tests, bots and the lab roster
+    // assume one per faction); a T2-lab hero is a second hero for the same faction, trained at its T2 lab, spawning at
+    // level 3 with the points those levels give, and exempt from the castle clamp (design/heroes-t2-lab.md section 4).
+    static final ResourceCost T2_HERO_COST = ResourceCost.Unit(0, 450, 450, 50, 4);   // 450 metal, 450 energy, 50 s, 4 pop
+
+    public static final HeroKit ASH_SHAMAN = new HeroKit("ash_shaman", "Ash Shaman", "piglins", Role.CASTER,
+        180, 7, 0, 0.27f, 150, 12, 1.4f, T2_HERO_COST,
+        new AbilitySpec("firewall", "hero_firewall", Target.GROUND, Ai.NONE, cd(16, 14, 11), v(10, 12, 14), 0,
+            40, 6, v(4, 6, 8), v(4), HeroKits::firewall),
+        new AbilitySpec("lava_geyser", "hero_lava_geyser", Target.GROUND, Ai.NONE, cd(13, 11, 9), v(12), 3,
+            50, 8, v(12, 18, 24), v(1.5f), HeroKits::lavaGeyser),
+        new AbilitySpec("ember_totem", "hero_ember_totem", Target.GROUND, Ai.NONE, cd(36, 32, 27), v(10), 5,
+            60, 10, v(3, 4.5f, 6), v(8), HeroKits::emberTotem),
+        // passive: no cast (the effect never fires); a = seconds a hit target burns, applied by AshShamanUnit.doHurtTarget
+        new AbilitySpec("kindle", "hero_kindle", Target.SELF, Ai.NONE, cd(1, 1, 1), v(0), 0,
+            0, 0, v(2, 3, 4), v(0), c -> false)).t2Lab(3);
+
+    public static final List<HeroKit> T2_LAB = List.of(ASH_SHAMAN);
 
     @Nullable
     public static HeroKit forFaction(String factionName) {
@@ -312,10 +332,10 @@ public final class HeroKits {
         return true;
     }
 
-    /** Attacks a lot faster and runs faster for a while - and takes a fifth more damage. */
+    /** Attacks a lot faster and runs faster for a while - and takes a tenth more damage. */
     static boolean frenzy(Cast c) {
         int t = ticks(c.b());
-        c.fh.heroCore().startFrenzy(t, c.a() / 100f, 1.2f);
+        c.fh.heroCore().startFrenzy(t, c.a() / 100f, 1.1f);
         HeroFx.buff(c.hero, MobEffects.MOVEMENT_SPEED, t, 0);
         HeroFx.particles(c.level, ParticleTypes.ANGRY_VILLAGER, c.hero.position().add(0, 2, 0), 6, 0.4, 0);
         HeroFx.sound(c.level, c.hero.position(), SoundEvents.RAVAGER_ROAR, 1.0f, 1.2f);
@@ -618,6 +638,97 @@ public final class HeroKits {
         }
         HeroFx.ring(c.level, ParticleTypes.ELECTRIC_SPARK, c.hero.position(), c.spec.radius);
         HeroFx.sound(c.level, c.hero.position(), SoundEvents.ANVIL_USE, 1.0f, 1.4f);
+        return true;
+    }
+
+    // ---- Horde T2 lab: Ash Shaman (H13) ----
+
+    /** A line of fire from the hero toward the aim, burning enemies on it (and only on it) every half second for b s. */
+    static boolean firewall(Cast c) {
+        Vec3 aim = new Vec3(c.at.x - c.hero.getX(), 0, c.at.z - c.hero.getZ());
+        double dist = aim.length();
+        if (dist < 0.5)
+            aim = c.hero.getLookAngle().multiply(1, 0, 1);
+        if (aim.lengthSqr() < 1e-4)
+            return false;
+        final Vec3 dir = aim.normalize();
+        double length = Math.max(4, Math.min(c.range(), dist));
+        Vec3 from = c.hero.position().add(dir.scale(1.5));
+        Vec3 to = from.add(dir.scale(length));
+        float dmg = c.a();
+        long[] left = { ticks(c.b()) };
+        int[] n = { 0 };
+        HeroFx.sound(c.level, from, SoundEvents.BLAZE_SHOOT, 1.2f, 0.6f);
+        c.fh.heroCore().timers.add(() -> {
+            if (n[0]++ % 10 == 0) {
+                for (LivingEntity e : HeroFx.enemiesOnLine(c.level, c.hero, from, to, 0.9)) {
+                    HeroFx.damage(c.hero, e, dmg, true);
+                    e.setSecondsOnFire(2);
+                }
+            }
+            if (n[0] % 3 == 0) {
+                int steps = (int) length;
+                for (int i = 0; i <= steps; i++) {
+                    Vec3 p = from.add(dir.scale(length * i / Math.max(1, steps)));
+                    HeroFx.particles(c.level, ParticleTypes.FLAME, p.add(0, 0.4, 0), 2, 0.25, 0.02);
+                }
+            }
+            return --left[0] <= 0 || !c.hero.isAlive();
+        });
+        return true;
+    }
+
+    /** A telegraphed eruption: a ring of embers marks the spot for b s, then it erupts (no damage before that). */
+    static boolean lavaGeyser(Cast c) {
+        Vec3 at = c.at;
+        float dmg = c.a();
+        double radius = c.spec.radius;
+        long[] left = { ticks(c.b()) };
+        HeroFx.sound(c.level, at, SoundEvents.LAVA_AMBIENT, 1.2f, 0.8f);
+        c.fh.heroCore().timers.add(() -> {
+            if (!c.hero.isAlive())
+                return true;   // the caster fell: the eruption is cancelled
+            if (--left[0] > 0) {
+                if (left[0] % 4 == 0) {
+                    HeroFx.ring(c.level, ParticleTypes.LAVA, at, radius);
+                    HeroFx.particles(c.level, ParticleTypes.SMOKE, at.add(0, 0.2, 0), 3, radius / 2, 0.01);
+                }
+                return false;
+            }
+            for (LivingEntity e : HeroFx.enemies(c.level, c.hero, at, radius)) {
+                HeroFx.damage(c.hero, e, dmg, true);
+                e.setSecondsOnFire(3);
+                e.setDeltaMovement(e.getDeltaMovement().add(0, 0.9, 0));
+                e.hurtMarked = true;
+            }
+            HeroFx.particles(c.level, ParticleTypes.LAVA, at.add(0, 0.5, 0), 40, radius / 2, 0.3);
+            HeroFx.particles(c.level, ParticleTypes.FLAME, at.add(0, 1, 0), 30, radius / 3, 0.25);
+            HeroFx.sound(c.level, at, SoundEvents.GENERIC_EXPLODE, 1.0f, 1.2f);
+            return true;
+        });
+        return true;
+    }
+
+    /** A totem of embers at the spot: every second for b s, enemies inside its radius burn (and only those). */
+    static boolean emberTotem(Cast c) {
+        Vec3 at = c.at;
+        float dmg = c.a();
+        double radius = c.spec.radius;
+        long[] left = { ticks(c.b()) };
+        int[] n = { 0 };
+        HeroFx.sound(c.level, at, SoundEvents.FIRECHARGE_USE, 1.2f, 0.7f);
+        c.fh.heroCore().timers.add(() -> {
+            if (n[0]++ % 20 == 0) {
+                for (LivingEntity e : HeroFx.enemies(c.level, c.hero, at, radius)) {
+                    HeroFx.damage(c.hero, e, dmg, true);
+                    e.setSecondsOnFire(2);
+                }
+                HeroFx.ring(c.level, ParticleTypes.FLAME, at, radius);
+            }
+            if (n[0] % 4 == 0)
+                HeroFx.particles(c.level, ParticleTypes.FLAME, at.add(0, 1.2, 0), 3, 0.15, 0.05);
+            return --left[0] <= 0 || !c.hero.isAlive();
+        });
         return true;
     }
 

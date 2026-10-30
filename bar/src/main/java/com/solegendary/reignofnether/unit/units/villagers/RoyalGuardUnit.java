@@ -246,8 +246,8 @@ public class RoyalGuardUnit extends Vindicator implements AttackerUnit, HeroUnit
     final static public float attackDamage = 6.0f;
     final static public float attackBonusPerLevel = 0.6f;
     final static public float attacksPerSecond = 0.5f;
-    final static public float maxHealth = 125.0f;
-    final static public float maxHealthBonusPerLevel = 15.0f;
+    final static public float maxHealth = 140.0f;
+    final static public float maxHealthBonusPerLevel = 16.5f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.28f;
     final static public float attackRange = 2; // only used by ranged units or melee building attackers

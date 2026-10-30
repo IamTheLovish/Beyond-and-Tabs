@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.faction;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
+import com.solegendary.reignofnether.building.BuildGroup;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.building.production.ProductionItems;
@@ -270,6 +271,7 @@ public class Factions {
 		registerEntity(STORMCALLERS, EntityRegistrar.EARTHSHAKER_UNIT.get(), ProductionItems.EARTHSHAKER);
 		registerEntity(STORMCALLERS, EntityRegistrar.GRAVITY_MONK_UNIT.get(), ProductionItems.GRAVITY_MONK);
 		registerEntity(STORMCALLERS, EntityRegistrar.MIRROR_MAGE_UNIT.get(), ProductionItems.MIRROR_MAGE);
+		registerEntity(STORMCALLERS, EntityRegistrar.SPARK_SAGE_UNIT.get(), ProductionItems.SPARK_SAGE);   // essence caster
 		// Stormcallers slice 4: the rest of T2 and the T3 experimental
 		registerEntity(STORMCALLERS, EntityRegistrar.SEER_UNIT.get(), ProductionItems.SEER);
 		registerEntity(STORMCALLERS, EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), ProductionItems.LANTERN_FORTRESS);
@@ -295,6 +297,7 @@ public class Factions {
 		registerEntity(BRASSWORKS, EntityRegistrar.DRILL_BURROWER_UNIT.get(), ProductionItems.DRILL_BURROWER);
 		registerEntity(BRASSWORKS, EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), ProductionItems.REPAIR_CRAWLER);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), ProductionItems.CLOCKWORK_SPIDER);
+		registerEntity(BRASSWORKS, EntityRegistrar.SOUL_ENGINEER_UNIT.get(), ProductionItems.SOUL_ENGINEER);   // essence caster
 		// slice 4: the Great Forge's experimental and the drones it launches (no production item: the engine makes them)
 		registerEntity(BRASSWORKS, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), ProductionItems.IRON_LEVIATHAN_ENGINE);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_DRONE_UNIT.get());
@@ -321,10 +324,19 @@ public class Factions {
 		registerEntity(VILLAGERS, EntityRegistrar.DAWN_PALADIN_UNIT.get());
 		registerEntity(MONSTERS, EntityRegistrar.GRAVECALLER_UNIT.get());
 		registerEntity(PIGLINS, EntityRegistrar.HORDE_WARCHIEF_UNIT.get());
+		registerEntity(PIGLINS, EntityRegistrar.ASH_SHAMAN_UNIT.get());
 		registerEntity(VERDANT_COURT, EntityRegistrar.THORNHEART_DRUID_UNIT.get());
 		registerEntity(TIDEWROUGHT, EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get());
 		registerEntity(STORMCALLERS, EntityRegistrar.STORM_WITCH_UNIT.get());
 		registerEntity(BRASSWORKS, EntityRegistrar.ARCH_ENGINEER_UNIT.get());
+		// the T1 siege lobbers (design/siege_t1.md), each at its faction's T1 lab
+		registerEntity(VILLAGERS, EntityRegistrar.SUNFIRE_MANGONEL_UNIT.get(), ProductionItems.SUNFIRE_MANGONEL);
+		registerEntity(MONSTERS, EntityRegistrar.SKULL_HURLER_UNIT.get(), ProductionItems.SKULL_HURLER);
+		registerEntity(PIGLINS, EntityRegistrar.BOULDER_CHUCKER_UNIT.get(), ProductionItems.BOULDER_CHUCKER);
+		registerEntity(VERDANT_COURT, EntityRegistrar.BURL_SLINGER_UNIT.get(), ProductionItems.BURL_SLINGER);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.POWDER_MONKEY_UNIT.get(), ProductionItems.POWDER_MONKEY);
+		registerEntity(STORMCALLERS, EntityRegistrar.THUNDERSTONE_MONK_UNIT.get(), ProductionItems.THUNDERSTONE_MONK);
+		registerEntity(BRASSWORKS, EntityRegistrar.STEAM_LOBBER_UNIT.get(), ProductionItems.STEAM_LOBBER);
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
 		registerEntity(NEUTRAL, EntityRegistrar.POLAR_BEAR_UNIT.get(), ProductionItems.POLAR_BEAR);
@@ -337,173 +349,176 @@ public class Factions {
 	
 	public static void registerBuildings() {
 		// Monsters
-		registerStartBuilding(MONSTERS, Buildings.MAUSOLEUM, Keybindings.abilitySlot1);
-		registerBuildings(MONSTERS, Buildings.SPRUCE_STOCKPILE, Keybindings.abilitySlot2);
-		registerBuildings(MONSTERS, Buildings.METAL_EXTRACTOR_MONSTERS, Keybindings.hotkey5);
-		registerBuildings(MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Keybindings.hotkey6);
-		registerBuildings(MONSTERS, Buildings.ENERGY_CONVERTER_MONSTERS, Keybindings.hotkey7);
-		registerBuildings(MONSTERS, Buildings.STORAGE_VAULT_MONSTERS, Keybindings.hotkey8);
-		registerBuildings(MONSTERS, Buildings.SCULK_CATALYST, Keybindings.abilitySlot3);
+		registerStartBuilding(MONSTERS, Buildings.MAUSOLEUM, BuildGroup.ECONOMY);
+		registerBuildings(MONSTERS, Buildings.SPRUCE_STOCKPILE, BuildGroup.ECONOMY);
+		registerBuildings(MONSTERS, Buildings.METAL_EXTRACTOR_MONSTERS, BuildGroup.ECONOMY);
+		registerBuildings(MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, BuildGroup.ECONOMY);
+		registerBuildings(MONSTERS, Buildings.ENERGY_CONVERTER_MONSTERS, BuildGroup.ECONOMY);
+		registerBuildings(MONSTERS, Buildings.STORAGE_VAULT_MONSTERS, BuildGroup.ECONOMY);
+		registerBuildings(MONSTERS, Buildings.SOLAR_COLLECTOR_MONSTERS, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
+		registerBuildings(MONSTERS, Buildings.ADVANCED_SOLAR_MONSTERS, BuildGroup.ECONOMY);   // steady energy, T2 constructors
+		registerBuildings(MONSTERS, Buildings.GEOTHERMAL_PLANT_MONSTERS, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		
+		registerBuildings(MONSTERS, Buildings.MONSTER_MARKET, BuildGroup.ECONOMY);
+		registerBuildings(MONSTERS, Buildings.SPRUCE_BRIDGE, BuildGroup.ECONOMY);
+		registerBuildings(MONSTERS, Buildings.GRAVEYARD, BuildGroup.MILITARY);
+		registerBuildings(MONSTERS, Buildings.DUNGEON, BuildGroup.MILITARY);
+		registerBuildings(MONSTERS, Buildings.SPIDER_LAIR, BuildGroup.MILITARY);
+		registerBuildings(MONSTERS, Buildings.SLIME_PIT, BuildGroup.MILITARY);
+		registerBuildings(MONSTERS, Buildings.STRONGHOLD, BuildGroup.MILITARY);
+		registerBuildings(MONSTERS, Buildings.ALTAR_OF_DARKNESS, BuildGroup.MILITARY);
+		registerBuildings(MONSTERS, Buildings.LAB_ANNEX_MONSTERS, BuildGroup.MILITARY);
+		registerBuildings(MONSTERS, Buildings.SCULK_CATALYST, BuildGroup.TECH);
 		// no Pumpkin Farm / Haunted House (lovish, Oct 16: "the farm and village hut arent part of the game"): the old food
 		// and population economy's buildings; extractors and wind generators do their jobs. Still registered (old saves).
-		registerBuildings(MONSTERS, Buildings.DARK_WATCHTOWER, Keybindings.abilitySlot5);
-		registerBuildings(MONSTERS, Buildings.GRAVEYARD, Keybindings.abilitySlot6);
-		registerBuildings(MONSTERS, Buildings.DUNGEON, Keybindings.abilitySlot7);
-		registerBuildings(MONSTERS, Buildings.SPIDER_LAIR, Keybindings.abilitySlot8);
-		registerBuildings(MONSTERS, Buildings.SLIME_PIT, Keybindings.abilitySlot9);
-		registerBuildings(MONSTERS, Buildings.LABORATORY, Keybindings.hotkey9);   // was P (abilitySlot10): Patrol is P now
-		registerBuildings(MONSTERS, Buildings.STRONGHOLD, Keybindings.hotkey2);
-		registerBuildings(MONSTERS, Buildings.ALTAR_OF_DARKNESS, Keybindings.hotkey11);   // was F (hotkey3): F is Fight now
-		registerBuildings(MONSTERS, Buildings.SPRUCE_BRIDGE, Keybindings.hotkey4);
-		
-		registerBuildings(MONSTERS, Buildings.MONSTER_MARKET, Keybindings.hotkey10);
-		registerBuildings(MONSTERS, Buildings.LAB_ANNEX_MONSTERS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
-		registerBuildings(MONSTERS, Buildings.GEOTHERMAL_PLANT_MONSTERS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
-		registerBuildings(MONSTERS, Buildings.SOLAR_COLLECTOR_MONSTERS);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
-		registerBuildings(MONSTERS, Buildings.ADVANCED_SOLAR_MONSTERS);   // steady energy, T2 constructors
-		registerBuildings(MONSTERS, Buildings.BEACON);
+		registerBuildings(MONSTERS, Buildings.DARK_WATCHTOWER, BuildGroup.DEFENCE);
+		registerBuildings(MONSTERS, Buildings.LABORATORY, BuildGroup.TECH);
 		
 		//Piglins
-		registerStartBuilding(PIGLINS, Buildings.CENTRAL_PORTAL, Keybindings.abilitySlot1);
-		registerBuildings(PIGLINS, Buildings.PORTAL_BASIC, Keybindings.abilitySlot2);
+		registerStartBuilding(PIGLINS, Buildings.CENTRAL_PORTAL, BuildGroup.ECONOMY);
+		registerBuildings(PIGLINS, Buildings.METAL_EXTRACTOR_PIGLINS, BuildGroup.ECONOMY);
+		registerBuildings(PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, BuildGroup.ECONOMY);
+		registerBuildings(PIGLINS, Buildings.ENERGY_CONVERTER_PIGLINS, BuildGroup.ECONOMY);
+		registerBuildings(PIGLINS, Buildings.STORAGE_VAULT_PIGLINS, BuildGroup.ECONOMY);
+		registerBuildings(PIGLINS, Buildings.SOLAR_COLLECTOR_PIGLINS, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
+		registerBuildings(PIGLINS, Buildings.ADVANCED_SOLAR_PIGLINS, BuildGroup.ECONOMY);   // steady energy, T2 constructors
+		registerBuildings(PIGLINS, Buildings.GEOTHERMAL_PLANT_PIGLINS, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(PIGLINS, Buildings.PIGLIN_MARKET, BuildGroup.ECONOMY);
+		registerBuildings(PIGLINS, Buildings.BLACKSTONE_BRIDGE, BuildGroup.ECONOMY);
+		registerBuildings(PIGLINS, Buildings.PORTAL_BASIC, BuildGroup.MILITARY);
 		// no Netherwart Farm (the old food economy - see the Gravebound above)
-		registerBuildings(PIGLINS, Buildings.BASTION, Keybindings.abilitySlot4);
-		registerBuildings(PIGLINS, Buildings.HOGLIN_STABLES, Keybindings.abilitySlot5);
-		registerBuildings(PIGLINS, Buildings.FLAME_SANCTUARY, Keybindings.abilitySlot6);
-		registerBuildings(PIGLINS, Buildings.WITHER_SHRINE, Keybindings.abilitySlot7);
-		registerBuildings(PIGLINS, Buildings.BASALT_SPRINGS, Keybindings.abilitySlot8);
-		registerBuildings(PIGLINS, Buildings.FORTRESS, Keybindings.abilitySlot9);
-		registerBuildings(PIGLINS, Buildings.INFERNAL_PORTAL, Keybindings.hotkey11);   // was F (hotkey3): F is Fight now
-		registerBuildings(PIGLINS, Buildings.BLACKSTONE_BRIDGE, Keybindings.hotkey4);
-		registerBuildings(PIGLINS, Buildings.METAL_EXTRACTOR_PIGLINS, Keybindings.hotkey5);
-		registerBuildings(PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Keybindings.hotkey6);
-		registerBuildings(PIGLINS, Buildings.ENERGY_CONVERTER_PIGLINS, Keybindings.hotkey7);
-		registerBuildings(PIGLINS, Buildings.STORAGE_VAULT_PIGLINS, Keybindings.hotkey8);
-		registerBuildings(PIGLINS, Buildings.PIGLIN_MARKET, Keybindings.hotkey10);
-		registerBuildings(PIGLINS, Buildings.LAB_ANNEX_PIGLINS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
-		registerBuildings(PIGLINS, Buildings.GEOTHERMAL_PLANT_PIGLINS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
-		registerBuildings(PIGLINS, Buildings.SOLAR_COLLECTOR_PIGLINS);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
-		registerBuildings(PIGLINS, Buildings.ADVANCED_SOLAR_PIGLINS);   // steady energy, T2 constructors
-		registerBuildings(PIGLINS, Buildings.BEACON);
+		registerBuildings(PIGLINS, Buildings.BASTION, BuildGroup.MILITARY);
+		registerBuildings(PIGLINS, Buildings.HOGLIN_STABLES, BuildGroup.MILITARY);
+		registerBuildings(PIGLINS, Buildings.FLAME_SANCTUARY, BuildGroup.MILITARY);
+		registerBuildings(PIGLINS, Buildings.WITHER_SHRINE, BuildGroup.MILITARY);
+		registerBuildings(PIGLINS, Buildings.BASALT_SPRINGS, BuildGroup.MILITARY);
+		registerBuildings(PIGLINS, Buildings.FORTRESS, BuildGroup.MILITARY);
+		registerBuildings(PIGLINS, Buildings.INFERNAL_PORTAL, BuildGroup.MILITARY);
+		registerBuildings(PIGLINS, Buildings.LAB_ANNEX_PIGLINS, BuildGroup.MILITARY);
 		registerBuilding(PIGLINS, Buildings.PORTAL_CIVILIAN);
 		registerBuilding(PIGLINS, Buildings.PORTAL_POCKET);
 		registerBuilding(PIGLINS, Buildings.PORTAL_MILITARY);
 		registerBuilding(PIGLINS, Buildings.PORTAL_TRANSPORT);
 		
 		//VillagersFaction
-		registerStartBuilding(VILLAGERS, Buildings.TOWN_CENTRE, Keybindings.abilitySlot1);
-		registerBuildings(VILLAGERS, Buildings.OAK_STOCKPILE, Keybindings.abilitySlot2);
-		registerBuildings(VILLAGERS, Buildings.METAL_EXTRACTOR_VILLAGERS, Keybindings.hotkey5);
-		registerBuildings(VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Keybindings.hotkey6);
-		registerBuildings(VILLAGERS, Buildings.ENERGY_CONVERTER_VILLAGERS, Keybindings.hotkey7);
-		registerBuildings(VILLAGERS, Buildings.STORAGE_VAULT_VILLAGERS, Keybindings.hotkey8);
+		registerStartBuilding(VILLAGERS, Buildings.TOWN_CENTRE, BuildGroup.ECONOMY);
+		registerBuildings(VILLAGERS, Buildings.OAK_STOCKPILE, BuildGroup.ECONOMY);
+		registerBuildings(VILLAGERS, Buildings.METAL_EXTRACTOR_VILLAGERS, BuildGroup.ECONOMY);
+		registerBuildings(VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, BuildGroup.ECONOMY);
+		registerBuildings(VILLAGERS, Buildings.ENERGY_CONVERTER_VILLAGERS, BuildGroup.ECONOMY);
+		registerBuildings(VILLAGERS, Buildings.STORAGE_VAULT_VILLAGERS, BuildGroup.ECONOMY);
+		registerBuildings(VILLAGERS, Buildings.SOLAR_COLLECTOR_VILLAGERS, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
+		registerBuildings(VILLAGERS, Buildings.ADVANCED_SOLAR_VILLAGERS, BuildGroup.ECONOMY);   // steady energy, T2 constructors
+		registerBuildings(VILLAGERS, Buildings.GEOTHERMAL_PLANT_VILLAGERS, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(VILLAGERS, Buildings.VILLAGER_MARKET, BuildGroup.ECONOMY);
+		registerBuildings(VILLAGERS, Buildings.OAK_BRIDGE, BuildGroup.ECONOMY);
+		registerBuildings(VILLAGERS, Buildings.BARRACKS, BuildGroup.MILITARY);
+		registerBuildings(VILLAGERS, Buildings.CASTLE, BuildGroup.MILITARY);
+		registerBuildings(VILLAGERS, Buildings.SHRINE_OF_PROSPERITY, BuildGroup.MILITARY);
+		registerBuildings(VILLAGERS, Buildings.IRON_GOLEM_BUILDING, BuildGroup.MILITARY);
+		registerBuildings(VILLAGERS, Buildings.LAB_ANNEX_VILLAGERS, BuildGroup.MILITARY);
 		// no Villager House / Wheat Farm (lovish, Oct 16 - see the Gravebound above); the Grand Market asks for Wind
 		// Generators instead of houses (ResearchMarketUpgradeVillager)
-		registerBuildings(VILLAGERS, Buildings.WATCHTOWER, Keybindings.abilitySlot5);
-		registerBuildings(VILLAGERS, Buildings.BARRACKS, Keybindings.abilitySlot6);
-		registerBuildings(VILLAGERS, Buildings.BLACKSMITH, Keybindings.abilitySlot7);
-		registerBuildings(VILLAGERS, Buildings.WITCH_HUT, Keybindings.abilitySlot8);
-		registerBuildings(VILLAGERS, Buildings.ARCANE_TOWER, Keybindings.abilitySlot9);
-		registerBuildings(VILLAGERS, Buildings.LIBRARY, Keybindings.hotkey11);    // was P (abilitySlot10): Patrol is P now
-		registerBuildings(VILLAGERS, Buildings.CASTLE, Keybindings.hotkey2);
-		registerBuildings(VILLAGERS, Buildings.SHRINE_OF_PROSPERITY, Keybindings.abilitySlot3);   // was F (hotkey3): F is Fight now
-		registerBuildings(VILLAGERS, Buildings.IRON_GOLEM_BUILDING, Keybindings.hotkey9);
-		registerBuildings(VILLAGERS, Buildings.OAK_BRIDGE, Keybindings.hotkey4);
-		registerBuildings(VILLAGERS, Buildings.VILLAGER_MARKET, Keybindings.hotkey10);
-		registerBuildings(VILLAGERS, Buildings.LAB_ANNEX_VILLAGERS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
-		registerBuildings(VILLAGERS, Buildings.GEOTHERMAL_PLANT_VILLAGERS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
-		registerBuildings(VILLAGERS, Buildings.SOLAR_COLLECTOR_VILLAGERS);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
-		registerBuildings(VILLAGERS, Buildings.ADVANCED_SOLAR_VILLAGERS);   // steady energy, T2 constructors
-		registerBuildings(VILLAGERS, Buildings.BEACON);
+		registerBuildings(VILLAGERS, Buildings.WATCHTOWER, BuildGroup.DEFENCE);
+		registerBuildings(VILLAGERS, Buildings.BLACKSMITH, BuildGroup.TECH);
+		registerBuildings(VILLAGERS, Buildings.WITCH_HUT, BuildGroup.TECH);
+		registerBuildings(VILLAGERS, Buildings.ARCANE_TOWER, BuildGroup.TECH);
+		registerBuildings(VILLAGERS, Buildings.LIBRARY, BuildGroup.TECH); 
 		
-		// Verdant Court: the same hotkey slots as the others (capitol slot 1, army lab slot 6, economy 5/6/7)
-		registerStartBuilding(VERDANT_COURT, Buildings.HEARTWOOD_HALL, Keybindings.abilitySlot1);
-		registerBuildings(VERDANT_COURT, Buildings.METAL_EXTRACTOR_VERDANT, Keybindings.hotkey5);
-		registerBuildings(VERDANT_COURT, Buildings.WIND_GENERATOR_VERDANT, Keybindings.hotkey6);
-		registerBuildings(VERDANT_COURT, Buildings.ENERGY_CONVERTER_VERDANT, Keybindings.hotkey7);
-		// storage: H, not "." like the others - the Seedshaper's Vine Snare already has "." (hotkey8)
-		registerBuildings(VERDANT_COURT, Buildings.STORAGE_VAULT_VERDANT, Keybindings.hotkey10);
-		registerBuildings(VERDANT_COURT, Buildings.GROVE, Keybindings.abilitySlot6);
-		registerBuildings(VERDANT_COURT, Buildings.CIRCLE_OF_ELDERS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
-		registerBuildings(VERDANT_COURT, Buildings.HEART_OF_THE_WILD, Keybindings.hotkey2);   // T3 lab: the Castle's and Stronghold's slot
-		registerBuildings(VERDANT_COURT, Buildings.STORM_OAK, Keybindings.abilitySlot5);       // T2 defence: the Watchtowers' slot
-		registerBuildings(VERDANT_COURT, Buildings.LAB_ANNEX_VERDANT);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
-		registerBuildings(VERDANT_COURT, Buildings.GEOTHERMAL_PLANT_VERDANT);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
-		registerBuildings(VERDANT_COURT, Buildings.SOLAR_COLLECTOR_VERDANT);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
-		registerBuildings(VERDANT_COURT, Buildings.ADVANCED_SOLAR_VERDANT);   // steady energy, T2 constructors
+		// Verdant Court
+		registerStartBuilding(VERDANT_COURT, Buildings.HEARTWOOD_HALL, BuildGroup.ECONOMY);
+		registerBuildings(VERDANT_COURT, Buildings.METAL_EXTRACTOR_VERDANT, BuildGroup.ECONOMY);
+		registerBuildings(VERDANT_COURT, Buildings.WIND_GENERATOR_VERDANT, BuildGroup.ECONOMY);
+		registerBuildings(VERDANT_COURT, Buildings.ENERGY_CONVERTER_VERDANT, BuildGroup.ECONOMY);
+		registerBuildings(VERDANT_COURT, Buildings.STORAGE_VAULT_VERDANT, BuildGroup.ECONOMY);
+		registerBuildings(VERDANT_COURT, Buildings.SOLAR_COLLECTOR_VERDANT, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
+		registerBuildings(VERDANT_COURT, Buildings.ADVANCED_SOLAR_VERDANT, BuildGroup.ECONOMY);   // steady energy, T2 constructors
+		registerBuildings(VERDANT_COURT, Buildings.GEOTHERMAL_PLANT_VERDANT, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(VERDANT_COURT, Buildings.GROVE, BuildGroup.MILITARY);
+		registerBuildings(VERDANT_COURT, Buildings.CIRCLE_OF_ELDERS, BuildGroup.MILITARY);   // T2 lab
+		registerBuildings(VERDANT_COURT, Buildings.HEART_OF_THE_WILD, BuildGroup.MILITARY);   // T3 lab
+		registerBuildings(VERDANT_COURT, Buildings.LAB_ANNEX_VERDANT, BuildGroup.MILITARY);
+		registerBuildings(VERDANT_COURT, Buildings.STORM_OAK, BuildGroup.DEFENCE);   // T2 defence
+		
 
-		// Tidewrought: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, T2 lab slot 9, T2 defence
-		// slot 5, T3 lab hotkey 2)
-		registerStartBuilding(TIDEWROUGHT, Buildings.WRECK_HARBOUR, Keybindings.abilitySlot1);
-		registerBuildings(TIDEWROUGHT, Buildings.METAL_EXTRACTOR_TIDE, Keybindings.hotkey5);
-		registerBuildings(TIDEWROUGHT, Buildings.WIND_GENERATOR_TIDE, Keybindings.hotkey6);
-		registerBuildings(TIDEWROUGHT, Buildings.ENERGY_CONVERTER_TIDE, Keybindings.hotkey7);
-		registerBuildings(TIDEWROUGHT, Buildings.STORAGE_VAULT_TIDE, Keybindings.hotkey8);
-		registerBuildings(TIDEWROUGHT, Buildings.SLIPWAY, Keybindings.abilitySlot6);
-		registerBuildings(TIDEWROUGHT, Buildings.DRYDOCK, Keybindings.abilitySlot9);              // T2 lab: the Arcane Tower's slot
-		registerBuildings(TIDEWROUGHT, Buildings.LIGHTHOUSE_BATTERY, Keybindings.abilitySlot5);   // T2 defence: the Watchtowers' slot
-		registerBuildings(TIDEWROUGHT, Buildings.ABYSSAL_SHIPYARD, Keybindings.hotkey2);          // T3 lab: the Castle's and Stronghold's slot
-		registerBuildings(TIDEWROUGHT, Buildings.LAB_ANNEX_TIDE);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
-		registerBuildings(TIDEWROUGHT, Buildings.GEOTHERMAL_PLANT_TIDE);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
-		registerBuildings(TIDEWROUGHT, Buildings.SOLAR_COLLECTOR_TIDE);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
-		registerBuildings(TIDEWROUGHT, Buildings.ADVANCED_SOLAR_TIDE);   // steady energy, T2 constructors
+		// Tidewrought
+		registerStartBuilding(TIDEWROUGHT, Buildings.WRECK_HARBOUR, BuildGroup.ECONOMY);
+		registerBuildings(TIDEWROUGHT, Buildings.METAL_EXTRACTOR_TIDE, BuildGroup.ECONOMY);
+		registerBuildings(TIDEWROUGHT, Buildings.WIND_GENERATOR_TIDE, BuildGroup.ECONOMY);
+		registerBuildings(TIDEWROUGHT, Buildings.ENERGY_CONVERTER_TIDE, BuildGroup.ECONOMY);
+		registerBuildings(TIDEWROUGHT, Buildings.STORAGE_VAULT_TIDE, BuildGroup.ECONOMY);
+		registerBuildings(TIDEWROUGHT, Buildings.SOLAR_COLLECTOR_TIDE, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
+		registerBuildings(TIDEWROUGHT, Buildings.ADVANCED_SOLAR_TIDE, BuildGroup.ECONOMY);   // steady energy, T2 constructors
+		registerBuildings(TIDEWROUGHT, Buildings.GEOTHERMAL_PLANT_TIDE, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(TIDEWROUGHT, Buildings.SLIPWAY, BuildGroup.MILITARY);
+		registerBuildings(TIDEWROUGHT, Buildings.DRYDOCK, BuildGroup.MILITARY);   // T2 lab
+		registerBuildings(TIDEWROUGHT, Buildings.ABYSSAL_SHIPYARD, BuildGroup.MILITARY);   // T3 lab
+		registerBuildings(TIDEWROUGHT, Buildings.LAB_ANNEX_TIDE, BuildGroup.MILITARY);
+		registerBuildings(TIDEWROUGHT, Buildings.LIGHTHOUSE_BATTERY, BuildGroup.DEFENCE);   // T2 defence
+		
 
-		// Stormcallers: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, storage 8); no T2/T3 lab yet
-		registerStartBuilding(STORMCALLERS, Buildings.JADE_PAGODA, Keybindings.abilitySlot1);
-		registerBuildings(STORMCALLERS, Buildings.METAL_EXTRACTOR_STORM, Keybindings.hotkey5);
-		registerBuildings(STORMCALLERS, Buildings.WIND_GENERATOR_STORM, Keybindings.hotkey6);
-		registerBuildings(STORMCALLERS, Buildings.ENERGY_CONVERTER_STORM, Keybindings.hotkey7);
-		// storage: H, not "." - the Geomancer's Ley Link already has "." (hotkey8); H is Hold, which workers never show
-		registerBuildings(STORMCALLERS, Buildings.STORAGE_VAULT_STORM, Keybindings.hotkey10);
-		registerBuildings(STORMCALLERS, Buildings.LOTUS_ACADEMY, Keybindings.abilitySlot6);
-		registerBuildings(STORMCALLERS, Buildings.CELESTIAL_OBSERVATORY, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
-		registerBuildings(STORMCALLERS, Buildings.HEAVENS_GATE, Keybindings.hotkey2);                // T3 lab: the Castle's and Stronghold's slot
-		registerBuildings(STORMCALLERS, Buildings.LAB_ANNEX_STORM);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
-		registerBuildings(STORMCALLERS, Buildings.GEOTHERMAL_PLANT_STORM);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
-		registerBuildings(STORMCALLERS, Buildings.SOLAR_COLLECTOR_STORM);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
-		registerBuildings(STORMCALLERS, Buildings.ADVANCED_SOLAR_STORM);   // steady energy, T2 constructors
+		// Stormcallers
+		registerStartBuilding(STORMCALLERS, Buildings.JADE_PAGODA, BuildGroup.ECONOMY);
+		registerBuildings(STORMCALLERS, Buildings.METAL_EXTRACTOR_STORM, BuildGroup.ECONOMY);
+		registerBuildings(STORMCALLERS, Buildings.WIND_GENERATOR_STORM, BuildGroup.ECONOMY);
+		registerBuildings(STORMCALLERS, Buildings.ENERGY_CONVERTER_STORM, BuildGroup.ECONOMY);
+		registerBuildings(STORMCALLERS, Buildings.STORAGE_VAULT_STORM, BuildGroup.ECONOMY);
+		registerBuildings(STORMCALLERS, Buildings.SOLAR_COLLECTOR_STORM, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
+		registerBuildings(STORMCALLERS, Buildings.ADVANCED_SOLAR_STORM, BuildGroup.ECONOMY);   // steady energy, T2 constructors
+		registerBuildings(STORMCALLERS, Buildings.GEOTHERMAL_PLANT_STORM, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(STORMCALLERS, Buildings.LOTUS_ACADEMY, BuildGroup.MILITARY);
+		registerBuildings(STORMCALLERS, Buildings.CELESTIAL_OBSERVATORY, BuildGroup.MILITARY);   // T2 lab
+		registerBuildings(STORMCALLERS, Buildings.HEAVENS_GATE, BuildGroup.MILITARY);   // T3 lab
+		registerBuildings(STORMCALLERS, Buildings.LAB_ANNEX_STORM, BuildGroup.MILITARY);
+		
 
-		// Brassworks: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, storage 8); no T2/T3 lab yet
-		registerStartBuilding(BRASSWORKS, Buildings.FOUNDRY_HALL, Keybindings.abilitySlot1);
-		registerBuildings(BRASSWORKS, Buildings.METAL_EXTRACTOR_BRASS, Keybindings.hotkey5);
-		registerBuildings(BRASSWORKS, Buildings.WIND_GENERATOR_BRASS, Keybindings.hotkey6);
-		registerBuildings(BRASSWORKS, Buildings.ENERGY_CONVERTER_BRASS, Keybindings.hotkey7);
-		registerBuildings(BRASSWORKS, Buildings.STORAGE_VAULT_BRASS, Keybindings.hotkey10);   // H, like the Stormcallers: the Tinker's Field Upgrade sits on "."
-		registerBuildings(BRASSWORKS, Buildings.MACHINE_SHOP, Keybindings.abilitySlot6);
-		registerBuildings(BRASSWORKS, Buildings.ASSEMBLY_WORKS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
-		registerBuildings(BRASSWORKS, Buildings.RAIL_BATTERY, Keybindings.abilitySlot5);      // T2 defence: the Watchtowers' slot
-		registerBuildings(BRASSWORKS, Buildings.GREAT_FORGE, Keybindings.hotkey2);           // T3 lab: the Castle's and Heaven's Gate's slot
-		registerBuildings(BRASSWORKS, Buildings.LAB_ANNEX_BRASS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
-		registerBuildings(BRASSWORKS, Buildings.GEOTHERMAL_PLANT_BRASS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
-		registerBuildings(BRASSWORKS, Buildings.SOLAR_COLLECTOR_BRASS);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
-		registerBuildings(BRASSWORKS, Buildings.ADVANCED_SOLAR_BRASS);   // steady energy, T2 constructors
+		// Brassworks
+		registerStartBuilding(BRASSWORKS, Buildings.FOUNDRY_HALL, BuildGroup.ECONOMY);
+		registerBuildings(BRASSWORKS, Buildings.METAL_EXTRACTOR_BRASS, BuildGroup.ECONOMY);
+		registerBuildings(BRASSWORKS, Buildings.WIND_GENERATOR_BRASS, BuildGroup.ECONOMY);
+		registerBuildings(BRASSWORKS, Buildings.ENERGY_CONVERTER_BRASS, BuildGroup.ECONOMY);
+		registerBuildings(BRASSWORKS, Buildings.STORAGE_VAULT_BRASS, BuildGroup.ECONOMY);
+		registerBuildings(BRASSWORKS, Buildings.SOLAR_COLLECTOR_BRASS, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
+		registerBuildings(BRASSWORKS, Buildings.ADVANCED_SOLAR_BRASS, BuildGroup.ECONOMY);   // steady energy, T2 constructors
+		registerBuildings(BRASSWORKS, Buildings.GEOTHERMAL_PLANT_BRASS, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(BRASSWORKS, Buildings.MACHINE_SHOP, BuildGroup.MILITARY);
+		registerBuildings(BRASSWORKS, Buildings.ASSEMBLY_WORKS, BuildGroup.MILITARY);   // T2 lab
+		registerBuildings(BRASSWORKS, Buildings.GREAT_FORGE, BuildGroup.MILITARY);   // T3 lab
+		registerBuildings(BRASSWORKS, Buildings.LAB_ANNEX_BRASS, BuildGroup.MILITARY);
+		registerBuildings(BRASSWORKS, Buildings.RAIL_BATTERY, BuildGroup.DEFENCE);   // T2 defence
+		
 
 		// the static defences of all seven factions (design/defences.md): walls, gates, traps, the T1 anti-raid tower and
-		// the anti-T3 emplacement, appended to each build menu with no hotkey (every key is taken)
+		// the anti-T3 emplacement, appended to each build menu's Defence tab
 		com.solegendary.reignofnether.building.buildings.defence.Defences.registerWithFactions();
 		// big-units (design/big_units.md): every faction's Ward Spire (the game enders' counter) and the game enders built so
-		// far; no hotkeys left in the build menus
-		registerBuildings(VILLAGERS, Buildings.WARD_SPIRE_VILLAGERS);
-		registerBuildings(MONSTERS, Buildings.WARD_SPIRE_MONSTERS);
-		registerBuildings(PIGLINS, Buildings.WARD_SPIRE_PIGLINS);
-		registerBuildings(VERDANT_COURT, Buildings.WARD_SPIRE_VERDANT);
-		registerBuildings(TIDEWROUGHT, Buildings.WARD_SPIRE_TIDE);
-		registerBuildings(STORMCALLERS, Buildings.WARD_SPIRE_STORM);
-		registerBuildings(BRASSWORKS, Buildings.WARD_SPIRE_BRASS);
-		registerBuildings(VILLAGERS, Buildings.SUN_SPIRE);
-		registerBuildings(MONSTERS, Buildings.NECROPOLIS);
+		// far (Ward Spire: Defence tab, game enders: Tech tab)
+		registerBuildings(VILLAGERS, Buildings.WARD_SPIRE_VILLAGERS, BuildGroup.DEFENCE);
+		registerBuildings(MONSTERS, Buildings.WARD_SPIRE_MONSTERS, BuildGroup.DEFENCE);
+		registerBuildings(PIGLINS, Buildings.WARD_SPIRE_PIGLINS, BuildGroup.DEFENCE);
+		registerBuildings(VERDANT_COURT, Buildings.WARD_SPIRE_VERDANT, BuildGroup.DEFENCE);
+		registerBuildings(TIDEWROUGHT, Buildings.WARD_SPIRE_TIDE, BuildGroup.DEFENCE);
+		registerBuildings(STORMCALLERS, Buildings.WARD_SPIRE_STORM, BuildGroup.DEFENCE);
+		registerBuildings(BRASSWORKS, Buildings.WARD_SPIRE_BRASS, BuildGroup.DEFENCE);
+		registerBuildings(VILLAGERS, Buildings.SUN_SPIRE, BuildGroup.TECH);
+		registerBuildings(MONSTERS, Buildings.NECROPOLIS, BuildGroup.TECH);
 		// beasts-2: the other five game enders
-		registerBuildings(PIGLINS, Buildings.DOOM_FORGE);
-		registerBuildings(VERDANT_COURT, Buildings.WORLD_SEED);
-		registerBuildings(TIDEWROUGHT, Buildings.MAELSTROM_ENGINE);
-		registerBuildings(STORMCALLERS, Buildings.HEAVENS_BELL);
-		registerBuildings(BRASSWORKS, Buildings.EARTHCRACKER);
+		registerBuildings(PIGLINS, Buildings.DOOM_FORGE, BuildGroup.TECH);
+		registerBuildings(VERDANT_COURT, Buildings.WORLD_SEED, BuildGroup.TECH);
+		registerBuildings(TIDEWROUGHT, Buildings.MAELSTROM_ENGINE, BuildGroup.TECH);
+		registerBuildings(STORMCALLERS, Buildings.HEAVENS_BELL, BuildGroup.TECH);
+		registerBuildings(BRASSWORKS, Buildings.EARTHCRACKER, BuildGroup.TECH);
+
+		// Beacon last in Tech
+		registerBuildings(MONSTERS, Buildings.BEACON, BuildGroup.TECH);
+		registerBuildings(PIGLINS, Buildings.BEACON, BuildGroup.TECH);
+		registerBuildings(VILLAGERS, Buildings.BEACON, BuildGroup.TECH);
 
 		//Neutral
-		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);
-		registerBuildings(NEUTRAL, Buildings.HEALING_FOUNTAIN, Keybindings.abilitySlot2);
-		registerBuildings(NEUTRAL, Buildings.END_PORTAL, Keybindings.abilitySlot3);
-		registerBuildings(NEUTRAL, Buildings.NEUTRAL_TRANSPORT_PORTAL, Keybindings.abilitySlot4);
+		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, BuildGroup.ECONOMY);
+		registerBuildings(NEUTRAL, Buildings.HEALING_FOUNTAIN, BuildGroup.ECONOMY);
+		registerBuildings(NEUTRAL, Buildings.END_PORTAL, BuildGroup.ECONOMY);
+		registerBuildings(NEUTRAL, Buildings.NEUTRAL_TRANSPORT_PORTAL, BuildGroup.ECONOMY);
 		
 		if (FMLEnvironment.dist.isClient())
 			for (ResourceLocation faction : PLAYABLE_FACTIONS) {
@@ -528,17 +543,23 @@ public class Factions {
 		return Registry.register(ReignOfNetherRegistries.FACTIONS, key, faction);
 	}
 	
-	public static void registerStartBuilding(Faction faction, Building building, Keybinding key) {
-		registerBuildings(faction, building, key);
+	public static void registerStartBuilding(Faction faction, Building building, BuildGroup group) {
+		registerBuildings(faction, building, group);
 		faction.capitolBuilding = ReignOfNetherRegistries.BUILDING.getKey(building);
 	}
 	
-	public static void registerBuildings(Faction faction, Building building, Keybinding key) {
+	/**
+	 * Puts a building in a tab of the worker's build menu. Slot keys are positional (BuildGroup.SLOT_KEYS): the Nth
+	 * building registered in a tab takes the Nth key, in every tab, so registration order is the tab's order.
+	 */
+	public static void registerBuildings(Faction faction, Building building, BuildGroup group) {
 		building.setFaction(faction.key);
+		Keybinding key = faction.nextSlotKey(group);
+		faction.buildGroups.put(building, group);
 		if (key != null)
 			faction.buildHotkeys.put(building, key);
 		if (FMLEnvironment.dist.isClient())
-			faction.addBuilding(building, key);
+			faction.addBuilding(building, key, group);
 	}
 	
 	public static void registerBuilding(Faction faction, Building building) {
@@ -570,9 +591,7 @@ public class Factions {
 		FACTION_BY_TYPE.clear();
 	}
 	
-	public static void registerBuildings(Faction faction, Building building) {
-		registerBuildings(faction, building, null);
-	}
+
 	
 	/**
 	 * The faction with this key, or null when there is none. Packet decoders use this, not {@link #getFaction}: that one

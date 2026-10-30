@@ -213,6 +213,14 @@ public class BuildingPlacement {
     public String payerName; // who pays for construction (bridges lose their ownerName after placement)
     public boolean freeBuild = false; // placed by a command: built the old way without any cost
     public float buildSpeedMult = 1f; // eg. 2 for a player's first capitol
+    /**
+     * The Soul Engineer's Soul Boiler (ability/abilities/SoulBoiler): until this game tick the building builds and
+     * produces {@link com.solegendary.reignofnether.ability.abilities.SoulBoiler#SPEED_MULT} times as fast. Server
+     * only, not saved: a 20 s thing.
+     */
+    public long boilUntilTick = 0;
+    /** The owner the boil was cast for (SoulBoiler.startBoil): it ends if the building changes hands. */
+    public String boilOwner = "";
 
     protected List<AbilityButton> abilityButtons = new ArrayList<>();
     protected List<Ability> abilities = new ArrayList<>();
@@ -261,7 +269,13 @@ public class BuildingPlacement {
                         maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
     }
 
+    /** How far the building reveals fog: its designed sight ({@link #getBaseSightRange}) times the global Vision multiplier. */
     public int getSightRange() {
+        return com.solegendary.reignofnether.fogofwar.Vision.scaled(getBaseSightRange());
+    }
+
+    /** The designed sight; placements with their own sight override this, not getSightRange. */
+    public int getBaseSightRange() {
         if (isCapitol)
             return Building.CAPITOL_SIGHT_RANGE;
         else if (getBuilding().hasActiveAddon(GarrisonableBuildingAddon.class) &&
@@ -487,14 +501,27 @@ public class BuildingPlacement {
             patchValueCache = v;
         return v;
     }
+    /**
+     * Energy per second this building drains while it runs (resources/TierGate): a finished metal extractor, T1 or T2 by
+     * its tower. 0 while the refit runs (the drill is stopped, like its income) and for every other building. The economy
+     * pays the sum each tick and the extractors' metal scales with the share it could pay
+     * (EconomyServerEvents.payExtractorUpkeep).
+     */
+    public float getEnergyUpkeep() {
+        if (!isBuilt || !(getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor))
+            return 0;
+        if (this instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp && !pp.productionQueue.isEmpty())
+            return 0;
+        return getUpgradeLevel() > 0 ? com.solegendary.reignofnether.resources.TierGate.T2_EXTRACTOR_ENERGY_UPKEEP
+            : com.solegendary.reignofnether.resources.TierGate.T1_EXTRACTOR_ENERGY_UPKEEP;
+    }
+
     public float getEnergyIncome() {
         if (!isBuilt)
             return 0;
         float e = getBuilding().getEnergyIncome();
-        // Stormcallers Ley resonance (mana/LeyNetwork): a ley-linked wind generator earns more per other generator in its
-        // network (capped). One empty-map check for every owner who never linked anything
+        // BAR wind: a wind generator earns with the wind
         if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator wg) {
-            e *= com.solegendary.reignofnether.mana.LeyNetwork.incomeMultiplier(ownerName, centrePos);
             if (wg.isWindDriven())
                 e *= com.solegendary.reignofnether.resources.Wind.multiplier();   // BAR wind: earns with the wind
         }
@@ -761,6 +788,43 @@ public class BuildingPlacement {
                  .append(", built ").append(isBuilt).toString();
     }
 
+    /**
+     * The site's own multipliers on its builders' power: the first-capitol bonus ({@link #buildSpeedMult}), the Soul
+     * Boiler (SoulBoiler.speedMult) and the economy pace (EconomyPace: construction speeds up / slows down with income,
+     * so a paced match keeps the same build-time-to-income ratio; cost per building is unchanged - only how fast it
+     * flows). Public for the game test.
+     */
+    public float boostedBuildPower(float buildPower) {
+        return buildPower * buildSpeedMult * com.solegendary.reignofnether.ability.abilities.SoulBoiler.speedMult(this)
+            * com.solegendary.reignofnether.resources.EconomyPace.of(payerName);
+    }
+
+    /**
+     * Puts missing blocks straight back - no builder, no wood, lowest first, dry before wet - until the building has
+     * regained {@code hp} health (it may overshoot by under one block's share) or is whole. The Soul Engineer's Patch
+     * Kit (ability/abilities/PatchKit). Returns the health regained. Server only.
+     */
+    public int restoreHealthNow(int hp) {
+        if (level == null || level.isClientSide() || hp <= 0)
+            return 0;
+        int before = getHealth();
+        partialBlocksDestroyed = 0d;   // a dent smaller than a block is mended first, as a builder's repair does
+        ArrayList<BuildingBlock> missing = new ArrayList<>();
+        for (BuildingBlock block : blocks)
+            if (!block.getBlockState().isAir() && !block.isPlaced(level) && level.isLoaded(block.getBlockPos()))
+                missing.add(block);
+        missing.sort(Comparator.comparingInt(b -> b.getBlockPos().getY()));
+        missing = waterLast(neverPlacedFirst(missing, placedBlockPosSet));
+        for (BuildingBlock block : missing) {
+            if (getHealth() - before >= hp || getHealth() >= getMaxHealth())
+                break;
+            blockPlaceQueue.add(0, block);
+            buildNextBlock();
+            blockPlaceQueue.remove(block);   // still there only when it could not be placed
+        }
+        return getHealth() - before;
+    }
+
     public static ArrayList<BuildingBlock> neverPlacedFirst(ArrayList<BuildingBlock> unplaced, Set<BlockPos> placed) {
         if (placed.isEmpty())
             return unplaced;
@@ -835,9 +899,6 @@ public class BuildingPlacement {
             }
             return;
         }
-        // a Sunforged Field Mason's Bulwark halves attackers' damage while it holds (design/combat_engineers.md); the
-        // attacker-less overload (game-ender strikes, com-blasts) is not an attack and ignores it
-        amount *= com.solegendary.reignofnether.ability.abilities.Bulwark.damageMultiplier(this);
         if (attacker instanceof Mob mob)
             lastAttacker = mob;
         if (attacker instanceof Unit u && !getLevel().isClientSide() && isAttackable() && amount > 0)
@@ -869,12 +930,23 @@ public class BuildingPlacement {
             intAmount += 1;
         }
 
+        // a building's own water (a pool, a waterlogged block) goes last: the blocks next to it are never picked, but
+        // breaking the water itself left the wall beside the gap dry for the ~5 ticks the rest took to flow back, a hit
+        // in that window broke the wall, and the pool poured out onto the raiders round the building - they floated off
+        // it, and Verdant's extractor (its pool a block up on its south edge) took 15-28 s instead of 10 / 22 s
+        // (RaidGameTests.raid_hits_leave_an_extractors_pool_till_last)
         var placedBlocks = new ArrayList<BuildingBlock>();
+        var poolBlocks = new ArrayList<BuildingBlock>();
         for (BuildingBlock block : blocks) {
             if (!isDestroyedAndNotNextToLiquid(block)) continue;
-            placedBlocks.add(block);
+            if (getLevel().getBlockState(block.getBlockPos()).getFluidState().isEmpty())
+                placedBlocks.add(block);
+            else
+                poolBlocks.add(block);
         }
         Collections.shuffle(placedBlocks);
+        Collections.shuffle(poolBlocks);
+        placedBlocks.addAll(poolBlocks);
         for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
             BlockPos bp = placedBlocks.get(i).getBlockPos();
             com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
@@ -970,7 +1042,8 @@ public class BuildingPlacement {
             int z = block.getBlockPos().getZ();
             boolean solid = !block.getBlockState().isAir();
             if (solid && !quietDemolition && block.isPlaced(serverLevel) && seen[0]++ % blastEvery == blastEvery / 2) {
-                serverLevel.explode(null, null, null, x, y, z, 1.0f, false, Level.ExplosionInteraction.TNT);
+                serverLevel.explode(null, null, null, x, y, z, 1.0f, false,
+                    getBuilding().keepsGroundIntact() ? Level.ExplosionInteraction.NONE : Level.ExplosionInteraction.TNT);
             }
             // removed without the per-block break crack and debris (hundreds of them per building)
             if (solid)
@@ -1027,7 +1100,6 @@ public class BuildingPlacement {
         }
         placedBlockPosSet.clear();
 
-        com.solegendary.reignofnether.mana.LeyNetwork.onBuildingGone(ownerName, centrePos);   // its ley links die with it
         getBuilding().destroy(serverLevel, this);
         for (BuildingCommand command : commands)
             if (command.condition == BuildingCommand.TriggerCondition.ON_DESTROY)
@@ -1056,6 +1128,11 @@ public class BuildingPlacement {
     // should only be run serverside
     public void onBlockBreak(ServerLevel level, BlockPos pos, boolean breakBlocks) {
         totalBlocksEverBroken += 1;
+        // a block lost while the site is unbuilt takes its share of the paid build progress with it: otherwise
+        // tickFlowConstruction re-queued it for free next tick (no builder, no cost), so any hit worth up to two blocks
+        // grew straight back and a partly built site could never be brought down (the user's 20% metal extractor)
+        if (!isBuilt && placedBlockPosSet.contains(pos) && getBlocksTotal() > 0)
+            buildProgress = Math.max(0f, buildProgress - 1f / getBlocksTotal());
         Random rand = new Random();
 
         if (this.getFaction().equals(Factions.MONSTERS) && ResearchServerEvents.playerHasResearch(this.ownerName,
@@ -1165,6 +1242,10 @@ public class BuildingPlacement {
         isBuilt = true;
         if (!this.level.isClientSide()) {
             FrozenChunkClientboundPacket.setBuildingBuiltServerside(this.originPos);
+            // a finished site leaves its builders' queues now, not on their goal's next 5-tick turn (until then the
+            // queue still listed it as a pending order)
+            for (WorkerUnit worker : getBuilders())
+                worker.getBuildRepairGoal().queuedBuildings.remove(this);
             if (isCapitol && BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) <= 1) {
                 for (int i = 0; i < 3; i++)
                     spawnHuntableAnimalsNearby(animalSpawnBlockRange / 2);
@@ -1427,10 +1508,7 @@ public class BuildingPlacement {
         // still rises, slowly
         if (assistUntilTick > serverLevel.getGameTime())
             buildPower += assistPower;
-        buildPower *= buildSpeedMult;
-        // economy pace (EconomyPace): construction speeds up / slows down with income, so a paced match keeps the
-        // same build-time-to-income ratio. Cost per building is unchanged - only how fast it flows
-        buildPower *= com.solegendary.reignofnether.resources.EconomyPace.of(payerName);
+        buildPower = boostedBuildPower(buildPower);
 
         // progress may only run a few blocks ahead of the blocks actually placed (block placement is rate limited
         // and blocks destroyed during construction must be rebuilt), so builders never pay for nothing

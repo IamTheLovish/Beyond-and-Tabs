@@ -102,8 +102,12 @@ public class BugSweep1GameTests {
     public static void bugsweep1_select_army_k_is_migrated_once(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         String name = Keybindings.selectArmy.getTranslationKey();
-        if (KeybindMigration.LAYOUT_VERSION < 2)
+        if (KeybindMigration.LAYOUT_VERSION < 3)
             problems.add("LAYOUT_VERSION must be bumped for the select-army row");
+        // layout 2 (the Ctrl+C / Ctrl+Shift+B move) shipped without the row: those installs need it as well
+        if (KeybindMigration.plan(2, n -> n.equals(name) ? GLFW.GLFW_KEY_K : KeybindMigration.CUSTOM).stream()
+                .noneMatch(m -> m.binding().equals(name)))
+            problems.add("layout 2 must move select army too");
         // layout 1 install with K saved: moves to the current default
         var moves = KeybindMigration.plan(1, n -> n.equals(name) ? GLFW.GLFW_KEY_K : KeybindMigration.CUSTOM);
         if (moves.size() != 1 || !moves.get(0).binding().equals(name) || moves.get(0).from() != GLFW.GLFW_KEY_K

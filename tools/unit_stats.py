@@ -110,6 +110,7 @@ ROSTER = [
     ('Stormcallers', 't2', 'storm/EarthshakerUnit', 'tank'),
     ('Stormcallers', 't2', 'storm/GravityMonkUnit', 'caster'),
     ('Stormcallers', 't2', 'storm/MirrorMageUnit', 'support'),
+    ('Stormcallers', 't2', 'storm/SparkSageUnit', 'support'),
     # slice 4: the Seer and the Lantern Fortress do not fight (the Fortress is bought for its dome); the Phoenix's
     # rebirth and the Celestial Dragon's Tempest are what the table can't see
     ('Stormcallers', 't2', 'storm/SeerUnit', 'scout'),
@@ -135,6 +136,7 @@ ROSTER = [
     ('Brassworks', 't2', 'brass/DrillBurrowerUnit', 'raider'),
     ('Brassworks', 't2', 'brass/RepairCrawlerUnit', 'support'),
     ('Brassworks', 't2', 'brass/ClockworkSpiderUnit', 'skirmisher'),
+    ('Brassworks', 't2', 'brass/SoulEngineerUnit', 'support'),
     # slice 4: the Great Forge's experimental (Heat vents its cannon; the drones it launches are free and not listed)
     ('Brassworks', 't3', 'brass/IronLeviathanEngineUnit', 'experimental'),
     # big-units (design/big_units.md): the T2 beasts - each pays for a signature the per-target columns can't see (an
@@ -387,6 +389,11 @@ def building_stats():
         name = os.path.basename(cls)
         src = _read(path)
         hp = re.search(r'this\.maxHealth\s*=\s*([\d.]+)', src)
+        if not hp:   # a health that lives in raid/RaidTuning.java (the early-raid numbers: one tuning place)
+            ref = re.search(r'this\.maxHealth\s*=\s*(?:com\.solegendary\.reignofnether\.raid\.)?RaidTuning\.(\w+)', src)
+            if ref:
+                tuning = _read(os.path.join(SRC, 'raid/RaidTuning.java'))
+                hp = re.search(r'\b' + ref.group(1) + r'\s*=\s*([\d.]+)d?;', tuning)
         rng = re.search(r'int get(?:Attack)?Range\([^)]*\)\s*\{\s*return\s+(\d+)', src)
         mi = re.search(r'this\.metalIncome\s*=\s*([\d.]+)', src)
         ei = re.search(r'this\.energyIncome\s*=\s*([\d.]+)', src)

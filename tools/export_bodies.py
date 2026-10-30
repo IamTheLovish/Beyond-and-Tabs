@@ -24,6 +24,15 @@ BODIES = [
     ("design/models/sunforged_halberdier_v2.json", "HalberdierModel", "halberdier_unit", "tabard,tabard_dark"),
     ("design/models/sunforged_crossbow_levy_v2.json", "CrossbowLevyModel", "crossbow_levy_unit", "tabard,tabard_dark"),
     ("design/models/sunforged_squire_runner_v2.json", "SquireRunnerModel", "squire_runner_unit", "tabard,tabard_dark"),
+    # Oct 21 (lovish 21:20): the four Sunforged men off the villager body (tools/human_kit.py), with plain _s maps
+    ("design/models/sunforged_cleric_v2.json", "DomeClericModel", "dome_cleric_unit", "tabard,tabard_dark",
+     "--plain-spec"),
+    ("design/models/sunforged_architect_v2.json", "RoyalArchitectModel", "royal_architect_body_unit",
+     "tabard,tabard_dark", "--plain-spec"),
+    ("design/models/sunforged_mason_v2.json", "FieldMasonModel", "field_mason_body_unit", "tabard,tabard_dark",
+     "--plain-spec"),
+    ("design/models/sunforged_dawn_paladin_v2.json", "DawnPaladinModel", "dawn_paladin_body_unit",
+     "tabard,tabard_dark", "--plain-spec"),
 ]
 TEX = "bar/src/main/resources/assets/reignofnether/textures/entities/"
 JAVA = "bar/src/main/java/com/solegendary/reignofnether/unit/modelling/models/gen/"
@@ -46,11 +55,11 @@ def main(argv):
     check = "--check" in argv
     only = [a for a in argv if not a.startswith("--")]
     changed = []
-    for model, cls, texture, team in BODIES:
+    for model, cls, texture, team, *extra in BODIES:
         if only and not any(o in texture for o in only):
             continue
         r = subprocess.run([sys.executable, "tools/dsl_to_game.py", model, "--class", cls, "--texture", texture,
-                            "--team", team], cwd=ROOT, capture_output=True, text=True)
+                            "--team", team] + list(extra), cwd=ROOT, capture_output=True, text=True)
         if r.returncode != 0:
             print(r.stdout + r.stderr)
             raise SystemExit("export failed: " + texture)
