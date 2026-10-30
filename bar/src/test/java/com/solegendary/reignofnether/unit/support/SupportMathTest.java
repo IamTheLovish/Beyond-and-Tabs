@@ -159,12 +159,17 @@ class SupportMathTest {
     }
 
     @Test
-    void healIgnoresScratchesAndFriendsOutOfReach() {
+    void healTakesAFriendOneHpDownButNotOneOutOfReach() {
+        // lovish's review r1 answer "Only full health": anyone below full is a target (the game's floor, 0), a full
+        // friend never; the old 3 HP scratch floor still works when passed
         SupportField f = field();
         add(f, 0, 0, ME);
-        addHurt(f, 2, 0, 19f, FRIEND);   // 1 HP missing
-        addHurt(f, 20, 0, 2f, FRIEND);   // far away
-        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 12, SPLASH, 3f, INV));
+        int far = addHurt(f, 20, 0, 2f, FRIEND);   // far away
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 12, SPLASH, SupportBrain.HEAL_MIN_MISSING, INV));
+        int scratch = addHurt(f, 2, 0, 19f, FRIEND);   // 1 HP missing
+        assertEquals(scratch, SupportMath.healTarget(f, 0, 0, 12, SPLASH, SupportBrain.HEAL_MIN_MISSING, INV));
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 12, SPLASH, 3f, INV), "a 3 HP floor skips the scratch");
+        assertNotEquals(-1, far);
     }
 
     @Test
@@ -324,7 +329,7 @@ class SupportMathTest {
         add(f, 0, 0, ME);
         for (int i = 0; i < 30; i++)
             add(f, 1 + i * 0.25, 7, FOE);
-        int k = SupportMath.nearest(f, F_ENEMY, 0, 0, 0, 100, 0f);
+        int k = SupportMath.nearest(f, F_ENEMY, 0, 0, 0, 100, SupportMath.ANY);
         assertEquals(SupportMath.MAX_CANDIDATES, k);
         for (int c = 1; c < k; c++)
             assertTrue(f.candD[c - 1] <= f.candD[c], "nearest first");

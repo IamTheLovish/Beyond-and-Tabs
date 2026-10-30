@@ -93,15 +93,19 @@ public final class SupportMath {
         return c;
     }
 
+    /** {@link #nearest}'s minMissing for "hurt or not": every entry matching the flags counts. */
+    static final float ANY = -1f;
+
     /**
      * Up to {@link #MAX_CANDIDATES} entries matching the flags within {@code r} of (cx, cz), nearest first, into
-     * {@code f.cand}; returns how many. A {@code minMissing} above 0 keeps only the {@link #hurt} ones.
+     * {@code f.cand}; returns how many. A {@code minMissing} of 0 or more keeps only the {@link #hurt} ones, {@link #ANY}
+     * every one.
      */
     static int nearest(SupportField f, int all, int none, double cx, double cz, double r, float minMissing) {
         double r2 = r * r;
         int k = 0;
         for (int i = 0; i < f.n; i++) {
-            if (!has(f.flags[i], all, none) || (minMissing > 0 && !hurt(f, i, minMissing)))
+            if (!has(f.flags[i], all, none) || (minMissing >= 0 && !hurt(f, i, minMissing)))
                 continue;
             double d = d2(f.x[i], f.z[i], cx, cz);
             if (d > r2)
@@ -135,7 +139,7 @@ public final class SupportMath {
         out.reset();
         int skip = skipUndead(rule);
         double reach2 = reach * reach, r2 = radius * radius;
-        int k = nearest(f, F_ENEMY, skip, sx, sz, reach, 0f);
+        int k = nearest(f, F_ENEMY, skip, sx, sz, reach, ANY);
         for (int c = 0; c < k; c++) {
             int i = f.cand[c];
             double cx = 0, cz = 0;
@@ -185,12 +189,13 @@ public final class SupportMath {
     }
 
     /**
-     * Hurt enough for a heal: missing at least {@code minMissing} health (a scratch is not worth a throw), so never a
-     * friend at full health. lovish, Oct 30 ("heal low hp units not full hp units"), and his review r1 answer "Only full
-     * health": no cut below full - who is lowest decides (healTarget), not a bar.
+     * Hurt enough for a heal: missing some health, and at least {@code minMissing} - so never a friend at full health.
+     * lovish, Oct 30 ("heal low hp units not full hp units"), and his review r1 answer "Only full health": no cut below
+     * full - who is lowest decides (healTarget), not a bar.
      */
     static boolean hurt(SupportField f, int i, float minMissing) {
-        return f.missing(i) >= minMissing;
+        float m = f.missing(i);
+        return m > 0 && m >= minMissing;
     }
 
     /** What a friend's value adds to a heal's score: 0 for the cheapest (value 1) up to {@link #VALUE_TIEBREAK}. */
@@ -346,7 +351,7 @@ public final class SupportMath {
      * nearer. -1 when none of them has an enemy that close.
      */
     public static int front(SupportField f, double sx, double sz, double r) {
-        int k = nearest(f, F_FRIEND, F_SUPPORT | F_SELF, sx, sz, r, 0f);
+        int k = nearest(f, F_FRIEND, F_SUPPORT | F_SELF, sx, sz, r, ANY);
         int best = -1, bestCount = 0;
         for (int c = 0; c < k; c++) {
             int i = f.cand[c];

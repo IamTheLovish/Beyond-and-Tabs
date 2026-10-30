@@ -114,8 +114,12 @@ public final class SupportBrain {
     static final double MAX_DY = 8;
     /** An idle unit that walked further than this for a cast walks back to its post. */
     static final double HOME_DRIFT = 2.0;
-    /** A friend must miss at least this much health for a heal (not a scratch: a potion's cooldown is shared). */
-    public static final float HEAL_MIN_MISSING = 3f;
+    /**
+     * A friend must miss more than nothing and at least this much health for a heal. lovish, Oct 30 (review r1, "Only
+     * full health"): anyone below full is a target, a full one never - so 0. It was 3 (a scratch not worth a throw,
+     * a potion's cooldown being shared); setting it back to 3 brings that floor back.
+     */
+    public static final float HEAL_MIN_MISSING = 0f;
     /** How far past a cast's range a unit may walk for a heal or cleanse: idle, and under a support order. */
     public static final double IDLE_WALK = 4.0, ORDER_WALK = 2.0;
 
@@ -404,7 +408,7 @@ public final class SupportBrain {
         if (fighters.length == 0)
             return false;
         double sx = mob.getX(), sz = mob.getZ();
-        if (SupportMath.nearest(FIELD, F_ENEMY | F_ATTACKER, 0, sx, sz, 1e4, 0f) == 0)
+        if (SupportMath.nearest(FIELD, F_ENEMY | F_ATTACKER, 0, sx, sz, 1e4, SupportMath.ANY) == 0)
             return false;
         int e = FIELD.cand[0];
         double ex = FIELD.x[e], ez = FIELD.z[e];
