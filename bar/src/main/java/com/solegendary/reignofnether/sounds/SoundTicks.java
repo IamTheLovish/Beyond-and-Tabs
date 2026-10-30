@@ -6,10 +6,12 @@ import net.minecraft.Util;
  * The clock the client's sound throttles count in: real time, 20 ticks a second (SfxClient's gaps and per-tick
  * budgets, SoundClientEvents' repeat damping).
  *
- * <p>Not the level's game time. On the client that is the time of day (mixin/ClientLevelMixin.tickTime sets both to
- * the target the server's time packet gives, mixin/ClientPacketMixin.handleSetTime): it stands still between those
- * packets and jumps about 20 ticks once a second, and stands still for good when the day does. Counted in it, "3 unit
- * sounds a tick" was 3 a second for a whole battle, and each sound's 2-tick gap was a second.
+ * <p>Not the level's game time. On the client that is the time of day: mixin/ClientLevelMixin.tickTime sets game
+ * time and day time to the target the server's time packets give (mixin/ClientPacketMixin.handleSetTime). In a match
+ * the day moves one tick every matchDayCycle game ticks (match/DayClock: every 3rd at the default Slow), it stands
+ * still with the cycle Off, before the match starts and once it is decided, and near a night source it walks to
+ * midnight and stays there. Counted in it, "3 unit sounds a tick" was 1 a tick at Slow, and with the clock standing
+ * still a category's budget and every sound's gap never ran out: after the first few, no unit sound played at all.
  */
 public final class SoundTicks {
 
