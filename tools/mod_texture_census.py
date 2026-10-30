@@ -61,7 +61,11 @@ def load_jars(paths):
     return files
 
 
-def read(files, key, cache={}):
+_CACHE = {}
+
+
+def read(files, key):
+    cache = _CACHE
     if key not in files:
         return None
     if key not in cache:
