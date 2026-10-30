@@ -1,8 +1,6 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.building.BuildingServerEvents;
-import com.solegendary.reignofnether.building.buildings.defence.DefenceTower;
 import com.solegendary.reignofnether.hero.FactionHero;
 import com.solegendary.reignofnether.hero.FactionHeroAbility;
 import com.solegendary.reignofnether.hero.HeroBot;
@@ -29,9 +27,10 @@ import java.util.List;
  * the player's order first, only what the hero's side sees, never under an enemy tower's guns - was proven on the Dawn
  * Paladin alone (HeroBrain.ROLLED_OUT); the other seven heroes still ran v1, which reads every unit round the hero
  * (cloaked or not), fires its gap closer off a move order and lets the hero's own chase walk it under a tower. One test
- * per hero, each on the v2 rule its kit can show: the five with a strike skip an enemy their side cannot see; the
- * Warchief keeps its move order past an enemy in Savage Leap's reach; the Ash Shaman (a melee body) does not chase into
- * a tower. Written before the code (tests first): main runs v1 for all seven. Each test has a batch of its own
+ * per hero that v1 and v2 tell apart: the five with a strike skip an enemy their side cannot see; the Warchief keeps
+ * its move order past an enemy in Savage Leap's reach. The Ash Shaman is rolled out too, but no test here tells v1 from
+ * v2 for it while every one of its spells is Ai.NONE (its tower test passed on main, red run 41002933229, so it was
+ * dropped): PR 418 gives its spells their AI. Written before the code (tests first). Each test has a batch of its own
  * (HeroAiV2GameTests: a hero looks 16 blocks round itself, and a neighbour's units are enemies in reach).
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
@@ -184,53 +183,6 @@ public class HeroAiV2RolloutGameTests {
                 if (arrived[0] < 0)
                     problems.add(String.format("the Warchief never got to where it was sent (%.1f blocks short at best)", closest[0]));
                 HeroAiGameTests.finish(helper, problems, HeroAiV2GameTests.mobs(h, foe), null);
-            });
-        }
-    }
-
-    // ------------------------------------------------------------------------------- never under a tower's guns
-
-    /**
-     * The Ash Shaman (the Brute's melee body) stands just outside an enemy raid tower's reach with an enemy inside it:
-     * its own chase must not take it under the guns. v1 has no say over the hero's idle targeting
-     * (HeroBot.mayAutoTarget answers "yes" without a brain), so the Shaman walks up to the enemy. Its spells are left
-     * unlearnt: the draft's #5 gives them their AI.
-     */
-    @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_shaman", timeoutTicks = 240)
-    public static void hero_ai_v2_rollout_ash_shaman_never_chases_into_an_enemy_tower(GameTestHelper helper) {
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        String me = HeroGameTests.owner(helper, "v2r_shaman"), them = me + "_foe";
-        DefenceTower.DefenceTowerPlacement tower = HeroAiV2GameTests.raidTower(helper, them);
-        if (tower == null) {
-            HeroAiGameTests.finish(helper, List.of("setup: the raid tower is not a DefenceTowerPlacement"), new ArrayList<>(), null);
-            return;
-        }
-        Runnable cleanup = () -> BuildingServerEvents.getBuildings().remove(tower);
-        double tx = tower.centrePos.getX() + 0.5, tz = tower.centrePos.getZ() + 0.5;
-        int range = tower.tower.kind.range;
-        Mob h = hero(helper, HeroKits.ASH_SHAMAN, me, 15, 15);
-        Mob foe = HeroAiV2GameTests.dummy(helper, them, 11, 11);
-        List<Mob> mobs = HeroAiV2GameTests.mobs(h, foe);
-        if (!(h instanceof FactionHero) || foe == null) {
-            HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, cleanup);
-            return;
-        }
-        if (HeroAiV2GameTests.flat(h, tx, tz) <= range + 2 || HeroAiV2GameTests.flat(foe, tx, tz) >= range - 1) {
-            HeroAiGameTests.finish(helper, List.of(String.format("setup: hero %.1f and enemy %.1f from the tower (range %d)",
-                HeroAiV2GameTests.flat(h, tx, tz), HeroAiV2GameTests.flat(foe, tx, tz), range)), mobs, cleanup);
-            return;
-        }
-        double[] closest = { Double.MAX_VALUE };
-        for (int t = 1; t <= 200; t++) {
-            final int tick = t;
-            helper.runAfterDelay(t, () -> {
-                closest[0] = Math.min(closest[0], HeroAiV2GameTests.flat(h, tx, tz));
-                if (tick < 200)
-                    return;
-                List<String> problems = new ArrayList<>();
-                if (closest[0] <= range)
-                    problems.add(String.format("the Ash Shaman went %.1f blocks from an enemy raid tower that reaches %d", closest[0], range));
-                HeroAiGameTests.finish(helper, problems, mobs, cleanup);
             });
         }
     }
