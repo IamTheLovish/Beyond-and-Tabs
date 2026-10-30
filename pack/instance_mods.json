@@ -1,5 +1,11 @@
 [
  {
+  "file": "FramedBlocks-9.4.3.jar",
+  "size": 4251314,
+  "sha1": "740c0feaab75455f32df7e137389f77c83fb490c",
+  "sha512": "19a098bbf9ee7ee39f6b785bbce5f87b9dca58a491fa16eba2f38cfa106f37ee90c1ce56686a50adef8f5d3086e3c22a6127ed02bdf3f80d57297c8f7c1b49fc"
+ },
+ {
   "file": "ImmediatelyFast-Forge-1.5.5+1.20.4.jar",
   "size": 532063,
   "sha1": "9eacd407b7dea636d375dc47335d92f616484ea2",
@@ -46,6 +52,13 @@
   "size": 573928,
   "sha1": "10263d3e99807662ff065edce0e470fe62e84b30",
   "sha512": "e48dae175eb053ce0f7035e634264f8e84e60560609a5e0391bff01c3e584e6c0fa28fd88fde852b674876b8e21f923444c9ad2726326e337da2d69af0261a70"
+ },
+ {
+  "file": "domum_ornamentum-1.20.1-1.0.304-snapshot-universal.jar",
+  "size": 1180558,
+  "sha1": "166c70ed9f958aa79c3f30a0bd84e3bf6fc3b47f",
+  "sha512": "a13b9ac9cdfe2cc4602e0fb224765e73aaa0fe8d664029bc3433512f3a5cafc55a1fd9783bfb610a441a9111c8165f8582bff1d388421171f90c99bf569321e1",
+  "url": "https://edge.forgecdn.net/files/8765/962/domum_ornamentum-1.20.1-1.0.304-snapshot-universal.jar"
  },
  {
   "file": "embeddium-0.3.31+mc1.20.1.jar",
