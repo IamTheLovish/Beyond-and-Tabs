@@ -130,6 +130,17 @@ public class HeroServerEvents {
         }
     }
 
+    /** A player left: the rank-up menu holds they had on their heroes end now (auto-learn goes on without them). */
+    @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent evt) {
+        if (evt.getEntity().level().isClientSide())
+            return;
+        String name = evt.getEntity().getName().getString();
+        for (LivingEntity le : UnitServerEvents.getAllUnits())
+            if (le instanceof FactionHero hero && name.equals(hero.getOwnerName()))
+                hero.heroCore().releaseRankMenu();
+    }
+
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent evt) {
         for (HeroUnitSave fallenHero : fallenHeroes) {
