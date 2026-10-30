@@ -29,7 +29,8 @@ import java.util.List;
  *
  * lovish (Oct 30) on how: "increase max flying high by a bit then go around if it cant fly over that new max", and
  * then "Ground under the dragon": a dragon may climb to {@link #CEILING} over whatever is below it right now (it climbs
- * over hills and towers on the way) and flies round only what stands taller than that.
+ * over hills and towers on the way) and flies round only what stands taller than that; and "can be higher if it needs
+ * to fly over hills or mountains": rising ground is flown over however high it goes.
  *
  * Each test flies one dragon down a 56 x 24 glass course far from the grid (its chunks held): sent over a wall under
  * that ceiling it must arrive in time, never touch it, keep its way on (no stop-go) and never rise past the ceiling;
@@ -324,6 +325,61 @@ public class DragonRouteGameTests {
                     problems.add(String.format("slowed to %.3f b/t on the way (under 0.6 x cruise %.3f)", worst[0], cruise));
                 if (worst[2] > OVERSHOOT)
                     problems.add(String.format("climbed %.2f blocks past its ceiling", worst[2]));
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems));
+            } finally {
+                dragon.discard();
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------------ over a hill
+
+    /**
+     * lovish: "can be higher if it needs to fly over hills or mountains". A ridge 13 wide across the line rises a block
+     * per block to 18 over the floor and falls again: its top is past a ceiling counted from the floor the dragon starts
+     * over, but it is rising ground, not a tower, so the Bone Dragon flies straight over it - never 1.5 blocks off the
+     * line, never touching it - and is over its point in time.
+     */
+    @GameTest(template = ARENA, timeoutTicks = SETUP + ARRIVE_BY + 20, batch = BATCH)
+    public static void bone_dragon_flies_over_a_hill_higher_than_its_ceiling(GameTestHelper helper) {
+        Course c = course(helper, 6);
+        for (int dx = 14; dx <= 47; dx++) {
+            int h = Math.max(1, 18 - Math.abs(dx - 31));
+            stone(helper, c, dx, 1, 6, dx, h, 18);
+        }
+        Mob dragon = spawn(helper, EntityRegistrar.BONE_DRAGON_UNIT.get(), c.x0() + 6.5, PAD_Y + 10.5, c.z0() + 12.5, -90f);
+        BlockPos target = c.at(52, 0, 12);
+        double tx = target.getX() + 0.5, tz = target.getZ() + 0.5, lineZ = c.z0() + 12.5;
+        helper.runAfterDelay(SETUP, () -> ((Unit) dragon).getMoveGoal().setMoveTarget(target));
+        final double[] off = { 0 };
+        final int[] arrived = { -1 }, touched = { 0 };
+        final List<String> trace = new ArrayList<>();
+        for (int t = SETUP + 1; t <= SETUP + ARRIVE_BY; t++) {
+            final int tick = t - SETUP;
+            helper.runAfterDelay(t, () -> {
+                double x = dragon.getX(), z = dragon.getZ();
+                if (tick % 10 == 0)
+                    trace.add(String.format("t%d %.1f %.1f %.1f", tick, x - c.x0(), dragon.getY() - PAD_Y, z - c.z0()));
+                if (dragon.horizontalCollision || (dragon.verticalCollision && !dragon.onGround()))
+                    touched[0]++;
+                off[0] = Math.max(off[0], Math.abs(z - lineZ));
+                if (arrived[0] < 0 && Math.hypot(tx - x, tz - z) < 3.0)
+                    arrived[0] = tick;
+            });
+        }
+        helper.runAfterDelay(SETUP + ARRIVE_BY + 2, () -> {
+            try {
+                List<String> problems = new ArrayList<>();
+                if (arrived[0] < 0)
+                    problems.add("not over its point " + ARRIVE_BY + " ticks after the order (" + tail(trace) + ")");
+                if (touched[0] > 0)
+                    problems.add(touched[0] + " ticks against the hill");
+                if (off[0] > 1.5)
+                    problems.add(String.format("went %.1f blocks off the line: round a hill it should fly over (%s)",
+                        off[0], tail(trace)));
                 if (problems.isEmpty())
                     helper.succeed();
                 else
