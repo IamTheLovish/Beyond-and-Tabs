@@ -165,10 +165,11 @@ TARGETS = {
     "polished_basalt_top": dict(luma=0.38, std=0.050, sat=0.02, tilt=8.0, smooth=90, pore=8),
     "bone_block_side": dict(luma=0.84, std=0.060, sat=0.12, tilt=16.0, smooth=80, pore=20),   # r31: shafts
     "bone_block_top": dict(luma=0.80, std=0.070, sat=0.13, tilt=16.2, smooth=73, pore=20),
-    "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.08, tilt=16.0, smooth=138, pore=4),
-    "quartz_pillar_top": dict(luma=0.88, std=0.050, sat=0.09, tilt=13.4, smooth=104, pore=4),
-    "quartz_bricks": dict(luma=0.87, std=0.032, sat=0.07, tilt=10.4, smooth=129, pore=4),
-    "quartz_block_bottom": dict(luma=0.90, std=0.014, sat=0.05, tilt=2.5, smooth=145, pore=4),   # r31: seamless, near-white
+    # r32 (critic: "whites are cream" - mostly the shader's grade; the textures' own warm cast cut to near neutral)
+    "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.05, tilt=16.0, smooth=138, pore=4),
+    "quartz_pillar_top": dict(luma=0.88, std=0.050, sat=0.05, tilt=13.4, smooth=104, pore=4),
+    "quartz_bricks": dict(luma=0.87, std=0.032, sat=0.05, tilt=10.4, smooth=129, pore=4),
+    "quartz_block_bottom": dict(luma=0.91, std=0.012, sat=0.03, tilt=2.5, smooth=145, pore=4),   # r32: seamless, no veins
     # round 17 (lovish Oct 20: "pepper dots"): the crystalline stones trimmed to read as one calm stone from the RTS
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
     "andesite": dict(luma=0.56, std=0.055, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),
@@ -230,7 +231,8 @@ TARGETS = {
     # 16); soften 2.5 -> 1.0 (procedural, no scan grain to tame)
     "basalt_side": dict(luma=0.30, std=0.060, sat=0.05, tilt=16.0, smooth=30, pore=10, soften=1.0),
     "basalt_top": dict(luma=0.30, std=0.060, sat=0.05, tilt=14.0, smooth=26, pore=10, soften=1.0),
-    "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
+    # r32: a cut face - calm (std 0.06 -> 0.035), flat (tilt 13.9 -> 5), satin (25 -> 70); basalt keeps its columns
+    "smooth_basalt": dict(luma=0.30, std=0.035, sat=0.06, tilt=5.0, smooth=70, pore=8),
     # r31 (art director: "reads as dirt"): grey-brown ash - sat 0.37 -> 0.20, a touch lighter, matte (smooth 60 -> 28)
     "soul_sand": dict(luma=0.28, std=0.050, sat=0.30, tilt=15.0, smooth=28, pore=48, soften=0.8),   # r31b: warmer
     # r31 (sampler 3: metals "painted stone"): chamfer + brushing in the relief (tilt 10 -> 13), smoother (147 -> 178)
@@ -258,8 +260,9 @@ TARGETS = {
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
     "blackstone_top": dict(luma=0.17, std=0.033, sat=0.10, tilt=20.0, smooth=14, pore=12),
     # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
-    "quartz_block_top": dict(luma=0.90, std=0.016, sat=0.05, tilt=3.0, smooth=145, pore=4),
-    "quartz_block_side": dict(luma=0.90, std=0.016, sat=0.05, tilt=3.0, smooth=145, pore=4),
+    # r32: the vein carries the hue (sat 0.05 -> 0.04 with a near-neutral body), a touch more spread for it
+    "quartz_block_top": dict(luma=0.90, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),
+    "quartz_block_side": dict(luma=0.90, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),
     "farmland": dict(luma=0.38, std=0.080, sat=0.38, tilt=20.0, smooth=22, pore=56, soften=0.8),     # r31: rows
     "farmland_moist": dict(luma=0.24, std=0.070, sat=0.40, tilt=18.0, smooth=60, pore=64, soften=0.8),
     # the snowy side: dirt and snow each fitted to their own block's numbers (the recipe); smooth / pore between them
@@ -1592,21 +1595,36 @@ def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06
         alb = alb * (1 - m[..., None]) + moss_rgb * m[..., None]
         H = H + 0.08 * m
     if cracks > 0:   # drawn after everything else, so a brick texture without cracks keeps its random draws
+        # r32 (critic: cracked polished blackstone bricks identical to the plain ones at RTS scale): the fissures
+        # wider (2-3 texels at 32 per block - they survive the mipmaps) and through more of the bricks, and each
+        # crack has a pale SPALL beside it - the fresh stone where a flake broke away - which is what reads on a
+        # dark block (a darker line on near-black is nothing)
         line = np.abs(F.warp(F.noise(2, 7, 0.5), 0.02 * F.noise(4, 12), 0.02 * F.noise(4, 12)))
-        crack = (1 - smoothstep(0.0, 0.02, line)) * smoothstep(0.3, 0.7, F.noise(1, 3, 0.5)) * cracks * face
-        H = H - 0.3 * crack
-        alb = alb * (1 - 0.6 * crack)[..., None]
+        where = smoothstep(0.0, 0.45, F.noise(1, 3, 0.5))
+        crack = (1 - smoothstep(0.0, 0.032, line)) * where * cracks * face
+        spall = smoothstep(0.03, 0.10, line) * (1 - smoothstep(0.12, 0.22, line)) * where * cracks * face
+        spall = spall * smoothstep(0.2, 0.6, norm01(F.noise(3, 9, 0.5)))        # only along parts of the crack
+        H = H - 0.3 * crack - 0.10 * spall
+        alb = alb * (1 - 0.7 * crack + 0.9 * spall)[..., None]
     return H, alb
 
 
-def m_polished(F, n, base, mottle=0.10, crystals=0.10, fleck=(20, 56)):
-    """A polished stone face (polished blackstone / deepslate): soft mottling, few crystals, a bevelled border."""
-    mot = F.fbm(3, 4, 0.55)
+def m_polished(F, n, base, mottle=0.10, crystals=0.10, fleck=(20, 56), seam=0.0, rim=(0.06, 0.012), calm=False):
+    """A polished stone face (polished blackstone / deepslate): soft mottling, few crystals, a bevelled border.
+    Round 32 (critic: "polished vs rough twins read identical at RTS scale"): seam > 0 draws a faint 2x2 seam - a
+    1-texel line through the middle each way, `seam` darker - the mark of a cut and set stone; calm swaps the
+    mottle for a tighter, quieter grain (a polished face is one calm tone, the rough twin keeps its mottle)."""
+    mot = F.fbm(4, 3, 0.5) if calm else F.fbm(3, 4, 0.55)
     speck = F.noise(16, 48, 0.0)
     flecks = smoothstep(1.3, 2.2, F.noise(fleck[0], fleck[1], 0.0))
-    bev = frame(F, 0.06, 0.012)
-    H = 0.35 + 0.5 * bev + 0.03 * mot + 0.01 * speck
-    shade = (0.88 + mottle * mot + 0.02 * speck - crystals * flecks) * (0.75 + 0.25 * bev)
+    bev = frame(F, rim[0], rim[1])
+    H = 0.35 + 0.5 * bev + (0.015 if calm else 0.03) * mot + (0.004 if calm else 0.01) * speck
+    shade = (0.88 + mottle * mot + (0.008 if calm else 0.02) * speck - crystals * flecks) * (0.75 + 0.25 * bev)
+    if seam > 0:
+        d = np.minimum(np.abs(F.u - 0.5), np.abs(F.v - 0.5))
+        line = 1 - smoothstep(0.0, 1.2 / n, d)                      # ~1 texel each side of the middle
+        H = H - 0.08 * line
+        shade = shade * (1 - seam * line)
     return H, tint(base, shade)
 
 
@@ -1948,18 +1966,26 @@ def m_quartz(F, n, kind):
     elif kind in ("block_side", "block_top"):
         # r31 (art director: "remove the heavy dark seam through the 2x2 ... quartz_block a subtle tile, faint cool
         # marble vein, near-white"): a very narrow, shallow chamfer (a tile line, not a groove) and cool veins
+        # r32 (critic: quartz_block vs smooth_quartz identical at RTS): the block keeps the chamfer and carries a
+        # wider, clearer blue-grey vein (3-4 texels, a soft halo) - the smooth block is seamless and vein-free
         bev = frame(F, 0.025, 0.006)
         drift = F.noise(2, 6, 0.5, sx=1.0, sy=6.0) if kind == "block_side" else F.noise(1, 3, 0.5)
+        # (the r31 vein's threshold 0.02 on a unit-std noise was a fifth of a texel wide - invisible, a few dots)
+        line = np.abs(F.warp(F.noise(1, 4, 1.0), 0.03 * F.noise(3, 9), 0.03 * F.noise(3, 9)))
+        vein = (1 - smoothstep(0.0, 0.22, line)) * smoothstep(0.1, 0.6, F.noise(1, 3, 0.5))
+        vein = np.maximum(vein, 0.6 * F.blur(vein, 3.0))                 # a soft halo round the vein
         H = 0.5 + 0.12 * bev - 0.01 * vein + 0.01 * drift
-        shade = (0.96 - 0.09 * vein + 0.010 * drift) * (0.96 + 0.04 * bev)
-    else:                          # smooth quartz (quartz_block_bottom): SEAMLESS, the veins and a soft cloud only
+        shade = (0.96 - 0.05 * vein + 0.010 * drift) * (0.96 + 0.04 * bev)
+    else:                          # smooth quartz (quartz_block_bottom): SEAMLESS - a soft cloud only (r32: no veins)
         slow = F.noise(1, 3, 0.5)
         cloud = slow + 0.5 * F.noise(4, 10, 0.5)                       # a soft marble cloud at two scales (colour)
-        H = 0.55 + 0.02 * slow - 0.01 * vein + 0.004 * F.noise(20, 60, 0.3)   # the relief: flat, a fine polish grain
-        shade = 0.96 - 0.10 * vein + 0.008 * cloud
-    alb = tint((0.93, 0.92, 0.89), shade)
-    if kind in ("block_side", "block_top", "smooth"):
-        alb = alb * (1 - 0.06 * vein[..., None] * np.array([0.5, 0.2, 0.0])[None, None, :])   # a cool grey-blue vein
+        vein = np.zeros_like(slow)
+        H = 0.55 + 0.02 * slow + 0.004 * F.noise(20, 60, 0.3)          # the relief: flat, a fine polish grain
+        shade = 0.96 + 0.012 * cloud
+    # r32 (critic: "whites are cream" - mostly the shader's grade; the texture's own warm cast cut to near neutral)
+    alb = tint((0.93, 0.93, 0.92), shade)
+    if kind in ("block_side", "block_top"):
+        alb = alb * (1 - 0.07 * vein[..., None] * np.array([0.5, 0.25, 0.0])[None, None, :])   # a cool grey-blue vein
     return H, alb
 
 
@@ -3514,7 +3540,8 @@ def recipes():
         "deepslate_tiles": lambda F, n: m_tiles(F, n, 4, (0.22, 0.22, 0.24), joint=(0.014, 0.034), grout=0.38),
         "deepslate": lambda F, n: m_deepslate(F, n),
         "deepslate_top": lambda F, n: m_deepslate(F, n, top=True),
-        "polished_deepslate": lambda F, n: m_polished(F, n, (0.32, 0.32, 0.34), 0.06, 0.04),
+        # r32 (critic: polished vs rough twins identical at RTS): a faint 2x2 seam, a tighter calmer grain
+        "polished_deepslate": lambda F, n: m_polished(F, n, (0.32, 0.32, 0.34), 0.05, 0.03, seam=0.25, calm=True),
         # r21: 22 small high-contrast stones read as salt-and-pepper on the dark base - fewer, larger, calmer stones
         # r31: m_cobbled_slate - 16 flat angular flakes per face, soft joints (3-4 domed stones read as cartoon)
         "cobbled_deepslate": lambda F, n: m_cobbled_slate(F, n, cells=16),
@@ -3590,7 +3617,9 @@ def recipes():
         "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.19, 0.21)),
         "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
         "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
-        "smooth_basalt": lambda F, n: m_clayish(F, n, (0.28, 0.28, 0.30)),
+        # r32 (critic: smooth basalt vs basalt identical): a cut, calm face with a faint 2x2 seam, a hair of rim
+        "smooth_basalt": lambda F, n: m_polished(F, n, (0.28, 0.28, 0.30), 0.05, 0.03, seam=0.25, rim=(0.03, 0.006),
+                                                 calm=True),
         "soul_sand": m_soul_sand,
         # r31: m_gem - 3-5 hard flat facets, deep body, bright tops (m_facets' 16-18 pyramids read as cabbage)
         "diamond_block": lambda F, n: m_gem(F, n, (0.28, 0.60, 0.72), (0.86, 0.97, 1.0)),
