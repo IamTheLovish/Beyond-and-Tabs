@@ -164,7 +164,7 @@ TARGETS = {
     "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.08, tilt=16.0, smooth=138, pore=4),
     "quartz_pillar_top": dict(luma=0.88, std=0.050, sat=0.09, tilt=13.4, smooth=104, pore=4),
     "quartz_bricks": dict(luma=0.87, std=0.032, sat=0.07, tilt=10.4, smooth=129, pore=4),
-    "quartz_block_bottom": dict(luma=0.87, std=0.030, sat=0.07, tilt=3.0, smooth=145, pore=4),
+    "quartz_block_bottom": dict(luma=0.90, std=0.014, sat=0.05, tilt=2.5, smooth=145, pore=4),   # r31: seamless, near-white
     # round 17 (lovish Oct 20: "pepper dots"): the crystalline stones trimmed to read as one calm stone from the RTS
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
     "andesite": dict(luma=0.56, std=0.055, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),
@@ -250,8 +250,9 @@ TARGETS = {
     "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
     "blackstone_top": dict(luma=0.17, std=0.033, sat=0.10, tilt=20.0, smooth=14, pore=12),
-    "quartz_block_top": dict(luma=0.87, std=0.032, sat=0.07, tilt=4.0, smooth=145, pore=4),
-    "quartz_block_side": dict(luma=0.88, std=0.030, sat=0.07, tilt=3.0, smooth=145, pore=4),
+    # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
+    "quartz_block_top": dict(luma=0.90, std=0.016, sat=0.05, tilt=3.0, smooth=145, pore=4),
+    "quartz_block_side": dict(luma=0.90, std=0.016, sat=0.05, tilt=3.0, smooth=145, pore=4),
     "farmland": dict(luma=0.38, std=0.085, sat=0.38, tilt=22.0, smooth=22, pore=56),
     "farmland_moist": dict(luma=0.24, std=0.070, sat=0.40, tilt=20.0, smooth=60, pore=64),
     # the snowy side: dirt and snow each fitted to their own block's numbers (the recipe); smooth / pore between them
@@ -1789,16 +1790,22 @@ def m_quartz(F, n, kind):
         inner = frame(F, 0.22, 0.17)
         H = 0.4 + 0.3 * bev + 0.2 * inner
         shade = (0.90 - 0.06 * vein) * (0.8 + 0.1 * bev + 0.1 * inner)
-    elif kind == "block_side":   # the quartz block's side: a plain dressed face, a soft chamfer, faint upright drift
-        bev = frame(F, 0.04, 0.008)
-        drift = F.noise(2, 6, 0.5, sx=1.0, sy=6.0)
-        H = 0.5 + 0.35 * bev - 0.02 * vein + 0.01 * drift
-        shade = (0.95 - 0.08 * vein + 0.015 * drift) * (0.88 + 0.12 * bev)
-    else:                          # smooth quartz (quartz_block_bottom) and the quartz block's top: a bevelled slab
-        bev = frame(F, 0.05, 0.01) if kind == "smooth" else frame(F, 0.07, 0.014)
-        H = 0.45 + 0.4 * bev - 0.02 * vein
-        shade = (0.94 - 0.08 * vein) * (0.85 + 0.15 * bev)
-    return H, tint((0.92, 0.90, 0.86), shade)
+    elif kind in ("block_side", "block_top"):
+        # r31 (art director: "remove the heavy dark seam through the 2x2 ... quartz_block a subtle tile, faint cool
+        # marble vein, near-white"): a very narrow, shallow chamfer (a tile line, not a groove) and cool veins
+        bev = frame(F, 0.025, 0.006)
+        drift = F.noise(2, 6, 0.5, sx=1.0, sy=6.0) if kind == "block_side" else F.noise(1, 3, 0.5)
+        H = 0.5 + 0.12 * bev - 0.01 * vein + 0.01 * drift
+        shade = (0.96 - 0.09 * vein + 0.010 * drift) * (0.96 + 0.04 * bev)
+    else:                          # smooth quartz (quartz_block_bottom): SEAMLESS, the veins and a soft cloud only
+        slow = F.noise(1, 3, 0.5)
+        cloud = slow + 0.5 * F.noise(4, 10, 0.5)                       # a soft marble cloud at two scales (colour)
+        H = 0.55 + 0.02 * slow - 0.01 * vein + 0.004 * F.noise(20, 60, 0.3)   # the relief: flat, a fine polish grain
+        shade = 0.96 - 0.10 * vein + 0.008 * cloud
+    alb = tint((0.93, 0.92, 0.89), shade)
+    if kind in ("block_side", "block_top", "smooth"):
+        alb = alb * (1 - 0.06 * vein[..., None] * np.array([0.5, 0.2, 0.0])[None, None, :])   # a cool grey-blue vein
+    return H, alb
 
 
 def m_crystal(F, n, minerals, per_side=20, cluster=0.75, contrast=0.55, mottle=0.05, drift_base=2):
