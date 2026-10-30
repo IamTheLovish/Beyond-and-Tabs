@@ -1165,15 +1165,22 @@ def m_plate(F, n, rgb):
     return H, tint(rgb, L / max(L.mean(), 1e-6)), smooth
 
 
-def brushed(F, strength=1.0):
+def brushed(F, strength=1.0, coarse=False):
     """Brushed-metal grain: long fine streaks along u (a rolled / ground plate), as a tone 0-1 around 0.5."""
     # fine (40-64 cycles: 2-3 texels) so the mipmaps average it away at RTS distance - the streaks are a close-up
     # and reflection signal, not a stripe pattern on the block (v1 at 8-64 cycles drew vertical bars at RTS zoom)
-    g = F.noise(40, 64, 0.0, sx=1.0, sy=14.0) + 0.35 * F.noise(16, 40, 0.0, sx=1.0, sy=14.0)
+    # r33 (critic, eyes 41029731853: "fine glitter grain" on the gold and iron tops - with the shader now reading the
+    # specular map, per-texel smoothness steps sparkle): coarse = the brushing at 4-12 texels (10-32 cycles), long
+    # along u, so the streaks are bands the mipmaps keep as a soft anisotropy rather than glitter
+    if coarse:
+        g = F.noise(12, 32, 0.2, sx=1.0, sy=40.0) + 0.3 * F.noise(32, 48, 0.0, sx=1.0, sy=30.0)
+    else:
+        g = F.noise(40, 64, 0.0, sx=1.0, sy=14.0) + 0.35 * F.noise(16, 40, 0.0, sx=1.0, sy=14.0)
     return 0.5 + 0.5 * np.tanh(0.5 * strength * g)
 
 
-def m_metal_plate(F, n, bevel=0.07, groove=0.012, dent=0.012, brush=1.0, smooth_base=165, smooth_var=55):
+def m_metal_plate(F, n, bevel=0.07, groove=0.012, dent=0.012, brush=1.0, smooth_base=165, smooth_var=55,
+                  coarse=False):
     """Round 23: the shared cast-and-ground metal plate. Height: a bevelled rim, broad cast dents, the brushing as
     a fine ripple. Albedo: a flat metal tone with the brushing (real polished metal is near-uniform in albedo - its
     look is all reflection). Smoothness: HIGH on the ground faces (the sky and sun reflect crisp), lower in the
@@ -1185,7 +1192,7 @@ def m_metal_plate(F, n, bevel=0.07, groove=0.012, dent=0.012, brush=1.0, smooth_
     d = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
     bev = smoothstep(0.0, groove, d) * np.clip((d - groove) / max(bevel - groove, 1e-6), 0, 1)
     dents = F.noise(2, 6, 0.6)
-    br = brushed(F, brush)
+    br = brushed(F, brush, coarse)
     wear = smoothstep(0.3, 0.9, norm01(F.fbm(2, 3, 0.5)))        # patches handled more (duller)
     H = 0.35 + 0.5 * bev + dent * dents + 0.012 * (br - 0.5)
     shade = (0.93 + 0.04 * dents + 0.025 * (br - 0.5)) * (0.72 + 0.28 * bev)
@@ -1198,8 +1205,9 @@ def m_iron(F, n):
     """Round 23: an iron block as a riveted hot-rolled plate - brushed, a rivet row inside the bevel, the plate
     faces a cool neutral grey (the warm cast in the eyes stills was the rig's low sun: the grey reference block
     took the same tint)."""
-    H, alb, smooth = m_metal_plate(F, n, bevel=0.07, groove=0.010, dent=0.010, brush=1.0, smooth_base=178,
-                                   smooth_var=50)
+    # r33: coarse brushing (4+ texels), the smoothness swing halved - no glitter grain under the shader
+    H, alb, smooth = m_metal_plate(F, n, bevel=0.07, groove=0.010, dent=0.010, brush=1.0, smooth_base=185,
+                                   smooth_var=26, coarse=True)
     # rivets: 4 per side, round domes at 1/8 block in from the edge
     cx = np.array([0.125, 0.375, 0.625, 0.875])
     du = np.min(np.abs(F.u[..., None] - cx[None, None, :]), -1)
@@ -1220,8 +1228,8 @@ def m_iron(F, n):
 def m_gold_r23(F, n):
     """Round 23 gold: a cast plate, finer polish than iron (less brushing), warm yellow, calm smoothness with the
     polish grain."""
-    H, alb, smooth = m_metal_plate(F, n, bevel=0.08, groove=0.012, dent=0.012, brush=0.6, smooth_base=196,
-                                   smooth_var=32)
+    H, alb, smooth = m_metal_plate(F, n, bevel=0.08, groove=0.012, dent=0.012, brush=0.6, smooth_base=200,
+                                   smooth_var=16, coarse=True)        # r33: coarse polish grain, no glitter
     L = alb @ np.array([0.2126, 0.7152, 0.0722])
     return H, tint((0.98, 0.78, 0.25), L / max(L.mean(), 1e-6)), smooth
 
