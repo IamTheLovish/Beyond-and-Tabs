@@ -103,10 +103,21 @@ public class SoulBoiler extends Ability {
         AbilityClientboundPacket.sendSetCooldownPacket(self.getId(), this.action, this.cooldownMax);
     }
 
-    /** The build/production speed factor of {@code bp} now: {@link #SPEED_MULT} while it boils (server), else 1. */
+    /**
+     * The build/production speed factor of {@code bp} now: {@link #SPEED_MULT} while it boils (server), else 1. The boil
+     * belongs to the owner it was cast for: a building that changes hands (a capture rewrites ownerName in place) stops
+     * boiling, so the capturer never inherits it.
+     */
     public static float speedMult(BuildingPlacement bp) {
         Level l = bp.getLevel();
-        return l != null && !l.isClientSide() && l.getGameTime() < bp.boilUntilTick ? SPEED_MULT : 1f;
+        return l != null && !l.isClientSide() && l.getGameTime() < bp.boilUntilTick
+            && bp.ownerName != null && bp.ownerName.equals(bp.boilOwner) ? SPEED_MULT : 1f;
+    }
+
+    /** Boils {@code b} for its current owner until game tick {@code untilTick}. Public for the game test. */
+    public static void startBoil(BuildingPlacement b, long untilTick) {
+        b.boilUntilTick = untilTick;
+        b.boilOwner = b.ownerName;
     }
 
     public static boolean isBoiling(BuildingPlacement bp) {
@@ -164,7 +175,7 @@ public class SoulBoiler extends Ability {
             refuse(owner, Empower.MSG_SHORT, quiet);
             return false;
         }
-        b.boilUntilTick = sl.getGameTime() + BOIL_TICKS;
+        startBoil(b, sl.getGameTime() + BOIL_TICKS);
         BlockPos c = b.centrePos;
         sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, c.getX() + 0.5, b.maxCorner.getY() + 1, c.getZ() + 0.5, 24, 1.2, 0.4, 1.2, 0.02);
         sl.sendParticles(ParticleTypes.CLOUD, c.getX() + 0.5, b.maxCorner.getY() + 1.5, c.getZ() + 0.5, 12, 1.0, 0.4, 1.0, 0.04);

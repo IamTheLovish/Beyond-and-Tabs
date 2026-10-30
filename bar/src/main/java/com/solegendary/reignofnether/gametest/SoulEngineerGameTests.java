@@ -953,7 +953,7 @@ public class SoulEngineerGameTests {
                     problems.add("Soul Boiler boiled an enemy's building (" + Essence.get(rich) + " essence)");
                 shop.ownerName = me;
                 // already boiling
-                shop.boilUntilTick = level.getGameTime() + 100;
+                SoulBoiler.startBoil(shop, level.getGameTime() + 100);
                 sbR.use(level, (Unit) rich, shop.centrePos);
                 if (Essence.get(rich) != 30 || shop.boilUntilTick != level.getGameTime() + 100)
                     problems.add("Soul Boiler boiled a building already boiling (" + Essence.get(rich) + " essence)");
@@ -983,6 +983,7 @@ public class SoulEngineerGameTests {
         BuildingPlacement shop = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, true);
         helper.runAfterDelay(3, () -> {
             List<String> problems = new ArrayList<>();
+            BuildingPlacement idleSite = null;
             try {
                 if (!(caster instanceof SoulEngineerUnit se) || !(shop instanceof ProductionPlacement pp)) {
                     problems.add("could not set up the Soul Engineer and the Machine Shop");
@@ -995,10 +996,11 @@ public class SoulEngineerGameTests {
                 pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, me));   // no population
                 // a friendly site nobody is building, alone in reach
                 BuildingServerEvents.getBuildings().remove(shop);
-                BuildingPlacement idleSite = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, false);
+                idleSite = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, false);
                 if (se.autoBoil() || (idleSite != null && SoulBoiler.isBoiling(idleSite)))
                     problems.add("the Soul Engineer boiled a site nobody is building by itself");
                 BuildingServerEvents.getBuildings().remove(idleSite);
+                idleSite = null;
                 BuildingServerEvents.getBuildings().add(shop);
                 // sealed
                 caster.addEffect(new net.minecraft.world.effect.MobEffectInstance(
@@ -1020,6 +1022,8 @@ public class SoulEngineerGameTests {
             } catch (RuntimeException ex) {
                 problems.add("threw " + ex);
             } finally {
+                if (idleSite != null)
+                    BuildingServerEvents.getBuildings().remove(idleSite);
                 unsite(level, shop);
                 discardAll(live(caster));
                 finish(helper, problems);
@@ -1180,6 +1184,61 @@ public class SoulEngineerGameTests {
             } finally {
                 BuildingServerEvents.getBuildings().remove(rising);
                 discardAll(live(caster));
+                finish(helper, problems);
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------- polish
+
+    /**
+     * A boil belongs to the owner it was cast for: when the building changes hands (a capture rewrites ownerName in
+     * place, BuildingPlacement.checkAndDoCapture) it stops boiling at once, and the new owner's Soul Engineer can boil
+     * it for itself (not refused as already boiling).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void soul_engineer_soul_boiler_ends_when_the_building_changes_hands(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "boilmine"), foe = owner(helper, "boiltaker");
+        Mob caster = engineer(helper, me, 1, 1, 20);
+        Mob taker = engineer(helper, foe, 1, 2, 20);
+        BuildingPlacement shop = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, true);
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                SoulBoiler sb = caster == null ? null : ability(caster, SoulBoiler.class);
+                SoulBoiler sbT = taker == null ? null : ability(taker, SoulBoiler.class);
+                if (sb == null || sbT == null || !(shop instanceof ProductionPlacement pp)) {
+                    problems.add("could not set up the two Soul Engineers and the Machine Shop");
+                    return;
+                }
+                beside(caster, shop, 6);
+                beside(taker, shop, 4);
+                pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, me));   // work, no population
+                float p0 = pp.getProductionBuildPower();
+                sb.use(level, (Unit) caster, shop.centrePos);
+                if (!SoulBoiler.isBoiling(shop)) {
+                    problems.add("setup: the owner's Soul Boiler did not boil its own Machine Shop");
+                    return;
+                }
+                // the capture: ownerName rewritten in place; the queue is the capturer's now
+                shop.ownerName = foe;
+                pp.productionQueue.clear();
+                pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, foe));
+                if (SoulBoiler.isBoiling(shop) || SoulBoiler.speedMult(shop) != 1f)
+                    problems.add("the captured Machine Shop still boils for its new owner (factor " + SoulBoiler.speedMult(shop) + ")");
+                float p1 = pp.getProductionBuildPower();
+                if (Math.abs(p1 - p0) > 1e-3f)
+                    problems.add("the captured Machine Shop produces with " + p1 + " power, the unboiled " + p0);
+                sbT.use(level, (Unit) taker, shop.centrePos);
+                if (!SoulBoiler.isBoiling(shop) || Essence.get(taker) != 0)
+                    problems.add("the new owner's Soul Engineer could not boil its captured Machine Shop ("
+                        + Essence.get(taker) + " essence left of 20)");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                unsite(level, shop);
+                discardAll(live(caster, taker));
                 finish(helper, problems);
             }
         });
