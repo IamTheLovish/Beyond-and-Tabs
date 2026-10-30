@@ -1,0 +1,200 @@
+[17:27:26] [Render thread/INFO]: [Frame] p50 105.7 ms (9 fps), p95 192.2 ms, max 270.7 ms over 240 frames; RTS view, zoom 36, 5 units known
+[17:27:26] [Render thread/INFO]: [Anim] 5 units/frame (max 5): animation p50 0.1 ms, p95 0.1 ms; unit render p50 8.5 ms, p95 20.4 ms; per unit 62.6 us anim, 2059.8 us render (anim 3%); RTS view, zoom 36, detail on, over 76 frames
+[17:27:26] [Render thread/INFO]: [FrameParts] 72 frames, mean 138.5 ms/frame; ours 14.5 ms (10%): unitBodies 9.02 (max 30.2, 5.0/f) | hud 1.84 (max 29.9, 1.0/f) | minimap 1.08 (max 4.1, 38/f) | worldFx 0.64 (max 12.5, 11/f) | unitOverlays 0.46 (max 5.5, 11/f) | bars 0.40 (max 7.2, 22/f) | markersMetal 0.31 (max 3.3, 2.0/f) | markersChunks 0.29 (max 14.3, 1.0/f) | buildingBoxes 0.22 (max 3.1, 1.0/f) | markersMapWorld 0.07 (max 0.3, 1.0/f) | unitRings 0.07 (max 4.1, 11/f) | markersRange 0.06 (max 3.0, 1.0/f) | worldMarkers 0.04 (max 2.9, 11/f) (+12 smaller); elsewhere 123.9 ms; 0 section re-mesh requests/s
+[17:27:26] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.8, 5.0/t)
+[17:27:26] [Render thread/INFO]: [FogRemesh] 10 s: 0 fog updates, sections marked 0/s (skipped 0/s under the surface band, flushed 0/s), rebuilt 22/s (+35/s all air) on vanilla, band 0.00 ms/s, surface mode, 0 stale columns
+[17:27:29] [Server thread/INFO]: [Tick] p50 8.0 ms, p95 25.4 ms, max 59.1 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[17:27:29] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[17:27:29] [Server thread/INFO]: [Sys] 200 ticks, mean 12.6 ms/tick; ours 2.9 ms (23%): buildings 1.63 (max 11.0, 1.0/t) | pathfinder 0.77 (max 78.9, 2.0/t) | unstick 0.10 (max 6.2, 8.0/t) | unit 0.07 (max 0.3, 8.0/t) | fogOfWar 0.07 (max 3.4, 1.0/t) | attacker 0.06 (max 4.9, 8.0/t) | bots 0.04 (max 4.2, 0.1/t) | economy 0.04 (max 1.4, 1.0/t) | separation 0.02 (max 2.5, 8.0/t) (+11 smaller); vanilla 9.2 ms (73%): chunks 7.19 (max 50.1, 3.0/t) | travel 0.44 (max 6.9, 21/t) | baseTick 0.40 (max 9.2, 25/t) | aiGoals 0.37 (max 7.4, 21/t) | otherEntities 0.34 (max 5.6, 21/t) | unitTick 0.32 (max 14.6, 8.0/t) | levelRest 0.18 (max 3.4, 3.0/t); elsewhere 0.5 ms; gc 113 ms
+[17:27:30] [Server thread/INFO]: [ArenaPathing] navmesh warm: 842 of 1177 arena chunks in 39253 ms (the rest were not loaded)
+[17:27:30] [Notification Thread/INFO]: [GC] 7 collections took 149 ms of the last 13 s
+[17:27:31] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 13.5 ms): per-system timing off
+[17:27:36] [Render thread/INFO]: [Frame] p50 92.8 ms (11 fps), p95 187.9 ms, max 270.7 ms over 240 frames; RTS view, zoom 36, 5 units known
+[17:27:36] [Render thread/INFO]: [Anim] 5 units/frame (max 5): animation p50 0.0 ms, p95 0.1 ms; unit render p50 4.6 ms, p95 10.9 ms; per unit 24.7 us anim, 869.6 us render (anim 3%); RTS view, zoom 36, detail on, over 119 frames
+[17:27:36] [Render thread/INFO]: [FrameParts] 119 frames, mean 84.1 ms/frame; ours 8.0 ms (10%): unitBodies 4.41 (max 16.3, 5.0/f) | hud 1.11 (max 2.5, 1.0/f) | minimap 0.79 (max 3.5, 38/f) | markersMetal 0.48 (max 17.8, 2.0/f) | bars 0.28 (max 9.3, 22/f) | worldFx 0.25 (max 3.2, 11/f) | buildingBoxes 0.21 (max 6.1, 1.0/f) | unitOverlays 0.20 (max 5.2, 11/f) | markersMapWorld 0.16 (max 3.1, 1.0/f) | markersRange 0.07 (max 3.1, 1.0/f) (+15 smaller); elsewhere 76.1 ms; 0 section re-mesh requests/s
+[17:27:36] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.3, 5.0/t)
+[17:27:36] [Render thread/INFO]: [FogRemesh] 10 s: 0 fog updates, sections marked 0/s (skipped 0/s under the surface band, flushed 0/s), rebuilt 25/s (+22/s all air) on vanilla, band 0.00 ms/s, surface mode, 0 stale columns
+[17:27:39] [Server thread/INFO]: [Tick] p50 5.8 ms, p95 10.2 ms, max 14.7 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[17:27:39] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[17:27:39] [Server thread/INFO]: [Sys] 40 ticks, mean 8.9 ms/tick; ours 2.0 ms (22%): buildings 1.34 (max 4.9, 1.0/t) | unit 0.21 (max 3.1, 8.0/t) | pathfinder 0.15 (max 1.2, 2.0/t) | economy 0.10 (max 3.5, 1.0/t) | fogOfWar 0.05 (max 0.6, 1.0/t) | unstick 0.03 (max 0.1, 8.0/t) | attacker 0.03 (max 0.1, 8.0/t) (+13 smaller); vanilla 6.8 ms (76%): chunks 5.61 (max 14.6, 3.0/t) | otherEntities 0.34 (max 3.2, 22/t) | unitTick 0.26 (max 3.1, 8.0/t) | aiGoals 0.20 (max 3.1, 22/t) | baseTick 0.13 (max 0.3, 26/t) | travel 0.13 (max 0.4, 22/t) | levelRest 0.09 (max 0.8, 3.0/t); elsewhere 0.1 ms; gc 12 ms
+[17:27:41] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[17:27:43] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793381263756
+[17:27:43] [Server thread/INFO]: [Eyes] ground 0:30 round [-221, 0]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:coal_ore=6, minecraft:diorite_wall=2, minecraft:grass_block=2163, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=10, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=44, minecraft:stone_brick_stairs=8}
+[17:27:43] [Render thread/INFO]: World look: off
+[17:27:43] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793381263980
+[17:27:44] [Render thread/INFO]: World look: subtle
+[17:27:44] [IO-Worker-8/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[17:27:44] [IO-Worker-5/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[17:27:46] [Render thread/INFO]: [Frame] p50 78.8 ms (13 fps), p95 123.4 ms, max 160.3 ms over 240 frames; RTS view, zoom 30, 5 units known
+[17:27:46] [Render thread/INFO]: [Anim] 5 units/frame (max 5): animation p50 0.0 ms, p95 0.0 ms; unit render p50 2.0 ms, p95 7.7 ms; per unit 17.9 us anim, 678.9 us render (anim 3%); RTS view, zoom 30, detail on, over 89 frames
+[17:27:46] [Render thread/INFO]: [FrameParts] 118 frames, mean 84.5 ms/frame; ours 5.9 ms (7%): unitBodies 2.46 (max 13.9, 3.7/f) | hud 1.05 (max 2.4, 1.0/f) | minimap 0.83 (max 3.6, 38/f) | bars 0.37 (max 6.2, 22/f) | markersMetal 0.33 (max 6.2, 2.0/f) | buildingBoxes 0.27 (max 18.2, 1.0/f) | worldFx 0.20 (max 4.5, 11/f) | unitOverlays 0.17 (max 8.8, 11/f) | markersMapWorld 0.14 (max 3.2, 1.0/f) (+16 smaller); elsewhere 78.7 ms; 0 section re-mesh requests/s
+[17:27:46] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[17:27:46] [Render thread/INFO]: [FogRemesh] 10 s: 0 fog updates, sections marked 0/s (skipped 0/s under the surface band, flushed 0/s), rebuilt 23/s (+25/s all air) on vanilla, band 0.00 ms/s, surface mode, 0 stale columns
+[17:27:48] [Render thread/INFO]: [Eyes] 19_heroes: summoned 4 heroes for 'Offline' round [-213, 79, 51], 4 for 'Bot1 (medium)' (Gravecaller far out at [-214, 79, 85], Arch-Engineer in a thicket at [-203, 79, 45])
+[17:27:48] [Server thread/INFO]: [Offline: Gamerule sendCommandFeedback is now set to: false]
+[17:27:48] [Server thread/INFO]: [Eyes] 19_heroes: planted 9 thicket blocks for 'Bot1 (medium)' round -203, 72, 45
+[17:27:48] [Server thread/INFO]: [Offline: Summoned reignofnether:storm_witch_unit for Offline at (-217, 70, 51)]
+[17:27:48] [Server thread/INFO]: [Offline: Summoned reignofnether:horde_warchief_unit for Offline at (-213, 70, 51)]
+[17:27:48] [Server thread/INFO]: [Offline: Summoned reignofnether:ash_shaman_unit for Offline at (-211, 70, 51)]
+[17:27:48] [Server thread/INFO]: [Offline: Summoned reignofnether:corsair_captain_unit for Offline at (-217, 70, 56)]
+[17:27:48] [Server thread/INFO]: [Offline: Summoned reignofnether:dawn_paladin_unit for Bot1 (medium) at (-209, 70, 56)]
+[17:27:48] [Server thread/INFO]: [Offline: Summoned reignofnether:thornheart_druid_unit for Bot1 (medium) at (-205, 70, 56)]
+[17:27:48] [Server thread/INFO]: [Offline: Summoned reignofnether:gravecaller_unit for Bot1 (medium) at (-214, 70, 85)]
+[17:27:48] [Server thread/INFO]: [Offline: Summoned reignofnether:arch_engineer_unit for Bot1 (medium) at (-203, 72, 45)]
+[17:27:48] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/dawn_paladin_body_unit.png (1024x1024) uploaded with 3 mip levels
+[17:27:49] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/dawn_paladin_body_unit_team.png (1024x1024) uploaded with 3 mip levels
+[17:27:49] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/dawn_paladin_body_unit_glow.png (1024x1024) uploaded with 3 mip levels
+[17:27:49] [Server thread/INFO]: [Sys] the server is slow (tick p95 46.5 ms): per-system timing on
+[17:27:49] [Server thread/INFO]: [Tick] p50 6.5 ms, p95 46.5 ms, max 66.6 ms over the last 100 ticks; 16 units, 5 buildings, 1 players
+[17:27:49] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[17:27:54] [Server thread/INFO]: [Eyes] 19_heroes: entity.reignofnether.dawn_paladin_unit put on Hold fire; block at its feet Block{minecraft:air}
+[17:27:54] [Server thread/INFO]: [Eyes] 19_heroes: entity.reignofnether.thornheart_druid_unit put on Hold fire; block at its feet Block{minecraft:air}
+[17:27:54] [Server thread/INFO]: [Eyes] 19_heroes: entity.reignofnether.gravecaller_unit put on Hold fire; block at its feet Block{minecraft:grass}
+[17:27:54] [Server thread/INFO]: [Eyes] 19_heroes: entity.reignofnether.arch_engineer_unit put on Hold fire; block at its feet Block{reignofnether:thicket}[age=3]
+[17:27:56] [Render thread/INFO]: [Frame] p50 79.9 ms (13 fps), p95 139.8 ms, max 446.8 ms over 240 frames; RTS view, zoom 30, 12 units known
+[17:27:56] [Render thread/INFO]: [Anim] 7 units/frame (max 7): animation p50 0.3 ms, p95 3.4 ms; unit render p50 6.3 ms, p95 15.7 ms; per unit 156.5 us anim, 1333.3 us render (anim 12%); RTS view, zoom 30, detail on, over 83 frames
+[17:27:56] [Render thread/INFO]: [FrameParts] 112 frames, mean 89.3 ms/frame; ours 9.7 ms (11%): unitBodies 7.16 (max 237.6, 5.3/f) | hud 1.09 (max 3.7, 1.0/f) | minimap 0.83 (max 4.0, 38/f) | markersMapWorld 0.28 (max 6.2, 1.0/f) | unitOverlays 0.18 (max 1.3, 11/f) | buildingDecor 0.05 (max 4.5, 4.0/f) | markersMetal 0.03 (max 3.0, 2.0/f) | buildingBoxes 0.02 (max 0.0, 1.0/f) (+17 smaller); elsewhere 79.6 ms; 7 section re-mesh requests/s
+[17:27:56] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.04 (max 0.9, 11/t)
+[17:27:56] [Render thread/INFO]: [FogRemesh] 10 s: 1 fog updates, sections marked 7/s (skipped 32/s under the surface band, flushed 0/s), rebuilt 5/s (+21/s all air) on vanilla, band 0.10 ms/s, surface mode, 0 stale columns
+[17:27:59] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_mid 1793381279167
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: 7 heroes on the client, zoom 30, our game mode spectator, fog on true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: 8 heroes on the server within 64 of the scene
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes: the Witch's point spent (points now 0)
+[17:27:59] [Server thread/INFO]: [Ability] literal{Offline} ranked up ability HERO_ABILITY_1 on unit 50
+[17:27:59] [Server thread/INFO]: [Tick] p50 35.0 ms, p95 67.0 ms, max 85.0 ms over the last 100 ticks; 16 units, 5 buildings, 1 players
+[17:27:59] [Server thread/INFO]: [Paths] last 10 s: 4 unit vanilla createPath, 4 short searches, 0 full-range fallbacks; chase cell memo 0/4 hits
+[17:27:59] [Server thread/INFO]: [Sys] 200 ticks, mean 29.6 ms/tick; ours 24.7 ms (84%): pathfinder 23.11 (max 79.3, 2.0/t) | buildings 0.93 (max 6.7, 1.0/t) | unit 0.16 (max 4.2, 16/t) | attacker 0.10 (max 3.2, 16/t) | unstick 0.06 (max 3.6, 16/t) | bots 0.06 (max 5.2, 0.1/t) | economy 0.06 (max 5.5, 1.0/t) | unitSync 0.05 (max 3.8, 0.1/t) | fogOfWar 0.04 (max 1.1, 1.0/t) | targetGrid 0.04 (max 2.1, 0.4/t) | attacker/entityScan 0.04 (max 3.1, 0.6/t) | stuckNudge 0.03 (max 2.3, 16/t) | reactions 0.02 (max 2.0, 16/t) (+11 smaller); vanilla 4.5 ms (15%): chunks 2.53 (max 13.2, 3.0/t) | aiGoals 0.48 (max 6.9, 25/t) | unitTick 0.46 (max 8.3, 16/t) | travel 0.39 (max 4.3, 33/t) | otherEntities 0.28 (max 6.2, 25/t) | baseTick 0.27 (max 7.3, 37/t) | levelRest 0.13 (max 3.2, 3.0/t); elsewhere 0.3 ms; gc 44 ms
+[17:27:59] [IO-Worker-4/INFO]: [Eyes] 19_heroes_mid: Saved screenshot as bat_eyes_19_heroes_mid.png
+[17:28:03] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_spent 1793381283213
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: 7 heroes on the client, zoom 30, our game mode spectator, fog on true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: 8 heroes on the server within 64 of the scene
+[17:28:03] [IO-Worker-12/INFO]: [Eyes] 19_heroes_spent: Saved screenshot as bat_eyes_19_heroes_spent.png
+[17:28:06] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 8.9 ms): per-system timing off
+[17:28:06] [Render thread/INFO]: [Frame] p50 76.6 ms (13 fps), p95 145.0 ms, max 446.8 ms over 240 frames; RTS view, zoom 14, 12 units known
+[17:28:06] [Render thread/INFO]: [Anim] 7 units/frame (max 7): animation p50 0.2 ms, p95 0.7 ms; unit render p50 3.4 ms, p95 14.9 ms; per unit 56.3 us anim, 912.4 us render (anim 6%); RTS view, zoom 14, detail on, over 118 frames
+[17:28:06] [Render thread/INFO]: [FrameParts] 118 frames, mean 84.9 ms/frame; ours 8.5 ms (10%): unitBodies 5.85 (max 22.4, 6.6/f) | hud 1.16 (max 3.4, 1.0/f) | minimap 0.76 (max 3.2, 38/f) | markersMapWorld 0.22 (max 6.6, 1.0/f) | unitOverlays 0.21 (max 5.2, 11/f) | markersRange 0.09 (max 0.3, 1.0/f) | unitRings 0.08 (max 1.1, 11/f) | buildingBoxes 0.04 (max 2.4, 1.0/f) (+17 smaller); elsewhere 76.4 ms; 0 section re-mesh requests/s
+[17:28:06] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.1 ms/tick: unitTick 0.05 (max 3.3, 12/t)
+[17:28:06] [Render thread/INFO]: [FogRemesh] 10 s: 0 fog updates, sections marked 0/s (skipped 0/s under the surface band, flushed 0/s), rebuilt 0/s (+1/s all air) on vanilla, band 0.00 ms/s, surface mode, 0 stale columns
+[17:28:07] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_horde_pair 1793381287221
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: 7 heroes on the client, zoom 14, our game mode spectator, fog on true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: 8 heroes on the server within 64 of the scene
+[17:28:07] [IO-Worker-12/INFO]: [Eyes] 19_heroes_horde_pair: Saved screenshot as bat_eyes_19_heroes_horde_pair.png
+[17:28:09] [Server thread/INFO]: [Tick] p50 5.0 ms, p95 9.0 ms, max 15.9 ms over the last 100 ticks; 16 units, 5 buildings, 1 players
+[17:28:09] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[17:28:09] [Server thread/INFO]: [Sys] 140 ticks, mean 16.2 ms/tick; ours 11.5 ms (71%): pathfinder 10.87 (max 59.1, 2.0/t) | unit 0.11 (max 4.1, 16/t) | buildings 0.11 (max 3.1, 1.0/t) | fogOfWar 0.09 (max 2.5, 1.0/t) | stuckNudge 0.05 (max 3.7, 16/t) | attacker 0.05 (max 2.1, 16/t) | reactions 0.04 (max 3.1, 16/t) | unstick 0.03 (max 1.1, 16/t) | bots 0.02 (max 1.3, 0.1/t) | unitSync 0.02 (max 1.6, 0.1/t) (+12 smaller); vanilla 4.0 ms (25%): chunks 2.17 (max 7.7, 3.0/t) | unitTick 0.47 (max 6.4, 16/t) | travel 0.39 (max 5.2, 35/t) | aiGoals 0.36 (max 4.2, 27/t) | baseTick 0.26 (max 4.2, 39/t) | otherEntities 0.22 (max 3.3, 27/t) | levelRest 0.12 (max 3.3, 3.0/t); elsewhere 0.7 ms; gc 0 ms
+[17:28:11] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_selected 1793381291281
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: 7 heroes on the client, zoom 30, our game mode spectator, fog on true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: 8 heroes on the server within 64 of the scene
+[17:28:11] [Render thread/INFO]: [System] [CHAT] 
+[17:28:11] [Render thread/INFO]: [System] [CHAT] Enabled fog of war for all players
+[17:28:11] [Render thread/INFO]: [System] [CHAT] 
+[17:28:11] [IO-Worker-4/INFO]: [Eyes] 19_heroes_selected: Saved screenshot as bat_eyes_19_heroes_selected.png
+[17:28:12] [Render thread/INFO]: [Eyes] step 24 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[17:28:16] [Render thread/INFO]: [Frame] p50 71.9 ms (14 fps), p95 112.2 ms, max 153.6 ms over 240 frames; RTS view, zoom 30, 12 units known
+[17:28:16] [Render thread/INFO]: [Anim] 4 units/frame (max 7): animation p50 0.1 ms, p95 0.2 ms; unit render p50 0.6 ms, p95 8.6 ms; per unit 73.2 us anim, 619.7 us render (anim 12%); RTS view, zoom 30, detail on, over 133 frames
+[17:28:16] [Render thread/INFO]: [FrameParts] 133 frames, mean 75.4 ms/frame; ours 6.4 ms (8%): unitBodies 2.57 (max 22.8, 4.2/f) | hud 2.14 (max 45.4, 1.0/f) | minimap 0.72 (max 1.1, 38/f) | unitOverlays 0.31 (max 29.0, 11/f) | markersRange 0.20 (max 6.2, 1.0/f) | unitRings 0.17 (max 3.3, 11/f) | markersMapWorld 0.12 (max 1.2, 1.0/f) | bars 0.08 (max 2.4, 22/f) | buildingBoxes 0.02 (max 0.0, 1.0/f) (+16 smaller); elsewhere 69.0 ms; 0 section re-mesh requests/s
+[17:28:16] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.05 (max 2.6, 12/t)
+[17:28:16] [Render thread/INFO]: [FogRemesh] 10 s: 0 fog updates, sections marked 0/s (skipped 0/s under the surface band, flushed 0/s), rebuilt 7/s (+24/s all air) on vanilla, band 0.00 ms/s, surface mode, 0 stale columns
+[17:28:19] [Server thread/INFO]: [Tick] p50 5.0 ms, p95 9.5 ms, max 13.2 ms over the last 100 ticks; 16 units, 6 buildings, 1 players
+[17:28:19] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[17:28:21] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_fog 1793381301302
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: 7 heroes on the client, zoom 30, our game mode spectator, fog on true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: 8 heroes on the server within 64 of the scene
+[17:28:21] [IO-Worker-12/INFO]: [Eyes] 19_heroes_fog: Saved screenshot as bat_eyes_19_heroes_fog.png
+[17:28:23] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[17:28:23] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png, reignofnether:textures/entities/squire_runner_unit.png, reignofnether:textures/entities/squire_runner_unit_glow.png, reignofnether:textures/entities/squire_runner_unit_team.png]
+[17:28:23] [Render thread/INFO]: [Eyes] tour complete
+[17:28:23] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[17:28:23] [Render thread/INFO]: Stopping!
+[17:28:23] [Server thread/INFO]: Offline lost connection: Disconnected
+[17:28:23] [Server thread/INFO]: Offline left the game
+[17:28:23] [Server thread/INFO]: Player logged out: Offline, id: 2
+[17:28:23] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[17:28:23] [Server thread/INFO]: RTSPlayerSaveData.load
+[17:28:23] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1056|0
+[17:28:23] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|686|554|0
+[17:28:23] [Server thread/INFO]: Stopping server
+[17:28:23] [Server thread/INFO]: Saving players
+[17:28:23] [Server thread/INFO]: Saving worlds
+[17:28:23] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[17:28:23] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[17:28:23] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[17:28:23] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[17:28:23] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[17:28:23] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[17:28:23] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved

@@ -1,0 +1,157 @@
+[17:24:28] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[17:24:29] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[17:24:29] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/render/chunk/compile/pipeline/FluidRenderer (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer)
+[17:24:29] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[17:24:29] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/model/color/ColorProviderRegistry (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.model.color.ColorProviderRegistry)
+[17:24:29] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/model/quad/blender/BlendedColorProvider (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.model.quad.blender.BlendedColorProvider)
+[17:24:29] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/render/chunk/RenderSectionManager (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager)
+[17:24:36] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[17:24:43] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[17:24:50] [Worker-ResourceReload-1/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[17:24:50] [Worker-ResourceReload-1/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[17:24:56] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[17:24:58] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[17:25:27] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[17:25:57] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[17:26:27] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[17:26:27] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793381187611
+[17:26:27] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[17:26:31] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793381191668
+[17:26:31] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[17:26:31] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[17:26:33] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[17:26:58] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 118 s left (client tick 248, camera at [-221, 95, 0]); our slot -211, -9; a bot's start 229, -9; markers: 2 boxes, 7 frames drawn; team 0 (mine) fill built (34196 columns, 1893 quads), 369 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[17:27:01] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 116 s left, zoom 36.0, camera at [-220, 95, 0]; markers: 2 boxes, 29 frames drawn; team 0 (mine) fill built (36905 columns, 2002 quads), 442 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[17:27:01] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793381221165
+[17:27:01] [IO-Worker-2/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[17:27:03] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 114 s left, zoom 60.0, camera at [-218, 95, -2]; markers: 2 boxes, 44 frames drawn; team 0 (mine) fill built (36750 columns, 2032 quads), 450 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[17:27:03] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793381223133
+[17:27:03] [IO-Worker-8/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[17:27:05] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 112 s left, zoom 100.0, camera at [-217, 95, -3]; markers: 2 boxes, 61 frames drawn; team 0 (mine) fill built (37073 columns, 2067 quads), 463 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[17:27:05] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793381225068
+[17:27:05] [IO-Worker-2/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[17:27:09] [Render thread/INFO]: [Eyes] 01f: eye at [229, 70, 11] y 71 looking at the start 229, -9 (20 blocks away; ground there 70); 107 s left; markers: 2 boxes, 122 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (38161 columns, 2345 quads), 443 perimeter heights known
+[17:27:09] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793381229807
+[17:27:10] [IO-Worker-9/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[17:27:12] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[17:27:12] [Render thread/INFO]: [Eyes] 01e: start placed at -211, -9 with 105 s left; the phase ends 3 s later
+[17:27:13] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 103 s left, zoom 36.0, camera at [-220, 95, 0]; markers: 2 boxes, 158 frames drawn; team 0 (mine) fill built (38121 columns, 2105 quads), 469 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[17:27:13] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793381233644
+[17:27:13] [IO-Worker-2/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[17:27:41] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[17:27:43] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793381263756
+[17:27:43] [Server thread/INFO]: [Eyes] ground 0:30 round [-221, 0]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:coal_ore=6, minecraft:diorite_wall=2, minecraft:grass_block=2163, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=10, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=44, minecraft:stone_brick_stairs=8}
+[17:27:43] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793381263980
+[17:27:44] [IO-Worker-8/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[17:27:44] [IO-Worker-5/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[17:27:48] [Render thread/INFO]: [Eyes] 19_heroes: summoned 4 heroes for 'Offline' round [-213, 79, 51], 4 for 'Bot1 (medium)' (Gravecaller far out at [-214, 79, 85], Arch-Engineer in a thicket at [-203, 79, 45])
+[17:27:48] [Server thread/INFO]: [Eyes] 19_heroes: planted 9 thicket blocks for 'Bot1 (medium)' round -203, 72, 45
+[17:27:54] [Server thread/INFO]: [Eyes] 19_heroes: entity.reignofnether.dawn_paladin_unit put on Hold fire; block at its feet Block{minecraft:air}
+[17:27:54] [Server thread/INFO]: [Eyes] 19_heroes: entity.reignofnether.thornheart_druid_unit put on Hold fire; block at its feet Block{minecraft:air}
+[17:27:54] [Server thread/INFO]: [Eyes] 19_heroes: entity.reignofnether.gravecaller_unit put on Hold fire; block at its feet Block{minecraft:grass}
+[17:27:54] [Server thread/INFO]: [Eyes] 19_heroes: entity.reignofnether.arch_engineer_unit put on Hold fire; block at its feet Block{reignofnether:thicket}[age=3]
+[17:27:59] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_mid 1793381279167
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: 7 heroes on the client, zoom 30, our game mode spectator, fog on true
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes_mid: 8 heroes on the server within 64 of the scene
+[17:27:59] [Render thread/INFO]: [Eyes] 19_heroes: the Witch's point spent (points now 0)
+[17:27:59] [IO-Worker-4/INFO]: [Eyes] 19_heroes_mid: Saved screenshot as bat_eyes_19_heroes_mid.png
+[17:28:03] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_spent 1793381283213
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: 7 heroes on the client, zoom 30, our game mode spectator, fog on true
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:28:03] [Render thread/INFO]: [Eyes] 19_heroes_spent: 8 heroes on the server within 64 of the scene
+[17:28:03] [IO-Worker-12/INFO]: [Eyes] 19_heroes_spent: Saved screenshot as bat_eyes_19_heroes_spent.png
+[17:28:07] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_horde_pair 1793381287221
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: 7 heroes on the client, zoom 14, our game mode spectator, fog on true
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:28:07] [Render thread/INFO]: [Eyes] 19_heroes_horde_pair: 8 heroes on the server within 64 of the scene
+[17:28:07] [IO-Worker-12/INFO]: [Eyes] 19_heroes_horde_pair: Saved screenshot as bat_eyes_19_heroes_horde_pair.png
+[17:28:11] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_selected 1793381291281
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: 7 heroes on the client, zoom 30, our game mode spectator, fog on true
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:28:11] [Render thread/INFO]: [Eyes] 19_heroes_selected: 8 heroes on the server within 64 of the scene
+[17:28:11] [IO-Worker-4/INFO]: [Eyes] 19_heroes_selected: Saved screenshot as bat_eyes_19_heroes_selected.png
+[17:28:12] [Render thread/INFO]: [Eyes] step 24 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[17:28:21] [Render thread/INFO]: [Eyes] clip-mark 19_heroes_fog 1793381301302
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51]: points 0, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56]: points 0, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56]: points 1, cloaked false, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45]: points 1, cloaked true, invisible to us false, hidden from us false, in sight true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: 7 heroes on the client, zoom 30, our game mode spectator, fog on true
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.storm_witch_unit of 'Offline' at [-217, 70, 51], concealed false
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.horde_warchief_unit of 'Offline' at [-213, 70, 51], concealed false
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.ash_shaman_unit of 'Offline' at [-211, 70, 51], concealed false
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.corsair_captain_unit of 'Offline' at [-217, 70, 56], concealed false
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.dawn_paladin_unit of 'Bot1 (medium)' at [-209, 70, 56], concealed false (cover: at -209, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 5.39)
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.thornheart_druid_unit of 'Bot1 (medium)' at [-205, 70, 56], concealed false (cover: at -205, 70, 56, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false, nearest other-owner unit ash_shaman_unit (Offline) at 7.81)
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.gravecaller_unit of 'Bot1 (medium)' at [-214, 70, 85], concealed false (cover: at -214, 70, 85, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set false)
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: server has entity.reignofnether.arch_engineer_unit of 'Bot1 (medium)' at [-203, 72, 45], concealed true (cover: at -203, 72, 45, in friendly thicket false, engaged false, revealed for 0 more ticks, hidden-set true, nearest other-owner unit ash_shaman_unit (Offline) at 10.20)
+[17:28:21] [Render thread/INFO]: [Eyes] 19_heroes_fog: 8 heroes on the server within 64 of the scene
+[17:28:21] [IO-Worker-12/INFO]: [Eyes] 19_heroes_fog: Saved screenshot as bat_eyes_19_heroes_fog.png
+[17:28:23] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[17:28:23] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png, reignofnether:textures/entities/squire_runner_unit.png, reignofnether:textures/entities/squire_runner_unit_glow.png, reignofnether:textures/entities/squire_runner_unit_team.png]
+[17:28:23] [Render thread/INFO]: [Eyes] tour complete
