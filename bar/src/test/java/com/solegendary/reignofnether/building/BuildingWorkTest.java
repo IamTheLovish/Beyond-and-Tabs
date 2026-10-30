@@ -115,13 +115,18 @@ class BuildingWorkTest {
 
     @Test
     void theSmokeIsMediumAndBudgeted() {
-        assertEquals(2, BuildingWork.PUFFS_PER_STACK);
-        assertEquals(4, BuildingWork.CHUFF_PUFFS);
+        // medium = a ~5-block column at the density critic round 2 judged readable and not loud (~15 puffs a block;
+        // the first estimate, 2 puffs a pass at ~6 a block, read as 1-2 blocks of wisp - critic round 1)
+        double perBlock = (double) BuildingWork.PUFFS_PER_STACK / BuildingWork.SMOKE_PERIOD / BuildingWork.PUFF_RISE;
+        assertTrue(perBlock >= 12 && perBlock <= 18, "puffs per block of column " + perBlock);
+        assertEquals(2 * BuildingWork.PUFFS_PER_STACK, BuildingWork.CHUFF_PUFFS, "the chuff is twice a pass");
         assertEquals(24, BuildingWork.WORK_BUDGET, "working smoke has a budget like idle life's 40");
         // the column stands ~5 blocks (medium; subtle ~3, strong ~8): rise x the puff's life
         double column = BuildingWork.PUFF_RISE * BuildingWork.PUFF_LIFE_TICKS;
-        assertTrue(BuildingWork.PUFF_LIFE_TICKS >= 280 && BuildingWork.PUFF_LIFE_TICKS <= 330,
-            "the signal-fire smoke's life, 280-330 ticks: " + BuildingWork.PUFF_LIFE_TICKS);
+        // smoke = working: once the queue empties the last puff is gone within 7 s (critic round 2 saw the signal-fire
+        // smoke, 280-330 ticks, still hanging 10 s after the queue cleared)
+        assertTrue(BuildingWork.PUFF_MAX_LIFE_TICKS <= 140, "the last puff lives " + BuildingWork.PUFF_MAX_LIFE_TICKS + " ticks");
+        assertTrue(BuildingWork.PUFF_LIFE_TICKS < BuildingWork.PUFF_MAX_LIFE_TICKS);
         assertTrue(column >= 4 && column <= 6, "column " + column);
     }
 

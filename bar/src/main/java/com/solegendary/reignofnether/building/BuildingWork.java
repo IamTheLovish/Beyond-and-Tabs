@@ -26,20 +26,23 @@ public final class BuildingWork {
 
     /** Ticks between working-smoke passes. */
     public static final int SMOKE_PERIOD = 8;
-    /** Puffs from each stack a pass. */
-    public static final int PUFFS_PER_STACK = 2;
-    /** Extra puffs from each stack on the pass after a unit leaves: the "chuff" that marks the moment. */
-    public static final int CHUFF_PUFFS = 4;
+    /**
+     * Puffs from each stack a pass. Critic round 2 (Oct 30) judged round 3's column - ~15 puffs per block of height -
+     * readable and not loud; this keeps that density at the faster rise below (6 / 8 ticks / 0.048 = 15.6 per block).
+     */
+    public static final int PUFFS_PER_STACK = 6;
+    /** Extra puffs from each stack on the pass after a unit leaves: the "chuff" that marks the moment (twice a pass). */
+    public static final int CHUFF_PUFFS = 12;
     /** Labs a working pass may puff from, whatever the base size (8v8 safety); idle life keeps its own 40. */
     public static final int WORK_BUDGET = 24;
     /**
-     * A puff's life: vanilla's signal-fire smoke lives 280-330 ticks. Round 2's cosy smoke (80-130 ticks) at 0.045 showed
-     * only 1-2 blocks of column at the RTS camera (critic, Oct 30): the long-lived puff, rising slower, packs the same
-     * ~5 blocks with twice the puffs per block.
+     * A puff's life: vanilla's cosy campfire smoke lives 80-130 ticks (105 on average, PUFF_MAX_LIFE_TICKS at most). Round
+     * 3 tried the signal-fire smoke (280-330 ticks): critic round 2 saw it still hanging over a lab 10 s after its queue
+     * emptied - against lovish's "smoke = working". With this life the last puff is gone within 6.5 s.
      */
-    public static final int PUFF_LIFE_TICKS = 305;
+    public static final int PUFF_LIFE_TICKS = 105, PUFF_MAX_LIFE_TICKS = 130;
     /** A puff's rise, blocks a tick: PUFF_LIFE_TICKS x this = the ~5-block column (lovish's medium). */
-    public static final double PUFF_RISE = 0.017;
+    public static final double PUFF_RISE = 0.048;
 
     // ------------------------------------------------------------------ window light (medium)
 

@@ -221,15 +221,15 @@ public class BuildingAmbienceClientEvents {
     }
 
     /**
-     * A working stack: a smoke column leaning with the wind (vanilla's long-lived signal-fire smoke, rising slowly, so the
-     * column is dense; its drift halved to keep the lean at ~1 block over the column); a fire faction's stack flares.
+     * A working stack: a dense smoke column leaning with the wind (cosy campfire smoke: short-lived, so it clears within
+     * ~6 s of the queue emptying); a fire faction's stack flares now and then.
      */
     private static void stackSmoke(BlockPos stack, int puffs, FactionTraits.Ambience idiom) {
         double x = stack.getX() + 0.5, y = stack.getY() + 0.7, z = stack.getZ() + 0.5;
         for (int i = 0; i < puffs; i++)
-            MC.level.addParticle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE,
+            MC.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE,
                 x + (random.nextDouble() - 0.5) * 0.3, y + random.nextDouble() * 0.3, z + (random.nextDouble() - 0.5) * 0.3,
-                DRIFT * 0.5, BuildingWork.PUFF_RISE + random.nextDouble() * 0.004, DRIFT * 0.5);
+                DRIFT, BuildingWork.PUFF_RISE + random.nextDouble() * 0.006, DRIFT);
         if (idiom == FactionTraits.Ambience.FORGE_FIRE && random.nextInt(4) == 0)
             MC.level.addParticle(ParticleTypes.FLAME, x, y - 0.2, z, 0, 0.02, 0);
         else if (idiom == FactionTraits.Ambience.SOUL_FLAMES && random.nextInt(4) == 0)

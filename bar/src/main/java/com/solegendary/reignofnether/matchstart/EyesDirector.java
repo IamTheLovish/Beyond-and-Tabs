@@ -1447,8 +1447,7 @@ public final class EyesDirector {
                 if (phaseSeconds() < 8)
                     return;
                 shot(mc, label + "_idle_rts");
-                setZoom(closeZoom());
-                OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+                workClose();
                 nextPhase(22);
             }
             case 22 -> {
@@ -1476,8 +1475,7 @@ public final class EyesDirector {
                 shot(mc, label + "_work_rts");
                 var server = mc.getSingleplayerServer();
                 server.execute(() -> server.overworld().setDayTime(13000));
-                setZoom(closeZoom());
-                OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+                workClose();
                 nextPhase(25);
             }
             case 25 -> {   // the client eases its sky toward the server's time: wait for it
@@ -1502,6 +1500,15 @@ public final class EyesDirector {
             }
             default -> nextStructure(mc);
         }
+    }
+
+    /**
+     * The work stills' close view: the building with room above it for its ~5-block smoke column (round 3's close view
+     * cut the Machine Shop's column off at the frame's top edge - critic round 2).
+     */
+    private static void workClose() {
+        setZoom(Math.min(ZOOM_NORMAL - 2, 1.2f * closeZoom()));
+        OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.5));
     }
 
     /** The work entry's placement as the client sees it (the smoke and the windows read this one). */
