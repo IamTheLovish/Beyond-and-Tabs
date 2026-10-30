@@ -219,9 +219,11 @@ public final class SfxClient {
         };
     }
 
-    /** Rolls the per-tick counters over when the game tick changed; decays the busy rate per tick elapsed. */
+    /** Rolls the per-tick counters over when the tick (SoundTicks) changed; decays the busy rate per tick elapsed. */
     private static long rollTick() {
-        long now = MC.level != null ? MC.level.getGameTime() : 0;
+        long now = SoundTicks.now();   // a real tick: the level's game time is the time of day here (SoundTicks)
+        if (EYES)
+            eyesWindow(now);
         if (now != tick) {
             long steps = tick == Long.MIN_VALUE ? 1 : Math.max(1, Math.min(40, now - tick));
             for (int c = 0; c < CATS.length; c++) {
@@ -241,6 +243,7 @@ public final class SfxClient {
     private static boolean admit(Sfx s, long now, float dist) {
         int c = s.category.ordinal();
         askedThisTick[c]++;
+        windowAsked[c]++;
         long last = lastPlay[s.ordinal()];
         if (last != 0 && now >= last && now - last < s.minGapTicks)
             return false;
@@ -250,8 +253,37 @@ public final class SfxClient {
         if (busy[c] > CALM_RATE * 2 && dist > NEAR * 2.5f)
             return false;
         playedThisTick[c]++;
+        windowPlayed[c]++;
         lastPlay[s.ordinal()] = now == 0 ? 1 : now;
         return true;
+    }
+
+    // the eyes run's [Sfx] line: what each category asked to play and played over about 10 s, and how many different
+    // values the level's game time showed meanwhile (the clock these throttles counted in before SoundTicks)
+    private static final boolean EYES = Boolean.getBoolean("bat.eyes");
+    private static final int[] windowAsked = new int[CATS.length], windowPlayed = new int[CATS.length];
+    private static long windowStart = 0, lastGameTime = Long.MIN_VALUE;
+    private static int gameTimeValues = 0;
+
+    private static void eyesWindow(long now) {
+        long gt = MC.level != null ? MC.level.getGameTime() : 0;
+        if (gt != lastGameTime) {
+            gameTimeValues++;
+            lastGameTime = gt;
+        }
+        if (windowStart == 0)
+            windowStart = now;
+        if (now - windowStart < 200)
+            return;
+        StringBuilder sb = new StringBuilder("[Sfx] ").append(now - windowStart).append(" ticks, played/asked:");
+        for (int c = 0; c < CATS.length; c++) {
+            sb.append(' ').append(CATS[c].name().toLowerCase()).append(' ').append(windowPlayed[c]).append('/')
+                .append(windowAsked[c]);
+            windowPlayed[c] = windowAsked[c] = 0;
+        }
+        com.solegendary.reignofnether.ReignOfNether.LOGGER.info("{} | game time values {}", sb, gameTimeValues);
+        gameTimeValues = 0;
+        windowStart = now;
     }
 
     private static float crowdScale(Sfx s) {
