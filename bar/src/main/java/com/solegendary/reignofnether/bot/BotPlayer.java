@@ -71,8 +71,7 @@ public class BotPlayer {
         if (faction.equals(Factions.PIGLINS))
             return new Kit(Buildings.CENTRAL_PORTAL, null, null,   // no house (no supply: lovish, Oct 29) or farm
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
-                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER,
-                            ProductionItems.VOODOO_SHAMAN),   // T1 essence caster: autocasts Hex and Blood Totem; Spirit Puppet and Empower stay manual
+                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),   // THROWAWAY: kit revert, no Shaman in the Horde bot's T1 army
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
                     List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST,
                             ProductionItems.GOREHORN_RHINO),   // big-units T2 beast
