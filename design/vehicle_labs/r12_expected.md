@@ -50,3 +50,19 @@ runs). Noon glass hue 7 -> 37 (the birch shows at noon). Gantry beam top 0.51 (o
 | Gantry beam top | 0.51 | 0.45-0.48 | stone slab (measured up 0.471) |
 Expected critics: towers +1 (no arrow; cupola or spire chosen side by side), gate +1 to +2 (the coal lump broken -
 lovish's own target), dusk +1 (warm points inside), weathering 0, RTS +0.5.
+
+## Round 3 measured (eyes run 41034045196; round 2, spire A, cupola B in one run)
+Spire A sat 0.276 / 0.278, value 0.545 / 0.524; cupola B sat 0.298 / 0.291, value 0.565 / 0.479. Dusk glass hue 249 ->
+29, sat 0.19 -> 0.13, value 0.23 -> 0.42, bright 0 -> 1.3 %. Both critics picked A (decided overnight).
+
+## Round 4 - expected, written before its stills (spire A + the round-4 designer's five changes)
+| Measure | Round 3 A | Round 4 expected | Note |
+|---|---|---|---|
+| Spire area sat | 0.276 / 0.278 | 0.27-0.30 | dark prismarine (pack sat 0.36) on a quarter of the cells |
+| Spire area value | 0.545 / 0.524 | 0.46-0.52 | the round-3 band 0.50-0.62 may fail at its low edge; the designer expected 0.44-0.54 |
+| Spire streak share | 0.046 | 0.18-0.30 | r11's band 0.15-0.45 |
+| Dusk glass hue / sat / value | 29 / 0.13 / 0.42 | 20-35 / 0.20-0.35 / 0.33-0.45 | acacia (pack sat 0.62) instead of birch (0.33) |
+| Gantry share in 0.27-0.50 | 0.36 | 0.75-0.95 | stone-brick slab top ~0.38 |
+| Stack soot top-3 / top-4 / below | 0 / 0 / 0 | 0.5 / 0.25 / 0 | built exactly |
+| Eave soot y5 / y4 / y3 | (streaks) | 0.50 / 0.22 / 0 | built exactly on the seen piers |
+Expected critics: weathering +1 to +2, dusk +0.5 to +1, towers +0 to +0.5, gate 0 to +0.5.

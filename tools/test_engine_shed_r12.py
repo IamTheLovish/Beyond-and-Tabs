@@ -333,8 +333,13 @@ class EngineShedR12(EngineShedR11):
             if low:
                 self.assertLessEqual(sum(seen[q] for q in low) / len(low), n_top / len(top) / 3, s["top"])
 
+    @unittest.skip("retired round 4: superseded by test_r4_eave_staining_fades (critics r3: the streaks read as shutters)")
     def test_r12_soot_streaks_under_the_eaves(self):
-        """lovish: soot and weathering (the critic: "no streaks under the eaves"). >= 4 streaks on the camera faces'
+        """RETIRED round 4: it asked for >= 4 streaks of 2+ cells (round 1's own design); the cameras see 9 pier cells at
+        y 4, so 4 two-course streaks put 44 % of y 4 in soot - against the designer's fading band (y 4 0.10-0.30) - and the
+        round-3 critics read the tall streaks as shutters.
+
+        lovish: soot and weathering (the critic: "no streaks under the eaves"). >= 4 streaks on the camera faces'
         brick walls in 34 or rts_close (the gate frame is not wall): 2+ soot cells one over the other at y 2..eave, the top
         one under an eave (a wall, dentil or roof cell within 2 above)."""
         p = self.p

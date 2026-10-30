@@ -33,16 +33,19 @@ SX, SZ = R.SX, R.SZ
 TOWER = R.TOWER
 META = dict(R.META)
 WARM = "shroomlight"
-WARM_SURFACE = "birch_planks"
+WARM_SURFACE = "acacia_planks"   # round 4: birch read cream (critics r3); acacia pack luma 0.41, sat 0.62
 SPIRE = "mcwroofs:prismarine_brick"
-DRIP = "mcwroofs:cyan_terracotta"
+DRIP = "mcwroofs:dark_prismarine"   # round 4: fine-grain weathering in the same hue family (round 2's grey = arrow)
 # the drip cells per ring (eave ring 16-17 over x 0-4 z 4-8, upper ring 18-19 over x 1-3 z 5-7): two-cell clusters on
 # each face of the eave ring, one cell on each face of the upper ring above one of them - runs down the slope
-DRIPS = (set(), set())   # round 3: none - round 2's clusters read as "a mint arrow on dark grey" (both critics)
+# round 4 (the designer): fine grain - 4 of the eave ring's 16 cells and 2 of the upper ring's 8, each upper one over a
+# lower one (a 2-cell fall line, the largest group), the north face of the upper ring clear (no arrow), no a-b-a-b-a
+DRIPS = ({(0, 6), (3, 8), (4, 5), (1, 4)}, {(1, 6), (3, 7)})
 ROOF = "spire"           # round 3 builds both: "spire" (rounds 1-2's shape, the control) and "cupola" (the designer's B)
 OUT_SPIRE = "design/vehicle_labs/brass_t1_r12_r3a.nbt"
 SOOT, SOOT_SL, STREAK = "polished_blackstone_bricks", "polished_blackstone_brick_slab", "deepslate_bricks"
 DRY = R.DRY
+EAVE_STAINS = [(8, 5, 24), (16, 5, 24), (4, 5, 19), (3, 5, 16), (8, 4, 24), (4, 4, 19)]   # piers: south 24, west 4, bay
 # r11's windows (tools/engine_shed_r11.py walls()): (face, wall plane, columns, bottom row, top row)
 WINDOWS = [("west", 4, (17, 18), 3, 5), ("west", 4, (20, 21), 3, 5), ("west", 4, (23,), 3, 5),
            ("south", 24, (5, 6, 7), 3, 5), ("south", 24, (9, 10, 11), 3, 5),
@@ -226,8 +229,8 @@ def warm_surfaces(g):
                 continue
             if S.glyph(n) == "#":
                 g.set(*q, WARM_SURFACE)
-            elif n.endswith("_stairs") and not n.startswith("birch"):          # an inner head or reveal stair
-                g.set(*q, "birch_stairs", **g.b[q][1])
+            elif n.endswith("_stairs") and not n.startswith("acacia"):         # an inner head or reveal stair
+                g.set(*q, "acacia_stairs", **g.b[q][1])
 
 
 # ---------------------------------------------------------------------------------------------------- 3. the spire
@@ -309,7 +312,7 @@ def gantry(g):
         for y in range(1, 5):
             g.set(1, y, z, STONE_W, **DRY)
     for z in range(18, 24):
-        slab(g, (1, 5, z), "stone_slab")                   # (round 3: smooth stone's top read 0.51, over the band)
+        slab(g, (1, 5, z), "stone_brick_slab")             # (smooth stone's top read 0.51, stone slab's too pale)
 
 
 def coal_stage(g):
@@ -325,26 +328,28 @@ def coal_stage(g):
 
 # ---------------------------------------------------------------------------------------------------- 4. soot
 def weathering(g):
-    """Soot. At each stack's top: the cap is blackstone (stacks()), the course under the crown blackened round the
-    shaft, and a drip fading down its south-west arris (blackstone, then deepslate brick, 3 courses). Under the eaves:
-    a three-course deepslate-brick streak on every second brick pier of the camera faces (y 3-5, under the dentils)."""
+    """Soot that reads as STAINING (round-4 designer: darkest at its source, fading by density, never a lone dark cell
+    or a run of three - round 2's drip read as an opening, its pier streaks as shutters, round 3 "clean and new").
+    At each stack's top: the blackstone cap (stacks()) and the blackened course under the crown (top - 2); under it a
+    ragged deepslate-brick hem - two cells at top - 3 (one on each pair of faces), one at top - 4 on the south face.
+    Under the eaves of the faces nearest the stacks (south 24, south 16, west 4) the cameras see only the brick piers
+    between the windows (8 at y 5, 9 at y 4): every second one stained under its dentils (y 5), two of those a course
+    further (y 4), none lower (EAVE_STAINS)."""
     for s in M.AF["stacks"]:
         sx0, sx1, sz0, sz1 = s["shaft"]
         top = s["top"]
         for x in range(sx0, sx1 + 1):
             for z in range(sz0, sz1 + 1):
                 g.set(x, top - 2, z, SOOT)
-        #     round 3: no drip under it (both round-2 critics: "reads as an opening") - the dark top course is the study
-        #     chimney's crown event (koin)
-    piers = []
-    for face, plane, span in (("south", 24, range(4, 17)), ("south", 16, range(0, 10)), ("west", 4, range(16, 25))):
-        run = [u for u in span if all(g.b.get(at(face, plane, u, y), ("",))[0] == BRICK for y in (3, 4, 5))
-               and at(face, plane, u, 6) in g.b]
-        piers += [(face, plane, u) for u in run[::2]]
-    for face, plane, u in piers:                           # round 2: three courses (1 x 2 did not read)
-        for y in (3, 4, 5):
-            g.set(*at(face, plane, u, y), STREAK)
-    return piers
+        g.set(sx0, top - 3, sz0, STREAK)                   # west + north faces
+        g.set(sx1, top - 3, sz1, STREAK)                   # south + east faces
+        g.set(sx1, top - 4, sz1, STREAK)                   # the south face, one course lower
+    stained = []                                           # the wall cells the cameras see there are the piers:
+    for q in EAVE_STAINS:                                  # half of them stained at y 5, two of those down to y 4
+        if g.b.get(q, ("",))[0] == BRICK:
+            g.set(*q, STREAK)
+            stained.append(q)
+    return stained
 
 
 def detail(roof=None):
