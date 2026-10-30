@@ -347,7 +347,8 @@ def build_ac():
 # gate, the north-light field, the stacks' places and tops (the south one moved 2 north, off the south face).
 # Stack and tower proportions measured on the study builds: design/vehicle_labs/towers.md.
 AF = dict(bay=(0, 9, 8, 16), tower=(1, 3, 5, 7), flank_x=4,
-          boilers=[(12, 16, 0, 4), (12, 16, 18, 23)],
+          boilers=[(12, 16, 0, 4), (12, 16, 18, 24)],    # the south one to the plot edge: a blind critic (af vs a)
+          #                                                saw the 1-wide saw strip left at z 24 as an open lean-to
           stacks=[dict(base=(13, 16, 0, 3), shaft=(14, 15, 1, 2), top=25),
                   dict(base=(13, 16, 19, 22), shaft=(14, 15, 20, 21), top=22)])
 CORNICE = "stone_brick_stairs"
