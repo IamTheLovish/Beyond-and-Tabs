@@ -231,6 +231,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(StartPosServerEvents.class);
         vanillaEventBus.register(AlliancesServerEvents.class);
         vanillaEventBus.register(HeroServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hero.HeroRankMenuClient.class);   // keeps the rank-up menu hold alive
         vanillaEventBus.register(NonUnitServerEvents.class);
         vanillaEventBus.register(TimeServerEvents.class);
         vanillaEventBus.register(CustomBuildingServerEvents.class);
