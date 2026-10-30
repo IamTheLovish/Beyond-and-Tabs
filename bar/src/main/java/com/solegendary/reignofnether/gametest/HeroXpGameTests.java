@@ -133,4 +133,80 @@ public class HeroXpGameTests {
                 helper.succeed();
         });
     }
+
+    /**
+     * A neutral kill (no owner) pays a point at 10 XP, twice a player's unit, as the old neutral orbs did, and its orbs
+     * still fly. MAX_NEUTRAL_EXP_LEVEL is now asked once per kill (the old orbs asked as each landed).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void hero_xp_pays_double_for_a_neutral_kill(GameTestHelper helper) {
+        String me = HeroGameTests.owner(helper, "xp_neutral");
+        Mob hero = HeroGameTests.spawnHero(helper, HeroKits.HORDE_WARCHIEF, me, 4, 4);
+        Mob victim = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), "", 6, 4);
+        java.util.List<Mob> mobs = new java.util.ArrayList<>(java.util.Arrays.asList(hero, victim));
+        try {
+            if (hero == null || victim == null) {
+                helper.fail("could not spawn the hero or its victim");
+                return;
+            }
+            int want = (((Unit) victim).getCost().population + 1) * 50;
+            hero.setNoAi(true);
+            helper.runAfterDelay(3, victim::kill);
+            helper.runAfterDelay(5, () -> {
+                int orbs = helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
+                    hero.getBoundingBox().inflate(8)).size();
+                int got = ((HeroUnit) hero).getExperience();
+                discard(mobs);
+                if (got != want)
+                    helper.fail("a neutral kill paid " + got + " XP, not " + want);
+                else if (orbs == 0)
+                    helper.fail("the neutral kill sent no XP orbs to show it");
+                else
+                    helper.succeed();
+            });
+        } catch (RuntimeException e) {
+            discard(mobs);
+            throw e;
+        }
+    }
+
+    /** The orbs still fly to the hero (the look of the XP), but landing pays nothing more than the kill already did. */
+    @GameTest(template = ARENA, timeoutTicks = 260)
+    public static void hero_xp_orbs_still_fly_and_pay_nothing_more(GameTestHelper helper) {
+        String me = HeroGameTests.owner(helper, "xp_orbs"), them = HeroGameTests.owner(helper, "xp_orbs_victim");
+        Mob hero = HeroGameTests.spawnHero(helper, HeroKits.HORDE_WARCHIEF, me, 3, 3);
+        Mob victim = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), them, 9, 3);
+        java.util.List<Mob> mobs = new java.util.ArrayList<>(java.util.Arrays.asList(hero, victim));
+        if (hero == null || victim == null) {
+            discard(mobs);
+            helper.fail("could not spawn the hero or its victim");
+            return;
+        }
+        int want = expectedXp(victim);
+        hero.setNoAi(true);
+        int[] orbs = { 0 };
+        helper.runAfterDelay(3, victim::kill);
+        helper.runAfterDelay(5, () -> orbs[0] = helper.getLevel().getEntitiesOfClass(
+            com.solegendary.reignofnether.hero.HeroExperienceOrb.class, hero.getBoundingBox().inflate(12)).size());
+        helper.runAfterDelay(200, () -> {
+            int got = ((HeroUnit) hero).getExperience();
+            int left = helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
+                hero.getBoundingBox().inflate(12)).size();
+            discard(mobs);
+            if (orbs[0] == 0)
+                helper.fail("the kill sent no XP orbs to the hero");
+            else if (got != want)
+                helper.fail("after the orbs landed the hero has " + got + " XP, not the kill's " + want);
+            else if (left > 0)
+                helper.fail(left + " orbs never reached the hero in 10 s");
+            else
+                helper.succeed();
+        });
+    }
+
+    static void discard(java.util.List<Mob> mobs) {
+        for (Mob m : mobs)
+            if (m != null && !m.isRemoved())
+                m.discard();
+    }
 }

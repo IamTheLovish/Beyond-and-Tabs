@@ -63,7 +63,8 @@ public class HeroServerEvents {
             if (popCost > 0) {
                 for (LivingEntity unit : UnitServerEvents.getAllUnits()) {
                     boolean inRange = unit.distanceToSqr((LivingEntity) deadUnit) < HeroExperienceOrb.RANGE * HeroExperienceOrb.RANGE;
-                    if (unit instanceof HeroUnit heroUnit && inRange && heroUnit != evt.getEntity()) {
+                    // a fallen hero (its body stays in the unit list a moment) earns nothing: its record is written
+                    if (unit instanceof HeroUnit heroUnit && unit.isAlive() && inRange && heroUnit != evt.getEntity()) {
                         String heroOwner = ((Unit) heroUnit).getOwnerName();
                         String deadOwner = deadUnit.getOwnerName();
 

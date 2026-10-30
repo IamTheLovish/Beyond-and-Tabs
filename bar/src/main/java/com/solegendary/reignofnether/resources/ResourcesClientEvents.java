@@ -162,8 +162,14 @@ public class ResourcesClientEvents {
 
     /** One line of floating text at {@code pos}, in the RTS view (a hero's "+N XP"; the caller decides who sees it). */
     public static void addFloatingText(String text, BlockPos pos) {
-        if (OrthoviewClientEvents.isEnabled())
-            floatingTexts.add(new FloatingText(text, pos, 0));
+        if (!OrthoviewClientEvents.isEnabled())
+            return;
+        // staggered like the resource lines: a text that starts while another at the spot is still young waits its turn
+        int tickAge = 0;
+        for (FloatingText f : floatingTexts)
+            if (f.pos.equals(pos) && f.tickAge < 25)
+                tickAge = Math.min(tickAge, f.tickAge - 25);
+        floatingTexts.add(new FloatingText(text, pos, tickAge));
     }
 
     public static void addFloatingTextsFromResources(Resources res, BlockPos pos) {
