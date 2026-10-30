@@ -230,7 +230,9 @@ TARGETS = {
     "obsidian": dict(luma=0.16, std=0.090, sat=0.20, tilt=10.0, smooth=228, pore=0),   # r31c: chroma cut (0.30 -> 0.20)
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
-    "dirt_path_top": dict(luma=0.47, std=0.050, sat=0.44, tilt=15.0, smooth=29, pore=50),
+    # r34: cracked dry earth (m_cracked_path) - the spread is the cracks' (std 0.05 -> 0.065), the value stays on
+    # the palette band
+    "dirt_path_top": dict(luma=0.47, std=0.065, sat=0.44, tilt=15.0, smooth=29, pore=50),
     "dirt_path_side": dict(luma=0.40, std=0.069, sat=0.46, tilt=18.0, smooth=18, pore=56),
     # round 14: single-block numbers, pack-study 38763481360 (vanilla 38763491796 beside it); metal and gem blocks
     # between the reference (which leans on shader reflections) and vanilla's brighter colours; relief trimmed on
@@ -546,6 +548,8 @@ SEED_ORDER = (
     "deepslate_bricks_v3",
     "polished_blackstone_bricks_v2",
     "polished_blackstone_bricks_v3",
+    # round 34: mossy cobblestone and the emissive blocks - appended last
+    "mossy_cobblestone",
 )
 
 
@@ -1167,6 +1171,11 @@ for _parent, _slots in PROC_VARIANT_BLOCKS.values():
 # the planks' boards run on from block to block (two of the four rows have no butt joint in the tile): their blob
 # edge is feathered over 12 texels, so a board's tone drifts along its length instead of stepping
 PROC_FEATHER = {b: 12.0 for b in ("oak_planks", "spruce_planks", "dark_oak_planks", "birch_planks")}
+# Round 34 (lovish: "hyper realism" - the ground blocks and the glowing blocks; claude/handoff r34): new textures,
+# appended last (SEED_ORDER rule). Mossy cobblestone takes cobblestone's numbers with the moss's green on top; the
+# emissive blocks (magma, redstone ore, glowstone, shroomlight, sea lantern) paint their own emission into _s alpha
+# (LabPBR: 0-254 = glow strength, 255 = none) on the hot / lit parts only - their luma is the UNLIT albedo's
+TARGETS["mossy_cobblestone"] = dict(luma=0.37, std=0.090, sat=0.22, tilt=20.5, smooth=30, pore=24)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1827,7 +1836,7 @@ def m_moss(F, n):
     hollow = smoothstep(0.6, 0.95, F.noise(3, 8, 0.5))
     H = 0.5 + 0.2 * tufts + 0.05 * fine - 0.15 * hollow
     shade = 0.85 + 0.15 * norm01(tufts) + 0.05 * fine - 0.15 * hollow
-    return H, tint((0.36, 0.48, 0.18), shade)
+    return H, tint(MOSS_RGB, shade)
 
 
 def m_azalea(F, n, flowering):
@@ -2283,6 +2292,116 @@ def m_path(F, n, side):
     return np.where(band, Hp + 0.1, Hd), np.where(band[..., None], ap, ad)
 
 
+# ------------------------------------------------------------------ round 34: domed cobbles, laid stones ----------
+def domed_stones(F, cells, jitter=0.9, warp=0.012, joint=(0.006, 0.030), flat=0.55, two_sizes=0.0):
+    """Round 34 (lovish: cobbles as LARGE ROUNDED stones with lit domed tops, dark deep joints): a periodic field of
+    stones packed in a bed. Each Voronoi cell is one stone whose top is a DOME - 1 at its centre, falling to 0 at the
+    joint along the cell's own radius (f1 / (f1 + f2), so the dome's foot follows the stone's outline) - with a
+    flatter crown (`flat`: the share of the radius over which the top stays high). Returns dict(dome 0..1, stone
+    0..1 (0 in the joint), joint 0..1 (1 at the joint's floor), idx, k, f1, f2): the recipes paint colour and height
+    from these. two_sizes > 0: that share of the cells is split into smaller stones (a mix of large and small)."""
+    n = F.n
+    f1, f2, idx, k = F.voronoi(cells, jitter)
+    if two_sizes > 0:
+        g1, g2, gidx, gk = F.voronoi(cells * 3, jitter)
+        small = (F.rng.random(k) < two_sizes)[idx]
+        f1, f2 = np.where(small, g1, f1), np.where(small, g2, f2)
+        idx = np.where(small, gidx + k, idx)
+        k = k + gk
+    wu, wv = warp * F.noise(2, 7, 0.6), warp * F.noise(2, 7, 0.6)       # a slow warp: outlines bulge, no jags
+    f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
+    idx = idx[(np.round((F.v + wv) * n).astype(int)) % n, (np.round((F.u + wu) * n).astype(int)) % n]
+    edge = f2 - f1                                       # 0 at the joint line
+    stone = smoothstep(joint[0], joint[1], edge)         # 0 in the joint, 1 on the stone
+    r = np.clip(2 * f1 / np.maximum(f1 + f2, 1e-6), 0, 1)     # 0 at the stone's centre, 1 at its outline
+    rr = np.clip((r - flat) / max(1 - flat, 1e-6), 0, 1)       # the crown flat, the flank falling
+    dome = np.sqrt(np.clip(1 - rr * rr, 0, 1)) * stone         # a quarter-circle flank: a rounded cobble
+    jointf = 1 - smoothstep(0.0, joint[1] * 1.6, edge)         # the joint's floor and its shoulder
+    return dict(dome=dome, stone=stone, joint=jointf, idx=idx, k=k, f1=f1, f2=f2, r=r)
+
+
+def m_cobble_domed(F, n, cells=16, moss=0.15, base=(0.50, 0.50, 0.49)):
+    """Cobblestone, round 34: ~14 large rounded cobbles per face, each its own grey (cool, warm, a few dark), its
+    domed top lit by the normal map and a little lighter in the albedo too (the plain game sees domes as well); the
+    joints a dark packed grit three to five texels wide at 128 with deep AO; a little moss and a few blades of green
+    in some of the joints (`moss`: how much - mossy cobblestone creeps it onto the stones' lower flanks)."""
+    d = domed_stones(F, cells, jitter=0.9, warp=0.009, joint=(0.010, 0.050), flat=0.30, two_sizes=0.12)
+    dome, stone, joint, idx, k = d["dome"], d["stone"], d["joint"], d["idx"], d["k"]
+    rng = F.rng
+    tone = rng.uniform(0.74, 1.20, k)[idx]
+    kind = rng.random(k)[idx][..., None]
+    rgb = np.where(kind < 0.55, np.array(base),
+                   np.where(kind < 0.78, np.array([0.47, 0.49, 0.53]),       # blue-grey
+                            np.where(kind < 0.92, np.array([0.54, 0.50, 0.45]), np.array([0.38, 0.38, 0.38]))))
+    if moss > 0.5:       # the mossy block: near-neutral stones, so its saturation fit goes to the moss, not the stones
+        rgb = rgb * 0.4 + 0.6 * (rgb @ LUMA)[..., None]
+    grain = F.noise(14, 44, 0.3)
+    pits = smoothstep(1.3, 2.2, -F.noise(8, 24, 0.5)) * stone     # a few shallow pits on the stones
+    H = 0.15 + 0.75 * dome + 0.02 * grain * stone - 0.05 * pits - 0.10 * joint
+    # colour: the crown a step lighter than the flank, the joint a dark grit
+    lit = 0.76 + 0.32 * dome
+    shade_stone = tone * lit * (1.0 + 0.05 * grain - 0.20 * pits)
+    grit = 0.9 + 0.2 * F.noise(16, 48, 0.3)
+    stone_rgb = rgb * shade_stone[..., None]
+    joint_rgb = np.array([0.26, 0.245, 0.22]) * grit[..., None]
+    alb = stone_rgb * stone[..., None] + joint_rgb * (1 - stone[..., None])
+    # moss (the shared material, moss_cushions): in some of the joints and creeping up the stones' feet; mossy
+    # cobblestone (moss > 0.5) also grows cushions on some of the stone tops - patches, not a green wash
+    where = smoothstep(0.55 - 0.45 * moss, 1.0 - 0.45 * moss, F.noise(2, 8, 0.6))
+    foot = 1 - smoothstep(0.0, 0.20 + 0.50 * moss, dome + 0.12 * F.noise(6, 20, 0.4))   # a ragged creep
+    seed = np.clip(where * foot, 0, 1)
+    if moss > 0.5:
+        tops = smoothstep(0.62, 0.95, norm01(F.fbm(3, 3, 0.55))) * stone
+        seed = np.clip(seed + tops, 0, 1)
+    m, mdome, moss_rgb = moss_cushions(F, seed, min(1.0, 0.6 + moss))
+    # the moss between stones sits in their shadow: darker than moss_block's open carpet (it read as lime specks)
+    alb = alb * (1 - m[..., None]) + moss_rgb * 0.72 * m[..., None]
+    H = H + 0.08 * m * mdome                             # the moss cushions stand a little proud
+    return H, np.clip(alb, 0, 1)
+
+
+def m_cracked_path(F, n, side):
+    """Dirt path, round 34 (lovish's reference, Oct 30 05:43: a CRACKED DRY-EARTH path): packed, sun-baked earth
+    broken into irregular polygon plates by dark cracks 1-3 texels wide (at 128), the plates' edges a little raised
+    and lit (dried earth curls up at a crack) in the height and the normal, the plate tops faintly concave with a
+    fine grit, a few small pressed-in pebbles. The mean value and hue stay on the environment palette band (TARGETS
+    dirt_path_top: olive-tan, not salmon) - the richness is the plate / crack contrast. No grass on the top: the
+    path's irregular edge against the lawn is a separate overlay. The side: the path's edge (15/16 block) over dirt."""
+    # plates of two sizes (a few large among the small - a real crack net is uneven), their outlines wandering
+    f1, f2, idx, k = F.voronoi(14, 0.95)
+    g1, g2, gidx, gk = F.voronoi(34, 0.95)
+    small = (F.rng.random(k) < 0.45)[idx]
+    f1, f2 = np.where(small, g1, f1), np.where(small, g2, f2)
+    idx = np.where(small, gidx + k, idx)
+    k = k + gk
+    wu, wv = 0.014 * F.noise(3, 10, 0.5), 0.014 * F.noise(3, 10, 0.5)
+    f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
+    idx = idx[(np.round((F.v + wv) * n).astype(int)) % n, (np.round((F.u + wu) * n).astype(int)) % n]
+    gap = f2 - f1
+    width = 0.009 + 0.005 * np.clip(F.noise(2, 6, 0.5), -1, 1)   # the cracks' width varies along the net
+    crack = 1 - smoothstep(0.0, width, gap)                       # the open crack: 1-3 texels at 128
+    lip = smoothstep(0.0, 0.022, gap) * (1 - smoothstep(0.022, 0.07, gap))    # the raised, curled plate edge
+    inside = smoothstep(0.03, 0.12, gap)                           # the plate's concave middle
+    grit = F.noise(12, 40, 0.3)
+    clods = F.fbm(4, 3, 0.5)
+    pf1, pf2, pidx, pk = F.voronoi(70, 1.0)
+    peb = (F.rng.random(pk) < 0.16)[pidx] & (pf1 < 0.016) & (crack < 0.3)
+    pebble = np.where(peb, np.clip(1 - pf1 / 0.016, 0, 1), 0.0)
+    H = 0.55 - 0.30 * crack + 0.045 * lip - 0.03 * inside + 0.015 * grit + 0.02 * clods + 0.22 * pebble
+    tone = F.rng.uniform(0.92, 1.08, k)[idx]
+    shade = tone * (0.86 + 0.16 * lip + 0.03 * grit + 0.04 * clods - 0.04 * inside) * (1 - 0.42 * crack)
+    hue = F.noise(2, 6, 0.5)
+    jit = np.stack([0.04 * hue, 0.01 * hue, -0.04 * hue], -1)
+    alb = tint((0.56, 0.47, 0.30), shade, jit)                     # olive-tan (hue ~39 deg), the fit sets the value
+    alb = np.where(peb[..., None], np.clip(alb * 0.7 + 0.12, 0, 1) * np.array([0.95, 0.94, 0.92]), alb)
+    alb = np.clip(alb, 0, 1)
+    if not side:
+        return H, alb
+    Hd, ad = m_dirt(F, n)
+    band = F.v < (0.19 + 0.02 * F.noise(4, 12, 0.5)[0:1, :])
+    return np.where(band, H + 0.1, Hd), np.where(band[..., None], alb, ad)
+
+
 # ------------------------------------------------------------------ round 14: the structure preview's gaps ---------
 def m_reinforced(F, n, top):
     """Reinforced deepslate: a dark slab held in a pale, bone-like frame (bars across on the side, a ring on top)."""
@@ -2360,6 +2479,26 @@ def m_podzol_side(F, n):
     return np.where(band, Hd + 0.1, Hd), np.where(band[..., None], litter, ad)
 
 
+# Round 34: ONE moss material for every mossy block (the builds' weathering run moss_block -> mossy_cobblestone ->
+# mossy_stone_bricks -> stone_bricks; the family sheet showed moss_block a yellow-olive and mossy_stone_bricks' moss
+# a brighter lime). moss_block's hue; the blocks differ in coverage only.
+MOSS_RGB = (0.36, 0.48, 0.18)
+
+
+def moss_cushions(F, seed, strength, cells=300):
+    """Moss clumps where `seed` (0..1) says it grows: rounded cushions ~7 texels across (Voronoi cells with a domed
+    profile) inside soft-edged contiguous patches, a velvet grain, the MOSS_RGB colour. Returns (m 0..1 coverage,
+    dome, moss_rgb): albedo = alb * (1 - m) + moss_rgb * m, height + ~0.1 * m * dome."""
+    f1, f2, idx, k = F.voronoi(cells, 1.0)
+    cell = 1.0 / math.sqrt(cells)
+    dome = np.clip(1 - (f1 / (0.62 * cell)) ** 2, 0, 1)
+    grow = (0.7 + 0.3 * F.rng.random(k))[idx] * seed
+    cover = smoothstep(0.22, 0.5, grow)
+    m = np.clip(strength * cover * (0.35 + 0.65 * dome ** 0.5), 0, 1)
+    velvet = 0.85 + 0.3 * norm01(F.noise(10, 30, 0.3))
+    return m, dome, tint(MOSS_RGB, velvet * (0.8 + 0.4 * dome))
+
+
 def frame(F, width, groove):
     """A border bevel round the block (cut / polished stone): 1 inside, falling to 0 in a groove at the edge, so tiled
     blocks read as separate stones. width and groove in tile units."""
@@ -2403,17 +2542,10 @@ def m_stone_bricks(F, n, moss=0.0, cracks=0.0):
         # across (Voronoi cells with a domed profile), seeded where the joints are and spreading over the brick
         # arrises and corners in a few patches along the wall, a real green with a velvet grain; the clumps stand a
         # little proud of the stone
-        f1, f2, idx, k = F.voronoi(300, 1.0)                           # ~7 texels per cell
-        cell = 1.0 / math.sqrt(300)
-        dome = np.clip(1 - (f1 / (0.62 * cell)) ** 2, 0, 1)             # a cushion per cell, gaps between
         near = 1 - smoothstep(0.02, 0.14, dj)                            # the joints and the arrises beside them
         patch = norm01(F.fbm(2, 3, 0.55))
         seed = np.clip(near * (0.3 + 0.9 * patch) + 0.6 * smoothstep(0.7, 0.95, patch), 0, 1)   # where moss grows
-        grow = (0.7 + 0.3 * F.rng.random(k))[idx] * seed
-        cover = smoothstep(0.22, 0.5, grow)                              # the patch: contiguous, soft-edged
-        m = np.clip(moss * cover * (0.35 + 0.65 * dome ** 0.5), 0, 1)    # cushions within it, gaps between
-        velvet = 0.85 + 0.3 * norm01(F.noise(10, 30, 0.3))
-        moss_rgb = tint((0.32, 0.50, 0.15), velvet * (0.8 + 0.4 * dome))
+        m, dome, moss_rgb = moss_cushions(F, seed, moss)                 # r34: the shared moss material
         alb = alb * (1 - m[..., None]) + moss_rgb * m[..., None]
         H = H + 0.10 * m * dome
     if cracks > 0:
@@ -3706,7 +3838,9 @@ def recipes():
         "grass_block_top": _scan("grass_block_top"),
         "grass_block_side": _scan_grass_side(0),
         "grass_block_side_overlay": _scan_grass_overlay(0),
-        "dirt": _scan("dirt"), "stone": _scan("stone"), "cobblestone": _plain(m_cobblestone),
+        "dirt": _scan("dirt"), "stone": _scan("stone"),
+        "cobblestone": _plain(m_cobble_domed),   # r34: domed cobbles (m_cobblestone kept for reference)
+        "mossy_cobblestone": _plain(lambda F, n: m_cobble_domed(F, n, moss=0.85)),
         # r31: columnar basalt (m_columnar) in place of the Rock035 scan - the scan's variants turned the tile, which
         # would lay the ribs sideways; each variant is its own roll on the fixed column edges (COLUMN_EDGES)
         "basalt_side": _plain(lambda F, n: m_columnar(F, n, False, False)),
@@ -3813,8 +3947,8 @@ def recipes():
         # each with its own tone and a hard bright edge - the shader's smooth/F0 gives the glint
         "red_nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.42, 0.08, 0.08), pits=0.05),
         "chiseled_stone_bricks": m_chiseled,
-        "dirt_path_top": lambda F, n: m_path(F, n, False),
-        "dirt_path_side": lambda F, n: m_path(F, n, True),
+        "dirt_path_top": lambda F, n: m_cracked_path(F, n, False),   # r34: cracked dry earth
+        "dirt_path_side": lambda F, n: m_cracked_path(F, n, True),
         # round 14: cracked / chiseled variants, metals and gems, the structure preview's gaps
         "cracked_stone_bricks": lambda F, n: m_stone_bricks(F, n, cracks=1.0),   # r31: the plain layout
         "cracked_deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32), cracks=1.0),
