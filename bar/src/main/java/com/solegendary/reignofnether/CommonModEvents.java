@@ -133,6 +133,10 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit.createAttributes().build());
         evt.put(EntityRegistrar.WITCH_UNIT.get(), WitchUnit.createAttributes().build());
         evt.put(EntityRegistrar.EVOKER_UNIT.get(), EvokerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ANGEL_CALLER_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.AngelCallerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.MENDER_ANGEL_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.MenderAngelUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SERAPH_ARCHER_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.SeraphArcherUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SWORD_SERAPH_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.SwordSeraphUnit.createAttributes().build());
         evt.put(EntityRegistrar.ENDERMAN_UNIT.get(), EndermanUnit.createAttributes().build());
         evt.put(EntityRegistrar.WARDEN_UNIT.get(), WardenUnit.createAttributes().build());
         evt.put(EntityRegistrar.RAVAGER_UNIT.get(), RavagerUnit.createAttributes().build());

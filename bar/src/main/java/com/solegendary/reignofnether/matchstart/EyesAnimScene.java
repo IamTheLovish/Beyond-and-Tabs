@@ -79,7 +79,7 @@ public final class EyesAnimScene {
                 clip = "walk";
             List<String> views = new ArrayList<>();
             for (String v : (i < p.length ? p[i++] : "side+front+rear").split("\\+"))
-                if (v.equals("side") || v.equals("front") || v.equals("rear"))
+                if (v.equals("side") || v.equals("front") || v.equals("rear") || v.equals("rts"))
                     views.add(v);
             if (views.isEmpty())
                 views = List.of("side", "front", "rear");
@@ -516,6 +516,7 @@ public final class EyesAnimScene {
                 if (camOn)
                     placeCamera(mc, evt.renderTickTime);
             } else if (recording) {
+                logYaw(mc, evt.renderTickTime);
                 capture(mc, evt.renderTickTime);
             }
         } catch (Exception e) {
@@ -538,13 +539,16 @@ public final class EyesAnimScene {
             return;
         }
         Vec3 aim = e.getPosition(partial).add(0, e.getBbHeight() * 0.5, 0);
-        double yaw = Math.toRadians(bodyYaw(e, partial));
+        // rts: fixed to the world (from the south-east, high), so a turn is seen as a turn - the other views turn with
+        // the body
+        double yaw = Math.toRadians(camView.equals("rts") ? -45f : bodyYaw(e, partial));
         double hx = -Math.sin(yaw), hz = Math.cos(yaw);        // the way it faces
         double rx = -hz, rz = hx;                              // its right hand
         double right, ahead, up;
         switch (camView) {
             case "front" -> { right = 0.62; ahead = 0.78; up = 0.25; }
             case "rear" -> { right = 0.15; ahead = -1.0; up = 0.30; }
+            case "rts" -> { right = 0.0; ahead = 0.75; up = 0.75; }
             default -> { right = 1.0; ahead = 0.0; up = 0.18; }   // side: from its right
         }
         double cx = aim.x + (rx * right + hx * ahead) * camDist;
@@ -557,6 +561,20 @@ public final class EyesAnimScene {
         lastPose = new double[] { cx, feetY, cz, yawDeg, pitchDeg };
         mc.player.moveTo(cx, feetY, cz, yawDeg, pitchDeg);
         mc.player.setDeltaMovement(Vec3.ZERO);
+    }
+
+    /**
+     * A turn clip's yaw trace, every frame drawn: vanilla's lerp of yBodyRotO..yBodyRot (what main draws) and the
+     * body yaw the renderer draws now (MotionPass.bodyYaw, smooth turning #412), against the scene's game clock.
+     */
+    private static void logYaw(Minecraft mc, float partial) {
+        if (!current().clip().equals("turn") || !(mc.level.getEntity(camId) instanceof LivingEntity le))
+            return;
+        ReignOfNether.LOGGER.info("[Eyes] anim-yaw {} t={} vanilla={} drawn={}", runNo,
+                String.format("%.3f", sceneClock + partial),
+                String.format("%.2f", Mth.rotLerp(partial, le.yBodyRotO, le.yBodyRot)),
+                String.format("%.2f", com.solegendary.reignofnether.unit.modelling.motion.MotionPass.bodyYaw(le, partial,
+                        le.yBodyRotO, le.yBodyRot)));
     }
 
     private static void capture(Minecraft mc, float partial) {

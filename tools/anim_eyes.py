@@ -47,6 +47,7 @@ sys.path.insert(0, HERE)
 
 CLIPS = ("idle", "walk", "attack", "turn", "death")
 VIEWS = ("side", "front", "rear")
+KNOWN_VIEWS = VIEWS + ("rts",)   # rts: fixed to the world, asked for by name only (EyesAnimScene)
 # the recording window per clip in game ticks - the same numbers as EyesAnimScene.parse
 DEFAULT_TICKS = {"idle": 120, "walk": 80, "attack": 100, "turn": 240, "death": 44}
 FRAMES_PER_RUN = 36           # EyesAnimScene.FRAMES: captures per take
@@ -93,7 +94,7 @@ def parse_spec(spec):
             clip = "walk"
         if clip not in CLIPS:
             raise ValueError("unknown clip %r in %r; clips: %s" % (clip, entry, ", ".join(CLIPS)))
-        views = tuple(v for v in (p[i] if i < len(p) else "side+front+rear").split("+") if v in VIEWS)
+        views = tuple(v for v in (p[i] if i < len(p) else "side+front+rear").split("+") if v in KNOWN_VIEWS)
         i += 1
         views = views or VIEWS
         dist, rec = 0.0, 0
@@ -497,7 +498,7 @@ def main(argv=None):
         if a.clip not in CLIPS and a.clip != "fly":
             print("anim_eyes: unknown clip %r; clips: %s" % (a.clip, ", ".join(CLIPS)), file=sys.stderr)
             return 2
-        views = tuple(v for v in a.views.split("+") if v in VIEWS) or VIEWS
+        views = tuple(v for v in a.views.split("+") if v in KNOWN_VIEWS) or VIEWS
         spec = build_spec(uid, "walk" if a.clip == "fly" else a.clip, views, a.dist, a.ticks)
         branch = a.branch or subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True,
                                             cwd=ROOT).stdout.strip()

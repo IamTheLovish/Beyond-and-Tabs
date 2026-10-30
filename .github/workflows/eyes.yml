@@ -593,6 +593,8 @@ jobs:
           path: |
             out/anim-sheets/**
             out/eyes-lines.txt
+            out/latest.log
+            out/clips/full_540p.mp4
           retention-days: 7
       - name: Keep the raw frames when the sheets could not be made
         if: always() && env.ANIM != '' && steps.animsheets.outcome == 'failure'
