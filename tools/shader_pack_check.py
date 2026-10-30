@@ -25,6 +25,9 @@ CLEAN_ROOM = "Original work, written clean-room"
 INCLUDE = re.compile(r'^\s*#include\s+"([^"]+)"\s*$')
 # a loader macro some programs test for, and a value for it (the loader defines the render stages as small ints)
 LOADER_MACROS = {"MC_RENDER_STAGE_STARS": "5"}
+# option-screen switches (lib/settings.glsl `#define NAME value // [...]`) compiled at a non-default value as well: one
+# variant per entry, each applied to the programs that read it
+OPTION_VARIANTS = [{"MATERIALS": "0"}, {"WATER_REALISM": "0"}, {"CAUSTICS": "0"}, {"SSR": "0"}, {"CAUSTICS": "0", "SSR": "0"}]
 
 
 def expand(path, seen=()):
@@ -56,6 +59,21 @@ def with_macros(source, macros):
     lines = source.split("\n")
     extra = ["#define %s %s" % kv for kv in macros.items()]
     return "\n".join(lines[:1] + extra + lines[1:])
+
+
+def with_options(source, options):
+    """The source with each option's `#define NAME value` line set to the given value (the loader rewrites the same
+    line when a player changes the option)."""
+    for name, value in options.items():
+        source, n = re.subn(r"^(\s*#define\s+%s\s+)\S+" % re.escape(name), r"\g<1>" + value, source, flags=re.M)
+        if n == 0:
+            raise ValueError("option %s is not defined" % name)
+    return source
+
+
+def reads_option(source, name):
+    """Whether the program tests the option anywhere past its definition."""
+    return len(re.findall(r"\b%s\b" % re.escape(name), source)) > 1
 
 
 def compile_errors(glslang, name, source):
@@ -121,32 +139,49 @@ def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 
 
-def check(glslang):
-    """All problems found, as printable lines."""
+def check(glslang, options=None):
+    """All problems found, as printable lines. options: option values every program is compiled at (default: the
+    pack's own), on top of which OPTION_VARIANTS are tried."""
     problems = header_problems()
     for name in programs():
-        source = expand(os.path.join(SHADERS, name))
-        variants = [({}, source)]
-        used = {m: v for m, v in LOADER_MACROS.items() if m in source}
-        if used:
-            variants.append((used, with_macros(source, used)))
-        for macros, src in variants:
-            err = compile_errors(glslang, name, src)
-            if err:
-                label = name + (" with " + ", ".join(macros) if macros else "")
-                problems.append("%s:\n%s" % (label, err))
+        base = expand(os.path.join(SHADERS, name))
+        base = with_options(base, {k: v for k, v in (options or {}).items() if reads_option(base, k) or
+                                   re.search(r"#define\s+%s\b" % re.escape(k), base)})
+        sources = [("", base)]
+        for opts in OPTION_VARIANTS:
+            if all(reads_option(base, o) for o in opts):
+                sources.append((", ".join("%s=%s" % kv for kv in opts.items()), with_options(base, opts)))
+        for opt_label, source in sources:
+            variants = [({}, source)]
+            used = {m: v for m, v in LOADER_MACROS.items() if m in source}
+            if used:
+                variants.append((used, with_macros(source, used)))
+            for macros, src in variants:
+                err = compile_errors(glslang, name, src)
+                if err:
+                    label = name + (" with " + ", ".join(macros) if macros else "") + (
+                        " [" + opt_label + "]" if opt_label else "")
+                    problems.append("%s:\n%s" % (label, err))
     return problems
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--glslang", help="path to glslang (default: glslang or glslangValidator on PATH)")
+    ap.add_argument("--option", action="append", default=[], metavar="NAME=VALUE",
+                    help="compile every program with this option value (repeatable)")
     args = ap.parse_args()
+    options = dict(o.split("=", 1) for o in args.option)
+    settings = open(os.path.join(SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+    for o in options:
+        if not re.search(r"^#define\s+%s\s" % re.escape(o), settings, re.M):
+            print("no option %s in lib/settings.glsl" % o, file=sys.stderr)
+            return 2
     glslang = find_glslang(args.glslang)
     if not glslang:
         print("glslang not found (apt-get install glslang-tools)", file=sys.stderr)
         return 2
-    problems = check(glslang)
+    problems = check(glslang, options)
     for p in problems:
         print(p)
     print("%d programs, %d problems" % (len(programs()), len(problems)))

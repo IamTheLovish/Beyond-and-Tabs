@@ -31,5 +31,18 @@ const float ambientOcclusionLevel = 1.0;
 // gems, emission from _s. Off: the slice 1 look, for an A/B
 #define MATERIALS 1 // [0 1]
 
+// realistic water (slice 4, lib/water.glsl): opacity from the depth of water under each pixel - clear over a shallow
+// bed, the palette's dark teal-blue over deep water. Off: slice 1's one fixed alpha, for an A/B
+#define WATER_REALISM 1 // [0 1]
+// the ripples on water: their steepness (0 = a still mirror, 1 = gentle, 2 = a breezy day)
+#define WATER_WAVES 1.0 // [0.0 0.5 1.0 1.5 2.0]
+// sunlight focused by the ripples into moving bright lines on the bed under shallow water
+#define CAUSTICS 1 // [0 1]
+// screen-space reflections on water (composite.fsh): the banks, trees and buildings mirrored where the surface
+// reflects strongly - a grazing first-person view. The march runs only where Fresnel passes 4%, which the RTS
+// camera's ~65 degrees down never reaches (water there is ~2% mirror), so from above it costs one fetch per pixel
+#define SSR 1 // [0 1]
+
 // block ids from block.properties
 #define ID_FOLIAGE 10001.0
+#define ID_WATER 10002.0
