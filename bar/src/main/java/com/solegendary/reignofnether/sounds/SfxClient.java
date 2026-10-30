@@ -55,6 +55,9 @@ public final class SfxClient {
     private static final int[] playedThisTick = new int[CATS.length];
     private static final int[] askedThisTick = new int[CATS.length];
     private static final float[] busy = new float[CATS.length];
+    // per construction loop (a NANO_* sound): when its last granule played and the gap drawn for the next (NanoCadence)
+    private static final long[] nanoLast = new long[ALL.length];
+    private static final int[] nanoGap = new int[ALL.length];
     private static long tick = Long.MIN_VALUE;
 
     /** Most new sounds a category may start in one tick (UNITS, BUILDINGS, ABILITIES, ANNOUNCER, UI). */
@@ -114,8 +117,20 @@ public final class SfxClient {
                     // flags = the beam's life: a builder's beam lives NANO_INTERVAL + 3, a reclaim/tree beam a full
                     // second-long step (22); longer standing links (ley lines) have their own chime and stay silent
                     int life = e.flags & 0xFF;
-                    if (life <= BarFx.NANO_INTERVAL + 4)
-                        playAt(Sfx.nano(e.kind), e.x, e.y, e.z, 1f, 1f);
+                    if (life <= BarFx.NANO_INTERVAL + 4) {
+                        // the construction loop: sparse and irregular, one gap per faction however many build
+                        // (NanoCadence - at one granule per 10 ticks it was a metronome, "workers buzzing", Oct 29)
+                        Sfx s = Sfx.nano(e.kind);
+                        if (s != null) {
+                            long now = rollTick();
+                            int i = s.ordinal();
+                            if (NanoCadence.shouldPlay(now, nanoLast[i], nanoGap[i])) {
+                                nanoLast[i] = now;
+                                nanoGap[i] = NanoCadence.nextGap(RANDOM.nextFloat());
+                                playAt(s, e.x, e.y, e.z, 1f, 1f);
+                            }
+                        }
+                    }
                     else if (life <= 24)
                         playAt(Sfx.RECLAIM_TICK, e.x, e.y, e.z, 1f, 1f);
                 }
@@ -324,6 +339,8 @@ public final class SfxClient {
     public static void reset() {
         java.util.Arrays.fill(lastPlay, 0);
         java.util.Arrays.fill(busy, 0);
+        java.util.Arrays.fill(nanoLast, 0);
+        java.util.Arrays.fill(nanoGap, 0);
         tick = Long.MIN_VALUE;
     }
 }
