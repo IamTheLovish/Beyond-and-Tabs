@@ -48,6 +48,8 @@ final class ConstructionFx {
     private static final float DONE_SECONDS = 2.2f;
     /** Past this RTS zoom (strategic) the ring keeps half its puffs and the light shafts stop. */
     private static final float FAR_ZOOM = 70;
+    /** An outline rim this close above the cut line is left out: the cut line is the one bright line there. */
+    private static final float RIM_CLEAR = 0.75f;
     /** Seconds between recounts of what stands in each layer (a few hundred block-state reads per site). */
     private static final float RECOUNT = 0.5f;
 
@@ -169,10 +171,10 @@ final class ConstructionFx {
             drawCut(s, front, far ? 0.3f : 0.16f, LINE_GOLD, 0.9f);
             if (!far)
                 drawShafts(s, front, clock);
-            // one bold silhouette: twice the selection box's weight so the two never read as one (round 2 critic)
-            // the part still to come: warm gold, half alpha, ~1.5x the selection box, fading toward the top - the cut
-            // line below it stays the one bright line (round 3 critic)
-            drawOutline(s, front, far ? 0.2f : 0.1f, OUTLINE_GOLD, far ? 0.6f : 0.5f);
+            // the part still to come: warm gold, ~1.5x the selection box's weight, fading toward the top - corners and
+            // top / step rims only, quieter than round 4's 0.5 (the critic: keep the outline QUIET; the cut line below
+            // it stays the one bright line)
+            drawOutline(s, front, far ? 0.2f : 0.1f, OUTLINE_GOLD, far ? 0.55f : 0.42f);
             if (far)
                 drawGlints(cx, front, cz, r, clock, true);
             else
@@ -232,6 +234,13 @@ final class ConstructionFx {
         edge(x0, y, z1, x0, y, z0, w, c, a);
     }
 
+    /**
+     * The part still to come: each box's four corner verticals (fading upward) and its TOP rim - the step ledges and
+     * the roof line - and nothing else. Round 4 critic (eyes 41031649391): the full wireframe read as a cage, and a box's
+     * bottom rim lay on the box below's top rim, so that height was drawn twice and read as a second saturated gold line
+     * beside the cut line. Now each height is drawn once, no bottoms, and a rim within RIM_CLEAR of the cut line is
+     * left out - the cut line stays the one bright line.
+     */
     static void drawOutline(Site s, float front, float w, int c, float a) {
         int n = s.shape.outline(front, s.outline);
         if (n == 0)
@@ -243,12 +252,11 @@ final class ConstructionFx {
             int b = i * 6;
             float x0 = o[b], x1 = o[b + 1], z0 = o[b + 2], z1 = o[b + 3], y0 = o[b + 4], y1 = o[b + 5];
             float a0 = a * (1f - 0.75f * (y0 - front) / span), a1 = a * (1f - 0.75f * (y1 - front) / span);
-            for (int h = (i == 0 ? 1 : 0); h < 2; h++) {   // the first box's bottom IS the cut line - not drawn twice
-                float y = h == 0 ? y0 : y1, ay = h == 0 ? a0 : a1;
-                edge(x0, y, z0, x1, y, z0, w, c, ay, ay);
-                edge(x1, y, z0, x1, y, z1, w, c, ay, ay);
-                edge(x1, y, z1, x0, y, z1, w, c, ay, ay);
-                edge(x0, y, z1, x0, y, z0, w, c, ay, ay);
+            if (y1 - front > RIM_CLEAR) {
+                edge(x0, y1, z0, x1, y1, z0, w, c, a1);
+                edge(x1, y1, z0, x1, y1, z1, w, c, a1);
+                edge(x1, y1, z1, x0, y1, z1, w, c, a1);
+                edge(x0, y1, z1, x0, y1, z0, w, c, a1);
             }
             edge(x0, y0, z0, x0, y1, z0, w, c, a0, a1);   // the corners, fading upward
             edge(x1, y0, z0, x1, y1, z0, w, c, a0, a1);
