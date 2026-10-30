@@ -83,9 +83,10 @@ public class ClientModEvents {
                 BlockRegistrar.WRAITH_SNOW_LAYER.get()
         );
 
-        // Tidewrought tidepool: the grey vanilla water texture tinted the faction's shallow-sea teal
+        // Light Grid tile (the tidepool, design/ai_faction.md slice 1a): the white grid lines tinted one light colour
+        // (team-coloured lines need the owner on the client: later); the dark panel stays dark under any tint
         evt.register(
-                (state, level, pos, tintIndex) -> 0x3CC8BE,
+                (state, level, pos, tintIndex) -> 0x7FF4FF,
                 BlockRegistrar.TIDEPOOL.get()
         );
 
