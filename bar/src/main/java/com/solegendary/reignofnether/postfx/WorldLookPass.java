@@ -128,6 +128,24 @@ public final class WorldLookPass {
         return shader;
     }
 
+    private static final float[] NEUTRAL = { 1f, 1f, 1f };
+    private static float[] highlight = NEUTRAL;
+
+    /**
+     * The highlight tint this pass applied last frame ({1, 1, 1} when it stepped aside or grades none). The valley mist
+     * runs before this pass and pre-divides its light by it, so the mist's white leaves the grade white (eyes r54, Oct 29:
+     * a golden highlight tint turned the mist cream). A grade that tints highlights sets {@code highlight} where it
+     * sets its uniforms.
+     */
+    public static float[] highlightTint() {
+        return highlight;
+    }
+
+    /** Vanilla's sky-tracking fog colour this frame (before the RTS view's map-edge override): the valley mist's light. */
+    public static float[] skyFog() {
+        return new float[] { skyR, skyG, skyB };
+    }
+
     /** Vanilla's fog colour before any override (sky, biome, time of day, weather), captured every frame. */
     static void captureSkyFog(float r, float g, float b) {
         skyR = r;
@@ -141,8 +159,10 @@ public final class WorldLookPass {
         int look = lookOverride != null ? lookOverride : DisplaySettings.worldLook();
         boolean pack = look != DisplaySettings.LOOK_OFF && ShaderPacks.inUse();
         logState(pack ? STATE_PACK : look);
-        if (look == DisplaySettings.LOOK_OFF || pack)
+        if (look == DisplaySettings.LOOK_OFF || pack) {
+            highlight = NEUTRAL;
             return;
+        }
         RenderTarget main = MC.getMainRenderTarget();
         if (main.width <= 0 || main.height <= 0)   // minimised window
             return;
