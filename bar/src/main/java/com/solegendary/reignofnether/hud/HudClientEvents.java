@@ -371,10 +371,25 @@ public class HudClientEvents {
             controlGroup.entityIds.removeIf(id -> id == entityId);
     }
 
-    // BAR's Tab (select commander) as a plain press only: latched on the raw press here, the same event the overview's
-    // Shift+Tab and the Ctrl+Tab cycle read, and run on the release (onKeyRelease)
+    // BAR's Tab (select commander) as a plain press only: latched on the press, run on the release (onKeyRelease). Two
+    // sources, because each misses some keys: the raw press (onInput, the event the overview's Shift+Tab and the Ctrl+Tab
+    // cycle read) never comes for a key the RTS screen cancels (E / L, TopdownGuiClientEvents.onKeyPress - Codex round
+    // 2 of BAC-007b, select commander rebound there), and the screen's own press skips some bound vanilla keys (above
+    // onKeyRelease). PressLatch takes the same press twice.
     private static final com.solegendary.reignofnether.keybinds.PressLatch selectCommanderPress =
         new com.solegendary.reignofnether.keybinds.PressLatch();
+
+    private static boolean plain(int modifiers) {
+        return (modifiers & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SHIFT | GLFW.GLFW_MOD_ALT)) == 0;
+    }
+
+    // first and even when cancelled: TopdownGuiClientEvents cancels E / L to keep the inventory and advancements shut
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST, receiveCanceled = true)
+    public static void onScreenKeyPressForTab(ScreenEvent.KeyPressed.Pre evt) {
+        if (OrthoviewClientEvents.isEnabled() && evt.getScreen() instanceof TopdownGui
+                && Keybindings.selectCommander.matches(evt.getKeyCode()))
+            selectCommanderPress.press(plain(evt.getModifiers()));
+    }
 
     @SubscribeEvent
     // can't use ScreenEvent.KeyboardKeyPressedEvent as that only happens when a screen is up
@@ -383,7 +398,7 @@ public class HudClientEvents {
             if (evt.getKey() == Keybindings.getFnum(1).getKey())
                 HudPanels.onF1();   // RoN's F1 and vanilla's hideGui are one switch (HudPanels.hidden)
             if (Keybindings.selectCommander.matches(evt.getKey()))
-                selectCommanderPress.press((evt.getModifiers() & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SHIFT | GLFW.GLFW_MOD_ALT)) == 0);
+                selectCommanderPress.press(plain(evt.getModifiers()));
         }
     }
 

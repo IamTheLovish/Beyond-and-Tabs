@@ -29,6 +29,27 @@ class PressLatchTest {
     }
 
     @Test
+    void aRepeatAfterTheModifierCameUpDoesNotRearm() {
+        // Ctrl+Tab held, Ctrl let go, Tab still down and repeating: still the cycle gesture
+        PressLatch l = new PressLatch();
+        l.press(false);
+        l.press(true);
+        l.press(true);
+        assertFalse(l.release());
+    }
+
+    @Test
+    void thePressReportedTwiceStaysPlain() {
+        // the RTS screen's key event and the raw input event both report one plain press
+        PressLatch l = new PressLatch();
+        l.press(true);
+        l.press(true);
+        assertTrue(l.release());
+        l.press(true);
+        assertTrue(l.release(), "the next tap after a release starts fresh");
+    }
+
+    @Test
     void aModifiedPressAfterAPlainOneDisarms() {
         // key repeat or a second press with Ctrl held: the latest press decides
         PressLatch l = new PressLatch();
