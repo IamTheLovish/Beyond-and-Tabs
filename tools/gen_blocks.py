@@ -257,11 +257,14 @@ TARGETS = {
     "diamond_block": dict(luma=0.70, std=0.120, sat=0.35, tilt=16.0, smooth=250, pore=0, f0=44),
     # r32 (critic: "too dark and muddy"): 0.36 -> 0.50, a cleaner green (sat 0.60 -> 0.72)
     "emerald_block": dict(luma=0.50, std=0.110, sat=0.72, tilt=16.0, smooth=235, pore=0, f0=15),
-    "lapis_block": dict(luma=0.22, std=0.050, sat=0.55, tilt=7.6, smooth=60, pore=0, f0=15),
+    # r33 (critic, eyes 41029731853: the blues "crushed"): lapis lifted to a deep ultramarine that reads blue from
+    # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
+    "lapis_block": dict(luma=0.30, std=0.050, sat=0.72, tilt=7.6, smooth=60, pore=0, f0=15),
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     "white_concrete": dict(luma=0.80, std=0.008, sat=0.04, tilt=2.0, smooth=86, pore=10),
     # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
-    "blue_terracotta": dict(luma=0.30, std=0.018, sat=0.33, tilt=3.5, smooth=36, pore=30, soften=1.0),   # r31b: -20% chroma
+    # r31b: -20% chroma. r33 (critic: "crushed"): a clearer dusty blue - luma 0.30 -> 0.37, sat 0.33 -> 0.42
+    "blue_terracotta": dict(luma=0.37, std=0.018, sat=0.42, tilt=3.5, smooth=36, pore=30, soften=1.0),
     "podzol_side": dict(luma=0.36, std=0.090, sat=0.44, tilt=21.6, smooth=15, pore=56),
     # round 15 (Oct 15, the texture audit): the face census's partial blocks (tools/face_census.py) - our texture on
     # some faces of a block, vanilla 16x on the rest. Each new face takes its sibling's numbers: a stripped log's top
@@ -1391,7 +1394,7 @@ def m_lapis(F, n):
     mott = F.fbm(3, 4, 0.55)
     wisp = smoothstep(0.75, 0.95, norm01(F.warp(F.noise(2, 6, 0.5), 0.03 * F.noise(3, 9), 0.03 * F.noise(3, 9))))
     shade = 0.85 + 0.25 * norm01(mott)
-    alb = tint((0.14, 0.20, 0.55), shade)
+    alb = tint((0.10, 0.20, 0.62), shade)                    # r33: a cleaner ultramarine (less green in the blue)
     alb = alb * (1 - 0.5 * wisp[..., None]) + 0.5 * wisp[..., None] * np.array([0.55, 0.58, 0.62])   # calcite veins
     fleck = F.noise(40, 90, 0.0) > 2.6
     alb[fleck] = (0.85, 0.70, 0.30)
@@ -3713,7 +3716,8 @@ def recipes():
         "end_stone": lambda F, n: m_igneous(F, n, (0.86, 0.86, 0.66), (0.62, 0.62, 0.46), 0.9, size=(7, 16)),
         "white_concrete": lambda F, n: m_clayish(F, n, (0.86, 0.87, 0.87), pits=0.01, mottle=0.03),
         # r31b (eyes: "reads as violet dyed wool"): a dusty slate-blue, chroma pulled toward grey
-        "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.31, 0.32, 0.46), flash=(0.94, 0.94, 0.98)),
+        # r33 (critic: "crushed"): a clearer dusty blue, the hue toward blue rather than violet
+        "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.30, 0.36, 0.52), flash=(0.94, 0.95, 0.99)),
         "podzol_side": m_podzol_side,
         # round 15: the face census's partial blocks
         "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.65, (8, 20)),
