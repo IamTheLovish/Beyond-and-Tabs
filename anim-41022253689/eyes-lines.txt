@@ -1,0 +1,787 @@
+[07:54:05] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[07:54:06] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[07:54:06] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[07:54:14] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[07:54:25] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[07:54:34] [Worker-ResourceReload-2/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[07:54:35] [Worker-ResourceReload-2/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[07:54:42] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[07:54:44] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[07:55:13] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[07:55:43] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[07:56:13] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[07:56:13] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793346973858
+[07:56:14] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[07:56:17] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793346977953
+[07:56:17] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[07:56:18] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[07:56:20] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[07:56:36] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[07:56:36] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[07:56:36] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[07:56:51] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 119 s left (client tick 274, camera at [-223, 85, 7]); our slot -216, 1; a bot's start 224, 1; markers: 2 boxes, 1 frames drawn; team 0 (mine) fill built (35259 columns, 1888 quads), 391 perimeter heights known; team 1 fill none (0 columns, 0 quads), 43 perimeter heights known, rebuild pending
+[07:56:54] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 115 s left, zoom 36.0, camera at [-222, 85, 7]; markers: 2 boxes, 14 frames drawn; team 0 (mine) fill built (35259 columns, 1888 quads), 391 perimeter heights known; team 1 fill built (1141 columns, 184 quads), 43 perimeter heights known
+[07:56:54] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793347014356
+[07:56:54] [IO-Worker-5/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[07:56:56] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 113 s left, zoom 60.0, camera at [-221, 85, 6]; markers: 2 boxes, 26 frames drawn; team 0 (mine) fill built (37369 columns, 1981 quads), 444 perimeter heights known; team 1 fill built (1141 columns, 184 quads), 43 perimeter heights known
+[07:56:56] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793347016296
+[07:56:56] [IO-Worker-4/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[07:56:58] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 111 s left, zoom 100.0, camera at [-220, 85, 5]; markers: 2 boxes, 37 frames drawn; team 0 (mine) fill built (37369 columns, 1981 quads), 462 perimeter heights known; team 1 fill built (1141 columns, 184 quads), 43 perimeter heights known
+[07:56:58] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793347018394
+[07:56:58] [IO-Worker-2/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[07:57:03] [Render thread/INFO]: [Eyes] 01f: eye at [224, 69, 21] y 70 looking at the start 224, 1 (20 blocks away; ground there 71); 107 s left; markers: 2 boxes, 90 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known, rebuild pending; team 1 fill built (38131 columns, 2291 quads), 491 perimeter heights known, rebuild pending
+[07:57:03] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793347023064
+[07:57:03] [IO-Worker-10/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[07:57:03] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:57:05] [Render thread/INFO]: [Eyes] 01e: start placed at -216, 1 with 104 s left; the phase ends 3 s later
+[07:57:06] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 103 s left, zoom 36.0, camera at [-224, 90, 9]; markers: 2 boxes, 112 frames drawn; team 0 (mine) fill built (23518 columns, 1319 quads), 313 perimeter heights known; team 1 fill built (1141 columns, 184 quads), 43 perimeter heights known
+[07:57:06] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793347026795
+[07:57:07] [IO-Worker-5/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[07:57:33] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:57:37] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793347057127
+[07:57:37] [Server thread/INFO]: [Eyes] ground 0:30 round [-224, 8]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:coal_ore=3, minecraft:diorite_wall=3, minecraft:grass_block=2162, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=14, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=43, minecraft:stone_brick_stairs=8}
+[07:57:37] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793347057382
+[07:57:37] [Render thread/INFO]: [Eyes] 20_anim: 4 run(s) on a pad at [-156, 72, 0]: blade_dancer_unit:turn:rts,grunt_unit:turn:rts,rifle_squad_unit:turn:rts,windcaller_unit:turn:rts
+[07:57:37] [IO-Worker-4/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[07:57:37] [IO-Worker-2/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[07:57:41] [Render thread/INFO]: [Eyes] 20_anim: run 0 - blade_dancer_unit / turn / rts summoned at [-156, 72, 0]
+[07:57:41] [Render thread/INFO]: [Eyes] 20_anim: run 0 - blade_dancer_unit is BladeDancerUnit (id 93), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:57:43] [Render thread/INFO]: [Eyes] anim-run 0 blade_dancer_unit turn rts window 240 ticks from game tick 114, a frame every 6.7 ticks, unit at [-152, 72, 0]
+[07:57:43] [Render thread/INFO]: [Eyes] anim-yaw 0 t=114.800 vanilla=-90.00 drawn=-90.00
+[07:57:43] [Render thread/INFO]: [Eyes] anim-frame 0 rts 0 bat_eyes_20_anim_r00_rts_f000.png t=114.80 swing=0.00 limb=0.92 yaw=-90.0 pos=-151.3,72.0,0.5
+[07:57:43] [Render thread/INFO]: [Eyes] anim-beat 0 tick 1 frames 1 unit [-152, 72, 0] wall 0.1 s screen none paused false
+[07:57:43] [Server thread/INFO]: [Eyes] anim-beat-server tick 1245 unit [-151, 72, 0] noAi false navDone false owner-side game time 1245
+[07:57:43] [Render thread/INFO]: [Eyes] anim-yaw 0 t=116.620 vanilla=-90.00 drawn=-90.00
+[07:57:43] [Render thread/INFO]: [Eyes] anim-yaw 0 t=119.900 vanilla=-90.00 drawn=-90.00
+[07:57:43] [Render thread/INFO]: [Eyes] anim-yaw 0 t=123.060 vanilla=-90.00 drawn=-90.00
+[07:57:43] [Render thread/INFO]: [Eyes] anim-frame 0 rts 1 bat_eyes_20_anim_r00_rts_f001.png t=123.06 swing=0.00 limb=0.53 yaw=-90.0 pos=-149.6,72.0,0.5
+[07:57:43] [Render thread/INFO]: [Eyes] anim-yaw 0 t=125.520 vanilla=-90.00 drawn=-90.00
+[07:57:43] [Render thread/INFO]: [Eyes] anim-yaw 0 t=128.040 vanilla=-90.00 drawn=-90.00
+[07:57:43] [Render thread/INFO]: [Eyes] anim-yaw 0 t=130.000 vanilla=-90.00 drawn=-90.00
+[07:57:43] [Render thread/INFO]: [Eyes] anim-frame 0 rts 2 bat_eyes_20_anim_r00_rts_f002.png t=130.00 swing=0.00 limb=0.92 yaw=-90.0 pos=-148.0,72.0,0.5
+[07:57:44] [Render thread/INFO]: [Eyes] anim-yaw 0 t=131.940 vanilla=-90.00 drawn=-90.00
+[07:57:44] [Render thread/INFO]: [Eyes] anim-yaw 0 t=134.480 vanilla=-90.00 drawn=-90.00
+[07:57:44] [Render thread/INFO]: [Eyes] anim-beat 0 tick 21 frames 3 unit [-147, 72, 0] wall 1.1 s screen none paused false
+[07:57:44] [Server thread/INFO]: [Eyes] anim-beat-server tick 1265 unit [-146, 72, 0] noAi false navDone false owner-side game time 1265
+[07:57:44] [Render thread/INFO]: [Eyes] anim-yaw 0 t=137.260 vanilla=-90.00 drawn=-90.00
+[07:57:44] [Render thread/INFO]: [Eyes] anim-frame 0 rts 3 bat_eyes_20_anim_r00_rts_f003.png t=137.26 swing=0.00 limb=0.88 yaw=-90.0 pos=-146.2,72.0,0.5
+[07:57:44] [Render thread/INFO]: [Eyes] anim-yaw 0 t=140.400 vanilla=-90.00 drawn=-90.00
+[07:57:44] [Render thread/INFO]: [Eyes] anim-yaw 0 t=143.720 vanilla=-90.00 drawn=-90.00
+[07:57:44] [Render thread/INFO]: [Eyes] anim-yaw 0 t=146.480 vanilla=-90.00 drawn=-90.00
+[07:57:44] [Render thread/INFO]: [Eyes] anim-frame 0 rts 4 bat_eyes_20_anim_r00_rts_f004.png t=146.48 swing=0.00 limb=0.88 yaw=-90.0 pos=-144.3,72.0,0.5
+[07:57:44] [Render thread/INFO]: [Eyes] anim-yaw 0 t=149.740 vanilla=-90.00 drawn=-90.00
+[07:57:45] [Render thread/INFO]: [Eyes] anim-yaw 0 t=152.460 vanilla=-90.00 drawn=-90.00
+[07:57:45] [Render thread/INFO]: [Eyes] anim-beat 0 tick 41 frames 5 unit [-143, 72, 0] wall 2.0 s screen none paused false
+[07:57:45] [Server thread/INFO]: [Eyes] anim-beat-server tick 1284 unit [-142, 72, 0] noAi false navDone false owner-side game time 1284
+[07:57:45] [Render thread/INFO]: [Eyes] anim-yaw 0 t=155.540 vanilla=-90.00 drawn=-90.00
+[07:57:45] [Render thread/INFO]: [Eyes] anim-frame 0 rts 5 bat_eyes_20_anim_r00_rts_f005.png t=155.54 swing=0.00 limb=0.88 yaw=-90.0 pos=-142.3,72.0,0.5
+[07:57:45] [Render thread/INFO]: [Eyes] anim-yaw 0 t=159.380 vanilla=-90.00 drawn=-90.00
+[07:57:45] [Render thread/INFO]: [Eyes] anim-yaw 0 t=162.400 vanilla=-90.00 drawn=-90.00
+[07:57:45] [Render thread/INFO]: [Eyes] anim-frame 0 rts 6 bat_eyes_20_anim_r00_rts_f006.png t=162.40 swing=0.00 limb=0.81 yaw=-90.0 pos=-140.9,72.0,0.5
+[07:57:45] [Render thread/INFO]: [Eyes] anim-yaw 0 t=165.580 vanilla=-90.00 drawn=-90.00
+[07:57:45] [Render thread/INFO]: [Eyes] anim-yaw 0 t=168.120 vanilla=-90.00 drawn=-90.00
+[07:57:46] [Render thread/INFO]: [Eyes] anim-yaw 0 t=171.400 vanilla=-90.00 drawn=-90.00
+[07:57:46] [Render thread/INFO]: [Eyes] anim-frame 0 rts 7 bat_eyes_20_anim_r00_rts_f007.png t=171.40 swing=0.00 limb=0.88 yaw=-90.0 pos=-139.0,72.0,0.5
+[07:57:46] [Render thread/INFO]: [Eyes] anim-yaw 0 t=174.340 vanilla=-90.00 drawn=-90.00
+[07:57:46] [Render thread/INFO]: [Eyes] anim-beat 0 tick 61 frames 8 unit [-139, 72, 0] wall 3.1 s screen none paused false
+[07:57:46] [Server thread/INFO]: [Eyes] anim-beat-server tick 1305 unit [-137, 72, 0] noAi false navDone false owner-side game time 1305
+[07:57:46] [Render thread/INFO]: [Eyes] anim-yaw 0 t=177.440 vanilla=-90.00 drawn=-90.00
+[07:57:46] [Render thread/INFO]: [Eyes] anim-yaw 0 t=180.460 vanilla=-90.00 drawn=-90.00
+[07:57:46] [Render thread/INFO]: [Eyes] anim-frame 0 rts 8 bat_eyes_20_anim_r00_rts_f008.png t=180.46 swing=0.00 limb=0.88 yaw=-90.0 pos=-137.0,72.0,0.5
+[07:57:46] [Render thread/INFO]: [Eyes] anim-yaw 0 t=182.900 vanilla=-90.00 drawn=-90.00
+[07:57:46] [Render thread/INFO]: [Eyes] anim-yaw 0 t=185.900 vanilla=-90.00 drawn=-90.00
+[07:57:46] [Render thread/INFO]: [Eyes] anim-yaw 0 t=188.100 vanilla=-90.00 drawn=-90.00
+[07:57:46] [Render thread/INFO]: [Eyes] anim-frame 0 rts 9 bat_eyes_20_anim_r00_rts_f009.png t=188.10 swing=0.00 limb=0.90 yaw=-90.0 pos=-135.0,72.0,0.5
+[07:57:46] [Render thread/INFO]: [Eyes] anim-yaw 0 t=190.980 vanilla=-90.00 drawn=-90.00
+[07:57:47] [Render thread/INFO]: [Eyes] anim-yaw 0 t=193.720 vanilla=-90.00 drawn=-90.00
+[07:57:47] [Render thread/INFO]: [Eyes] anim-beat 0 tick 81 frames 10 unit [-134, 72, 0] wall 4.0 s screen none paused false
+[07:57:47] [Server thread/INFO]: [Eyes] anim-beat-server tick 1323 unit [-133, 72, 0] noAi false navDone false owner-side game time 1323
+[07:57:47] [Render thread/INFO]: [Eyes] anim-yaw 0 t=195.280 vanilla=-90.00 drawn=-90.00
+[07:57:47] [Render thread/INFO]: [Eyes] anim-frame 0 rts 10 bat_eyes_20_anim_r00_rts_f010.png t=195.28 swing=0.00 limb=0.35 yaw=-90.0 pos=-133.6,72.0,0.5
+[07:57:47] [Render thread/INFO]: [Eyes] anim-leg 0 1 to 28, -28
+[07:57:47] [Render thread/INFO]: [Eyes] anim-yaw 0 t=196.820 vanilla=-90.00 drawn=-90.00
+[07:57:47] [Render thread/INFO]: [Eyes] anim-yaw 0 t=199.560 vanilla=-90.00 drawn=-90.00
+[07:57:47] [Render thread/INFO]: [Eyes] anim-yaw 0 t=202.220 vanilla=-90.00 drawn=-90.00
+[07:57:47] [Render thread/INFO]: [Eyes] anim-frame 0 rts 11 bat_eyes_20_anim_r00_rts_f011.png t=202.22 swing=0.00 limb=0.69 yaw=-90.0 pos=-132.4,72.0,0.5
+[07:57:47] [Render thread/INFO]: [Eyes] anim-yaw 0 t=204.560 vanilla=-99.71 drawn=-98.39
+[07:57:47] [Render thread/INFO]: [Eyes] anim-yaw 0 t=206.620 vanilla=-121.97 drawn=-116.86
+[07:57:47] [Render thread/INFO]: [Eyes] anim-yaw 0 t=208.900 vanilla=-136.33 drawn=-131.69
+[07:57:47] [Render thread/INFO]: [Eyes] anim-frame 0 rts 12 bat_eyes_20_anim_r00_rts_f012.png t=208.90 swing=0.00 limb=0.88 yaw=-136.3 pos=-131.7,72.0,-0.3
+[07:57:47] [Render thread/INFO]: [Eyes] anim-yaw 0 t=211.040 vanilla=-136.89 drawn=-135.53
+[07:57:48] [Render thread/INFO]: [Eyes] anim-yaw 0 t=213.160 vanilla=-136.11 drawn=-136.10
+[07:57:48] [Render thread/INFO]: [Eyes] anim-yaw 0 t=214.940 vanilla=-135.07 drawn=-135.80
+[07:57:48] [Render thread/INFO]: [Eyes] anim-beat 0 tick 101 frames 13 unit [-131, 72, -2] wall 5.1 s screen none paused false
+[07:57:48] [Server thread/INFO]: [Eyes] anim-beat-server tick 1344 unit [-131, 72, -2] noAi false navDone false owner-side game time 1344
+[07:57:48] [Render thread/INFO]: [Eyes] anim-yaw 0 t=216.520 vanilla=-135.00 drawn=-135.33
+[07:57:48] [Render thread/INFO]: [Eyes] anim-frame 0 rts 13 bat_eyes_20_anim_r00_rts_f013.png t=216.52 swing=0.00 limb=0.77 yaw=-135.0 pos=-130.6,72.0,-1.5
+[07:57:48] [Render thread/INFO]: [Eyes] anim-yaw 0 t=218.340 vanilla=-135.00 drawn=-135.09
+[07:57:48] [Render thread/INFO]: [Eyes] anim-yaw 0 t=220.520 vanilla=-135.24 drawn=-135.23
+[07:57:48] [Render thread/INFO]: [Eyes] anim-yaw 0 t=223.100 vanilla=-133.94 drawn=-125.78
+[07:57:48] [Render thread/INFO]: [Eyes] anim-yaw 0 t=225.500 vanilla=-120.16 drawn=-121.16
+[07:57:48] [Render thread/INFO]: [Eyes] anim-frame 0 rts 14 bat_eyes_20_anim_r00_rts_f014.png t=225.50 swing=0.00 limb=0.36 yaw=-120.2 pos=-129.0,72.0,-2.6
+[07:57:48] [Render thread/INFO]: [Eyes] anim-yaw 0 t=227.800 vanilla=-88.53 drawn=-98.38
+[07:57:48] [Render thread/INFO]: [Eyes] anim-yaw 0 t=229.940 vanilla=-112.50 drawn=-104.68
+[07:57:49] [Render thread/INFO]: [Eyes] anim-yaw 0 t=232.620 vanilla=-151.47 drawn=-156.27
+[07:57:49] [Render thread/INFO]: [Eyes] anim-frame 0 rts 15 bat_eyes_20_anim_r00_rts_f015.png t=232.62 swing=0.00 limb=0.49 yaw=-151.5 pos=-128.0,71.0,-2.7
+[07:57:49] [Render thread/INFO]: [Eyes] anim-beat 0 tick 121 frames 16 unit [-129, 71, -4] wall 6.0 s screen none paused false
+[07:57:49] [Server thread/INFO]: [Eyes] anim-beat-server tick 1364 unit [-129, 71, -4] noAi false navDone false owner-side game time 1364
+[07:57:49] [Render thread/INFO]: [Eyes] anim-yaw 0 t=235.540 vanilla=-190.71 drawn=-194.40
+[07:57:49] [Render thread/INFO]: [Eyes] anim-yaw 0 t=238.740 vanilla=-197.56 drawn=-196.81
+[07:57:49] [Render thread/INFO]: [Eyes] anim-yaw 0 t=241.900 vanilla=-191.20 drawn=-191.89
+[07:57:49] [Render thread/INFO]: [Eyes] anim-frame 0 rts 16 bat_eyes_20_anim_r00_rts_f016.png t=241.90 swing=0.00 limb=0.87 yaw=-191.2 pos=-128.4,71.0,-4.5
+[07:57:49] [Render thread/INFO]: [Eyes] anim-yaw 0 t=245.180 vanilla=-189.43 drawn=-184.69
+[07:57:49] [Render thread/INFO]: [Eyes] anim-yaw 0 t=248.260 vanilla=-182.79 drawn=-182.13
+[07:57:49] [Render thread/INFO]: [Eyes] anim-yaw 0 t=250.960 vanilla=-181.41 drawn=-181.48
+[07:57:49] [Render thread/INFO]: [Eyes] anim-frame 0 rts 17 bat_eyes_20_anim_r00_rts_f017.png t=250.96 swing=0.00 limb=0.86 yaw=-181.4 pos=-128.5,71.0,-6.3
+[07:57:50] [Render thread/INFO]: [Eyes] anim-yaw 0 t=254.040 vanilla=-181.41 drawn=-181.41
+[07:57:50] [Render thread/INFO]: [Eyes] anim-beat 0 tick 141 frames 18 unit [-129, 71, -8] wall 7.1 s screen none paused false
+[07:57:50] [Server thread/INFO]: [Eyes] anim-beat-server tick 1386 unit [-129, 71, -9] noAi false navDone false owner-side game time 1386
+[07:57:50] [Render thread/INFO]: [Eyes] anim-yaw 0 t=257.540 vanilla=-181.41 drawn=-181.41
+[07:57:50] [Render thread/INFO]: [Eyes] anim-yaw 0 t=260.120 vanilla=-181.41 drawn=-181.41
+[07:57:50] [Render thread/INFO]: [Eyes] anim-frame 0 rts 18 bat_eyes_20_anim_r00_rts_f018.png t=260.12 swing=0.00 limb=0.87 yaw=-181.4 pos=-128.5,71.0,-8.5
+[07:57:50] [Render thread/INFO]: [Eyes] anim-yaw 0 t=261.920 vanilla=-181.41 drawn=-181.41
+[07:57:50] [Render thread/INFO]: [Eyes] anim-yaw 0 t=263.700 vanilla=-181.41 drawn=-181.41
+[07:57:50] [Render thread/INFO]: [Eyes] anim-yaw 0 t=265.480 vanilla=-181.41 drawn=-181.41
+[07:57:50] [Render thread/INFO]: [Eyes] anim-yaw 0 t=267.040 vanilla=-181.41 drawn=-181.41
+[07:57:50] [Render thread/INFO]: [Eyes] anim-frame 0 rts 19 bat_eyes_20_anim_r00_rts_f019.png t=267.04 swing=0.00 limb=0.53 yaw=-181.4 pos=-128.5,71.0,-9.8
+[07:57:50] [Render thread/INFO]: [Eyes] anim-yaw 0 t=269.580 vanilla=-181.41 drawn=-181.41
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=272.340 vanilla=-181.41 drawn=-181.41
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=274.400 vanilla=-181.41 drawn=-181.41
+[07:57:51] [Render thread/INFO]: [Eyes] anim-frame 0 rts 20 bat_eyes_20_anim_r00_rts_f020.png t=274.40 swing=0.00 limb=0.91 yaw=-181.4 pos=-128.5,71.0,-11.6
+[07:57:51] [Render thread/INFO]: [Eyes] anim-beat 0 tick 161 frames 21 unit [-129, 71, -12] wall 8.1 s screen none paused false
+[07:57:51] [Server thread/INFO]: [Eyes] anim-beat-server tick 1404 unit [-129, 71, -13] noAi false navDone false owner-side game time 1404
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=276.240 vanilla=-181.41 drawn=-181.41
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=278.640 vanilla=-181.41 drawn=-181.41
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=280.800 vanilla=-172.78 drawn=-175.44
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=282.980 vanilla=-155.16 drawn=-162.09
+[07:57:51] [Render thread/INFO]: [Eyes] anim-frame 0 rts 21 bat_eyes_20_anim_r00_rts_f021.png t=282.98 swing=0.00 limb=0.97 yaw=-155.2 pos=-128.2,71.0,-13.4
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=284.800 vanilla=-146.84 drawn=-151.32
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=286.420 vanilla=-144.45 drawn=-146.46
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=288.540 vanilla=-142.89 drawn=-143.44
+[07:57:51] [Render thread/INFO]: [Eyes] anim-yaw 0 t=290.340 vanilla=-146.17 drawn=-147.51
+[07:57:51] [Render thread/INFO]: [Eyes] anim-frame 0 rts 22 bat_eyes_20_anim_r00_rts_f022.png t=290.34 swing=0.00 limb=0.72 yaw=-146.2 pos=-127.6,71.0,-14.6
+[07:57:52] [Render thread/INFO]: [Eyes] anim-yaw 0 t=292.400 vanilla=-162.22 drawn=-161.11
+[07:57:52] [Render thread/INFO]: [Eyes] anim-yaw 0 t=294.380 vanilla=-180.16 drawn=-177.43
+[07:57:52] [Render thread/INFO]: [Eyes] anim-beat 0 tick 181 frames 23 unit [-128, 70, -16] wall 9.1 s screen none paused false
+[07:57:52] [Server thread/INFO]: [Eyes] anim-beat-server tick 1424 unit [-128, 70, -17] noAi false navDone false owner-side game time 1424
+[07:57:52] [Render thread/INFO]: [Eyes] anim-yaw 0 t=296.380 vanilla=-188.42 drawn=-185.11
+[07:57:52] [Render thread/INFO]: [Eyes] anim-yaw 0 t=298.740 vanilla=-182.05 drawn=-183.26
+[07:57:52] [Render thread/INFO]: [Eyes] anim-frame 0 rts 23 bat_eyes_20_anim_r00_rts_f023.png t=298.74 swing=0.00 limb=0.71 yaw=-182.0 pos=-127.6,70.2,-16.1
+[07:57:52] [Render thread/INFO]: [Eyes] anim-yaw 0 t=301.220 vanilla=-179.91 drawn=-179.01
+[07:57:52] [Render thread/INFO]: [Eyes] anim-yaw 0 t=304.140 vanilla=-177.17 drawn=-176.51
+[07:57:52] [Render thread/INFO]: [Eyes] anim-yaw 0 t=306.280 vanilla=-175.78 drawn=-175.92
+[07:57:52] [Render thread/INFO]: [Eyes] anim-frame 0 rts 24 bat_eyes_20_anim_r00_rts_f024.png t=306.28 swing=0.00 limb=0.32 yaw=-175.8 pos=-127.5,70.0,-17.6
+[07:57:52] [Render thread/INFO]: [Eyes] anim-leg 0 2 to 56, -28
+[07:57:52] [Render thread/INFO]: [Eyes] anim-yaw 0 t=308.480 vanilla=-177.36 drawn=-177.31
+[07:57:52] [Render thread/INFO]: [Eyes] anim-yaw 0 t=310.600 vanilla=-179.34 drawn=-178.85
+[07:57:53] [Render thread/INFO]: [Eyes] anim-yaw 0 t=312.420 vanilla=-179.53 drawn=-179.36
+[07:57:53] [Render thread/INFO]: [Eyes] anim-yaw 0 t=314.260 vanilla=-179.53 drawn=-179.50
+[07:57:53] [Render thread/INFO]: [Eyes] anim-frame 0 rts 25 bat_eyes_20_anim_r00_rts_f025.png t=314.26 swing=0.00 limb=0.30 yaw=-179.5 pos=-127.5,70.0,-18.9
+[07:57:53] [Render thread/INFO]: [Eyes] anim-beat 0 tick 201 frames 26 unit [-128, 70, -19] wall 10.1 s screen none paused false
+[07:57:53] [Server thread/INFO]: [Eyes] anim-beat-server tick 1445 unit [-127, 70, -19] noAi false navDone false owner-side game time 1445
+[07:57:53] [Render thread/INFO]: [Eyes] anim-yaw 0 t=316.580 vanilla=-158.14 drawn=-161.48
+[07:57:53] [Render thread/INFO]: [Eyes] anim-yaw 0 t=319.340 vanilla=-126.74 drawn=-113.76
+[07:57:53] [Render thread/INFO]: [Eyes] anim-yaw 0 t=321.600 vanilla=-95.83 drawn=-98.99
+[07:57:53] [Render thread/INFO]: [Eyes] anim-frame 0 rts 26 bat_eyes_20_anim_r00_rts_f026.png t=321.60 swing=0.00 limb=0.29 yaw=-95.8 pos=-126.7,70.0,-18.5
+[07:57:53] [Render thread/INFO]: [Eyes] anim-yaw 0 t=323.860 vanilla=-83.96 drawn=-88.23
+[07:57:53] [Render thread/INFO]: [Eyes] anim-yaw 0 t=326.340 vanilla=-84.63 drawn=-88.21
+[07:57:53] [Render thread/INFO]: [Eyes] anim-yaw 0 t=328.360 vanilla=-90.64 drawn=-90.39
+[07:57:53] [Render thread/INFO]: [Eyes] anim-frame 0 rts 27 bat_eyes_20_anim_r00_rts_f027.png t=328.36 swing=0.00 limb=0.90 yaw=-90.6 pos=-125.0,70.0,-18.5
+[07:57:53] [Render thread/INFO]: [Eyes] anim-yaw 0 t=330.260 vanilla=-92.10 drawn=-91.43
+[07:57:54] [Render thread/INFO]: [Eyes] anim-yaw 0 t=332.720 vanilla=-91.07 drawn=-91.21
+[07:57:54] [Render thread/INFO]: [Eyes] anim-yaw 0 t=334.840 vanilla=-90.54 drawn=-90.74
+[07:57:54] [Render thread/INFO]: [Eyes] anim-beat 0 tick 221 frames 28 unit [-124, 70, -19] wall 11.1 s screen none paused false
+[07:57:54] [Server thread/INFO]: [Eyes] anim-beat-server tick 1465 unit [-123, 70, -19] noAi false navDone false owner-side game time 1465
+[07:57:54] [Render thread/INFO]: [Eyes] anim-yaw 0 t=336.920 vanilla=-90.47 drawn=-90.53
+[07:57:54] [Render thread/INFO]: [Eyes] anim-frame 0 rts 28 bat_eyes_20_anim_r00_rts_f028.png t=336.92 swing=0.00 limb=0.97 yaw=-90.5 pos=-123.1,70.0,-18.5
+[07:57:54] [Render thread/INFO]: [Eyes] anim-yaw 0 t=339.480 vanilla=-90.47 drawn=-90.47
+[07:57:54] [Render thread/INFO]: [Eyes] anim-yaw 0 t=342.140 vanilla=-90.47 drawn=-90.47
+[07:57:54] [Render thread/INFO]: [Eyes] anim-yaw 0 t=344.600 vanilla=-90.47 drawn=-90.47
+[07:57:54] [Render thread/INFO]: [Eyes] anim-frame 0 rts 29 bat_eyes_20_anim_r00_rts_f029.png t=344.60 swing=0.00 limb=0.84 yaw=-90.5 pos=-121.6,70.0,-18.5
+[07:57:54] [Render thread/INFO]: [Eyes] anim-yaw 0 t=346.900 vanilla=-90.47 drawn=-90.47
+[07:57:54] [Render thread/INFO]: [Eyes] anim-yaw 0 t=349.680 vanilla=-101.20 drawn=-102.15
+[07:57:55] [Render thread/INFO]: [Eyes] anim-yaw 0 t=352.460 vanilla=-122.06 drawn=-129.82
+[07:57:55] [Render thread/INFO]: [Eyes] anim-frame 0 rts 30 bat_eyes_20_anim_r00_rts_f030.png t=352.46 swing=0.00 limb=0.88 yaw=-122.1 pos=-119.7,70.0,-19.1
+[07:57:55] [Render thread/INFO]: [Eyes] anim-run-end 0 31 frames in 240 ticks (12 s wall)
+[07:57:55] [Render thread/INFO]: [Eyes] 20_anim: run 1 - grunt_unit / turn / rts summoned at [-156, 72, 0]
+[07:57:55] [Render thread/INFO]: [Eyes] 20_anim: run 1 - grunt_unit is GruntUnit (id 127), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:57:57] [Render thread/INFO]: [Eyes] anim-run 1 grunt_unit turn rts window 240 ticks from game tick 399, a frame every 6.7 ticks, unit at [-153, 72, 0]
+[07:57:57] [Render thread/INFO]: [Eyes] anim-yaw 1 t=399.960 vanilla=-90.00 drawn=-90.00
+[07:57:57] [Render thread/INFO]: [Eyes] anim-frame 1 rts 0 bat_eyes_20_anim_r01_rts_f000.png t=399.96 swing=0.00 limb=0.47 yaw=-90.0 pos=-152.4,72.0,0.5
+[07:57:57] [Render thread/INFO]: [Eyes] anim-beat 1 tick 1 frames 1 unit [-153, 72, 0] wall 0.1 s screen none paused false
+[07:57:57] [Server thread/INFO]: [Eyes] anim-beat-server tick 1529 unit [-152, 72, 0] noAi false navDone false owner-side game time 1529
+[07:57:57] [Render thread/INFO]: [Eyes] anim-yaw 1 t=401.360 vanilla=-90.00 drawn=-90.00
+[07:57:57] [Render thread/INFO]: [Eyes] anim-yaw 1 t=402.880 vanilla=-90.00 drawn=-90.00
+[07:57:57] [Render thread/INFO]: [Eyes] anim-yaw 1 t=404.760 vanilla=-90.00 drawn=-90.00
+[07:57:57] [Render thread/INFO]: [Eyes] anim-yaw 1 t=406.500 vanilla=-90.00 drawn=-90.00
+[07:57:57] [Render thread/INFO]: [Eyes] anim-yaw 1 t=408.400 vanilla=-90.00 drawn=-90.00
+[07:57:57] [Render thread/INFO]: [Eyes] anim-frame 1 rts 1 bat_eyes_20_anim_r01_rts_f001.png t=408.40 swing=0.00 limb=0.47 yaw=-90.0 pos=-151.2,72.0,0.5
+[07:57:57] [Render thread/INFO]: [Eyes] anim-yaw 1 t=410.420 vanilla=-90.00 drawn=-90.00
+[07:57:58] [Render thread/INFO]: [Eyes] anim-yaw 1 t=412.760 vanilla=-90.00 drawn=-90.00
+[07:57:58] [Render thread/INFO]: [Eyes] anim-yaw 1 t=415.060 vanilla=-90.00 drawn=-90.00
+[07:57:58] [Render thread/INFO]: [Eyes] anim-yaw 1 t=417.260 vanilla=-90.00 drawn=-90.00
+[07:57:58] [Render thread/INFO]: [Eyes] anim-frame 1 rts 2 bat_eyes_20_anim_r01_rts_f002.png t=417.26 swing=0.00 limb=0.44 yaw=-90.0 pos=-150.0,72.0,0.5
+[07:57:58] [Render thread/INFO]: [Eyes] anim-yaw 1 t=420.000 vanilla=-90.00 drawn=-90.00
+[07:57:58] [Render thread/INFO]: [Eyes] anim-beat 1 tick 21 frames 3 unit [-150, 72, 0] wall 1.1 s screen none paused false
+[07:57:58] [Server thread/INFO]: [Eyes] anim-beat-server tick 1550 unit [-149, 72, 0] noAi false navDone false owner-side game time 1550
+[07:57:58] [Render thread/INFO]: [Eyes] anim-yaw 1 t=422.460 vanilla=-90.00 drawn=-90.00
+[07:57:58] [Render thread/INFO]: [Eyes] anim-yaw 1 t=424.700 vanilla=-90.00 drawn=-90.00
+[07:57:58] [Render thread/INFO]: [Eyes] anim-frame 1 rts 3 bat_eyes_20_anim_r01_rts_f003.png t=424.70 swing=0.00 limb=0.61 yaw=-90.0 pos=-148.8,72.0,0.5
+[07:57:58] [Render thread/INFO]: [Eyes] anim-yaw 1 t=426.660 vanilla=-90.00 drawn=-90.00
+[07:57:58] [Render thread/INFO]: [Eyes] anim-yaw 1 t=429.160 vanilla=-90.00 drawn=-90.00
+[07:57:59] [Render thread/INFO]: [Eyes] anim-yaw 1 t=431.900 vanilla=-90.00 drawn=-90.00
+[07:57:59] [Render thread/INFO]: [Eyes] anim-frame 1 rts 4 bat_eyes_20_anim_r01_rts_f004.png t=431.90 swing=0.00 limb=0.52 yaw=-90.0 pos=-148.0,72.0,0.5
+[07:57:59] [Render thread/INFO]: [Eyes] anim-yaw 1 t=434.660 vanilla=-90.00 drawn=-90.00
+[07:57:59] [Render thread/INFO]: [Eyes] anim-yaw 1 t=438.100 vanilla=-90.00 drawn=-90.00
+[07:57:59] [Render thread/INFO]: [Eyes] anim-beat 1 tick 41 frames 5 unit [-147, 72, 0] wall 2.0 s screen none paused false
+[07:57:59] [Server thread/INFO]: [Eyes] anim-beat-server tick 1568 unit [-147, 72, 0] noAi false navDone false owner-side game time 1568
+[07:57:59] [Render thread/INFO]: [Eyes] anim-yaw 1 t=440.240 vanilla=-90.00 drawn=-90.00
+[07:57:59] [Render thread/INFO]: [Eyes] anim-frame 1 rts 5 bat_eyes_20_anim_r01_rts_f005.png t=440.24 swing=0.00 limb=0.47 yaw=-90.0 pos=-146.8,72.0,0.5
+[07:57:59] [Render thread/INFO]: [Eyes] anim-yaw 1 t=443.420 vanilla=-90.00 drawn=-90.00
+[07:57:59] [Render thread/INFO]: [Eyes] anim-yaw 1 t=446.440 vanilla=-90.00 drawn=-90.00
+[07:57:59] [Render thread/INFO]: [Eyes] anim-yaw 1 t=448.420 vanilla=-90.00 drawn=-90.00
+[07:57:59] [Render thread/INFO]: [Eyes] anim-frame 1 rts 6 bat_eyes_20_anim_r01_rts_f006.png t=448.42 swing=0.00 limb=0.20 yaw=-90.0 pos=-145.8,72.0,0.5
+[07:57:59] [Render thread/INFO]: [Eyes] anim-yaw 1 t=450.220 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=452.860 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=455.020 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=457.420 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-frame 1 rts 7 bat_eyes_20_anim_r01_rts_f007.png t=457.42 swing=0.00 limb=0.27 yaw=-90.0 pos=-144.6,72.0,0.5
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=459.760 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-beat 1 tick 61 frames 8 unit [-145, 72, 0] wall 3.1 s screen none paused false
+[07:58:00] [Server thread/INFO]: [Eyes] anim-beat-server tick 1590 unit [-144, 72, 0] noAi false navDone false owner-side game time 1590
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=461.980 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=463.940 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=465.580 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-frame 1 rts 8 bat_eyes_20_anim_r01_rts_f008.png t=465.58 swing=0.00 limb=0.45 yaw=-90.0 pos=-143.4,72.0,0.5
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=467.200 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=469.000 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=470.500 vanilla=-90.00 drawn=-90.00
+[07:58:00] [Render thread/INFO]: [Eyes] anim-yaw 1 t=472.180 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=474.300 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-frame 1 rts 9 bat_eyes_20_anim_r01_rts_f009.png t=474.30 swing=0.00 limb=0.46 yaw=-90.0 pos=-142.3,72.0,0.5
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=476.240 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=477.940 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=479.520 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-beat 1 tick 81 frames 10 unit [-142, 72, 0] wall 4.1 s screen none paused false
+[07:58:01] [Server thread/INFO]: [Eyes] anim-beat-server tick 1609 unit [-141, 72, 0] noAi false navDone false owner-side game time 1609
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=481.120 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-frame 1 rts 10 bat_eyes_20_anim_r01_rts_f010.png t=481.12 swing=0.00 limb=0.34 yaw=-90.0 pos=-141.4,72.0,0.5
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=483.340 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=485.840 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=488.000 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-frame 1 rts 11 bat_eyes_20_anim_r01_rts_f011.png t=488.00 swing=0.00 limb=0.73 yaw=-90.0 pos=-140.4,72.0,0.5
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=490.040 vanilla=-90.00 drawn=-90.00
+[07:58:01] [Render thread/INFO]: [Eyes] anim-yaw 1 t=492.240 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=493.840 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=495.340 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-frame 1 rts 12 bat_eyes_20_anim_r01_rts_f012.png t=495.34 swing=0.00 limb=0.66 yaw=-90.0 pos=-139.4,72.0,0.5
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=496.860 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=498.800 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-beat 1 tick 101 frames 13 unit [-139, 72, 0] wall 5.0 s screen none paused false
+[07:58:02] [Server thread/INFO]: [Eyes] anim-beat-server tick 1628 unit [-139, 72, 0] noAi false navDone false owner-side game time 1628
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=500.420 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=502.040 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-frame 1 rts 13 bat_eyes_20_anim_r01_rts_f013.png t=502.04 swing=0.00 limb=0.33 yaw=-90.0 pos=-138.5,72.0,0.5
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=503.740 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=505.840 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=507.380 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=508.900 vanilla=-90.00 drawn=-90.00
+[07:58:02] [Render thread/INFO]: [Eyes] anim-frame 1 rts 14 bat_eyes_20_anim_r01_rts_f014.png t=508.90 swing=0.00 limb=0.50 yaw=-90.0 pos=-137.6,72.0,0.5
+[07:58:02] [Render thread/INFO]: [Eyes] anim-leg 1 1 to 28, -28
+[07:58:02] [Render thread/INFO]: [Eyes] anim-yaw 1 t=510.520 vanilla=-90.00 drawn=-90.00
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=512.680 vanilla=-90.00 drawn=-90.00
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=514.280 vanilla=-90.00 drawn=-90.00
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=516.020 vanilla=-90.45 drawn=-97.36
+[07:58:03] [Render thread/INFO]: [Eyes] anim-frame 1 rts 15 bat_eyes_20_anim_r01_rts_f015.png t=516.02 swing=0.00 limb=0.36 yaw=-90.4 pos=-136.9,72.0,0.3
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=517.620 vanilla=-140.40 drawn=-115.37
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=519.520 vanilla=-157.99 drawn=-143.43
+[07:58:03] [Render thread/INFO]: [Eyes] anim-beat 1 tick 121 frames 16 unit [-137, 72, -1] wall 6.1 s screen none paused false
+[07:58:03] [Server thread/INFO]: [Eyes] anim-beat-server tick 1649 unit [-137, 72, -1] noAi false navDone false owner-side game time 1649
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=521.040 vanilla=-158.23 drawn=-152.09
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=522.520 vanilla=-146.63 drawn=-151.27
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=524.040 vanilla=-140.61 drawn=-145.51
+[07:58:03] [Render thread/INFO]: [Eyes] anim-frame 1 rts 16 bat_eyes_20_anim_r01_rts_f016.png t=524.04 swing=0.00 limb=0.58 yaw=-140.6 pos=-136.3,72.0,-0.6
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=525.720 vanilla=-139.48 drawn=-141.71
+[07:58:03] [Render thread/INFO]: [Eyes] step 25 screen none level true
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=527.340 vanilla=-139.22 drawn=-139.98
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=528.860 vanilla=-139.22 drawn=-139.41
+[07:58:03] [Render thread/INFO]: [Eyes] anim-yaw 1 t=530.720 vanilla=-139.22 drawn=-139.24
+[07:58:03] [Render thread/INFO]: [Eyes] anim-frame 1 rts 17 bat_eyes_20_anim_r01_rts_f017.png t=530.72 swing=0.00 limb=0.54 yaw=-139.2 pos=-135.7,72.0,-1.2
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=532.760 vanilla=-149.19 drawn=-146.33
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=534.900 vanilla=-175.97 drawn=-166.27
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=536.440 vanilla=-174.06 drawn=-169.59
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=538.080 vanilla=-166.63 drawn=-162.11
+[07:58:04] [Render thread/INFO]: [Eyes] anim-frame 1 rts 18 bat_eyes_20_anim_r01_rts_f018.png t=538.08 swing=0.00 limb=0.30 yaw=-166.6 pos=-135.4,72.0,-2.1
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=539.840 vanilla=-147.66 drawn=-152.72
+[07:58:04] [Render thread/INFO]: [Eyes] anim-beat 1 tick 141 frames 19 unit [-136, 72, -3] wall 7.1 s screen none paused false
+[07:58:04] [Server thread/INFO]: [Eyes] anim-beat-server tick 1670 unit [-135, 72, -3] noAi false navDone false owner-side game time 1670
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=541.680 vanilla=-147.66 drawn=-148.90
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=543.200 vanilla=-147.56 drawn=-147.76
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=545.020 vanilla=-147.18 drawn=-147.14
+[07:58:04] [Render thread/INFO]: [Eyes] anim-frame 1 rts 19 bat_eyes_20_anim_r01_rts_f019.png t=545.02 swing=0.00 limb=0.65 yaw=-147.2 pos=-134.9,72.0,-3.0
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=546.560 vanilla=-146.72 drawn=-146.87
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=548.620 vanilla=-152.72 drawn=-151.60
+[07:58:04] [Render thread/INFO]: [Eyes] anim-yaw 1 t=551.040 vanilla=-156.98 drawn=-164.39
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=553.040 vanilla=-170.73 drawn=-169.29
+[07:58:05] [Render thread/INFO]: [Eyes] anim-frame 1 rts 20 bat_eyes_20_anim_r01_rts_f020.png t=553.04 swing=0.00 limb=0.24 yaw=-170.7 pos=-134.5,72.0,-3.8
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=554.860 vanilla=-179.11 drawn=-173.15
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=557.040 vanilla=-180.47 drawn=-178.57
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=558.660 vanilla=-180.47 drawn=-179.92
+[07:58:05] [Render thread/INFO]: [Eyes] anim-beat 1 tick 161 frames 21 unit [-135, 72, -5] wall 8.0 s screen none paused false
+[07:58:05] [Server thread/INFO]: [Eyes] anim-beat-server tick 1688 unit [-135, 72, -6] noAi false navDone false owner-side game time 1688
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=560.320 vanilla=-177.12 drawn=-176.03
+[07:58:05] [Render thread/INFO]: [Eyes] anim-frame 1 rts 21 bat_eyes_20_anim_r01_rts_f021.png t=560.32 swing=0.00 limb=0.50 yaw=-177.1 pos=-134.4,72.0,-4.9
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=562.080 vanilla=-168.33 drawn=-164.77
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=563.880 vanilla=-148.65 drawn=-154.06
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=565.360 vanilla=-148.43 drawn=-150.20
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=566.860 vanilla=-147.72 drawn=-148.54
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=568.420 vanilla=-147.66 drawn=-147.90
+[07:58:05] [Render thread/INFO]: [Eyes] anim-frame 1 rts 22 bat_eyes_20_anim_r01_rts_f022.png t=568.42 swing=0.00 limb=0.53 yaw=-147.7 pos=-134.0,72.0,-5.7
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=570.100 vanilla=-147.66 drawn=-147.70
+[07:58:05] [Render thread/INFO]: [Eyes] anim-yaw 1 t=571.960 vanilla=-144.51 drawn=-146.64
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=573.520 vanilla=-142.67 drawn=-143.77
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=575.060 vanilla=-140.87 drawn=-140.75
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=576.700 vanilla=-136.69 drawn=-138.35
+[07:58:06] [Render thread/INFO]: [Eyes] anim-frame 1 rts 23 bat_eyes_20_anim_r01_rts_f023.png t=576.70 swing=0.00 limb=0.57 yaw=-136.7 pos=-133.3,72.0,-6.7
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=578.400 vanilla=-136.41 drawn=-137.01
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=579.980 vanilla=-136.41 drawn=-136.55
+[07:58:06] [Render thread/INFO]: [Eyes] anim-beat 1 tick 181 frames 24 unit [-133, 72, -8] wall 9.1 s screen none paused false
+[07:58:06] [Server thread/INFO]: [Eyes] anim-beat-server tick 1709 unit [-133, 72, -8] noAi false navDone false owner-side game time 1709
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=581.560 vanilla=-136.41 drawn=-136.44
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=583.240 vanilla=-136.41 drawn=-136.41
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=584.740 vanilla=-136.41 drawn=-136.40
+[07:58:06] [Render thread/INFO]: [Eyes] anim-frame 1 rts 24 bat_eyes_20_anim_r01_rts_f024.png t=584.74 swing=0.00 limb=0.41 yaw=-136.4 pos=-132.6,72.0,-7.4
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=586.420 vanilla=-136.41 drawn=-136.41
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=588.180 vanilla=-136.32 drawn=-136.23
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=589.920 vanilla=-135.51 drawn=-135.90
+[07:58:06] [Render thread/INFO]: [Eyes] anim-yaw 1 t=591.380 vanilla=-135.47 drawn=-135.65
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=592.960 vanilla=-135.47 drawn=-135.52
+[07:58:07] [Render thread/INFO]: [Eyes] anim-frame 1 rts 25 bat_eyes_20_anim_r01_rts_f025.png t=592.96 swing=0.00 limb=0.62 yaw=-135.5 pos=-131.8,72.0,-8.2
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=594.640 vanilla=-135.47 drawn=-135.48
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=596.480 vanilla=-135.47 drawn=-135.47
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=598.200 vanilla=-135.47 drawn=-135.47
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=599.960 vanilla=-135.47 drawn=-135.47
+[07:58:07] [Render thread/INFO]: [Eyes] anim-frame 1 rts 26 bat_eyes_20_anim_r01_rts_f026.png t=599.96 swing=0.00 limb=0.41 yaw=-135.5 pos=-131.2,72.0,-8.8
+[07:58:07] [Render thread/INFO]: [Eyes] anim-beat 1 tick 201 frames 27 unit [-132, 72, -9] wall 10.1 s screen none paused false
+[07:58:07] [Server thread/INFO]: [Eyes] anim-beat-server tick 1730 unit [-131, 72, -10] noAi false navDone false owner-side game time 1730
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=601.640 vanilla=-135.47 drawn=-135.47
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=604.240 vanilla=-135.47 drawn=-135.47
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=606.520 vanilla=-135.47 drawn=-135.47
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=608.460 vanilla=-135.47 drawn=-135.47
+[07:58:07] [Render thread/INFO]: [Eyes] anim-frame 1 rts 27 bat_eyes_20_anim_r01_rts_f027.png t=608.46 swing=0.00 limb=0.65 yaw=-135.5 pos=-130.3,72.0,-9.7
+[07:58:07] [Render thread/INFO]: [Eyes] anim-yaw 1 t=610.900 vanilla=-135.47 drawn=-135.47
+[07:58:08] [Render thread/INFO]: [Eyes] anim-yaw 1 t=613.560 vanilla=-135.47 drawn=-135.47
+[07:58:08] [Render thread/INFO]: [Eyes] anim-yaw 1 t=616.240 vanilla=-135.47 drawn=-135.47
+[07:58:08] [Render thread/INFO]: [Eyes] anim-frame 1 rts 28 bat_eyes_20_anim_r01_rts_f028.png t=616.24 swing=0.00 limb=0.48 yaw=-135.5 pos=-129.6,72.0,-10.4
+[07:58:08] [Render thread/INFO]: [Eyes] anim-yaw 1 t=618.320 vanilla=-130.62 drawn=-129.19
+[07:58:08] [Render thread/INFO]: [Eyes] anim-beat 1 tick 221 frames 29 unit [-129, 72, -11] wall 11.0 s screen none paused false
+[07:58:08] [Server thread/INFO]: [Eyes] anim-beat-server tick 1748 unit [-129, 72, -11] noAi false navDone false owner-side game time 1748
+[07:58:08] [Render thread/INFO]: [Eyes] anim-yaw 1 t=620.400 vanilla=-111.67 drawn=-113.23
+[07:58:08] [Render thread/INFO]: [Eyes] anim-leg 1 2 to 56, -28
+[07:58:08] [Render thread/INFO]: [Eyes] anim-yaw 1 t=622.180 vanilla=-96.37 drawn=-98.29
+[07:58:08] [Render thread/INFO]: [Eyes] anim-yaw 1 t=624.040 vanilla=-86.94 drawn=-98.87
+[07:58:08] [Render thread/INFO]: [Eyes] anim-frame 1 rts 29 bat_eyes_20_anim_r01_rts_f029.png t=624.04 swing=0.00 limb=0.43 yaw=-86.9 pos=-128.6,71.8,-10.5
+[07:58:08] [Render thread/INFO]: [Eyes] anim-yaw 1 t=626.420 vanilla=-143.72 drawn=-141.25
+[07:58:08] [Render thread/INFO]: [Eyes] anim-yaw 1 t=629.120 vanilla=-188.36 drawn=-202.43
+[07:58:08] [Render thread/INFO]: [Eyes] anim-yaw 1 t=631.520 vanilla=-223.28 drawn=-220.05
+[07:58:08] [Render thread/INFO]: [Eyes] anim-frame 1 rts 30 bat_eyes_20_anim_r01_rts_f030.png t=631.52 swing=0.00 limb=0.10 yaw=-223.3 pos=-128.2,71.0,-10.5
+[07:58:09] [Render thread/INFO]: [Eyes] anim-yaw 1 t=633.480 vanilla=-200.61 drawn=-201.13
+[07:58:09] [Render thread/INFO]: [Eyes] anim-yaw 1 t=636.240 vanilla=-160.48 drawn=-137.25
+[07:58:09] [Render thread/INFO]: [Eyes] anim-yaw 1 t=638.200 vanilla=-105.16 drawn=-105.70
+[07:58:09] [Render thread/INFO]: [Eyes] anim-frame 1 rts 31 bat_eyes_20_anim_r01_rts_f031.png t=638.20 swing=0.00 limb=0.51 yaw=-105.2 pos=-127.4,71.0,-10.5
+[07:58:09] [Render thread/INFO]: [Eyes] anim-run-end 1 32 frames in 240 ticks (12 s wall)
+[07:58:09] [Render thread/INFO]: [Eyes] 20_anim: run 2 - rifle_squad_unit / turn / rts summoned at [-156, 72, 0]
+[07:58:09] [Render thread/INFO]: [Eyes] 20_anim: run 2 - rifle_squad_unit is RifleSquadUnit (id 129), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:58:11] [Render thread/INFO]: [Eyes] anim-run 2 rifle_squad_unit turn rts window 240 ticks from game tick 683, a frame every 6.7 ticks, unit at [-153, 72, 0]
+[07:58:11] [Render thread/INFO]: [Eyes] anim-yaw 2 t=683.280 vanilla=-90.00 drawn=-90.00
+[07:58:11] [Render thread/INFO]: [Eyes] anim-frame 2 rts 0 bat_eyes_20_anim_r02_rts_f000.png t=683.28 swing=0.00 limb=0.50 yaw=-90.0 pos=-152.5,72.0,0.5
+[07:58:11] [Render thread/INFO]: [Eyes] anim-beat 2 tick 1 frames 1 unit [-153, 72, 0] wall 0.1 s screen none paused false
+[07:58:11] [Server thread/INFO]: [Eyes] anim-beat-server tick 1813 unit [-152, 72, 0] noAi false navDone false owner-side game time 1813
+[07:58:11] [Render thread/INFO]: [Eyes] anim-yaw 2 t=684.920 vanilla=-90.00 drawn=-90.00
+[07:58:11] [Render thread/INFO]: [Eyes] anim-yaw 2 t=686.600 vanilla=-90.00 drawn=-90.00
+[07:58:11] [Render thread/INFO]: [Eyes] anim-yaw 2 t=688.280 vanilla=-90.00 drawn=-90.00
+[07:58:11] [Render thread/INFO]: [Eyes] anim-yaw 2 t=689.900 vanilla=-90.00 drawn=-90.00
+[07:58:11] [Render thread/INFO]: [Eyes] anim-yaw 2 t=691.500 vanilla=-90.00 drawn=-90.00
+[07:58:11] [Render thread/INFO]: [Eyes] anim-frame 2 rts 1 bat_eyes_20_anim_r02_rts_f001.png t=691.50 swing=0.00 limb=0.55 yaw=-90.0 pos=-151.3,72.0,0.5
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=693.740 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=695.180 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=696.680 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=698.400 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-frame 2 rts 2 bat_eyes_20_anim_r02_rts_f002.png t=698.40 swing=0.00 limb=0.64 yaw=-90.0 pos=-150.1,72.0,0.5
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=700.100 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=701.980 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=703.580 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-beat 2 tick 21 frames 3 unit [-150, 72, 0] wall 1.1 s screen none paused false
+[07:58:12] [Server thread/INFO]: [Eyes] anim-beat-server tick 1833 unit [-149, 72, 0] noAi false navDone false owner-side game time 1833
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=705.080 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-frame 2 rts 3 bat_eyes_20_anim_r02_rts_f003.png t=705.08 swing=0.00 limb=0.57 yaw=-90.0 pos=-149.2,72.0,0.5
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=706.700 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=708.840 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=710.320 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-yaw 2 t=711.940 vanilla=-90.00 drawn=-90.00
+[07:58:12] [Render thread/INFO]: [Eyes] anim-frame 2 rts 4 bat_eyes_20_anim_r02_rts_f004.png t=711.94 swing=0.00 limb=0.62 yaw=-90.0 pos=-148.2,72.0,0.5
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=713.540 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=715.600 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=717.220 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=719.160 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-frame 2 rts 5 bat_eyes_20_anim_r02_rts_f005.png t=719.16 swing=0.00 limb=0.68 yaw=-90.0 pos=-147.1,72.0,0.5
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=721.260 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=722.940 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-beat 2 tick 41 frames 6 unit [-147, 72, 0] wall 2.1 s screen none paused false
+[07:58:13] [Server thread/INFO]: [Eyes] anim-beat-server tick 1852 unit [-147, 72, 0] noAi false navDone false owner-side game time 1852
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=724.460 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=726.020 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-frame 2 rts 6 bat_eyes_20_anim_r02_rts_f006.png t=726.02 swing=0.00 limb=0.57 yaw=-90.0 pos=-146.2,72.0,0.5
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=727.820 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=729.900 vanilla=-90.00 drawn=-90.00
+[07:58:13] [Render thread/INFO]: [Eyes] anim-yaw 2 t=731.640 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=733.140 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-frame 2 rts 7 bat_eyes_20_anim_r02_rts_f007.png t=733.14 swing=0.00 limb=0.37 yaw=-90.0 pos=-145.2,72.0,0.5
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=734.920 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=737.080 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=739.100 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=741.280 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-frame 2 rts 8 bat_eyes_20_anim_r02_rts_f008.png t=741.28 swing=0.00 limb=0.49 yaw=-90.0 pos=-144.0,72.0,0.5
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=743.600 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-beat 2 tick 61 frames 9 unit [-144, 72, 0] wall 3.1 s screen none paused false
+[07:58:14] [Server thread/INFO]: [Eyes] anim-beat-server tick 1874 unit [-143, 72, 0] noAi false navDone false owner-side game time 1874
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=745.620 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=747.060 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=748.600 vanilla=-90.00 drawn=-90.00
+[07:58:14] [Render thread/INFO]: [Eyes] anim-frame 2 rts 9 bat_eyes_20_anim_r02_rts_f009.png t=748.60 swing=0.00 limb=0.55 yaw=-90.0 pos=-143.0,72.0,0.5
+[07:58:14] [Render thread/INFO]: [Eyes] anim-yaw 2 t=750.400 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-yaw 2 t=752.360 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-yaw 2 t=754.380 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-yaw 2 t=756.000 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-frame 2 rts 10 bat_eyes_20_anim_r02_rts_f010.png t=756.00 swing=0.00 limb=0.50 yaw=-90.0 pos=-141.9,72.0,0.5
+[07:58:15] [Render thread/INFO]: [Eyes] anim-yaw 2 t=757.960 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-yaw 2 t=760.520 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-yaw 2 t=763.140 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-frame 2 rts 11 bat_eyes_20_anim_r02_rts_f011.png t=763.14 swing=0.00 limb=0.58 yaw=-90.0 pos=-140.8,72.0,0.5
+[07:58:15] [Render thread/INFO]: [Eyes] anim-beat 2 tick 81 frames 12 unit [-141, 72, 0] wall 4.1 s screen none paused false
+[07:58:15] [Server thread/INFO]: [Eyes] anim-beat-server tick 1893 unit [-141, 72, 0] noAi false navDone false owner-side game time 1893
+[07:58:15] [Render thread/INFO]: [Eyes] anim-yaw 2 t=765.500 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-yaw 2 t=768.220 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-yaw 2 t=769.940 vanilla=-90.00 drawn=-90.00
+[07:58:15] [Render thread/INFO]: [Eyes] anim-frame 2 rts 12 bat_eyes_20_anim_r02_rts_f012.png t=769.94 swing=0.00 limb=0.68 yaw=-90.0 pos=-139.8,72.0,0.5
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=772.240 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=774.320 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=776.300 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=777.860 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-frame 2 rts 13 bat_eyes_20_anim_r02_rts_f013.png t=777.86 swing=0.00 limb=0.72 yaw=-90.0 pos=-138.6,72.0,0.5
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=779.380 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=781.340 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=782.700 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-beat 2 tick 101 frames 14 unit [-138, 72, 0] wall 5.0 s screen none paused false
+[07:58:16] [Server thread/INFO]: [Eyes] anim-beat-server tick 1912 unit [-138, 72, 0] noAi false navDone false owner-side game time 1912
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=784.260 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=785.840 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-frame 2 rts 14 bat_eyes_20_anim_r02_rts_f014.png t=785.84 swing=0.00 limb=0.56 yaw=-90.0 pos=-137.6,72.0,0.5
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=787.640 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=789.500 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=790.860 vanilla=-90.00 drawn=-90.00
+[07:58:16] [Render thread/INFO]: [Eyes] anim-yaw 2 t=792.400 vanilla=-90.00 drawn=-90.00
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=793.960 vanilla=-90.00 drawn=-90.00
+[07:58:17] [Render thread/INFO]: [Eyes] anim-frame 2 rts 15 bat_eyes_20_anim_r02_rts_f015.png t=793.96 swing=0.00 limb=0.67 yaw=-90.0 pos=-136.3,72.0,0.5
+[07:58:17] [Render thread/INFO]: [Eyes] anim-leg 2 1 to 28, -28
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=795.580 vanilla=-90.00 drawn=-90.00
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=797.080 vanilla=-90.00 drawn=-90.00
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=798.900 vanilla=-90.00 drawn=-90.00
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=800.880 vanilla=-103.20 drawn=-98.65
+[07:58:17] [Render thread/INFO]: [Eyes] anim-frame 2 rts 16 bat_eyes_20_anim_r02_rts_f016.png t=800.88 swing=0.00 limb=0.49 yaw=-103.2 pos=-135.4,72.0,0.4
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=802.880 vanilla=-123.01 drawn=-115.22
+[07:58:17] [Render thread/INFO]: [Eyes] anim-beat 2 tick 121 frames 17 unit [-135, 72, 0] wall 6.1 s screen none paused false
+[07:58:17] [Server thread/INFO]: [Eyes] anim-beat-server tick 1934 unit [-135, 72, -1] noAi false navDone false owner-side game time 1934
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=805.580 vanilla=-131.81 drawn=-131.96
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=807.840 vanilla=-136.41 drawn=-135.76
+[07:58:17] [Render thread/INFO]: [Eyes] anim-frame 2 rts 17 bat_eyes_20_anim_r02_rts_f017.png t=807.84 swing=0.00 limb=0.46 yaw=-136.4 pos=-134.8,72.0,-0.2
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=809.600 vanilla=-136.41 drawn=-136.32
+[07:58:17] [Render thread/INFO]: [Eyes] anim-yaw 2 t=811.600 vanilla=-136.41 drawn=-136.42
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=813.060 vanilla=-136.41 drawn=-136.42
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=814.620 vanilla=-136.41 drawn=-136.41
+[07:58:18] [Render thread/INFO]: [Eyes] anim-frame 2 rts 18 bat_eyes_20_anim_r02_rts_f018.png t=814.62 swing=0.00 limb=0.55 yaw=-136.4 pos=-134.1,72.0,-0.9
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=816.500 vanilla=-136.17 drawn=-136.19
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=819.040 vanilla=-136.47 drawn=-144.30
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=821.040 vanilla=-150.13 drawn=-154.46
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=822.640 vanilla=-156.88 drawn=-159.25
+[07:58:18] [Render thread/INFO]: [Eyes] anim-frame 2 rts 19 bat_eyes_20_anim_r02_rts_f019.png t=822.64 swing=0.00 limb=0.59 yaw=-156.9 pos=-133.4,72.0,-2.0
+[07:58:18] [Render thread/INFO]: [Eyes] anim-beat 2 tick 141 frames 20 unit [-134, 72, -3] wall 7.0 s screen none paused false
+[07:58:18] [Server thread/INFO]: [Eyes] anim-beat-server tick 1952 unit [-134, 72, -3] noAi false navDone false owner-side game time 1952
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=824.260 vanilla=-150.35 drawn=-154.79
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=826.420 vanilla=-149.61 drawn=-150.72
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=828.160 vanilla=-149.06 drawn=-149.47
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=829.800 vanilla=-148.69 drawn=-149.03
+[07:58:18] [Render thread/INFO]: [Eyes] anim-frame 2 rts 20 bat_eyes_20_anim_r02_rts_f020.png t=829.80 swing=0.00 limb=0.61 yaw=-148.7 pos=-133.0,72.0,-2.8
+[07:58:18] [Render thread/INFO]: [Eyes] anim-yaw 2 t=831.500 vanilla=-148.36 drawn=-148.52
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=834.140 vanilla=-149.37 drawn=-153.86
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=836.260 vanilla=-159.71 drawn=-160.43
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=837.820 vanilla=-153.51 drawn=-160.32
+[07:58:19] [Render thread/INFO]: [Eyes] anim-frame 2 rts 21 bat_eyes_20_anim_r02_rts_f021.png t=837.82 swing=0.00 limb=0.58 yaw=-153.5 pos=-132.5,72.0,-3.9
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=839.400 vanilla=-150.28 drawn=-154.78
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=841.220 vanilla=-149.79 drawn=-150.96
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=842.800 vanilla=-148.69 drawn=-149.51
+[07:58:19] [Render thread/INFO]: [Eyes] anim-beat 2 tick 161 frames 22 unit [-133, 72, -5] wall 8.1 s screen none paused false
+[07:58:19] [Server thread/INFO]: [Eyes] anim-beat-server tick 1972 unit [-132, 72, -6] noAi false navDone false owner-side game time 1972
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=844.460 vanilla=-148.38 drawn=-148.64
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=846.160 vanilla=-148.05 drawn=-148.09
+[07:58:19] [Render thread/INFO]: [Eyes] anim-frame 2 rts 22 bat_eyes_20_anim_r02_rts_f022.png t=846.16 swing=0.00 limb=0.56 yaw=-148.1 pos=-131.9,72.0,-4.9
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=847.840 vanilla=-147.66 drawn=-147.79
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=849.560 vanilla=-147.66 drawn=-147.69
+[07:58:19] [Render thread/INFO]: [Eyes] anim-yaw 2 t=851.160 vanilla=-146.98 drawn=-146.11
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=852.740 vanilla=-137.19 drawn=-142.48
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=854.380 vanilla=-135.00 drawn=-137.98
+[07:58:20] [Render thread/INFO]: [Eyes] anim-frame 2 rts 23 bat_eyes_20_anim_r02_rts_f023.png t=854.38 swing=0.00 limb=0.59 yaw=-135.0 pos=-131.1,72.0,-5.9
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=856.260 vanilla=-135.00 drawn=-135.72
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=857.920 vanilla=-135.00 drawn=-135.14
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=859.520 vanilla=-135.00 drawn=-135.02
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=861.180 vanilla=-135.00 drawn=-135.00
+[07:58:20] [Render thread/INFO]: [Eyes] anim-frame 2 rts 24 bat_eyes_20_anim_r02_rts_f024.png t=861.18 swing=0.00 limb=0.57 yaw=-135.0 pos=-130.5,72.0,-6.5
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=862.860 vanilla=-135.40 drawn=-135.13
+[07:58:20] [Render thread/INFO]: [Eyes] anim-beat 2 tick 181 frames 25 unit [-131, 72, -7] wall 9.1 s screen none paused false
+[07:58:20] [Server thread/INFO]: [Eyes] anim-beat-server tick 1993 unit [-130, 72, -8] noAi false navDone false owner-side game time 1993
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=865.240 vanilla=-135.58 drawn=-135.69
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=866.860 vanilla=-136.34 drawn=-135.99
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=868.360 vanilla=-136.41 drawn=-136.24
+[07:58:20] [Render thread/INFO]: [Eyes] anim-frame 2 rts 25 bat_eyes_20_anim_r02_rts_f025.png t=868.36 swing=0.00 limb=0.55 yaw=-136.4 pos=-129.7,72.0,-7.3
+[07:58:20] [Render thread/INFO]: [Eyes] anim-yaw 2 t=870.220 vanilla=-133.31 drawn=-130.95
+[07:58:21] [Render thread/INFO]: [Eyes] anim-yaw 2 t=872.500 vanilla=-112.27 drawn=-114.99
+[07:58:21] [Render thread/INFO]: [Eyes] anim-yaw 2 t=874.440 vanilla=-96.83 drawn=-100.18
+[07:58:21] [Render thread/INFO]: [Eyes] anim-yaw 2 t=876.100 vanilla=-89.91 drawn=-92.77
+[07:58:21] [Render thread/INFO]: [Eyes] anim-frame 2 rts 26 bat_eyes_20_anim_r02_rts_f026.png t=876.10 swing=0.00 limb=0.52 yaw=-89.9 pos=-128.7,71.9,-7.5
+[07:58:21] [Render thread/INFO]: [Eyes] anim-yaw 2 t=878.240 vanilla=-96.86 drawn=-102.41
+[07:58:21] [Render thread/INFO]: [Eyes] anim-yaw 2 t=880.860 vanilla=-163.13 drawn=-145.67
+[07:58:21] [Render thread/INFO]: [Eyes] anim-yaw 2 t=882.860 vanilla=-195.52 drawn=-181.10
+[07:58:21] [Render thread/INFO]: [Eyes] anim-frame 2 rts 27 bat_eyes_20_anim_r02_rts_f027.png t=882.86 swing=0.00 limb=0.25 yaw=-195.5 pos=-128.2,71.0,-7.7
+[07:58:21] [Render thread/INFO]: [Eyes] anim-beat 2 tick 201 frames 28 unit [-129, 71, -8] wall 10.1 s screen none paused false
+[07:58:21] [Server thread/INFO]: [Eyes] anim-beat-server tick 2013 unit [-129, 71, -9] noAi false navDone false owner-side game time 2013
+[07:58:21] [Render thread/INFO]: [Eyes] anim-yaw 2 t=885.400 vanilla=-198.38 drawn=-194.78
+[07:58:21] [Render thread/INFO]: [Eyes] anim-yaw 2 t=888.360 vanilla=-194.04 drawn=-191.98
+[07:58:21] [Render thread/INFO]: [Eyes] anim-yaw 2 t=891.200 vanilla=-189.47 drawn=-188.88
+[07:58:21] [Render thread/INFO]: [Eyes] anim-frame 2 rts 28 bat_eyes_20_anim_r02_rts_f028.png t=891.20 swing=0.00 limb=0.58 yaw=-189.5 pos=-128.4,71.0,-9.0
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=893.280 vanilla=-186.92 drawn=-186.63
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=895.380 vanilla=-184.22 drawn=-184.83
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=897.040 vanilla=-184.20 drawn=-184.21
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=898.780 vanilla=-182.90 drawn=-183.61
+[07:58:22] [Render thread/INFO]: [Eyes] anim-frame 2 rts 29 bat_eyes_20_anim_r02_rts_f029.png t=898.78 swing=0.00 limb=0.61 yaw=-182.9 pos=-128.5,71.0,-9.9
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=900.860 vanilla=-182.12 drawn=-182.57
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=902.620 vanilla=-181.64 drawn=-181.87
+[07:58:22] [Render thread/INFO]: [Eyes] anim-beat 2 tick 221 frames 30 unit [-129, 71, -11] wall 11.0 s screen none paused false
+[07:58:22] [Server thread/INFO]: [Eyes] anim-beat-server tick 2032 unit [-129, 71, -12] noAi false navDone false owner-side game time 2032
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=904.240 vanilla=-181.41 drawn=-181.55
+[07:58:22] [Render thread/INFO]: [Eyes] anim-leg 2 2 to 56, -28
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=906.160 vanilla=-181.41 drawn=-181.43
+[07:58:22] [Render thread/INFO]: [Eyes] anim-frame 2 rts 30 bat_eyes_20_anim_r02_rts_f030.png t=906.16 swing=0.00 limb=0.51 yaw=-181.4 pos=-128.5,71.0,-11.0
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=908.280 vanilla=-181.41 drawn=-181.41
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=910.440 vanilla=-181.41 drawn=-181.41
+[07:58:22] [Render thread/INFO]: [Eyes] anim-yaw 2 t=912.080 vanilla=-178.78 drawn=-170.10
+[07:58:23] [Render thread/INFO]: [Eyes] anim-yaw 2 t=913.840 vanilla=-111.06 drawn=-144.06
+[07:58:23] [Render thread/INFO]: [Eyes] anim-frame 2 rts 31 bat_eyes_20_anim_r02_rts_f031.png t=913.84 swing=0.00 limb=0.51 yaw=-111.1 pos=-128.1,71.0,-11.6
+[07:58:23] [Render thread/INFO]: [Eyes] anim-yaw 2 t=915.540 vanilla=-97.49 drawn=-113.12
+[07:58:23] [Render thread/INFO]: [Eyes] anim-yaw 2 t=917.540 vanilla=-95.24 drawn=-99.70
+[07:58:23] [Render thread/INFO]: [Eyes] anim-yaw 2 t=919.780 vanilla=-117.22 drawn=-111.33
+[07:58:23] [Render thread/INFO]: [Eyes] anim-yaw 2 t=922.040 vanilla=-123.21 drawn=-128.83
+[07:58:23] [Render thread/INFO]: [Eyes] anim-frame 2 rts 32 bat_eyes_20_anim_r02_rts_f032.png t=922.04 swing=0.00 limb=0.25 yaw=-123.2 pos=-127.1,71.0,-11.9
+[07:58:23] [Render thread/INFO]: [Eyes] anim-run-end 2 33 frames in 240 ticks (12 s wall)
+[07:58:24] [Render thread/INFO]: [Eyes] 20_anim: run 3 - windcaller_unit / turn / rts summoned at [-156, 72, 0]
+[07:58:24] [Render thread/INFO]: [Eyes] 20_anim: run 3 - windcaller_unit is WindcallerUnit (id 140), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:58:25] [Render thread/INFO]: [Eyes] anim-run 3 windcaller_unit turn rts window 240 ticks from game tick 968, a frame every 6.7 ticks, unit at [-153, 72, 0]
+[07:58:25] [Render thread/INFO]: [Eyes] anim-yaw 3 t=968.020 vanilla=-90.00 drawn=-90.00
+[07:58:25] [Render thread/INFO]: [Eyes] anim-frame 3 rts 0 bat_eyes_20_anim_r03_rts_f000.png t=968.02 swing=0.00 limb=0.56 yaw=-90.0 pos=-152.6,72.0,0.5
+[07:58:25] [Render thread/INFO]: [Eyes] anim-beat 3 tick 1 frames 1 unit [-153, 72, 0] wall 0.1 s screen none paused false
+[07:58:25] [Server thread/INFO]: [Eyes] anim-beat-server tick 2098 unit [-153, 72, 0] noAi false navDone false owner-side game time 2098
+[07:58:25] [Render thread/INFO]: [Eyes] anim-yaw 3 t=969.800 vanilla=-90.00 drawn=-90.00
+[07:58:25] [Render thread/INFO]: [Eyes] anim-yaw 3 t=971.360 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=972.920 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=974.560 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=976.160 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-frame 3 rts 1 bat_eyes_20_anim_r03_rts_f001.png t=976.16 swing=0.00 limb=0.19 yaw=-90.0 pos=-151.6,72.0,0.5
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=977.820 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=979.600 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=981.060 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=982.600 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=984.180 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-frame 3 rts 2 bat_eyes_20_anim_r03_rts_f002.png t=984.18 swing=0.00 limb=0.54 yaw=-90.0 pos=-150.5,72.0,0.5
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=985.920 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=987.620 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-beat 3 tick 21 frames 3 unit [-150, 72, 0] wall 1.1 s screen none paused false
+[07:58:26] [Server thread/INFO]: [Eyes] anim-beat-server tick 2117 unit [-150, 72, 0] noAi false navDone false owner-side game time 2117
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=989.060 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=990.580 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-yaw 3 t=992.160 vanilla=-90.00 drawn=-90.00
+[07:58:26] [Render thread/INFO]: [Eyes] anim-frame 3 rts 3 bat_eyes_20_anim_r03_rts_f003.png t=992.16 swing=0.00 limb=0.54 yaw=-90.0 pos=-149.3,72.0,0.5
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=993.980 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=995.640 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=997.000 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=999.040 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-frame 3 rts 4 bat_eyes_20_anim_r03_rts_f004.png t=999.04 swing=0.00 limb=0.54 yaw=-90.0 pos=-148.4,72.0,0.5
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1001.120 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1002.880 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1004.460 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1006.200 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-frame 3 rts 5 bat_eyes_20_anim_r03_rts_f005.png t=1006.20 swing=0.00 limb=0.19 yaw=-90.0 pos=-147.6,72.0,0.5
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1008.240 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-beat 3 tick 41 frames 6 unit [-148, 72, 0] wall 2.1 s screen none paused false
+[07:58:27] [Server thread/INFO]: [Eyes] anim-beat-server tick 2138 unit [-147, 72, 0] noAi false navDone false owner-side game time 2138
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1010.240 vanilla=-90.00 drawn=-90.00
+[07:58:27] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1011.820 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1013.320 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-frame 3 rts 6 bat_eyes_20_anim_r03_rts_f006.png t=1013.32 swing=0.00 limb=0.56 yaw=-90.0 pos=-146.5,72.0,0.5
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1015.480 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1017.520 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1019.700 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1021.720 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-frame 3 rts 7 bat_eyes_20_anim_r03_rts_f007.png t=1021.72 swing=0.00 limb=0.77 yaw=-90.0 pos=-145.3,72.0,0.5
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1023.560 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1025.040 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1026.560 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1028.200 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-beat 3 tick 61 frames 8 unit [-145, 72, 0] wall 3.1 s screen none paused false
+[07:58:28] [Server thread/INFO]: [Eyes] anim-beat-server tick 2158 unit [-144, 72, 0] noAi false navDone false owner-side game time 2158
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1029.740 vanilla=-90.00 drawn=-90.00
+[07:58:28] [Render thread/INFO]: [Eyes] anim-frame 3 rts 8 bat_eyes_20_anim_r03_rts_f008.png t=1029.74 swing=0.00 limb=0.54 yaw=-90.0 pos=-144.3,72.0,0.5
+[07:58:28] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1031.340 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1032.980 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1034.540 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1036.120 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1037.780 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-frame 3 rts 9 bat_eyes_20_anim_r03_rts_f009.png t=1037.78 swing=0.00 limb=0.42 yaw=-90.0 pos=-143.4,72.0,0.5
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1039.500 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1041.660 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1043.820 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1045.760 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-frame 3 rts 10 bat_eyes_20_anim_r03_rts_f010.png t=1045.76 swing=0.00 limb=0.77 yaw=-90.0 pos=-142.1,72.0,0.5
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1047.860 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-beat 3 tick 81 frames 11 unit [-142, 72, 0] wall 4.1 s screen none paused false
+[07:58:29] [Server thread/INFO]: [Eyes] anim-beat-server tick 2178 unit [-142, 72, 0] noAi false navDone false owner-side game time 2178
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1049.600 vanilla=-90.00 drawn=-90.00
+[07:58:29] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1051.220 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1052.960 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-frame 3 rts 11 bat_eyes_20_anim_r03_rts_f011.png t=1052.96 swing=0.00 limb=0.41 yaw=-90.0 pos=-141.4,72.0,0.5
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1054.820 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1056.920 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1058.500 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1060.500 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-frame 3 rts 12 bat_eyes_20_anim_r03_rts_f012.png t=1060.50 swing=0.00 limb=0.19 yaw=-90.0 pos=-140.3,72.0,0.5
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1062.780 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1064.480 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1066.140 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1067.960 vanilla=-90.00 drawn=-90.00
+[07:58:30] [Render thread/INFO]: [Eyes] anim-frame 3 rts 13 bat_eyes_20_anim_r03_rts_f013.png t=1067.96 swing=0.00 limb=0.44 yaw=-90.0 pos=-139.4,72.0,0.5
+[07:58:30] [Render thread/INFO]: [Eyes] anim-beat 3 tick 101 frames 14 unit [-139, 72, 0] wall 5.1 s screen none paused false
+[07:58:30] [Server thread/INFO]: [Eyes] anim-beat-server tick 2198 unit [-139, 72, 0] noAi false navDone false owner-side game time 2198
+[07:58:30] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1070.140 vanilla=-90.00 drawn=-90.00
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1072.500 vanilla=-90.00 drawn=-90.00
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1074.440 vanilla=-90.00 drawn=-90.00
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1075.960 vanilla=-90.00 drawn=-90.00
+[07:58:31] [Render thread/INFO]: [Eyes] anim-frame 3 rts 14 bat_eyes_20_anim_r03_rts_f014.png t=1075.96 swing=0.00 limb=0.63 yaw=-90.0 pos=-138.2,72.0,0.5
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1077.500 vanilla=-90.00 drawn=-90.00
+[07:58:31] [Render thread/INFO]: [Eyes] anim-leg 3 1 to 28, -28
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1079.480 vanilla=-90.00 drawn=-90.00
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1081.000 vanilla=-90.00 drawn=-90.00
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1082.480 vanilla=-98.55 drawn=-98.20
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1084.120 vanilla=-112.09 drawn=-117.18
+[07:58:31] [Render thread/INFO]: [Eyes] anim-frame 3 rts 15 bat_eyes_20_anim_r03_rts_f015.png t=1084.12 swing=0.00 limb=0.14 yaw=-112.1 pos=-137.2,72.0,0.5
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1085.640 vanilla=-143.21 drawn=-132.80
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1087.020 vanilla=-143.09 drawn=-139.70
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1088.520 vanilla=-144.89 drawn=-142.73
+[07:58:31] [Render thread/INFO]: [Eyes] anim-beat 3 tick 121 frames 16 unit [-137, 72, -1] wall 6.1 s screen none paused false
+[07:58:31] [Server thread/INFO]: [Eyes] anim-beat-server tick 2218 unit [-137, 72, -1] noAi false navDone false owner-side game time 2218
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1089.960 vanilla=-146.56 drawn=-145.01
+[07:58:31] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1091.600 vanilla=-144.04 drawn=-144.02
+[07:58:31] [Render thread/INFO]: [Eyes] anim-frame 3 rts 16 bat_eyes_20_anim_r03_rts_f016.png t=1091.60 swing=0.00 limb=0.69 yaw=-144.0 pos=-136.6,72.0,-0.3
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1093.740 vanilla=-137.94 drawn=-139.61
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1095.560 vanilla=-136.38 drawn=-137.32
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1096.940 vanilla=-135.08 drawn=-136.24
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1098.460 vanilla=-135.00 drawn=-135.48
+[07:58:32] [Render thread/INFO]: [Eyes] anim-frame 3 rts 17 bat_eyes_20_anim_r03_rts_f017.png t=1098.46 swing=0.00 limb=0.53 yaw=-135.0 pos=-135.9,72.0,-1.1
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1100.500 vanilla=-134.79 drawn=-134.90
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1102.280 vanilla=-134.59 drawn=-134.67
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1103.840 vanilla=-161.03 drawn=-143.11
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1105.340 vanilla=-166.06 drawn=-155.86
+[07:58:32] [Render thread/INFO]: [Eyes] anim-frame 3 rts 18 bat_eyes_20_anim_r03_rts_f018.png t=1105.34 swing=0.00 limb=0.49 yaw=-166.1 pos=-135.5,72.0,-1.7
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1106.880 vanilla=-157.91 drawn=-160.12
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1108.920 vanilla=-150.52 drawn=-154.25
+[07:58:32] [Render thread/INFO]: [Eyes] anim-beat 3 tick 141 frames 19 unit [-136, 72, -3] wall 7.1 s screen none paused false
+[07:58:32] [Server thread/INFO]: [Eyes] anim-beat-server tick 2239 unit [-135, 72, -3] noAi false navDone false owner-side game time 2239
+[07:58:32] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1110.880 vanilla=-149.98 drawn=-151.08
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1113.020 vanilla=-149.95 drawn=-149.25
+[07:58:33] [Render thread/INFO]: [Eyes] anim-frame 3 rts 19 bat_eyes_20_anim_r03_rts_f019.png t=1113.02 swing=0.00 limb=0.53 yaw=-149.9 pos=-135.0,72.0,-2.7
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1114.920 vanilla=-148.23 drawn=-148.60
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1117.480 vanilla=-148.20 drawn=-148.26
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1120.100 vanilla=-149.39 drawn=-155.71
+[07:58:33] [Render thread/INFO]: [Eyes] anim-frame 3 rts 20 bat_eyes_20_anim_r03_rts_f020.png t=1120.10 swing=0.00 limb=0.52 yaw=-149.4 pos=-134.6,72.0,-3.4
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1121.920 vanilla=-173.97 drawn=-163.36
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1123.740 vanilla=-175.17 drawn=-171.18
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1125.620 vanilla=-178.16 drawn=-176.67
+[07:58:33] [Render thread/INFO]: [Eyes] step 25 screen none level true
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1127.080 vanilla=-180.00 drawn=-178.88
+[07:58:33] [Render thread/INFO]: [Eyes] anim-frame 3 rts 21 bat_eyes_20_anim_r03_rts_f021.png t=1127.08 swing=0.00 limb=0.69 yaw=-180.0 pos=-134.5,72.0,-4.5
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1128.740 vanilla=-180.00 drawn=-179.72
+[07:58:33] [Render thread/INFO]: [Eyes] anim-beat 3 tick 161 frames 22 unit [-135, 72, -5] wall 8.1 s screen none paused false
+[07:58:33] [Server thread/INFO]: [Eyes] anim-beat-server tick 2259 unit [-135, 72, -6] noAi false navDone false owner-side game time 2259
+[07:58:33] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1130.940 vanilla=-159.51 drawn=-167.04
+[07:58:34] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1132.520 vanilla=-158.20 drawn=-161.34
+[07:58:34] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1134.520 vanilla=-153.53 drawn=-154.54
+[07:58:34] [Render thread/INFO]: [Eyes] anim-frame 3 rts 22 bat_eyes_20_anim_r03_rts_f022.png t=1134.52 swing=0.00 limb=0.49 yaw=-153.5 pos=-134.3,72.0,-5.3
+[07:58:34] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1137.100 vanilla=-149.03 drawn=-148.80
+[07:58:34] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1139.900 vanilla=-146.89 drawn=-147.16
+[07:58:34] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1141.980 vanilla=-142.30 drawn=-144.09
+[07:58:34] [Render thread/INFO]: [Eyes] anim-frame 3 rts 23 bat_eyes_20_anim_r03_rts_f023.png t=1141.98 swing=0.00 limb=0.70 yaw=-142.3 pos=-133.7,72.0,-6.2
+[07:58:34] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1144.100 vanilla=-142.21 drawn=-142.62
+[07:58:34] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1146.900 vanilla=-137.52 drawn=-139.20
+[07:58:34] [Render thread/INFO]: [Eyes] anim-beat 3 tick 181 frames 24 unit [-134, 72, -7] wall 9.1 s screen none paused false
+[07:58:34] [Server thread/INFO]: [Eyes] anim-beat-server tick 2277 unit [-133, 72, -8] noAi false navDone false owner-side game time 2277
+[07:58:34] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1149.360 vanilla=-136.58 drawn=-136.58
+[07:58:34] [Render thread/INFO]: [Eyes] anim-frame 3 rts 24 bat_eyes_20_anim_r03_rts_f024.png t=1149.36 swing=0.00 limb=0.71 yaw=-136.6 pos=-133.0,72.0,-7.0
+[07:58:34] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1151.580 vanilla=-135.63 drawn=-135.77
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1153.620 vanilla=-135.48 drawn=-135.54
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1155.800 vanilla=-135.21 drawn=-135.30
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1157.380 vanilla=-135.14 drawn=-135.19
+[07:58:35] [Render thread/INFO]: [Eyes] anim-frame 3 rts 25 bat_eyes_20_anim_r03_rts_f025.png t=1157.38 swing=0.00 limb=0.69 yaw=-135.1 pos=-132.3,72.0,-7.7
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1159.100 vanilla=-135.14 drawn=-135.15
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1161.640 vanilla=-135.14 drawn=-135.14
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1163.560 vanilla=-135.14 drawn=-135.14
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1165.640 vanilla=-135.14 drawn=-135.14
+[07:58:35] [Render thread/INFO]: [Eyes] anim-frame 3 rts 26 bat_eyes_20_anim_r03_rts_f026.png t=1165.64 swing=0.00 limb=0.26 yaw=-135.1 pos=-131.6,72.0,-8.4
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1167.300 vanilla=-135.14 drawn=-135.14
+[07:58:35] [Render thread/INFO]: [Eyes] anim-beat 3 tick 201 frames 27 unit [-132, 72, -9] wall 10.1 s screen none paused false
+[07:58:35] [Server thread/INFO]: [Eyes] anim-beat-server tick 2298 unit [-131, 72, -10] noAi false navDone false owner-side game time 2298
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1169.880 vanilla=-135.14 drawn=-135.14
+[07:58:35] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1171.560 vanilla=-135.14 drawn=-135.14
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1173.240 vanilla=-135.14 drawn=-135.14
+[07:58:36] [Render thread/INFO]: [Eyes] anim-frame 3 rts 27 bat_eyes_20_anim_r03_rts_f027.png t=1173.24 swing=0.00 limb=0.50 yaw=-135.1 pos=-130.8,72.0,-9.2
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1175.560 vanilla=-135.14 drawn=-135.14
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1177.400 vanilla=-135.14 drawn=-135.14
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1179.320 vanilla=-135.14 drawn=-135.14
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1181.060 vanilla=-135.14 drawn=-135.14
+[07:58:36] [Render thread/INFO]: [Eyes] anim-frame 3 rts 28 bat_eyes_20_anim_r03_rts_f028.png t=1181.06 swing=0.00 limb=0.69 yaw=-135.1 pos=-130.0,72.0,-10.0
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1182.920 vanilla=-135.14 drawn=-135.14
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1184.800 vanilla=-135.14 drawn=-135.14
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1186.360 vanilla=-135.14 drawn=-135.14
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1188.040 vanilla=-133.63 drawn=-122.61
+[07:58:36] [Render thread/INFO]: [Eyes] anim-frame 3 rts 29 bat_eyes_20_anim_r03_rts_f029.png t=1188.04 swing=0.00 limb=0.47 yaw=-133.6 pos=-129.3,72.0,-10.5
+[07:58:36] [Render thread/INFO]: [Eyes] anim-beat 3 tick 221 frames 30 unit [-130, 72, -11] wall 11.1 s screen none paused false
+[07:58:36] [Server thread/INFO]: [Eyes] anim-beat-server tick 2318 unit [-129, 72, -11] noAi false navDone false owner-side game time 2318
+[07:58:36] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1189.880 vanilla=-90.90 drawn=-103.74
+[07:58:36] [Render thread/INFO]: [Eyes] anim-leg 3 2 to 56, -28
+[07:58:37] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1192.040 vanilla=-90.00 drawn=-92.90
+[07:58:37] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1194.340 vanilla=-90.00 drawn=-90.35
+[07:58:37] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1196.920 vanilla=-90.00 drawn=-89.99
+[07:58:37] [Render thread/INFO]: [Eyes] anim-frame 3 rts 30 bat_eyes_20_anim_r03_rts_f030.png t=1196.92 swing=0.00 limb=0.42 yaw=-90.0 pos=-128.4,71.3,-10.5
+[07:58:37] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1199.380 vanilla=-89.73 drawn=-89.51
+[07:58:37] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1200.940 vanilla=-89.30 drawn=-89.36
+[07:58:37] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1202.380 vanilla=-89.56 drawn=-89.62
+[07:58:37] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1204.100 vanilla=-90.00 drawn=-89.87
+[07:58:37] [Render thread/INFO]: [Eyes] anim-frame 3 rts 31 bat_eyes_20_anim_r03_rts_f031.png t=1204.10 swing=0.00 limb=0.08 yaw=-90.0 pos=-128.0,71.0,-10.5
+[07:58:37] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1205.760 vanilla=-90.00 drawn=-89.96
+[07:58:37] [Render thread/INFO]: [Eyes] anim-yaw 3 t=1207.940 vanilla=-90.00 drawn=-90.00
+[07:58:37] [Render thread/INFO]: [Eyes] anim-run-end 3 32 frames in 240 ticks (12 s wall)
+[07:58:38] [Render thread/INFO]: [Eyes] 20_anim: done, 0 of 4 runs failed
+[07:58:40] [Render thread/INFO]: [Eyes] unit textures with mips: 0 of 33 registered (up to 3 levels)
+[07:58:40] [Render thread/WARN]: [Eyes] no generated unit texture was uploaded with mips - SimpleTextureMixin did not apply?
+[07:58:40] [Render thread/INFO]: [Eyes] tour complete

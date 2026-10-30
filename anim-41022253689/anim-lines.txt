@@ -1,0 +1,22 @@
+20_anim: 4 run(s) on a pad at [-156, 72, 0]: blade_dancer_unit:turn:rts,grunt_unit:turn:rts,rifle_squad_unit:turn:rts,windcaller_unit:turn:rts
+20_anim: run 0 - blade_dancer_unit / turn / rts summoned at [-156, 72, 0]
+20_anim: run 0 - blade_dancer_unit is BladeDancerUnit (id 93), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-leg 0 1 to 28, -28
+anim-leg 0 2 to 56, -28
+anim-run-end 0 31 frames in 240 ticks (12 s wall)
+20_anim: run 1 - grunt_unit / turn / rts summoned at [-156, 72, 0]
+20_anim: run 1 - grunt_unit is GruntUnit (id 127), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-leg 1 1 to 28, -28
+anim-leg 1 2 to 56, -28
+anim-run-end 1 32 frames in 240 ticks (12 s wall)
+20_anim: run 2 - rifle_squad_unit / turn / rts summoned at [-156, 72, 0]
+20_anim: run 2 - rifle_squad_unit is RifleSquadUnit (id 129), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-leg 2 1 to 28, -28
+anim-leg 2 2 to 56, -28
+anim-run-end 2 33 frames in 240 ticks (12 s wall)
+20_anim: run 3 - windcaller_unit / turn / rts summoned at [-156, 72, 0]
+20_anim: run 3 - windcaller_unit is WindcallerUnit (id 140), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-leg 3 1 to 28, -28
+anim-leg 3 2 to 56, -28
+anim-run-end 3 32 frames in 240 ticks (12 s wall)
+20_anim: done, 0 of 4 runs failed

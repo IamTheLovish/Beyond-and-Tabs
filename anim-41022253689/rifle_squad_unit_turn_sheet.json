@@ -1,0 +1,38 @@
+{
+ "title": "rifle_squad_unit / turn   real game client   window 240 ticks (12.0 s)   views rts   10 frames",
+ "views": [
+  "rts"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +1.43s  (tick 29)",
+  "3  +2.49s  (tick 50)",
+  "4  +3.99s  (tick 80)",
+  "5  +5.13s  (tick 103)",
+  "6  +6.57s  (tick 131)",
+  "7  +8.14s  (tick 163)",
+  "8  +9.25s  (tick 185)",
+  "9  +10.78s  (tick 216)",
+  "10  +11.94s  (tick 239)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +1.43s  (tick 29)",
+   "3  +2.49s  (tick 50)",
+   "4  +3.99s  (tick 80)",
+   "5  +5.13s  (tick 103)",
+   "6  +6.57s  (tick 131)",
+   "7  +8.14s  (tick 163)",
+   "8  +9.25s  (tick 185)",
+   "9  +10.78s  (tick 216)",
+   "10  +11.94s  (tick 239)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}

@@ -1,0 +1,38 @@
+{
+ "title": "grunt_unit / turn   real game client   window 240 ticks (12.0 s)   views rts   10 frames",
+ "views": [
+  "rts"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +1.24s  (tick 25)",
+  "3  +2.42s  (tick 48)",
+  "4  +4.06s  (tick 81)",
+  "5  +5.45s  (tick 109)",
+  "6  +6.54s  (tick 131)",
+  "7  +8.02s  (tick 160)",
+  "8  +9.24s  (tick 185)",
+  "9  +10.43s  (tick 209)",
+  "10  +11.91s  (tick 238)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +1.24s  (tick 25)",
+   "3  +2.42s  (tick 48)",
+   "4  +4.06s  (tick 81)",
+   "5  +5.45s  (tick 109)",
+   "6  +6.54s  (tick 131)",
+   "7  +8.02s  (tick 160)",
+   "8  +9.24s  (tick 185)",
+   "9  +10.43s  (tick 209)",
+   "10  +11.91s  (tick 238)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}
