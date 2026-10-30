@@ -1563,6 +1563,13 @@ public class BuildingPlacement {
 
     /** A placed block's sound while a building rises (vanilla's block place is 1.0). */
     static final float CONSTRUCTION_VOLUME = 0.22f;
+    /**
+     * Fewest game ticks between two place sounds of one building: several builders on a fast build laid a block (and a
+     * sound) every tick or two - a steady patter on top of the nano loop (Oct 29: "workers buzzing as they build").
+     * The blocks still appear one by one; only every few get a sound.
+     */
+    static final int PLACE_SOUND_GAP = 6;
+    private long lastPlaceSound = Long.MIN_VALUE / 2;
     /** At most this many blasts when a building is destroyed (it set one off on a quarter of its blocks - dozens). */
     static final int MAX_COLLAPSE_BLASTS = 4;
 
@@ -1614,8 +1621,12 @@ public class BuildingPlacement {
             // burst of debris (LevelEvent.PARTICLES_DESTROY_BLOCK), the steady ticking lovish heard all match (Oct 21:
             // "a constant ticking or binging ... it might be the workers building sound"); a second call passed a sound's
             // hashCode as a level event id. Quiet and slightly varied; the nano beams show the work
-            level.playSound(null, bp, bs.getSoundType().getPlaceSound(), net.minecraft.sounds.SoundSource.BLOCKS,
-                CONSTRUCTION_VOLUME, 0.85f + level.getRandom().nextFloat() * 0.2f);
+            long now = level.getGameTime();
+            if (now - lastPlaceSound >= PLACE_SOUND_GAP) {
+                lastPlaceSound = now;
+                level.playSound(null, bp, bs.getSoundType().getPlaceSound(), net.minecraft.sounds.SoundSource.BLOCKS,
+                    CONSTRUCTION_VOLUME, 0.85f + level.getRandom().nextFloat() * 0.2f);
+            }
             blockPlaceQueue.removeIf(i -> i.equals(nextBlock));
             onBlockBuilt(bp, bs);
             if (this.getBlocksPlaced() > highestBlockCountReached) {
