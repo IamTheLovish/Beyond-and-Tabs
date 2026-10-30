@@ -13,7 +13,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.gametest.GameTestHolder;
@@ -333,6 +335,126 @@ public class DragonFlightGameTests {
                 cleanup.run();
             }
         });
+    }
+
+    /**
+     * The Stormcallers' dragons fly with a nose too (lovish after a match, Oct 30: "looks choppy laggy ... isnt fluid at
+     * all"). They flew on the ghast brain (FlyingUnitMoveControl): a shove of a fifth of the speed attribute every 2-6
+     * random ticks, coasting on the drag between, and the yaw snapped to that velocity in one tick. Sent to a point
+     * behind it, each must turn round at most DragonFlight.TURN_SLOW degrees a tick, its speed over the ground must
+     * change smoothly (never more than MAX_SPEED_STEP b/t from one tick to the next: the steering eases by 0.008 /
+     * 0.012, a ghast shove is ~0.06), and it must come to rest on the point.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 260)
+    public static void celestial_dragon_turns_and_eases_into_its_point(GameTestHelper helper) {
+        fliesSmoothlyToAPointBehindIt(helper, EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), "Celestial Dragon");
+    }
+
+    /** As {@link #celestial_dragon_turns_and_eases_into_its_point}, for the Thunder Dragon. */
+    @GameTest(template = ARENA, timeoutTicks = 260)
+    public static void thunder_dragon_turns_and_eases_into_its_point(GameTestHelper helper) {
+        fliesSmoothlyToAPointBehindIt(helper, EntityRegistrar.THUNDER_DRAGON_UNIT.get(), "Thunder Dragon");
+    }
+
+    /** The largest change in speed over the ground from one tick to the next that still reads as smooth flight. */
+    static final double MAX_SPEED_STEP = 0.02;
+
+    private static void fliesSmoothlyToAPointBehindIt(GameTestHelper helper, EntityType<? extends Mob> type, String name) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = skyPad(helper, 290);
+        final int gy = pad.getY();
+        Mob dragon = type.create(level);
+        if (!(dragon instanceof Unit unit)) {
+            helper.fail("could not create the " + name);
+            return;
+        }
+        dragon.moveTo(pad.getX() + 3.5, gy + 8, pad.getZ() + 8.5, 90, 0);    // facing -x; the point is behind it
+        unit.setOwnerName("gametest_dragon_flight");
+        level.addFreshEntity(dragon);
+        TestCleanup.entities(helper, List.of(dragon));
+        BlockPos target = new BlockPos(pad.getX() + 13, gy - 1, pad.getZ() + 8);
+        double tx = target.getX() + 0.5, tz = target.getZ() + 0.5;
+        helper.runAfterDelay(3, () -> unit.getMoveGoal().setMoveTarget(target));
+        final float[] last = { Float.NaN };
+        final double[] lastPos = { Double.NaN, Double.NaN, Double.NaN };   // x, z, last tick's speed over the ground
+        final double[] worst = { 0, 0 };   // the largest yaw step, the largest speed step
+        final String[] where = { "", "" };
+        final List<String> trace = new ArrayList<>();
+        for (int t = 4; t <= 240; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                trace.add(sample(tick, dragon));
+                int i = trace.size() - 1;
+                float yaw = dragon.getYRot();
+                if (!Float.isNaN(last[0])) {
+                    double step = Math.abs(Mth.wrapDegrees(yaw - last[0]));
+                    if (step > worst[0]) {
+                        worst[0] = step;
+                        where[0] = String.format(" at tick %d, %.1f -> %.1f (%s)", tick, last[0], yaw,
+                            String.join(" | ", trace.subList(Math.max(0, i - 3), i + 1)));
+                    }
+                }
+                last[0] = yaw;
+                if (!Double.isNaN(lastPos[0])) {
+                    double mx = dragon.getX() - lastPos[0], mz = dragon.getZ() - lastPos[1];
+                    double speed = Math.sqrt(mx * mx + mz * mz);
+                    if (!Double.isNaN(lastPos[2])) {
+                        double step = Math.abs(speed - lastPos[2]);
+                        if (step > worst[1]) {
+                            worst[1] = step;
+                            where[1] = String.format(" at tick %d, %.3f -> %.3f b/t (%s)", tick, lastPos[2], speed,
+                                String.join(" | ", trace.subList(Math.max(0, i - 3), i + 1)));
+                        }
+                    }
+                    lastPos[2] = speed;
+                }
+                lastPos[0] = dragon.getX();
+                lastPos[1] = dragon.getZ();
+            });
+        }
+        helper.runAfterDelay(245, () -> {
+            try {
+                double dx = dragon.getX() - tx, dz = dragon.getZ() - tz;
+                double off = Math.sqrt(dx * dx + dz * dz);
+                double speed = dragon.getDeltaMovement().horizontalDistance();
+                List<String> problems = new ArrayList<>();
+                if (worst[0] > com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW + 0.5)
+                    problems.add(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)%s", worst[0],
+                        com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW, where[0]));
+                if (worst[1] > MAX_SPEED_STEP)
+                    problems.add(String.format("its speed jumped %.3f b/t in one tick (cap %.3f)%s", worst[1],
+                        MAX_SPEED_STEP, where[1]));
+                if (off > 3)
+                    problems.add(String.format("it did not reach the point: %.1f blocks off (%s)", off, tail(trace, 3)));
+                if (speed > 0.05)
+                    problems.add(String.format("it is still coasting at %.2f b/t", speed));
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(name + ": " + String.join("; ", problems));
+            } finally {
+                dragon.discard();
+            }
+        });
+    }
+
+    /**
+     * The client sees every tick of a dragon's flight. An entity type's default tracking sends the position every 3rd
+     * tick and the client walks the body there over 3 frames' ticks; packets that land a tick early or late leave a
+     * big, fast flyer standing still for a tick and then jumping (the stutter lovish saw), and the rig, which reads the
+     * flight from the client's own positions, flickers between its glide and its hover with it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void dragons_send_their_position_every_tick(GameTestHelper helper) {
+        List<String> slow = new ArrayList<>();
+        for (EntityType<?> type : List.<EntityType<?>>of(EntityRegistrar.BONE_DRAGON_UNIT.get(),
+                EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), EntityRegistrar.THUNDER_DRAGON_UNIT.get()))
+            if (type.updateInterval() != 1)
+                slow.add(EntityType.getKey(type) + " every " + type.updateInterval() + " ticks");
+        if (slow.isEmpty())
+            helper.succeed();
+        else
+            helper.fail("dragons tracked less than every tick: " + String.join(", ", slow));
     }
 
     /** Test ticks the rally-point test waits at most for its arena's entity sections before it fails on them. */

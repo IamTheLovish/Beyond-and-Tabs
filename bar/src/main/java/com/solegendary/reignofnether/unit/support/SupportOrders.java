@@ -121,7 +121,7 @@ public final class SupportOrders {
             }
         SupportMath.rearRank(gx, gz, cx, cz, SupportBrain.standoff(unit.getSupportReach()), index, count, REAR_SPACING, P);
         BlockPos dest = new BlockPos(Mth.floor(P[0]), pos.getY(), Mth.floor(P[1]));
-        unit.getSupportState().fight(dest);
+        unit.getSupportState().fight(dest, fighterIds(self, selection));
         unit.getMoveGoal().setMoveTarget(dest);   // on its way now; the brain takes over at its next look
         return true;
     }

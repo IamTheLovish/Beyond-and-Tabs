@@ -162,7 +162,7 @@ NOTES.md                  older session log; README.md is out of date (this file
 - **Fast JUnit tests** (`bar/src/test/java`, JUnit 5, plan 008): pure rules in seconds, not the minutes of a GameTest.
   They run inside job `bar`'s `./gradlew build` (no extra job or runner); the `JUnit summary` step posts the count as a
   notice (`tools/junit_summary.py`). A rule that touches the world cannot load here - pull the arithmetic into a plain
-  class (`PopulationRules`, `EconomyMath`, `PlacementGrid`, `MergeGrid`...) and test that; do not mock the world. Table-
+  class (`EconomyMath`, `PlacementGrid`, `MergeGrid`...) and test that; do not mock the world. Table-
   driven, written from the rule before the code; a real bug found by a test stays `@Disabled("BUG: ...")` in the PR for
   the commander to decide - never bend the test.
 - **Writing GameTests** (`bar/.../gametest/`): every public rule gets one. Keep everything inside the test's own
@@ -226,7 +226,8 @@ All run on GitHub Actions, never on anyone's PC:
   **Structure photos** (input `structure`: names in the jar or `.nbt` paths, comma-separated): instead of the tour,
   each structure is stamped on a flat pad and shot four ways (`bat_eyes_15_<name>_rts`, `_rts_close`, `_34` - a
   first-person 3/4 view - and `_dusk`) to branch `eyes-structures` (`eyes-structures-shaders` with `shaders`). Judge a
-  new building design here, with real textures and glass, before asking lovish. For a design on a feature branch,
+  new building design here, with real textures and glass, before asking lovish. Input `mist` (with `structure`) lets the
+  valley mist (ambient/mist) into those stills and adds a dawn still `15_<name>_mist_rts`; it publishes to `<lane>-mist`. For a design on a feature branch,
   dispatch the workflow with `ref=<that branch>`: it uses that branch's build (the header of eyes.yml has the call).
 - **bot-ladder.yml** (nightly 07:03 UTC + `workflow_dispatch`; Oct 22, lovish approved) - bot vs bot full matches, one per hosted
   runner (a 40-match matrix = two waves of the ~20 runners), every Difficulty pair x faction pair

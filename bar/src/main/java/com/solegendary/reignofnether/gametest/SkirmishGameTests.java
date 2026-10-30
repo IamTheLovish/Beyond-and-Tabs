@@ -808,7 +808,10 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Raise Dead: needs population room; with it, a wreck rises as a Ghoul and pays from the wreck first. */
+    /**
+     * Raise Dead: a wreck rises as a Ghoul and pays from the wreck first. (Its "needs population room" half retired -
+     * lovish Oct 29: no max population; the ghouls' own limit is NoMaxPopulationGameTests' 8 per player.)
+     */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void raise_dead_turns_wrecks_into_ghouls(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -827,37 +830,30 @@ public class SkirmishGameTests {
         var wreck = com.solegendary.reignofnether.resources.WreckServerEvents.spawnWreck(level, at.getX() - 1.5,
             at.getY(), at.getZ() + 0.5, 200f, com.solegendary.reignofnether.faction.Factions.MONSTERS);
         helper.runAfterDelay(3, () -> {
-            if (wreck == null || wreck.isRemoved()) {
-                helper.fail("test wreck did not spawn");
-                return;
-            }
-            int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
-            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
-            int none;
-            try {   // the cap is server-wide: a throw must not leave it at 0 for every later test
-                none = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
+            List<String> problems = new ArrayList<>();
+            try {   // cleaned up whatever the verdict (PR #394 review, N5)
+                if (wreck == null || wreck.isRemoved())
+                    throw new IllegalStateException("test wreck did not spawn");
+                int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
+                if (raised != 1)
+                    problems.add("expected one Ghoul from one wreck, got " + raised);
+                float left = com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(wreck);
+                if (left > 200f - com.solegendary.reignofnether.resources.ResourceCosts.ZOMBIE.metal() + 0.01f)
+                    problems.add("the Ghoul was not paid from the wreck (" + left + " left)");
+                if (pool.getMetal() < -0.01f || pool.getMetal() > 0.01f)
+                    problems.add("pool paid although the wreck covered the cost: " + pool.getMetal());
             } finally {
-                com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+                for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, lich.getBoundingBox().inflate(6)))
+                    if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()))
+                        e.discard();
+                if (wreck != null)
+                    wreck.discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
             }
-            if (none != 0)
-                helper.fail("raised a Ghoul past the unit cap");
-            com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
-            int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
-            int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
-            com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
-            if (raised != 1)
-                helper.fail("expected one Ghoul from one wreck, got " + raised);
-            float left = com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(wreck);
-            if (left > 200f - com.solegendary.reignofnether.resources.ResourceCosts.ZOMBIE.metal() + 0.01f)
-                helper.fail("the Ghoul was not paid from the wreck (" + left + " left)");
-            if (pool.getMetal() < -0.01f || pool.getMetal() > 0.01f)
-                helper.fail("pool paid although the wreck covered the cost: " + pool.getMetal());
-            for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, lich.getBoundingBox().inflate(6)))
-                if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()))
-                    e.discard();
-            wreck.discard();
-            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
-            helper.succeed();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
         });
     }
 
@@ -1133,27 +1129,20 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
-    /** Bone Dragon kills rise: needs population room, leaves no wreck, crumbles on time. */
+    /**
+     * Bone Dragon kills rise, leave no wreck and crumble on time. (Its "needs population room" half retired - lovish
+     * Oct 29: no max population; the 8-per-owner risen cap is its own limit.)
+     */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void dragon_risen_skeletons_are_free_and_temporary(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_wyrm";
         BlockPos at = helper.absolutePos(new BlockPos(14, 2, 2));
-        int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
-        com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
-        net.minecraft.world.entity.Entity none;
-        try {   // the cap is server-wide: a throw must not leave it at 0 for every later test
-            none = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
-        } finally {
-            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
-        }
-        if (none != null)
-            helper.fail("raised a skeleton past the unit cap");
         com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
         var risen = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
         com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
         if (risen == null) {
-            helper.fail("no skeleton rose with population room");
+            helper.fail("no skeleton rose");
             return;
         }
         var where = risen.position();   // tests run in parallel: look for a wreck HERE, not at the global count
@@ -4899,6 +4888,22 @@ public class SkirmishGameTests {
 
     // ------------------------------------------------------------------ Verdant Living Terrain (slice 3)
 
+    /**
+     * The chunks under this test's 16x16 arena, for {@link GameTestChunks#whenEntitiesReady}. A test that counts block
+     * ticks (fire spread, a scheduled tick) or searches for entities has to start once those chunks tick, not at test
+     * tick 0: on the PR 380 r3 green, three such tests failed in the second their batch started ("an orphan cell ...
+     * did not dry up", "the thicket did not burn", the Fog Bank enemy finding no entity at all) - their fixed 5-40 tick
+     * waits ran out before the new arena's chunks were entity-ticking.
+     */
+    static List<long[]> arenaChunks(GameTestHelper helper) {
+        BlockPos a = helper.absolutePos(BlockPos.ZERO), b = helper.absolutePos(new BlockPos(15, 0, 15));
+        List<long[]> chunks = new ArrayList<>();
+        for (int cx = Math.min(a.getX(), b.getX()) >> 4; cx <= Math.max(a.getX(), b.getX()) >> 4; cx++)
+            for (int cz = Math.min(a.getZ(), b.getZ()) >> 4; cz <= Math.max(a.getZ(), b.getZ()) >> 4; cz++)
+                chunks.add(new long[] { cx, cz });
+        return chunks;
+    }
+
     /** Clears a box of the arena to open ground: stone at y=1 (template coords), air above up to y=4. */
     static void openGround(GameTestHelper helper, int x0, int z0, int x1, int z1) {
         ServerLevel level = helper.getLevel();
@@ -5201,20 +5206,26 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Fire set beside a thicket burns it away within a second or two (and it does not come back). */
-    @GameTest(template = ARENA, timeoutTicks = 100)
+    /**
+     * Fire set beside a thicket burns it away within a second or two (and it does not come back). The fire is lit once
+     * the arena's chunks tick ({@link #arenaChunks}): fire spreads on block ticks, which a chunk that is not
+     * entity-ticking yet skips.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 1000)
     public static void verdant_thicket_burns(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_thicket_fire";
         openGround(helper, 5, 5, 10, 10);
         BlockPos spot = helper.absolutePos(new BlockPos(7, 2, 7));
-        if (!com.solegendary.reignofnether.blocks.ThicketBlock.place(level, spot, owner, true)) {
-            helper.fail("could not place a thicket at " + spot);
-            return;
-        }
         var thicket = com.solegendary.reignofnether.registrars.BlockRegistrar.THICKET.get();
-        level.setBlock(spot.east(), net.minecraft.world.level.block.Blocks.FIRE.defaultBlockState(), 3);
-        helper.runAfterDelay(40, () -> {
+        // registered here and idle until the fire is lit: registering a tick callback from inside whenEntitiesReady's
+        // callback corrupts vanilla's tick-time map (BuildingDamageGameTests)
+        long[] litAt = { -1 };
+        boolean[] checked = { false };
+        helper.onEachTick(() -> {
+            if (checked[0] || litAt[0] < 0 || helper.getTick() < litAt[0] + 40)
+                return;
+            checked[0] = true;
             boolean gone = !level.getBlockState(spot).is(thicket);
             for (BlockPos p : new BlockPos[] { spot, spot.east() })
                 level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
@@ -5223,6 +5234,15 @@ public class SkirmishGameTests {
                 helper.fail("the thicket did not burn with fire right beside it");
             else
                 helper.succeed();
+        });
+        GameTestChunks.whenEntitiesReady(helper, level, arenaChunks(helper), 5, 200, 900, "thicket fire arena", () -> {
+            if (!com.solegendary.reignofnether.blocks.ThicketBlock.place(level, spot, owner, true)) {
+                checked[0] = true;
+                helper.fail("could not place a thicket at " + spot);
+                return;
+            }
+            level.setBlock(spot.east(), net.minecraft.world.level.block.Blocks.FIRE.defaultBlockState(), 3);
+            litAt[0] = helper.getTick();
         });
     }
 
@@ -5455,25 +5475,26 @@ public class SkirmishGameTests {
 
     /**
      * A pool dries up after its lifetime (the 1 Hz expiry pass), and a cell its registry doesn't know - as after a
-     * restart - removes itself through its scheduled fail-safe tick.
+     * restart - removes itself through its scheduled fail-safe tick. Both are set up once the arena's chunks tick
+     * ({@link #arenaChunks}): a chunk that is not entity-ticking yet holds its scheduled ticks back.
      */
-    @GameTest(template = ARENA, timeoutTicks = 80)
+    @GameTest(template = ARENA, timeoutTicks = 1000)
     public static void tidepool_expires_and_orphan_cells_dry_up(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_tide_expiry_" + helper.absolutePos(BlockPos.ZERO).asLong();
         openGround(helper, 1, 1, 9, 9);
-        var pool = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner,
-            helper.absolutePos(new BlockPos(3, 2, 3)), 1, 20);
-        if (pool == null || pool.cellCount() != 5) {
-            helper.fail("an r1 raise on open ground should make 5 cells: " + (pool == null ? "refused" : pool.cellCount()));
-            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
-            return;
-        }
         var tide = com.solegendary.reignofnether.registrars.BlockRegistrar.TIDEPOOL.get();
         BlockPos orphan = helper.absolutePos(new BlockPos(7, 2, 7));
-        level.setBlock(orphan, tide.defaultBlockState(), 3);
-        level.scheduleTick(orphan, tide, 5);
-        helper.runAfterDelay(30, () -> {
+        // registered here and idle until the pools are raised: registering a tick callback from inside
+        // whenEntitiesReady's callback corrupts vanilla's tick-time map (BuildingDamageGameTests)
+        List<com.solegendary.reignofnether.tide.TidepoolServerEvents.Pool> raised = new ArrayList<>();
+        long[] raisedAt = { -1 };
+        boolean[] checked = { false };
+        helper.onEachTick(() -> {
+            if (checked[0] || raisedAt[0] < 0 || helper.getTick() < raisedAt[0] + 30)
+                return;
+            checked[0] = true;
+            var pool = raised.get(0);
             try {
                 com.solegendary.reignofnether.tide.TidepoolServerEvents.tickExpiry(level);
                 if (pool.isActive())
@@ -5487,6 +5508,20 @@ public class SkirmishGameTests {
             } finally {
                 com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
             }
+        });
+        GameTestChunks.whenEntitiesReady(helper, level, arenaChunks(helper), 5, 200, 900, "tidepool expiry arena", () -> {
+            var pool = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner,
+                helper.absolutePos(new BlockPos(3, 2, 3)), 1, 20);
+            if (pool == null || pool.cellCount() != 5) {
+                checked[0] = true;
+                com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+                helper.fail("an r1 raise on open ground should make 5 cells: " + (pool == null ? "refused" : pool.cellCount()));
+                return;
+            }
+            level.setBlock(orphan, tide.defaultBlockState(), 3);
+            level.scheduleTick(orphan, tide, 5);
+            raised.add(pool);
+            raisedAt[0] = helper.getTick();
         });
     }
 
@@ -6667,9 +6702,10 @@ public class SkirmishGameTests {
      * The Admiral's Fog Bank: an Admiral has it, and casting it hides a friendly unit inside the cloud from an enemy 8
      * blocks away (invisible, and the enemy's target search skips it); a Holy Bell rung by that enemy's side then
      * strips the cover like a thicket's. The enemy and the bell ringer are never added to the level (they can't act);
-     * an arena-sized bell keeps the reveal out of the neighbouring tests.
+     * an arena-sized bell keeps the reveal out of the neighbouring tests. The friends are added once the arena's chunks
+     * tick ({@link #arenaChunks}): an entity search finds nothing in a chunk whose entities are still loading.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60)
+    @GameTest(template = ARENA, timeoutTicks = 1000)
     public static void tidewrought_fog_bank_hides_friends_and_holy_bell_reveals(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_tide_fog_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
@@ -6692,9 +6728,6 @@ public class SkirmishGameTests {
         friend.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
         foe.moveTo(spot.getX() + 8.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
         architect.moveTo(spot.getX() + 4.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
-        level.addFreshEntity(admiral);
-        level.addFreshEntity(friend);
-        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(admiral);
         List<net.minecraft.world.entity.Mob> all = List.of(admiral, friend, foe, architect);
         Runnable cleanup = () -> {
             for (var e : all)
@@ -6702,22 +6735,40 @@ public class SkirmishGameTests {
             com.solegendary.reignofnether.tide.FogBankServerEvents.clearOwner(owner);
             com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
         };
-        com.solegendary.reignofnether.ability.abilities.FogBank fog = null;
-        for (var a : admiral.getAbilities().get())
-            if (a instanceof com.solegendary.reignofnether.ability.abilities.FogBank f)
-                fog = f;
-        if (fog == null) {
-            helper.fail("the Admiral has no Fog Bank");
-            cleanup.run();
-            return;
-        }
-        final var fogBank = fog;
-        helper.runAfterDelay(5, () -> {
+        List<com.solegendary.reignofnether.ability.abilities.FogBank> fogs = new ArrayList<>();
+        long[] addedAt = { -1 };
+        boolean[] checked = { false };
+        GameTestChunks.whenEntitiesReady(helper, level, arenaChunks(helper), 5, 200, 900, "fog bank arena", () -> {
+            level.addFreshEntity(admiral);
+            level.addFreshEntity(friend);
+            com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(admiral);
+            for (var a : admiral.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.FogBank f)
+                    fogs.add(f);
+            if (fogs.isEmpty()) {
+                checked[0] = true;
+                cleanup.run();
+                helper.fail("the Admiral has no Fog Bank");
+                return;
+            }
+            addedAt[0] = helper.getTick();
+        });
+        // registered here, not in the callback above, and idle until the friends are added: registering a tick callback
+        // from inside whenEntitiesReady's callback corrupts vanilla's tick-time map (BuildingDamageGameTests)
+        helper.onEachTick(() -> {
+            if (checked[0] || addedAt[0] < 0 || helper.getTick() < addedAt[0] + 5)
+                return;
+            checked[0] = true;
+            var fogBank = fogs.get(0);
             try {
                 // control: before the fog the 8-block enemy can target the friend
-                if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend)
-                        || com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 10, level) != friend) {
-                    helper.fail("precondition: the enemy cannot see the friend before the fog");
+                var picked = com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 10, level);
+                if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) || picked != friend) {
+                    // named, so a CI failure says whether a neighbouring test's unit was closer (PR 380 green r2: 2/8)
+                    helper.fail("precondition: the enemy cannot see the friend before the fog (friend hidden "
+                        + com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) + ", concealed "
+                        + com.solegendary.reignofnether.unit.Concealment.isConcealed(friend) + ", picked " + describe(picked)
+                        + ", nearest stranger " + nearestStranger(foe, foeOwner, 10, List.of(admiral, friend, architect)) + ")");
                     return;
                 }
                 fogBank.use(level, admiral, spot.below());   // also runs a cover pass
@@ -9412,7 +9463,7 @@ public class SkirmishGameTests {
                 level.addFreshEntity(e);
         com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(sage);
         helper.runAfterDelay(5, () -> {
-            int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
+            int unitsBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner);
             // never a commander
             if (com.solegendary.reignofnether.ability.abilities.MirrorImages.cast(level, mage, owner, sage, true) != null
                     || Math.abs(pool.getEnergy() - 500) > 0.01f) {
@@ -9445,8 +9496,8 @@ public class SkirmishGameTests {
             if (com.solegendary.reignofnether.unit.UnitServerEvents.getUnitToEntityRelationship((com.solegendary.reignofnether.unit.interfaces.Unit) foe, decoys.get(0))
                     != com.solegendary.reignofnether.unit.Relationship.HOSTILE)
                 helper.fail("an enemy does not see a decoy as hostile");
-            if (com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner) != popBefore)
-                helper.fail("decoys count toward population: " + com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner) + " vs " + popBefore);
+            if (com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner) != unitsBefore)   // (was population)
+                helper.fail("decoys count as units: " + com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner) + " vs " + unitsBefore);
             // a decoy's blow lands no damage
             float foeHp = foe.getHealth();
             foe.hurt(level.damageSources().mobAttack(decoys.get(0)), 6f);
