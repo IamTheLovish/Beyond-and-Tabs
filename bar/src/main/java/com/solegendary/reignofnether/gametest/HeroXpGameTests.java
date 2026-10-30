@@ -19,7 +19,9 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
  * near a hero is worth (pop + 1) x 5 points, sent as orbs of 2 and a last orb of 1; a player's orb pays half its value
  * (int), so that last orb paid nothing - an even-pop kill lost 5 XP every time. And the XP rode on the orbs: a hero that
  * fell before they reached it never got it. The kill now pays at the kill, exactly; the orbs are only the look.
- * Written before the code (tests first).
+ * Written before the code (tests first). Each test has a batch of its own: a death within 20 blocks pays every enemy
+ * hero there, and a neighbouring arena's kill paid this one's hero too (green 41087007818: "a 2-pop kill paid 175 XP,
+ * not 75" on all 8 runners, the 100 of a neighbour's Vindicator).
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -33,7 +35,7 @@ public class HeroXpGameTests {
     }
 
     /** A Spider (2 population, an even pop: the old split lost its last point) killed beside a still hero. */
-    @GameTest(template = ARENA, timeoutTicks = 260)
+    @GameTest(template = ARENA, batch = "hero_xp_pays_exactly_for_an_even_pop_kill", timeoutTicks = 260)
     public static void hero_xp_pays_exactly_for_an_even_pop_kill(GameTestHelper helper) {
         String me = HeroGameTests.owner(helper, "xp_exact"), them = HeroGameTests.owner(helper, "xp_exact_victim");
         Mob hero = HeroGameTests.spawnHero(helper, HeroKits.HORDE_WARCHIEF, me, 4, 4);
@@ -66,7 +68,7 @@ public class HeroXpGameTests {
      * The hero falls two ticks after its kill, before the orbs (eight blocks off) can reach it: the fallen hero's
      * record - what the revive brings back - still holds the kill's XP.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100)
+    @GameTest(template = ARENA, batch = "hero_xp_is_kept_when_the_hero_falls_right_after_the_kill", timeoutTicks = 100)
     public static void hero_xp_is_kept_when_the_hero_falls_right_after_the_kill(GameTestHelper helper) {
         String me = HeroGameTests.owner(helper, "xp_fall"), them = HeroGameTests.owner(helper, "xp_fall_victim");
         Mob hero = HeroGameTests.spawnHero(helper, HeroKits.HORDE_WARCHIEF, me, 3, 3);
@@ -101,7 +103,7 @@ public class HeroXpGameTests {
      * - what the revive brings back - gains XP. On main the orbs discarded themselves for a dying hero; paying at the
      * kill must ask the same (review r1 on PR 419).
      */
-    @GameTest(template = ARENA, timeoutTicks = 100)
+    @GameTest(template = ARENA, batch = "hero_xp_a_fallen_hero_earns_none", timeoutTicks = 100)
     public static void hero_xp_a_fallen_hero_earns_none(GameTestHelper helper) {
         String me = HeroGameTests.owner(helper, "xp_dead"), them = HeroGameTests.owner(helper, "xp_dead_victim");
         Mob hero = HeroGameTests.spawnHero(helper, HeroKits.HORDE_WARCHIEF, me, 3, 3);
@@ -138,7 +140,7 @@ public class HeroXpGameTests {
      * A neutral kill (no owner) pays a point at 10 XP, twice a player's unit, as the old neutral orbs did, and its orbs
      * still fly. MAX_NEUTRAL_EXP_LEVEL is now asked once per kill (the old orbs asked as each landed).
      */
-    @GameTest(template = ARENA, timeoutTicks = 120)
+    @GameTest(template = ARENA, batch = "hero_xp_pays_double_for_a_neutral_kill", timeoutTicks = 120)
     public static void hero_xp_pays_double_for_a_neutral_kill(GameTestHelper helper) {
         String me = HeroGameTests.owner(helper, "xp_neutral");
         Mob hero = HeroGameTests.spawnHero(helper, HeroKits.HORDE_WARCHIEF, me, 4, 4);
@@ -171,7 +173,7 @@ public class HeroXpGameTests {
     }
 
     /** The orbs still fly to the hero (the look of the XP), but landing pays nothing more than the kill already did. */
-    @GameTest(template = ARENA, timeoutTicks = 260)
+    @GameTest(template = ARENA, batch = "hero_xp_orbs_still_fly_and_pay_nothing_more", timeoutTicks = 260)
     public static void hero_xp_orbs_still_fly_and_pay_nothing_more(GameTestHelper helper) {
         String me = HeroGameTests.owner(helper, "xp_orbs"), them = HeroGameTests.owner(helper, "xp_orbs_victim");
         Mob hero = HeroGameTests.spawnHero(helper, HeroKits.HORDE_WARCHIEF, me, 3, 3);
