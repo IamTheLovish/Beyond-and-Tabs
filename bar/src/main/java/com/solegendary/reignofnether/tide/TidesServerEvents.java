@@ -9,7 +9,6 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -24,8 +23,12 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import java.util.UUID;
 
 /**
- * Tidewrought <b>Tides</b> buff (design/tidewrought_plan.md 3.3): a tidal unit standing on a tidepool or in real water
- * is {@link #SPEED_BONUS} faster and regenerates {@link #REGEN_PER_PASS} HP every {@link #PASS_TICKS} ticks (2 HP/s).
+ * Tidewrought <b>Tides</b> buff (design/tidewrought_plan.md 3.3), now the Light Grid's (design/ai_faction.md, slice 1a):
+ * a tidal unit standing on a tidepool - a grid tile - is {@link #SPEED_BONUS} faster and regenerates
+ * {@link #REGEN_PER_PASS} HP every {@link #PASS_TICKS} ticks (2 HP/s).
+ * <p>
+ * Real water gives nothing since slice 1a: the maps are dry and the bonus is the grid's (lovish Oct 29: "there isnt
+ * water").
  * <p>
  * Who is tidal ({@link #isTidal}): a unit whose faction's {@link FactionTraits#tidal} is set (the Tidewrought), or any
  * unit carrying the {@link #TIDAL_TAG} entity tag (summons borrowed from another faction, and the game tests).
@@ -33,7 +36,7 @@ import java.util.UUID;
  * <p>
  * Cost at 8v8: one pass every {@link #PASS_TICKS} ticks over the existing unit list - for a non-tidal unit that is
  * one faction-traits lookup, for a tidal one a single block-state read at its feet. The speed modifier (fixed UUID,
- * transient) is only added or removed when a unit steps on or off the water, never rewritten while it stays. No
+ * transient) is only added or removed when a unit steps on or off the grid, never rewritten while it stays. No
  * packets: speed syncs through attributes, health through vanilla.
  */
 public class TidesServerEvents {
@@ -60,11 +63,11 @@ public class TidesServerEvents {
         return e.getTags().contains(TIDAL_TAG) || FactionTraits.of(Factions.getFaction(u)).tidal;
     }
 
-    /** Is the entity standing on a tidepool or in real water (source, flowing or waterlogged) right now? */
+    /** Is the entity standing on a tidepool (a grid tile) right now? Real water does not count (slice 1a). */
     public static boolean isWet(LivingEntity le) {
         feet.set(le.getX(), le.getY() + 0.1, le.getZ());
         BlockState bs = le.level().getBlockState(feet);
-        return bs.getBlock() instanceof TidepoolBlock || bs.getFluidState().is(FluidTags.WATER);
+        return bs.getBlock() instanceof TidepoolBlock;
     }
 
     /** Does this unit carry the Tides speed modifier right now? */

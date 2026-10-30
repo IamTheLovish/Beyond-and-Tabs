@@ -179,7 +179,7 @@ public class MonsterWaveSpawner {
                 break;
         }
         if (remainingPop > 0) {
-            PlayerServerEvents.sendMessageToAllPlayers("Failed to spawn " + remainingPop + "/" + pop + " population worth of monster units");
+            PlayerServerEvents.sendMessageToAllPlayers("Failed to spawn " + remainingPop + "/" + pop + " of the wave's strength in monster units");
         }
         lastFaction = Factions.MONSTERS;
     }
