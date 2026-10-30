@@ -87,6 +87,8 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
     private double scanX, scanZ, scanUx, scanUz, maxFeet = Double.POSITIVE_INFINITY;
     private float detourYaw = 0f;
     private int detourTicks = 0, detourSide = 1, detourTotal = 0;
+    /** The point of the order the way round and the side-steps were found for (a new order drops them). */
+    private double orderX = Double.NaN, orderZ = Double.NaN;
     /** The Dive's ground spot while it stoops (BoneDragonUnit.startDive), and whether it is down on the ground. */
     private Vec3 diveTo = null;
     private boolean landed = false;
@@ -168,6 +170,16 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
 
     @Override
     public void tick() {
+        double ox = wantedX - orderX, oz = wantedZ - orderZ;
+        if (operation == Operation.MOVE_TO && (Double.isNaN(ox) || ox * ox + oz * oz > 1.0)) {
+            orderX = wantedX;
+            orderZ = wantedZ;
+            detourTicks = 0;
+            detourTotal = 0;
+            bypassTicks = 0;
+            noWayTicks = 0;
+            routeIn = 0;
+        }
         // the nose starts from the body's yaw as it is now: BoneDragonUnit.updateRotation leaves the two equal, but a
         // dragon ordered in its spawn tick (the state was built at yaw 0, before the spawn's moveTo) or turned by other
         // code (a conversion, a possession) would otherwise swing its nose to a stale heading in one tick
@@ -217,20 +229,20 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
                 bypassTicks = 0;
                 // side-stepping out from under what shut it in: level, along the detour, then back on the route -
                 // not while something still covers its back (a porch roof: back on the route it would only climb
-                // into it again), up to DETOUR_MAX ticks in all
-                if (--detourTicks == 0 && underCover() && (detourTotal += DETOUR_TICKS) < DETOUR_MAX)
-                    detourTicks = DETOUR_TICKS;
+                // into it again): another side-step, its way picked afresh (the last one may have run into a
+                // corner), up to DETOUR_MAX ticks under cover in all
+                if (--detourTicks == 0 && underCover() && detourTotal < DETOUR_MAX)
+                    startCoverDetour(dx, dz);
                 if (detourTicks == 0) {
                     sweepIn = 0;                      // look again at once, before it steers back into what shut it in
                     routeIn = 0;
-                    detourTotal = 0;
                 }
                 double r = Math.toRadians(detourYaw);
                 dx = -Math.sin(r) * 8.0;
                 dz = Math.cos(r) * 8.0;
                 dy = 0.0;
                 blocked = false;
-            } else if (underCover() && startDetour((float) Math.toDegrees(-Math.atan2(dx, dz)))) {
+            } else if (underCover() && detourTotal < DETOUR_MAX && startCoverDetour(dx, dz)) {
                 // something over its back (a roof): no route reads here - the ground under it is the roof - out first
                 bypassTicks = 0;
                 double r = Math.toRadians(detourYaw);
@@ -240,6 +252,8 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
                 blocked = false;
             } else {
                 double hd = Math.sqrt(dx * dx + dz * dz);
+                if (!underCover())
+                    detourTotal = 0;                  // out from under: the next roof gets its own DETOUR_MAX
                 if (noWayTicks > 0)
                     noWayTicks--;
                 if (routeIn-- <= 0) {
@@ -429,6 +443,14 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
      * {@link #DETOUR_TICKS} along the first open way round the line to the point (wantYaw) - 45, 90, then 135 degrees
      * off it, the side it last stepped to first. False when every way is shut: it hovers where it is.
      */
+    /** A side-step out from under cover, counted against DETOUR_MAX (the way to the point is dx, dz). */
+    private boolean startCoverDetour(double dx, double dz) {
+        if (!startDetour((float) Math.toDegrees(-Math.atan2(dx, dz))))
+            return false;
+        detourTotal += DETOUR_TICKS;
+        return true;
+    }
+
     private boolean startDetour(float wantYaw) {
         for (float off : new float[] { 45f, 90f, 135f })
             for (int side : new int[] { detourSide, -detourSide }) {
