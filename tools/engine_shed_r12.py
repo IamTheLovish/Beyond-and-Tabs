@@ -46,6 +46,7 @@ WINDOWS = [("west", 4, (17, 18), 3, 5), ("west", 4, (20, 21), 3, 5), ("west", 4,
            ("south", 24, (5, 6, 7), 3, 5), ("south", 24, (9, 10, 11), 3, 5),
            ("south", 16, (1, 2), 3, 5), ("south", 16, (1, 2), 7, 8), ("south", 16, (5, 6), 8, 9),
            ("south", 16, (8, 9), 8, 9)]
+LAMPS = set()          # round 3: the hanging lanterns inside the window rooms (room_lamps())
 INWARD = {"west": "east", "east": "west", "north": "south", "south": "north"}
 
 

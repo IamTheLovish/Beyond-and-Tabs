@@ -19,7 +19,9 @@ import unittest
 from collections import Counter, deque
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import building_gates as G  # noqa: E402
 import camera_colour as CC  # noqa: E402
+import gen_blocks as GB  # noqa: E402
 import schem_study as S  # noqa: E402
 from test_engine_shed_r11 import HAVE_NUMPY, EngineShedR11, full  # noqa: E402
 
@@ -375,8 +377,14 @@ class EngineShedR12(EngineShedR11):
                      and any(k in n for k in ("deepslate", "blackstone", "coal")))
         self.assertEqual(bad[:8], [], len(bad))
 
+    @unittest.skip("retired round 3: the designer reverted to one material, band 0.50-0.62 (test_r3_spire_value_band)")
     def test_r2_spire_value_band(self):
-        """Measured r1: the spire's area VALUE 0.52-0.54 (pixels) - the lightest large area at RTS; critics: "the
+        """RETIRED round 3. Round 2 met this band (0.464 / 0.443) only with grey cyan-terracotta drips, which both
+        round-2 critics read as "a mint arrow on dark grey" (a chequer-type fault); no single verdigris block lands in
+        both lovish's saturation band and 0.36-0.48 (dark prismarine estimates sat ~0.34). The round-3 designer went back
+        to one material at round 1's 0.55 (critic B, round 2: 0.46 "drops into the ground mids").
+
+        Measured r1: the spire's area VALUE 0.52-0.54 (pixels) - the lightest large area at RTS; critics: "the
         biggest saturated area ... may read as a team colour". The tower roof's area colour in rts_close and 34 (the mean
         of its pixels as the stills show its blocks) has value 0.36-0.48: darker than r1, not as dark as the slate
         (0.26)."""
@@ -400,17 +408,19 @@ class EngineShedR12(EngineShedR11):
             self.assertEqual(bad, [], s["top"])
 
     def test_r2_stack_shaft_tones(self):
-        """The designer's band: every stack cell the rts / rts_close / 34 stills show between the stone wash and the
-        soot (wash + 1 .. top - 6) reads camera value 0.30-0.46 and saturation <= 0.45 - the wall brick's range, no lit
-        skirt."""
+        """No lit skirt on the shaft: every stack cell the rts / rts_close / 34 stills show between the stone wash and the
+        soot (wash + 1 .. top - 6) reads camera value 0.30-0.47 (round-3 designer: the wall brick's 0.33-0.45 plus 0.03 for
+        run drift) and saturation at most the wall brick's own on that face + 0.03. (Round 2 had an absolute cap of 0.45:
+        plain wall brick itself measured 0.434 in run 41022055197 and 0.455 in run 41026048601 on its west face, so the
+        cap sat inside the drift; the round-1 brick wash, value 0.525, sat 0.50-0.53, still fails both forms.)"""
         for s in self.m["stacks"]:
             foot, _, _ = self.stack_parts(s)
             bad = Counter()
             for st in ("rts", "rts_close", "34"):
                 for h in self.p.hits[st].values():
                     if self.in_stack(h[0], s, 0) and foot + 2 <= h[0][1] <= s["top"] - 6:
-                        c = CC.lookup(self.table, h[1], h[2])
-                        if not c or not (0.30 <= c[2] <= 0.46 and c[1] <= 0.45):
+                        c, br = CC.lookup(self.table, h[1], h[2]), CC.lookup(self.table, "bricks", h[2])
+                        if not c or not (0.30 <= c[2] <= 0.47 and c[1] <= br[1] + 0.03):
                             bad[(h[1], h[2], c)] += 1
             self.assertEqual(list(bad.most_common(4)), [], s["top"])
 
@@ -430,8 +440,12 @@ class EngineShedR12(EngineShedR11):
         self.assertGreaterEqual(warm / len(hits), 0.80, (warm, len(hits), Counter(h[3][1] for h in hits if h[3]
                                                                                   ).most_common(4)))
 
+    @unittest.skip("retired round 3: both round-2 critics read the drip as a hole; replaced by test_r3_shaft_clean")
     def test_r2_soot_drips_down_each_stack(self):
-        """Critics r1: the soot "reads as a black collar ... not staining down the shaft". On each stack's two camera
+        """RETIRED round 3: critic A "a hard dark patch that reads as an opening", critic B "not separable from the old
+        dark band"; the designer kept the study chimney's dark top course (koin) and dropped the drip.
+
+        Critics r1: the soot "reads as a black collar ... not staining down the shaft". On each stack's two camera
         faces (west, south) soot cells by look run down >= 3 consecutive courses from the course under the crown."""
         p = self.p
         for s in self.m["stacks"]:
@@ -476,6 +490,108 @@ class EngineShedR12(EngineShedR11):
             vals = [CC.lookup(self.table, h[1], h[2]) for h in hits]
             mid = sum(1 for v in vals if v and FRAME_VAL[0] <= v[2] <= FRAME_VAL[1]) / len(hits)
             self.assertGreaterEqual(mid, 0.70, (still, round(mid, 3), Counter(h[1] for h in hits).most_common(3)))
+
+    # ------------------------------------------------------------------------------------------- round 3: the round-2
+    # critics (RTS 6.5 / 6.5, towers 6 / 6, gate 4 / 4, weathering 4 / 3, dusk 4 / 4 - no gain), the round-3 designer
+    # (itachi2-api run 20261030-043958-r12-round3-designer) and lovish's answers (Oct 30: the obsidian lump is the coal
+    # stage; a straight slim shaft; a lantern inside a room, seen through the glass, is OK)
+    def test_r3_spire_one_material(self):
+        """Critics r2: the grey drips "a mint arrow on dark grey". Of the tower roof's pixels in rts_close and 34, at most
+        5 % are a second material (anything but prismarine)."""
+        for still in ("rts_close", "34"):
+            hits = self.tower_roof_hits(still)
+            other = sum(1 for h in hits if "prismarine" not in h[1]) / len(hits)
+            self.assertLessEqual(other, 0.05, (still, round(other, 3), Counter(h[1] for h in hits).most_common(3)))
+
+    def test_r3_spire_value_band(self):
+        """The designer (round 3): the tower roof's area value (the mean of its pixels as the stills show its blocks) in
+        rts_close and 34 is 0.50-0.62 - a light accent (critic B, round 2: 0.46 "drops into the ground mids"), no paler
+        than the prismarine roof itself (0.62). Round 1 measured 0.549 / 0.522."""
+        import colorsys
+        import numpy as np
+        for still in ("rts_close", "34"):
+            hits = self.tower_roof_hits(still)
+            px = [CC.lookup_rgb(self.table, h[1], h[2]) for h in hits]
+            self.assertGreaterEqual(sum(1 for q in px if q) / len(px), 0.95, (still, "not photographed yet", Counter(
+                h[1] for h, q in zip(hits, px) if not q).most_common(3)))
+            v = colorsys.rgb_to_hsv(*np.array([q for q in px if q]).mean(0))[2]
+            self.assertTrue(0.50 <= v <= 0.62, (still, round(v, 3)))
+
+    def test_r3_shaft_clean_below_the_soot_course(self):
+        """Critics r2: the drip "reads as an opening". No soot cell (by look) on a stack's shaft below its blackened
+        course (top - 2), down to the wash."""
+        p = self.p
+        for s in self.m["stacks"]:
+            foot, _, _ = self.stack_parts(s)
+            sx0, sx1, sz0, sz1 = s["shaft"]
+            bad = [(q, p.n[q]) for y in range(foot + 1, s["top"] - 2) for q, f in
+                   [((sx0, y, z), "west") for z in range(sz0, sz1 + 1)] + [((x, y, sz1), "south")
+                                                                           for x in range(sx0, sx1 + 1)]
+                   if q in p.n and self.soot(p.n[q], f)]
+            self.assertEqual(bad, [], s["top"])
+
+    def coal_stage(self):
+        return {q: n for q, n in self.p.n.items() if q[0] in (1, 2) and q[2] in (1, 2, 3) and q[1] >= 2
+                and S.glyph(n) != "|"}
+
+    def dark(self, n, face):
+        """Near-black by look: camera value < 0.22 where the table has it, else the pack's luma < 0.22."""
+        c = CC.lookup(self.table, n, face)
+        if c:
+            return c[2] < 0.22
+        t = GB.TARGETS.get(base(n))
+        return bool(t) and t["luma"] < 0.22
+
+    def test_r3_coal_stage_not_an_obsidian_lump(self):
+        """lovish (Oct 30): the "obsidian lump" is the coal stage (measured round 2: area value 0.07-0.09, a solid
+        black 2 x 3 block). The designer: a heap - no dark cell above the plinth top + 2 (y 3), and the largest connected
+        group of near-black cells (camera value < 0.22, else pack luma) at most 3."""
+        cells = self.coal_stage()
+        self.assertTrue(cells)
+        self.assertEqual(sorted(q for q in cells if q[1] > 3), [])
+        dark = {q for q, n in cells.items() if self.dark(n, "up")}
+        best, seen = 0, set()
+        for q in dark:
+            if q in seen:
+                continue
+            todo, comp = [q], set()
+            while todo:
+                c = todo.pop()
+                if c in comp or c not in dark:
+                    continue
+                comp.add(c)
+                todo += [(c[0] + a, c[1] + b, c[2] + d) for a, b, d in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0),
+                                                                        (0, 0, 1), (0, 0, -1))]
+            seen |= comp
+            best = max(best, len(comp))
+        self.assertLessEqual(best, 3, sorted(dark))
+
+    def test_r3_coal_stage_value_band(self):
+        """The designer: the coal stage's area value (its pixels as rts and rts_close show its blocks) 0.20-0.32 - still
+        coal (not grey), no longer a black hole (round 2: 0.07-0.09)."""
+        import colorsys
+        import numpy as np
+        cells = self.coal_stage()
+        for still in ("rts", "rts_close"):
+            hits = [h for h in self.p.hits[still].values() if h[0] in cells]
+            self.assertGreater(len(hits), 100, still)
+            px = [CC.lookup_rgb(self.table, h[1], h[2]) for h in hits]
+            self.assertGreaterEqual(sum(1 for q in px if q) / len(px), 0.95, (still, "not photographed yet", Counter(
+                h[1] for h, q in zip(hits, px) if not q).most_common(3)))
+            v = colorsys.rgb_to_hsv(*np.array([q for q in px if q]).mean(0))[2]
+            self.assertTrue(0.20 <= v <= 0.32, (still, round(v, 3)))
+
+    def test_r3_a_lamp_inside_every_window_room(self):
+        """lovish (Oct 30): a warm lantern inside a room, 2-3 blocks behind the glass and seen through it, is "light
+        inside the rooms". Behind each camera-face window (r11's WINDOWS on the south and west faces) a hanging lantern
+        stands 2-3 blocks in, the dusk still shows it through that window's glass, and no camera sees it straight."""
+        p = self.p
+        lamps = {q for q, n in p.n.items() if n == "lantern" and q in E.LAMPS}
+        self.assertGreaterEqual(len(lamps), len(E.WINDOWS) - 2, sorted(lamps))     # (a lane window may have none)
+        through = {h[3][0] for h in p.hits["dusk"].values() if S.glyph(h[1]) == "g" and h[3]}
+        straight = {h[0] for st in G.STILLS for h in p.hits[st].values()}
+        self.assertEqual(sorted(lamps - through), [], "lamps the dusk still does not see through glass")
+        self.assertEqual(sorted(lamps & straight), [], "lamps seen straight")
 
 
 def block_light(n):
