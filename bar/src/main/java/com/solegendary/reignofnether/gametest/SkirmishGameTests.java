@@ -808,7 +808,10 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Raise Dead: needs population room; with it, a wreck rises as a Ghoul and pays from the wreck first. */
+    /**
+     * Raise Dead: a wreck rises as a Ghoul and pays from the wreck first. (Its "needs population room" half retired -
+     * lovish Oct 29: no max population; the ghouls' own limit is NoMaxPopulationGameTests' 8 per player.)
+     */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void raise_dead_turns_wrecks_into_ghouls(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -827,37 +830,30 @@ public class SkirmishGameTests {
         var wreck = com.solegendary.reignofnether.resources.WreckServerEvents.spawnWreck(level, at.getX() - 1.5,
             at.getY(), at.getZ() + 0.5, 200f, com.solegendary.reignofnether.faction.Factions.MONSTERS);
         helper.runAfterDelay(3, () -> {
-            if (wreck == null || wreck.isRemoved()) {
-                helper.fail("test wreck did not spawn");
-                return;
-            }
-            int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
-            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
-            int none;
-            try {   // the cap is server-wide: a throw must not leave it at 0 for every later test
-                none = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
+            List<String> problems = new ArrayList<>();
+            try {   // cleaned up whatever the verdict (PR #394 review, N5)
+                if (wreck == null || wreck.isRemoved())
+                    throw new IllegalStateException("test wreck did not spawn");
+                int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
+                if (raised != 1)
+                    problems.add("expected one Ghoul from one wreck, got " + raised);
+                float left = com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(wreck);
+                if (left > 200f - com.solegendary.reignofnether.resources.ResourceCosts.ZOMBIE.metal() + 0.01f)
+                    problems.add("the Ghoul was not paid from the wreck (" + left + " left)");
+                if (pool.getMetal() < -0.01f || pool.getMetal() > 0.01f)
+                    problems.add("pool paid although the wreck covered the cost: " + pool.getMetal());
             } finally {
-                com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+                for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, lich.getBoundingBox().inflate(6)))
+                    if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()))
+                        e.discard();
+                if (wreck != null)
+                    wreck.discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
             }
-            if (none != 0)
-                helper.fail("raised a Ghoul past the unit cap");
-            com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
-            int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
-            int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
-            com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
-            if (raised != 1)
-                helper.fail("expected one Ghoul from one wreck, got " + raised);
-            float left = com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(wreck);
-            if (left > 200f - com.solegendary.reignofnether.resources.ResourceCosts.ZOMBIE.metal() + 0.01f)
-                helper.fail("the Ghoul was not paid from the wreck (" + left + " left)");
-            if (pool.getMetal() < -0.01f || pool.getMetal() > 0.01f)
-                helper.fail("pool paid although the wreck covered the cost: " + pool.getMetal());
-            for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, lich.getBoundingBox().inflate(6)))
-                if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()))
-                    e.discard();
-            wreck.discard();
-            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
-            helper.succeed();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
         });
     }
 
@@ -1133,27 +1129,20 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
-    /** Bone Dragon kills rise: needs population room, leaves no wreck, crumbles on time. */
+    /**
+     * Bone Dragon kills rise, leave no wreck and crumble on time. (Its "needs population room" half retired - lovish
+     * Oct 29: no max population; the 8-per-owner risen cap is its own limit.)
+     */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void dragon_risen_skeletons_are_free_and_temporary(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_wyrm";
         BlockPos at = helper.absolutePos(new BlockPos(14, 2, 2));
-        int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
-        com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
-        net.minecraft.world.entity.Entity none;
-        try {   // the cap is server-wide: a throw must not leave it at 0 for every later test
-            none = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
-        } finally {
-            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
-        }
-        if (none != null)
-            helper.fail("raised a skeleton past the unit cap");
         com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
         var risen = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
         com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
         if (risen == null) {
-            helper.fail("no skeleton rose with population room");
+            helper.fail("no skeleton rose");
             return;
         }
         var where = risen.position();   // tests run in parallel: look for a wreck HERE, not at the global count
@@ -9412,7 +9401,7 @@ public class SkirmishGameTests {
                 level.addFreshEntity(e);
         com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(sage);
         helper.runAfterDelay(5, () -> {
-            int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
+            int unitsBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner);
             // never a commander
             if (com.solegendary.reignofnether.ability.abilities.MirrorImages.cast(level, mage, owner, sage, true) != null
                     || Math.abs(pool.getEnergy() - 500) > 0.01f) {
@@ -9445,8 +9434,8 @@ public class SkirmishGameTests {
             if (com.solegendary.reignofnether.unit.UnitServerEvents.getUnitToEntityRelationship((com.solegendary.reignofnether.unit.interfaces.Unit) foe, decoys.get(0))
                     != com.solegendary.reignofnether.unit.Relationship.HOSTILE)
                 helper.fail("an enemy does not see a decoy as hostile");
-            if (com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner) != popBefore)
-                helper.fail("decoys count toward population: " + com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner) + " vs " + popBefore);
+            if (com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner) != unitsBefore)   // (was population)
+                helper.fail("decoys count as units: " + com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner) + " vs " + unitsBefore);
             // a decoy's blow lands no damage
             float foeHp = foe.getHealth();
             foe.hurt(level.damageSources().mobAttack(decoys.get(0)), 6f);

@@ -59,7 +59,7 @@ public class AngelCallerProd extends ProductionItem implements IUnitProductionIt
             List.of(
                 Component.translatable("entity.reignofnether.angel_caller_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.angel_caller_unit.tooltip1").getVisualOrderText()
             ),
