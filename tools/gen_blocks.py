@@ -70,7 +70,12 @@ TARGETS = {
     # 0.19 on screen vs <= 0.10, and the per-block repeat visible): mean +5% (0.645 -> 0.677), sat 0.11 -> 0.21, the
     # texel contrast halved (std 0.042 -> 0.03, soften 1.2 -> 2.0, tilt 7 -> 5, ao 0.4 -> 0.25, calmer leaflets in
     # clover_lawn), the mound mottle kept; each variant its OWN lawn (OWN_SEED_VARIANTS), not a turned copy
-    "grass_block_top":  dict(luma=0.677, std=0.024, sat=0.21, lf=0.3, ao=0.15, tilt=4.0, smooth=24, pore=40, soften=2.4,
+    # lawn L1 (lp17, the first fair stills with the pack loaded; the lit lawn 105/132/53 = hue 81 sat 0.60 L 0.47 vs
+    # Complementary's 113/144/66 = 84 / 0.54 / 0.52, "olive, not fresh green"): the screen is the biome tint x the albedo
+    # (k ~ 1.03), this world's tint ~ (0.56, 0.77, 0.35), so the target albedo mean is ~0.75 with a slight neutral-
+    # magenta cast (1.07 / 1.0 / 1.02: it tempers the tint's green instead of adding yellow) - luma 0.677 -> 0.75, sat
+    # 0.21 -> 0.08; the r50 calm speckle and own-seed variants kept
+    "grass_block_top":  dict(luma=0.75, std=0.024, sat=0.08, lf=0.3, ao=0.15, tilt=4.0, smooth=24, pore=40, soften=2.4,
                              shoulder=0.82),
     # r46 (eyes stack7: the sampler pads' rim - this face - was the darkest thing on screen at ~0.12 at 5000): the
     # soil is the dirt texture (_scan_grass_side), so the lift is its humus band (0.22 -> 0.10 darker) - gate G5
@@ -1490,7 +1495,7 @@ for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_b
 for _p in ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top"):
     # r42 (eyes 41058728743: far tufts read as a tan speckle at the 34 view): the straw closer to the lawn's screen
     # value and duller - luma 0.50 -> 0.42, sat 0.36 -> 0.24 - so it melts in with distance
-    TARGETS[_p] = dict(luma=0.42, std=0.110, sat=0.30, tilt=12.0, smooth=50, pore=120)   # r48: warmer straw (sat 0.24 -> 0.30)
+    TARGETS[_p] = dict(luma=0.36, std=0.110, sat=0.30, tilt=12.0, smooth=50, pore=120)   # r48: warmer; lawn L1: darker green-khaki
 # r34 (tufts round 34; critic r33: tufts 4/10 default, 6/10 preset): bold-blade sprites (tools/plant_sprites.py) and
 # more shapes - three short grasses, two ferns, two tall grasses - so neighbouring tufts differ. Each extra shape
 # takes its first shape's targets; appended (SEED_ORDER rule). m_plant fits only their luma MEAN and saturation, over
@@ -1550,12 +1555,12 @@ for _p in FLOWER_TEXTURES:
 # 0.68 mean: plant_sprites TIP / BASE), a dark base (~0.33 tinted), the hue ~10 degrees toward yellow (m_plant)
 for _sh in ("", "_b", "_c"):
     for _sz in ("", *PLANT_SIZES):
-        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.68, sat=0.16)   # r50: olive, not lime
+        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.58, sat=0.14)   # r50: olive; lawn L1: green, body under the lawn
 for _p in ("fern", "fern_b", "fern_t", "fern_b_t"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.64, sat=0.12)
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.55, sat=0.12)   # lawn L1
 for _p in ("tall_grass_bottom", "tall_grass_top", "large_fern_bottom", "large_fern_top", "tall_grass_bottom_b",
            "tall_grass_top_b"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.66, sat=0.16)
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.57, sat=0.14)   # lawn L1
 PLANT_SEEDS = (
     "grass",
     "tall_grass_bottom",
@@ -4561,7 +4566,7 @@ def m_plant(name, n):
     H, shade = full[0], full[1]
     alpha = full[3] if straw else full[2]
     if straw:   # dry straw: a warm olive-yellow (r45: tan read pink; r48: khaki read grey-blue under the sky)
-        rgb = np.array([0.74, 0.68, 0.34])[None, None, :] * shade[..., None]
+        rgb = np.array([0.56, 0.60, 0.34])[None, None, :] * shade[..., None]   # lawn L1: a green-khaki straw, not tan
     else:
         # r31 (fresh critic r31/r32, in-game noon stills: from above the tufts vanished into the lawn - same tint, same
         # value - and only their sun shadows showed, as dark stars): the blades carry a little warmth of their own, so
@@ -4573,7 +4578,9 @@ def m_plant(name, n):
         # toward yellow (hue 60 in albedo -> ~70 tinted vs the lawn's 79), sat 0.26
         # r50 (the tips showed as 2-4 px lime dots at the RTS zoom): the bias toward olive - less chroma, a touch of
         # red in it, so the bright tips are not neon
-        rgb = np.stack([shade * 1.10, shade * 1.0, shade * 0.70], -1)
+        # lawn L1 (lp17: the tufts read tan, 119/118/84, sat 0.31, beside Complementary's dark-green tufts): a GREEN
+        # bias (hue ~130 in albedo -> ~88 tinted), the body under the lawn
+        rgb = np.stack([shade * 0.95, shade * 1.03, shade * 0.90], -1)
     t = TARGETS[name]
     alb = ps.bleed(_plant_fit(np.clip(rgb, 0, 1), alpha > 0.05, t["luma"], t["sat"]), alpha)
     H = ps.bleed(np.where(alpha > 0, H, 0.0), alpha)
@@ -5322,7 +5329,7 @@ def clover_lawn(F, n):
     warm = np.where(fl, 1.5, warm)
     hue = np.clip(warm, -1.5, 1.5)
     alb = np.clip(np.stack([shade * (1 + 0.05 * hue), shade * (1 + 0.01 * hue), shade * (1 - 0.06 * hue)], -1) * 0.55, 0, 1)
-    alb = np.clip(alb * np.array([1.14, 1.0, 0.80]), 0, 1)   # r39: the mean ~6 degrees toward yellow-green (the fit
+    alb = np.clip(alb * np.array([1.07, 1.0, 1.02]), 0, 1)   # r39: yellow cast; lawn L1: a slight neutral-magenta cast (the fit
     # scales the cast down with the leaf-to-leaf spread when it sets sat, so it is pushed hard here)
     return H, alb, flowers
 
