@@ -50,7 +50,7 @@ public final class CommandCard {
     public static List<Order> orders(boolean attacker, boolean worker, boolean canGarrison, boolean garrisoned) {
         List<Order> out = new ArrayList<>(10);
         // Fight / Attack-move (F) is the one attack order, for every attacker - workers and the commander too (lovish,
-        // Oct 22: "only f"). The workers' old F build slot (hotkey3) moved to [ / E (Factions) so F is never shared.
+        // Oct 22: "only f"). A worker's F build-grid cell is live only in an open tab (BuildTabs.onKey runs first).
         if (attacker)
             out.add(Order.FIGHT);
         out.add(Order.MOVE);

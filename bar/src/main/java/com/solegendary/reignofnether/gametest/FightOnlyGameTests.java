@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.Building;
+import com.solegendary.reignofnether.building.BuildGroup;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.keybinds.FightArm;
 import com.solegendary.reignofnether.keybinds.KeyPress;
@@ -25,7 +26,7 @@ import java.util.Map;
  * Fight (F) is the only attack order (lovish, Oct 22: "we dont need f and x, only f"; and "I have to double click twice
  * with F to attack move"). Checks the pure rules behind it: FightArm (one press flips the armed state once), KeyPress
  * (the inventory slot keys stand down when the card has a button on the key), the bindings (no Attack, Fight on F), the
- * workers' build menus (nothing on F) and KeybindMigration's carry of a custom Attack key to Fight.
+ * workers' build menus (F only as a build-grid cell) and KeybindMigration's carry of a custom Attack key to Fight.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -73,8 +74,13 @@ public class FightOnlyGameTests {
         verdict(helper, problems);
     }
 
+    /**
+     * Main's build menu is BAR's grid (BuildGroup): the 8th cell of every tab is on the grid key F, live only while a tab
+     * is open (BuildTabs.onKey runs first and eats the key). So F is never two things: no tab open, F is Fight; a tab
+     * open, F picks the cell. A build slot on F that is NOT a grid key (the old hotkey3 slots) would fire with Fight.
+     */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
-    public static void fightonly_no_worker_build_slot_sits_on_f_in_any_faction(GameTestHelper helper) {
+    public static void fightonly_f_is_a_build_slot_only_as_a_grid_cell(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         int checked = 0;
         for (Faction f : ReignOfNetherRegistries.FACTIONS) {
@@ -82,8 +88,9 @@ public class FightOnlyGameTests {
                 checked++;
                 Keybinding kb = e.getValue();
                 if (kb == null) continue;
-                if (kb.getDefaultKey() == Keybindings.fight.getDefaultKey() || kb == Keybindings.hotkey3)
-                    problems.add(f.getName() + ": " + e.getKey().name + " is on the Fight key");
+                boolean onF = kb.getDefaultKey() == Keybindings.fight.getDefaultKey() || kb.getAliasKey() == Keybindings.fight.getDefaultKey();
+                if (kb == Keybindings.hotkey3 || (onF && !BuildGroup.SLOT_KEYS.contains(kb)))
+                    problems.add(f.getName() + ": " + e.getKey().name + " is on the Fight key outside the build grid");
             }
         }
         if (checked == 0) problems.add("no faction recorded any build hotkey (nothing was checked)");
