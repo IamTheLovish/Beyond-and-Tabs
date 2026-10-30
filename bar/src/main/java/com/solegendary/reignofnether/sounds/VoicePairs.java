@@ -12,19 +12,20 @@ import java.util.Iterator;
  * and a far one once (measured with [Ears], PR 426).
  * <p>
  * A copy is dropped only when its twin has just played: the same sound, one copy local and one from the server, within
- * {@link #NEAR} blocks and {@link #WINDOW} ticks of each other. Whichever arrives first plays. A far fight's local copy
- * has no twin and always plays. The same pairing removes other doubled events too (an iron golem's swing: the server's
+ * {@link #NEAR} blocks and {@link #WINDOW_MS} of each other. Whichever arrives first plays. A far fight's local copy
+ * has no twin and always plays. Time is real time (Util.getMillis): the client level's game time is no clock in this
+ * mod (ClientLevelMixin pins it to a normalised time of day, which stands still and jumps during night distortion). The same pairing removes other doubled events too (an iron golem's swing: the server's
  * doHurtTarget and the client's entity event 4 both play it).
  */
 public final class VoicePairs {
 
-    /** Ticks between the two copies of one event: the server's packet and the client's own event can be a few apart. */
-    static final int WINDOW = 6;
+    /** Between the two copies of one event: the server's packet and the client's own event can be a few ticks apart. */
+    static final long WINDOW_MS = 300;
     /** Blocks between them: the server's position and the client's interpolated one of the same entity. */
     static final double NEAR = 2.5;
     static final int MAX = 256;
 
-    private record Heard(String sound, double x, double y, double z, long tick, boolean local) { }
+    private record Heard(String sound, double x, double y, double z, long ms, boolean local) { }
 
     private final ArrayDeque<Heard> recent = new ArrayDeque<>();
 
@@ -32,12 +33,12 @@ public final class VoicePairs {
      * A sound about to play. Returns true when it is the second copy of one event (drop it); false to play it, and it
      * is remembered as a first copy.
      */
-    public boolean secondCopy(String sound, double x, double y, double z, boolean local, long tick) {
-        while (!recent.isEmpty() && (tick - recent.peekFirst().tick() > WINDOW || recent.size() > MAX))
+    public boolean secondCopy(String sound, double x, double y, double z, boolean local, long nowMs) {
+        while (!recent.isEmpty() && (nowMs - recent.peekFirst().ms() > WINDOW_MS || recent.size() >= MAX))
             recent.pollFirst();
         for (Iterator<Heard> it = recent.iterator(); it.hasNext(); ) {
             Heard h = it.next();
-            if (h.local() != local && h.sound().equals(sound) && Math.abs(tick - h.tick()) <= WINDOW) {
+            if (h.local() != local && h.sound().equals(sound) && Math.abs(nowMs - h.ms()) <= WINDOW_MS) {
                 double dx = h.x() - x, dy = h.y() - y, dz = h.z() - z;
                 if (dx * dx + dy * dy + dz * dz <= NEAR * NEAR) {
                     it.remove();   // one pair per event: a third copy would be a new event
@@ -45,8 +46,12 @@ public final class VoicePairs {
                 }
             }
         }
-        recent.addLast(new Heard(sound, x, y, z, tick, local));
+        recent.addLast(new Heard(sound, x, y, z, nowMs, local));
         return false;
+    }
+
+    int remembered() {
+        return recent.size();
     }
 
     public void clear() {
