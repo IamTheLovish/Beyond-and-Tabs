@@ -561,7 +561,8 @@ public class BuildingClientEvents {
 
     private static void renderLevel(RenderLevelStageEvent evt) throws NoSuchFieldException {
 
-        drawBuildingToPlace(
+        if (!AreaMexClientEvents.active())   // Shift with an extractor: the area-mex circle replaces the single ghost
+            drawBuildingToPlace(
                 evt.getPoseStack(),
                 BuildingUtils.getBuildingOriginPos(ghostCursor(), isBridge(buildingToPlace), buildingRotation, buildingDimensions),
                 0
@@ -673,6 +674,13 @@ public class BuildingClientEvents {
         // prevent clicking behind HUDs
         if (HudClientEvents.isMouseOverAnyButtonOrHud()) {
             setBuildingToPlace(null);
+            return;
+        }
+
+        // Shift + extractor ghost: area mex (every free patch in the circle); the ghost stays armed like a Shift placement
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1 && AreaMexClientEvents.active()) {
+            AreaMexClientEvents.place();
+            evt.setCanceled(true);
             return;
         }
 

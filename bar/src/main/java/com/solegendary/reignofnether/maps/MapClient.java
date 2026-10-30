@@ -32,6 +32,8 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec2;
@@ -170,6 +172,21 @@ public final class MapClient {
         return null;
     }
 
+    /** The humans the phase waits for (not placed, or placed and not ready; not one who left), lineup order. */
+    public static List<String> notReadyNames() {
+        List<String> names = new ArrayList<>();
+        for (MapStateClientboundPacket.PickInfo p : picks)
+            if (!p.bot() && !p.left() && !(p.placed() && p.ready()))
+                names.add(p.name());
+        return names;
+    }
+
+    /** True once the local player has pressed Ready (the eyes tour and the panel). */
+    public static boolean myReady() {
+        MapStateClientboundPacket.PickInfo mine = myPick();
+        return mine != null && mine.ready();
+    }
+
     /** The phase's clock as the banner shows it (the server's count, synced each second); 0 outside the phase. */
     public static int secondsLeft() {
         return phase ? secondsLeft : 0;
@@ -228,6 +245,7 @@ public final class MapClient {
         prepPct = p.prepPct;
         if (p.prepStage >= 0)
             prepSeen = true;
+        com.solegendary.reignofnether.fogofwar.FogMemoryClient.onPrepState(wasPrepRunning, isPrepRunning());
         if (wasPrepRunning && !isPrepRunning())
             ReignOfNether.LOGGER.info("[Prep] the server reports the battlefield {}",
                 prepStage >= 0 ? "READY" : "preparation ended");
@@ -285,6 +303,11 @@ public final class MapClient {
     /** The countdown banner for the hint bar: yours, placed, or a watcher's. */
     private static String bannerText() {
         MapStateClientboundPacket.PickInfo mine = myPick();
+        if (mine != null && mine.ready()) {
+            List<String> waiting = notReadyNames();
+            return waiting.isEmpty() ? I18n.get("maps.reignofnether.startphase_all_ready")
+                : I18n.get("maps.reignofnether.startphase_ready_waiting", String.join(", ", waiting), secondsLeft);
+        }
         return mine == null ? I18n.get("maps.reignofnether.startphase_watch", secondsLeft)
             : mine.placed() ? I18n.get("maps.reignofnether.startphase_placed", secondsLeft)
             : I18n.get("maps.reignofnether.startphase", secondsLeft);
@@ -332,6 +355,8 @@ public final class MapClient {
             return;
         }
         StartMarkers.tick();
+        if (forceArmedTicks > 0 && (--forceArmedTicks == 0 || !phase))
+            forceArmedTicks = 0;
         // the countdown banner rides on the one hint bar (hud/HintBar), which draws it only on the RTS screen - never
         // over the pause menu (rover run 1, finding 9) and never under the loading veil
         if (phase) {
@@ -437,8 +462,16 @@ public final class MapClient {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fpS = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_MAP);
         try {
-            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            int fg = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_GATE);
+            boolean skip;
+            try {
+                skip = com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays();
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fg);
+            }
+            if (skip) return;   // shader pack shadow map: overlays cast no shadow
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
                 return;
             // the start markers show from the ground too (a hero sees the rim, fence and pillars); the rest is RTS-only
@@ -446,6 +479,7 @@ public final class MapClient {
                 StartMarkers.render(evt.getPoseStack(), evt.getCamera());
             if (!OrthoviewClientEvents.isEnabled())
                 return;
+            int fw = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_MAPWORLD);
             try {
                 renderWorld(evt.getPoseStack(), evt.getCamera());
             } catch (Exception e) {
@@ -453,8 +487,11 @@ public final class MapClient {
                 if (!renderFailed)
                     ReignOfNether.LOGGER.error("[Maps] the map overlay failed to draw", e);
                 renderFailed = true;
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fw);
             }
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fpS);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
@@ -550,7 +587,140 @@ public final class MapClient {
             gg.drawString(font, p.name(), 0, 0, 0xFF000000 | p.colour(), true);
             gg.pose().popPose();
         }
+        drawReadyPanel(gg, font);
         gg.pose().popPose();
+    }
+
+    // ------------------------------------------------------------------------------------------ ready panel
+
+    // tester Joisco (Oct 26): a Ready button for every human, and everyone sees who the game is waiting for
+    private static final int PANEL_W = 150;
+    private static final int[] readyRect = new int[4];   // x0, y0, x1, y1 (gui pixels); x1 == 0: not drawn
+    private static final int[] forceRect = new int[4];
+    /** Ticks left on an armed Force start: the first click warns (naming who is not ready), the second sends. */
+    private static int forceArmedTicks = 0;
+
+    /** The host as the server judges it (PacketAuth.isHost): the integrated server's owner, or an op on a dedicated one. */
+    private static boolean localIsHost() {
+        return MC.player != null && (MC.hasSingleplayerServer() || MC.player.hasPermissions(2));
+    }
+
+    private static void drawReadyPanel(GuiGraphics gg, Font font) {
+        readyRect[2] = 0;
+        forceRect[2] = 0;
+        if (picks.isEmpty())
+            return;
+        MapStateClientboundPacket.PickInfo mine = myPick();
+        boolean host = localIsHost();
+        List<String> waiting = notReadyNames();
+        int humans = 0, ready = 0;
+        for (MapStateClientboundPacket.PickInfo p : picks)
+            if (!p.bot() && !p.left()) {
+                humans++;
+                if (p.placed() && p.ready())
+                    ready++;
+            }
+        boolean showForce = host && forceArmedTicks > 0 && !waiting.isEmpty();
+        List<FormattedCharSequence> warn = showForce
+            ? font.split(Component.literal(I18n.get("maps.reignofnether.startphase_force_warning",
+                String.join(", ", waiting))), PANEL_W - 8)
+            : List.of();
+        int rows = picks.size();
+        int h = 14 + rows * 10 + 4 + (mine != null && !mine.bot() ? 18 : 0) + (host ? 18 : 0) + warn.size() * 10 + 2;
+        int sw = gg.guiWidth(), sh = gg.guiHeight();
+        int x0 = sw - PANEL_W - 6, y0 = Math.max(24, sh / 2 - h / 2);
+        gg.fill(x0, y0, x0 + PANEL_W, y0 + h, 0xB0101216);
+        gg.fill(x0, y0 + h, x0 + PANEL_W, y0 + h + 1, waiting.isEmpty() ? 0xFF3CDC3C : 0xFFF0D23C);
+        gg.drawString(font, I18n.get("maps.reignofnether.startphase_ready_title", ready, humans), x0 + 4, y0 + 3,
+            0xFFFFFFFF, true);
+        int y = y0 + 15;
+        for (MapStateClientboundPacket.PickInfo p : picks) {
+            String state;
+            int col;
+            if (p.left()) {
+                state = I18n.get("maps.reignofnether.startphase_state_left");
+                col = 0xFFE65A5A;
+            } else if (p.bot()) {
+                state = I18n.get("maps.reignofnether.startphase_state_bot");
+                col = 0xFF7FD87F;
+            } else if (p.placed() && p.ready()) {
+                state = I18n.get("maps.reignofnether.startphase_state_ready");
+                col = 0xFF3CDC3C;
+            } else if (p.placed()) {
+                state = I18n.get("maps.reignofnether.startphase_state_placed");
+                col = 0xFFF0D23C;
+            } else {
+                state = I18n.get("maps.reignofnether.startphase_state_placing");
+                col = 0xFFA0A0A0;
+            }
+            String name = font.plainSubstrByWidth(p.name(), PANEL_W - 14 - font.width(state));
+            gg.drawString(font, name, x0 + 4, y, 0xFF000000 | p.colour(), true);
+            gg.drawString(font, state, x0 + PANEL_W - 4 - font.width(state), y, col, true);
+            y += 10;
+        }
+        y += 4;
+        if (mine != null && !mine.bot()) {
+            boolean can = mine.placed() || mine.ready();
+            String label = I18n.get(mine.ready() ? "maps.reignofnether.startphase_unready_button"
+                : mine.placed() ? "maps.reignofnether.startphase_ready_button"
+                : "maps.reignofnether.startphase_ready_place_first");
+            int bg = mine.ready() ? 0xFF6A5A20 : can ? 0xFF2E7D32 : 0xFF3A3A3A;
+            button(gg, font, readyRect, x0 + 4, y, PANEL_W - 8, 15, label, bg, can ? 0xFFFFFFFF : 0xFF9A9A9A);
+            y += 18;
+        }
+        if (host) {
+            String label = I18n.get(showForce ? "maps.reignofnether.startphase_force_confirm"
+                : "maps.reignofnether.startphase_force_button");
+            button(gg, font, forceRect, x0 + 4, y, PANEL_W - 8, 15, label, showForce ? 0xFFB02020 : 0xFF6A2020,
+                0xFFFFFFFF);
+            y += 18;
+            for (FormattedCharSequence line : warn) {
+                gg.drawString(font, line, x0 + 4, y, 0xFFFF8080, true);
+                y += 10;
+            }
+        }
+    }
+
+    private static void button(GuiGraphics gg, Font font, int[] rect, int x, int y, int w, int h, String label,
+                               int bg, int fg) {
+        gg.fill(x, y, x + w, y + h, bg);
+        gg.fill(x, y + h - 1, x + w, y + h, 0x60000000);
+        gg.drawString(font, label, x + w / 2 - font.width(label) / 2, y + 4, fg, true);
+        rect[0] = x;
+        rect[1] = y;
+        rect[2] = x + w;
+        rect[3] = y + h;
+    }
+
+    private static boolean inside(int[] r, double mx, double my) {
+        return r[2] > 0 && mx >= r[0] && mx < r[2] && my >= r[1] && my < r[3];
+    }
+
+    /** A click on the ready panel's buttons: consumed (true) when it hit one. */
+    private static boolean clickReadyPanel(double mx, double my) {
+        if (inside(readyRect, mx, my)) {
+            MapStateClientboundPacket.PickInfo mine = myPick();
+            if (mine != null && !mine.bot()) {
+                if (mine.ready())
+                    StartPhaseServerboundPacket.sendReady(false);
+                else if (mine.placed())
+                    StartPhaseServerboundPacket.sendReady(true);
+                else
+                    HintBar.queue(I18n.get("maps.reignofnether.startphase_ready_needs_place"), 100);
+            }
+            return true;
+        }
+        if (inside(forceRect, mx, my)) {
+            // nobody to warn about: one click; otherwise the first click shows who is not ready, the second sends
+            if (notReadyNames().isEmpty() || forceArmedTicks > 0) {
+                forceArmedTicks = 0;
+                StartPhaseServerboundPacket.sendForceStart();
+            } else {
+                forceArmedTicks = 20 * 6;
+            }
+            return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------------------------------ input
@@ -559,6 +729,10 @@ public final class MapClient {
     public static void onMousePress(ScreenEvent.MouseButtonPressed.Pre evt) {
         if (!phase || MC.player == null || !OrthoviewClientEvents.isEnabled() || !(MC.screen instanceof TopdownGui))
             return;
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1 && clickReadyPanel(evt.getMouseX(), evt.getMouseY())) {
+            evt.setCanceled(true);
+            return;
+        }
         boolean onMinimap = MinimapClientEvents.isPointInsideMinimap(evt.getMouseX(), evt.getMouseY());
         BlockPos target = null;
         if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_2 && onMinimap) {
@@ -568,6 +742,11 @@ public final class MapClient {
         }
         if (target == null)
             return;
+        if (myReady()) {   // the server refuses a ready player's move too: say why instead of nothing happening
+            HintBar.queue(I18n.get("maps.reignofnether.startphase_unready_to_move"), 100);
+            evt.setCanceled(true);
+            return;
+        }
         StartPhaseServerboundPacket.send(target.getX(), target.getZ());
         evt.setCanceled(true);
     }

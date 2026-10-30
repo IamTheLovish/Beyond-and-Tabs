@@ -354,6 +354,9 @@ public class PlayerClientEvents {
         if (MC.player != null && evt.getPlayer().getId() == MC.player.getId()) {
             // server pushes brightChunks; no client recompute
             FogOfWarClientEvents.refreshLocalIsRTSPlayer();
+            // the server keeps no player settings between sessions: tell it whether our hero may fight by itself
+            com.solegendary.reignofnether.hero.HeroServerboundPacket.sendHeroAi(
+                com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.HERO_AI.get());
         }
     }
 
@@ -414,6 +417,8 @@ public class PlayerClientEvents {
                 if (entity instanceof Unit unit)
                     unit.setOwnerName("");
         UnitClientEvents.idleWorkerIds.clear();
+        UnitClientEvents.idleT2BuilderIds.clear();
+        UnitClientEvents.commanderIdle = false;
         ResearchClient.removeAllResearch();
         ResearchClient.removeAllCheats();
         BuildingClientEvents.getSelectedBuildings().clear();
@@ -447,6 +452,8 @@ public class PlayerClientEvents {
         UnitClientEvents.getSelectedUnits().clear();
         UnitClientEvents.getPreselectedUnits().clear();
         UnitClientEvents.idleWorkerIds.clear();
+        UnitClientEvents.idleT2BuilderIds.clear();
+        UnitClientEvents.commanderIdle = false;
         ResearchClient.removeAllResearch();
         ResearchClient.removeAllCheats();
         BuildingClientEvents.getSelectedBuildings().clear();

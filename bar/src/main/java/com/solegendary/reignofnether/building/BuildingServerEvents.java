@@ -182,22 +182,8 @@ public class BuildingServerEvents {
 
     public static final Random random = new Random();
 
-    private static final int SAVE_TICKS_MAX = 600;
-    private static int saveTicks = 0;
-    @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-        saveTicks += 1;
-        if (saveTicks >= SAVE_TICKS_MAX) {
-            ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
-            if (level != null) {
-                saveBuildings(level);
-                saveNetherZones(level);
-                saveTicks = 0;
-            }
-        }
-    }
+    // buildings and nether zones reach the disk with Minecraft's world save (persistence/RtsSaves, plan 014): the
+    // 30 s timer here wrote every saved-data file on the server thread mid-fight
 
     public static void saveBuildings(ServerLevel level) {
         if (level == null)
@@ -253,18 +239,14 @@ public class BuildingServerEvents {
         Set<BlockPos> seenOriginPoses = new HashSet<>();
         buildingData.buildings.removeIf(b -> !seenOriginPoses.add(b.originPos));
 
-        buildingData.save();
-        level.getDataStorage().save();
+        buildingData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     public static void saveNetherZones(ServerLevel level) {
         NetherZoneSaveData netherData = NetherZoneSaveData.getInstance(level);
         netherData.netherZones.clear();
         netherData.netherZones.addAll(netherZones);
-        netherData.save();
-        level.getDataStorage().save();
-
-        ReignOfNether.LOGGER.info("saved " + netherZones.size() + " netherzones in serverevents");
+        netherData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     @SubscribeEvent
@@ -277,6 +259,7 @@ public class BuildingServerEvents {
             // placement exists: touch them first, or a freshly launched game drops those entries as "Unknown
             // DataType" (the factory Repeat toggle came back off after a restart; design/code_review.md CR-03)
             ProductionPlacement.REPEAT_QUEUE.getClass();
+            ProductionPlacement.FACTORY_GUARD.getClass();
             BuildingReclaim.DECOMMISSION.getClass();
             com.solegendary.reignofnether.building.gameender.GameEnderPlacement.CHARGE.getClass();
             com.solegendary.reignofnether.building.gameender.WardSpirePlacement.CHARGE.getClass();
@@ -315,6 +298,7 @@ public class BuildingServerEvents {
                         pb.setRallyPoint(b.rallyPoint);
                         pb.repeatQueue = Boolean.TRUE.equals(b.dataStorage.getData(ProductionPlacement.REPEAT_QUEUE));
                         pb.stewardPaused = Boolean.TRUE.equals(b.dataStorage.getData(ProductionPlacement.STEWARD_PAUSED));
+                        pb.restoreFactoryGuard();
                     }
 
                     if (b.upgradeLevel > 0) {
@@ -811,7 +795,14 @@ public class BuildingServerEvents {
                 break;
             }
         }
-        if (b) {
+        if (b && com.solegendary.reignofnether.unit.GuardServerEvents.isGuarding(entity.getId())) {
+            // a guard escorting its ward stands next to it - often on the ward's new footprint. A MOVE order here
+            // ended the guard (UnitActionItem clears it on any order), so the assisting builder went idle while the
+            // ward built alone. Step it off without an order: the guard pass then gives a guarding builder this site.
+            Unit unit = (Unit) entity;
+            unit.setFollowTarget(null);
+            unit.setMoveTarget(newBuilding.getClosestGroundPos(entity.getOnPos(), 3, true));
+        } else if (b) {
             UnitServerEvents.addActionItem(((Unit) entity).getOwnerName(),
                 UnitAction.MOVE,
                 -1,
@@ -936,6 +927,9 @@ public class BuildingServerEvents {
             if (building instanceof ProductionPlacement pp && pp.repeatQueue) {
                 BuildingProductionClientboundPacket.toggleRepeat(building.ownerName, building.originPos, true);
             }
+            if (building instanceof ProductionPlacement pp && pp.factoryGuard) {
+                BuildingProductionClientboundPacket.toggleFactoryGuard(building.ownerName, building.originPos, true);
+            }
 
             if (building.getBuilding() instanceof Library) {
                 EnchantAbility ability = building.getDataStorage().getData(Library.AUTO_CAST_ENCHANT);
@@ -1058,8 +1052,7 @@ public class BuildingServerEvents {
         });
 
         for (BuildingPlacement building : buildingsToDestroy) {
-            // BAR kill feed: only a building that fell to damage (not a cancel or a defeat clean-up) is a kill line
-            com.solegendary.reignofnether.hud.KillFeedServerEvents.onBuildingDestroyed(building, building.lastAttacker);
+            building.getBuilding().onFellToDamage(serverLevel, building);   // death blasts (EnergyConverter's chain)
             building.destroy(serverLevel);
         }
 
@@ -1165,6 +1158,7 @@ public class BuildingServerEvents {
             }
             for (BuildingPlacement building : affectedBuildings) {
                 float atkDmg = 0;
+                boolean byUnit = ghastUnit != null || creeperUnit != null || pillagerUnit != null;
                 if (ghastUnit != null) {
                     atkDmg = ghastUnit.getUnitAttackDamage();
                     building.lastAttacker = ghastUnit;
@@ -1191,7 +1185,8 @@ public class BuildingServerEvents {
                             le.hurt(exp.getDamageSource(), (random.nextFloat(atkDmg + 1)) / 2f);
                     }
 
-                    building.destroyRandomBlocks(atkDmg, building.lastAttacker);
+                    // a unit's explosion brings the building down faster (BuildingDamage); the occupants above take the old hit
+                    building.destroyRandomBlocks(byUnit ? BuildingDamage.unit(atkDmg) : atkDmg, building.lastAttacker);
                 }
 
             }

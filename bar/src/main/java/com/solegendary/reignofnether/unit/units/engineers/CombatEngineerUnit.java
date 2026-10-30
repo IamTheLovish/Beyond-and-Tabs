@@ -68,13 +68,13 @@ import java.util.List;
  */
 public abstract class CombatEngineerUnit extends Vindicator implements Unit, WorkerUnit, AttackerUnit, ArmSwingingUnit, CombatEngineer {
 
-    /** This type's shared ability set (a subclass's static: safe to read from the constructor below). */
-    protected abstract Abilities engineerAbilities();
+    /** No engineer has an ability of its own (removed 2026-10-26); the set stays so a commander-style runtime extra still works. */
+    public static final Abilities ABILITIES = new Abilities();
 
     //region
     @Override
     public void updateAbilityButtons() {
-        abilities = Abilities.cloneKeepingExtras(engineerAbilities(), abilities);
+        abilities = Abilities.cloneKeepingExtras(ABILITIES, abilities);
     }
     Object2ObjectArrayMap<Ability, Float> cooldowns = Unit.createCooldownMap();
     Object2ObjectArrayMap<Ability, Integer> charges = new Object2ObjectArrayMap<>();
@@ -224,14 +224,7 @@ public abstract class CombatEngineerUnit extends Vindicator implements Unit, Wor
         updateAbilityButtons();
     }
 
-    /** The first (only) ability of this type's set: the faction ability on V. */
-    @Override
-    public Ability getEngineerAbility() {
-        List<Ability> list = engineerAbilities().get();
-        return list.isEmpty() ? null : list.get(0);
-    }
-
-    /** {@link CombatEngineers#BUILD_POWER}; the Pioneer's Overdrive raises and vents it. */
+    /** {@link CombatEngineers#BUILD_POWER}. */
     @Override
     public float getBuildPower() {
         return CombatEngineers.BUILD_POWER;
@@ -293,12 +286,8 @@ public abstract class CombatEngineerUnit extends Vindicator implements Unit, Wor
         WorkerUnit.tick(this);
         if (!this.level().isClientSide()) {
             CombatEngineers.tickFieldRepair(this);
-            engineerServerTick();
         }
     }
-
-    /** A subclass's own server-side per-tick work (the Pioneer's steam); nothing by default. */
-    protected void engineerServerTick() { }
 
     @Override
     public void remove(@NotNull RemovalReason pReason) {

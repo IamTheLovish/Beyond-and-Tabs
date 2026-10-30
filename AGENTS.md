@@ -93,7 +93,7 @@ tools/                    python tools: check_java.py, balance_audit.py, gen_*.p
                           BeyondAndTabs-Realistic, generated, not in git), materials.py (the one LabPBR encoder +
                           check_labpbr), face_census.py (what the RTS camera sees on our buildings, from the game's
                           own models), structure_preview.py (buildings drawn with the pack, offline; structure_render.py
-                          draws them on their real shapes from the RTS side, lights bright), pack_study.py;
+                          draws them on their real shapes from the RTS side, sun-lit with shadows and AO like the shader refs, --flat unlit), pack_study.py;
                           check_parts.py (the drawn extractor rigs' anchors: building/BuildingParts.java against
                           gen_structures.py's SUN_/GRAVE_RIG_ANCHORS, and their room in the .nbt - change a rig
                           structure, change its row; the parts follow the client setting "Building animation"
@@ -210,8 +210,8 @@ All run on GitHub Actions, never on anyone's PC:
   plays a scripted tour (build menu, army, box select, fights at two zooms, capitol, river crossing, domes...) and
   publishes stills **and a 10-second video clip per still** to the `eyes` branch. Add a scene when a feature has no
   shot that shows it. A feature nobody has seen is not done.
-  Dispatch inputs: `shaders` (Oculus + Embeddium + a shader pack: `shader_pack` complementary - the pick for lovish's
-  PC - or bliss, which fogs out the RTS view; `rp` labpbr / integrated; `shader_options` KEY=VALUE;... for a pack
+  Dispatch inputs: `shaders` (Oculus + Embeddium + a shader pack: `shader_pack` complementary - screenshots in CI only: its author refused us
+  permission to ship it (Oct 29), so no pack we publish may contain it (tools/test_pack_no_complementary.py) - or bliss, which fogs out the RTS view; `rp` labpbr / integrated; `shader_options` KEY=VALUE;... for a pack
   setting A/B), `pack` ours / none, `look` (the world look), `build_run` (a BUILD run id whose jar to test). Each
   variant publishes to its own branch; `eyes-approve.yml` copies a lane's stills to `<lane>-approved`, the baseline
   of the picture regression (tools/eyes_diff.py).
@@ -220,6 +220,14 @@ All run on GitHub Actions, never on anyone's PC:
   first-person 3/4 view - and `_dusk`) to branch `eyes-structures` (`eyes-structures-shaders` with `shaders`). Judge a
   new building design here, with real textures and glass, before asking lovish. For a design on a feature branch,
   dispatch the workflow with `ref=<that branch>`: it uses that branch's build (the header of eyes.yml has the call).
+- **bot-ladder.yml** (nightly 07:03 UTC + `workflow_dispatch`; Oct 22, lovish approved) - bot vs bot full matches, one per hosted
+  runner (a 40-match matrix = two waves of the ~20 runners), every Difficulty pair x faction pair
+  (`tools/ladder_matrix.py` reads `enum Difficulty` in BotPlayer, so a new tier is one enum value). The match is
+  `gametest/LadderGameTests` (batch `bot_ladder`, a no-op unless `BAT_LADDER_MATCH` is set, so the per-push shards are
+  unchanged); pace arithmetic in `LadderStats`. It logs `[Sim]`, `[Pace]` and `[Stuck]` lines, writes a JSON per match, and
+  `tools/ladder_report.py` makes the win-rate / pace table (job summary + artifact `bot-ladder-<date>.md`, built to append to
+  a Project doc). Dispatch inputs: `quick` (3 matches), `mode` nightly/full, `matches` (explicit list), `minutes`. Measurement
+  only - never change a unit or a bot in a ladder PR.
 - **pack-study.yml** (numbers only from a reference pack or vanilla's jar) and **face-census.yml** (our pack's
   coverage of the faction buildings, face by face, on Mojang's jar) - block pack calibration and coverage.
 - **concepts.yml** - Blender 4.2 on CI renders unit concept sheets from `design/models/*.json` (our own cube-model
