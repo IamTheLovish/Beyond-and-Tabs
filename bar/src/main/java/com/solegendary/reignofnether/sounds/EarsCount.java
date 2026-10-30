@@ -26,7 +26,10 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
  *   {@link #ABOVE} blocks above the sound - the RTS camera's case;</li>
  *   <li>received: the client got it from the server (ClientLevel.playSeededSound for the client's own player);</li>
  *   <li>local: the client played it itself (an entity's playSound with no player: a hurt or death voice from the
- *   client's own damage and death events, which ClientLevelMixin plays in the RTS view).</li>
+ *   client's own damage and death events, which ClientLevelMixin plays in the RTS view);</li>
+ *   <li>played near / far: what the RTS player hears (ClientLevelMixin.playSoundActual, after the fog test), split by
+ *   the sound's distance from the player's body: within {@link #NEAR} blocks the server sends its copy too, beyond it
+ *   only the local copy exists.</li>
  * </ul>
  * One log line at most every {@link #EVERY_MS} while sounds come in. The integrated server and the client share the
  * counters (one JVM in an eyes run).
@@ -39,9 +42,12 @@ public final class EarsCount {
     /** A player this far over the sound counts as the RTS camera's floating body. */
     static final double ABOVE = 8;
     static final long EVERY_MS = 10_000;
+    /** The server's send radius for a volume-1 sound (PlayerList.broadcast, 16 x max(1, volume)). */
+    static final double NEAR = 16;
 
     private static final AtomicIntegerArray SENT = new AtomicIntegerArray(3), LOST = new AtomicIntegerArray(3),
-        RECEIVED = new AtomicIntegerArray(3), LOCAL = new AtomicIntegerArray(3);
+        RECEIVED = new AtomicIntegerArray(3), LOCAL = new AtomicIntegerArray(3),
+        PLAYED_NEAR = new AtomicIntegerArray(3), PLAYED_FAR = new AtomicIntegerArray(3);
     private static volatile long lastLog = 0;
 
     private EarsCount() { }
@@ -96,6 +102,16 @@ public final class EarsCount {
         } catch (Exception ignored) { }
     }
 
+    /** A world sound the RTS player hears, distSqr from its body (ClientLevelMixin.playSoundActual). Never throws. */
+    public static void played(@Nullable SoundEvent sound, double distSqr) {
+        if (!ON)
+            return;
+        try {
+            (distSqr <= NEAR * NEAR ? PLAYED_NEAR : PLAYED_FAR).incrementAndGet(kind(sound));
+            maybeLog();
+        } catch (Exception ignored) { }
+    }
+
     static void maybeLog() {
         long now = System.currentTimeMillis();
         if (now - lastLog < EVERY_MS)
@@ -104,14 +120,18 @@ public final class EarsCount {
         ReignOfNether.LOGGER.info("[Ears] {}", line());
     }
 
-    /** "hurt sent 3 lost-to-height 41 received 3 local 40; death ...; other ..." (totals since the game started). */
+    /**
+     * "hurt sent 3 lost-to-height 41 received 3 local 40 played near 6 far 37; death ...; other ..." (totals since the
+     * game started).
+     */
     static String line() {
         StringBuilder sb = new StringBuilder();
         for (int k = 0; k < 3; k++) {
             if (k > 0)
                 sb.append("; ");
             sb.append(KINDS[k]).append(" sent ").append(SENT.get(k)).append(" lost-to-height ").append(LOST.get(k))
-                .append(" received ").append(RECEIVED.get(k)).append(" local ").append(LOCAL.get(k));
+                .append(" received ").append(RECEIVED.get(k)).append(" local ").append(LOCAL.get(k))
+                .append(" played near ").append(PLAYED_NEAR.get(k)).append(" far ").append(PLAYED_FAR.get(k));
         }
         return sb.toString();
     }
