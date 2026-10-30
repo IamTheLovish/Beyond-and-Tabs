@@ -174,6 +174,11 @@ public class Factions {
 		registerEntity(VILLAGERS, EntityRegistrar.SUN_COLOSSUS_UNIT.get(), ProductionItems.SUN_COLOSSUS);
 		registerEntity(VILLAGERS, EntityRegistrar.WITCH_UNIT.get(), ProductionItems.WITCH);
 		registerEntity(VILLAGERS, EntityRegistrar.EVOKER_UNIT.get(), ProductionItems.EVOKER);
+		registerEntity(VILLAGERS, EntityRegistrar.ANGEL_CALLER_UNIT.get(), ProductionItems.ANGEL_CALLER);
+		// the Angel Caller's summons: never trained (CallAngel), registered so their kills and colour read as Sunforged
+		registerEntity(VILLAGERS, EntityRegistrar.MENDER_ANGEL_UNIT.get());
+		registerEntity(VILLAGERS, EntityRegistrar.SERAPH_ARCHER_UNIT.get());
+		registerEntity(VILLAGERS, EntityRegistrar.SWORD_SERAPH_UNIT.get());
 		registerEntity(VILLAGERS, EntityRegistrar.WINDCALLER_UNIT.get(), ProductionItems.WINDCALLER);
 		registerEntity(VILLAGERS, EntityRegistrar.RAVAGER_UNIT.get(), ProductionItems.RAVAGER);
 		registerEntity(VILLAGERS, EntityRegistrar.ROYAL_GUARD_UNIT.get(), ProductionItems.ROYAL_GUARD);

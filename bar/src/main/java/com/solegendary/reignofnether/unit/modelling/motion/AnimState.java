@@ -49,8 +49,22 @@ public final class AnimState {
      */
     public static final int DEATH_KIND = SP_WEIGHT + Life.SPRING, DEATH_AZ = DEATH_KIND + 1, DEATH_DRAWN = DEATH_AZ + 1;
 
-    /** Floats per unit (room left for round 2's look solver and foot IK). */
-    public static final int STRIDE = 64;
+    /**
+     * The contact recoil ({@link Kinematics#onContact}): a spring slot, degrees, + = the arms and torso knocked back as
+     * the unit's own blow lands - kicked on the same tick as its target's flinch.
+     */
+    public static final int SP_RECOIL = DEATH_DRAWN + 1;
+
+    /**
+     * The look ({@link Kinematics#look}, {@link Motion}'s look block): spring slots on where the head looks - its WORLD
+     * yaw (degrees, kept continuous across the wrap, so a body turning under a steady gaze does not drag the gaze) and
+     * its pitch (degrees, + = down) - and AIM, 0..1, a ranged unit drawing on a target (eased in and out).
+     */
+    public static final int SP_LOOK_YAW = SP_RECOIL + Life.SPRING, SP_LOOK_PITCH = SP_LOOK_YAW + Life.SPRING,
+        AIM = SP_LOOK_PITCH + Life.SPRING;
+
+    /** Floats per unit (room left for foot IK). */
+    public static final int STRIDE = 80;
 
     /** HIT_SIZE values. */
     public static final float NONE = 0f, FLINCH = 1f, STAGGER = 2f;

@@ -52,6 +52,8 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.VINDICATOR.define(BUILDER);
         UnitCosts.WITCH.define(BUILDER);
         UnitCosts.EVOKER.define(BUILDER);
+        UnitCosts.ANGEL_CALLER.define(BUILDER);
+        UnitCosts.ANGEL.define(BUILDER);
         UnitCosts.RAVAGER.define(BUILDER);
         UnitCosts.WAR_MAMMOTH.define(BUILDER);
         UnitCosts.BONEWRIGHT.define(BUILDER);
@@ -385,6 +387,10 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry VINDICATOR = ResourceCostConfigEntry.Unit(160,0,0,32,3, ResourceCosts.VINDICATOR, "Vindicator Config");
         public static final ResourceCostConfigEntry WITCH = ResourceCostConfigEntry.Unit(90,90,90,35,3, ResourceCosts.WITCH, "Witch Config");
         public static final ResourceCostConfigEntry EVOKER = ResourceCostConfigEntry.Unit(140,0,120,35,3, ResourceCosts.EVOKER, "Evoker Config");
+        // Sunforged essence caster (design/essence_casters.md): the Evoker's price plus a little, its power is its essence
+        public static final ResourceCostConfigEntry ANGEL_CALLER = ResourceCostConfigEntry.Unit(140,40,120,40,3, ResourceCosts.ANGEL_CALLER, "Angel Caller Config");
+        // its angels are paid in essence: no metal, energy or population (lovish, Oct 29: "angels take no population")
+        public static final ResourceCostConfigEntry ANGEL = ResourceCostConfigEntry.Unit(0,0,0,1,0, ResourceCosts.ANGEL, "Angel (Angel Caller summon) Config");
         public static final ResourceCostConfigEntry RAVAGER = ResourceCostConfigEntry.Unit(400,50,150,60,7, ResourceCosts.RAVAGER, "Ravager Config");
         // Horde T3: ~4.5x the Siege Ox (T3 rule a); slow and melee-only (rule b)
         public static final ResourceCostConfigEntry SUN_COLOSSUS = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.SUN_COLOSSUS, "Sun Colossus Config");

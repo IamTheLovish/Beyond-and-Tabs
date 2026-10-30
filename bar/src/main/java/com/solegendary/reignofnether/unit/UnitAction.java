@@ -234,5 +234,9 @@ public enum UnitAction {
     SOUL_BOILER,            // 20 essence: a friendly building within 24 blocks builds and produces 50% faster for 20 s
     // Gravebound Tombcaller (essence caster, design/essence_casters.md "Gravebound Gravecaller" + Revision 1)
     RAISE_TOMBSTONE,        // 10 essence: a tombstone that spreads grave creep and raises a skeleton every 20 s
-    GRAVE_TIDE              // 5 essence: Gravebound friends near it or on its creep run 30% faster and regenerate
+    GRAVE_TIDE,             // 5 essence: Gravebound friends near it or on its creep run 30% faster and regenerate
+    // Sunforged essence caster, the Angel Caller (ability/abilities/CallAngel): each calls one temporary flying angel
+    CALL_MENDER_ANGEL,      // 5 essence: a flying healer for 20 s
+    CALL_SERAPH_ARCHER,     // 10 essence: a flying archer for 25 s
+    CALL_SWORD_SERAPH       // 20 essence: a flying melee engager for 30 s
 }

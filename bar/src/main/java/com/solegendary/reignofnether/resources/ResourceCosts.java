@@ -38,6 +38,8 @@ public class ResourceCosts {
     public static final ResourceCost VINDICATOR = new ResourceCost(ID, "VINDICATOR");
     public static final ResourceCost WITCH = new ResourceCost(ID, "WITCH");
     public static final ResourceCost EVOKER = new ResourceCost(ID, "EVOKER");
+    public static final ResourceCost ANGEL_CALLER = new ResourceCost(ID, "ANGEL_CALLER");   // Sunforged essence caster
+    public static final ResourceCost ANGEL = new ResourceCost(ID, "ANGEL");   // its summons: free, no population
     public static final ResourceCost RAVAGER = new ResourceCost(ID, "RAVAGER");
     public static final ResourceCost WAR_MAMMOTH = new ResourceCost(ID, "WAR_MAMMOTH");
     public static final ResourceCost BONEWRIGHT = new ResourceCost(ID, "BONEWRIGHT");
@@ -403,6 +405,8 @@ public class ResourceCosts {
         VINDICATOR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.VINDICATOR);
         WITCH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WITCH);
         EVOKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EVOKER);
+        ANGEL_CALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ANGEL_CALLER);
+        ANGEL.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ANGEL);
         RAVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.RAVAGER);
         WAR_MAMMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WAR_MAMMOTH);
         BONEWRIGHT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONEWRIGHT);
