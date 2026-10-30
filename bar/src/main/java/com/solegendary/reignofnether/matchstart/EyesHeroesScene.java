@@ -32,7 +32,8 @@ import java.util.List;
  * <ul>
  * <li>ours: the Storm Witch holding her first ability point, the Warchief and the Ash Shaman side by side (the Horde's two
  *     heroes), and a cloaked Corsair Captain;</li>
- * <li>the enemy's: a Dawn Paladin, a cloaked Thornheart Druid, and a Gravecaller 34 blocks out, beyond the sight of
+ * <li>the enemy's: a Dawn Paladin, a cloaked Thornheart Druid, an Arch-Engineer standing in a thicket of theirs (the
+ *     game's own cloak, ThicketCover), and a Gravecaller 34 blocks out, beyond the sight of
  *     everything of ours, for the fog still. (A client knows another player's points only for its own side: an enemy
  *     hero's count there is the client's default, so the badge rule - our heroes only - never reads it.)</li>
  * </ul>
@@ -52,7 +53,7 @@ final class EyesHeroesScene {
     private static int phase = 0;
     private static long phaseNanos = 0;
     private static String me, enemy;
-    private static Vec3 centre, far, hordePair;
+    private static Vec3 centre, far, hordePair, bush;
 
     private static double seconds() {
         return (System.nanoTime() - phaseNanos) / 1e9;
@@ -79,8 +80,8 @@ final class EyesHeroesScene {
                 summonAll(mc);
                 next(2);
             }
-            case 2 -> {   // wait for them on the client, then the first still
-                if ((ownHeroes().size() < 4 && seconds() < 30) || seconds() < 6)
+            case 2 -> {   // wait for them on the client (and the enemy's thicket to grow and hide its Engineer), then the first still
+                if ((ownHeroes().size() < 4 && seconds() < 30) || seconds() < 9)
                     return false;
                 EyesDirector.shot(mc, "19_heroes_mid");
                 log("19_heroes_mid");
@@ -150,6 +151,7 @@ final class EyesHeroesScene {
         centre = new Vec3(Math.floor(home.getX() + dirX * OFFSET) + 0.5, home.getY(), Math.floor(home.getZ() + dirZ * OFFSET) + 0.5);
         far = centre.add(dirX * FAR, 0, dirZ * FAR);
         hordePair = centre.add(1, 0, 0);
+        bush = centre.add(10, 0, -6);   // 10+ blocks from every hero of ours: beyond a thicket's 4-block reveal
         EyesDirector.setZoom(ZOOM_MID);
         OrthoviewClientEvents.centreCameraOnPosInstant(centre);
         next(1);
@@ -173,8 +175,18 @@ final class EyesHeroesScene {
         summon(mc, enemy, HeroKits.DAWN_PALADIN, centre.add(4, 0, 5), "");
         summon(mc, enemy, HeroKits.THORNHEART_DRUID, centre.add(8, 0, 5), CLOAK);
         summon(mc, enemy, HeroKits.GRAVECALLER, far, "");
-        ReignOfNether.LOGGER.info("[Eyes] 19_heroes: summoned 4 heroes for '{}' round {}, 3 for '{}' ({} far out at {})",
-            me, EyesDirector.fmt(centre), enemy, HeroKits.GRAVECALLER.itemName, EyesDirector.fmt(far));
+        // the game's own cloak on a hero (review r1 on PR 443): an enemy thicket (Verdant cover, ThicketCover) with
+        // the enemy's Arch-Engineer standing in it - hidden from us by the server once the bush is grown (4 s)
+        var server = mc.getSingleplayerServer();
+        if (server != null) {
+            BlockPos at = BlockPos.containing(bush.x, EyesDirector.surfaceY(mc, (int) Math.floor(bush.x), (int) Math.floor(bush.z)), bush.z);
+            String owner = enemy;
+            server.execute(() -> com.solegendary.reignofnether.ability.abilities.PlantThicket.plantPatch(server.overworld(), owner, at, false));
+        }
+        summon(mc, enemy, HeroKits.ARCH_ENGINEER, bush, "");
+        ReignOfNether.LOGGER.info("[Eyes] 19_heroes: summoned 4 heroes for '{}' round {}, 4 for '{}' ({} far out at {}, {} in a thicket at {})",
+            me, EyesDirector.fmt(centre), enemy, HeroKits.GRAVECALLER.itemName, EyesDirector.fmt(far),
+            HeroKits.ARCH_ENGINEER.itemName, EyesDirector.fmt(bush));
     }
 
     private static List<LivingEntity> ownHeroes() {
@@ -234,8 +246,8 @@ final class EyesHeroesScene {
             for (var e : server.overworld().getAllEntities())
                 if (e instanceof HeroUnit && e instanceof Unit u && e.isAlive() && e.position().distanceTo(centre) < 64) {
                     s++;
-                    ReignOfNether.LOGGER.info("[Eyes] {}: server has {} of '{}' at {}", still, e.getType().getDescriptionId(),
-                        u.getOwnerName(), EyesDirector.fmt(e.position()));
+                    ReignOfNether.LOGGER.info("[Eyes] {}: server has {} of '{}' at {}, concealed {}", still, e.getType().getDescriptionId(),
+                        u.getOwnerName(), EyesDirector.fmt(e.position()), com.solegendary.reignofnether.unit.Concealment.isConcealed(e));
                 }
             ReignOfNether.LOGGER.info("[Eyes] {}: {} heroes on the server within 64 of the scene", still, s);
         }
