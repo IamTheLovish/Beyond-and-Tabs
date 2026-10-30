@@ -172,7 +172,7 @@ public final class ConstructionShape {
     }
 
     /** Seconds of a tool's beat: moving to the next spot, winding up, the blow; the rest of the cycle is the recoil. */
-    public static final float BEAT_MOVE = 0.2f, BEAT_WIND = 0.3f, BEAT_STRIKE = 0.1f, BEAT_CYCLE = 0.8f;
+    public static final float BEAT_MOVE = 0.2f, BEAT_WIND = 0.15f, BEAT_STRIKE = 0.1f, BEAT_CYCLE = 0.9f;
 
     /** The length of {@link #ringPoint}'s rounded rectangle round {@code box} at {@code pad}. */
     public static float ringLength(float[] box, float pad) {

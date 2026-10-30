@@ -221,8 +221,8 @@ class ConstructionShapeTest {
         float m = ConstructionShape.BEAT_MOVE, w = ConstructionShape.BEAT_WIND, st = ConstructionShape.BEAT_STRIKE;
         float cyc = ConstructionShape.BEAT_CYCLE;
         assertTrue(m <= 0.5f, "never idle more than ~0.5 s");
-        assertEquals(0.8f, cyc, 1e-4, "a blow every 0.8 s (round 9 critic)");
-        assertEquals(0.3f, w, 1e-4);
+        assertEquals(0.9f, cyc, 1e-4, "a blow every 0.9 s (round 10 critic)");
+        assertEquals(0.25f, w + st, 1e-4, "a 0.25 s arc: the wind-up and the blow (round 10 critic)");
         assertEquals(0.1f, st, 1e-4);
 
         ConstructionShape.strikeBeat(m * 0.5f, b);           // moving, the first cycle: no blow yet
