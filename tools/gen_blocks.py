@@ -113,8 +113,9 @@ TARGETS = {
     # r31 (art director: "reads as packed dirt"): straw is pale gold - luma 0.54 -> 0.62, more spread (stalk-to-stalk
     # contrast), satin stalks (smooth 20 -> 42)
     # r31b (eyes: ours tan beside the benchmark's yellow): one step more yellow saturation (0.56 -> 0.66)
-    "hay_block_side":   dict(luma=0.63, std=0.100, sat=0.66, tilt=21.4, smooth=42, pore=40),
-    "hay_block_top":    dict(luma=0.62, std=0.095, sat=0.66, tilt=21.4, smooth=38, pore=40),
+    # r32 (critic: "too tan, weak bands"): one step more golden saturation (0.66 -> 0.76), the twine darker and wider
+    "hay_block_side":   dict(luma=0.63, std=0.105, sat=0.76, tilt=21.4, smooth=42, pore=40),
+    "hay_block_top":    dict(luma=0.62, std=0.095, sat=0.76, tilt=21.4, smooth=38, pore=40),
     # round 8: every wood's bark and end grain (pack-study 38743610740, single blocks; the reference's log tops carry
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
@@ -1481,7 +1482,7 @@ def m_barrel_end(F, n, hole, rows=4):
                 f0=np.where(band > 0.5, IRON, 10), smooth=smooth * (1 - band) + ismooth * band)
 
 
-def hay_twine(F, centres=(0.25, 0.75), half=0.03):
+def hay_twine(F, centres=(0.25, 0.75), half=0.036):
     """Two baler-twine bands round the bale at v = centres: a twisted cord (a diagonal twist along u), sunk a little
     into the straw, with two edges. Returns (band mask 0-1, twist tone 0-1)."""
     d = np.min(np.abs((F.v[..., None] - np.array(centres)[None, None, :] + 0.5) % 1.0 - 0.5), -1)
@@ -1511,10 +1512,10 @@ def m_hay_side(F, n):
     tone = 0.62 + 0.55 * prof + 0.06 * fine + 0.10 * clump
     # some stalks bleached pale, some still green-grey: a slow hue drift along the stalks
     bleach = norm01(F.noise(6, 20, 0.4, sx=1.0, sy=30.0))
-    base = np.array([0.88, 0.70, 0.30])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
+    base = np.array([0.90, 0.72, 0.26])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
         * np.array([1.0, 1.06, 1.3])[None, None, :] ** (bleach - 0.5)[..., None]     # bleached: paler, less orange
     alb = np.clip(base * tone[..., None], 0, 1)
-    cord = tint((0.34, 0.20, 0.10), 0.75 + 0.35 * twist)                         # dark sisal twine
+    cord = tint((0.22, 0.15, 0.09), 0.70 + 0.40 * twist)             # dark sisal twine (r32: darker, a dull brown)
     a = band[..., None]
     return H, alb * (1 - a) + cord * a
 
@@ -1543,7 +1544,7 @@ def m_hay_top(F, n):
     H = 0.45 + 0.26 * prof + 0.04 * fine + 0.08 * clump + 0.12 * ring - 0.10 * hole
     tone = 0.62 + 0.55 * prof + 0.06 * fine + 0.10 * clump + 0.25 * ring - 0.35 * hole
     bleach = norm01(F.noise(6, 20, 0.4, sx=30.0, sy=1.0))
-    base = np.array([0.88, 0.70, 0.30])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
+    base = np.array([0.90, 0.72, 0.26])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
         * np.array([1.0, 1.06, 1.3])[None, None, :] ** (bleach - 0.5)[..., None]
     return H, np.clip(base * tone[..., None], 0, 1)
 
