@@ -1116,6 +1116,15 @@ public final class EyesDirector {
                 // ground samplers, run 40703946521, Oct 28)
                 if (!structureSettled(mc, 5))
                     return;
+                // and once the client's sky has reached noon: the server jumps to 6000 when the site is set up, but the
+                // client eases its sky there (ClientLevelMixin.tickTime) - 2 of ~7 shader-lane runs shot a low sun with
+                // long shadows and a near-black field (41012329032, 41015896238, Oct 30). Same wait as the dusk still.
+                long noonT = mc.level.getDayTime() % 24000;
+                boolean atNoon = Math.abs(noonT - 6000) < 150;
+                if (!atNoon && phaseSeconds() < 40)
+                    return;
+                if (!atNoon)
+                    ReignOfNether.LOGGER.warn("[Eyes] {}_rts: the client sky is at {} not 6000 after 40 s", label, noonT);
                 logAim(mc, label + "_rts");
                 shot(mc, label + "_rts");
                 benchStarted = false;
