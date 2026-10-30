@@ -2,7 +2,8 @@
 """Builds BeyondAndTabs-test.mrpack for remote testers (run by .github/workflows/modpack.yml).
 
 Every third-party mod is resolved on Modrinth by the sha1 of lovish's own file (pack/instance_mods.json), so a tester's
-launcher downloads byte-identical jars from cdn.modrinth.com; nothing is rehosted. e4mc (the open-source Open-to-LAN
+launcher downloads byte-identical jars from cdn.modrinth.com; nothing is rehosted. A required mod that is not on
+Modrinth (Domum Ornamentum) carries its official CurseForge CDN "url" in instance_mods.json, checked byte for byte. e4mc (the open-source Open-to-LAN
 internet tunnel) is added so lovish can host without port forwarding. Our own GPL jar goes in overrides/.
 
 usage: build_pack.py <our jar> <out dir>
@@ -13,6 +14,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -59,7 +61,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
 REQUIRED_FILES = ("alexsmobs-", "citadel-", "mcw-roofs-", "mcw-mcwwindows-", "mcw-mcwfences-", "chipped-forge-",
-                  "athena-forge-", "resourcefullib-forge-")
+                  "athena-forge-", "resourcefullib-forge-", "FramedBlocks-",
+                  "domum_ornamentum-")
 
 
 def get_json(url):
@@ -105,6 +108,25 @@ def index_entry(filename, sha1, sha512, size, url, client_only=False):
             "downloads": [url], "fileSize": size}
 
 
+# official hosts a mod may download from: Modrinth's CDN, and CurseForge's for a required mod that is not on Modrinth
+# (Domum Ornamentum): its instance_mods.json entry names the official file URL ("url") and the bytes are checked here
+DOWNLOAD_HOSTS = ("cdn.modrinth.com", "edge.forgecdn.net")
+
+
+def resolve_pinned_url(m):
+    """An instance_mods.json entry with its own official "url" (a mod not on Modrinth): download it and check that
+    the bytes are lovish's pinned file (size, sha1, sha512) - nothing is rehosted, the launcher fetches that URL."""
+    if urllib.parse.urlparse(m["url"]).hostname not in DOWNLOAD_HOSTS[1:]:
+        sys.exit(f"::error::{m['file']}: pinned url host is not one of {DOWNLOAD_HOSTS[1:]}: {m['url']}")
+    with tempfile.TemporaryDirectory() as tmp:
+        dest = os.path.join(tmp, m["file"])
+        download(m["url"], dest)
+        sha1, sha512 = file_hashes(dest)
+        if (sha1, sha512, os.path.getsize(dest)) != (m["sha1"], m["sha512"], m["size"]):
+            sys.exit(f"::error::{m['file']}: the bytes at {m['url']} are not the pinned file")
+    return index_entry(m["file"], m["sha1"], m["sha512"], m["size"], m["url"])
+
+
 def resolve_instance_mods():
     mods = json.load(open(os.path.join(HERE, "instance_mods.json")))
     absent = [p for p in REQUIRED_FILES if not any(m["file"].startswith(p) for m in mods)]
@@ -112,6 +134,10 @@ def resolve_instance_mods():
         sys.exit("::error::pack/instance_mods.json lacks mods our mods.toml requires: " + ", ".join(absent))
     entries, missing, project_ids = [], [], set()
     for m in mods:
+        if m.get("url"):
+            entries.append(resolve_pinned_url(m))
+            print(f"ok  {m['file']} -> {m['url']}")
+            continue
         v = get_json(f"{API}/version_file/{m['sha1']}?algorithm=sha1")
         f = next((f for f in (v or {}).get("files", []) if f["hashes"].get("sha1") == m["sha1"]), None)
         if f is None:
@@ -188,10 +214,10 @@ def main():
     e4mc_entries, e4mc_records = resolve_e4mc(out_dir, projects)
     files += e4mc_entries
 
-    for f in files:  # the pack must only point at Modrinth's CDN
+    for f in files:  # the pack must only point at the mods' official hosts
         for u in f["downloads"]:
-            if urllib.parse.urlparse(u).hostname != "cdn.modrinth.com":
-                sys.exit(f"::error::{f['path']}: download host is not cdn.modrinth.com: {u}")
+            if urllib.parse.urlparse(u).hostname not in DOWNLOAD_HOSTS:
+                sys.exit(f"::error::{f['path']}: download host is not one of {DOWNLOAD_HOSTS}: {u}")
 
     sha = os.environ.get("GITHUB_SHA", "local")[:7]
     index = {"formatVersion": 1, "game": "minecraft",
