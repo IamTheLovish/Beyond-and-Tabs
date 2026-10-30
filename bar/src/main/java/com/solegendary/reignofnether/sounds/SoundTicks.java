@@ -11,7 +11,8 @@ import net.minecraft.Util;
  * the day moves one tick every matchDayCycle game ticks (match/DayClock: every 3rd at the default Slow), it stands
  * still with the cycle Off, before the match starts and once it is decided, and near a night source it walks to
  * midnight and stays there. Counted in it, "3 unit sounds a tick" was 1 a tick at Slow, and with the clock standing
- * still a category's budget and every sound's gap never ran out: after the first few, no unit sound played at all.
+ * still a category's budget was never renewed and no sound's gap ever ended: after the first few, no unit sound
+ * played at all.
  */
 public final class SoundTicks {
 
