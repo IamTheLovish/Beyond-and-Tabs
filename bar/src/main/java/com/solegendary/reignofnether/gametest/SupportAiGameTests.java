@@ -1179,7 +1179,9 @@ public class SupportAiGameTests {
     /**
      * Review r2: on Follow the medic holds behind her leader's fight, not anyone's. Her vindicator and a second one fight
      * an enemy that can't die; once she holds behind them, her leader is moved 28 blocks back while the second fights
-     * on. She follows him out (main's follow did; r2's first hold kept her behind the other's fight until it ended).
+     * on. She follows him out (main's follow did; r2's first hold kept her behind the other's fight until it ended):
+     * once he has reached his spot (or 160 ticks on) she is within 6 of him, well off her standoff spot by the fight.
+     * Review r3: he walks back through that spot, so "near him" alone also passed while she still held there.
      */
     @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 1200)
     public static void healer_on_follow_leaves_a_fight_her_leader_left(GameTestHelper helper) {
@@ -1225,7 +1227,9 @@ public class SupportAiGameTests {
                     leftAt[0] = t;
                     order(level, mine, UnitAction.MOVE, -1, p.offset(4, -1, 8), leader);
                 }
-            } else if (rejoinedAt[0] < 0 && t >= leftAt[0] + 40 && flat(medic, leader) <= 6.0) {
+            } else if (rejoinedAt[0] < 0 && t >= leftAt[0] + 40
+                    && (flat(leader, p.getX() + 4.5, p.getZ() + 8.5) <= 2.5 || t >= leftAt[0] + 160)
+                    && medic.getX() < p.getX() + 12 && flat(medic, leader) <= 6.0) {
                 rejoinedAt[0] = t;
                 otherGap[0] = flat(other, foe);
             }
@@ -1245,7 +1249,8 @@ public class SupportAiGameTests {
                 else if (leftAt[0] < 0)
                     problems.add("the leader was never moved off");
                 else if (rejoinedAt[0] < 0)
-                    problems.add("the medic did not follow her leader out of the fight within 300 ticks");
+                    problems.add("the medic did not follow her leader out of the fight within 300 ticks (once he was"
+                        + " at his spot, within 6 of him and short of x 12)");
                 else if (otherGap[0] > 3.0)
                     problems.add("the other vindicator was no longer fighting (" + f(otherGap[0]) + " from the enemy)");
                 if (((Unit) medic).getFollowTarget() != leader)
