@@ -977,8 +977,9 @@ public class SoulEngineerGameTests {
 
     /**
      * The bots' Soul Boiler: the unit casts it by itself (autoBoil) at a friendly building in reach that is working -
-     * never at an idle one, a queue held at the population cap or a site nobody is building - only with 20 essence, and
-     * never while sealed (the AutoCaster's gates).
+     * never at an idle one or a site nobody is building - only with 20 essence, and never while sealed (the
+     * AutoCaster's gates). (Its "a queue held at the population cap" check retired - lovish Oct 29: no max population;
+     * no queue is ever held now.)
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
     public static void soul_engineer_soul_boiler_autocasts_at_a_busy_building(GameTestHelper helper) {
@@ -998,21 +999,6 @@ public class SoulEngineerGameTests {
                 Essence.add(caster, 1);
                 if (se.autoBoil() || SoulBoiler.isBoiling(shop))
                     problems.add("the Soul Engineer boiled an idle building by itself");
-                // a unit queued with no population room (the cap lowered to 0 for this check): the queue is held, no boil
-                pp.productionQueue.add(new ActiveProduction(ProductionItems.STEAM_RUNNER, false, me));
-                int maxPop = UnitServerEvents.maxPopulation;   // BAR: everyone's supply is the host's cap
-                // a server global: keep this window tick-free (no delay, spawn or anything that ticks between the set
-                // and the restore), or parallel tests would see the 0 cap
-                try {
-                    UnitServerEvents.maxPopulation = 0;
-                    if (ProductionItems.STEAM_RUNNER.isBelowPopulationSupply(pp))
-                        problems.add("setup: with a population cap of 0 the Steam Runner's queue is not held");
-                    else if (se.autoBoil() || SoulBoiler.isBoiling(shop))
-                        problems.add("the Soul Engineer boiled a queue held at the population cap by itself");
-                } finally {
-                    UnitServerEvents.maxPopulation = maxPop;
-                }
-                pp.productionQueue.clear();
                 pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, me));   // no population
                 // a friendly site nobody is building, alone in reach
                 BuildingServerEvents.getBuildings().remove(shop);

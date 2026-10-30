@@ -27,13 +27,7 @@ public class GameruleServerEvents {
         if (!nodes.get(0).getNode().getName().equals("gamerule"))
             return;
 
-        if (nodes.get(1).getNode().getName().equals("maxPopulation")) {
-            Map<String, ParsedArgument<CommandSourceStack, ?>> args = evt.getParseResults().getContext().getArguments();
-            if (args.containsKey("value")) {
-                UnitServerEvents.maxPopulation = (int) args.get("value").getResult();
-                GameruleClientboundPacket.setMaxPopulation(UnitServerEvents.maxPopulation);
-            }
-        } else if (nodes.get(1).getNode().getName().equals("groundYLevel")) {
+        if (nodes.get(1).getNode().getName().equals("groundYLevel")) {
             Map<String, ParsedArgument<CommandSourceStack, ?>> args = evt.getParseResults().getContext().getArguments();
             if (args.containsKey("value")) {
                 double groundYLevel = ((Integer) args.get("value").getResult()).doubleValue();
@@ -159,8 +153,6 @@ public class GameruleServerEvents {
             GameruleClientboundPacket.setLogFalling(logFalling);
             boolean neutralAggro = server.getGameRules().getRule(GameRuleRegistrar.NEUTRAL_AGGRO).get();
             GameruleClientboundPacket.setNeutralAggro(neutralAggro);
-            int maxPopulation = server.getGameRules().getInt(GameRuleRegistrar.MAX_POPULATION);
-            GameruleClientboundPacket.setMaxPopulation(maxPopulation);
             boolean unitGriefing = server.getGameRules().getRule(GameRuleRegistrar.DO_UNIT_GRIEFING).get();
             GameruleClientboundPacket.setUnitGriefing(unitGriefing);
             boolean playerGriefing = server.getGameRules().getRule(GameRuleRegistrar.DO_PLAYER_GRIEFING).get();
