@@ -712,6 +712,17 @@ public class ProductionPlacement extends BuildingPlacement {
                         break;
                     }
                 }
+                // none waiting: one that started behind a paused unit at the head (tickProductionQueue, #228) is not at
+                // the front, so its button sends a back-of-queue cancel; take it and refund what it spent
+                for (int i = 1; !success && i < productionQueue.size(); i++) {
+                    ActiveProduction prodItem = productionQueue.get(i);
+                    if (prodItem.item.equals(item)) {
+                        productionQueue.remove(i);
+                        if (!getLevel().isClientSide())
+                            refundProduction(prodItem);
+                        success = true;
+                    }
+                }
             }
         }
         return success;

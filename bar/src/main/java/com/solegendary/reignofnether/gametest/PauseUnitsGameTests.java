@@ -2,7 +2,17 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingUtils;
+import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.Buildings;
+import com.solegendary.reignofnether.building.production.HeroProductionItem;
+import com.solegendary.reignofnether.hero.HeroKit;
+import com.solegendary.reignofnether.hero.HeroKits;
+import com.solegendary.reignofnether.hero.HeroProd;
+import com.solegendary.reignofnether.hero.HeroTypes;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionItem;
@@ -144,6 +154,94 @@ public class PauseUnitsGameTests {
                 else
                     helper.succeed();
             }
+        } finally {
+            UnitProductionPause.clearOwner(owner);
+            ResourcesServerEvents.resourcesList.remove(pool);
+        }
+    }
+
+    // Codex adversarial review of the fix above (20261030, finding 1): a hero is not a paused unit, so it can now finish
+    // behind one. The hero cap must leave out the hero being finished there too, not only at the head, or the spawn is
+    // refused and its cost is lost. Registered placement, as HeroGameTests.hero_spawns_when_its_training_finishes.
+    @GameTest(template = ARENA, batch = "pauseunits")
+    public static void pauseunits_a_hero_finishing_behind_a_paused_unit_spawns_once(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        HeroKit kit = HeroKits.DAWN_PALADIN;
+        HeroProd prod = HeroProd.forKit(kit);
+        var type = HeroTypes.typeOf(kit);
+        String owner = "gametest_pauseunits_h_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        Resources pool = pool(owner);
+        ProductionPlacement pp = barracks(level, helper, owner, 0);
+        BuildingServerEvents.getBuildings().add(pp);
+        int heroes = 0;
+        String problem = null;
+        try {
+            if (prod == null || type == null)
+                problem = "no hero production item for " + kit.id;
+            else if (!pp.startProductionItem(ProductionItems.VINDICATOR) || !pp.startProductionItem(prod))
+                problem = "the Barracks refused a Vindicator then the hero: " + prod.getProduceErrorMsg(pp);
+            else {
+                ActiveProduction unit = pp.productionQueue.get(0), hero = pp.productionQueue.get(1);
+                UnitProductionPause.set(owner, true);
+                hero.ticksLeft = 0;   // trained: the next queue step completes it, behind the paused unit
+                pp.tickProductionQueue(level);
+                java.util.List<Mob> spawned = new java.util.ArrayList<>();
+                for (LivingEntity le : UnitServerEvents.getAllUnits())
+                    if (le instanceof Mob m && m.getType() == type && m instanceof Unit u && owner.equals(u.getOwnerName()))
+                        spawned.add(m);
+                heroes = spawned.size();
+                spawned.forEach(Mob::discard);   // after the walk: a discard changes the unit list
+                if (heroes != 1)
+                    problem = "a hero finished behind a paused unit spawned " + heroes + " times (cap check: "
+                        + HeroProductionItem.heroesCountedAgainstCap(pp, prod) + " counted)";
+                else if (pp.productionQueue.size() != 1 || pp.productionQueue.get(0) != unit)
+                    problem = "the paused unit is not alone at the head after the hero finished: queue " + pp.productionQueue.size();
+            }
+        } finally {
+            UnitProductionPause.clearOwner(owner);
+            pp.productionQueue.clear();
+            BuildingServerEvents.getBuildings().remove(pp);
+            ResourcesServerEvents.resourcesList.remove(pool);
+        }
+        if (problem != null)
+            helper.fail(problem);
+        else
+            helper.succeed();
+    }
+
+    // Codex adversarial review (finding 2): research started behind a paused unit is not at the head, so its cancel
+    // button sends a back-of-queue cancel, which only took items that had not started. It must cancel, refund what it
+    // spent and leave the paused unit at the head.
+    @GameTest(template = ARENA, batch = "pauseunits")
+    public static void pauseunits_research_started_behind_a_paused_unit_can_be_cancelled(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_pauseunits_c_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        Resources pool = pool(owner);
+        try {
+            ProductionPlacement pp = barracks(level, helper, owner, 0);
+            if (!pp.startProductionItem(ProductionItems.VINDICATOR) || !pp.startProductionItem(ProductionItems.UPGRADE_LAB_L2)) {
+                helper.fail("the Barracks refused a Vindicator then a Level 2 upgrade");
+                return;
+            }
+            ActiveProduction unit = pp.productionQueue.get(0), upgrade = pp.productionQueue.get(1);
+            UnitProductionPause.set(owner, true);
+            for (int i = 0; i < TICKS; i++)
+                pp.tickProductionQueue(level);
+            // the refund is what the item recorded as spent, in whole units (refundProduction -> EconomyServerEvents.refund
+            // rounds, as for any cancel)
+            float spentM = Math.round(upgrade.metalSpent), spentE = Math.round(upgrade.energySpent);
+            float m0 = pool.getMetal() + spentM, e0 = pool.getEnergy() + spentE;
+            if (spentM <= 0)
+                helper.fail("the upgrade behind the paused unit never started, so this proves nothing");
+            else if (!pp.cancelProductionItem(ProductionItems.UPGRADE_LAB_L2, false))
+                helper.fail("the started upgrade behind a paused unit could not be cancelled");
+            else if (pp.productionQueue.size() != 1 || pp.productionQueue.get(0) != unit)
+                helper.fail("cancelling the upgrade did not leave the paused unit alone at the head: queue " + pp.productionQueue.size());
+            else if (Math.abs(pool.getMetal() - m0) > 0.01f || Math.abs(pool.getEnergy() - e0) > 0.01f)
+                helper.fail("the cancelled upgrade was not refunded what it spent (" + spentM + " metal, " + spentE + " energy): metal "
+                    + pool.getMetal() + " of " + m0 + ", energy " + pool.getEnergy() + " of " + e0);
+            else
+                helper.succeed();
         } finally {
             UnitProductionPause.clearOwner(owner);
             ResourcesServerEvents.resourcesList.remove(pool);

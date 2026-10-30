@@ -80,13 +80,17 @@ public abstract class HeroProductionItem extends ProductionItem {
         return finishing(pp, item) ? n - 1 : n;
     }
 
-    /** Whether item heads pp's queue with no ticks left (being completed) and pp is a registered placement (so
-     *  HeroUnit.getHeroesInTraining counted it). */
+    /** Whether item is in pp's queue with no ticks left (being completed) and pp is a registered placement (so
+     *  HeroUnit.getHeroesInTraining counted it). Its first entry, not only the head: behind a paused unit the queue step
+     *  finishes the first item that is not paused (ProductionPlacement.tickProductionQueue, #228). */
     public static boolean finishing(ProductionPlacement pp, ProductionItem item) {
-        if (pp.productionQueue.isEmpty())
-            return false;
-        var head = pp.productionQueue.get(0);
-        if (head.item != item || head.ticksLeft > 0)
+        ActiveProduction entry = null;
+        for (ActiveProduction a : pp.productionQueue)
+            if (a.item == item) {
+                entry = a;
+                break;
+            }
+        if (entry == null || entry.ticksLeft > 0)
             return false;
         return (pp.level.isClientSide() ? com.solegendary.reignofnether.building.BuildingClientEvents.getBuildings()
             : com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings()).contains(pp);
