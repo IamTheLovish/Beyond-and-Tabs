@@ -161,7 +161,8 @@ TARGETS = {
     "terracotta": dict(luma=0.40, std=0.022, sat=0.52, tilt=3.5, smooth=36, pore=30, soften=1.0),
     # r31: cut columns (m_columnar polished) - crisp grooves, flat faces: tilt 25 -> 14 / 20 -> 10, satin 39 -> 70
     "polished_basalt_side": dict(luma=0.36, std=0.065, sat=0.05, tilt=14.0, smooth=70, pore=8),
-    "polished_basalt_top": dict(luma=0.33, std=0.065, sat=0.02, tilt=10.0, smooth=70, pore=8),
+    # r32 (critic: the top "a tight cobble / hex grid, indistinguishable from basalt"): ground rings, lifted 15%
+    "polished_basalt_top": dict(luma=0.38, std=0.050, sat=0.02, tilt=8.0, smooth=90, pore=8),
     "bone_block_side": dict(luma=0.84, std=0.060, sat=0.12, tilt=16.0, smooth=80, pore=20),   # r31: shafts
     "bone_block_top": dict(luma=0.80, std=0.070, sat=0.13, tilt=16.2, smooth=73, pore=20),
     "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.08, tilt=16.0, smooth=138, pore=4),
@@ -1850,6 +1851,28 @@ def m_basalt(F, n, top):
     return m_columnar(F, n, top, polished=True)
 
 
+def m_polished_basalt_top(F, n, rings=16, lobe=4.0):
+    """Round 32 (critic, eyes 41025894452: polished basalt "got WORSE: its top is a tight cobble / hex grid,
+    indistinguishable from basalt"): the polished block's top is a cut and ground face, not column ends - the
+    grinder leaves concentric rings that follow the block's square outline with rounded corners (a p-norm radius,
+    lobe = 4), one ring per 4 texels at 128 (`rings` from the centre to the edge), every fourth ring cut a touch
+    deeper so the pattern survives the mipmaps as a few soft bands; a faint grit and mottle, a bevelled rim. The
+    column cells stay on the sides only (m_columnar)."""
+    x, y = F.u - 0.5, F.v - 0.5
+    r = (np.abs(x) ** lobe + np.abs(y) ** lobe) ** (1.0 / lobe)          # a rounded square's radius
+    r = r + 0.002 * F.noise(2, 6, 0.5)                                   # the rings wander a hair
+    fine = np.cos(2 * math.pi * r * 2 * rings)                           # 1 ring per 4 texels
+    broad = np.cos(2 * math.pi * r * rings / 2)                          # every fourth ring deeper
+    grit = F.noise(16, 48, 0.3)
+    mottle = F.fbm(2, 3, 0.5)
+    bev = frame(F, 0.05, 0.012)
+    H = 0.35 + 0.5 * bev + 0.025 * fine + 0.02 * broad + 0.004 * grit
+    shade = (0.92 + 0.05 * fine + 0.05 * broad + 0.03 * mottle + 0.008 * grit) * (0.75 + 0.25 * bev)
+    hue = F.noise(2, 5, 0.5)
+    jit = np.stack([0.01 * hue, 0.0 * hue, -0.01 * hue], -1)
+    return H, tint((0.35, 0.35, 0.37), shade, jit)
+
+
 def m_mud(F, n):
     """Round 31 (art director: mud "a flat dark slab - wet sheen via smoothness, drying cracks"): a drying mud flat -
     a network of shrinkage cracks (Voronoi plates ~1/4 block, the crack a groove whose plate edges curl up a little),
@@ -3509,7 +3532,7 @@ def recipes():
         "red_terracotta": lambda F, n: m_terracotta(F, n, (0.64, 0.22, 0.15)),
         "terracotta": lambda F, n: m_terracotta(F, n, (0.72, 0.44, 0.28)),
         "polished_basalt_side": lambda F, n: m_basalt(F, n, False),
-        "polished_basalt_top": lambda F, n: m_basalt(F, n, True),
+        "polished_basalt_top": m_polished_basalt_top,   # r32: a ground face with concentric rings
         "bone_block_side": lambda F, n: m_bone(F, n, False),
         "bone_block_top": lambda F, n: m_bone(F, n, True),
         "quartz_pillar": lambda F, n: m_quartz(F, n, "pillar"),
