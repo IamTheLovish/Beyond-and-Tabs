@@ -154,8 +154,13 @@ public class ThornweaverGameTests {
             e -> !e.isRemoved());
     }
 
+    /**
+     * Guardians within {@code r} of {@code at}, over the whole height the spell may raise one at (it stands the treant
+     * up to SeedOfRenewal.MAX_DY from the click, like the sapling): falling sand or gravel can lift it (run 40969304023,
+     * 2 runners of 8: "the cast raised 0 guardians").
+     */
     private static List<LivingEntity> guardiansNear(ServerLevel level, BlockPos at, double r) {
-        return level.getEntitiesOfClass(LivingEntity.class, new AABB(at).inflate(r), SproutGuardian::isGuardian);
+        return level.getEntitiesOfClass(LivingEntity.class, new AABB(at).inflate(r, SeedOfRenewal.MAX_DY + 1, r), SproutGuardian::isGuardian);
     }
 
     private static void clearWispsNear(Vec3 at, double r) {
@@ -754,7 +759,9 @@ public class ThornweaverGameTests {
                 List<LivingEntity> raised = guardiansNear(level, richSpot, 2);
                 made.addAll(raised);
                 if (raised.size() != 1)
-                    early.add("the cast raised " + raised.size() + " guardians, expected 1");
+                    early.add("the cast raised " + raised.size() + " guardians, expected 1 (essence left " + Essence.get(rich)
+                        + ", cooldown " + ((Unit) rich).getCooldown(b) + ", standing cell " + SeedOfRenewal.standingCell(level,
+                        richSpot.getX(), richSpot.getZ(), richSpot.getY() + 1) + " for the spot " + richSpot + ")");
                 else {
                     LivingEntity g = raised.get(0);
                     if (g instanceof Mob m)
