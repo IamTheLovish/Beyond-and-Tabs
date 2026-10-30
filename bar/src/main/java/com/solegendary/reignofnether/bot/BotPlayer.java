@@ -16,8 +16,10 @@ import com.solegendary.reignofnether.resources.MetalPatches;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import com.solegendary.reignofnether.unit.support.SupportState;
 import com.solegendary.reignofnether.util.MiscUtil;
 
 import net.minecraft.core.BlockPos;
@@ -1387,26 +1389,29 @@ public class BotPlayer {
             BlockPos centre = null;
             List<LivingEntity> lagging = new ArrayList<>();
             for (LivingEntity le : mine) {
-                // Moonwell Bearers and Bloom Priestesses: healers, not fighters (neither is an AttackerUnit, so the
-                // army list never holds them and they would otherwise idle at the lab)
-                if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit)    // the Fortress shields it
-                        && !(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))   // essence casters follow the army too
+                if (!followsArmy(le))
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
                     centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
                 BlockPos mt = mb.getMoveGoal() == null ? null : mb.getMoveGoal().getMoveTarget();
+                // a support unit already on its Fight to (near) here holds its standoff on the way, off that spot
+                SupportState ss = le instanceof SupportUnit su ? su.getSupportState() : null;
+                BlockPos fight = ss != null && ss.mode() == SupportState.Mode.SUPPORT_MOVE ? ss.destination() : null;
                 if (le.distanceToSqr(centre.getX() + 0.5, le.getY(), centre.getZ() + 0.5) > 10 * 10
-                        && (mt == null || mt.distSqr(centre) > 8 * 8))
+                        && (mt == null || mt.distSqr(centre) > 8 * 8)
+                        && (fight == null || fight.distSqr(centre) > 12 * 12))
                     lagging.add(le);
             }
-            if (centre != null)
-                order(lagging, UnitAction.MOVE, centre);
+            if (centre != null) {
+                // support units get a Fight, not a Move (lovish, Oct 30: "stay behind units"): a Move ends their support
+                // order, so they walked into the middle of a fighting army; a Fight holds them behind its front
+                List<LivingEntity> supports = new ArrayList<>(), others = new ArrayList<>();
+                for (LivingEntity le : lagging)
+                    (le instanceof SupportUnit ? supports : others).add(le);
+                order(supports, UnitAction.ATTACK_MOVE, centre);
+                order(others, UnitAction.MOVE, centre);
+            }
         }
         if (minutes < 2 || home == null)
             return;
@@ -2234,6 +2239,19 @@ public class BotPlayer {
         choke = best;
         chokeAcrossX = ax;
         chokeAcrossZ = az;
+    }
+
+    /**
+     * The bot's units that are not fighters but walk with its army (none is an AttackerUnit, so the army list never
+     * holds them and they would otherwise idle at the lab): every support unit - the healers, the Field Medic too
+     * (the old hand-written list left a villager bot's medics at the lab), the Ink Scribe that seals from the line -
+     * the Seer that watches from it, the Lantern Fortress that shields it, and the essence casters.
+     */
+    public static boolean followsArmy(LivingEntity le) {
+        return le instanceof SupportUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit
+            || le instanceof com.solegendary.reignofnether.essence.EssenceCarrier;
     }
 
     /** The top solid block of a column from the heightmap (a single read, unlike a scan down from build height). */
