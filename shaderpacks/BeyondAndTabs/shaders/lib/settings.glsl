@@ -209,7 +209,7 @@ const vec3 SKY_AIR_DAY = vec3(0.60, 0.65, 0.72);
 // is and before any discard - basic yellow, textured red, textured_lit blue, weather violet, beaconbeam orange,
 // spidereyes spring green, damagedblock brown, entities green, block cyan, hand magenta, clouds azure, skytextured
 // lime. Terrain, water and the sky dome keep their look. To find which program draws the dotted ring. Off for play
-#define PROBE2 0 // [0 1]
+#define PROBE2 1 // [0 1]
 const float SKY_GRADIENT_SPAN = 0.60;
 // the low sun's sky (lib/sky.glsl, light pass 4): below SKY_SUNSET_HIGH of the sun's sine the horizon warms toward the
 // sun - SKY_SUNSET_GOLD (hue ~33, t11800) turning SKY_SUNSET_DEEP (hue ~15, darker: the dusk still) as the sun reaches
