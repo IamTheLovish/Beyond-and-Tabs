@@ -550,6 +550,12 @@ SEED_ORDER = (
     "polished_blackstone_bricks_v3",
     # round 34: mossy cobblestone and the emissive blocks - appended last
     "mossy_cobblestone",
+    "magma_block",
+    "redstone_ore",
+    "deepslate_redstone_ore",
+    "glowstone",
+    "shroomlight",
+    "sea_lantern",
 )
 
 
@@ -1176,6 +1182,14 @@ PROC_FEATHER = {b: 12.0 for b in ("oak_planks", "spruce_planks", "dark_oak_plank
 # emissive blocks (magma, redstone ore, glowstone, shroomlight, sea lantern) paint their own emission into _s alpha
 # (LabPBR: 0-254 = glow strength, 255 = none) on the hot / lit parts only - their luma is the UNLIT albedo's
 TARGETS["mossy_cobblestone"] = dict(luma=0.37, std=0.090, sat=0.22, tilt=20.5, smooth=30, pore=24)
+# the glowing blocks are painted (their parts keep their own colours - not fitted): luma / std / sat are reference
+# notes only; tilt is solved as usual, smooth is the base the recipe's own map replaces
+TARGETS["magma_block"] = dict(luma=0.30, std=0.120, sat=0.60, tilt=16.0, smooth=60, pore=8)
+TARGETS["redstone_ore"] = dict(luma=0.48, std=0.090, sat=0.20, tilt=10.0, smooth=22, pore=12)
+TARGETS["deepslate_redstone_ore"] = dict(luma=0.24, std=0.080, sat=0.25, tilt=18.0, smooth=12, pore=10)
+TARGETS["glowstone"] = dict(luma=0.70, std=0.120, sat=0.70, tilt=14.0, smooth=150, pore=0)
+TARGETS["shroomlight"] = dict(luma=0.55, std=0.100, sat=0.75, tilt=14.0, smooth=80, pore=20)
+TARGETS["sea_lantern"] = dict(luma=0.80, std=0.080, sat=0.15, tilt=8.0, smooth=150, pore=0)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2402,6 +2416,148 @@ def m_cracked_path(F, n, side):
     return np.where(band, H + 0.1, Hd), np.where(band[..., None], alb, ad)
 
 
+# ------------------------------------------------------------------ round 34: the glowing blocks -----------------
+# LabPBR emission lives in the _s alpha: 0-254 = how much of the albedo glows, 255 = none. Only the hot or lit parts
+# glow (magma's cracks, the ore's crystals, the lamp's core), with a bright core and a falloff; the body stays unlit.
+# check_labpbr refuses emission on more than half of a texture's texels, so a glowing block is still mostly body.
+def glow_falloff(core, peak=254.0):
+    """The emission code of a glow field `core` (0..1): `peak` (0-254, 254 = full) at 1 falling to 0 at the glow's
+    edge, 255 (none) where there is no glow at all."""
+    return np.where(core > 0.02, np.clip(peak * np.clip(core, 0, 1), 0, 254), 255.0)
+
+
+def m_magma(F, n):
+    """Magma block: a dark, slaggy basalt crust broken into plates by a network of cracks through which the melt
+    glows - yellow-white at the widest cracks, falling through orange to a dull red at the crust's edge; the plates
+    domed a little and pitted, the cracks deep (the crust floats on the melt). The glow is emission on the cracks."""
+    f1, f2, idx, k = F.voronoi(18, 0.95)
+    wu, wv = 0.016 * F.noise(2, 7, 0.6), 0.016 * F.noise(2, 7, 0.6)
+    f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
+    gap = f2 - f1
+    width = 0.020 + 0.012 * np.clip(F.noise(2, 6, 0.5), -1, 1)
+    melt = 1 - smoothstep(0.0, width, gap)                       # the open crack: 1 at its middle
+    heat = 1 - smoothstep(0.0, width * 2.2, gap)                 # the crust's edge, baking
+    # thinner secondary cracks within the plates (not all glowing: some cold)
+    fine = 1 - smoothstep(0.0, 0.012, np.abs(F.warp(F.noise(4, 12, 0.5), 0.02 * F.noise(4, 10), 0.02 * F.noise(4, 10))))
+    fine *= smoothstep(0.3, 0.8, F.noise(2, 5, 0.5))
+    hot_fine = fine * smoothstep(0.4, 0.9, F.noise(2, 6, 0.5))
+    melt = np.clip(melt + 0.7 * hot_fine, 0, 1)
+    heat = np.clip(heat + 0.8 * hot_fine, 0, 1)
+    r = np.clip(2 * f1 / np.maximum(f1 + f2, 1e-6), 0, 1)
+    dome = np.sqrt(np.clip(1 - r * r, 0, 1))
+    pits = smoothstep(1.2, 2.0, -F.noise(10, 30, 0.5))
+    grit = F.noise(16, 50, 0.3)
+    H = 0.25 + 0.55 * dome * (1 - melt) + 0.03 * grit - 0.08 * pits - 0.25 * melt - 0.12 * fine * (1 - hot_fine)
+    crust = tint((0.16, 0.14, 0.13), 0.85 + 0.25 * dome + 0.05 * grit - 0.3 * pits - 0.4 * fine * (1 - hot_fine))
+    # the glow's colour by temperature: dull red at the crust's edge -> orange -> yellow-white in the crack's middle
+    t = np.clip(0.35 * heat + 0.65 * melt, 0, 1)
+    glow_rgb = np.stack([0.55 + 0.45 * t, 0.10 + 0.70 * t ** 1.6, 0.02 + 0.55 * t ** 4], -1)
+    w = np.clip(heat, 0, 1)[..., None]
+    alb = crust * (1 - w) + glow_rgb * w
+    emit = glow_falloff(np.clip(0.25 * heat + 0.75 * melt, 0, 1))
+    smooth = 40 + 120 * melt                                     # the melt glassy, the crust rough
+    return dict(H=H, alb=np.clip(alb, 0, 1), smooth=smooth, emit=emit)
+
+
+def m_redstone_ore(F, n, deep):
+    """Redstone ore: the host rock (stone, or deepslate's upright slate) with clusters of blood-red crystals - small
+    angular facets grouped in 3-5 veins, each facet its own shade, bright glassy tops - glowing from inside (dim: a
+    redstone ore lit up, not a lamp), the host rock unlit."""
+    if deep:
+        H, alb = m_deepslate(F, n)
+    else:
+        H, alb = m_stone(F, n)
+    # the veins: where a slow field is high, filled with small facet cells
+    vein = smoothstep(0.55, 0.85, norm01(F.fbm(2, 3, 0.55) + 0.4 * F.noise(4, 10, 0.5)))
+    f1, f2, idx, k = F.voronoi(400, 1.0)
+    cell = 1.0 / math.sqrt(400)
+    inner = smoothstep(0.0, 0.20 * cell, 0.80 * cell - f1)       # a facet with a thin dark rim
+    seam = smoothstep(0.0, 0.006, f2 - f1)                       # the dark seam between facets
+    on = (F.rng.random(k) < 0.75)[idx]
+    crystal = np.clip(vein * inner * on, 0, 1)
+    facet = (0.3 + 0.7 * F.rng.random(k))[idx]                   # each facet its own shade: deep garnet to bright
+    glint = smoothstep(0.8, 1.0, facet)
+    red = np.stack([0.30 + 0.60 * facet, 0.02 + 0.06 * facet + 0.45 * glint, 0.02 + 0.04 * facet + 0.40 * glint], -1)
+    red = red * (0.35 + 0.65 * seam)[..., None]
+    alb = alb * (1 - crystal[..., None]) + red * crystal[..., None]
+    H = H + 0.14 * crystal * (0.5 + 0.5 * facet) * seam - 0.05 * vein * (1 - crystal)
+    emit = glow_falloff(crystal * seam * (0.4 + 0.6 * facet), peak=150.0)
+    smooth = np.where(crystal > 0.5, 150.0 + 60 * facet, 22.0 if not deep else 12.0)
+    return dict(H=H, alb=np.clip(alb, 0, 1), smooth=smooth, emit=emit)
+
+
+def m_glowstone(F, n):
+    """Glowstone: a packed cluster of yellow-amber crystal nodules, each lit from inside - bright cores, their rims
+    darker amber - in a dark resinous matrix; the nodules' tops are the emission (bright cores, a falloff to the
+    rim), the matrix between them unlit."""
+    f1, f2, idx, k = F.voronoi(90, 1.0)
+    g1, g2, gidx, gk = F.voronoi(260, 1.0)
+    big = (F.rng.random(k) < 0.55)[idx]
+    f1, f2 = np.where(big, f1, g1), np.where(big, f2, g2)
+    idx = np.where(big, idx, gidx + k)
+    k = k + gk
+    r = np.clip(2 * f1 / np.maximum(f1 + f2, 1e-6), 0, 1)
+    nodule = smoothstep(0.004, 0.02, f2 - f1)                    # 0 at the joint between nodules
+    dome = np.sqrt(np.clip(1 - r * r, 0, 1)) * nodule
+    core = np.clip(1 - (r / 0.68) ** 2, 0, 1) * nodule           # the lit heart of each nodule
+    tone = (0.75 + 0.35 * F.rng.random(k))[idx]
+    lit_on = (F.rng.random(k) < 0.7)[idx]                        # some nodules dark (burnt out)
+    glow = core * tone * lit_on
+    H = 0.2 + 0.7 * dome + 0.02 * F.noise(16, 48, 0.3)
+    amber = np.stack([0.96, 0.72, 0.24]) * (0.70 + 0.30 * dome)[..., None] * tone[..., None]
+    bright = np.array([1.0, 0.94, 0.66])
+    alb = amber * (1 - glow[..., None]) + bright * glow[..., None]
+    alb = np.where(lit_on[..., None], alb, amber * 0.70)
+    matrix = np.array([0.50, 0.34, 0.12])
+    alb = alb * nodule[..., None] + matrix * (1 - nodule[..., None])
+    emit = glow_falloff(glow)
+    smooth = 120 + 80 * core
+    return dict(H=H, alb=np.clip(alb, 0, 1), smooth=smooth, emit=emit)
+
+
+def m_shroomlight(F, n):
+    """Shroomlight: a spongy fungal mass, orange-red, its skin pocked with round pores that glow from inside (the
+    emission - the pores' depths bright yellow-orange, the skin unlit); a few larger lit blisters."""
+    f1, f2, idx, k = F.voronoi(120, 1.0)
+    cell = 1.0 / math.sqrt(120)
+    on = (F.rng.random(k) < 0.6)[idx]
+    rad = (0.28 + 0.2 * F.rng.random(k))[idx] * cell
+    pore = np.clip(1 - (f1 / np.maximum(rad, 1e-6)) ** 2, 0, 1) * on
+    blister = smoothstep(0.7, 0.95, norm01(F.fbm(3, 3, 0.55)))
+    spongy = F.noise(6, 20, 0.5)
+    H = 0.6 + 0.08 * spongy - 0.25 * pore + 0.1 * blister
+    skin = tint((0.78, 0.36, 0.14), 0.85 + 0.15 * norm01(spongy) + 0.1 * blister)
+    glow = np.clip(pore ** 0.8 + 0.6 * blister, 0, 1)
+    hot = np.array([1.0, 0.80, 0.35])
+    alb = skin * (1 - glow[..., None]) + hot * glow[..., None]
+    emit = glow_falloff(np.clip(pore + 0.5 * blister, 0, 1), peak=240.0)
+    smooth = 60 + 100 * pore
+    return dict(H=H, alb=np.clip(alb, 0, 1), smooth=smooth, emit=emit)
+
+
+def m_sea_lantern(F, n):
+    """Sea lantern: a pale prismarine frame round a glowing core - the frame a bevelled ring of cool grey-green
+    stone (unlit), the core a panel of milky aqua-white crystal with a bright centre and brighter seams where the
+    crystal is thinnest; the core is the emission."""
+    e = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+    bevel = smoothstep(0.12, 0.17, e) * (1 - smoothstep(0.17, 0.20, e))
+    core = smoothstep(0.17, 0.21, e)
+    cx, cy = F.u - 0.5, F.v - 0.5
+    rr = np.sqrt(cx * cx + cy * cy)
+    centre = np.clip(1 - (rr / 0.36) ** 2, 0, 1)
+    f1, f2, idx, k = F.voronoi(20, 0.8)
+    seam = 1 - smoothstep(0.0, 0.015, f2 - f1)                  # crystal seams, the thinnest glass: brightest
+    grain = F.noise(8, 24, 0.4)
+    H = np.where(core > 0.5, 0.80 + 0.02 * grain - 0.03 * seam, 0.55 + 0.25 * bevel + 0.02 * grain)
+    stone = tint((0.58, 0.68, 0.62), 0.9 + 0.15 * bevel + 0.04 * grain)
+    glass = np.stack([0.70 + 0.28 * centre + 0.1 * seam, 0.88 + 0.12 * centre, 0.90 + 0.10 * centre], -1)
+    alb = stone * (1 - core[..., None]) + np.clip(glass, 0, 1) * core[..., None]
+    glow = core * np.clip(0.45 + 0.45 * centre + 0.4 * seam, 0, 1)
+    emit = glow_falloff(glow)
+    smooth = np.where(core > 0.5, 200.0, 70.0)
+    return dict(H=H, alb=np.clip(alb, 0, 1), smooth=smooth, emit=emit)
+
+
 # ------------------------------------------------------------------ round 14: the structure preview's gaps ---------
 def m_reinforced(F, n, top):
     """Reinforced deepslate: a dark slab held in a pale, bone-like frame (bars across on the side, a ring on top)."""
@@ -2901,15 +3057,21 @@ def m_lantern(F, n, glow):
     side = rect(0, 2, 6, 9)
     pane = rect(0.9, 3.0, 5.1, 8.1)
     mullion = pane & (np.abs(x - 3.0) < 0.25)                 # the frame's middle bar, a sixteenth of a block
-    core = np.exp(-(((x - 3.0) / 1.1) ** 2 + ((y - 6.2) / 1.6) ** 2))
+    # r34: a FLAME in the pane - a teardrop core (yellow-white, tallest upward) with the glow falling off to the
+    # pane's corners; the emission follows it (254 at the core, dim at the edges), the glass itself a warm amber
+    dy = (y - 6.4) / np.where(y < 6.4, 2.0, 1.1)
+    core = np.exp(-(((x - 3.0) / 0.75) ** 2 + dy ** 2))
+    halo = np.exp(-(((x - 3.0) / 1.6) ** 2 + ((y - 6.0) / 2.4) ** 2))
     lit = pane & ~mullion
-    glass = np.clip(np.asarray(glow) * (0.70 + 0.55 * core[..., None]), 0, 1)
+    white = np.array([1.0, 0.97, 0.85])
+    glass = np.asarray(glow) * (0.45 + 0.55 * halo[..., None])
+    glass = np.clip(glass * (1 - core[..., None] ** 1.5) + white * core[..., None] ** 1.5, 0, 1)
     alb = np.where(side[..., None], iron_c, alb)
     alb = np.where(lit[..., None], glass, alb)
     H = np.where(side, np.where(lit, 0.45, 0.8), H)
     smooth = np.where(lit, 225.0, smooth)
     f0 = np.where(lit, 10, f0)
-    emit = np.where(lit, np.clip(110 + 140 * core, 0, 250), emit)
+    emit = np.where(lit, np.clip(90 + 164 * np.maximum(core, 0.6 * halo), 0, 254), emit)
     cap = rect(0, 9, 6, 15)
     knob_top = rect(1, 10, 5, 14)
     ring = cap & ~rect(0.7, 9.7, 5.3, 14.3)
@@ -4030,6 +4192,13 @@ def recipes():
     R["lantern"] = _parts(lambda F, n: m_lantern(F, n, (1.0, 0.72, 0.32)), fit=False)
     R["soul_lantern"] = _parts(lambda F, n: m_lantern(F, n, (0.35, 0.85, 0.95)), fit=False)
     R["cobweb"] = _parts(m_cobweb, fit=False)
+    # round 34: the glowing blocks (emission in the _s alpha on the hot / lit parts only)
+    R["magma_block"] = _parts(m_magma, fit=False)
+    R["redstone_ore"] = _parts(lambda F, n: m_redstone_ore(F, n, False), fit=False)
+    R["deepslate_redstone_ore"] = _parts(lambda F, n: m_redstone_ore(F, n, True), fit=False)
+    R["glowstone"] = _parts(m_glowstone, fit=False)
+    R["shroomlight"] = _parts(m_shroomlight, fit=False)
+    R["sea_lantern"] = _parts(m_sea_lantern, fit=False)
     R["exposed_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 1)))
     R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
     for name, base in SCAN_VARIANT_OF.items():        # round 28: variant k is SCAN index k - 1
