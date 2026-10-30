@@ -1493,7 +1493,7 @@ public final class EyesDirector {
                 UnitClientEvents.clearSelectedUnits();
                 BuildingClientEvents.clearSelectedBuildings();
                 setZoom(ZOOM_NORMAL);
-                OrthoviewClientEvents.centreCameraOnPosInstant(net.minecraft.world.phys.Vec3.atCenterOf(b.centrePos));
+                OrthoviewClientEvents.centreCameraOnPosInstant(consAim(b));
                 consPhase = 3;
                 consAt = ticks + 30;
             }
@@ -1509,6 +1509,30 @@ public final class EyesDirector {
             }
             default -> next();
         }
+    }
+
+    /**
+     * Where 06b / 06c look: the site's centre pulled 60% of the way toward its builders. Construction round 15 critic:
+     * no worker in either still, so nothing said "being built now". The workers were there - they build from within
+     * BuildRepairGoal.BUILD_RANGE (2) of the footprint, on the side they walked in from - in the round 15 stills the near
+     * side - and centred on the site's middle that side lies at the bottom of the screen, under the building panel (the 06b still
+     * shows only their health bars and a name plate peeking out above it). Pulled toward them, they stand in the open
+     * between the site and the panel, the build front and their tools in view.
+     */
+    private static Vec3 consAim(BuildingPlacement b) {
+        Vec3 c = Vec3.atCenterOf(b.centrePos);
+        double x = 0, y = 0, z = 0;
+        int n = 0;
+        for (LivingEntity le : new ArrayList<>(UnitClientEvents.getAllUnits()))
+            if (le instanceof WorkerUnit && le.isAlive() && b.isPosInsideBuilding(le.getOnPos(), 4)
+                    && UnitClientEvents.getPlayerToEntityRelationship(le) == Relationship.OWNED) {
+                x += le.getX(); y += le.getY(); z += le.getZ();
+                n++;
+            }
+        ReignOfNether.LOGGER.info("[Eyes] 06b_construction: {} owned workers at the site", n);
+        if (n == 0)
+            return c;
+        return c.add((x / n - c.x) * 0.6, (y / n - c.y) * 0.6, (z / n - c.z) * 0.6);
     }
 
     // ---- 07: two armies, by the game's own summon command ----

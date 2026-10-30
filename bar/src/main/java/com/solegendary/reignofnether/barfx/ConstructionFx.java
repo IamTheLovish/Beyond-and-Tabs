@@ -7,13 +7,7 @@ import com.solegendary.reignofnether.building.ConstructionCrew;
 import com.solegendary.reignofnether.building.ConstructionGrid;
 import com.solegendary.reignofnether.building.ConstructionShape;
 import com.solegendary.reignofnether.faction.FactionTraits;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import org.joml.Matrix4f;
 
@@ -27,9 +21,11 @@ import java.util.WeakHashMap;
  * race could get their own method of building"). The White Angel pilot, approved from a paintover ("i loveeee"):
  * <ul>
  *   <li>a cool slate-blue GHOST over every block still missing - and nothing else (ConstructionGrid) - one volume,
- *   one colour, blended once a screen pixel, a dark 1 px outline on its silhouette: cool "not yet" against the warm
- *   white "done" (round 12 critic: separate them by hue; rounds 13-14: one volume, not a lattice);</li>
- *   <li>ONE build front a wall face: an amber band along the course being laid there, over everything;</li>
+ *   one colour, LIGHTENED onto the scene so the laid white stone under it stays white, a dark 1 px outline on its
+ *   silhouette: cool "not yet" against the warm white "done" (round 12 critic: separate them by hue; rounds 13-14:
+ *   one volume, not a lattice; round 15: the laid wall read as ghost);</li>
+ *   <li>ONE build front for the whole building: an amber band along the lowest course still being laid, breathing
+ *   slowly, over everything;</li>
  *   <li>three thin beams rising from the front row, slow gold motes;</li>
  *   <li>a small tool in the hands of each builder at work (up to three), each blow a 2-frame flash and sparks;</li>
  *   <li>done: a cloud halo swells and fades, a flash on the top, a light ring runs out over the ground.</li>
@@ -54,12 +50,17 @@ final class ConstructionFx {
     private static final int COOL = 0xB9CBEE;   // round 11 critic: desaturated (a periwinkle kerb at #8FB0F0, 0.7)
     /** The build front (round 14 critic): one #FFB347 band, opaque, normal-blended, on one course a wall face. */
     private static final int FRONT = 0xFFB347;
-    /** The ghost (round 14 critic: #5B74A0 at 0.35 measured B - R ~ -4 over turf, a grey-green hue ~130): one volume
-     *  #4C6BA8 at 0.45 - over grass B - R >= +3, saturation ~0.25 - and ONE colour throughout (the brighter next course
-     *  read as a second, nested layer and a false "partly built" cue); a dark 1 px outline #3A5070 (never the
-     *  selection box's pale 2 px). */
-    private static final int GHOST_FILL = 0x4C6BA8, GHOST_EDGE = 0x3A5070;
-    private static final float GHOST_A = 0.45f;
+    /**
+     * The ghost, LIGHTENED onto the scene (BarFxRenderTypes.LIGHTEN: each channel max(scene, ghost)). Round 15 critic:
+     * blended over at 0.45, #4C6BA8 tinted the laid white wall top under the ghost of the courses above it pale blue
+     * (157, 166, 184) - the building read as 100% ghost - and still measured B - R -2.8 over grass ((83, 105, 80); the
+     * grade takes ~14 off a cool blue and adds ~12 to its red). Lightened, #284687 (40, 70, 135) leaves everything
+     * brighter than it in every channel exactly as it is - laid quartz (~185-235) and its shaded sides (~122, 122, 128:
+     * B +7 at most) - and lifts only the blue of the darker ground: grass (75, 92, 47) -> (75, 92, 135), B - R +60
+     * before the grade, ~+35 after; the RTS grass (74-82, 95-100, 52) the same. One colour throughout; a dark 1 px
+     * outline #3A5070 (never the selection box's pale 2 px).
+     */
+    private static final int GHOST_FILL = 0x284687, GHOST_EDGE = 0x3A5070;
     /** The beams: #FFE2A0, 0.45 at most, normal-blended (round 13 critic: peak L <= 200). */
     private static final int BEAM = 0xFFE2A0;
     private static final float BEAM_A = 0.45f;
@@ -168,7 +169,11 @@ final class ConstructionFx {
             // standing = the exact state (isPlaced) or the same block in another state: a slab's type, a lantern's
             // hanging, a banner's rotation or a candle's lit flag differ while the block plainly stands - round 12: the
             // ghost was drawn over standing quartz
-            boolean placed = b.isPlaced(level) || level.getBlockState(bp).getBlock() == b.getBlockState().getBlock();
+            // ... or anything solid at all (round 15 critic: "cull every ghost cell whose world block is already
+            // placed" - a laid block in another variant, or ground the plan builds into, is never ghosted); air, water and
+            // grass tufts (canBeReplaced) still count as missing
+            net.minecraft.world.level.block.state.BlockState ws = level.getBlockState(bp);
+            boolean placed = b.isPlaced(level) || ws.getBlock() == b.getBlockState().getBlock() || !ws.canBeReplaced();
             s.grid.mark(bp.getX(), bp.getY(), bp.getZ(), placed);
             if (placed)
                 s.standing[s.shape.layerOf(bp.getY())]++;
@@ -208,11 +213,9 @@ final class ConstructionFx {
                 net.minecraft.client.Minecraft.getInstance().getWindow().getHeight());
 
         // Pass order (round 13 critic). 1 normal-blended: the halo (done), the beams - before the ghost, which then lies
-        // over whatever is inside its volume. 2 additive: motes, the workers' sparks, the completion flash. 3 the ghost:
-        // its depth prepass, then its colour once a pixel (drawn straight away, in order - ghostPass). 4 its outline and
-        // the tools in the workers' hands. 5 the build front, polygon-offset, over everything of the site. The ghost's
-        // depth stays in the buffer for the rest of the frame: later particles behind a ghost are hidden as if it were
-        // glass that writes depth - a few blocks of a rising site, accepted.
+        // over whatever is inside its volume. 2 additive: motes, the workers' sparks, the completion flash. 3 the ghost,
+        // lightened (no depth write: a pixel behind two of its faces is the same as behind one). 4 its outline and the
+        // tools in the workers' hands. 5 the build front, polygon-offset, over everything of the site.
         BarFxClient.begin(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
         for (BuildingPlacement p : scratch) {
             Site s = siteOf(p);
@@ -281,9 +284,12 @@ final class ConstructionFx {
         }
         buffers.endBatch(BarFxRenderTypes.ADDITIVE);
 
-        // the ghost: its nearest surface into depth, then its colour once a pixel
-        ghostPass(buffers, BarFxRenderTypes.DEPTH_ONLY, mat);
-        ghostPass(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
+        // the ghost
+        BarFxClient.begin(buffers, BarFxRenderTypes.LIGHTEN, mat);
+        for (BuildingPlacement p : scratch)
+            if (!p.isBuilt)
+                ghostFaces(SITES.get(p));
+        buffers.endBatch(BarFxRenderTypes.LIGHTEN);
         BarFxClient.begin(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
         for (BuildingPlacement p : scratch) {
             Site s = SITES.get(p);
@@ -301,40 +307,6 @@ final class ConstructionFx {
             if (!p.isBuilt)
                 drawFront(SITES.get(p), clock, far);
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT_OFFSET);
-        BarFxClient.vc = null;
-    }
-
-    /**
-     * One pass of the ghost (round 14 critic: still blended more than once where its faces overlap on screen - nested
-     * faces at the stepped roof wing and a lower corner, luma 142 against 90 for one layer). The prepass and the colour
-     * pass are drawn straight away through the Tesselator, in this order, not left in the shared buffer source: a
-     * shader pack's buffer source (Oculus) holds every batch to the end of the level and groups them by render type,
-     * so the colour could land before the depth it is tested against, and every face of a non-convex hull blended.
-     * Both passes send the very same quads (ghostFaces) through the same shader, so their depths match exactly; the
-     * colour pass (TRANSLUCENT: LEQUAL, no depth write) passes only where its depth equals the nearest ghost depth -
-     * each pixel takes the ghost once, at its nearest face - and the laid blocks in front (in the depth buffer before
-     * the prepass) still hide it. LEQUAL rather than EQUAL: the same answer, with no risk of a pack's program rounding
-     * the two passes a hair apart. If the Tesselator is busy (never seen), the buffer source is used.
-     */
-    private static void ghostPass(MultiBufferSource.BufferSource buffers, RenderType type, Matrix4f mat) {
-        BufferBuilder bb = Tesselator.getInstance().getBuilder();
-        if (bb.building()) {
-            BarFxClient.begin(buffers, type, mat);
-            for (BuildingPlacement p : scratch)
-                if (!p.isBuilt)
-                    ghostFaces(SITES.get(p));
-            buffers.endBatch(type);
-            return;
-        }
-        bb.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        BarFxClient.vc = bb;
-        BarFxClient.mat = mat;
-        for (BuildingPlacement p : scratch)
-            if (!p.isBuilt)
-                ghostFaces(SITES.get(p));
-        type.setupRenderState();
-        BufferUploader.drawWithShader(bb.end());
-        type.clearRenderState();
         BarFxClient.vc = null;
     }
 
@@ -451,14 +423,14 @@ final class ConstructionFx {
      * alpha doubled (~0.45 over grass, not 0.28), the old inset on every side of every cell left a seam between each two,
      * and the slate read teal-grey (hue 139, sat 0.14). Now:
      * <ul>
-     *   <li>only the hull's faces (ConstructionGrid.ghostFace: the block beyond is not part of the site), the ones turned
-     *   to the camera, each spanning its whole cell in its plane (ghostQuad: edge to edge, no seam) and GHOST_INSET
-     *   inside it (never on a standing block's plane);</li>
-     *   <li>drawn twice, in order (ghostPass): a depth-only prepass, then the colour with LEQUAL and no depth write -
-     *   each pixel blended once, at its nearest ghost surface;</li>
-     *   <li>one colour throughout, #4C6BA8 at 0.45 (round 14 critic: no brighter next course - it nested).</li>
+     *   <li>only the hull's faces (ConstructionGrid.ghostFace: the cell beyond is not volume - against standing blocks
+     *   too, so no hole behind a lantern or a slab, round 15), the ones turned to the camera, each spanning its whole
+     *   cell in its plane (ghostQuad: edge to edge, no seam) and GHOST_INSET inside it (never on a standing block's
+     *   plane: behind a laid full block the depth test hides it);</li>
+     *   <li>LIGHTENED (round 15 critic: blended over, it tinted the laid wall under it): each pixel the brighter of the
+     *   scene and #284687 per channel - once or many times, the same;</li>
+     *   <li>one colour throughout (round 14 critic: no brighter next course - it nested).</li>
      * </ul>
-     * Called for both passes with the same quads (the prepass ignores the colour), so their depths match exactly.
      */
     static void ghostFaces(Site s) {
         if (s == null)
@@ -475,7 +447,7 @@ final class ConstructionFx {
                     continue;
                 ConstructionGrid.ghostQuad(x, y, z, dir, GHOST_INSET, q);
                 for (int j = 0; j < 12; j += 3)
-                    BarFxClient.v(q[j], q[j + 1], q[j + 2], GHOST_FILL, GHOST_A);
+                    BarFxClient.v(q[j], q[j + 1], q[j + 2], GHOST_FILL, 1f);
             }
         }
     }
@@ -492,8 +464,8 @@ final class ConstructionFx {
     /** The most ghost edges one building draws; how far the ghost sits inside its cells. */
     private static final int EDGE_CAP = 400;
     private static final float GHOST_INSET = 0.01f;
-    /** The outline is pulled this far toward the camera so the ghost's own depth (the prepass) never hides half of it;
-     *  in the RTS view (orthographic) that moves nothing on screen. */
+    /** The outline is pulled this far toward the camera so the laid block it runs along never hides half of it; in the
+     *  RTS view (orthographic) that moves nothing on screen. */
     private static final float EDGE_NUDGE = 0.1f;
 
     /**
@@ -540,20 +512,24 @@ final class ConstructionFx {
 
     // ------------------------------------------------------------------ the build front
 
-    /** The front's on-screen width (px) close and from the strategic zoom; how far it is pulled toward the camera. */
-    private static final float FRONT_PX = 3, FRONT_PX_FAR = 4, FRONT_NUDGE = 0.3f;
+    /** The front's on-screen width (px) close and from the strategic zoom; how far it is pulled toward the camera; its
+     *  breath (a cycle every FRONT_PULSE_S seconds, brightness +-FRONT_PULSE). */
+    private static final float FRONT_PX = 2.5f, FRONT_PX_FAR = 3, FRONT_NUDGE = 0.3f, FRONT_PULSE_S = 0.8f,
+            FRONT_PULSE = 0.15f;
 
     /**
-     * ONE build front a wall face (round 14 critic: a 3-5 px orange edge on scattered block tops at many heights read as
-     * "orange-trimmed blocks", not "the row being laid"). Now:
+     * ONE build front for the whole building (round 14 critic: a 3-5 px orange edge on scattered block tops at many
+     * heights read as "orange-trimmed blocks"; round 15: one course a face still made 5 orange pieces over 270 px of
+     * screen height). Now:
      * <ul>
-     *   <li>per wall face turned to the camera, the course being laid there (ConstructionGrid.courseFront: the highest
-     *   course partly laid on that face, else the lowest still missing) - one height a face, so its pixels lie in one
-     *   band a block high on screen at most;</li>
+     *   <li>the lowest course with a block still missing (ConstructionGrid.courseFront), on every wall face turned to the
+     *   camera - one height for the building, so all its orange lies in one course's band on each face;</li>
      *   <li>along that course's whole OUTER edge at its bed (laid and missing cells alike - one continuous line, never
      *   a run of block tops), and nothing orange on any other block: no beads, no rim elsewhere;</li>
-     *   <li>#FFB347 at 1.0, NORMAL-blended (round 13: additive vanished on a white wall), 3 px on screen close and
-     *   4 px from the strategic zoom (sized in pixels, so never a hairline zoomed out);</li>
+     *   <li>#FFB347 at 1.0, NORMAL-blended (round 13: additive vanished on a white wall), 2.5 px on screen close and
+     *   3 px from the strategic zoom (sized in pixels, so never a hairline zoomed out);</li>
+     *   <li>breathing: its brightness +-15% over 0.8 s - the site's "being built now" even with no builder in view
+     *   (round 15 critic);</li>
      *   <li>drawn last of the site, polygon-offset and pulled FRONT_NUDGE toward the camera: nothing of the site - the
      *   ghost, its own wall, the beams - covers it.</li>
      * </ul>
@@ -565,12 +541,13 @@ final class ConstructionFx {
         float w = (far ? FRONT_PX_FAR : FRONT_PX) * pxBlocks;
         float lx = BarFxClient.lookX, lz = BarFxClient.lookZ;
         float ox = -lx * FRONT_NUDGE, oy = -BarFxClient.lookY * FRONT_NUDGE, oz = -lz * FRONT_NUDGE;
+        int c = shade(FRONT, 1 + FRONT_PULSE * (float) Math.sin(clock * 2 * Math.PI / FRONT_PULSE_S));
         for (int i = 0, n = g.courseEdgeCount(); i < n; i++) {
             int side = g.courseSide(i);
             if (sideNx(side) * lx + sideNz(side) * lz > -0.05f)   // a face turned away: hidden behind the building
                 continue;
             float ix = -sideNx(side) * RIM_INSET + ox, iz = -sideNz(side) * RIM_INSET + oz, y = g.courseY(i) + oy;
-            line(g.courseX0(i) + ix, y, g.courseZ0(i) + iz, g.courseX1(i) + ix, y, g.courseZ1(i) + iz, w, FRONT, 1f);
+            line(g.courseX0(i) + ix, y, g.courseZ0(i) + iz, g.courseX1(i) + ix, y, g.courseZ1(i) + iz, w, c, 1f);
         }
     }
 

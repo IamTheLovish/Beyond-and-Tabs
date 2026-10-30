@@ -170,6 +170,12 @@ public class BuildProgressBarClientEvents {
             Eta prod = b.isBuilt ? PROD_ETAS.get(b) : null;
             if (build == null && prod == null)
                 continue;
+            // a White Angel site rising: nothing floats over it (construction round 15 critic: with its "ETA" text gone
+            // since round 13, the bar alone floated over the site as an unlabelled gold-and-navy pill that read as an
+            // object; ConstructionFx shows the work on the building and the panel shows progress and the ETA -
+            // PortraitRendererBuilding, constructionEta)
+            if (build != null && FactionTraits.of(b.getFaction()) == FactionTraits.SUNFORGED)
+                continue;
             boolean friendly = AlliancesClient.isAlliedOrOwned(me, b.ownerName);
             if (prod != null && !friendly)
                 continue;   // an enemy's production queue is private
@@ -211,15 +217,10 @@ public class BuildProgressBarClientEvents {
             RenderSystem.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
             HealthBarClientEvents.renderProgress(pose, frac, 0, 0, BAR_WIDTH, mode, r, g, bl);
 
-            // a White Angel site rising: no floating text in the scene (construction round 13 critic: the "ETA 0:10" in
-            // the world competed with the build front) - the bar stays, the ETA is in the building's panel
-            // (PortraitRendererBuilding, constructionEta)
-            if (build == null || FactionTraits.of(b.getFaction()) != FactionTraits.SUNFORGED) {
-                String text = eta.text;
-                float tw = font.width(text);
-                font.drawInBatch(text, -tw / 2f, -10, 0xFFFFFFFF, false, pose.last().pose(), buffers,
-                        Font.DisplayMode.SEE_THROUGH, 0x60000000, 0xF000F0);
-            }
+            String text = eta.text;
+            float tw = font.width(text);
+            font.drawInBatch(text, -tw / 2f, -10, 0xFFFFFFFF, false, pose.last().pose(), buffers,
+                    Font.DisplayMode.SEE_THROUGH, 0x60000000, 0xF000F0);
             pose.popPose();
             drawn++;
         }
