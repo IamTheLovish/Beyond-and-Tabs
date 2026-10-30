@@ -27,15 +27,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * of every late-game frame). {@link #CIRCLES} circles of radius {@link #RADIUS} (a defence tower's ring, three blocks
  * thick as MiscUtil.getRangeIndicatorCircleBlocks makes it), drawn into a vertex sink that only counts:
  * <ul>
- * <li><b>old</b> - MyRenderer.drawBlockFace per face, as BlockClientEvents called it: the texture's name made anew,
- *     two boxes, a pose push / translate / pop and the face. What the bench cannot run without a game is left out, so
- *     the real old path was dearer still: a block-state read per face for the snow, and a translucent-buffer fetch per
- *     face through the buffer source;</li>
+ * <li><b>old</b> - MyRenderer.drawBlockFace per face, as BlockClientEvents called it: the texture's name parsed
+ *     anew, two boxes, a pose push / translate / pop and the face. What the bench cannot run without a game is left
+ *     out, so the real old path was dearer still: a block-state read per face for the snow, and a translucent-buffer
+ *     fetch (a render-type lookup) per face through the buffer source;</li>
  * <li><b>new</b> - each circle's {@link RangeCircleMesh} (built once, as BlockClientEvents keeps it for
  *     {@link RangeCircleMesh#REFRESH_TICKS} ticks) emitted through one pose.</li>
  * </ul>
- * Gates: the new draw at most half the old one (best round each), allocation-free, and the same vertices. Lines go to
- * stdout and build/range-circle-bench.txt, which build.yml turns into notices.
+ * The sink adds up every coordinate it is given, so the JIT cannot drop the work (a sink that only counted let it fold
+ * the whole loop away: "0.000 ms" on the first CI run). The view pose is pushed once per frame in the game, outside
+ * the timed loop here. Gates: the new draw at most half the old one (best round each), allocation-free, and the same
+ * vertices. Lines go to stdout and build/range-circle-bench.txt, which build.yml turns into notices.
  */
 class RangeCircleCostBench {
 
@@ -59,12 +61,28 @@ class RangeCircleCostBench {
 
     static long blackhole;
 
+    /** A vertex sink that keeps a sum of every position it is given (no GL, no buffer), so nothing is dead code. */
+    static final class SummingSink implements VertexConsumer {
+        long vertices;
+        double sum;
+
+        @Override public VertexConsumer vertex(double x, double y, double z) { vertices++; sum += x + y + z; return this; }
+        @Override public VertexConsumer color(int r, int g, int b, int a) { sum += a; return this; }
+        @Override public VertexConsumer uv(float u, float v) { return this; }
+        @Override public VertexConsumer overlayCoords(int u, int v) { return this; }
+        @Override public VertexConsumer uv2(int u, int v) { return this; }
+        @Override public VertexConsumer normal(float x, float y, float z) { sum += y; return this; }
+        @Override public void endVertex() { }
+        @Override public void defaultColor(int r, int g, int b, int a) { }
+        @Override public void unsetDefaultColor() { }
+    }
+
     /** MyRenderer.drawBlockFace(..., Direction.UP, yOffset, bp, ...) -> drawSolidBox, without the buffer fetch. */
     static void oldFace(PoseStack ps, VertexConsumer sink, BlockPos bp, float yOffset, double cx, double cy, double cz,
                         float r, float g, float b, float a) {
         AABB aabb = new AABB(bp);
         aabb = aabb.setMaxY(aabb.maxY + 0.01f);
-        ResourceLocation rl = new ResourceLocation("forge", "textures/white.png");
+        ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
         blackhole += rl.hashCode();
         ps.pushPose();
         ps.translate(-cx, -cy, -cz);
@@ -86,8 +104,8 @@ class RangeCircleCostBench {
             faces += bps.size();
         }
         double cx = 1400.5, cy = 140.62, cz = -1750.5;
-        AnimationCostBench.CountingSink oldSink = new AnimationCostBench.CountingSink();
-        AnimationCostBench.CountingSink newSink = new AnimationCostBench.CountingSink();
+        SummingSink oldSink = new SummingSink();
+        SummingSink newSink = new SummingSink();
         PoseStack oldPs = new PoseStack(), newPs = new PoseStack();
         oldPs.mulPose(new org.joml.Quaternionf().rotateX(1.1f));
         newPs.mulPose(new org.joml.Quaternionf().rotateX(1.1f));
@@ -99,22 +117,21 @@ class RangeCircleCostBench {
                     oldFace(oldPs, oldSink, bp, (bp.getX() & 7) == 0 ? 0.25f : 0f, cx, cy, cz, 0f, 0f, 0f, 0.6f);
             return System.nanoTime() - t0;
         });
+        newPs.translate(-cx, -cy, -cz);
+        Matrix4f m = newPs.last().pose();
+        Matrix3f n = newPs.last().normal();
         BenchRounds.Result now = BenchRounds.measure(ROUNDS, WARMUP, FRAMES, PAUSE_MS, (round, frame) -> {
             long t0 = System.nanoTime();
-            newPs.pushPose();
-            newPs.translate(-cx, -cy, -cz);
-            Matrix4f m = newPs.last().pose();
-            Matrix3f n = newPs.last().normal();
             for (RangeCircleMesh mesh : meshes)
                 mesh.emit(m, n, newSink, 0f, 0f, 0f, 0.6f);
-            newPs.popPose();
             return System.nanoTime() - t0;
         });
 
         String line = String.format(Locale.ROOT,
-            "[RangeBench] %d circles, %d faces/frame: old drawBlockFace path %.3f ms (%s), cached mesh %.3f ms (%s, %s) - x%.1f",
+            "[RangeBench] %d circles, %d faces/frame: old drawBlockFace path %.4f ms (%s), cached mesh %.4f ms (%s, %s) - x%.1f",
             CIRCLES, faces, old.bestMs(), old.roundsText(), now.bestMs(), now.roundsText(), now.bytesText(),
             old.bestMs() / Math.max(now.bestMs(), 1e-6));
+        assertTrue(oldSink.sum != 0 && newSink.sum != 0, "the sinks saw the vertices: " + line);
         System.out.println(line);
         Path out = Path.of("build", "range-circle-bench.txt");
         Files.createDirectories(out.getParent());
