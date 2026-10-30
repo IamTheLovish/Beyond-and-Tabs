@@ -123,7 +123,7 @@ TARGETS = {
     "gravel":           dict(luma=0.51, std=0.100, sat=0.07, tilt=18.0, smooth=24, pore=30, soften=0.8),   # r52: distinct stones; r53: 0.46 -> 0.43; r54: 0.49 - the TOP of the greys ladder (cobble 0.33 < stone 0.45 < stone_bricks 0.47 < gravel)
     # r35 (critic: the planks too dark and too close in value - oak ~0.55, jungle ~0.48, dark oak ~0.35): oak lifted
     "oak_planks":       dict(luma=0.55, std=0.055, sat=0.40, tilt=8.5, smooth=45, pore=24, soften=0.4, lf=0.3),
-    "oak_log":          dict(luma=0.33, std=0.085, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=2.0),   # r55: std 0.060 -> 0.085 (plates against fissures)
+    "oak_log":          dict(luma=0.33, std=0.140, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=2.0),   # r55: std 0.060 -> 0.085 (plates against fissures)
     "oak_log_top":      dict(luma=0.44, std=0.073, sat=0.48, tilt=12.0, smooth=40, pore=30),
     # round 3 (Oct 15): what the RTS view shows most after grass and water (the eyes ground census); new keys go at
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
@@ -176,15 +176,15 @@ TARGETS = {
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
     # flat dark slab (reviewer, eyes run 39548166615); the reference's numbers were for a lit flat view
-    "spruce_log":       dict(luma=0.23, std=0.090, sat=0.42, tilt=26.2, smooth=40, pore=36),   # r53: the flakes apart; r54: lifted 0.19 -> 0.22, std 0.085 (near-black at 30 px)
+    "spruce_log":       dict(luma=0.23, std=0.120, sat=0.42, tilt=26.2, smooth=40, pore=36),   # r53: the flakes apart; r54: lifted 0.19 -> 0.22, std 0.085 (near-black at 30 px)
     "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
     "birch_log":        dict(luma=0.72, std=0.210, sat=0.06, tilt=12.0, smooth=50, pore=30),   # r54: 2-3 dark bands (~0.25) on the 0.80 paper carry the spread; tilt 26 -> 12 (the paper's relief lit as speckle at 30 px)
     "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
-    "acacia_log":       dict(luma=0.35, std=0.090, sat=0.10, tilt=26.1, smooth=40, pore=36),   # r54: std 0.063 -> 0.080
+    "acacia_log":       dict(luma=0.35, std=0.140, sat=0.10, tilt=26.1, smooth=40, pore=36),   # r54: std 0.063 -> 0.080
     "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
-    "jungle_log":       dict(luma=0.29, std=0.090, sat=0.45, tilt=31.2, smooth=40, pore=36),   # r54: std 0.070 -> 0.085
+    "jungle_log":       dict(luma=0.29, std=0.125, sat=0.45, tilt=31.2, smooth=40, pore=36),   # r54: std 0.070 -> 0.085
     "jungle_log_top":   dict(luma=0.43, std=0.100, sat=0.55, tilt=12.0, smooth=40, pore=30),
-    "dark_oak_log":     dict(luma=0.21, std=0.095, sat=0.40, tilt=31.3, smooth=40, pore=36),   # r53: the blocks apart; r54: darker, coarser than oak
+    "dark_oak_log":     dict(luma=0.21, std=0.100, sat=0.40, tilt=31.3, smooth=40, pore=36),   # r53: the blocks apart; r54: darker, coarser than oak
     "dark_oak_log_top": dict(luma=0.21, std=0.039, sat=0.61, tilt=12.0, smooth=40, pore=30),
     # round 11: the other factions' buildings (structure census) - single-block numbers from pack-study 38760372803
     # (reference) beside 38760380796 (vanilla); std a little under the reference where rts_view says busy
@@ -4099,7 +4099,105 @@ def m_bark_r51(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     return H, alb
 
 
+# Round 56: PLATES, not furrows. The r54 / r55 bark rounds did reach the game (the generated oak_log.png differs
+# r53 -> r54 -> r55 by 12-14/255 mean, and the in-game posts differ 10/255 against a 3.7 grass control) - but they
+# kept r51's three vertical furrows per block on the same seed, only their contrast moved, and at the ~12-15 px side
+# face of the RTS camera a 1/9-block furrow is one pixel of a vertical streak whatever its depth: the critic read
+# the posts as unchanged. So the bark's form is now a BED OF PLATES at 1/4-1/3 block (what birch's 1/6-block bands
+# proved reads at 30 px: meso 0.05): an uneven grid of Voronoi plates, each at its own level and tone, the fissures
+# between them ~1/12 block wide (one screen pixel of dark), every plate's upper edge lit and its lower edge shaded
+# (the sun from above, baked into the albedo where the mips average the normal away), and the vertical fissures
+# deeper / wider than the horizontal ones (bark splits along the trunk first) - the species told apart by hue and
+# by the plates' size and relief. Cherry keeps its banded r51 bark; birch its own.
+# style: (mode, plates across, plates up, level spread, fissure width (block), edge lit, vertical bias, mottle,
+#         greying, crest). mode "ridge": wavy vertical fissures running on up the trunk, the ridges between them cut
+# ACROSS into plates at their own heights (oak, acacia, jungle, dark oak); "flake": a bed of Voronoi flakes (spruce).
+BARK56 = {
+    "oak": ("ridge", 4, 3, 0.70, 0.060, 0.22, 0.8, 0.00, 0.30, 0.0),       # warm mid-brown, plates 1/4 wide, 1/3 tall
+    "spruce": ("ridge", 4, 4, 0.70, 0.050, 0.22, 0.3, 0.10, 0.15, 0.0),    # reddish flakes, squarer plates
+    "acacia": ("ridge", 4, 2, 0.55, 0.055, 0.22, 1.0, 0.00, 0.50, 0.0),    # grey fibrous ridges: long plates
+    "jungle": ("ridge", 4, 3, 0.50, 0.050, 0.18, 0.5, 0.40, 0.25, 0.0),    # smoother, mottled
+    "dark_oak": ("ridge", 4, 3, 0.70, 0.070, 0.22, 0.6, 0.00, 0.20, 0.80), # near-black blocks with pale crests
+}
+
+
+def _bark_plates(F, n, mode, cols, rows):
+    """The plate bed: returns (edge_d: distance to the nearest fissure in block units, vert: 1 where that fissure
+    runs up the trunk, plate id map, plate count)."""
+    rng = F.rng
+    if mode == "flake":
+        m = max(cols, rows)
+        p1, p2, pidx, pk = F.voronoi(cols * rows, 0.6, aniso=(cols / m, rows / m), grid=(cols, rows))
+        wu, wv = 0.008 * F.noise(2, 6, 0.6), 0.008 * F.noise(2, 6, 0.6)
+        p1, p2 = F.warp(p1, wu, wv), F.warp(p2, wu, wv)
+        pidx = pidx[(np.round((F.v + wv) * n).astype(int)) % n, (np.round((F.u + wu) * n).astype(int)) % n]
+        gx = (np.roll(p1, -1, 1) - np.roll(p1, 1, 1))
+        gy = (np.roll(p1, -1, 0) - np.roll(p1, 1, 0))
+        vert = F.blur(np.abs(gx) / np.maximum(np.abs(gx) + np.abs(gy), 1e-6), 2.0)
+        return (p2 - p1) * m, vert, pidx, pk
+    # ridge: the vertical fissures are wavy lines at a wandering spacing (a slow noise long along v moves them),
+    # periodic in u because the wander is; each ridge (column) is cut across at its own heights
+    # (a band-limited noise with sy=6 keeps fy=0 only - a profile constant up the trunk, ruler-straight lines)
+    wander = 0.22 * F.noise(1, 3, 0.8, sx=1.0, sy=2.5)                     # in column units: the fissures sway
+    cu = F.u * cols + wander
+    col = np.floor(cu).astype(int) % cols
+    fu = cu - np.floor(cu)
+    d_v = np.minimum(fu, 1 - fu) / cols                                    # distance to the vertical fissure
+    # the breaks: per column an offset, plus a wobble along u so a break is not a ruler line
+    off = rng.random(cols)[col]
+    cv = F.v * rows + off + 0.10 * F.noise(2, 6, 0.6, sx=4.0, sy=1.0)
+    row = np.floor(cv).astype(int) % rows
+    fv = cv - np.floor(cv)
+    d_h = np.minimum(fv, 1 - fv) / rows
+    edge_d = np.minimum(d_v, d_h)
+    vert = smoothstep(-0.01, 0.01, d_h - d_v)                              # the nearer fissure is the vertical one
+    pidx = (col * rows + row).astype(np.int32)
+    return edge_d, vert, pidx, cols * rows
+
+
+def m_bark_r56(F, n, base=(0.42, 0.33, 0.21), style="oak"):
+    mode, cols, rows, lvl_amp, fw, edge, vbias, mottle, greying, crest = BARK56[style]
+    rng = F.rng
+    edge_d, vert, pidx, pk = _bark_plates(F, n, mode, cols, rows)
+    lvl = rng.uniform(-1.0, 1.0, pk)[pidx]                                  # each plate's own level and tone
+    tone = rng.uniform(-1.0, 1.0, pk)[pidx]
+    # a vertical fissure (between side-by-side plates) is wider and deeper than a break across a ridge
+    w = fw * (1 + vbias * (vert - 0.5)) * np.clip(1 + 0.25 * F.noise(3, 10, 0.5), 0.6, 1.4)
+    fissure = 1 - smoothstep(0.0, w, edge_d)                                # 1 in the crack
+    fissure = fissure * fissure * (3 - 2 * fissure)
+    floor = 1 - smoothstep(0.0, 0.35 * w, edge_d)                           # the crack's dark floor
+    plate = smoothstep(0.6 * w, 1.6 * w, edge_d)                            # the plate's flat top, a shoulder
+    # the plate's own surface: a gentle dome (its middle a little proud), fine scale / fibre in the relief only
+    dome = smoothstep(0.0, 0.5, edge_d) * plate
+    fib = F.noise(10, 48, 0.4, sx=1.0, sy=6.0)
+    scale = F.noise(8, 30, 0.5)
+    mot = mottle * F.noise(2, 6, 0.7)
+    H = 0.45 + 0.22 * lvl * plate + 0.03 * dome - 0.50 * fissure - 0.12 * floor + 0.02 * fib + 0.015 * scale * plate
+    # the sun from above: each plate's top edge lit, its bottom edge in shadow (a plate standing proud of the one
+    # below it) - from the slope of the blurred relief along v, a step the mips keep
+    Hb = F.blur(H, 2.0)
+    slope_v = (np.roll(Hb, -1, 0) - np.roll(Hb, 1, 0))
+    slope_u = (np.roll(Hb, -1, 1) - np.roll(Hb, 1, 1))
+    sun = np.tanh(-(slope_v + 0.4 * slope_u) * n / 6)                      # +: a face toward the top-left
+    rgb = np.asarray(base, dtype=np.float64)
+    grey = rgb.mean()
+    weathered = rgb + (grey - rgb) * greying + 0.03                        # the plate faces sun-greyed
+    col = rgb[None, None, :] * (1 - plate[..., None]) + weathered[None, None, :] * plate[..., None]
+    shade = (1 + lvl_amp * tone * plate + edge * sun * (1 - floor) + mot * plate + 0.02 * fib
+             - 0.55 * fissure - 0.25 * floor)
+    if crest > 0:
+        # dark oak: a pale weathered crest along the middle of each plate (pale on black, what tells it from oak)
+        shade = shade + crest * dome * smoothstep(0.0, 0.8, F.noise(2, 6, 0.6, sx=1.0, sy=3.0))
+    lichen = F.blur(smoothstep(1.0, 1.7, F.noise(3, 9, 0.6)) * plate, 1.5) * 0.30
+    col = col * (1 - lichen[..., None]) + np.array([0.52, 0.55, 0.42])[None, None, :] * grey / 0.5 * lichen[..., None]
+    col = col * (1 + 0.08 * fissure[..., None] * np.array([-1.0, -0.4, 0.6]))   # the cracks cooler and damper
+    alb = np.clip(col * shade[..., None], 0, 1)
+    return H, alb
+
+
 def m_log(F, n, base=(0.42, 0.33, 0.21), style="oak"):
+    if style in BARK56:
+        return m_bark_r56(F, n, base, style)
     return m_bark_r51(F, n, base, style)
 
 
@@ -6231,7 +6329,7 @@ def recipes():
         "basalt_side": _plain(lambda F, n: m_columnar(F, n, False, False)),
         "basalt_top": _plain(lambda F, n: m_columnar(F, n, True, False)),
         "sand": _plain(m_sand), "gravel": _plain(m_gravel_r25), "oak_planks": _plain(m_oak_planks_r24),
-        "oak_log": _plain(lambda F, n: m_bark_r51(F, n, (0.42, 0.33, 0.21), "oak")),   # r51 (r24 kept)
+        "oak_log": _plain(lambda F, n: m_log(F, n, (0.42, 0.33, 0.21), "oak")),   # r56 plates (r51 furrows, r24 kept)
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
         "polished_andesite": _plain(m_polished_andesite), "smooth_stone": _plain(m_smooth_stone),
         "smooth_stone_slab_side": _plain(m_smooth_stone_slab_side), "spruce_planks": _plain(m_spruce_planks),
