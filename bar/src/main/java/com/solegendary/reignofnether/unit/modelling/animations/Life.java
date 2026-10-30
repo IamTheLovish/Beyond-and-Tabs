@@ -26,10 +26,36 @@ public final class Life {
      * periodTicks: ~60 for a man at rest, longer for big bodies (100-140 for a dragon), shorter when panting.
      */
     public static float breath(float age, int id, float periodTicks) {
-        float p = ((age + offset(id)) / periodTicks) % 1f;
+        return breathAt((age + offset(id)) / periodTicks);
+    }
+
+    /**
+     * Breath, -1..1, at a phase (cycles; only the fraction counts). For a period that changes (exertion, a glide),
+     * keep the phase as state and {@link #advance} it by elapsed / period: {@code breath(age, ...)} with a changing
+     * period jumps by age * d(1/period) and strobes once age is large.
+     */
+    public static float breathAt(float phase) {
+        float p = frac(phase);
         // in-breath over the first 40% of the cycle, out-breath over the rest
         float s = p < 0.4f ? p / 0.4f : 1f - (p - 0.4f) / 0.6f;
         return smooth(s) * 2f - 1f;
+    }
+
+    /** A phase moved on by {@code cycles}, kept in 0..1. */
+    public static float advance(float phase, float cycles) {
+        return frac(phase + cycles);
+    }
+
+    /** The phase between the last tick's and this tick's at {@code partial} (0..1), across the wrap. */
+    public static float blendPhase(float prev, float now, float partial) {
+        float d = now - prev;
+        if (d < 0f)
+            d += 1f;
+        return frac(prev + d * Mth.clamp(partial, 0f, 1f));
+    }
+
+    private static float frac(float x) {
+        return x - (float) Math.floor(x);
     }
 
     /**
@@ -85,6 +111,67 @@ public final class Life {
     public static float smooth(float x) {
         x = Mth.clamp(x, 0f, 1f);
         return x * x * (3f - 2f * x);
+    }
+
+    /** Floats per spring slot: [value, velocity, the value one step before] (design/living_army.md). */
+    public static final int SPRING = 3;
+
+    /**
+     * One step of a damped spring held in s[i..i+2] toward `target`: `omega` its stiffness (rad per tick), `zeta` its
+     * damping ratio (1 = critical: arrives without overshoot; below 1 rocks before still), `dt` in ticks. Implicit
+     * Euler, so it never blows up whatever the step - a stall or a long frame only settles it sooner. No allocation.
+     */
+    public static void spring(float[] s, int i, float target, float omega, float zeta, float dt) {
+        float x = s[i], v = s[i + 1];
+        float w2dt = omega * omega * dt;
+        v = (v + w2dt * (target - x)) / (1f + 2f * zeta * omega * dt + w2dt * dt);
+        s[i + 2] = x;
+        s[i] = x + dt * v;
+        s[i + 1] = v;
+    }
+
+    /** A spring slot's value between its last two steps (partial 0..1): what a frame draws, the same in every pass. */
+    public static float springAt(float[] s, int i, float partial) {
+        return s[i + 2] + (s[i] - s[i + 2]) * partial;
+    }
+
+    /**
+     * An inertial chain (tail, neck, tassel, tabard): `links` spring slots from `base`, link 0 springing toward
+     * `rootTarget` and each later link toward the one before it, so a swing starts at the root, arrives late at the
+     * tip and settles there last. Unlike {@link #chain} (a lagged sine) it answers motion: a turn whips it, a stop
+     * settles it.
+     */
+    public static void springChain(float[] s, int base, int links, float rootTarget, float omega, float zeta, float dt) {
+        float target = rootTarget;
+        for (int k = 0; k < links; k++) {
+            int i = base + k * SPRING;
+            spring(s, i, target, omega, zeta, dt);
+            target = s[i];
+        }
+    }
+
+    /**
+     * The shared look solver (design/animation-foundation-audit.md, section 3, item 4): one look angle (degrees, yaw or
+     * pitch, relative to the body) split over a chain of bones from the root out - chest, then neck, then head. Each
+     * bone but the last takes its share of the whole look, clamped to its own limit; the last takes what is left, up
+     * to its limit, so the head arrives on the target whenever the chain can reach it and the chest only ever turns
+     * part of the way. Writes one angle per bone into out[0..n-1]; no allocation.
+     *
+     * @param shares the fraction of the look each bone but the last takes (chest 0.15 at rest, more when aiming)
+     * @param limits each bone's own limit, degrees (positive)
+     */
+    public static void look(float angle, float[] shares, float[] limits, int n, float[] out) {
+        if (!Float.isFinite(angle))
+            angle = 0f;
+        float left = angle;
+        for (int k = 0; k < n - 1; k++) {
+            float part = Mth.clamp(angle * shares[k], -limits[k], limits[k]);
+            if (Math.abs(part) > Math.abs(left))      // never past the target
+                part = left;
+            out[k] = part;
+            left -= part;
+        }
+        out[n - 1] = Mth.clamp(left, -limits[n - 1], limits[n - 1]);
     }
 
     /** Degrees to radians, for readable call sites. */

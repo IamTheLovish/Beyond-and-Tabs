@@ -65,7 +65,16 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
             }
 
             int bound = nonAirBlocks.size();
-            if (bound > 0) {
+            if (bound > 0 && this.mob instanceof com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit) {
+                // the siege lobber shells the nearest block: a random far-side one would walk it into a tower's reach
+                // (it out-reaches the anti-raid tower by one block; design/siege_t1.md), and its splash dents the whole
+                // building wherever it lands on it
+                BuildingBlock nearest = nonAirBlocks.get(0);
+                for (BuildingBlock b : nonAirBlocks)
+                    if (b.getBlockPos().distToCenterSqr(mob.position()) < nearest.getBlockPos().distToCenterSqr(mob.position()))
+                        nearest = b;
+                this.blockTarget = nearest.getBlockPos();
+            } else if (bound > 0) {
                 int randIndex = rand.nextInt(bound);
                 BuildingBlock block = nonAirBlocks.get(randIndex);
                 this.blockTarget = block.getBlockPos();
@@ -159,7 +168,8 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
             }
             if (distToTarget <= attackRange) { // start drawing bowstring
                 if (bowAttackGoal != null) {
-                    if (bowAttackGoal.getAttackCooldown() <= 0) {
+                    // artillery set-up (unit/SetUp): hold the shot, and the cooldown, until it has stood still
+                    if (bowAttackGoal.getAttackCooldown() <= 0 && com.solegendary.reignofnether.unit.SetUp.isSetUp(this.mob)) {
                         if (mob instanceof RangedAttackerUnit rangedAttackerUnit) {
                             rangedAttackerUnit.performUnitRangedAttack(tx, ty, tz, 20);
                             if (!mob.level().isClientSide() && buildingTarget != null)

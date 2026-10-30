@@ -37,6 +37,8 @@ final class SysTimer {
     private final long[] tickNs;
     /** Per section, what the tick (frame) that closed last spent: the [Spike] line reads it (FrameSpikes). */
     final long[] lastTickNs;
+    /** Completed calls per section since the timer was made ({@link #reset} leaves these; see {@link #lifetimeNs}). */
+    final long[] lifetimeCalls;
     /** Closed ticks (frames) in the window. */
     int ticks = 0;
     /** Begins refused because the stack was full (a runaway recursion), and ticks that closed with a section still open. */
@@ -58,6 +60,7 @@ final class SysTimer {
         this.tickNs = new long[sections];
         this.lastTickNs = new long[sections];
         this.lifetimeNs = new long[sections];
+        this.lifetimeCalls = new long[sections];
     }
 
     int sections() {
@@ -90,6 +93,7 @@ final class SysTimer {
         tickNs[id] += self;
         lifetimeNs[id] += self;
         calls[id]++;
+        lifetimeCalls[id]++;
         if (self > worstCallNs[id])
             worstCallNs[id] = self;
         if (depth > 0)
@@ -104,6 +108,7 @@ final class SysTimer {
         tickNs[id] += nanos;
         lifetimeNs[id] += nanos;
         calls[id]++;
+        lifetimeCalls[id]++;
         if (nanos > worstCallNs[id])
             worstCallNs[id] = nanos;
     }

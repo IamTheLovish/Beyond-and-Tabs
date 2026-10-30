@@ -177,6 +177,8 @@ public class FactionHeroAbility extends HeroAbility {
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         if (!(unit instanceof HeroUnit hero))
             return null;
+        if (slot == 0 && com.solegendary.reignofnether.hero.wager.WagerClient.enabled && unit instanceof Mob mob)
+            return wagerButton(hotkey, hero, mob.getId());
         boolean aimed = spec.target != HeroKit.Target.SELF;
         AbilityButton button = new AbilityButton(I18n.get(nameKey()),
             iconRl(),
@@ -192,6 +194,29 @@ public class FactionHeroAbility extends HeroAbility {
             },
             null,
             getTooltipLines(hero),
+            this,
+            hero
+        );
+        button.innerIconSizeModifier = 1;
+        return button;
+    }
+
+    /**
+     * Lovish's Wager Book on key 1 while the debug toggle (/wagerbook) is on: the button opens the book for this hero
+     * instead of casting the slot's ability (hero-abilities-overhaul Q6: "the book is ability key 1").
+     */
+    private AbilityButton wagerButton(Keybinding hotkey, HeroUnit hero, int heroId) {
+        AbilityButton button = new AbilityButton(I18n.get("abilities.reignofnether.hero.wager"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/item/wager_book.png"),
+            hotkey,
+            () -> false,
+            () -> false,
+            () -> true,
+            () -> com.solegendary.reignofnether.hero.wager.WagerClient.open(heroId),
+            null,
+            List.of(fcs(I18n.get("abilities.reignofnether.hero.wager"), true),
+                fcs(I18n.get("abilities.reignofnether.hero.wager.desc1")),
+                fcs(I18n.get("abilities.reignofnether.hero.wager.desc2"))),
             this,
             hero
         );

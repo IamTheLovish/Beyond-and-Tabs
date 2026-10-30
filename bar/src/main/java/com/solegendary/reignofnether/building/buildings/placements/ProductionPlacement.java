@@ -52,7 +52,8 @@ public class ProductionPlacement extends BuildingPlacement {
     protected ArrayList<BlockPos> rallyPoints = new ArrayList<>();
     protected LivingEntity rallyPointEntity;
     public List<Button> productionButtons;
-    public final List<ActiveProduction> productionQueue = new ArrayList<>();
+    // counts its changes, so the per-tick queue population (QueuePopulation) is never stale
+    public final List<ActiveProduction> productionQueue = new ProductionQueueList<>();
     /**
      * Depth of one building's production queue (BAR factories take a long queue; RoN had no cap at all, so a held
      * key could pile up hundreds of items that only ever showed as "+N"). Hitting it says "Queue full" and refuses the
@@ -100,6 +101,64 @@ public class ProductionPlacement extends BuildingPlacement {
         if (getLevel() != null && !getLevel().isClientSide())
             getDataStorage().setData(STEWARD_PAUSED, paused);
     }
+
+    /**
+     * BAR's factoryguard (Ctrl+G, tester request): while on, every builder this factory produces is given a guard
+     * order on it as its first order - it assists the factory's production instead of walking to the rally point.
+     * Combat units are unaffected. Off by default (bots never set it).
+     */
+    public boolean factoryGuard = false;
+    public static final com.solegendary.reignofnether.building.data.DataType<Boolean> FACTORY_GUARD =
+            com.solegendary.reignofnether.building.data.DataType.createRegistered(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                            com.solegendary.reignofnether.ReignOfNether.MOD_ID, "factory_guard"),
+                    (tag, server) -> tag.getBoolean("guard"),
+                    on -> {
+                        CompoundTag tag = new CompoundTag();
+                        tag.putBoolean("guard", on);
+                        return tag;
+                    },
+                    () -> false);
+
+    /** Sets the factory guard toggle and records it in the building's save data (server side). */
+    public void setFactoryGuard(boolean on) {
+        this.factoryGuard = on;
+        if (getLevel() != null && !getLevel().isClientSide())
+            getDataStorage().setData(FACTORY_GUARD, on);
+    }
+
+    /** Reads the factory guard toggle back from this building's save data (BuildingServerEvents, on load). */
+    public void restoreFactoryGuard() {
+        this.factoryGuard = Boolean.TRUE.equals(getDataStorage().getData(FACTORY_GUARD));
+    }
+
+    // ---- build power lent by guarding builders (GuardServerEvents): BAR's assist on a factory's production ----
+    private float guardAssistPower = 0;
+    private long guardAssistTick = Long.MIN_VALUE / 2;
+    /** A guard pass's assist is good for this many ticks (the pass runs every 10). */
+    public static final int GUARD_ASSIST_TICKS = 15;
+
+    /** One guarding builder lends {@code power} to this factory's production in the guard pass of tick {@code now}. */
+    public void addGuardAssist(float power, long now) {
+        if (guardAssistTick != now) {
+            guardAssistTick = now;
+            guardAssistPower = 0;
+        }
+        guardAssistPower += power;
+    }
+
+    /** The build power guarding builders lend this factory now (0 when no recent guard pass lent any). */
+    public float getGuardAssistPower() {
+        if (getLevel() == null || getLevel().getGameTime() - guardAssistTick > GUARD_ASSIST_TICKS)
+            return 0;
+        return guardAssistPower;
+    }
+
+    @Override
+    public float getProductionBuildPower() {
+        return (super.getProductionBuildPower() + getGuardAssistPower())
+            * com.solegendary.reignofnether.ability.abilities.SoulBoiler.speedMult(this);
+    }
     public boolean attackRally = false;
     public ResourceName rallyResourceName = ResourceName.NONE; // used to set worker resource targets
 
@@ -108,8 +167,9 @@ public class ProductionPlacement extends BuildingPlacement {
         if (building instanceof ProductionBuilding productionBuilding) {
             productionButtons = productionBuilding.productions.getButtons(this);
         }
-        if (isCapitol)
-            this.allowProdWhileBuilding = true;
+        // every production building takes a queue while it is still going up (Joisco, 2026-10-23: "pre queue units in
+        // workshops while the building is being built"); ProductionItem.tick keeps the queue frozen until isBuilt
+        this.allowProdWhileBuilding = true;
     }
 
     @Nullable
@@ -242,7 +302,13 @@ public class ProductionPlacement extends BuildingPlacement {
         if (entity instanceof Unit unit) {
             unit.setOwnerName(ownerName);
             unit.setupEquipmentAndUpgradesServer();
-            setDelayedRally(unit);
+            // factory guard: an own builder's first order is to guard (assist) this factory, not the rally point
+            if (factoryGuard && unit instanceof WorkerUnit && this.ownerName.equals(ownerName)) {
+                com.solegendary.reignofnether.unit.GuardServerEvents.setGuardBuilding(unit, this);
+                if (unit.getMoveGoal() != null)
+                    unit.getMoveGoal().stopMoving();   // it spawned beside the factory: assist from there, not its centre
+            } else
+                setDelayedRally(unit);
             recordUnitProduced(ownerName, entity);
             watchSpawn(entity);
             if (roof)
@@ -372,7 +438,7 @@ public class ProductionPlacement extends BuildingPlacement {
     public static BlockPos safeSpawnPoint(ServerLevel level, BlockPos spawnPoint) {
         byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
                 spawnPoint.getY(), spawnPoint.getZ());
-        if (kind == com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER)
+        if (com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind))
             return spawnPoint;
         if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
                 && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
@@ -525,6 +591,12 @@ public class ProductionPlacement extends BuildingPlacement {
         }
     }
 
+    /** Whether this owner already has {@code item} recorded as researched (heroes and other non-research items never are). */
+    private boolean alreadyResearched(ProductionItem item) {
+        var key = com.solegendary.reignofnether.api.ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item);
+        return key != null && com.solegendary.reignofnether.research.ResearchServerEvents.recordedCount(ownerName, key) > 0;
+    }
+
     // return true if successful
     public boolean startProductionItem(ProductionItem prodItem) {
         return startProductionItem(prodItem, -1);
@@ -549,7 +621,10 @@ public class ProductionPlacement extends BuildingPlacement {
             }
             else {
                 boolean allow = switch (prodItem.dupeRule) {
-                    case DISALLOW -> !prodItem.itemIsBeingProduced(false, ownerName);
+                    // one-off, player-wide: refused while queued at ANY of the owner's buildings, and once it is done.
+                    // The queue test alone let a second Tier 2 start after the first finished (the client only hides
+                    // the button; a stale card, a double press, the bot or a raw packet got through): tester report.
+                    case DISALLOW -> !prodItem.itemIsBeingProduced(false, ownerName) && !alreadyResearched(prodItem);
                     case DISALLOW_FOR_BUILDING -> !prodItem.itemIsBeingProducedAt(false, this);
                     case ALLOW -> true;
                 };
@@ -561,6 +636,11 @@ public class ProductionPlacement extends BuildingPlacement {
                 }
                 else if (productionQueue.size() >= MAX_QUEUE) {
                     HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
+                }
+                else if (com.solegendary.reignofnether.resources.TierGate.productionError(this, prodItem) != null) {
+                    // a T2 lab, or the extractor refit, without Tier 2 (resources/TierGate): the same on all seven factions
+                    HudClientboundPacket.showTempMessageI18n(ownerName,
+                        com.solegendary.reignofnether.resources.TierGate.productionError(this, prodItem));
                 }
                 else if (!prodItem.canProduce(this)) {
                     String errorMsg = prodItem.getProduceErrorMsg(this);

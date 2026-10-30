@@ -35,32 +35,84 @@ import java.util.Set;
 public class BlockClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
+    // Almost no building or unit carries a range indicator, but the frame used to walk all 1,700 buildings and 500 units
+    // (scene 18: 0.87 ms). The few that do are found every 5 ticks, or when either list changes size.
+    private static final com.solegendary.reignofnether.perf.RefreshGate RANGE_GATE =
+        new com.solegendary.reignofnether.perf.RefreshGate(5);
+    private static final ArrayList<BuildingPlacement> rangeBuildings = new ArrayList<>();
+    private static final ArrayList<LivingEntity> rangeUnits = new ArrayList<>();
+
+    private static void refreshRangeSubsets() {
+        java.util.List<BuildingPlacement> all = BuildingClientEvents.getBuildings();
+        ArrayList<LivingEntity> units = UnitClientEvents.getAllUnits();
+        long t = MC.level == null ? 0 : MC.level.getGameTime();
+        if (!RANGE_GATE.due(t, all.size() * 31 + units.size()))
+            return;
+        rangeBuildings.clear();
+        for (BuildingPlacement b : all)
+            if (b.getBuilding().getActiveAddon(RangeIndicatorAddon.class) != null)
+                rangeBuildings.add(b);
+        rangeUnits.clear();
+        for (LivingEntity le : units)
+            if (le instanceof RangeIndicator)
+                rangeUnits.add(le);
+    }
+
+    private static com.mojang.blaze3d.vertex.VertexConsumer frameBuffer = null;
+
+    /**
+     * The translucent buffer, fetched when the first highlight is drawn. Fetching it every frame whether or not
+     * anything drew made the buffer source end (flush) whatever batch was open and begin an empty one: most of this
+     * handler's 1.2 ms in scene 18, where no hero or tower has a range to show.
+     */
+    private static com.mojang.blaze3d.vertex.VertexConsumer vc() {
+        if (frameBuffer == null)
+            frameBuffer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(WHITE));
+        return frameBuffer;
+    }
+
+    private static final ResourceLocation WHITE = ResourceLocation.parse("forge:textures/white.png");
 
     public static NightCircleMode nightCircleMode = NightCircleMode.NO_OVERLAPS;
 
     // deals with block rendering jobs like range indicators
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+            return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fp2 = 0;
         try {
-            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
-            ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
-            var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
+            int fg = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_GATE);
+            boolean skip;
+            try {
+                skip = com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays();
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fg);
+            }
+            if (skip) return;   // shader pack shadow map: overlays cast no shadow
+            fp2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_RANGE);
+            frameBuffer = null;   // fetched on the first highlight drawn: see vc()
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
                 return;
             }
+            int fr = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_RANGE_REFRESH);
+            try {
+                refreshRangeSubsets();
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fr);
+            }
             // draw range indicators for buildings with abilities and monster night sources
-            for (BuildingPlacement building : BuildingClientEvents.getBuildings()) {
-                if (!FogOfWarClientEvents.isBuildingInBrightChunk(building)) continue;
-                RangeIndicatorAddon ria;
-                if ((ria = building.getBuilding().getActiveAddon(RangeIndicatorAddon.class)) != null) {
+            for (BuildingPlacement building : rangeBuildings) {
+                RangeIndicatorAddon ria = building.getBuilding().getActiveAddon(RangeIndicatorAddon.class);
+                if (ria != null && FogOfWarClientEvents.isBuildingInBrightChunk(building)) {
                     for (BlockPos bp : ria.getHighlightBps(building)) {
                         int snowLayers = BlockUtils.getSnowLayers(building.level.getBlockState(bp.above()));
                         float yOffset = snowLayers * 0.125f;
                         if (BuildingClientEvents.getSelectedBuildings().contains(building)) {
-                            MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+                            MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
                         } else if (!ria.showOnlyWhenSelected(building)) {
-                            MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0f, 0f, 0.6f);
+                            MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0f, 0f, 0.6f);
                         }
                     }
                 }
@@ -71,19 +123,25 @@ public class BlockClientEvents {
                 for (BlockPos bp : bps) {
                     int snowLayers = BlockUtils.getSnowLayers(MC.level.getBlockState(bp.above()));
                     float yOffset = snowLayers * 0.125f;
-                    MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+                    MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
                 }
             }
-            for (LivingEntity le : UnitClientEvents.getAllUnits()) {
-                if (!FogOfWarClientEvents.isBlockVisible(le.getOnPos())) continue;
-                boolean selected = UnitClientEvents.getSelectedUnits().contains(le);
-                if (le instanceof RangeIndicator ri && (selected || !ri.showOnlyWhenSelected())) {
-                    for (BlockPos bp : ri.getHighlightBps()) {
-                        int snowLayers = BlockUtils.getSnowLayers(le.level().getBlockState(bp.above()));
-                        float yOffset = snowLayers * 0.125f;
-                        MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+            int fu = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_RANGE_UNITS);
+            try {
+                for (LivingEntity le : rangeUnits) {
+                    if (!(le instanceof RangeIndicator ri) || le.isRemoved()) continue;
+                    if (!FogOfWarClientEvents.isBlockVisible(le.getOnPos())) continue;
+                    boolean selected = UnitClientEvents.getSelectedUnits().contains(le);
+                    if (selected || !ri.showOnlyWhenSelected()) {
+                        for (BlockPos bp : ri.getHighlightBps()) {
+                            int snowLayers = BlockUtils.getSnowLayers(le.level().getBlockState(bp.above()));
+                            float yOffset = snowLayers * 0.125f;
+                            MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+                        }
                     }
                 }
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fu);
             }
             if (HudClientEvents.hudSelectedEntity != null && MC.level != null &&
                     (ItemClientEvents.actionableUnitItem != null || ItemClientEvents.hoveredInvItem != null)) {
@@ -92,7 +150,7 @@ public class BlockClientEvents {
                 for (BlockPos bp : ri.getHighlightBps()) {
                     int snowLayers = BlockUtils.getSnowLayers(MC.level.getBlockState(bp.above()));
                     float yOffset = snowLayers * 0.125f;
-                    MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+                    MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
                 }
             }
 
@@ -111,6 +169,7 @@ public class BlockClientEvents {
                 }
             }
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp2);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }

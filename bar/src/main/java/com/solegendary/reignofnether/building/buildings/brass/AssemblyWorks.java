@@ -55,7 +55,7 @@ public class AssemblyWorks extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.POLISHED_BLACKSTONE);
         this.startingBlockTypes.add(Blocks.DEEPSLATE_BRICKS);
 
-        this.buildTimeModifier = 0.7f;   // as the other T2 labs
+        this.buildTimeBlocks = com.solegendary.reignofnether.resources.TierGate.T2_LAB_BUILD_BLOCKS;   // one build time for every faction's T2 lab (resources/TierGate)
         this.explodeChance = 0.2f;
         this.maxHealth = 340d;
         // the Juggernaut is wide: it walks out clear of the hall's walls (the Observatory's rule)
@@ -70,6 +70,7 @@ public class AssemblyWorks extends ProductionBuilding {
         this.productions.add(ProductionItems.CLOCKWORK_SPIDER, Keybindings.abilitySlot7);
         this.productions.add(ProductionItems.STEAM_HAULER, Keybindings.abilitySlot8);   // T2 beast (design/big_units.md)
         this.productions.add(ProductionItems.PIONEER, Keybindings.abilitySlot9);   // combat engineer (design/combat_engineers.md)
+        this.productions.add(ProductionItems.SOUL_ENGINEER, Keybindings.abilitySlot10);   // essence caster (design/essence_casters.md)
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key, as the Machine Shop
         this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);

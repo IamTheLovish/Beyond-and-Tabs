@@ -59,20 +59,12 @@ import java.util.List;
  * leather apron on the illager body (VillagerUnitModel, its own skin from tools/gen_brass_skins.py), with the shared
  * worker plumbing: builds, repairs, reclaims. The first one a player starts with is tagged as the commander - the
  * <b>Guildmaster</b> in a steam exo-suit - by CommanderServerEvents, which gives it the Rail Lance, Overclock and
- * Deploy Turret via FactionTraits. Its own order is the <b>Field Upgrade</b> (FieldUpgrade): brass plating or a long
- * barrel on a machine, once per machine.
+ * Deploy Turret via FactionTraits. (Field Upgrade was removed 2026-10-26.)
  * A thin copy of the Stormcallers' Geomancer rather than a subclass of it or VillagerUnit: both carry faction-specific
  * behaviour (Mana, professions, militia) that is found by instanceof elsewhere.
  */
 public class TinkerUnit extends Vindicator implements Unit, WorkerUnit, AttackerUnit, ArmSwingingUnit {
     public static final Abilities ABILITIES = new Abilities();
-    static {
-        // the Field Upgrade's two faces (hotkey8/9, as the Geomancer's Ley Link: the build menu uses slots 1/6 and 5-7)
-        ABILITIES.add(new com.solegendary.reignofnether.ability.abilities.FieldUpgrade(com.solegendary.reignofnether.brass.Heat.UPGRADE_PLATING),
-                com.solegendary.reignofnether.keybinds.Keybindings.hotkey8);
-        ABILITIES.add(new com.solegendary.reignofnether.ability.abilities.FieldUpgrade(com.solegendary.reignofnether.brass.Heat.UPGRADE_BARREL),
-                com.solegendary.reignofnether.keybinds.Keybindings.hotkey9);
-    }
     //region
     @Override
     public void updateAbilityButtons() {
