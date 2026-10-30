@@ -525,7 +525,7 @@ const float WHITE_SHADE_SUN_LO = 0.20;
 const float WHITE_SHADE_SUN_HI = 0.45;
 // SHADE_PROBE_WHITE 1: magenta where a white side takes the cool (weight > 0.5), yellow where a white side (whiteness
 // and side > 0.5) does not - what the cubes' shade faces show answers whether the path runs
-#define SHADE_PROBE_WHITE 0 // [0 1]
+#define SHADE_PROBE_WHITE 1 // [0 1]
 // light pass 17: and the LIGHT on such a side goes the same share to WHITE_SHADE_COOL at its own luma. lp16 kept b-r
 // +6..+9 on 4 of 5 white sides, +16 on one: the albedo neutral had nothing to take (gen_blocks paints quartz at sat
 // 0.03-0.04); the cast is the light's - the sky's part (the cool) scales with the vertex and material AO, the warm
