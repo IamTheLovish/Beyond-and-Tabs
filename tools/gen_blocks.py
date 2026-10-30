@@ -149,7 +149,9 @@ TARGETS = {
     "prismarine_bricks":          dict(luma=0.58, std=0.075, sat=0.33, tilt=12.0, smooth=44, pore=10),
     "dark_prismarine":            dict(luma=0.31, std=0.070, sat=0.36, tilt=15.6, smooth=78, pore=10),
     "moss_block":                 dict(luma=0.40, std=0.060, sat=0.60, tilt=14.0, smooth=41, pore=60),
-    "mossy_stone_bricks":         dict(luma=0.46, std=0.060, sat=0.12, tilt=11.0, smooth=22, pore=30, soften=0.8),   # r31
+    # r32 (critic: moss patches must be "real green, readable from above"): the moss clumps carry the hue and the
+    # spread - sat 0.12 -> 0.22, std 0.06 -> 0.075, a touch more relief for the cushions
+    "mossy_stone_bricks":         dict(luma=0.46, std=0.075, sat=0.15, tilt=13.0, smooth=22, pore=36, soften=0.8),
     # round 12: single-block numbers from pack-study 38761293030 (reference; vanilla 38761302665 beside it); std
     # trimmed where the reference is busy from the RTS camera (podzol 0.120, coarse dirt 0.128, diorite 0.116)
     "sandstone": dict(luma=0.57, std=0.060, sat=0.54, tilt=12.6, smooth=21, pore=50),
@@ -219,7 +221,7 @@ TARGETS = {
     # round 14: single-block numbers, pack-study 38763481360 (vanilla 38763491796 beside it); metal and gem blocks
     # between the reference (which leans on shader reflections) and vanilla's brighter colours; relief trimmed on
     # the carved and plated blocks (the reference's 26-31 deg come from engraved patterns we draw flatter)
-    "cracked_stone_bricks": dict(luma=0.48, std=0.060, sat=0.02, tilt=12.0, smooth=16, pore=12, soften=0.8),   # r31
+    "cracked_stone_bricks": dict(luma=0.48, std=0.068, sat=0.02, tilt=13.0, smooth=16, pore=12, soften=0.8),   # r32: fissures
     "cracked_deepslate_bricks": dict(luma=0.29, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),
     "cracked_polished_blackstone_bricks": dict(luma=0.15, std=0.057, sat=0.11, tilt=22.0, smooth=19, pore=8),
     "chiseled_nether_bricks": dict(luma=0.15, std=0.060, sat=0.30, tilt=22.0, smooth=49, pore=12),
@@ -1599,13 +1601,16 @@ def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06
         # wider (2-3 texels at 32 per block - they survive the mipmaps) and through more of the bricks, and each
         # crack has a pale SPALL beside it - the fresh stone where a flake broke away - which is what reads on a
         # dark block (a darker line on near-black is nothing)
-        line = np.abs(F.warp(F.noise(2, 7, 0.5), 0.02 * F.noise(4, 12), 0.02 * F.noise(4, 12)))
+        # (the thresholds are in units of a unit-std noise whose gradient is ~2 pi f per tile: on noise(2, 7) a
+        # threshold of 0.02 was a fifth of a texel - the old cracks were never visible; noise(1, 4) at 0.18 is ~2
+        # texels each side)
+        line = np.abs(F.warp(F.noise(1, 4, 1.0), 0.02 * F.noise(4, 12), 0.02 * F.noise(4, 12)))
         where = smoothstep(0.0, 0.45, F.noise(1, 3, 0.5))
-        crack = (1 - smoothstep(0.0, 0.032, line)) * where * cracks * face
-        spall = smoothstep(0.03, 0.10, line) * (1 - smoothstep(0.12, 0.22, line)) * where * cracks * face
+        crack = (1 - smoothstep(0.0, 0.14, line)) * where * cracks * face
+        spall = smoothstep(0.14, 0.3, line) * (1 - smoothstep(0.4, 0.7, line)) * where * cracks * face
         spall = spall * smoothstep(0.2, 0.6, norm01(F.noise(3, 9, 0.5)))        # only along parts of the crack
         H = H - 0.3 * crack - 0.10 * spall
-        alb = alb * (1 - 0.7 * crack + 0.9 * spall)[..., None]
+        alb = alb * (1 - 0.7 * crack + 0.6 * spall)[..., None]
     return H, alb
 
 
@@ -2264,19 +2269,37 @@ def m_stone_bricks(F, n, moss=0.0, cracks=0.0):
     alb = tint((0.52, 0.52, 0.51), shade, jit)
     alb = np.where((face < 0.5)[..., None], alb * np.array([1.0, 0.99, 0.96])[None, None, :], alb)   # mortar warm
     if moss > 0:
-        # from the joints onto the brick edges (within ~1/10 block of a joint), thicker on the bed joints' lower
-        # side, patchy along the wall; a tint, not blobs on the faces
-        near = 1 - smoothstep(0.0, 0.09, dj)
-        patch = smoothstep(0.35, 0.75, norm01(F.fbm(2, 3, 0.55)))
-        m = np.clip(moss * near * (0.4 + 0.6 * patch) * (0.7 + 0.3 * norm01(F.noise(8, 24, 0.3))), 0, 1)
-        moss_rgb = tint((0.30, 0.42, 0.17), 0.9 + 0.2 * norm01(F.noise(10, 30, 0.3)))
-        alb = alb * (1 - 0.85 * m[..., None]) + moss_rgb * 0.85 * m[..., None]
-        H = H + 0.03 * m
+        # r32 (critic: "mossy needs saturated green moss patches at 6-8 px scale - moss on edges and joints, real
+        # green, readable from above"; r31's joint tint read grey): moss as CLUMPS - rounded cushions 6-8 texels
+        # across (Voronoi cells with a domed profile), seeded where the joints are and spreading over the brick
+        # arrises and corners in a few patches along the wall, a real green with a velvet grain; the clumps stand a
+        # little proud of the stone
+        f1, f2, idx, k = F.voronoi(300, 1.0)                           # ~7 texels per cell
+        cell = 1.0 / math.sqrt(300)
+        dome = np.clip(1 - (f1 / (0.62 * cell)) ** 2, 0, 1)             # a cushion per cell, gaps between
+        near = 1 - smoothstep(0.02, 0.14, dj)                            # the joints and the arrises beside them
+        patch = norm01(F.fbm(2, 3, 0.55))
+        seed = np.clip(near * (0.3 + 0.9 * patch) + 0.6 * smoothstep(0.7, 0.95, patch), 0, 1)   # where moss grows
+        grow = (0.7 + 0.3 * F.rng.random(k))[idx] * seed
+        cover = smoothstep(0.22, 0.5, grow)                              # the patch: contiguous, soft-edged
+        m = np.clip(moss * cover * (0.35 + 0.65 * dome ** 0.5), 0, 1)    # cushions within it, gaps between
+        velvet = 0.85 + 0.3 * norm01(F.noise(10, 30, 0.3))
+        moss_rgb = tint((0.32, 0.50, 0.15), velvet * (0.8 + 0.4 * dome))
+        alb = alb * (1 - m[..., None]) + moss_rgb * m[..., None]
+        H = H + 0.10 * m * dome
     if cracks > 0:
-        line = np.abs(F.warp(F.noise(2, 7, 0.5), 0.02 * F.noise(4, 12), 0.02 * F.noise(4, 12)))
-        crack = (1 - smoothstep(0.0, 0.014, line)) * smoothstep(0.3, 0.7, F.noise(1, 3, 0.5)) * cracks * face
-        H = H - 0.25 * crack
-        alb = alb * (1 - 0.5 * crack)[..., None]
+        # r32 (critic: "cracked needs 2-3 px dark fissures that survive mipmaps at 32 px per block"): r31's crack
+        # threshold (0.014 on a unit-std noise(2, 7)) was a twentieth of a texel wide - it never showed. Now a
+        # fissure ~4 texels across with a soft dark halo (~10 texels: what the mipmaps keep) through about half
+        # the bricks, and pale chipped edges where the stone broke
+        line = np.abs(F.warp(F.noise(1, 4, 1.0), 0.02 * F.noise(4, 12), 0.02 * F.noise(4, 12)))
+        where = smoothstep(0.1, 0.5, F.noise(1, 3, 0.5)) * cracks * face
+        crack = (1 - smoothstep(0.0, 0.09, line)) * where
+        halo = (1 - smoothstep(0.06, 0.35, line)) * where
+        chip = smoothstep(0.09, 0.2, line) * (1 - smoothstep(0.2, 0.4, line)) * where \
+            * smoothstep(0.3, 0.7, norm01(F.noise(3, 9, 0.5)))
+        H = H - 0.18 * crack - 0.04 * halo - 0.03 * chip
+        alb = alb * (1 - 0.42 * crack - 0.10 * halo + 0.10 * chip)[..., None]
     return H, alb
 
 
