@@ -58,8 +58,8 @@ TARGETS = {
     # in-game stdev at 0.036 vs the benchmark's 0.057): procedural clover (clover_lawn) - std 0.045 -> 0.065 in 2-3
     # value bands of plants plus the clump shadows, a warm-cool hue spread (sat 0.05 -> 0.08), the mean unchanged
     # (the environment palette); soften 2.4 -> 1.0 and no mid boost (no scan grain to tame)
-    "grass_block_top":  dict(luma=0.645, std=0.065, sat=0.08, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=0.6,
-                             shoulder=0.82),
+    "grass_block_top":  dict(luma=0.645, std=0.065, sat=0.08, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=0.4,
+                             shoulder=0.82),   # r36: soften 0.6 -> 0.4, crisper leaflet rims
     "grass_block_side": dict(luma=0.31, std=0.050, sat=0.34, lf=0.0, tilt=14.0, smooth=26, pore=48, toe=0.235),
     # r34: tilt 16 -> 8 - the turf lip is a rounded roll with hanging blades; at 16 the solver's strength (the band is
     # thin, so its mip tilt is small) made every blade edge a wall whose normals drew a black line under the lip
@@ -281,7 +281,9 @@ TARGETS = {
     "emerald_block": dict(luma=0.58, std=0.100, sat=0.72, tilt=14.0, smooth=253, pore=0, f0=15),
     # r33 (critic, eyes 41029731853: the blues "crushed"): lapis lifted to a deep ultramarine that reads blue from
     # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
-    "lapis_block": dict(luma=0.30, std=0.050, sat=0.72, tilt=7.6, smooth=60, pore=0, f0=15),
+    # r36 (lovish lifted its protection; in game it read darker and duller than vanilla): a saturated, brighter
+    # ultramarine (0.30 -> 0.38, sat 0.72 -> 0.86) with more gold pyrite
+    "lapis_block": dict(luma=0.38, std=0.060, sat=0.86, tilt=7.6, smooth=70, pore=0, f0=15),
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     # r33 (critic, eyes 41029731853: 206/204/188 "greenish grey, not white"): neutral (sat 0 = greyscale - the old
     # 0.04 fit blew a near-grey base's green up), luma 0.80 -> 0.87, a faint concrete mottle (std 0.008 -> 0.012)
@@ -1581,8 +1583,8 @@ def m_lapis(F, n):
     shade = 0.85 + 0.25 * norm01(mott)
     alb = tint((0.10, 0.20, 0.62), shade)                    # r33: a cleaner ultramarine (less green in the blue)
     alb = alb * (1 - 0.5 * wisp[..., None]) + 0.5 * wisp[..., None] * np.array([0.55, 0.58, 0.62])   # calcite veins
-    fleck = F.noise(40, 90, 0.0) > 2.6
-    alb[fleck] = (0.85, 0.70, 0.30)
+    fleck = smoothstep(2.0, 2.6, F.noise(30, 70, 0.0))      # r36: more, larger pyrite flecks (2-3 texels)
+    alb = alb * (1 - fleck[..., None]) + fleck[..., None] * np.array([0.78, 0.60, 0.20])
     b = frame(F, 0.06, 0.012)
     return 0.6 + 0.1 * mott * b, alb * (0.8 + 0.2 * b)[..., None]
 
@@ -1891,8 +1893,11 @@ def m_copper(F, n, stage):
     face = smoothstep(0.005, 0.026, edge)
     ham = F.noise(4, 14, 0.6)
     br = brushed(F, 0.8)
-    H = 0.35 + 0.5 * smoothstep(0.005, 0.016, edge) + 0.02 * ham + 0.010 * (br - 0.5)
-    metal = tint((0.82, 0.46, 0.30), (0.95 + 0.06 * ham + 0.03 * (br - 0.5)) * (0.60 + 0.40 * face))
+    # r36 (lovish: "copper rims brighter - the cut seams catch the light"): a chamfered arris round each plate, a
+    # step lighter in the colour and raised in the height, so the seams draw a bright line under the sun
+    arris = smoothstep(0.016, 0.026, edge) * (1 - smoothstep(0.026, 0.050, edge))
+    H = 0.35 + 0.5 * smoothstep(0.005, 0.016, edge) + 0.06 * arris + 0.02 * ham + 0.010 * (br - 0.5)
+    metal = tint((0.82, 0.46, 0.30), (0.95 + 0.06 * ham + 0.03 * (br - 0.5) + 0.22 * arris) * (0.60 + 0.40 * face))
     smooth_metal = np.clip(170 + 40 * (br - 0.5) - 20 * (1 - face), 40, 235)
     if stage == 0:
         return H, metal, np.full(H.shape, 234), smooth_metal
@@ -3230,10 +3235,14 @@ def m_glass(F, n, rgb, kind):
     """Glass: a pane with a thin bevelled edge and a few faint diagonal glints. kind 'clear' = the plain glass block
     (vanilla draws it CUT-OUT: alpha 0 or 1, so only the edge and the glints show), 'stained' and 'tinted' are
     translucent (the alpha blends: stained a coloured veil, tinted nearly opaque and dark). 'edge' = a pane's top
-    strip (glass_pane_top: the edge of the sheet seen end-on - all glass, opaque)."""
+    strip (glass_pane_top: the edge of the sheet seen end-on - all glass, opaque).
+    Round 36 (lovish: "faint frost and droplets, high smoothness for the sky reflection, dark slim frame lines,
+    still clearly see-through"): a slimmer, darker frame line; a faint FROST creeping in from the corners (a feathery
+    noise, pale, in the alpha on the cut-out block) and a few round DROPLETS (a bright rim, a dark heart, a dome in
+    the normal), the rest of the pane open; glass-smooth (235) everywhere but the frame."""
     uc, vc = F.u + 0.5 / n, F.v + 0.5 / n                      # texel centres: the same rim width on every side
     d = np.minimum(np.minimum(uc, 1 - uc), np.minimum(vc, 1 - vc))
-    rim = 1 - smoothstep(0.03, 0.045, d)                       # ~1/25 block
+    rim = 1 - smoothstep(0.018, 0.030, d)                      # ~1/40 block: slim
     g = ((F.u + F.v) * 1.0 + 0.15 * F.noise(1, 3, 0.5) * 0.1) % 1.0
     glint = (1 - smoothstep(0.004, 0.012, np.abs(g - 0.30))) + 0.6 * (1 - smoothstep(0.003, 0.009, np.abs(g - 0.36)))
     glint *= smoothstep(0.2, 0.6, F.noise(1, 3, 0.5) * 0.5 + 0.5) * (1 - rim)
@@ -3242,17 +3251,30 @@ def m_glass(F, n, rgb, kind):
     if kind == "edge":
         shade = 0.9 + 0.05 * F.noise(2, 8, 0.6, sx=1.0, sy=6.0)   # streaks along v: the model maps column u 7-9
         return dict(H=0.5 + 0.02 * smudge, alb=tint(base * 0.85, shade))
+    # frost: feathery, from the corners, thinning toward the middle of the pane
+    corner = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
+    feather = norm01(F.blur(F.fbm(6, 3, 0.6) + 0.5 * F.noise(14, 40, 0.3), 1.2))
+    frost = smoothstep(0.62, 0.9, feather * (0.2 + 1.1 * smoothstep(0.38, 0.70, corner))) * (1 - rim)
+    # droplets: a few round drops, each a dome with a bright rim and a darker heart
+    f1, f2, idx, k = F.voronoi(60, 1.0)
+    on = (F.rng.random(k) < 0.22)[idx]
+    rad = (0.012 + 0.012 * F.rng.random(k))[idx]
+    dr = np.clip(1 - (f1 / np.maximum(rad, 1e-6)) ** 2, 0, 1) * on * (1 - rim)
+    drop = dr > 0.02
+    drop_rim = smoothstep(0.0, 0.35, dr) * (1 - smoothstep(0.35, 0.8, dr))
     alb = tint(base, 0.95 + 0.03 * smudge)
-    alb = alb * (1 - 0.25 * rim[..., None]) + 0.25 * rim[..., None] * (base * 0.6)   # the edge reads darker
+    alb = alb * (1 - 0.45 * rim[..., None]) + 0.45 * rim[..., None] * (base * 0.35)   # the frame line dark
     alb = np.clip(alb + 0.35 * glint[..., None], 0, 1)
+    alb = alb * (1 - frost[..., None]) + frost[..., None] * np.clip(base * 1.08, 0, 1)   # frost pale
+    alb = np.where(drop[..., None], np.clip(base * (0.75 + 0.45 * drop_rim)[..., None], 0, 1), alb)
     if kind == "clear":
-        alpha = ((rim > 0.5) | (glint > 0.35)).astype(np.float64)
+        alpha = ((rim > 0.5) | (glint > 0.35) | (frost > 0.5) | drop).astype(np.float64)
     elif kind == "stained":
-        alpha = np.clip(0.42 + 0.03 * smudge + 0.45 * rim + 0.3 * glint, 0, 1)
+        alpha = np.clip(0.42 + 0.03 * smudge + 0.45 * rim + 0.3 * glint + 0.25 * frost + 0.3 * dr, 0, 1)
     else:   # tinted
-        alpha = np.clip(0.80 + 0.02 * smudge + 0.15 * rim + 0.1 * glint, 0, 1)
-    H = 0.5 + 0.35 * rim + 0.02 * smudge
-    return dict(H=H, alb=alb, alpha=alpha, smooth=np.where(rim > 0.5, 190.0, 235.0))
+        alpha = np.clip(0.80 + 0.02 * smudge + 0.15 * rim + 0.1 * glint + 0.1 * frost, 0, 1)
+    H = 0.5 + 0.35 * rim + 0.02 * smudge + 0.12 * np.sqrt(dr) + 0.03 * frost
+    return dict(H=H, alb=alb, alpha=alpha, smooth=np.where(rim > 0.5, 150.0, np.where(frost > 0.5, 120.0, 235.0)))
 
 
 def m_ladder(F, n):
@@ -3677,6 +3699,8 @@ def clover_lawn(F, n):
     tone = np.array([0.84, 1.0, 1.16])[band] * (0.97 + 0.06 * rng.random(count))
     lean = rng.standard_normal(count)
     rot = rng.random(count) * 2 * math.pi
+    tilt_a = rng.random(count) * 2 * math.pi          # r36: each plant leans toward its own light direction
+    tx, ty = np.cos(tilt_a), np.sin(tilt_a)
     scale = 0.8 + 0.4 * rng.random(count)
     order = np.argsort(level)               # back to front
     r0 = int(leaf_r * 1.6) + 3
@@ -3704,9 +3728,10 @@ def clover_lawn(F, n):
             above = inside & (h > sub)
             H[np.ix_(win_y, win_x)] = np.where(above, h, sub)
             # the leaflet's shade: its tone band, a lit centre, a darker rim (self-shadow of the leaf above)
-            rim = 1 - 0.30 * (1 - smoothstep(0.0, 0.25, dome))        # a dark rim: the leaf's edge over its neighbour
+            rim = 1 - 0.42 * (1 - smoothstep(0.0, 0.30, dome))        # a dark rim: the leaf's edge over its neighbour
             vein = 1 + 0.10 * (1 - smoothstep(0.0, 0.12, np.abs(across))) * (along > -0.2)
-            lit = tone[i] * (0.70 + 0.40 * dome) * (1 + 0.12 * (along * ox - across * oy)) * rim * vein
+            tiltl = (dx * tx[i] + dy * ty[i]) / R                       # r36: the leaf's own tilt (one side lit)
+            lit = tone[i] * (0.70 + 0.40 * dome) * (1 + 0.20 * tiltl) * rim * vein
             s_sub = shade[np.ix_(win_y, win_x)]
             shade[np.ix_(win_y, win_x)] = np.where(above, lit, s_sub)
             w_sub = warm[np.ix_(win_y, win_x)]
@@ -4716,7 +4741,7 @@ def make(name, res, preview_dir):
 # blockstate names a width x height grid of sprites and each block shows the one at its world (x, z) on the top -
 # (x | z, y) on the sides - so a pattern larger than a block (wind ripples across a dune) carries on from block to
 # block. Square sizes only (the 1.20.1 code indexes with height). Its quads carry no biome tint: never grass.
-GIANT = {"sand": ((0.86, 0.78, 0.58), 4)}     # (red_sand is on the "beat the benchmark" list: untouched for now)
+GIANT = {"sand": ((0.86, 0.78, 0.58), 4), "red_sand": ((0.75, 0.42, 0.18), 4)}   # r36: red_sand's protection lifted
 
 
 def write_giant(name, res, preview_dir=None):
