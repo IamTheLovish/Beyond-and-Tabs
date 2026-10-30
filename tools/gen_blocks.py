@@ -87,10 +87,14 @@ TARGETS = {
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
     # numbers of pack-study run 38732322940 (polished andesite is near flat and polished; smooth stone is rough)
     # r31: narrower, lighter mortar and flatter faces - std 0.081 -> 0.055, tilt 18.4 -> 11 (it read as cobble)
-    "stone_bricks":     dict(luma=0.50, std=0.055, sat=0.03, tilt=11.0, smooth=18, pore=12, soften=0.8),
-    "polished_andesite": dict(luma=0.49, std=0.035, sat=0.03, tilt=3.0, smooth=119, pore=4),
-    "smooth_stone":     dict(luma=0.54, std=0.045, sat=0.04, tilt=17.7, smooth=16, pore=10),   # r21: cool mid grey
-    "smooth_stone_slab_side": dict(luma=0.54, std=0.045, sat=0.04, tilt=17.7, smooth=16, pore=10),
+    # r35 (the 1890 station render: stone_bricks, polished andesite, smooth stone and stone sat within 0.05 of each
+    # other and the facade read as one flat grey mass): the greys step apart - stone_bricks 0.50 -> 0.44 with darker
+    # recessed joints and more brick-to-brick spread (std 0.055 -> 0.065), polished andesite 0.49 -> 0.57 cooler and
+    # smooth, smooth stone 0.54 -> 0.63 light and calm; stone stays 0.52 (the scan and the gates), andesite 0.56 -> 0.48
+    "stone_bricks":     dict(luma=0.44, std=0.065, sat=0.03, tilt=11.0, smooth=18, pore=12, soften=0.8),
+    "polished_andesite": dict(luma=0.57, std=0.035, sat=0.04, tilt=3.0, smooth=119, pore=4),
+    "smooth_stone":     dict(luma=0.63, std=0.040, sat=0.04, tilt=17.7, smooth=16, pore=10),
+    "smooth_stone_slab_side": dict(luma=0.63, std=0.040, sat=0.04, tilt=17.7, smooth=16, pore=10),
     "spruce_planks":    dict(luma=0.36, std=0.060, sat=0.30, tilt=7.7, smooth=53, pore=24),
     # leaves (round 5): the trees seen from above. Greyscale (the foliage colour tints them), alpha holes for 'fancy'
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
@@ -165,7 +169,7 @@ TARGETS = {
     "moss_block":                 dict(luma=0.40, std=0.060, sat=0.60, tilt=14.0, smooth=41, pore=60),
     # r32 (critic: moss patches must be "real green, readable from above"): the moss clumps carry the hue and the
     # spread - sat 0.12 -> 0.22, std 0.06 -> 0.075, a touch more relief for the cushions
-    "mossy_stone_bricks":         dict(luma=0.46, std=0.075, sat=0.15, tilt=13.0, smooth=22, pore=36, soften=0.8),
+    "mossy_stone_bricks":         dict(luma=0.41, std=0.075, sat=0.15, tilt=13.0, smooth=22, pore=36, soften=0.8),   # r35: with stone_bricks
     # round 12: single-block numbers from pack-study 38761293030 (reference; vanilla 38761302665 beside it); std
     # trimmed where the reference is busy from the RTS camera (podzol 0.120, coarse dirt 0.128, diorite 0.116)
     "sandstone": dict(luma=0.57, std=0.060, sat=0.54, tilt=12.6, smooth=21, pore=50),
@@ -193,17 +197,19 @@ TARGETS = {
     "quartz_block_bottom": dict(luma=0.91, std=0.012, sat=0.03, tilt=2.5, smooth=145, pore=4),   # r32: seamless, no veins
     # round 17 (lovish Oct 20: "pepper dots"): the crystalline stones trimmed to read as one calm stone from the RTS
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
-    "andesite": dict(luma=0.56, std=0.055, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),
+    "andesite": dict(luma=0.48, std=0.050, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),   # r35: a step under stone
     "granite": dict(luma=0.47, std=0.048, sat=0.39, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),
     "diorite": dict(luma=0.73, std=0.070, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
-    "snow": dict(luma=0.93, std=0.019, sat=0.05, tilt=5.9, smooth=92, pore=0),
+    "snow": dict(luma=0.94, std=0.019, sat=0.08, tilt=5.9, smooth=92, pore=0),   # r35: bluish-white
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
     "coarse_dirt": dict(luma=0.36, std=0.080, sat=0.37, tilt=25.0, smooth=10, pore=56),
     "clay": dict(luma=0.53, std=0.035, sat=0.10,   # r21: read pink-white under the warm sun - bluer
     tilt=8.9, smooth=102, pore=64),
     "red_sand": dict(luma=0.52, std=0.040, sat=0.60, tilt=12.9, smooth=34, pore=60),
     "mud": dict(luma=0.22, std=0.045, sat=0.14, tilt=16.3, smooth=90, pore=64),   # r31: the cracks carry the spread
-    "calcite": dict(luma=0.87, std=0.075, sat=0.01, tilt=19.4, smooth=59, pore=10),
+    # r35 (calcite / diorite / snow indistinguishable at 32 px): calcite a smooth bright white (std 0.075 -> 0.035,
+    # tilt 19 -> 8), diorite keeps its speckle, snow the brightest and bluish
+    "calcite": dict(luma=0.88, std=0.035, sat=0.01, tilt=8.0, smooth=70, pore=10),
     # round 18: tuff is a fine ash rock - its 7-texel crystals speckled without shaders (std 0.085 -> 0.060)
     "tuff": dict(luma=0.43, std=0.060, sat=0.06, lf=0.5, tilt=14.0, smooth=11, pore=20),
     # round 13: single-block numbers from pack-study 38762019919 (vanilla 38762030150 beside it); the reference's
@@ -243,7 +249,7 @@ TARGETS = {
     # round 14: single-block numbers, pack-study 38763481360 (vanilla 38763491796 beside it); metal and gem blocks
     # between the reference (which leans on shader reflections) and vanilla's brighter colours; relief trimmed on
     # the carved and plated blocks (the reference's 26-31 deg come from engraved patterns we draw flatter)
-    "cracked_stone_bricks": dict(luma=0.48, std=0.068, sat=0.02, tilt=13.0, smooth=16, pore=12, soften=0.8),   # r32: fissures
+    "cracked_stone_bricks": dict(luma=0.43, std=0.068, sat=0.02, tilt=13.0, smooth=16, pore=12, soften=0.8),   # r32: fissures; r35: with stone_bricks
     "cracked_deepslate_bricks": dict(luma=0.29, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),
     "cracked_polished_blackstone_bricks": dict(luma=0.15, std=0.057, sat=0.11, tilt=22.0, smooth=19, pore=8),
     "chiseled_nether_bricks": dict(luma=0.15, std=0.060, sat=0.30, tilt=22.0, smooth=49, pore=12),
@@ -2682,17 +2688,19 @@ def m_stone_bricks(F, n, moss=0.0, cracks=0.0):
     dv = np.minimum(in_c, 1 - in_c) / 2 + chip           # distance to a bed joint (tile units)
     du = np.minimum(ju, 1 - ju) + chip                   # to a head joint
     dj = np.minimum(dv, du)
-    face = smoothstep(0.006, 0.016, dj)                  # 0 in the mortar, 1 on the face: a narrow joint
-    hf = smoothstep(0.006, 0.011, dj)                    # the height step crisper still
+    # r35 (station render: the courses turned into a uniform stripe at 16 px): the joint a little wider and darker,
+    # recessed deeper, so the blocks read as blocks from the RTS camera
+    face = smoothstep(0.007, 0.020, dj)                  # 0 in the mortar, 1 on the face
+    hf = smoothstep(0.007, 0.013, dj)                    # the height step crisper still
     # small tone steps between the bricks: the texture repeats on every block (stone bricks are never turned), so one
     # darker brick became a lattice across a wall (rts_view)
-    tone = (F.rng.random(4) - 0.5)[(course * 2 + (ju > 0.5)) % 4]
+    tone = (F.rng.random(4) - 0.5)[(course * 2 + (ju > 0.5)) % 4] * 1.6     # r35: more brick-to-brick spread
     weather = F.fbm(3, 4, 0.55)
     grain = F.noise(12, 40, 0.3)
     pits = smoothstep(0.78, 0.95, F.noise(10, 30, 0.4))
-    H = 0.35 + 0.5 * hf + 0.03 * weather * face + 0.015 * grain - 0.06 * pits * face
+    H = 0.30 + 0.55 * hf + 0.03 * weather * face + 0.015 * grain - 0.06 * pits * face
     stone = 0.88 + 0.05 * tone + 0.045 * weather + 0.008 * grain - 0.03 * pits
-    mortar = 0.78 + 0.03 * grain                          # mortar a touch darker than the stone, never black
+    mortar = 0.68 + 0.03 * grain                          # r35: the recessed joint in shadow, still not black
     shade = stone * face + mortar * (1 - face)
     hue = F.noise(2, 5, 0.5) * (0.0 if moss > 0 else 1.0)   # (the mossy block's sat fit would blow the jitter up)
     jit = np.stack([0.02 * hue, 0.0 * hue, -0.02 * hue], -1)
@@ -2736,7 +2744,7 @@ def m_polished_andesite(F, n):
     # few, faint crystals: with more the polished steps read as rough granite from the RTS camera (run 38735013028)
     shade = (0.88 + 0.10 * mottle + 0.02 * speck - 0.10 * flecks) * (0.75 + 0.25 * bev)
     jit = np.stack([0.015 * mottle, 0.0 * mottle, -0.01 * mottle], -1)
-    return H, tint((0.53, 0.53, 0.52), shade, jit)
+    return H, tint((0.52, 0.54, 0.57), shade, jit)       # r35: cooler than the stone bricks
 
 
 def m_smooth_stone(F, n):
@@ -4237,7 +4245,7 @@ def recipes():
         "clay": lambda F, n: m_clayish(F, n, (0.62, 0.64, 0.70), pits=0.02, mottle=0.05),
         "red_sand": lambda F, n: m_sand(F, n, (0.75, 0.42, 0.18)),
         # ("mud" moved below: r31 m_mud paints its own smoothness)
-        "calcite": lambda F, n: m_igneous(F, n, (0.88, 0.88, 0.86), (0.75, 0.75, 0.74), 1.0),
+        "calcite": lambda F, n: m_igneous(F, n, (0.90, 0.90, 0.89), (0.80, 0.80, 0.79), 0.4),   # r35: smooth bright white
         # fine ash with a few darker lapilli: small crystals, low contrast, the tone in a soft mottle (round 18)
         "tuff": lambda F, n: m_crystal(F, n, [((0.42, 0.42, 0.38), 0.85), ((0.32, 0.32, 0.29), 0.15)],
                                        per_side=34, cluster=0.85, contrast=0.3, mottle=0.08, drift_base=3),
