@@ -2635,7 +2635,9 @@ def rts_view(alb, ppb=RTS_PPB, blocks=8, tint=None, seed=1, rotate=True):
 # run 38740005727: greyscale - the biome water colour tints it - luma 0.68, std 0.064, alpha 0.71 on every texel)
 # because the reference pack's water was lumped with lava. Animated like vanilla's (32 frames, 2 ticks each = a 3.2 s
 # loop): ripple layers drift a whole number of tiles per loop, so the strip loops without a seam.
-WATER = dict(luma=0.68, std=0.064, alpha=0.71, frames=32, frametime=2, tilt=10.0, smooth=230, f0=5)
+# alpha 0.71 -> 0.85 (environment palette, Oct 29): at 0.71 the sand bed was 29% of every water pixel and lifted the
+# river to the lawn's value (eyes r54: water 0.42 vs lawn 0.32) - it read as a painted strip, not water lying low
+WATER = dict(luma=0.68, std=0.064, alpha=0.85, frames=32, frametime=2, tilt=10.0, smooth=230, f0=5)
 # (lo, hi cycles per tile, slope, weight, tiles moved per loop along u, along v)
 STILL_LAYERS = ((2, 5, 1.0, 1.0, 1, 0), (4, 10, 0.8, 0.6, 0, 1), (5, 12, 0.8, 0.5, -1, 1), (12, 28, 0.5, 0.25, 2, -1))
 # Flowing water (round 9): vanilla's flow texture is drawn at half scale (2 blocks per tile) and turned so v points

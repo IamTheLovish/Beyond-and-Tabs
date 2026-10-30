@@ -99,13 +99,7 @@ public class ClientModEvents {
 
         // wrap every block's provider with the fog multiplier; biome-tinted ones only fog their untinted quads
         // (BiomeColorsMixin fogs the biome colour itself)
-        java.util.Set<Block> biomeTinted = java.util.Set.of(
-                Blocks.GRASS_BLOCK, Blocks.FERN, Blocks.GRASS, Blocks.POTTED_FERN,
-                Blocks.PINK_PETALS, Blocks.SUGAR_CANE, Blocks.LARGE_FERN, Blocks.TALL_GRASS,
-                Blocks.OAK_LEAVES, Blocks.JUNGLE_LEAVES, Blocks.ACACIA_LEAVES,
-                Blocks.DARK_OAK_LEAVES, Blocks.VINE, Blocks.MANGROVE_LEAVES,
-                Blocks.WATER, Blocks.BUBBLE_COLUMN
-        );
+        java.util.Set<Block> biomeTinted = FogTintingBlockColor.BIOME_TINTED;
         BlockColors blockColors = evt.getBlockColors();
         java.util.Map<Holder.Reference<Block>, BlockColor> map =
                 ((BlockColorsAccessor) (Object) blockColors).getBlockColors();

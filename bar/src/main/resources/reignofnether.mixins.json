@@ -102,6 +102,8 @@
     "fogofwar.BlockColorsAccessor",
     "fogofwar.ClientChunkCacheMixin",
     "fogofwar.ClientPacketListenerLightMixin",
+    "fogofwar.EmbeddiumBlendFogWrappedMixin",
+    "fogofwar.EmbeddiumFogOnlyQuadsMixin",
     "fogofwar.CompiledChunkMixin",
     "fogofwar.EntityRenderDispatcherMixin",
     "fogofwar.EntityShadowMixin",
