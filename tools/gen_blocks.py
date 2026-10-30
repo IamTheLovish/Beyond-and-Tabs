@@ -54,10 +54,16 @@ TARGETS = {
     # plain close-ups: grass top Laplacian 39.7 vs main's 8.6 - speckle; stone +10-22%, dirt +8% with 26% less
     # mid-band): softer at the texel (soften) with the forms 3-12 texels across raised again (mid), calibrated on the
     # close-up's sampling offline (150 / 250 px per block, nearest texel + mips)
-    "grass_block_top":  dict(luma=0.645, std=0.045, sat=0.05, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=2.4,
-                             mid=1.5, shoulder=0.80),
+    # round 34 (lovish: a CLOVER LAWN, "richer saturation and shadows and depth"; the critic measured the r33 lawn's
+    # in-game stdev at 0.036 vs the benchmark's 0.057): procedural clover (clover_lawn) - std 0.045 -> 0.065 in 2-3
+    # value bands of plants plus the clump shadows, a warm-cool hue spread (sat 0.05 -> 0.08), the mean unchanged
+    # (the environment palette); soften 2.4 -> 1.0 and no mid boost (no scan grain to tame)
+    "grass_block_top":  dict(luma=0.645, std=0.065, sat=0.08, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=0.6,
+                             shoulder=0.82),
     "grass_block_side": dict(luma=0.31, std=0.050, sat=0.34, lf=0.0, tilt=14.0, smooth=26, pore=48, toe=0.235),
-    "grass_block_side_overlay": dict(luma=0.56, std=0.070, sat=0.00, lf=0.0, tilt=16.0, smooth=24, pore=40),
+    # r34: tilt 16 -> 8 - the turf lip is a rounded roll with hanging blades; at 16 the solver's strength (the band is
+    # thin, so its mip tilt is small) made every blade edge a wall whose normals drew a black line under the lip
+    "grass_block_side_overlay": dict(luma=0.56, std=0.070, sat=0.00, lf=0.0, tilt=8.0, smooth=24, pore=40),
     "dirt":             dict(luma=0.34, std=0.045, sat=0.36, lf=0.0, tilt=12.0, smooth=26, pore=56, soften=1.4, mid=1.5,
                              toe=0.285),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
@@ -3401,7 +3407,107 @@ def m_scan_basalt(F, n, end=False):
     return d
 
 
-SCAN_BASES = {"stone": m_scan_stone, "dirt": m_scan_dirt, "grass_block_top": m_scan_grass_top}
+def clover_lawn(F, n):
+    """Round 34 (lovish's reference: a CLOVER LAWN seen from above): a carpet of small round clover leaflets - each
+    plant three leaflets round a stem point, drawn back to front so the higher plants overlap the lower - with short
+    blades of grass between and over them, the plants in clumps (mounds of turf) with deep self-shadow in the gaps
+    between the clumps, a few tiny flowers. Returns (H, alb (grey with a hue spread: the biome colour tints it),
+    flower mask). Everything periodic. Leaflets ~5-7 texels across at 256 (1/40 block): they do not resolve from the
+    RTS camera, where the clumps and their shadows carry the look (2-3 value bands); up close each leaflet is lit."""
+    rng = F.rng
+    yy, xx = np.mgrid[0:n, 0:n]
+    H = np.zeros((n, n))
+    shade = np.ones((n, n)) * 0.55          # the gaps: the dark floor of the lawn
+    warm = np.zeros((n, n))                 # hue: +1 warm (yellow), -1 cool (blue-green)
+    mound = F.fbm(3, 3, 0.5) + 0.5 * F.noise(6, 14, 0.5)     # the clumps: where the turf heaps up (1/10-1/4 block)
+    mound = norm01(mound)
+    floor = -0.40 * (1 - mound)             # the gaps lie lower
+    H += 0.30 * mound
+    count = int(0.0030 * n * n)             # ~200 plants per tile at 256
+    leaf_r = n / 38.0
+    # each plant: a level (its height in the canopy), a tone band (3 bands) and a hue lean
+    px, py = rng.random(count) * n, rng.random(count) * n
+    mi = mound[np.minimum((py).astype(int), n - 1), np.minimum((px).astype(int), n - 1)]
+    level = 0.40 * mi + 0.35 * rng.random(count) * (0.4 + 0.6 * mi)
+    band = rng.integers(3, size=count)
+    tone = np.array([0.84, 1.0, 1.16])[band] * (0.97 + 0.06 * rng.random(count))
+    lean = rng.standard_normal(count)
+    rot = rng.random(count) * 2 * math.pi
+    scale = 0.8 + 0.4 * rng.random(count)
+    order = np.argsort(level)               # back to front
+    r0 = int(leaf_r * 1.6) + 3
+    for i in order:
+        cx, cy, lv = px[i], py[i], level[i]
+        for j in range(3):
+            a = rot[i] + j * 2 * math.pi / 3
+            lx, ly = cx + math.cos(a) * leaf_r * 0.95 * scale[i], cy + math.sin(a) * leaf_r * 0.95 * scale[i]
+            R = leaf_r * scale[i]
+            x0, y0 = int(math.floor(lx)) - r0, int(math.floor(ly)) - r0
+            win_y = (np.arange(y0, y0 + 2 * r0 + 1)) % n
+            win_x = (np.arange(x0, x0 + 2 * r0 + 1)) % n
+            dy = (np.arange(y0, y0 + 2 * r0 + 1) - ly)[:, None]
+            dx = (np.arange(x0, x0 + 2 * r0 + 1) - lx)[None, :]
+            # a heart-shaped leaflet: a disc with a notch at its outer edge (away from the stem)
+            ox, oy = math.cos(a), math.sin(a)
+            along = (dx * ox + dy * oy) / R
+            across = (-dx * oy + dy * ox) / R
+            rr = np.sqrt((along - 0.1) ** 2 + across ** 2)
+            notch = smoothstep(0.55, 0.9, along) * (1 - smoothstep(0.0, 0.35, np.abs(across)))
+            inside = (rr < 1.0) & (notch < 0.5)
+            dome = np.clip(1 - rr * rr, 0, 1) * inside
+            h = lv + 0.12 * np.sqrt(dome)           # a cushion: steep only at its rim
+            sub = H[np.ix_(win_y, win_x)]
+            above = inside & (h > sub)
+            H[np.ix_(win_y, win_x)] = np.where(above, h, sub)
+            # the leaflet's shade: its tone band, a lit centre, a darker rim (self-shadow of the leaf above)
+            rim = 1 - 0.30 * (1 - smoothstep(0.0, 0.25, dome))        # a dark rim: the leaf's edge over its neighbour
+            vein = 1 + 0.10 * (1 - smoothstep(0.0, 0.12, np.abs(across))) * (along > -0.2)
+            lit = tone[i] * (0.70 + 0.40 * dome) * (1 + 0.12 * (along * ox - across * oy)) * rim * vein
+            s_sub = shade[np.ix_(win_y, win_x)]
+            shade[np.ix_(win_y, win_x)] = np.where(above, lit, s_sub)
+            w_sub = warm[np.ix_(win_y, win_x)]
+            warm[np.ix_(win_y, win_x)] = np.where(above, lean[i] * 0.6 + 0.8 * (tone[i] - 1.0) * 4, w_sub)
+    H = H + floor
+    # blades of grass between and over the clover: thin, short, standing proud; their colour a touch lighter
+    blades = F.blur(grass_blades(F, int(1.6 * n), n / 22, max(1, n // 128)), 0.7)   # soft-edged (no black steps)
+    bl = blades > 0.25
+    H = np.where(bl, H + 0.10 * blades, H)              # the blades ride on the canopy (a tall ridge drew black edges)
+    shade = np.where(bl, 0.95 + 0.30 * blades, shade)
+    warm = np.where(bl, warm + 0.8, warm)
+    # the clumps: their crowns catch the light, the gaps between them lie in shadow (this is what the RTS camera
+    # sees - 3-8 px wide at 32 px per block); plus the leaves' own self-shadow where the canopy drops
+    shade = shade * (0.78 + 0.40 * mound)
+    rel = H - F.blur(H, n / 40)
+    shadow = smoothstep(0.0, 0.25, -rel)
+    shade = shade * (1 - 0.40 * shadow)
+    # a few tiny flowers: 4-5 petals, pale, sparse
+    flowers = np.zeros((n, n))
+    for _ in range(int(0.00018 * n * n) + 2):
+        fx, fy = rng.random() * n, rng.random() * n
+        pr = n / 80.0
+        k = 4 + int(rng.random() < 0.5)
+        for j in range(k):
+            a = j * 2 * math.pi / k + rng.random() * 0.3
+            cxp, cyp = fx + math.cos(a) * pr * 1.1, fy + math.sin(a) * pr * 1.1
+            d2 = ((xx - cxp + n / 2) % n - n / 2) ** 2 + ((yy - cyp + n / 2) % n - n / 2) ** 2
+            flowers = np.maximum(flowers, np.clip(1 - d2 / (pr * pr), 0, 1))
+    fl = flowers > 0.15
+    H = np.where(fl, np.maximum(H, 0.9), H)
+    shade = np.where(fl, 1.45, shade)
+    warm = np.where(fl, 1.5, warm)
+    hue = np.clip(warm, -1.5, 1.5)
+    alb = np.clip(np.stack([shade * (1 + 0.05 * hue), shade * (1 + 0.01 * hue), shade * (1 - 0.06 * hue)], -1) * 0.55, 0, 1)
+    return H, alb, flowers
+
+
+def m_clover_top(F, n):
+    """The grass block's top, round 34: the procedural clover lawn in place of the Grass004 scan (its own normals
+    from the height, so nxy is None). The variants (SCAN_VARIANT_OF) cut their blobs from it as before."""
+    H, alb, _ = clover_lawn(F, n)
+    return dict(alb=alb, H=H, nxy=None)
+
+
+SCAN_BASES = {"stone": m_scan_stone, "dirt": m_scan_dirt, "grass_block_top": m_clover_top}   # r34: clover lawn
 # (basalt left the scans in r31: m_columnar)
 
 
@@ -3413,7 +3519,7 @@ def scan_textures(base, i, n):
     F = Field(n, SEEDS[base])
     d = SCAN_BASES[base](F, n)
     alb = tone_limits(mid_band(F, soften(F, fit_albedo(d["alb"], t), t), t), t)
-    n_img, s_img, k = maps(F, d["H"], t, None, d["nxy"])
+    n_img, s_img, k = maps(F, d["H"], t, None, d.get("nxy"))
     alb, n_img, s_img = variant_maps(alb, n_img, s_img, i)
     return dict(alb=alb, H=d["H"], maps=(n_img, s_img), k=k)
 
@@ -3442,25 +3548,40 @@ def turf(n, i):
     blades = np.zeros((n, n))
 
     def strands(rng, keep):
-        for _ in range(int(0.9 * n)):                 # hanging blades: tapered, nearly vertical, from the band's edge
+        # r34: a THICK turf lip whose blades overhang the edge and hang down the dirt in a ragged fringe - more of
+        # them, longer (to 0.08 block), tapered; a few clover leaflets peeking over the lip's edge
+        for _ in range(int(1.4 * n)):                 # hanging blades: tapered, nearly vertical, from the band's edge
             x, r1, r2, r3, r4 = rng.random(5)
             if not keep(x):
                 continue
             x *= n
             top = depth[0, int(x) % n] * n - r1 * 0.03 * n
-            ln = n * (0.02 + 0.05 * r2 ** 1.5)
-            drift = (r3 - 0.5) * 0.25                 # a slight lean, never sideways
-            wid = 1.0 + 1.2 * r4 * n / 256
+            ln = n * (0.02 + 0.06 * r2 ** 1.4)
+            drift = (r3 - 0.5) * 0.3                  # a slight lean, never sideways
+            wid = 1.0 + 1.4 * r4 * n / 256
             steps = int(ln)
             for st in range(steps):
                 t = st / max(1, steps - 1)
-                w = wid * (1 - 0.85 * t)               # tapers to a tip
+                w = wid * (1 - 0.8 * t)               # tapers to a tip
                 y = int(top + st)
                 if y >= n:
                     break
                 xc = x + drift * st
                 for dx in range(int(math.floor(xc - w / 2)), int(math.ceil(xc + w / 2))):
                     blades[y, dx % n] = max(blades[y, dx % n], 1.0 - 0.5 * t)
+        for _ in range(int(0.12 * n)):                # clover leaflets over the lip's edge: small discs
+            x, r1, r2 = rng.random(3)
+            if not keep(x):
+                continue
+            cx = x * n
+            cy = depth[0, int(cx) % n] * n + (r1 - 0.2) * 0.02 * n
+            rad = n / 60.0 * (0.8 + 0.5 * r2)
+            y0, y1 = int(cy - rad) - 1, int(cy + rad) + 2
+            for y in range(max(0, y0), min(n, y1)):
+                for dx in range(int(cx - rad) - 1, int(cx + rad) + 2):
+                    d2 = ((dx - cx) ** 2 + (y - cy) ** 2) / (rad * rad)
+                    if d2 < 1.0:
+                        blades[y, dx % n] = max(blades[y, dx % n], 0.9 - 0.3 * d2)
 
     def edge_zone(x):
         return x < 0.12 or x > 0.88
@@ -3473,8 +3594,20 @@ def turf(n, i):
     streak = g[yy, np.arange(n)[None, :]]
     streak = streak / streak.mean()
     below = np.clip((S.v - depth) / 0.12, 0, 1)        # the hanging blades darken toward their tips (in shadow)
-    shade = streak * (1.0 - 0.18 * S.v / np.maximum(depth, 1e-3) * (S.v < depth)) * (1 - 0.25 * below)
-    H = np.where(alpha > 0.5, 0.75 + 0.15 * np.clip(streak - 1, -1, 1) + 0.1 * blades, 0.0)
+    # r34: the lip - its crest (top fifth of the band) catches the light, its underside (bottom third) is in shadow
+    f = np.clip(S.v / np.maximum(depth, 1e-3), 0, 1)     # 1 below the band too: the hanging blades continue
+    # from the lip's underside (a reset to the crest there drew an up-facing step - a black line under the lip)
+    lip = 1.0 + 0.10 * (1 - smoothstep(0.0, 0.25, f)) - 0.22 * smoothstep(0.5, 1.0, f)
+    shade = streak * lip * (1 - 0.25 * below)
+    # the lip's height: rounded - full at the crest, falling toward its lower edge (the normal shows the roll)
+    roll = 1 - 0.22 * smoothstep(0.3, 1.0, f) ** 2
+    rib = S.blur(np.clip(streak - 1, -1, 1), 1.2)        # the blades' ribs, smoothed (texel steps blew the normal strength up)
+    hang = blades * smoothstep(0.0, 0.02, S.v - depth)  # the blades' relief only below the band, eased in from
+    H = np.where(alpha > 0.5, (0.75 + 0.10 * rib) * roll + 0.04 * hang, 0.0)   # the root (a step there drew a line)
+    # the cut-away texels take the turf's own nearby height (a 0 there made a cliff at the alpha edge whose normals
+    # drew a black line under the lip in game and in the lit preview, r34)
+    fill = S.blur(H * alpha, 3.0) / np.maximum(S.blur(alpha, 3.0), 1e-3)
+    H = np.where(alpha > 0.5, H, fill)
     return alpha, H, shade
 
 
@@ -3488,10 +3621,19 @@ def _scan_grass_side(i=0):
         alpha, Ht, _ = turf(n, i)
         m = alpha > 0.5
         humus = 1 - 0.22 * (1 - smoothstep(0.10, 0.50, F.v))
-        alb = tone_limits(soil["alb"] * humus[..., None], t)
+        # r34: thin roots wandering down from the turf (fading by mid-block) and a few small pale pebbles
+        rx = F.noise(3, 8, 0.6, sx=1.0, sy=4.0)                      # long along v: root lines
+        root = (1 - smoothstep(0.0, 0.05, np.abs(rx))) * (1 - smoothstep(0.15, 0.55, F.v)) * smoothstep(0.12, 0.2, F.v)
+        root *= smoothstep(0.2, 0.7, norm01(F.noise(1, 4, 0.5)))      # only some columns carry a root
+        pf1, pf2, pidx, pk = F.voronoi(60, 1.0)
+        peb = ((F.rng.random(pk) < 0.2)[pidx] & (pf1 < 0.014) & (F.v > 0.25)).astype(np.float64)
+        pebble = peb * np.clip(1 - pf1 / 0.014, 0, 1)
+        alb = tone_limits(soil["alb"] * humus[..., None] * (1 - 0.35 * root)[..., None], t)
+        alb = alb * (1 - pebble[..., None]) + np.array([0.52, 0.50, 0.46]) * pebble[..., None]
         alb = np.where(m[..., None], np.array([0.27, 0.29, 0.20]) * (0.8 + 0.4 * Ht[..., None]), alb)
         n_img[m] = (128, 128, 255, 255)                 # under the turf: flat, unshaded, at the top of the relief
-        return dict(H=np.where(m, 1.0, soil["H"]), alb=alb, maps=(n_img, s_img), k=soil["k"])
+        H = np.where(m, 1.0, soil["H"] + 0.15 * pebble - 0.05 * root)
+        return dict(H=H, alb=alb, maps=(n_img, s_img), k=soil["k"])
     return r
 
 
