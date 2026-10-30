@@ -112,7 +112,10 @@ final class EyesHeroesScene {
                 EyesDirector.shot(mc, "19_heroes_selected");
                 log("19_heroes_selected");
                 UnitClientEvents.clearSelectedUnits();
-                FogOfWarServerEvents.setEnabled(true);
+                // on the server's thread, as scene 17 does (the eyes match may already run with fog on: then nothing changes)
+                var server = mc.getSingleplayerServer();
+                if (server != null)
+                    server.execute(() -> FogOfWarServerEvents.setEnabled(true));
                 OrthoviewClientEvents.centreCameraOnPosInstant(far);
                 next(6);
             }
@@ -213,11 +216,16 @@ final class EyesHeroesScene {
             if (!(le instanceof HeroUnit h) || !(le instanceof Unit u) || !le.isAlive())
                 continue;
             n++;
-            ReignOfNether.LOGGER.info("[Eyes] {}: {} of '{}' at {}: points {}, cloaked {}, hidden from us {}, in sight {}",
+            Minecraft mc = Minecraft.getInstance();
+            ReignOfNether.LOGGER.info("[Eyes] {}: {} of '{}' at {}: points {}, cloaked {}, invisible to us {}, hidden from us {}, in sight {}",
                 still, le.getType().getDescriptionId(), u.getOwnerName(), EyesDirector.fmt(le.position()), h.getSkillPoints(),
-                le.isInvisible(), UnitClientEvents.isHiddenFromLocalPlayer(le), FogOfWarClientEvents.isInBrightChunk(le));
+                le.isInvisible(), mc.player != null && le.isInvisibleTo(mc.player), UnitClientEvents.isHiddenFromLocalPlayer(le),
+                FogOfWarClientEvents.isInBrightChunk(le));
         }
-        ReignOfNether.LOGGER.info("[Eyes] {}: {} heroes on the client, zoom {}", still, n, Math.round(OrthoviewClientEvents.getZoom()));
+        // a spectator or creative viewer may see invisible units: say which this one is (review r1 on PR 443)
+        var gm = Minecraft.getInstance().gameMode;
+        ReignOfNether.LOGGER.info("[Eyes] {}: {} heroes on the client, zoom {}, our game mode {}, fog on {}", still, n,
+            Math.round(OrthoviewClientEvents.getZoom()), gm == null ? "?" : gm.getPlayerMode().getName(), FogOfWarClientEvents.isEnabled());
         // what the server holds (one machine: the integrated server), so a hero missing on the client is told from one
         // that was never summoned
         var server = Minecraft.getInstance().getSingleplayerServer();
