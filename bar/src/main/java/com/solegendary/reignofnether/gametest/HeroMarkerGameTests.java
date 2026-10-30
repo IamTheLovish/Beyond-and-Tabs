@@ -78,4 +78,38 @@ public class HeroMarkerGameTests {
         else
             helper.fail(String.join("; ", problems));
     }
+
+    /**
+     * A hero the game cloaks (a Verdant thicket's cover, a cloak spell) carries no marker for its enemies. The RTS viewer
+     * is a spectator, and vanilla's isInvisibleTo lets a spectator see invisible bodies, so
+     * UnitClientEvents.isHiddenFromLocalPlayer is false for it: eyes run 41097850239 (PR 443's scene) logged the enemy
+     * Arch-Engineer in its grown thicket as concealed on the server yet "hidden from us false, in sight true" on our
+     * client - a ring and crest would have shown where it hides. The rule asks only what the client knows: the body is
+     * invisible, and whether the viewer owns it or is allied to its owner (those keep the marker on their own cloaked
+     * hero).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void hero_marker_hides_an_enemy_hero_the_game_cloaks(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        try {
+            Class<?> look = Class.forName("com.solegendary.reignofnether.hero.HeroLook");
+            var cloaked = look.getMethod("cloakedFromViewer", boolean.class, boolean.class);
+            // (the body is invisible, the viewer owns it or is allied to its owner)
+            if (!(boolean) cloaked.invoke(null, true, false))
+                problems.add("an enemy hero the game cloaks is not cloaked from an RTS viewer (its marker would show it)");
+            if ((boolean) cloaked.invoke(null, true, true))
+                problems.add("the viewer's own or allied cloaked hero counts as cloaked from them (it would lose its marker)");
+            if ((boolean) cloaked.invoke(null, false, false) || (boolean) cloaked.invoke(null, false, true))
+                problems.add("a hero that is not cloaked counts as cloaked from the viewer");
+        } catch (ClassNotFoundException e) {
+            problems.add("there is no hero/HeroLook: heroes are 1.1x and unmarked");
+        } catch (ReflectiveOperationException e) {
+            problems.add("hero/HeroLook has no cloak rule: the marker asks isHiddenFromLocalPlayer, false for an RTS "
+                + "viewer, so it shows an enemy hero the game cloaks (" + e + ")");
+        }
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
 }
