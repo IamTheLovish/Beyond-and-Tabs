@@ -43,7 +43,8 @@ const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.70;
 // light pass 9 (critic: the low sun's shadows ink-black, the benchmark's hazy gold): warmer and a little more of it
 // ((0.74, 0.70, 0.80) x 0.17 before). Model at t11800: a cast shadow ~0.13 -> ~0.16, the ratio ~2.9 -> ~2.4:1
 // Light pass 10: olive-gold and more of it ((0.82, 0.74, 0.70) x 0.24 before): t11800's shadow / lit ~0.6 on screen
-const vec3 SKY_LOW = vec3(0.95, 0.85, 0.55) * 0.34;
+// Light pass 11: t11800's shadows measured (34, 50, 23), target ~(45, 55, 30): redder and ~1.4x of it
+const vec3 SKY_LOW = vec3(1.00, 0.80, 0.45) * 0.50;
 // moonlight: cool and dim; lanterns and lit buildings carry the night (TimeOfDay: NIGHT)
 const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
 const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;
@@ -83,6 +84,8 @@ void lightColours(out vec3 sunColour, out vec3 skyColour) {
         sunColour *= smoothstep(SUN_FADE_LO, SUN_FADE_HI, h);
     // the sky's fill has no direction: it may glow on through twilight
     skyColour = mix(SKY_NIGHT, mix(SKY_LOW, SKY_HIGH, high), smoothstep(-0.08, 0.02, h));
+    // twilight (light pass 11): the day's fill dims as the sun sinks under ~11 degrees; the night's own fill untouched
+    skyColour *= mix(mix(SKY_TWILIGHT_DIM, 1.0, smoothstep(0.05, 0.20, h)), 1.0, 1.0 - smoothstep(-0.08, 0.02, h));
     sunColour *= 1.0 - 0.75 * rainStrength;
     skyColour *= 1.0 - 0.30 * rainStrength;
 }

@@ -87,7 +87,10 @@ const float GRASS_SHARPNESS_SHARE = 0.4;
 // gives open ground ~10% less sun than the zenith: 1.20 puts the lit lawn back at ~0.42 there
 // Light pass 10: 1.20 -> 1.26 (the 5000 lawn read 0.40 in pass 9, under its 0.42-0.43; part of that was the contact
 // term darkening round every tuft, which plants are now kept out of)
-const float LIGHT_OPEN_GROUND = 1.26;
+// Light pass 11: 1.26 -> 1.30. Measured on the pass-10 stills: the 5000 lawn fell 0.413 -> 0.355 against pass 9, the
+// drop uniform across the frame and in the warm channels only (top 30%: (90, 129, 55) -> (79, 123, 59)) - a cloud
+// shadow over the frame, cooled by the shade tint (now off the cloud). Clear sky at 1.30: ~0.43
+const float LIGHT_OPEN_GROUND = 1.30;
 // the sky's share of that light: a cast shadow on open ground keeps this much of the sunlit ground's light (was ~0.41,
 // on screen ~0.65 of the lit lawn; now ~0.78 on screen). Shadows lift without the sun losing its direction
 const float SHADOW_FILL_SHARE = 0.62;
@@ -102,7 +105,7 @@ const float SHADOW_FILL_SHARE = 0.62;
 // a sun-lit face and a shaded one show side by side; pass 9's strong bounce had lifted every side alike (quartz's two
 // sides 0.59 / 0.60). Anchored on those stills: quartz's shaded (west) side ~0.55, its sun-lit (south) side ~0.75,
 // stone pedestals' shaded sides ~0.34
-const float GROUND_ALBEDO = 0.40;
+const float GROUND_ALBEDO = 0.35;              // light pass 11: 0.40 -> 0.35 (with FILL_DIRECTION 0.70)
 // the sun's penumbra (lib/shadow.glsl): angular spread (radians; the disc is 0.0093, plus the bright aureole), and
 // the narrowest edge in blocks. Light pass 2 (the critic, 5.5/10: "an edgeless darkening, things float"): light pass
 // 1's 0.025 / 0.10 drew every edge at least 0.10 block soft (~7 px at rts_close's ~67 px a block) and a shadow a block
@@ -174,8 +177,9 @@ const float DISPLAY_SHOULDER_PERSPECTIVE = 0.86;
 const float DISPLAY_WHITE_PERSPECTIVE = 0.94;
 // the low sun's whites (light pass 4: block tops at t11800 0.95 against a 0.38 lawn read pasted on): as the sun sinks
 // (the light table's low row) the shoulder moves to DISPLAY_SHOULDER_LOW / DISPLAY_WHITE_LOW. A white top ~0.89
-const float DISPLAY_SHOULDER_LOW = 0.80;
-const float DISPLAY_WHITE_LOW = 0.925;
+// light pass 11: 0.80 / 0.925 -> 0.70 / 0.86 - quartz tops at t11800 0.92 against a 0.35 lawn read pasted on; ~0.82
+const float DISPLAY_SHOULDER_LOW = 0.70;
+const float DISPLAY_WHITE_LOW = 0.86;
 const float WHITE_DESATURATE_PERSPECTIVE = 0.10;
 // Enchanted's glow (final.fsh) is a screen blend: it lifted every pixel near a white block by the same amount, so a
 // dark face beside a white top gained ~+0.09 - an albedo-independent floor on the darks (light pass 2). Its lift now
@@ -290,6 +294,9 @@ const float SHADE_TINT_LOW_BOOST = 0.0;
 // and the ground's cool tint is cut by this share under a low sun (light pass 10: t11800's shadows read cool green,
 // (29, 49, 29); target olive ~(45, 55, 30))
 const float SHADE_TINT_LOW_CUT = 0.85;
+// the sky's fill dims toward this share as the sun sinks from 0.20 to 0.05 of its sine (lib/light.glsl, light pass 11):
+// twilight, while SKY_LOW (t11800, ~0.23) is lifted for its olive shadows
+const float SKY_TWILIGHT_DIM = 0.45;
 // the sun's spread under a low sun, scaled up to 1 + this (lib/shadow.glsl gShadowSpread, light pass 9): t11800's
 // long shadows ~6 -> ~10 px at the tip at the default zoom
 const float LOW_SUN_SPREAD = 0.4;             // light pass 10: 0.8 -> 0.4 (target 6-8 px at the long tips)
@@ -301,7 +308,8 @@ const float MOON_FADE_HI = 0.30;
 // from a warm western light, so the sun was the shadow light there, some ~5 degrees up (the eyes' client sky reaches its
 // time late; at 13000 the sun's sine is -0.05 by the celestial angle). The fade now ends where t11800 begins: ~0.2 at
 // 5 degrees up, full from 13 (t11800's ~0.23)
-const float SUN_FADE_LO = 0.02;
+// light pass 11: 0.02 -> 0.08 (the dusk still, shot with the sun ~5-6 degrees up, still lit the ground 0.29-0.31)
+const float SUN_FADE_LO = 0.08;
 const float SUN_FADE_HI = 0.22;
 // a sky light at or above this share of 15 counts as open sky (lib/light.glsl lightLevels, light pass 8)
 const float SKY_LIGHT_FULL = 0.8;
@@ -311,7 +319,10 @@ const float SKY_LIGHT_FULL = 0.8;
 // 0.67): the sky is brighter toward the sun and the sunlit ground bounces from that side, so a face turned toward the
 // sun's azimuth takes up to 1 + FILL_DIRECTION of the fill, one turned away 1 - FILL_DIRECTION; tops and the lawn none.
 // A wall facing the sun's azimuth against one facing away: fill ratio 1.86, ~1.2-1.3x on screen with the sun on it
-const float FILL_DIRECTION = 0.30;
+// light pass 11: 0.30 -> 0.70 (quartz at 5000: lit side 0.66-0.72, shaded 0.56-0.59; target 0.80 / 0.52, >= 1.5x).
+// Anchored on those stills: shaded ~0.53, lit ~0.76, ~1.45x - the sky toward the sun and the sunlit ground's bounce
+// carry the side split
+const float FILL_DIRECTION = 0.70;
 // the share of the occlusion (vertex and material AO) the ground's bounce takes (lib/light.glsl skyFill, light pass 7)
 const float BOUNCE_AO = 0.35;
 // how much harder a sinking sun rakes the grass (lib/light.glsl sunFacingRaked): the facing's easing toward a square
@@ -340,8 +351,12 @@ const float FOLIAGE_SHADOW_LIFT = 1.0;
 const float PLANT_SHADOW_ALPHA = 0.5;      // shadow.fsh: plants' texels below this alpha cast nothing
 // a plant's shadow caster (shadow.vsh, light pass 9): this share of its width round its block's centre and of its
 // height from its foot - a tuft's shadow a soft offset patch smaller than the tuft (~2-3 px of feather at 5000 RTS)
-const float PLANT_SHADOW_SHRINK = 0.6;
-const float PLANT_SHADOW_HEIGHT = 0.75;
+// light pass 11: 0.6 / 0.75 -> 0.75 / 0.9 (the tufts' shadows dropped the lawn only 0.03-0.06)
+const float PLANT_SHADOW_SHRINK = 0.75;
+const float PLANT_SHADOW_HEIGHT = 0.9;
+// a probe (light pass 11): 1 paints red every lit pixel whose sun shadow comes from a plant (shadow.fsh writes plants
+// red in shadowcolor0), to prove the tufts reach the shadow map. Off for play
+#define SHADOW_PROBE 0 // [0 1]
 // the meadow's macro variation (lib/meadow.glsl, light pass 3): patches MEADOW_CELL blocks per noise cell (~8-16 blocks
 // across), the albedo's linear value by exp(MEADOW_VALUE x field) - by a numpy model of the field through the
 // S-curve's 1.32 slope at the lawn: a macro std of ~0.04 luma (p5-p95 ~0.36-0.49), the frame-wide lawn std ~0.03 ->

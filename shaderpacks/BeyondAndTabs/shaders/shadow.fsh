@@ -22,5 +22,6 @@ void main() {
     // the caster is drawn smaller instead (shadow.vsh)
     if (plantCaster > 0.5 && a < PLANT_SHADOW_ALPHA)
         discard;
-    gl_FragData[0] = vec4(1.0);
+    // shadowcolor0: red for plants, for SHADOW_PROBE (lit.fsh); white for everything else
+    gl_FragData[0] = plantCaster > 0.5 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(1.0);
 }

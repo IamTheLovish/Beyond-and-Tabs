@@ -138,3 +138,17 @@ float sunShadow(vec3 playerPos, vec3 worldNormal, vec3 fit) {
     // fade out at the map's edge rather than end in a line
     return mix(lit, 1.0, smoothstep(0.94, 1.0, edge));
 }
+
+#if SHADOW_PROBE == 1
+// light pass 11's probe: 1 where the caster nearest the light over this point is a plant (shadow.fsh writes plants red
+// in shadowcolor0)
+uniform sampler2D shadowcolor0;
+
+float plantShadowProbe(vec3 playerPos, vec3 fit) {
+    vec4 clip = shadowProjection * (shadowModelView * vec4(playerPos, 1.0));
+    clip.xy = shadowRemap(clip.xy, fit);
+    if (max(abs(clip.x), abs(clip.y)) >= 1.0)
+        return 0.0;
+    return texture2D(shadowcolor0, clip.xy * 0.5 + 0.5).g < 0.5 ? 1.0 : 0.0;
+}
+#endif

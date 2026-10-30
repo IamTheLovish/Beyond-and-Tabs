@@ -25,7 +25,8 @@ float skySunset() {
 }
 
 float skyGolden() {
-    return smoothstep(0.02, 0.22, sunHeight());
+    // light pass 11: 0.02 -> 0.10 - the dusk still (the sun ~5-6 degrees up) takes the deep dusk colours, t11800 gold
+    return smoothstep(0.10, 0.22, sunHeight());
 }
 
 // the horizon's colour along horizontal direction toward (0 = away from the sun, 1 = under it), linear, from the day's

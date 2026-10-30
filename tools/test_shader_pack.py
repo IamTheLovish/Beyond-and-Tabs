@@ -161,7 +161,8 @@ class ShaderPack(unittest.TestCase):
         # Retired again (light pass 10): "0.55-0.65" - with the sun now on one visible face, pass 9's bounce had lifted
         # every side alike (quartz's sides 0.59 / 0.60, paper cut-outs). 0.48-0.55 now, the direction carrying the rest
         self.assertTrue(0.48 <= wall <= 0.55, wall)
-        self.assertGreaterEqual(wall * (1.0 - _const("FILL_DIRECTION")), 0.33)
+        # light pass 11: a wall turned fully from the sun keeps >= 0.12 of a sunlit top's light (its fill alone)
+        self.assertGreaterEqual(wall * (1.0 - _const("FILL_DIRECTION")), 0.12)
         self.assertLess(wall, share)                           # a wall in shade sits below the shaded lawn
 
     def test_shadows_are_soft_and_never_self_shadow(self):
@@ -433,7 +434,9 @@ class ShaderPack(unittest.TestCase):
         d = _const("FILL_DIRECTION")
         # light pass 9: 0.30 -> 0.20 (with a stronger ground bounce: the shaded sides read black), still >= 1.45x
         self.assertGreaterEqual((1.0 + d) / (1.0 - d), 1.45)
-        self.assertLessEqual(d, 0.4)
+        # Retired pin (light pass 11): "FILL_DIRECTION <= 0.4" - with the sun on one visible face the side split stayed
+        # 0.66-0.72 against 0.56-0.59 on quartz (target 0.80 / 0.52); the fill's direction carries most of it now
+        self.assertLessEqual(d, 0.8)
         self.assertIn("* fillDirection(n);", _read("program", "lit.fsh"))
 
     def test_perspective_whites_keep_their_lines(self):
@@ -520,6 +523,13 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("texture2D(colortex1, suv).b > 0.5", _read("composite.fsh"))
         self.assertTrue(0.6 <= _const("SHADE_TINT_LOW_CUT") <= 1.0)
         self.assertLessEqual(_const("SUN_FADE_HI"), math.sin(math.radians(13.0)))
+        # light pass 11: clouds dim the sun's colour, not the shadow term the shade tint reads; SHADOW_PROBE (off)
+        lit = _read("program", "lit.fsh")
+        self.assertIn("sunColour *= cloud;", lit)
+        self.assertNotIn("shadow *= cloudShade(", lit)
+        self.assertRegex(_read("lib", "settings.glsl"), r"(?m)^#define SHADOW_PROBE 0 // \[0 1\]")
+        self.assertIn("plantCaster > 0.5 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(1.0)", _read("shadow.fsh"))
+        self.assertGreaterEqual(_const("CLOUD_DARKEST", _read("lib", "clouds.glsl")), 0.8)
 
     def test_the_meadow_varies_across_the_field(self):
         # light pass 3 (round 41: the lawn read as uniform felt): a world-space low-frequency field on biome-tinted

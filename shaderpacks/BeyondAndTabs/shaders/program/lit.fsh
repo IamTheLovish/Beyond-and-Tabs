@@ -190,6 +190,8 @@ void main() {
     facing *= terminator;
 #endif
     float shadow = 0.0;
+    float cloud = 1.0;
+    float plantShadow = 0.0;           // SHADOW_PROBE
     gShadowSpread = 1.0 + LOW_SUN_SPREAD * lowSun();
     if (facing > 0.0) {
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
@@ -197,13 +199,29 @@ void main() {
         // a plant looks its shadow up a block toward the light: plants cast shadows now (FOLIAGE_SHADOW_LIFT)
         vec3 lookup = playerPos + (mat3(gbufferModelViewInverse) * l) * (FOLIAGE_SHADOW_LIFT * foliage);
         shadow = sunShadow(lookup, worldNormal, fit);
+#if SHADOW_PROBE == 1
+        plantShadow = shadow < 0.8 ? plantShadowProbe(lookup, fit) : 0.0;
+#endif
 #if CLOUD_SHADOWS == 1
         // a passing cloud takes some of the sun (and its glints, which read the same term), never the sky's fill
-        shadow *= cloudShade(playerPos + cameraPosition, normalize(mat3(gbufferModelViewInverse) * l));
+        // Light pass 11: on the sun's colour, not the shadow term - under a cloud the shade tint (which reads the shadow
+        // term) cooled the whole lit lawn, as if it were in shadow (the pass-10 5000 lawn: R and G down, B up)
+        cloud = cloudShade(playerPos + cameraPosition, normalize(mat3(gbufferModelViewInverse) * l));
 #endif
     }
+#if SHADOW_PROBE == 1
+    if (plantShadow > 0.5) {
+        gl_FragData[0] = vec4(1.0, 0.0, 0.0, 1.0);
+        gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+#ifdef LIT_WATER
+        gl_FragData[2] = vec4(0.0, 0.5, 0.0, 1.0);
+#endif
+        return;
+    }
+#endif
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
+    sunColour *= cloud;
     gShadeGround = groundMaterial;
     vec3 light = surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
     // near-white faces turned from up lose the light's colour (WHITE_WALL_NEUTRAL, light pass 3): white sides read

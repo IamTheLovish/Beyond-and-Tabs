@@ -14,7 +14,9 @@
 #ifndef CLOUDS_GLSL
 #define CLOUDS_GLSL
 
-const float CLOUD_DARKEST = 0.70;      // the sun's share left under the thickest part of a cloud
+// the sun's share left under the thickest part of a cloud. Light pass 11: 0.70 -> 0.85 - the patches are 15-60 blocks,
+// so a cloud can cover a whole RTS frame, and the eyes' lawn measurement swung by ~0.04 with the clouds
+const float CLOUD_DARKEST = 0.85;
 // blocks per noise cell. Measured on a 900-block square of this noise (numpy): patches past half cover have a median
 // diameter of 31 blocks, the middle half 14-60; a quarter of the ground is under one, and the edge ramp is >= 2.5 blocks
 const float CLOUD_CELL = 34.0;
