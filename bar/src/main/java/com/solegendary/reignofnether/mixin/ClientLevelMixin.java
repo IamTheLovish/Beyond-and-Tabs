@@ -108,6 +108,8 @@ public class ClientLevelMixin {
                 !pSoundEvent.getLocation().getNamespace().contains("reignofnether"))
             return;
 
+        if (com.solegendary.reignofnether.sounds.EarsCount.ON && this.minecraft.player != null)
+            com.solegendary.reignofnether.sounds.EarsCount.played(pSoundEvent, this.minecraft.player.distanceToSqr(pX, pY, pZ));
         Vec3 soundPos = getOrthoviewSoundPos(new Vec3(pX, pY, pZ));
 
         double d0 = this.minecraft.gameRenderer.getMainCamera().getPosition().distanceToSqr(soundPos.x(), soundPos.y(), soundPos.z());
