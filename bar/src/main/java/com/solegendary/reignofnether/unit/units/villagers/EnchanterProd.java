@@ -57,7 +57,7 @@ public class EnchanterProd extends HeroProductionItem implements IUnitProduction
         ArrayList<FormattedCharSequence> tooltips = new ArrayList<>(List.of(
                 Component.translatable("entity.reignofnether.enchanter_unit").append(Component.literal(" (")).append(Component.translatable("hud.units.reignofnether.hero")).append(Component.literal(")")).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.enchanter_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.enchanter_unit.tooltip2").getVisualOrderText()
