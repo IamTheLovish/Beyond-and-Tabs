@@ -568,6 +568,9 @@ SEED_ORDER = (
     "glowstone",
     "shroomlight",
     "sea_lantern",
+    "bricks",                 # round 35
+    "bricks_v2",
+    "bricks_v3",
 )
 
 
@@ -1202,6 +1205,13 @@ TARGETS["deepslate_redstone_ore"] = dict(luma=0.24, std=0.080, sat=0.25, tilt=18
 TARGETS["glowstone"] = dict(luma=0.70, std=0.120, sat=0.70, tilt=14.0, smooth=150, pore=0)
 TARGETS["shroomlight"] = dict(luma=0.55, std=0.100, sat=0.75, tilt=14.0, smooth=80, pore=20)
 TARGETS["sea_lantern"] = dict(luma=0.80, std=0.080, sat=0.15, tilt=8.0, smooth=150, pore=0)
+# round 35: red clay bricks (m_clay_bricks) - the build census's biggest missing block; a full cube, so it gets the
+# r33 procedural variants too (PROC_VARIANT_BLOCKS below)
+TARGETS["bricks"] = dict(luma=0.40, std=0.070, sat=0.52, tilt=12.0, smooth=24, pore=40, soften=0.6)
+PROC_VARIANT_BLOCKS["bricks"] = ("cube_all", {"all": "bricks"})
+for _k in range(2, PROC_VARIANTS + 1):
+    PROC_VARIANT_OF["bricks_v%d" % _k] = "bricks"
+    TARGETS["bricks_v%d" % _k] = dict(TARGETS["bricks"])
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2426,6 +2436,43 @@ def m_cracked_path(F, n, side):
     Hd, ad = m_dirt(F, n)
     band = F.v < (0.19 + 0.02 * F.noise(4, 12, 0.5)[0:1, :])
     return np.where(band, H + 0.1, Hd), np.where(band[..., None], alb, ad)
+
+
+# ------------------------------------------------------------------ round 35: clay bricks --------------------------
+def m_clay_bricks(F, n):
+    """Red clay bricks (r35; the build census's biggest missing block, 3.4% of the schematics' blocks): four courses
+    of two bricks per block in a running bond (vanilla's layout), each brick its own fired tone - most a red-orange,
+    some a darker brown-red clinker, a few paler and pinker - with worn, rounded arrises, a face of fine sand grain
+    with a few chips and pits, set in a recessed pale lime mortar with real AO in the joint. It must read as BRICK,
+    not stone_bricks, at 32 px: the colour and the four narrow courses do that."""
+    courses, per = 4, 2
+    course = np.floor(F.v * courses).astype(int)
+    in_c = (F.v * courses) % 1.0
+    off = np.where(course % 2 == 0, 0.0, 0.5)
+    ju = (F.u * per + off) % 1.0
+    brick = (course * per + np.floor(F.u * per + off).astype(int)) % 64
+    chip = 0.003 * F.noise(8, 24, 0.5)
+    dv = np.minimum(in_c, 1 - in_c) / courses + chip
+    du = np.minimum(ju, 1 - ju) / per + chip
+    dj = np.minimum(dv, du)
+    joint_w = 0.012                                       # ~1.5 texels at 128 each side: 3 texels of mortar
+    face = smoothstep(joint_w, joint_w + 0.010, dj)       # 0 in the mortar, 1 on the brick
+    arris = smoothstep(joint_w, joint_w + 0.045, dj)      # the worn, rounded edge: a soft shoulder
+    rng = F.rng
+    kind = rng.random(64)[brick]
+    tone = (0.86 + 0.28 * rng.random(64))[brick]
+    base = np.where(kind[..., None] < 0.62, np.array([0.64, 0.30, 0.20]),              # red-orange
+                    np.where(kind[..., None] < 0.85, np.array([0.48, 0.24, 0.18]),      # darker clinker
+                             np.array([0.70, 0.42, 0.32])))                            # paler, pinker
+    flash = norm01(F.noise(2, 5, 0.5, sx=3.0, sy=1.0))     # firing flash along each brick: a darker end
+    grain = F.noise(14, 44, 0.3)
+    pits = smoothstep(0.9, 1.05, F.noise(10, 30, 0.4)) * face
+    H = 0.28 + 0.55 * np.sqrt(arris) * face + 0.03 * F.fbm(3, 3, 0.5) * face + 0.015 * grain - 0.08 * pits
+    shade = tone * (0.82 + 0.16 * arris - 0.12 * (flash - 0.5) + 0.02 * grain - 0.25 * pits)
+    alb = base * shade[..., None]
+    mortar = np.array([0.66, 0.62, 0.55]) * (0.80 + 0.06 * grain)[..., None]
+    alb = alb * face[..., None] + mortar * (1 - face[..., None])
+    return H, np.clip(alb, 0, 1)
 
 
 # ------------------------------------------------------------------ round 34: the glowing blocks -----------------
@@ -4349,6 +4396,7 @@ def recipes():
     R["glowstone"] = _parts(m_glowstone, fit=False)
     R["shroomlight"] = _parts(m_shroomlight, fit=False)
     R["sea_lantern"] = _parts(m_sea_lantern, fit=False)
+    R["bricks"] = _plain(m_clay_bricks)                        # round 35
     R["exposed_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 1)))
     R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
     for name, base in SCAN_VARIANT_OF.items():        # round 28: variant k is SCAN index k - 1
