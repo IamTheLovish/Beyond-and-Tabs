@@ -127,9 +127,13 @@ public final class BoneMaps {
             BoneMap m = new BoneMap(body == null ? 0f : body.y, true, true, !keyframes)
                 .set(Motion.BODY, body).set(Motion.HEAD, head);
             ModelPart[] fall = keyframes ? null : humanRig(hm, head);
+            if (fall == null)
+                return m;
             // a generated human aims its own head (its setupAnim): its torso turns with an aim only
-            return fall == null ? m : m.fallsJointed(fall).looks(m.parts[Motion.BODY] != null ? Motion.LOOK_TWIST
-                : Motion.LOOK_NONE);
+            m.fallsJointed(fall).looks(m.parts[Motion.BODY] != null ? Motion.LOOK_TWIST : Motion.LOOK_NONE);
+            for (String weapon : GRIP_WEAPONS)
+                m.drops(gripWeapon(hm, weapon));
+            return m;
         }
         return NONE;
     }
@@ -163,6 +167,19 @@ public final class BoneMaps {
             if (p[bone] == null)
                 return null;
         return p;
+    }
+
+    /**
+     * The weapons a generated rig plants upright at rest (tools/gen_halberdier.py, the Field Medic's staff): laid back
+     * to that rest, they lie along a fallen body. The Levy's crossbow rests held forwards, so it is not one.
+     */
+    private static final String[] GRIP_WEAPONS = {"halberd", "staff"};
+
+    /** A weapon on a grip bone beside the hand (the grip also carries an arm), else null: one in a hand rides it. */
+    static ModelPart gripWeapon(HierarchicalModel<?> hm, String name) {
+        return hm.root().getAllParts()
+            .filter(p -> p.hasChild(name) && (p.hasChild("right_arm") || p.hasChild("left_arm")))
+            .findFirst().map(p -> p.getChild(name)).orElse(null);
     }
 
     /** Every leg, thigh and foot name our rigs and keyframe models use (bone names are not readable from a part). */
