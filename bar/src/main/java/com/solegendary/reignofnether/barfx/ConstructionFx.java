@@ -20,15 +20,13 @@ import java.util.WeakHashMap;
  * Each faction builds its own way (claude/faction-construction-oct29.md; lovish, Oct 29: "Building looks fake, each
  * race could get their own method of building"). The White Angel pilot, approved from a paintover ("i loveeee"):
  * <ul>
- *   <li>a soft cloud HALO round the course being built, lying just under it and climbing with it, a cool band on its
- *   inner edge;</li>
- *   <li>a pale GOLD ghost over every block still missing - and nothing else (ConstructionGrid): gold "not yet" over
- *   white "done" says how far along it is at a glance;</li>
- *   <li>a gold-white RIM along the top of every standing wall still to be built on, beads running along it;</li>
- *   <li>light from above: one soft cone landing in a cool pool, slow gold motes rising;</li>
- *   <li>a golden hammer and a chisel striking standing faces under the rim, each blow a white flash on the face fading
- *   through warm white, sparks and dust;</li>
- *   <li>done: the halo swells and fades, a flash on the top, a light ring runs out over the ground, the tools fly up.</li>
+ *   <li>a cool slate GHOST over every block still missing - and nothing else (ConstructionGrid) - outlined only on its
+ *   silhouette: cool "not yet" against the warm white "done" (round 12 critic: separate them by hue);</li>
+ *   <li>ONE build front: a warm gold line along the highest built row, a cool strip under it on the face;</li>
+ *   <li>a few soft beams rising from that row, slow gold motes;</li>
+ *   <li>up to three small golden tools striking built faces under the front, each blow a flash and sparks;</li>
+ *   <li>done: a cloud halo swells and fades, a flash on the top, a light ring runs out over the ground, the tools fly
+ *   up.</li>
  * </ul>
  * Building-agnostic: everything comes from the placement's own blocks (the buildings are being reworked). Pure client
  * rendering through BarFxClient's passes; thinner when zoomed out; nothing allocated per frame once a site is cached.
@@ -49,9 +47,10 @@ final class ConstructionFx {
      *  pool where the light lands. */
     private static final int COOL = 0xB9CBEE;   // round 11 critic: desaturated (a periwinkle kerb at #8FB0F0, 0.7)
     /** The rim: a 2 px #FFF6DC core in a 4 px #FFE9B0 glow (round 10 critic: the hero); its beads' glow. */
-    private static final int RIM_CORE = 0xFFF3C4, RIM_GLOW = 0xFFE9B0, BEAD_GLOW = 0xFFD66B;
+    private static final int FRONT_WARM = 0xFFD27A, FRONT_COOL = 0x7FB2FF, BEAD_GLOW = 0xFFD66B;
     /** The ghost: a pale cool fill, gold silhouette edges (round 10 critic). */
-    private static final int GHOST_FILL = 0xEEF2FA, GHOST_EDGE = 0xF2DFAE, GHOST_CONTACT = 0x6E7684;
+    private static final int GHOST_FILL = 0x6F86A8, GHOST_EDGE = 0xB8C8E0;
+    private static final float GHOST_A = 0.28f;
     /** The cone of light: a warm white, additive, 0.18 at its top fading to nothing at the ground. */
     private static final int RAY = 0xFFF8E6;
     /** Sparks; the blow's white flash and the struck face's warm afterglow; dust. */
@@ -130,7 +129,10 @@ final class ConstructionFx {
             if (b.getBlockState().isAir())
                 continue;
             BlockPos bp = b.getBlockPos();
-            boolean placed = b.isPlaced(level);
+            // standing = the exact state (isPlaced) or the same block in another state: a slab's type, a lantern's
+            // hanging, a banner's rotation or a candle's lit flag differ while the block plainly stands - round 12: the
+            // ghost was drawn over standing quartz
+            boolean placed = b.isPlaced(level) || level.getBlockState(bp).getBlock() == b.getBlockState().getBlock();
             s.grid.mark(bp.getX(), bp.getY(), bp.getZ(), placed);
             if (placed)
                 s.standing[s.shape.layerOf(bp.getY())]++;
@@ -202,7 +204,8 @@ final class ConstructionFx {
             float ease = Float.isNaN(s.ring[0]) ? 1 : Math.min(1, dt * 2.5f);
             for (int i = 0; i < 4; i++)
                 s.ring[i] = Float.isNaN(s.ring[i]) || ease >= 1 ? s.cut[i] : s.ring[i] + (s.cut[i] - s.ring[i]) * ease;
-            drawHalo(s, front, clock, far, 1f, 1f);
+            // (no halo while it rises - round 12 critic: it lay as a white ground haze at the walls' foot; the completion
+            // beat still swells it once)
             if (!far)
                 drawPool(s, clock);
             drawGhost(s, far);
@@ -351,35 +354,37 @@ final class ConstructionFx {
     // ------------------------------------------------------------------ the part still to come
 
     /**
-     * The ghost over every block still MISSING and nothing else (ConstructionGrid; round 9: drawn from one build front
-     * it caged standing walls). Round 11 critic: it read as stacked glass crates - the fill over the grass sampled as
-     * grass, and interior tops still carried gold outlines. Now:
+     * The ghost over every block still MISSING and nothing else (ConstructionGrid). Round 12 critic: the ghost-vs-built
+     * contrast was the weak point - a faint grey-green over the white quartz. Now it is set apart by HUE:
      * <ul>
-     *   <li>the fill: each missing block's faces turned to the camera with an open neighbour, #EEF2FA at 0.55 on the
-     *   tops and 0.38 on the sides;</li>
-     *   <li>gold only on the TRUE outer hull: a face's edge where the block beyond it, in the face's plane, is not
-     *   missing - the volume ends there - 1.5 px #F2DFAE at 0.5; no seams inside the volume, no step lines;</li>
-     *   <li>a 1 px darker contact line (0.25) where a side face meets what it stands on (the ground or stone), so it
-     *   reads on bright terrain;</li>
-     *   <li>at most EDGE_CAP edges a building.</li>
+     *   <li>the fill: each missing block's faces turned to the camera with an open neighbour, a cool slate #6F86A8 at
+     *   0.28 - every face of the volume the same, inset GHOST_INSET from the cell so it never shares a plane with a
+     *   standing block's face (no z-fighting);</li>
+     *   <li>edges only on the OUTER SILHOUETTE of each missing region, #B8C8E0, 1 px at 0.6: a face's edge where the
+     *   volume ends beyond it AND the fold there turns away from the camera (the top's far edges, the sides' far and
+     *   bottom edges). The creases between two faces turned to us (the top's near edges, the near corner) are where
+     *   the old lattice made its Y-junctions - none now; nothing inside a face.</li>
      * </ul>
+     * A block counts as missing only when no block of its kind stands there (recount), so nothing is ghosted over stone.
      */
     static void drawGhost(Site s, boolean far) {
         ConstructionGrid g = s.grid;
         float lx = BarFxClient.lookX, lz = BarFxClient.lookZ;
         int sx = lx > 0 ? -1 : 1, sz = lz > 0 ? -1 : 1;   // the x / z side turned to us
+        float e = GHOST_INSET;
         int n = g.missingCount();
         for (int i = 0; i < n; i++) {
             int x = g.missingX(i), y = g.missingY(i), z = g.missingZ(i);
+            float x0 = x + e, x1 = x + 1 - e, z0 = z + e, z1 = z + 1 - e, y0 = y + e, y1 = y + 1 - e;
             if (!g.isStructure(x, y + 1, z))
-                fill(x, y + 1, z, x + 1, y + 1, z, x + 1, y + 1, z + 1, x, y + 1, z + 1, 0.55f);
+                fill(x0, y1, z0, x1, y1, z0, x1, y1, z1, x0, y1, z1);
             if (!g.isStructure(x + sx, y, z)) {
-                float fx = sx > 0 ? x + 1 : x;
-                fill(fx, y, z, fx, y, z + 1, fx, y + 1, z + 1, fx, y + 1, z, 0.35f);
+                float fx = sx > 0 ? x1 : x0;
+                fill(fx, y0, z0, fx, y0, z1, fx, y1, z1, fx, y1, z0);
             }
             if (!g.isStructure(x, y, z + sz)) {
-                float fz = sz > 0 ? z + 1 : z;
-                fill(x, y, fz, x + 1, y, fz, x + 1, y + 1, fz, x, y + 1, fz, 0.38f);
+                float fz = sz > 0 ? z1 : z0;
+                fill(x0, y0, fz, x1, y0, fz, x1, y1, fz, x0, y1, fz);
             }
         }
         if (far)
@@ -389,105 +394,114 @@ final class ConstructionFx {
             drawn += ghostEdges(g, g.missingX(i), g.missingY(i), g.missingZ(i), sx, sz, EDGE_CAP - drawn);
     }
 
-    /** The most ghost edges one building draws. */
+    /** The most ghost edges one building draws; how far the ghost sits inside its cells. */
     private static final int EDGE_CAP = 400;
+    private static final float GHOST_INSET = 0.01f;
 
     /**
-     * The hull edges of missing block (x, y, z)'s visible faces, at most {@code room}: an edge where the block beyond
-     * it in the face's plane is not missing. Each edge is drawn by one face: a side face leaves its top edge to the top
-     * face when that shows, and the z face leaves the corner it shares with the x face when that shows. A side face's
-     * bottom edge over something not missing is the contact line. Returns how many it drew.
+     * The silhouette edges of missing block (x, y, z)'s visible faces, at most {@code room}. A face's edge counts only
+     * where the block beyond it in the face's plane is not missing (the volume ends there) and the direction across
+     * it is one turned AWAY from the camera (down, -sx, -sz) - so the fold behind that edge is out of view and the
+     * edge is the outline. Each such edge belongs to exactly one visible face. Returns how many it drew.
      */
     private static int ghostEdges(ConstructionGrid g, int x, int y, int z, int sx, int sz, int room) {
         int drawn = 0;
+        float e = GHOST_INSET;
         boolean top = !g.isStructure(x, y + 1, z), xf = !g.isStructure(x + sx, y, z), zf = !g.isStructure(x, y, z + sz);
-        float fx = sx > 0 ? x + 1 : x, fz = sz > 0 ? z + 1 : z, bx = sx > 0 ? x : x + 1, bz = sz > 0 ? z : z + 1;
-        float y1 = y + 1;
-        boolean below = !g.isMissing(x, y - 1, z);
-        if (top) {
-            if (drawn < room && !g.isMissing(x + 1, y, z)) drawn += edge(x + 1, y1, z, x + 1, y1, z + 1, false);
-            if (drawn < room && !g.isMissing(x - 1, y, z)) drawn += edge(x, y1, z, x, y1, z + 1, false);
-            if (drawn < room && !g.isMissing(x, y, z + 1)) drawn += edge(x, y1, z + 1, x + 1, y1, z + 1, false);
-            if (drawn < room && !g.isMissing(x, y, z - 1)) drawn += edge(x, y1, z, x + 1, y1, z, false);
+        float x0 = x + e, x1 = x + 1 - e, z0 = z + e, z1 = z + 1 - e, y0 = y + e, y1 = y + 1 - e;
+        float fx = sx > 0 ? x1 : x0, fz = sz > 0 ? z1 : z0, bx = sx > 0 ? x0 : x1, bz = sz > 0 ? z0 : z1;
+        if (top) {   // the top's far edges: toward -sx and -sz
+            if (drawn < room && !g.isMissing(x - sx, y, z)) drawn += edge(bx, y1, z0, bx, y1, z1);
+            if (drawn < room && !g.isMissing(x, y, z - sz)) drawn += edge(x0, y1, bz, x1, y1, bz);
         }
-        if (xf) {
-            if (drawn < room && below) drawn += edge(fx, y, z, fx, y, z + 1, true);
-            if (drawn < room && !g.isMissing(x, y, z - sz)) drawn += edge(fx, y, bz, fx, y1, bz, false);
-            if (drawn < room && !g.isMissing(x, y, z + sz)) drawn += edge(fx, y, fz, fx, y1, fz, false);
-            if (!top && drawn < room && !g.isMissing(x, y + 1, z)) drawn += edge(fx, y1, z, fx, y1, z + 1, false);
+        if (xf) {    // the x face: its bottom and its far (-sz) side
+            if (drawn < room && !g.isMissing(x, y - 1, z)) drawn += edge(fx, y0, z0, fx, y0, z1);
+            if (drawn < room && !g.isMissing(x, y, z - sz)) drawn += edge(fx, y0, bz, fx, y1, bz);
         }
-        if (zf) {
-            if (drawn < room && below) drawn += edge(x, y, fz, x + 1, y, fz, true);
-            if (drawn < room && !g.isMissing(x - sx, y, z)) drawn += edge(bx, y, fz, bx, y1, fz, false);
-            if (!xf && drawn < room && !g.isMissing(x + sx, y, z)) drawn += edge(fx, y, fz, fx, y1, fz, false);
-            if (!top && drawn < room && !g.isMissing(x, y + 1, z)) drawn += edge(x, y1, fz, x + 1, y1, fz, false);
+        if (zf) {    // the z face: its bottom and its far (-sx) side
+            if (drawn < room && !g.isMissing(x, y - 1, z)) drawn += edge(x0, y0, fz, x1, y0, fz);
+            if (drawn < room && !g.isMissing(x - sx, y, z)) drawn += edge(bx, y0, fz, bx, y1, fz);
         }
         return drawn;
     }
 
-    /** One ghost edge: the hull 1.5 px gold at 0.5, or the contact line 1 px darker at 0.25. Returns 1. */
-    private static int edge(float x0, float y0, float z0, float x1, float y1, float z1, boolean contact) {
-        if (contact)
-            line(x0, y0 + 0.01f, z0, x1, y0 + 0.01f, z1, 0.035f, GHOST_CONTACT, 0.25f);
-        else
-            line(x0, y0, z0, x1, y1, z1, 0.05f, GHOST_EDGE, 0.5f);
+    /** One ghost silhouette edge, #B8C8E0, 1 px at 0.6. Returns 1. */
+    private static int edge(float x0, float y0, float z0, float x1, float y1, float z1) {
+        line(x0, y0, z0, x1, y1, z1, 0.035f, GHOST_EDGE, 0.6f);
         return 1;
     }
 
     /** One ghost face's fill. */
     private static void fill(float ax, float ay, float az, float bx, float by, float bz, float cx, float cy, float cz,
-                             float dx, float dy, float dz, float a) {
-        BarFxClient.v(ax, ay, az, GHOST_FILL, a);
-        BarFxClient.v(bx, by, bz, GHOST_FILL, a);
-        BarFxClient.v(cx, cy, cz, GHOST_FILL, a);
-        BarFxClient.v(dx, dy, dz, GHOST_FILL, a);
+                             float dx, float dy, float dz) {
+        BarFxClient.v(ax, ay, az, GHOST_FILL, GHOST_A);
+        BarFxClient.v(bx, by, bz, GHOST_FILL, GHOST_A);
+        BarFxClient.v(cx, cy, cz, GHOST_FILL, GHOST_A);
+        BarFxClient.v(dx, dy, dz, GHOST_FILL, GHOST_A);
     }
 
     // ------------------------------------------------------------------ the rim
 
     /**
-     * The RIM (round 9 critic: continuous along the full exposed top course of every standing wall segment): every
-     * ConstructionGrid rim edge - the top edge of a standing block with a missing block on it, on an open side - inset
-     * RIM_INSET into the block, and up the vertical build fronts. The hero (rounds 10-11): a 2 px #FFF3C4 core at 0.95
-     * over a 6 px #FFE9B0 glow at 0.5, both pulsing 0.8-1.0 over 1.6 s (the ghost's gold stays under half). Beads, one per 6
-     * blocks of rim, run along it at 1.5 blocks a second: a white core in a #FFD66B glow at 0.8. Normal-blended.
+     * ONE build front (round 12 critic: cream lines on every built edge coincided with the ghost's edges, doubled up
+     * and z-fought). Only the rim edges of the HIGHEST built row (ConstructionGrid: the top edge of a standing block
+     * with a missing block on it, on an open side): a warm #FFD27A line, 2 px at 0.9, RIM_INSET into the block; under
+     * it, on the vertical face, a cool #7FB2FF strip at 0.35, 0.25 block tall - the cool counterpoint, half-way between
+     * round 11's strong band and none. Beads (one per 6 blocks) run along that row at 1.5 blocks a second.
      */
     static void drawRim(Site s, float clock, boolean far) {
         ConstructionGrid g = s.grid;
         int n = g.rimCount();
         if (n == 0)
             return;
-        float wg = far ? 0.25f : 0.15f, wc = far ? 0.12f : 0.07f;
-        float pulse = 0.9f + 0.1f * (float) Math.sin(clock * 2 * Math.PI / 1.6f);   // 0.8-1.0 over 1.6 s
-        float ag = 0.5f * pulse, ac = 0.95f * pulse;
+        float top = topRow(g);
+        float wc = far ? 0.12f : 0.07f;
+        int rowN = 0;
         for (int i = 0; i < n; i++) {
+            if (g.rimY(i) != top)
+                continue;
+            rowN++;
             int side = g.faceSide(i);
-            float ix = -sideNx(side) * RIM_INSET, iz = -sideNz(side) * RIM_INSET, y = g.rimY(i) + 0.02f;
-            float ax = g.rimX0(i) + ix, az = g.rimZ0(i) + iz, bx = g.rimX1(i) + ix, bz = g.rimZ1(i) + iz;
-            BarFxClient.streak(ax, y, az, bx, y, bz, wg, RIM_GLOW, ag, ag);
-            line(ax, y, az, bx, y, bz, wc, RIM_CORE, ac);
+            float nx = sideNx(side), nz = sideNz(side), y = g.rimY(i);
+            float ax = g.rimX0(i), az = g.rimZ0(i), bx = g.rimX1(i), bz = g.rimZ1(i);
+            // the cool strip on the face, just outside it, the 0.25 block under the line
+            float ox = nx * 0.01f, oz = nz * 0.01f;
+            BarFxClient.v(ax + ox, y - 0.25f, az + oz, FRONT_COOL, 0.35f);
+            BarFxClient.v(bx + ox, y - 0.25f, bz + oz, FRONT_COOL, 0.35f);
+            BarFxClient.v(bx + ox, y, bz + oz, FRONT_COOL, 0.35f);
+            BarFxClient.v(ax + ox, y, az + oz, FRONT_COOL, 0.35f);
+            float ix = -nx * RIM_INSET, iz = -nz * RIM_INSET;
+            line(ax + ix, y + 0.02f, az + iz, bx + ix, y + 0.02f, bz + iz, wc, FRONT_WARM, 0.9f);
         }
-        // up the vertical build fronts too (round 11 critic): where a standing face meets a missing one beside it
-        for (int i = 0, m = g.frontCount(); i < m; i++) {
-            int side = g.frontSide(i);
-            float x = g.frontX(i) - sideNx(side) * RIM_INSET, z = g.frontZ(i) - sideNz(side) * RIM_INSET;
-            float y0 = g.frontY(i), y1 = y0 + 1;
-            BarFxClient.streak(x, y0, z, x, y1, z, wg, RIM_GLOW, ag, ag);
-            line(x, y0, z, x, y1, z, wc, RIM_CORE, ac);
-        }
-        int beads = Math.max(1, Math.round(n / 6f));
+        if (rowN == 0)
+            return;
+        int beads = Math.max(1, Math.round(rowN / 6f));
         float r = far ? 0.25f : 0.15f;
         for (int k = 0; k < beads; k++) {
             float at = clock * 1.5f + k * 6f;
-            at -= (float) Math.floor(at / n) * n;
-            int i = Math.min(n - 1, (int) at);
-            float f = at - i;
+            at -= (float) Math.floor(at / rowN) * rowN;
+            int want = Math.min(rowN - 1, (int) at), seen = 0, i = 0;
+            for (; i < n; i++)
+                if (g.rimY(i) == top && seen++ == want)
+                    break;
+            if (i >= n)
+                continue;
+            float f = at - want;
             int side = g.faceSide(i);
             float ix = -sideNx(side) * RIM_INSET, iz = -sideNz(side) * RIM_INSET, y = g.rimY(i) + 0.05f;
             float x = g.rimX0(i) + (g.rimX1(i) - g.rimX0(i)) * f + ix, z = g.rimZ0(i) + (g.rimZ1(i) - g.rimZ0(i)) * f + iz;
             BarFxClient.softDisc(x, y, z, r, BEAD_GLOW, 0.8f, BEAD_GLOW, 0.35f, 12, 0, 0);
             BarFxClient.softDisc(x, y, z, r * 0.45f, 0xFFFFFF, 1f, 0xFFFFFF, 0.9f, 8, 0, 0);
         }
+    }
+
+    /** The highest built row's rim height (the build front), or NaN with no rim. */
+    private static float topRow(ConstructionGrid g) {
+        float top = Float.NaN;
+        for (int i = 0, n = g.rimCount(); i < n; i++)
+            if (Float.isNaN(top) || g.rimY(i) > top)
+                top = g.rimY(i);
+        return top;
     }
 
     // ------------------------------------------------------------------ light from above
@@ -525,10 +539,7 @@ final class ConstructionFx {
         s.pt[2] = s.grid.columnTop((int) Math.floor(x), (int) Math.floor(z));
     }
 
-    /**
-     * The cool pool where the light lands, on the standing surface: #A9C0F0 at 0.5 in its middle, radius 1.5, alpha-
-     * blended - its centre pixel over the white stone ~(197, 208, 228) after the grade (0.35 of #C4D4F4 left B - R ~10).
-     */
+    /** A soft cool pool on the standing surface inside the footprint (the accent colour at 0.5, radius 1.5). */
     static void drawPool(Site s, float clock) {
         landing(s, clock);
         if (Float.isNaN(s.pt[2]))
@@ -537,23 +548,33 @@ final class ConstructionFx {
     }
 
     /**
-     * Holy light with restraint. Round 11 critic: the warm wash creamed the white stone to #DFCDA1 - so no wash on built
-     * blocks; one soft radial glow disc 1.5 blocks across where the shafts land (0.12, additive), and 2-3 slow shafts
-     * round it - 0.2 block wide, 0.08 at the foot fading to nothing 6 blocks up, turning once in 20 s, the first a touch
-     * stronger (0.11) so one shows at the RTS zoom.
+     * Light from the build front (round 12 critic: 2-3 beams, 0.35, 0.15 block wide, only from the build-front row):
+     * three soft vertical beams rising 4 blocks from points on the highest built row's rim, each holding a spot for
+     * ~4 s with a fade in and out, then moving on. No wash on built stone (round 11). Additive.
      */
     static void drawLight(Site s, float front, float clock) {
-        landing(s, clock);
-        float x = s.pt[0], z = s.pt[1];
-        float yb = Float.isNaN(s.pt[2]) ? front : s.pt[2];
-        if (!Float.isNaN(s.pt[2]))
-            flatDisc(x, yb + 0.04f, z, 0.75f, RAY, 0.12f, 14);
+        ConstructionGrid g = s.grid;
+        float top = topRow(g);
+        if (Float.isNaN(top))
+            return;
+        int rowN = 0;
+        for (int i = 0, n = g.rimCount(); i < n; i++)
+            if (g.rimY(i) == top)
+                rowN++;
         for (int k = 0; k < 3; k++) {
-            double ang = clock * 2 * Math.PI / 20 + k * 2 * Math.PI / 3;
-            float r = 0.9f + 0.3f * k / 2f;
-            float sx = x + (float) Math.cos(ang) * r, sz = z + (float) Math.sin(ang) * r;
-            float a = k == 0 ? 0.11f : 0.08f;
-            BarFxClient.streak(sx, yb + 6f, sz, sx, yb + 0.05f, sz, 0.1f, RAY, 0f, a);
+            float t = clock / 4f + k / 3f;
+            int cyc = (int) Math.floor(t);
+            float f = t - cyc, a = 0.35f * (float) Math.sin(Math.PI * f);
+            int want = (int) (hash(cyc * 37 + k * 101) * rowN) % rowN, seen = 0, i = 0, n = g.rimCount();
+            for (; i < n; i++)
+                if (g.rimY(i) == top && seen++ == want)
+                    break;
+            if (i >= n)
+                continue;
+            int side = g.faceSide(i);
+            float x = (g.rimX0(i) + g.rimX1(i)) * 0.5f - sideNx(side) * 0.5f;
+            float z = (g.rimZ0(i) + g.rimZ1(i)) * 0.5f - sideNz(side) * 0.5f;
+            BarFxClient.streak(x, top + 4f, z, x, top + 0.05f, z, 0.075f, RAY, 0f, a);
         }
     }
 
@@ -575,14 +596,16 @@ final class ConstructionFx {
 
     /** Tools working at once (round 10 critic: 3-4 cycling): two hammers and a chisel, on the sides turned to us. */
     private static final int TOOLS = 3;
-    /** Hammer / chisel parts (blocks): ~0.8 block in all (round 11 critic); the handle's length is the pivot's
+    /** Hammer / chisel parts (blocks): ~0.5 block in all (round 12 critic); the handle's length is the pivot's
      *  distance from the struck point. */
-    private static final float HANDLE_W = 0.11f, HEAD_L = 0.4f, HEAD_W = 0.2f, CHISEL_GRIP_W = 0.15f;
+    private static final float HANDLE_W = 0.08f, HEAD_L = 0.28f, HEAD_W = 0.14f, CHISEL_GRIP_W = 0.11f;
     /** The tools' 1 px dark outline (blocks); the anticipation before a blow (~2 frames, seconds). */
     private static final float TOOL_LINE = 0.035f, ANTICIPATION = 0.035f;
-    /** The pivot stands this far out along the face's normal and this far above the struck point: the tool tilted
-     *  ~45 degrees into the face (round 10 critic: 35-50); the swing is a 40-degree arc. */
-    private static final float PIVOT_OUT = 0.42f, PIVOT_UP = 0.42f, ARC = 0.7f;
+    /** The pivot stands this far out along the face's normal and this far above the struck point: the tool hangs close
+     *  along its face (round 12 critic: two props floated 0.4 off the wall); the swing is a 40-degree arc. */
+    private static final float PIVOT_OUT = 0.12f, PIVOT_UP = 0.34f, ARC = 0.7f;
+    /** The struck point stands this far off its face (round 12 critic: props anchored 0.02 off a built face). */
+    private static final float FACE_GAP = 0.02f;
     /** The tools are pulled this far toward the camera so the block they strike never hides their heads. */
     private static final float NUDGE = 0.6f;
 
@@ -628,7 +651,7 @@ final class ConstructionFx {
         float nx = sideNx(side), nz = sideNz(side);
         if (!g.isStanding(x, y, z) || g.isStructure(x + (int) nx, y, z + (int) nz))
             return false;
-        s.tool[0] = x + 0.5f + nx * 0.5f; s.tool[1] = y + 0.5f; s.tool[2] = z + 0.5f + nz * 0.5f;
+        s.tool[0] = x + 0.5f + nx * (0.5f + FACE_GAP); s.tool[1] = y + 0.5f; s.tool[2] = z + 0.5f + nz * (0.5f + FACE_GAP);
         s.tool[3] = nx; s.tool[4] = nz;
         s.tool[5] = x; s.tool[6] = y; s.tool[7] = z;
         return true;
