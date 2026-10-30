@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.pathfinding;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
@@ -10,6 +11,10 @@ import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 import java.util.function.IntFunction;
 
@@ -26,6 +31,7 @@ import java.util.function.IntFunction;
  * block or a slab under part of the line) keeps the node-by-node walk. The check runs when the path changes and every
  * {@link #REAIM_TICKS} ticks (PathNavigationMixin), not every tick, and the cells are read once a tick for every unit.
  */
+@Mod.EventBusSubscriber(modid = ReignOfNether.MOD_ID)
 public final class LineOfWalk {
     private LineOfWalk() {}
 
@@ -59,10 +65,31 @@ public final class LineOfWalk {
     }
 
     // the cells read this tick on one level, per body height (1 standable, 2 not): a crowd walking one way reads its
-    // ground once, not once per unit. A block changed later in the same tick is seen the next tick
+    // ground once, not once per unit. A block changed later in the same tick is seen the next tick. Let go of with the
+    // level (forget): the integrated server's level must not outlive a logout here
     private static Level cachedLevel = null;
     private static long cachedTick = Long.MIN_VALUE;
     private static final Long2ByteOpenHashMap[] READ = new Long2ByteOpenHashMap[4];
+
+    /** Lets go of the cells read and the level they were read on. */
+    static void forget() {
+        cachedLevel = null;
+        cachedTick = Long.MIN_VALUE;
+        for (Long2ByteOpenHashMap m : READ)
+            if (m != null)
+                m.clear();
+    }
+
+    @SubscribeEvent
+    public static void onLevelUnload(LevelEvent.Unload evt) {
+        if (evt.getLevel() == cachedLevel)
+            forget();
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent evt) {
+        forget();
+    }
 
     /**
      * The cells of a level for a body `height` blocks tall, by the units' own rules and vanilla's both: the RTS grid's

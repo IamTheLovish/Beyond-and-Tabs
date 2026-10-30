@@ -33,8 +33,9 @@ import java.util.function.Supplier;
  * axes and diagonals, and the unit aims at each node in turn, so its heading swings between the axis and the diagonal
  * every few blocks - drawn, the body rocks from side to side all the way. On an open glass pad far from the test grid
  * one unit is ordered 32 blocks east and 7 south (12 degrees off the axis). Over the walk - from 10 ticks after the order
- * and 2 blocks on (the first turn is #412's) until 4 blocks short of the goal - its body yaw (what every frame draws) must stay within
- * {@link #MAX_OFF} of the bearing to the goal, and may turn the net way it has to plus at most {@link #MAX_ROCK}
+ * (the first turn is #412's) until 4 blocks short of the goal - its body yaw (what every frame draws) must stay within
+ * {@link #MAX_OFF} of the bearing to the goal (judged from 10 ticks after it has its path: an RTS path comes some ticks
+ * after the order), and may turn the net way it has to plus at most {@link #MAX_ROCK}
  * degrees: the excess of all its turning over the net turn is the rocking (a clean corner adds nothing to it, a swing
  * out and back adds both halves; the bearing bound catches a path that bunches its diagonal steps into one corner).
  * <p>
@@ -324,6 +325,7 @@ public class WalkLineGameTests {
         // off the bearing; NaN until the judged window starts
         float[] turn = { 0f, Float.NaN, Float.NaN, 0f };
         int[] worstTick = { -1 };
+        int[] pathAt = { -1 };   // the tick (from the order) the unit first had a path
         int[] touch = { 0, -1 };   // ticks touching a keep-off cell, the first of them
         long[] cost = new long[3];   // LineOfWalk's counts at the order (lines, cells, nanos)
         StringBuilder trace = new StringBuilder();
@@ -359,11 +361,13 @@ public class WalkLineGameTests {
                         touch[1] = t;
                     break;
                 }
-            // judged from 10 ticks after the order and 2 blocks from the spawn (the first turn is #412's; an RTS path
-            // comes from the worker pool some ticks after the order, so at 10 ticks the unit may not have turned yet)
-            // until 4 blocks short of the goal (the stop and the last node are not the line)
-            double fromX = m.getX() - sx, fromZ = m.getZ() - sz;
-            if (t >= 10 && fromX * fromX + fromZ * fromZ >= 4 && left > 4) {
+            if (pathAt[0] < 0 && m.getNavigation().getPath() != null)
+                pathAt[0] = t;
+            // the rocking is judged from 10 ticks after the order (the first turn is #412's), the bearing from 10 ticks
+            // after the unit has its path (an RTS path comes from the worker pool some ticks after the order: until it
+            // does the unit still faces its spawn heading, which is not the line's fault), both until 4 blocks short of
+            // the goal (the stop and the last node are not the line)
+            if (t >= 10 && left > 4) {
                 if (Float.isNaN(turn[1])) {
                     turn[1] = turn[2] = m.yBodyRot;
                 } else {
@@ -371,7 +375,7 @@ public class WalkLineGameTests {
                     turn[0] += Math.abs(step);
                     turn[2] += step;
                 }
-                if (Math.abs(off) > turn[3]) {
+                if (pathAt[0] >= 0 && t >= pathAt[0] + 10 && Math.abs(off) > turn[3]) {
                     turn[3] = Math.abs(off);
                     worstTick[0] = t;
                 }
