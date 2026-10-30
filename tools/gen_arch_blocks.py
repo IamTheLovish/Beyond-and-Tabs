@@ -9,9 +9,9 @@ Profiles (measured from the reference builds, design/arch_blocks/profiles.md):
                    cyma and a weathered top; 13 px proud. shape straight / outer / inner (mitred corners).
   string_course_*  a storey band: drip band 5 px proud, 7 px tall; shape straight / outer / inner.
   sill_*           a window sill under the opening: sloped top, 7 px proud, a drip groove under the lip.
-  lintel_*         a flat lintel over the opening, 3 px proud with a chamfered soffit; keystone=true adds a tapered
+  lintel_*         a flat lintel over the opening, 4 px proud with a chamfered soffit; keystone=true adds a tapered
                    keystone 6 px proud.
-  arch_ring_*      a segmental arch over a 3-wide opening (rise 10 px, ring 6 px, keystone at the crown): pieces
+  arch_ring_*      a segmental arch over a 3-wide opening (rise 10 px, ring 6 px, 3 proud, keystone 5 proud): pieces
                    left_springer, left_haunch, crown, right_haunch, right_springer (left / right as you face the wall).
 Every block hangs IN FRONT of the wall (its back against the wall face, culled by it) and faces away from it; models
 are drawn facing north (front at small z, back at z 16). Textures are vanilla only (minecraft:block/...), so the
@@ -114,8 +114,8 @@ def sill():
 
 
 def lintel(key):
-    boxes = [("all", (0, 0, 14, 16, 2, 16)),           # chamfered soffit
-             ("all", (0, 2, 13, 16, 15, 16)),          # the face, 3 px proud
+    boxes = [("all", (0, 0, 13, 16, 2, 16)),           # chamfered soffit
+             ("all", (0, 2, 12, 16, 15, 16)),          # the face, 4 px proud
              ("all", (0, 15, 14, 16, 16, 16))]
     if key:
         boxes += [("key", (6, 0, 10, 10, 5, 13)), ("key", (5, 5, 10, 11, 11, 13)), ("key", (4, 11, 10, 12, 16, 13)),
@@ -124,7 +124,7 @@ def lintel(key):
 
 
 # the segmental arch, in u (px from the left springer's left edge, as you face the wall) and y (px above springing)
-ARCH_RISE, ARCH_RING, ARCH_SPAN, ARCH_PROUD = 10, 5, 48, 2
+ARCH_RISE, ARCH_RING, ARCH_SPAN, ARCH_PROUD = 10, 6, 48, 3
 _R = (ARCH_SPAN ** 2 / 4 + ARCH_RISE ** 2) / (2 * ARCH_RISE)
 _CY = ARCH_RISE - _R
 _CU = 16 + ARCH_SPAN / 2
@@ -137,13 +137,13 @@ def _arc(u, r):
 
 
 def arch(piece):
-    """One cell of a segmental arch over a 3-wide opening (span 48 px, rise 10, ring 5, proud 2), in the row above
+    """One cell of a segmental arch over a 3-wide opening (span 48 px, rise 10, ring 6, proud 3), in the row above
     the opening's straight jambs. The haunches and crown ARE the wall there (front z 0, the wall face; back z 16): the
     ring's voussoirs run through the wall's depth (their soffit shows from below), a brick spandrel fills above the
-    extrados, the opening stays open under the intrados, and the ring stands 2 px proud of the face (drawn into the
-    cell in front; it does not collide there). The crown carries a keystone 3 px proud. The springers hang in front of
+    extrados, the opening stays open under the intrados, and the ring stands 3 px proud of the face (drawn into the
+    cell in front; it does not collide there). The crown carries a keystone 5 px proud. The springers hang in front of
     the piers (their back on the pier's face, like the other mouldings) and carry the ring's tail down to the
-    springing line, proud by the same 2 px."""
+    springing line, proud by the same 3 px."""
     cell = PIECES.index(piece)
     boxes = []
     for s in range(0, 16, 2):
@@ -166,7 +166,7 @@ def arch(piece):
             boxes.append(("ring", (x0, 0, 16 - ARCH_PROUD, x1, hi, 16)))
     if piece == "crown":
         lo = round(_arc(_CU, _R)) - 1
-        boxes += [("key", (5, lo, -3, 11, 16, 0)), ("key", (7, lo + 2, -4, 9, 15, -3))]
+        boxes += [("key", (5, lo, -5, 11, 16, 0)), ("key", (7, lo + 2, -6, 9, 15, -5))]
     return boxes
 
 
@@ -467,9 +467,14 @@ def bay(kind):
             for z in range(2, 7):
                 if z in (5, 6) or x in (0, BAY_W - 1) or z == 2:
                     put(x, y, z, "bricks")
-    for x in range(-1, BAY_W + 1):                               # the slate roof, over the cornice
-        for z in range(1, 8):
-            put(x, BAY_H + 1, z, "deepslate_tile_slab", type="bottom", waterlogged="false")
+    for x in range(BAY_W):                                        # the slate roof stops at the wall head, so the
+        for z in range(2, 7):                                     # cornice is the eave seen from above (r1 critic:
+            put(x, BAY_H + 1, z, "deepslate_tile_slab", type="bottom", waterlogged="false")   # hidden under the roof)
+    for x in range(1, BAY_W - 1):                                 # a dark room behind every opening (r1 critic: the
+        put(x, 1, 4, "dark_oak_planks")                           # clear panes read as white wireframe on daylight)
+        for y in range(2, BAY_H):
+            if x in (1, 3, 4, 5, 7):
+                put(x, y, 4, "dark_oak_planks")
     for x in (1, 7):                                              # windows: a 1-block reveal, the glass behind
         for y in (3, 4, 5):
             b.pop((x, y, 6), None)
@@ -486,28 +491,28 @@ def bay(kind):
             put(x, 1, Z, "reignofnether:string_course_stone", facing="south", shape="straight")
         for x in (0, 2, 6, 8):
             put(x, 4, Z, "reignofnether:string_course_stone", facing="south", shape="straight")
-        for x in (1, 7):
+        for x in (0, 1, 2, 6, 7, 8):                              # sills run onto the jambs (r1: floating chips)
             put(x, 2, Z, "reignofnether:sill_stone", facing="south")
-            put(x, 6, Z, "reignofnether:lintel_stone", facing="south", keystone="true")
+        for x, key in ((0, "false"), (1, "true"), (7, "true"), (8, "false")):   # lintels bear on the jambs too
+            put(x, 6, Z, "reignofnether:lintel_stone", facing="south", keystone=key)
         for i, piece in enumerate(PIECES):                        # haunches + crown ARE the wall; springers in front
             put(2 + i, 6, 6 if piece in IN_WALL else Z, "reignofnether:arch_ring_stone", facing="south", piece=piece)
-        for x in range(BAY_W):
-            put(x, BAY_H, Z, "reignofnether:cornice_brick", facing="south", shape="straight")
-        put(-1, BAY_H, Z, "reignofnether:cornice_brick", facing="south", shape="outer")
-        put(BAY_W, BAY_H, Z, "reignofnether:cornice_brick", facing="east", shape="outer")
+        for x in range(BAY_W):                                    # pale cut stone, never the wall's brick (r1)
+            put(x, BAY_H, Z, "reignofnether:cornice_stone", facing="south", shape="straight")
+        put(-1, BAY_H, Z, "reignofnether:cornice_stone", facing="south", shape="outer")
+        put(BAY_W, BAY_H, Z, "reignofnether:cornice_stone", facing="east", shape="outer")
         for z in range(2, Z):
-            put(-1, BAY_H, z, "reignofnether:cornice_brick", facing="west", shape="straight")
-            put(BAY_W, BAY_H, z, "reignofnether:cornice_brick", facing="east", shape="straight")
+            put(-1, BAY_H, z, "reignofnether:cornice_stone", facing="west", shape="straight")
+            put(BAY_W, BAY_H, z, "reignofnether:cornice_stone", facing="east", shape="straight")
     else:
         st = dict(half="top", shape="straight", waterlogged="false")
         for x in (0, 1, 2, 6, 7, 8):
             put(x, 1, Z, "stone_brick_stairs", facing="north", half="bottom", shape="straight", waterlogged="false")
         for x in (0, 2, 6, 8):
             put(x, 4, Z, "stone_brick_stairs", facing="north", **st)
-        for x in (1, 7):
+        for x in (0, 1, 2, 6, 7, 8):
             put(x, 2, Z, "smooth_stone_slab", type="top", waterlogged="false")
-            put(x, 6, Z, "stone_brick_stairs", facing="north", **st)
-        for x in range(2, 7):
+        for x in range(BAY_W):
             put(x, 6, Z, "stone_brick_stairs", facing="north", **st)
         put(3, 5, 6, "stone_brick_stairs", facing="east", **st)        # the 1890-station arch: springer stairs
         put(5, 5, 6, "stone_brick_stairs", facing="west", **st)

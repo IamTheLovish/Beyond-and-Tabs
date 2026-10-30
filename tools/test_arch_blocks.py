@@ -203,7 +203,7 @@ class AntiToyGate(unittest.TestCase):
     def test_the_demo_structure_holds_both_bays_side_by_side(self):
         b = S.load(os.path.join(ROOT, A.DEMO))
         ids = {n for n, _ in b.blocks.values()}
-        for bid in ("cornice_brick", "sill_stone", "lintel_stone", "arch_ring_stone"):
+        for bid in ("cornice_", "string_course_", "sill_", "lintel_", "arch_ring_"):    # each profile, any material
             self.assertTrue(any(n == "reignofnether:" + bid or n.startswith("reignofnether:" + bid) for n in ids), bid)
         left = S.Build({q: v for q, v in b.blocks.items() if q[0] < A.SPLIT_X})
         self.assertFalse(any(n.startswith("reignofnether:") for n, _ in left.blocks.values()))

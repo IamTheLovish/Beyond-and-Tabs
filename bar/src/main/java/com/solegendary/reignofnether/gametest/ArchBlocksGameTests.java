@@ -170,10 +170,16 @@ public class ArchBlocksGameTests {
     /**
      * Every texture of every model a blockstate names is minecraft:block/<name> and that texture is in the game (so a
      * resource pack's retexture of the vanilla block reaches the moulding): no reignofnether: texture, no other mod's.
+     * Where the client's assets are on the classpath the .png itself must be there; the CI GameTest server has no
+     * client assets (run 40992160121: even block/bricks.png is absent), so there the texture must be the texture of a
+     * registered vanilla block of the same name (bricks, smooth_stone, polished_deepslate, weathered_cut_copper - each
+     * a full block whose single texture carries its name). The eyes client run loads the models with no missing-texture
+     * warning (PR #407).
      */
     @GameTest(template = ARENA, timeoutTicks = 40)
     public static void arch_block_models_use_only_vanilla_textures_that_exist(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
+        boolean clientAssets = resourceExists("/assets/minecraft/textures/block/stone.png");
         int checked = 0;
         for (String id : expected().keySet()) {
             JsonObject bs = json("/assets/reignofnether/blockstates/" + id + ".json", problems);
@@ -197,9 +203,13 @@ public class ArchBlocksGameTests {
                         continue;
                     }
                     checked++;
-                    String png = "/assets/minecraft/textures/block/" + v.substring("minecraft:block/".length()) + ".png";
-                    if (!resourceExists(png))
+                    String tex = v.substring("minecraft:block/".length());
+                    String png = "/assets/minecraft/textures/block/" + tex + ".png";
+                    if (clientAssets && !resourceExists(png))
                         problems.add(name + " texture " + v + " does not exist (" + png + ")");
+                    if (!clientAssets && !net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(
+                            ResourceLocation.fromNamespaceAndPath("minecraft", tex)))
+                        problems.add(name + " texture " + v + " is not the texture of a vanilla block");
                 }
             }
         }
