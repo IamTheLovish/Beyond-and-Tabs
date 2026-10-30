@@ -189,7 +189,7 @@ TARGETS = {
     "polished_granite": dict(luma=0.44, std=0.060, sat=0.37, tilt=4.0, smooth=125, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
     "blackstone": dict(luma=0.18, std=0.035, sat=0.10, tilt=24.0, smooth=12, pore=12),
-    "obsidian": dict(luma=0.06, std=0.025, sat=0.25, tilt=10.0, smooth=194, pore=0),
+    "obsidian": dict(luma=0.06, std=0.025, sat=0.25, tilt=10.0, smooth=228, pore=0),   # r30: m_obsidian_glass paints its own smoothness (faces 228)
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
     "dirt_path_top": dict(luma=0.47, std=0.050, sat=0.44, tilt=15.0, smooth=29, pore=50),
@@ -1119,6 +1119,69 @@ def m_facets(F, n, rgb, cells, edge=0.010, rim=True):
         H = H * b
         shade = shade * (0.8 + 0.2 * b)
     return H, tint(rgb, shade)
+
+
+def m_obsidian_glass(F, n, cells=4):
+    """Round 30 (lovish, Oct 30: "I really like how the obsidian looked in complementary ... I want our textures more
+    realistic than his"): obsidian as what it is - volcanic glass broken along conchoidal fractures, not r22b's flat
+    leaded-glass facets. A few large fracture faces with CURVED edges (the cell metric is warped by slow noise, so no
+    face is a polygon), each a shallow shell-shaped scoop round its own point of impact off to one side, with faint
+    ripple rings (Wallner lines) that widen and fade away from the impact - in the relief only, so the light finds
+    them and the colour stays calm. Where two faces meet the glass is thin: some aretes (not all - a uniform web of
+    light lines read as crazed tiles in the v1 sheet) catch a smoky brown-grey edge and are rougher than the faces.
+    The faces are near-black with a cold violet depth and slow flow banding; glass-smooth (faces ~228, aretes down to
+    ~130), so a shader's sky and sun reflections give the gloss - the albedo stays dark, the light does the work.
+    No inclusion specks: v1's tiny violet dots were the "dots of pepper" fault (round 25)."""
+    rng = F.rng
+    k = max(2, int(round(math.sqrt(cells))))
+    gx, gy = np.meshgrid((np.arange(k) + 0.5) / k, (np.arange(k) + 0.5) / k)
+    pts = (np.stack([gx.ravel(), gy.ravel()], 1) + (rng.random((k * k, 2)) - 0.5) * 1.0 / k) % 1.0
+    m = len(pts)
+    cell = 1.0 / k
+    ang = rng.uniform(0, 2 * math.pi, m)
+    imp = (pts + 0.6 * cell * np.stack([np.cos(ang), np.sin(ang)], 1)) % 1.0
+    curv = rng.uniform(0.6, 1.4, m)                 # how deep each scoop is
+    lam = rng.uniform(0.035, 0.05, m)               # ripple spacing at the impact: 4-6 texels at 128x
+    tone = rng.uniform(0.94, 1.06, m)               # glass is uniform: faces differ only a little
+    weight = rng.uniform(-0.04, 0.04, m)            # additive weights: faces of unequal size
+    lit_edge = rng.random((m, m)) < 0.35            # which face pairs show a smoky edge
+    lit_edge = lit_edge | lit_edge.T
+    # warp the metric so the face edges curve (slow, periodic)
+    wu = 0.05 * F.noise(1, 3, 0.5)
+    wv = 0.05 * F.noise(1, 3, 0.5)
+    U, V = (F.u + wu) % 1.0, (F.v + wv) % 1.0
+    f1 = np.full((n, n), 9.0)
+    f2 = np.full((n, n), 9.0)
+    idx = np.zeros((n, n), dtype=np.int32)
+    idx2 = np.zeros((n, n), dtype=np.int32)
+    for i, (px, py) in enumerate(pts):
+        dx = (U - px + 0.5) % 1.0 - 0.5
+        dy = (V - py + 0.5) % 1.0 - 0.5
+        d = np.sqrt(dx * dx + dy * dy) + weight[i]
+        closer = d < f1
+        second = ~closer & (d < f2)
+        f2 = np.where(closer, f1, np.where(second, d, f2))
+        idx2 = np.where(closer, idx, np.where(second, i, idx2))
+        idx = np.where(closer, i, idx)
+        f1 = np.where(closer, d, f1)
+    ix, iy = imp[idx, 0], imp[idx, 1]
+    di = np.sqrt(((U - ix + 0.5) % 1.0 - 0.5) ** 2 + ((V - iy + 0.5) % 1.0 - 0.5) ** 2) / cell
+    H = 0.30 * curv[idx] * np.minimum(di, 1.8) ** 2   # the shell: lowest at the impact
+    # ripples widen with distance (phase ~ sqrt) and fade; slightly wavy, as real ones are
+    phase = np.sqrt(di + 0.05) * cell / lam[idx] + 0.3 * F.noise(3, 8, 0.5)
+    ripple = np.sin(2 * math.pi * phase) * np.exp(-2.0 * di)
+    H = H + 0.02 * ripple
+    arete = 1 - smoothstep(0.0, 0.012, f2 - f1)
+    H = H + 0.18 * arete
+    lit = lit_edge[idx, idx2] * (0.5 + 0.5 * norm01(F.noise(2, 6, 0.5)))   # a smoky edge that comes and goes
+    # flow banding: slow and faint - the bands repeat every block, and strong ones striped a wall (v2 sheet)
+    flow = norm01(F.warp(F.noise(1, 2, 0.5, sx=5.0, sy=1.0), 0.0, 0.03 * F.noise(2, 6, 0.5)))
+    shade = tone[idx] * (0.965 + 0.07 * flow)
+    alb = tint((0.075, 0.07, 0.095), shade)
+    a = (0.45 * arete * lit)[..., None]
+    alb = alb * (1 - a) + np.array([0.22, 0.19, 0.17]) * a
+    smooth = 228 - 95 * arete - 4 * np.abs(ripple)
+    return dict(H=H, alb=alb, smooth=smooth)
 
 
 def m_lapis(F, n):
@@ -3023,7 +3086,6 @@ def recipes():
         # a faint violet depth - mottle 0.20 -> 0.06
         # r22b (eyes: a flat dark-brown cake, the flecks invisible): 3-5 large conchoidal planes of cool black glass,
         # each with its own tone and a hard bright edge - the shader's smooth/F0 gives the glint
-        "obsidian": lambda F, n: m_facets(F, n, (0.08, 0.085, 0.12), 5, edge=0.006, rim=False),
         "red_nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.42, 0.08, 0.08), pits=0.05),
         "chiseled_stone_bricks": m_chiseled,
         "dirt_path_top": lambda F, n: m_path(F, n, False),
@@ -3063,6 +3125,9 @@ def recipes():
         plain["stripped_%s_log_top" % wood] = lambda F, n, e=end, s=side: m_log_top(F, n, e, s, rim=(0.58, 0.04))
     for name, fn in plain.items():
         R[name] = _plain(fn)
+    # r30 (lovish Oct 30: "more realistic than" Complementary's obsidian): volcanic glass - conchoidal shell scoops
+    # with ripple rings, smoky thin aretes, glass-smooth faces (m_obsidian_glass paints its own smoothness)
+    R["obsidian"] = _parts(m_obsidian_glass)
     R["iron_block"] = _parts(lambda F, n: _d3(m_iron(F, n)))                       # round 23: brushed, riveted
     R["netherite_block"] = _parts(lambda F, n: _d3(m_plate(F, n, (0.30, 0.27, 0.29))))
     R["grass_block_snow"] = _grass_snow_side
