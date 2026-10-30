@@ -26,6 +26,12 @@ class KeybindMigrationTest {
         return kb == null ? KeybindMigration.CUSTOM : kb.getDefaultKey();
     }
 
+    // what layout 3 shipped and layout 4 (BAC-007b 2a) moves: Space alert, F5 unbound, "." idle worker / observer toggle, "," Mass Burial, Ctrl+Tab cycle
+    private static final Map<String, Integer> OLD_LAYOUT_3 = Map.of(
+        "key.reignofnether.last_alert", GLFW.GLFW_KEY_SPACE, "key.reignofnether.fn_5", GLFW.GLFW_KEY_F5,
+        "key.reignofnether.idle_worker", GLFW.GLFW_KEY_PERIOD, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_PERIOD,
+        "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_COMMA, "key.reignofnether.tab", GLFW.GLFW_KEY_TAB);
+
     private static List<KeybindMigration.Move> plan(int version, Map<String, Integer> overrides) {
         return KeybindMigration.plan(version, name -> saved(overrides, name));
     }
@@ -34,7 +40,7 @@ class KeybindMigrationTest {
     void attackDefaultIsA() {
         // BAR Grid (BarGridDefaults, BAC-007b): WASD panning is gone, so A is Attack again
         assertEquals(GLFW.GLFW_KEY_A, Keybindings.attack.getDefaultKey());
-        assertEquals(3, KeybindMigration.LAYOUT_VERSION);
+        assertEquals(4, KeybindMigration.LAYOUT_VERSION);
     }
 
     @Test
@@ -45,22 +51,35 @@ class KeybindMigrationTest {
     }
 
     @Test
-    void aLayoutTwoInstallWithEveryOldOrderKeyGetsExactlySevenMoves() {
+    void aLayoutTwoInstallWithEveryOldOrderKeyGetsExactlyThirteenMoves() {
         // layout 2 shipped Attack X, Stop S, Patrol P, Guard G, Hold H, Move M and an unbound commander key; the
-        // overview stays on Tab (it needs Shift now, no key moves). Nothing else moves.
-        Map<String, Integer> old = Map.of(
+        // overview stays on Tab (it needs Shift now, no key moves); layout 4 adds the six keys layout 3 shipped (OLD_LAYOUT_3).
+        Map<String, Integer> old = new HashMap<>(OLD_LAYOUT_3);
+        old.putAll(Map.of(
             ATTACK, GLFW.GLFW_KEY_X, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "key.reignofnether.patrol", GLFW.GLFW_KEY_P,
             "key.reignofnether.guard", GLFW.GLFW_KEY_G, "key.reignofnether.hold", GLFW.GLFW_KEY_H,
-            "key.reignofnether.move", GLFW.GLFW_KEY_M, "key.reignofnether.select_commander", -1);
+            "key.reignofnether.move", GLFW.GLFW_KEY_M, "key.reignofnether.select_commander", -1));
         List<KeybindMigration.Move> moves = plan(2, old);
-        assertEquals(7, moves.size(), moves.toString());
+        assertEquals(13, moves.size(), moves.toString());
         for (KeybindMigration.Move m : moves)
             assertEquals(KeybindMigration.bindings().get(m.binding()).getDefaultKey(), m.to(), m.binding());
         // each lands on its BarGridDefaults row; Move goes unbound
         assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.stop", GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_G)), moves.toString());
         assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.move", GLFW.GLFW_KEY_M, -1)), moves.toString());
         assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.select_commander", -1, GLFW.GLFW_KEY_TAB)), moves.toString());
-        assertEquals(List.of(), plan(3, old), "a layout 3 install is left alone");
+        assertEquals(List.of(), plan(4, old), "a layout 4 install is left alone");
+    }
+
+    @Test
+    void aLayoutThreeInstallWithEveryOldKeyGetsExactlySixMoves() {
+        List<KeybindMigration.Move> moves = plan(3, OLD_LAYOUT_3);
+        assertEquals(6, moves.size(), moves.toString());
+        for (KeybindMigration.Move m : moves)
+            assertEquals(KeybindMigration.bindings().get(m.binding()).getDefaultKey(), m.to(), m.binding());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.last_alert", GLFW.GLFW_KEY_SPACE, GLFW.GLFW_KEY_F5)), moves.toString());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.tab", GLFW.GLFW_KEY_TAB, GLFW.GLFW_KEY_PERIOD)), moves.toString());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.fn_5", GLFW.GLFW_KEY_F5, -1)), moves.toString());
+        assertEquals(List.of(), plan(4, OLD_LAYOUT_3), "a layout 4 install is left alone");
     }
 
     @Test

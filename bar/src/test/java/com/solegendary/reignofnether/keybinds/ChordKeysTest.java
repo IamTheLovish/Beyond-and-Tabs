@@ -14,8 +14,10 @@ class ChordKeysTest {
     @Test
     void theLegacyChords() {
         assertEquals(Chord.SELECT_COMMANDER, ChordKeys.of(GLFW.GLFW_KEY_C, true, false, false));
-        assertEquals(Chord.IDLE_BUILDER, ChordKeys.of(GLFW.GLFW_KEY_B, true, false, false));
-        assertEquals(Chord.IDLE_T2_BUILDER, ChordKeys.of(GLFW.GLFW_KEY_B, true, true, false));
+        assertEquals(Chord.IDLE_BUILDER, ChordKeys.of(GLFW.GLFW_KEY_TAB, true, false, false));
+        assertEquals(Chord.IDLE_T2_BUILDER, ChordKeys.of(GLFW.GLFW_KEY_TAB, true, true, false));
+        // Ctrl+B is BAR's selfd, which BAT does not copy: B stays Build
+        assertEquals(Chord.NONE, ChordKeys.of(GLFW.GLFW_KEY_B, true, false, false));
         // BAR Grid: Ctrl+E every unit, Ctrl+W every unit of the selected types (BarGridDefaults)
         assertEquals(Chord.SELECT_ALL_UNITS, ChordKeys.of(GLFW.GLFW_KEY_E, true, false, false));
         assertEquals(Chord.SELECT_SAME_TYPE, ChordKeys.of(GLFW.GLFW_KEY_W, true, false, false));
@@ -48,7 +50,8 @@ class ChordKeysTest {
     void labels() {
         assertEquals("Ctrl + C", ChordKeys.label(Chord.SELECT_COMMANDER));
         assertEquals("^C", ChordKeys.shortLabel(Chord.SELECT_COMMANDER));
-        assertEquals("^SB", ChordKeys.shortLabel(Chord.IDLE_T2_BUILDER));
+        assertEquals("^T", ChordKeys.shortLabel(Chord.IDLE_BUILDER));
+        assertEquals("^ST", ChordKeys.shortLabel(Chord.IDLE_T2_BUILDER));
         assertEquals("", ChordKeys.label(Chord.NONE));
     }
 

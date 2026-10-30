@@ -45,6 +45,13 @@ class BarGridDefaultsTest {
     }
 
     @Test
+    void barHasNoCtrlShiftTabSoTheIdleT2BuilderIsOurOwnExtra() throws IOException {
+        for (String line : tsvLines())
+            assertFalse(line.startsWith("Ctrl+Shift+tab\t"), "BAR has a Ctrl+Shift+Tab line, idle_t2_builder is no extra then: " + line);
+        assertTrue(BarGridDefaults.EXTRAS.get("key.reignofnether.idle_t2_builder").contains("Ctrl+Shift+Tab"));
+    }
+
+    @Test
     void everyBindingIsARowOrAnExtraWithAReason() {
         Set<String> rows = new HashSet<>();
         for (Row r : BarGridDefaults.ROWS)

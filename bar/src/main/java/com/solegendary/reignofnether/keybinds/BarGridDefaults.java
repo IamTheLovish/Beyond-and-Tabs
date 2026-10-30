@@ -37,6 +37,11 @@ public final class BarGridDefaults {
         new Row("key.reignofnether.select_commander", GLFW.GLFW_KEY_TAB,     false, false, "tab\tselectcomm focus"),
         new Row("key.reignofnether.queue_skip",      GLFW.GLFW_KEY_N,         false, false, "sc_n\tcommand_skip_current"),
         new Row("key.reignofnether.queue_insert",    GLFW.GLFW_KEY_SPACE,     false, false, "Any+space\tcommandinsert prepend_between"),
+        // F5 jumps to the last alert (Space is the queue-insert modifier); "." / "," cycle the selected unit types
+        new Row("key.reignofnether.last_alert",      GLFW.GLFW_KEY_F5,        false, false, "Any+f5\tlastmsgpos"),
+        new Row("key.reignofnether.tab",             GLFW.GLFW_KEY_PERIOD,    false, false, "sc_.\tcycleselected next"),
+        new Row("key.reignofnether.cycle_prev",      GLFW.GLFW_KEY_COMMA,     false, false, "sc_comma\tcycleselected prev"),
+        new Row("IDLE_BUILDER",                      GLFW.GLFW_KEY_TAB,       true,  false, "Ctrl+tab\tselect AllMap+_Builder_Idle+_ClearSelection_SelectOne+"),
         new Row("SELECT_ALL_UNITS",                  GLFW.GLFW_KEY_E,         true,  false, "Ctrl+sc_e\tselect AllMap++_ClearSelection_SelectAll+"),
         new Row("SELECT_SAME_TYPE",                  GLFW.GLFW_KEY_W,         true,  false, "Ctrl+sc_w\tselect AllMap+_InPrevSel+_ClearSelection_SelectAll+")
     );
@@ -132,7 +137,7 @@ public final class BarGridDefaults {
         Map.entry("key.reignofnether.hotkey_7", "build menu slot"),
         Map.entry("key.reignofnether.hotkey_8", "build menu slot"),
         Map.entry("key.reignofnether.hotkey_9", "build menu slot"),
-        Map.entry("key.reignofnether.idle_t2_builder", "BAT extra, no BAR default in increment 1"),
+        Map.entry("key.reignofnether.idle_t2_builder", "BAT extra Ctrl+Shift+Tab, no BAR line"),
         Map.entry("key.reignofnether.idle_worker", "BAT extra, no BAR default in increment 1"),
         Map.entry("key.reignofnether.item1", "hero item slot (increment 2)"),
         Map.entry("key.reignofnether.item2", "hero item slot (increment 2)"),
@@ -140,11 +145,11 @@ public final class BarGridDefaults {
         Map.entry("key.reignofnether.item4", "shares: G, never shown together with or live over the BAR order on the key (see class comment)"),
         Map.entry("key.reignofnether.item5", "hero item slot (increment 2)"),
         Map.entry("key.reignofnether.item6", "hero item slot (increment 2)"),
-        Map.entry("key.reignofnether.last_alert", "shares: Space, never shown together with or live over the BAR order on the key (see class comment)"),
         Map.entry("key.reignofnether.living_army_toggle", "BAT extra, no BAR default in increment 1"),
         Map.entry("key.reignofnether.minimap_toggle", "BAT extra, no BAR default in increment 1"),
         Map.entry("key.reignofnether.move", "BAR has no move key"),
         Map.entry("key.reignofnether.open_shop", "shares: Space, never shown together with or live over the BAR order on the key (see class comment)"),
+        Map.entry("key.reignofnether.possess_hop", "BAT hero, Tab in possession only"),
         Map.entry("key.reignofnether.overcharge", "BAT extra, no BAR default in increment 1"),
         Map.entry("key.reignofnether.overview", "shares: Tab (with Shift), never shown together with or live over the BAR order on the key (see class comment)"),
         Map.entry("key.reignofnether.pan_minus_x", "BAT camera"),
@@ -159,7 +164,6 @@ public final class BarGridDefaults {
         Map.entry("key.reignofnether.rotate_building_cw", "BAT camera"),
         Map.entry("key.reignofnether.select_army", "BAT extra, no BAR default in increment 1"),
         Map.entry("key.reignofnether.stats_table", "BAT extra, no BAR default in increment 1"),
-        Map.entry("key.reignofnether.tab", "shares: Tab (with Ctrl), never shown together with or live over the BAR order on the key (see class comment)"),
         Map.entry("key.reignofnether.toggle_camera", "BAT camera"),
         Map.entry("key.reignofnether.toggle_free_fly", "BAT camera"),
         Map.entry("key.reignofnether.zoom_in", "BAT camera"),
@@ -167,9 +171,14 @@ public final class BarGridDefaults {
     );
 
     /** BAR keys (the TSV line) whose action BAT lacks or keeps for later: the key stays free of other BAT defaults. */
-    public static final Map<String, String> DORMANT = Map.of(
-        "Shift+tab\tselectcomm append", "BAT has one commander, nothing to append; Shift+Tab is the camera overview",
-        "sc_-\tsnd_volume_decrease", "BAT's select-army button keeps -, BAR's sound volume is not copied",
-        "sc_d\tmanualfire", "the commander D-gun key, increment 2 (needs lovish)"
+    public static final Map<String, String> DORMANT = Map.ofEntries(
+        Map.entry("Shift+tab\tselectcomm append", "BAT has one commander, nothing to append; Shift+Tab is the camera overview"),
+        Map.entry("sc_-\tsnd_volume_decrease", "BAT's select-army button keeps -, BAR's sound volume is not copied"),
+        Map.entry("sc_d\tmanualfire", "the commander D-gun key, increment 2 (needs lovish)"),
+        Map.entry("Ctrl+sc_b\tselfd", "BAR self-destruct: BAT has no such order, B stays Build / item slot 6"),
+        Map.entry("Ctrl+Shift+sc_b\tselfd queued", "BAR self-destruct queued: as above"),
+        Map.entry("sc_.\tgridmenu_cycle_builder", "BAR cycles builders in the grid menu on the same key as the selection cycle; BAT keeps the one cycle"),
+        Map.entry("Ctrl+Shift+esc\tquitforce", "BAR force-quit: Esc belongs to the pause flow (PauseFlow), Minecraft has its own quit"),
+        Map.entry("Alt+Shift+esc\treloadforce", "BAR force-reload: not applicable to BAT")
     );
 }

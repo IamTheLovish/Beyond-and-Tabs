@@ -26,7 +26,7 @@ import java.util.List;
 
 /**
  * Intuitive keys after BAR's Grid profile (keybinds/BarGridDefaults): Attack on A, Esc cancels before the menu, Tab /
- * Ctrl+C commander, Ctrl+B / Ctrl+Shift+B idle builders, Ctrl+E / Ctrl+W selection, item slot 6's label.
+ * Ctrl+C commander, Ctrl+Tab / Ctrl+Shift+Tab idle builders, Ctrl+E / Ctrl+W selection, item slot 6's label.
  * The rules are pure (keybinds/ChordKeys, BuildCategoryKeys, guiscreen/PauseFlow), checked headless.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
@@ -159,23 +159,47 @@ public class IntuitiveKeysGameTests {
     }
 
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
-    public static void ac4_ctrl_b_next_idle_builder_and_ctrl_shift_b_idle_t2(GameTestHelper helper) {
+    public static void ac4_ctrl_tab_next_idle_builder_and_ctrl_shift_tab_idle_t2(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
-        if (ChordKeys.of(GLFW.GLFW_KEY_B, true, false, false) != Chord.IDLE_BUILDER)
-            problems.add("Ctrl+B is the next idle builder");
-        if (ChordKeys.of(GLFW.GLFW_KEY_B, true, true, false) != Chord.IDLE_T2_BUILDER)
-            problems.add("Ctrl+Shift+B is the next idle T2 builder");
+        if (ChordKeys.of(GLFW.GLFW_KEY_TAB, true, false, false) != Chord.IDLE_BUILDER)
+            problems.add("Ctrl+Tab is the next idle builder (BAR: Ctrl+tab select ... _Builder_Idle)");
+        if (ChordKeys.of(GLFW.GLFW_KEY_TAB, true, true, false) != Chord.IDLE_T2_BUILDER)
+            problems.add("Ctrl+Shift+Tab is the next idle T2 builder");
+        if (ChordKeys.of(GLFW.GLFW_KEY_B, true, false, false) != Chord.NONE
+                || ChordKeys.of(GLFW.GLFW_KEY_B, true, true, false) != Chord.NONE)
+            problems.add("Ctrl+B is BAR's selfd, no chord here");
         if (ChordKeys.of(GLFW.GLFW_KEY_B, false, false, false) != Chord.NONE)
             problems.add("plain B stays Build / item slot 6");
-        if (Keybindings.idleWorker.getDefaultKey() != GLFW.GLFW_KEY_PERIOD)
-            problems.add("'.' stays the idle-worker key");
+        if (ChordKeys.of(GLFW.GLFW_KEY_TAB, false, false, false) != Chord.NONE)
+            problems.add("plain Tab is select commander, not a chord");
+        if (Keybindings.idleWorker.getDefaultKey() != GLFW.GLFW_KEY_UNKNOWN)
+            problems.add("the idle-worker button starts unbound ('.' is the selection cycle)");
+        if (Keybindings.idleWorker.getChord() != Chord.IDLE_BUILDER)
+            problems.add("the idle-worker button shows Ctrl+Tab");
         if (Keybindings.idleT2Builder.getDefaultKey() == GLFW.GLFW_KEY_HOME)
             problems.add("idle T2 builder must be off Home (production monitor)");
         if (Keybindings.idleT2Builder.getChord() != Chord.IDLE_T2_BUILDER)
-            problems.add("the idle T2 button shows Ctrl+Shift+B");
+            problems.add("the idle T2 button shows Ctrl+Shift+Tab");
         for (Keybinding kb : Keybindings.all())
             if (kb.getTranslationKey() != null && kb.getDefaultKey() == GLFW.GLFW_KEY_HOME)
                 problems.add(kb.getTranslationKey() + " still ships on Home");
+        verdict(helper, problems);
+    }
+
+    /** BAR: "." / "," cycle the selected unit types (cycleselected next / prev), F5 is the last alert (lastmsgpos). */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void ac7_dot_comma_cycle_and_tab_hops_while_possessing(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        if (Keybindings.tab.getDefaultKey() != GLFW.GLFW_KEY_PERIOD)
+            problems.add("the selection cycle ships on '.' (BAR sc_. cycleselected next)");
+        if (Keybindings.cyclePrev.getDefaultKey() != GLFW.GLFW_KEY_COMMA)
+            problems.add("the backwards selection cycle ships on ',' (BAR sc_comma cycleselected prev)");
+        if (Keybindings.possessHop.getDefaultKey() != GLFW.GLFW_KEY_TAB)
+            problems.add("the possession hop ships on Tab");
+        if (Keybindings.lastAlert.getDefaultKey() != GLFW.GLFW_KEY_F5)
+            problems.add("the last alert ships on F5 (BAR Any+f5 lastmsgpos), not Space");
+        if (Keybindings.getFnum(5).getDefaultKey() != GLFW.GLFW_KEY_UNKNOWN)
+            problems.add("fn_5 starts unbound (F5 is the last alert)");
         verdict(helper, problems);
     }
 
