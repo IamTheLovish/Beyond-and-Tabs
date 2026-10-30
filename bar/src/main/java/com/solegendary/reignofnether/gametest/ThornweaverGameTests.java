@@ -943,8 +943,10 @@ public class ThornweaverGameTests {
     /**
      * A bot's Thornweaver goes with the army (PR 364 round 3 review: the bot's army list holds only attackers, so a
      * caster idled at its lab with 0 essence). One standing 14 blocks from the bot's army is lagging: the bot's
-     * Verdant habits - the "healers follow the army" block, which now takes every EssenceCarrier - order it to the
-     * army's centre. The block is package-private bot code, so the test calls it as think() does, by reflection.
+     * Verdant habits - the "healers follow the army" block (BotPlayer.followsArmy) - order it to the army's centre, by
+     * a Fight (ATTACK_MOVE), not a Move: it is a SupportUnit, and since lovish's "stay behind units" (Oct 30, PR 414) a
+     * Move would end its support order where a Fight keeps it behind the army's front. The block is package-private
+     * bot code, so the test calls it as think() does, by reflection.
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
     public static void thornweaver_bot_orders_a_lagging_thornweaver_to_the_army(GameTestHelper helper) {
@@ -959,27 +961,32 @@ public class ThornweaverGameTests {
             helper.fail("could not spawn the Thornweaver and the bot's army");
             return;
         }
-        List<BlockPos> moves = new ArrayList<>();
+        List<BlockPos> fights = new ArrayList<>(), moves = new ArrayList<>();
         double cx = (a.getX() + b.getX()) / 2, cz = (a.getZ() + b.getZ()) / 2;
         helper.runAfterDelay(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 BotPlayer brain = new BotPlayer(me, Factions.VERDANT_COURT, BotPlayer.Difficulty.MEDIUM, null);
                 brain.orderListener = (action, target) -> {
-                    if (action == UnitAction.MOVE)
+                    if (action == UnitAction.ATTACK_MOVE)
+                        fights.add(target);
+                    else if (action == UnitAction.MOVE)
                         moves.add(target);
                 };
                 List<LivingEntity> army = new ArrayList<>(List.of((LivingEntity) a, (LivingEntity) b));
-                // the Thornweaver is the only unit here the block may send: a move to the centre is its order
+                // the Thornweaver is the only unit here the block may send: a Fight to the centre is its order
                 List<LivingEntity> mine = new ArrayList<>(List.of((LivingEntity) caster, (LivingEntity) a, (LivingEntity) b));
                 java.lang.reflect.Method habits = BotPlayer.class.getDeclaredMethod("verdantHabits", ServerLevel.class,
                     List.class, List.class, List.class, List.class, long.class, long.class);
                 habits.setAccessible(true);
                 habits.invoke(brain, level, mine, army, new ArrayList<LivingEntity>(), new ArrayList<BuildingPlacement>(), level.getGameTime(), 0L);
-                if (moves.isEmpty())
-                    problems.add("the bot gave no move order: its Thornweaver 14 blocks from the army stays where it is");
-                else if (moves.stream().noneMatch(t -> Math.hypot(t.getX() + 0.5 - cx, t.getZ() + 0.5 - cz) <= 2))
-                    problems.add("the bot's move orders " + moves + " do not go to the army's centre (" + cx + ", " + cz + ")");
+                if (fights.isEmpty())
+                    problems.add("the bot gave no Fight order: its Thornweaver 14 blocks from the army stays where it is"
+                        + (moves.isEmpty() ? "" : " (Move orders " + moves + ": a Move ends a support unit's support order)"));
+                else if (fights.stream().noneMatch(t -> Math.hypot(t.getX() + 0.5 - cx, t.getZ() + 0.5 - cz) <= 2))
+                    problems.add("the bot's Fight orders " + fights + " do not go to the army's centre (" + cx + ", " + cz + ")");
+                else if (!moves.isEmpty())
+                    problems.add("the bot also gave Move orders " + moves + ": a Move ends the Thornweaver's support order");
             } catch (ReflectiveOperationException | RuntimeException ex) {
                 problems.add("the bot's Verdant habits could not be run: " + ex);
             } finally {
