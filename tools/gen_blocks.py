@@ -181,7 +181,9 @@ TARGETS = {
     "nether_bricks":              dict(luma=0.15, std=0.050, sat=0.35, tilt=18.0, smooth=50, pore=12),
     "prismarine_bricks":          dict(luma=0.58, std=0.075, sat=0.33, tilt=12.0, smooth=44, pore=10),
     "dark_prismarine":            dict(luma=0.31, std=0.070, sat=0.36, tilt=15.6, smooth=78, pore=10),
-    "moss_block":                 dict(luma=0.40, std=0.060, sat=0.60, tilt=14.0, smooth=41, pore=60),
+    # r41 (eyes 41053751822: a saturated neon cube, 0.468 on screen beside the lawn's 0.437, sat 0.59, hue 83 vs the
+    # lawn's 92): luma 0.40 -> 0.37, sat 0.60 -> 0.48, the hue toward the lawn's (MOSS_RGB), matte (smooth 41 -> 24)
+    "moss_block":                 dict(luma=0.37, std=0.060, sat=0.48, tilt=14.0, smooth=24, pore=60),
     # r32 (critic: moss patches must be "real green, readable from above"): the moss clumps carry the hue and the
     # spread - sat 0.12 -> 0.22, std 0.06 -> 0.075, a touch more relief for the cushions
     "mossy_stone_bricks":         dict(luma=0.41, std=0.075, sat=0.15, tilt=13.0, smooth=22, pore=36, soften=0.8),   # r35: with stone_bricks
@@ -294,7 +296,9 @@ TARGETS = {
     # reflection makes them glassy): diamond 0.70 -> 0.78, emerald 0.50 -> 0.58, both glass-smooth (253)
     "diamond_block": dict(luma=0.78, std=0.110, sat=0.35, tilt=14.0, smooth=253, pore=0, f0=44),
     # r32 (critic: "too dark and muddy"): 0.36 -> 0.50, a cleaner green (sat 0.60 -> 0.72)
-    "emerald_block": dict(luma=0.58, std=0.100, sat=0.72, tilt=14.0, smooth=253, pore=0, f0=15),
+    # r41 (eyes 41053751822: "translucent green jelly"): an opaque cut-gem block - smoothness 253 -> 150, f0 15 -> 10,
+    # darker body (0.58 -> 0.46) with a crystalline facet pattern, the facet-edge glow cut (m_gem edge_glow 0.35 -> 0.12)
+    "emerald_block": dict(luma=0.46, std=0.085, sat=0.66, tilt=14.0, smooth=150, pore=0),
     # r33 (critic, eyes 41029731853: the blues "crushed"): lapis lifted to a deep ultramarine that reads blue from
     # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
     # r36 (lovish lifted its protection; in game it read darker and duller than vanilla): a saturated, brighter
@@ -306,7 +310,9 @@ TARGETS = {
     "white_concrete": dict(luma=0.87, std=0.012, sat=0.0, tilt=2.0, smooth=86, pore=10),
     # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
     # r31b: -20% chroma. r33 (critic: "crushed"): a clearer dusty blue - luma 0.30 -> 0.37, sat 0.33 -> 0.42
-    "blue_terracotta": dict(luma=0.37, std=0.018, sat=0.42, tilt=3.5, smooth=36, pore=30, soften=1.0),
+    # r41 (eyes 41053751822: it read cornflower blue, hue 223): vanilla's blue terracotta is a dusky VIOLET (#4A3B5B,
+    # hue ~270) - the base hue 218 -> 274 (m_terracotta base), sat 0.42 -> 0.40
+    "blue_terracotta": dict(luma=0.37, std=0.018, sat=0.40, tilt=3.5, smooth=36, pore=30, soften=1.0),
     "podzol_side": dict(luma=0.36, std=0.090, sat=0.44, tilt=21.6, smooth=15, pore=56),
     # round 15 (Oct 15, the texture audit): the face census's partial blocks (tools/face_census.py) - our texture on
     # some faces of a block, vanilla 16x on the rest. Each new face takes its sibling's numbers: a stripped log's top
@@ -1257,7 +1263,7 @@ for _k in range(2, PROC_VARIANTS + 1):
 # round 36: the dyed families (DYES, colour_targets) and the bookshelf - appended last; red_ / blue_terracotta and
 # terracotta keep their r31-r33 entries above (the family's anchors)
 DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
-    "white":      ((0.91, 0.91, 0.90), (0.82, 0.84, 0.84), (0.82, 0.70, 0.63)),
+    "white":      ((0.91, 0.91, 0.91), (0.82, 0.84, 0.84), (0.82, 0.70, 0.63)),   # r41: the wool exactly neutral
     "light_gray": ((0.58, 0.58, 0.55), (0.50, 0.50, 0.46), (0.54, 0.43, 0.39)),
     "gray":       ((0.28, 0.30, 0.31), (0.23, 0.24, 0.25), (0.26, 0.20, 0.17)),
     "black":      ((0.11, 0.11, 0.12), (0.07, 0.07, 0.09), (0.16, 0.10, 0.08)),
@@ -1269,7 +1275,7 @@ DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
     "green":      ((0.33, 0.44, 0.12), (0.29, 0.37, 0.14), (0.30, 0.33, 0.17)),
     "cyan":       ((0.11, 0.58, 0.60), (0.09, 0.50, 0.56), (0.34, 0.38, 0.38)),
     "light_blue": ((0.26, 0.70, 0.86), (0.16, 0.56, 0.78), (0.45, 0.43, 0.54)),
-    "blue":       ((0.22, 0.26, 0.66), (0.18, 0.19, 0.58), (0.30, 0.36, 0.52)),
+    "blue":       ((0.22, 0.26, 0.66), (0.18, 0.19, 0.58), (0.38, 0.28, 0.46)),   # r41: the clay a dusky violet
     # r39: redder - hue 274 -> 283 (it read steel blue in game; 293 sat too close to magenta's 303)
     "purple":     ((0.60, 0.27, 0.74), (0.48, 0.13, 0.62), (0.49, 0.27, 0.36)),
     "magenta":    ((0.76, 0.28, 0.72), (0.68, 0.19, 0.64), (0.59, 0.35, 0.43)),
@@ -3457,7 +3463,7 @@ def m_podzol_side(F, n):
 # Round 34: ONE moss material for every mossy block (the builds' weathering run moss_block -> mossy_cobblestone ->
 # mossy_stone_bricks -> stone_bricks; the family sheet showed moss_block a yellow-olive and mossy_stone_bricks' moss
 # a brighter lime). moss_block's hue; the blocks differ in coverage only.
-MOSS_RGB = (0.36, 0.48, 0.18)
+MOSS_RGB = (0.33, 0.47, 0.19)   # r41: a step toward the lawn's hue
 
 
 def moss_cushions(F, seed, strength, cells=300):
@@ -5403,7 +5409,7 @@ def soften(F, alb, t):
 def _plain(fn):
     def r(F, n, t):
         H, alb = fn(F, n)
-        return dict(H=H, alb=soften(F, fit_albedo(alb, t), t))
+        return dict(H=H, alb=tone_limits(soften(F, fit_albedo(alb, t), t), t))   # r41: `shoulder` / `toe` cap the extremes
     return r
 
 
@@ -5590,7 +5596,7 @@ def recipes():
         "diamond_block": lambda F, n: m_gem(F, n, (0.40, 0.72, 0.82), (0.90, 0.98, 1.0)),   # r33: brighter body
         # r32 (critic: "too dark and muddy - a clear emerald green body with lighter facet edges"): a clean emerald
         # body, bright facet tops, the facet edges glowing, half the jardin
-        "emerald_block": lambda F, n: m_gem(F, n, (0.14, 0.60, 0.30), (0.62, 0.97, 0.66), inclusions=0.4, edge_glow=0.35),
+        "emerald_block": lambda F, n: m_gem(F, n, (0.09, 0.42, 0.20), (0.42, 0.82, 0.48), inclusions=0.5, edge_glow=0.12),   # r41: opaque
         # lapis is a stone, not a crystal: matte ultramarine blocks of rock with gold pyrite flecks
         "lapis_block": lambda F, n: m_lapis(F, n),
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
