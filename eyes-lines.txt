@@ -1,0 +1,107 @@
+[20:27:45] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[20:27:46] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[20:27:46] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[20:27:55] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[20:28:04] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[20:28:14] [Worker-ResourceReload-0/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[20:28:14] [Worker-ResourceReload-0/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[20:28:21] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[20:28:23] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[20:28:52] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[20:29:22] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[20:29:52] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[20:29:52] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793392192784
+[20:29:52] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[20:29:56] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793392196906
+[20:29:56] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[20:29:57] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[20:29:59] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[20:30:15] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[20:30:15] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[20:30:15] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[20:30:33] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 116 s left (client tick 331, camera at [-236, 85, 4]); our slot -229, -2; a bot's start 211, -2; markers: 2 boxes, 5 frames drawn; team 0 (mine) fill built (33861 columns, 1880 quads), 377 perimeter heights known; team 1 fill built (914 columns, 129 quads), 52 perimeter heights known
+[20:30:36] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 113 s left, zoom 36.0, camera at [-235, 85, 4]; markers: 2 boxes, 17 frames drawn; team 0 (mine) fill built (35988 columns, 1926 quads), 395 perimeter heights known; team 1 fill built (914 columns, 129 quads), 52 perimeter heights known
+[20:30:36] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793392236089
+[20:30:36] [IO-Worker-9/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[20:30:38] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 111 s left, zoom 60.0, camera at [-234, 85, 3]; markers: 2 boxes, 27 frames drawn; team 0 (mine) fill built (37077 columns, 1982 quads), 440 perimeter heights known; team 1 fill built (914 columns, 129 quads), 52 perimeter heights known
+[20:30:38] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793392238134
+[20:30:38] [IO-Worker-5/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[20:30:40] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 109 s left, zoom 100.0, camera at [-233, 85, 2]; markers: 2 boxes, 38 frames drawn; team 0 (mine) fill built (37077 columns, 1982 quads), 442 perimeter heights known; team 1 fill built (914 columns, 129 quads), 52 perimeter heights known
+[20:30:40] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793392240132
+[20:30:40] [IO-Worker-2/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[20:30:42] [Render thread/INFO]: [Eyes] step 1 screen none level true
+[20:30:44] [Render thread/INFO]: [Eyes] 01f: eye at [211, 69, 18] y 70 looking at the start 211, -2 (20 blocks away; ground there 71); 104 s left; markers: 2 boxes, 80 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (38749 columns, 2242 quads), 472 perimeter heights known
+[20:30:44] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793392244907
+[20:30:45] [IO-Worker-9/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[20:30:47] [Render thread/INFO]: [Eyes] 01e: start placed at -229, -2 with 102 s left; the phase ends 3 s later
+[20:30:48] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 101 s left, zoom 36.0, camera at [-237, 92, 6]; markers: 2 boxes, 100 frames drawn; team 0 (mine) fill built (35421 columns, 1909 quads), 425 perimeter heights known; team 1 fill built (914 columns, 129 quads), 52 perimeter heights known
+[20:30:48] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793392248618
+[20:30:48] [IO-Worker-6/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[20:31:12] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[20:31:18] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793392278862
+[20:31:18] [Server thread/INFO]: [Eyes] ground 0:30 round [-238, 6]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:coal_ore=4, minecraft:diorite_wall=3, minecraft:grass_block=2164, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=11, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=43, minecraft:stone_brick_stairs=8}
+[20:31:19] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793392279126
+[20:31:19] [Render thread/INFO]: [Eyes] 15 structures: site axis (1, -1) from the capitol -228, 79, -1 (the wall's ring round -9, -2, radius 280: a 64-wide pad here keeps 49 blocks from it)
+[20:31:19] [IO-Worker-11/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[20:31:19] [Server thread/INFO]: [Eyes] 15 structures: fog of war off, day time 6000 (noon)
+[20:31:19] [IO-Worker-10/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[20:31:21] [Render thread/INFO]: [Eyes] 15_work_machine_shop: built at -147, 70, -50 (9x13x9)
+[20:31:29] [Render thread/INFO]: [Eyes] clip-mark 15_work_machine_shop_idle_rts 1793392289117
+[20:31:29] [IO-Worker-2/INFO]: [Eyes] 15_work_machine_shop_idle_rts: Saved screenshot as bat_eyes_15_work_machine_shop_idle_rts.png
+[20:31:33] [Render thread/INFO]: [Eyes] clip-mark 15_work_machine_shop_idle_close 1793392293183
+[20:31:33] [Server thread/INFO]: [Eyes] work: queued Steam Runner at -147, 69, -50
+[20:31:33] [IO-Worker-11/INFO]: [Eyes] 15_work_machine_shop_idle_close: Saved screenshot as bat_eyes_15_work_machine_shop_idle_close.png
+[20:31:41] [Render thread/INFO]: [Eyes] 15_work_machine_shop: client queue 1 item(s)
+[20:31:41] [Render thread/INFO]: [Eyes] clip-mark 15_work_machine_shop_work_close 1793392301187
+[20:31:41] [IO-Worker-5/INFO]: [Eyes] 15_work_machine_shop_work_close: Saved screenshot as bat_eyes_15_work_machine_shop_work_close.png
+[20:31:42] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[20:31:45] [Render thread/INFO]: [Eyes] clip-mark 15_work_machine_shop_work_rts 1793392305274
+[20:31:45] [IO-Worker-11/INFO]: [Eyes] 15_work_machine_shop_work_rts: Saved screenshot as bat_eyes_15_work_machine_shop_work_rts.png
+[20:31:48] [Render thread/INFO]: [Eyes] clip-mark 15_work_machine_shop_work_dusk 1793392308337
+[20:31:48] [Server thread/INFO]: [Eyes] work: queue cleared at -147, 69, -50
+[20:31:48] [IO-Worker-11/INFO]: [Eyes] 15_work_machine_shop_work_dusk: Saved screenshot as bat_eyes_15_work_machine_shop_work_dusk.png
+[20:31:58] [Render thread/INFO]: [Eyes] clip-mark 15_work_machine_shop_idle_dusk 1793392318426
+[20:31:58] [IO-Worker-10/INFO]: [Eyes] 15_work_machine_shop_idle_dusk: Saved screenshot as bat_eyes_15_work_machine_shop_idle_dusk.png
+[20:32:00] [Render thread/INFO]: [Eyes] 15_work_assembly_works: built at -108, 68, -51 (11x9x11)
+[20:32:08] [Render thread/INFO]: [Eyes] clip-mark 15_work_assembly_works_idle_rts 1793392328040
+[20:32:08] [IO-Worker-5/INFO]: [Eyes] 15_work_assembly_works_idle_rts: Saved screenshot as bat_eyes_15_work_assembly_works_idle_rts.png
+[20:32:12] [Render thread/INFO]: [Eyes] clip-mark 15_work_assembly_works_idle_close 1793392332074
+[20:32:12] [Server thread/INFO]: [Eyes] work: queued Steam Juggernaut at -108, 67, -51
+[20:32:12] [IO-Worker-11/INFO]: [Eyes] 15_work_assembly_works_idle_close: Saved screenshot as bat_eyes_15_work_assembly_works_idle_close.png
+[20:32:12] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[20:32:20] [Render thread/INFO]: [Eyes] 15_work_assembly_works: client queue 1 item(s)
+[20:32:20] [Render thread/INFO]: [Eyes] clip-mark 15_work_assembly_works_work_close 1793392340140
+[20:32:20] [IO-Worker-2/INFO]: [Eyes] 15_work_assembly_works_work_close: Saved screenshot as bat_eyes_15_work_assembly_works_work_close.png
+[20:32:24] [Render thread/INFO]: [Eyes] clip-mark 15_work_assembly_works_work_rts 1793392344163
+[20:32:24] [IO-Worker-11/INFO]: [Eyes] 15_work_assembly_works_work_rts: Saved screenshot as bat_eyes_15_work_assembly_works_work_rts.png
+[20:32:27] [Render thread/INFO]: [Eyes] clip-mark 15_work_assembly_works_work_dusk 1793392347175
+[20:32:27] [Server thread/INFO]: [Eyes] work: queue cleared at -108, 67, -51
+[20:32:27] [IO-Worker-11/INFO]: [Eyes] 15_work_assembly_works_work_dusk: Saved screenshot as bat_eyes_15_work_assembly_works_work_dusk.png
+[20:32:37] [Render thread/INFO]: [Eyes] clip-mark 15_work_assembly_works_idle_dusk 1793392357245
+[20:32:37] [IO-Worker-2/INFO]: [Eyes] 15_work_assembly_works_idle_dusk: Saved screenshot as bat_eyes_15_work_assembly_works_idle_dusk.png
+[20:32:39] [Render thread/INFO]: [Eyes] 15_work_barracks: built at -68, 69, -50 (10x15x8)
+[20:32:42] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[20:32:47] [Render thread/INFO]: [Eyes] clip-mark 15_work_barracks_idle_rts 1793392367042
+[20:32:47] [IO-Worker-10/INFO]: [Eyes] 15_work_barracks_idle_rts: Saved screenshot as bat_eyes_15_work_barracks_idle_rts.png
+[20:32:51] [Render thread/INFO]: [Eyes] clip-mark 15_work_barracks_idle_close 1793392371149
+[20:32:51] [Server thread/INFO]: [Eyes] work: queued Vindicator at -68, 68, -50
+[20:32:51] [IO-Worker-2/INFO]: [Eyes] 15_work_barracks_idle_close: Saved screenshot as bat_eyes_15_work_barracks_idle_close.png
+[20:32:59] [Render thread/INFO]: [Eyes] 15_work_barracks: client queue 1 item(s)
+[20:32:59] [Render thread/INFO]: [Eyes] clip-mark 15_work_barracks_work_close 1793392379170
+[20:32:59] [IO-Worker-10/INFO]: [Eyes] 15_work_barracks_work_close: Saved screenshot as bat_eyes_15_work_barracks_work_close.png
+[20:33:03] [Render thread/INFO]: [Eyes] clip-mark 15_work_barracks_work_rts 1793392383256
+[20:33:03] [IO-Worker-2/INFO]: [Eyes] 15_work_barracks_work_rts: Saved screenshot as bat_eyes_15_work_barracks_work_rts.png
+[20:33:06] [Render thread/INFO]: [Eyes] clip-mark 15_work_barracks_work_dusk 1793392386290
+[20:33:06] [Server thread/INFO]: [Eyes] work: queue cleared at -68, 68, -50
+[20:33:06] [IO-Worker-2/INFO]: [Eyes] 15_work_barracks_work_dusk: Saved screenshot as bat_eyes_15_work_barracks_work_dusk.png
+[20:33:12] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[20:33:16] [Render thread/INFO]: [Eyes] clip-mark 15_work_barracks_idle_dusk 1793392396355
+[20:33:16] [IO-Worker-2/INFO]: [Eyes] 15_work_barracks_idle_dusk: Saved screenshot as bat_eyes_15_work_barracks_idle_dusk.png
+[20:33:18] [Render thread/INFO]: [Eyes] unit textures with mips: 0 of 33 registered (up to 3 levels)
+[20:33:18] [Render thread/WARN]: [Eyes] no generated unit texture was uploaded with mips - SimpleTextureMixin did not apply?
+[20:33:18] [Render thread/INFO]: [Eyes] tour complete
