@@ -18,7 +18,6 @@ on:
       - 'bar/build.gradle'
       - 'bar/src/main/resources/META-INF/mods.toml'
       - 'bar/src/main/java/com/solegendary/reignofnether/gametest/BuildingBlockModGameTests.java'
-      - 'tools/mod_texture_census.py'
       - '.github/workflows/block-ids.yml'
 permissions:
   contents: write
@@ -50,17 +49,6 @@ jobs:
         run: |
           chmod +x gradlew
           bash ../tools/ci_gametests.sh
-      - name: Which texture files each mod block draws with (tools/mod_texture_census.py - paths and sizes only)
-        if: always()
-        run: |
-          # lovish, Oct 30 ("repaint mod blocks 256x"): our pack must cover every texture a placed mod block ends on;
-          # this lists them per block (vanilla namespace = our pack once gen_blocks has the name, else the mod's own)
-          find ~/.gradle/caches/modules-2/files-2.1/maven.modrinth ~/.gradle/caches/modules-2/files-2.1/curse.maven \
-            -name '*.jar' ! -name '*-sources.jar' 2>/dev/null | sort > jars.txt || true
-          if [ -s jars.txt ]; then
-            python3 -I tools/mod_texture_census.py bar/run-gametest/mod_textures.json $(cat jars.txt) \
-              | sed 's/^/::notice::/' || echo "::warning::the texture census failed"
-          fi
       - name: Publish the id dump to branch block-ids
         if: always()
         env:
@@ -73,7 +61,6 @@ jobs:
           f=bar/run-gametest/mod_block_ids.json
           if [ ! -f "$f" ]; then echo "::error::the GameTest wrote no $f"; exit 1; fi
           cp "$f" out/
-          cp bar/run-gametest/mod_textures.json out/ 2>/dev/null || true
           python3 - <<'PY'
           import json
           d = json.load(open('out/mod_block_ids.json'))

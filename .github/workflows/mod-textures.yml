@@ -1,0 +1,80 @@
+# Mod texture census (Oct 30 2026; lovish's pick "repaint mod blocks 256x"): for every building-block mod block, the
+# texture files its models end on, with namespace and pixel size (tools/mod_texture_census.py). The jars are fetched
+# straight from their official sources by the pinned versions in bar/build.gradle (Modrinth API, CurseMaven) - no
+# Gradle run, about a minute - and read in the runner's temp folder; only paths and sizes are published (branch
+# mod-textures), never an image, so the mods' ARR art stays theirs. Its own workflow and concurrency group: riding on
+# block-ids.yml, a queued run was cancelled by other branches' pushes twice in ten minutes.
+# Read it: gh api 'repos/IamTheLovish/Beyond-and-Tabs/contents/mod_textures.json?ref=mod-textures' -H 'Accept: application/vnd.github.raw'
+name: mod-textures
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'bar/build.gradle'
+      - 'tools/mod_texture_census.py'
+      - 'tools/gen_blocks.py'
+      - '.github/workflows/mod-textures.yml'
+permissions:
+  contents: write
+concurrency:
+  group: mod-textures-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the pinned mod jars (official sources, into the runner's temp folder)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/jars"
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          UA = {'User-Agent': 'Beyond-and-Tabs mod-textures (paths and sizes only)'}
+          out = os.path.join(os.environ['RUNNER_TEMP'], 'jars')
+          src = open('bar/build.gradle', encoding='utf-8').read()
+          for line in src.splitlines():
+              if line.strip().startswith('//'):
+                  continue
+              m = re.search(r"'maven\.modrinth:([^:']+):([^:']+)'", line)
+              if m:
+                  slug, vid = m.groups()
+                  v = json.load(urllib.request.urlopen(urllib.request.Request(
+                      'https://api.modrinth.com/v2/version/' + vid, headers=UA), timeout=60))
+                  f = next((x for x in v['files'] if x.get('primary')), v['files'][0])
+                  url = f['url']
+              else:
+                  m = re.search(r"'curse\.maven:([^:']+)-(\d+):(\d+)'", line)
+                  if not m:
+                      continue
+                  slug, pid, fid = m.groups()
+                  url = 'https://cursemaven.com/curse/maven/%s-%s/%s/%s-%s-%s.jar' % (slug, pid, fid, slug, pid, fid)
+              data = urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=300).read()
+              open(os.path.join(out, slug + '.jar'), 'wb').write(data)
+              print('%s %.1f MB' % (slug, len(data) / 1e6))
+          PY
+      - name: The census
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 -I tools/mod_texture_census.py out/mod_textures.json "$RUNNER_TEMP"/jars/*.jar | sed 's/^/::notice::/'
+          rm -rf "$RUNNER_TEMP/jars"
+      - name: Publish to branch mod-textures
+        env:
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          cd out
+          git init -q -b mod-textures
+          git config user.name "mod-textures-bot"
+          git config user.email "mod-textures-bot@users.noreply.github.com"
+          echo "Texture files per building-block mod block, from ${REF} ${SHA::7} at $(date -u +%FT%TZ) (.github/workflows/mod-textures.yml)" > README.md
+          git add -A
+          git commit -q -m "Mod textures for ${SHA::7} (${REF})"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" mod-textures
+          echo "::notice::[Mod textures] published to branch mod-textures"
