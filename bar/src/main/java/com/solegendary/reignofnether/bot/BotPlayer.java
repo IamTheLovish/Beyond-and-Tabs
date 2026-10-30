@@ -32,7 +32,7 @@ import java.util.Random;
 /**
  * A skirmish opponent. Each bot owns an RTSPlayer (PlayerServerEvents.startRTSBot gives it workers and resources)
  * and this brain plays the match for it: a capitol, workers, metal extractors on the map's metal patches, wind
- * generators, houses ahead of the population cap, an army building, then waves of fighters at the nearest enemy.
+ * generators, an army building, then waves of fighters at the nearest enemy (no population: nothing to wait for).
  * Decisions are re-derived from world state every second, so it recovers cleanly after a reload.
  */
 public class BotPlayer {
@@ -67,7 +67,7 @@ public class BotPlayer {
         // the Horde's army lab is a Basic Portal the bot refits to a Military Portal (think() queues the refit): the
         // old kit named the Bastion, which only researches, so a Horde bot never trained a single Brute
         if (faction.equals(Factions.PIGLINS))
-            return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, null,   // no farms any more (Factions)
+            return new Kit(Buildings.CENTRAL_PORTAL, null, null,   // no house (no supply: lovish, Oct 29) or farm
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
                     null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
@@ -191,7 +191,7 @@ public class BotPlayer {
     // game time since when metal or energy has sat at the storage cap without a break (-1 = not at cap)
     long atCapSince = -1;
     static final long VAULT_AFTER_TICKS = 20 * 20;   // 20 s at the cap and the bot raises a vault
-    // game time since when the easy bot's T1 labs have paused to save for the T2 lab (-1 = not saving)
+    // game time of the easy bot's first pause to save for the missing T2 lab (-1 = the lab stands or isn't due)
     long t2SaveSince = -1;
     static final long T2_SAVE_MAX_TICKS = 20 * 60 * 3;   // three minutes of saving at most, then the labs train again
 
@@ -609,7 +609,8 @@ public class BotPlayer {
                 done = placeLab(level, armyBuildings, workers);
             // the research's energy (resources/TierGate, ~110 energy/s) ahead of the annex: a floating easy bot laid an
             // annex every think and no wind for six minutes, sat at 48-104 energy/s under the gate and only teched at the
-            // patience minute (bots_reach_tier_2, flake-stress 40779463480, Oct 28). The refits' energy stays below
+            // patience minute (bots_reach_tier_2, flake-stress 40779463480, Oct 28). After Tier 2 the refits'
+            // energy target is served by the rule's second copy, after the extractors
             float energyTarget = techEnergyTarget(tier2, buildings);
             if (!done && !tier2 && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
                     && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
@@ -749,9 +750,10 @@ public class BotPlayer {
             && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
         if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
-        techDiag = String.format("workers %d/%d avgE %.0f planE %.0f pend %b capq %d last %s", workers.size(), targetWorkers(),
-            averageEnergyIncome(eco.energyIncome, buildings, false), plannedEnergyIncome(eco.energyIncome, buildings), techPending,
-            capitol instanceof ProductionPlacement cpq ? cpq.productionQueue.size() : -1, lastPlacedName);
+        if (techDiagOn)
+            techDiag = String.format("workers %d/%d avgE %.0f planE %.0f pend %b capq %d last %s", workers.size(), targetWorkers(),
+                averageEnergyIncome(eco.energyIncome, buildings, false), plannedEnergyIncome(eco.energyIncome, buildings), techPending,
+                capitol instanceof ProductionPlacement cpq ? cpq.productionQueue.size() : -1, lastPlacedName);
         if (tier2) {
             boolean upgrading = false;
             for (BuildingPlacement bp : buildings)
@@ -796,13 +798,16 @@ public class BotPlayer {
         // Easy bots only (lovish's call, Oct 29), never while floating, and for T2_SAVE_MAX_TICKS at most: a lab its
         // workers can't reach would otherwise cap the army for the rest of the game (121 fighters from minute 13 on
         // a pool that went 933 -> 3500, flake-stress 40839167566)
-        boolean researchStarved = !tier2 && metalFill < 0.1f
-            && com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
-        boolean wantsT2Save = difficulty.easyLike() && !floating() && (tier2 || researchStarved) && kit.t2Lab() != null
-            && army.size() >= tuning.t2MinArmy() && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
-        if (!wantsT2Save)
+        // The clock runs from the first pause until the lab stands: an army dip or a spell of floating stops the pause
+        // without re-arming it
+        boolean researching = com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
+        boolean t2LabMissing = difficulty.easyLike() && kit.t2Lab() != null && (tier2 || researching)
+            && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
+        if (!t2LabMissing)
             t2SaveSince = -1;
-        else if (t2SaveSince < 0)
+        boolean researchStarved = !tier2 && researching && metalFill < 0.1f;
+        boolean wantsT2Save = t2LabMissing && (tier2 || researchStarved) && !floating() && army.size() >= tuning.t2MinArmy();
+        if (wantsT2Save && t2SaveSince < 0)
             t2SaveSince = gameTime;
         boolean savingForT2Lab = wantsT2Save && gameTime - t2SaveSince < T2_SAVE_MAX_TICKS;
         for (BuildingPlacement bp : buildings)
@@ -820,7 +825,7 @@ public class BotPlayer {
                 pp.setRepeatQueue(true);
                 queueAntiAir(pp, mine, gameTime);   // the Tidewrought's anti-air is T1 (the Court's is in its T2 lab)
                 while (pp.productionQueue.size() < tuning.queueDepth() && pp.startProductionItem(pickArmyItem(kit.army(), mine, false)))
-                    ;   // (startProductionItem false = can't afford population or the queue is full: stop)
+                    ;   // (startProductionItem false = the queue is full or an emerald cost can't be met: stop)
             }
 
         // 5') the Verdant Court's slice-2 habits: snares at the home choke, an owl over it, healers with the army
@@ -2369,6 +2374,8 @@ public class BotPlayer {
 
     /** The tech gate's inputs at the last think and the last building placed, for TierGateGameTests' [T2Snap] line. */
     public String techDiag = "-";
+    /** Off in play: the [T2Snap] test turns it on, so a live game never formats a line nobody reads. */
+    public boolean techDiagOn = false;
     String lastPlacedName = "-";
 
     /** A placement that found no site: counted, named, and reported through {@link #blocked}. */
@@ -2488,7 +2495,7 @@ public class BotPlayer {
 
     boolean placeNearImpl(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
         lastSiteRejections.clear();
-        int[][] footprintCols = null;   // read once per search, on its first ground_not_flat refusal
+        int[][] footprintCols = null;   // looked up on the search's first ground_not_flat refusal
         for (int ring = 0; ring <= 8; ring++) {
             for (int attempt = 0; attempt < (ring == 0 ? 1 : 8); attempt++) {
                 double a = attempt * Math.PI / 4 + ring;
@@ -2543,8 +2550,15 @@ public class BotPlayer {
         return b == kit.t2Lab() || b == com.solegendary.reignofnether.resources.TierGate.t1LabFor(kit.t2Lab());
     }
 
-    /** The footprint's four corners and centre (x, z offsets from the origin), or none when it has no block data. */
+    /** The footprint's four corners and centre (x, z offsets from the origin), or none when it has no block data;
+     *  once per building type (the structure doesn't change in a game). */
     int[][] footprintColumns(ServerLevel level, Building building) {
+        return FOOTPRINT_COLS.computeIfAbsent(building.structureName, n -> readFootprintColumns(level, building));
+    }
+
+    static final java.util.Map<String, int[][]> FOOTPRINT_COLS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static int[][] readFootprintColumns(ServerLevel level, Building building) {
         var blocks = building.getRelativeBlockData(level);
         if (blocks == null || blocks.isEmpty())
             return new int[0][];
@@ -2636,7 +2650,7 @@ public class BotPlayer {
     /**
      * BAR bots go experimental late: from the difficulty's t3Minute (hard 11, so the T3 lab stands by ~18; medium
      * 14) a bot researches Tier 3, has a T2 constructor build its T3 lab near home, then keeps one experimental in
-     * production whenever it has 20 population free. Easy bots never do (t3Minute 99).
+     * production (no population to wait for: lovish, Oct 29). Easy bots never do (t3Minute 99).
      */
     void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
         if (difficulty.easyLike() || minutes < tuning.t3Minute())
@@ -2680,13 +2694,11 @@ public class BotPlayer {
         }
         if (!t3.isBuilt || !(t3 instanceof ProductionPlacement pp))
             return;
-        int pop = UnitServerEvents.getCurrentPopulation(name);
-        int popCap = BuildingServerEvents.getTotalPopulationSupply(name);
         boolean queued = false;
         for (var item : pp.productionQueue)
             if (item.item == t3Unit())
                 queued = true;
-        if (!queued && popCap - pop >= 20)
+        if (!queued)
             pp.startProductionItem(t3Unit());
     }
 
