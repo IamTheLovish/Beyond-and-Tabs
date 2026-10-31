@@ -191,10 +191,38 @@ public class ControlsReferenceScreen extends Screen {
         return height - 34;
     }
 
-    private int contentHeight() {
-        int h = 0;
+    /** Where the key column starts: as far right as the longest key text allows, so the labels get the room (they wrap). */
+    private int keyColX() {
+        int pw = panelW(), x1 = (width + pw) / 2;
+        int keysW = 0;
         for (Row r : rows)
-            h += r.header ? 16 : 11;
+            if (!r.header)
+                keysW = Math.max(keysW, font.width(keysText(r)));
+        keysW = Math.min(keysW, pw / 2);
+        return x1 - 8 - keysW;
+    }
+
+    private String keysText(Row r) {
+        return r.changed ? r.keys + "  " + t("changed") : r.keys;
+    }
+
+    /** A row label wrapped to the label column (it used to be cut at the key column: "Take control of one selected unit (and ba"). */
+    private List<net.minecraft.util.FormattedCharSequence> labelLines(Row r, int labelW) {
+        return font.split(net.minecraft.network.chat.FormattedText.of(r.label), Math.max(40, labelW));
+    }
+
+    private int rowHeight(Row r, int labelW) {
+        return r.header ? 16 : Math.max(1, labelLines(r, labelW).size()) * 10 + 1;
+    }
+
+    private int labelW() {
+        return keyColX() - (width - panelW()) / 2 - 18;
+    }
+
+    private int contentHeight() {
+        int h = 0, lw = labelW();
+        for (Row r : rows)
+            h += rowHeight(r, lw);
         return h;
     }
 
@@ -252,16 +280,20 @@ public class ControlsReferenceScreen extends Screen {
         int top = listTop(), bottom = listBottom();
         g.enableScissor(x0 + 1, top, x1 - 1, bottom);
         int y = top - (int) scroll;
-        int keyColX = x0 + pw / 2 + 10;
+        int keyColX = keyColX(), lw = labelW();
         for (Row r : rows) {
-            int rh = r.header ? 16 : 11;
+            int rh = rowHeight(r, lw);
             if (y + rh >= top && y <= bottom) {
                 if (r.header) {
                     g.drawString(font, r.label, x0 + 8, y + 5, OnboardingUi.GOLD_HOT, false);
                     g.fill(x0 + 8, y + 14, x1 - 8, y + 15, OnboardingUi.GOLD_DIM);
                 } else {
-                    g.drawString(font, font.plainSubstrByWidth(r.label, keyColX - x0 - 14), x0 + 12, y + 1, OnboardingUi.TEXT, false);
-                    String keys = r.changed ? r.keys + "  " + t("changed") : r.keys;
+                    int ly = y + 1;
+                    for (var line : labelLines(r, lw)) {
+                        g.drawString(font, line, x0 + 12, ly, OnboardingUi.TEXT, false);
+                        ly += 10;
+                    }
+                    String keys = keysText(r);
                     g.drawString(font, font.plainSubstrByWidth(keys, x1 - keyColX - 8), keyColX, y + 1,
                         r.changed ? OnboardingUi.GOOD : OnboardingUi.TEXT_HOT, false);
                 }

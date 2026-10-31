@@ -138,7 +138,9 @@ public class CommanderServerEvents {
         Keybindings.abilitySlot1, Keybindings.abilitySlot2, Keybindings.abilitySlot3, Keybindings.abilitySlot4,
         Keybindings.abilitySlot5, Keybindings.abilitySlot6, Keybindings.abilitySlot7, Keybindings.abilitySlot9,
         Keybindings.hotkey1, Keybindings.hotkey12, Keybindings.hotkey11, Keybindings.hotkey2, Keybindings.hotkey4,
-        Keybindings.hotkey10, Keybindings.hotkey6, Keybindings.hotkey7, Keybindings.hotkey5 };
+        Keybindings.hotkey10, Keybindings.hotkey6, Keybindings.hotkey7, Keybindings.hotkey5,
+        // Z / X / C / V are the build lists for a builder, so the commander has fewer letters: these two come last
+        Keybindings.hotkey9, Keybindings.abilitySlot8 };
 
     /**
      * Adds a runtime ability on a key nothing else on the commander's card uses: its faction's whole build menu, its
@@ -156,6 +158,10 @@ public class CommanderServerEvents {
                 unit instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit,
                 unit instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit, true, false))
             claim(taken, order.key());
+        // the commander is a builder: Z / X / C / V open BAR's build lists while it is selected (BuildCategoryKeys), so
+        // an ability on one of them would never fire (bugsweep 1, bug 1)
+        for (Keybinding kb : Keybindings.buildCategoryKeys())
+            claim(taken, kb);
         var list = unit.getAbilities().get();
         var keys = unit.getAbilities().effectiveHotkeys();
         for (int i = 0; i < list.size(); i++)
