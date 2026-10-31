@@ -414,23 +414,31 @@ class ConstructionGridTest {
         assertTrue(g.nextBlock(crew, 1f, 0.5f, -0.7f, 0.5f, cell));
         assertEquals(10, cell[0]); assertEquals(65, cell[1]); assertEquals(20, cell[2]);
 
-        // a builder at work on a missing block of layer 2: that block, though it is not in the front course
-        crew.report(9f, 66f, 19f, 10.5f, 66.5f, 20.5f, 2f);
+        // a builder at work on a missing block of the front course: that block, though it is not the nearest
+        crew.report(9f, 65f, 19f, 10.5f, 65.5f, 20.5f, 2f);
         cell[3] = 0;
         assertTrue(g.nextBlock(crew, 2.1f, -0.5f, -0.7f, -0.5f, cell));
-        assertEquals(10, cell[0]); assertEquals(66, cell[1]); assertEquals(20, cell[2]);
+        assertEquals(10, cell[0]); assertEquals(65, cell[1]); assertEquals(20, cell[2]);
         // its next beat aims at another block: the flash stays where it is while that block is missing
-        crew.report(9f, 66f, 19f, 12.5f, 66.5f, 20.5f, 2.4f);
+        crew.report(9f, 65f, 19f, 12.5f, 65.5f, 22.5f, 2.4f);
         assertTrue(g.nextBlock(crew, 2.5f, -0.5f, -0.7f, -0.5f, cell));
-        assertEquals(10, cell[0]); assertEquals(66, cell[1]); assertEquals(20, cell[2]);
+        assertEquals(10, cell[0]); assertEquals(65, cell[1]); assertEquals(20, cell[2]);
+
+        // round 17 critic: a builder aiming ABOVE the front course is not "the block being laid" (the server lays the
+        // lowest course first): the front course's nearest missing cell instead
+        ConstructionCrew high = new ConstructionCrew();
+        high.report(9f, 66f, 19f, 10.5f, 66.5f, 20.5f, 2f);
+        cell[3] = 0;
+        assertTrue(g.nextBlock(high, 2.1f, -0.5f, -0.7f, -0.5f, cell));
+        assertEquals(12, cell[0]); assertEquals(65, cell[1]); assertEquals(22, cell[2]);
 
         // two builders: the nearer the camera (looking toward -x -z: the larger x + z) wins
         ConstructionCrew two = new ConstructionCrew();
-        two.report(9f, 66f, 19f, 10.5f, 66.5f, 20.5f, 3f);       // far
-        two.report(13f, 66f, 23f, 12.5f, 66.5f, 21.5f, 3f);      // near
+        two.report(9f, 65f, 19f, 10.5f, 65.5f, 20.5f, 3f);       // far
+        two.report(13f, 65f, 23f, 12.5f, 65.5f, 22.5f, 3f);      // near
         cell[3] = 0;
         assertTrue(g.nextBlock(two, 3.1f, -0.5f, -0.7f, -0.5f, cell));
-        assertEquals(12, cell[0]); assertEquals(66, cell[1]); assertEquals(21, cell[2]);
+        assertEquals(12, cell[0]); assertEquals(65, cell[1]); assertEquals(22, cell[2]);
 
         // a builder aiming at a STANDING block: ignored, the front course's nearest missing cell instead
         ConstructionCrew standing = new ConstructionCrew();
@@ -444,5 +452,119 @@ class ConstructionGridTest {
         int[] kept = { 10, 65, 20, 1 };
         assertTrue(laid.nextBlock(new ConstructionCrew(), 5f, 0.5f, -0.7f, 0.5f, kept));
         assertEquals(12, kept[0]); assertEquals(65, kept[1]); assertEquals(22, kept[2]);
+    }
+
+    /**
+     * {@link #site} with the floor and the second course's top laid all round (the builders ran ahead there), and the
+     * first wall course missing at two corners: the far -x/-z one, buried under the laid course above and behind its
+     * laid neighbours, and the near +x/+z one, open to a camera at +x +z.
+     */
+    private static ConstructionGrid buriedCorner() {
+        List<int[]> b = new ArrayList<>();
+        for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++) b.add(new int[] { 10 + x, 64, 20 + z });
+        for (int y = 1; y < 3; y++)
+            for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++)
+                if (x != 1 || z != 1) b.add(new int[] { 10 + x, 64 + y, 20 + z });
+        ConstructionGrid g = ConstructionGrid.of(b);
+        g.clear();
+        for (int[] p : b) {
+            boolean gap = p[1] == 65 && ((p[0] == 10 && p[2] == 20) || (p[0] == 12 && p[2] == 22));
+            g.mark(p[0], p[1], p[2], !gap);
+        }
+        g.finish();
+        return g;
+    }
+
+    /**
+     * Round 17 critic: the next block's flash never appeared in a still (two frames, 2 Hz, 0.7): it sat on a block the
+     * camera could not see. A missing block is IN VIEW when a ray toward the camera from one of its faces turned to the
+     * camera meets no standing block of the site; the flash prefers one in view - the builder's target only if it is.
+     */
+    @Test
+    void theFlashIsOnABlockTheCameraCanSee() {
+        ConstructionGrid g = buriedCorner();
+        float lx = -0.5f, ly = -0.7f, lz = -0.5f;   // looking toward -x -z: the camera stands at +x +z
+        assertTrue(!g.inView(10, 65, 20, lx, ly, lz), "the far corner: under the laid course, behind laid blocks");
+        assertTrue(g.inView(12, 65, 22, lx, ly, lz), "the near corner: its +x and +z faces open to the camera");
+        // a builder aiming at the buried corner: not shown there - the course's block in view instead
+        ConstructionCrew crew = new ConstructionCrew();
+        crew.report(9f, 65f, 19f, 10.5f, 65.5f, 20.5f, 1f);
+        int[] cell = new int[4];
+        assertTrue(g.nextBlock(crew, 1.1f, lx, ly, lz, cell));
+        assertEquals(12, cell[0]); assertEquals(65, cell[1]); assertEquals(22, cell[2]);
+        // a kept cell that falls out of view is given up
+        int[] kept = { 10, 65, 20, 1 };
+        assertTrue(g.nextBlock(new ConstructionCrew(), 2f, lx, ly, lz, kept));
+        assertEquals(12, kept[0]); assertEquals(65, kept[1]); assertEquals(22, kept[2]);
+        // from the other side (camera at -x -z) the far corner is the open one
+        int[] other = new int[4];
+        assertTrue(g.nextBlock(new ConstructionCrew(), 3f, 0.5f, -0.7f, 0.5f, other));
+        assertEquals(10, other[0]); assertEquals(65, other[1]); assertEquals(20, other[2]);
+    }
+
+    /** The front segment {x0, y0, z0, x1, y1, z1} on {@code side}, in either direction. */
+    private static boolean hasSeg(ConstructionGrid g, int side, float x0, float y0, float z0, float x1, float y1, float z1) {
+        for (int i = 0; i < g.frontSegCount(); i++) {
+            if (g.frontSegSide(i) != side)
+                continue;
+            float ax = g.frontSegX0(i), ay = g.frontSegY0(i), az = g.frontSegZ0(i);
+            float bx = g.frontSegX1(i), by = g.frontSegY1(i), bz = g.frontSegZ1(i);
+            if ((ax == x0 && ay == y0 && az == z0 && bx == x1 && by == y1 && bz == z1)
+                    || (ax == x1 && ay == y1 && az == z1 && bx == x0 && by == y0 && bz == z0))
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Round 17 critic: "no line of any colour at the laid/ghost boundary" - the band ran along the BED of the lowest
+     * course with a block missing, which on a course nearly laid is a full laid course under the ghost: a gold seam in
+     * the white wall, not the front. Now the front FOLLOWS the boundary on the front course's outer faces: along the top
+     * of each laid block of that course that has ghost above it (the top of a laid stack), along the bed of each missing
+     * one, and up the step between the two - one continuous stepped line where the laid stone meets the ghost.
+     */
+    @Test
+    void theFrontFollowsTheLaidGhostBoundary() {
+        ConstructionGrid g = wall();   // foot course laid; the second course laid only at x 0; the third missing
+        assertTrue(hasSeg(g, 0, 0, 2, 0, 1, 2, 0), "-z face: over the laid block at x 0, at its top");
+        for (int x = 1; x < 6; x++)
+            assertTrue(hasSeg(g, 0, x, 1, 0, x + 1, 1, 0), "-z face: the bed of the missing block at x " + x);
+        assertTrue(hasSeg(g, 0, 1, 1, 0, 1, 2, 0), "-z face: the step up between them at x 1");
+        assertTrue(hasSeg(g, 2, 1, 1, 1, 1, 2, 1), "+z face: the same step");
+        assertTrue(hasSeg(g, 3, 0, 2, 0, 0, 2, 1), "-x end: over its laid block");
+        assertTrue(hasSeg(g, 1, 6, 1, 0, 6, 1, 1), "+x end: the bed of its missing block");
+        assertTrue(!hasSeg(g, 0, 0, 1, 0, 1, 1, 0), "never the bed of a laid block (a seam in the laid wall)");
+        // 6 a long face, a step on each, an end each
+        assertEquals(6 + 1 + 6 + 1 + 1 + 1, g.frontSegCount());
+
+        // a laid stack two courses high: the line runs over its top, the step two courses tall
+        List<int[]> b = new ArrayList<>();
+        for (int y = 0; y < 4; y++) for (int x = 0; x < 3; x++) b.add(new int[] { x, y, 0 });
+        ConstructionGrid s = ConstructionGrid.of(b);
+        s.clear();
+        for (int[] p : b)
+            s.mark(p[0], p[1], p[2], p[1] == 0 || (p[0] == 0 && p[1] <= 2));
+        s.finish();
+        assertTrue(hasSeg(s, 0, 0, 3, 0, 1, 3, 0), "over the stack's top");
+        assertTrue(hasSeg(s, 0, 1, 1, 0, 1, 3, 0), "the step, two courses");
+        assertTrue(hasSeg(s, 0, 1, 1, 0, 2, 1, 0));
+
+        // a laid block of the course with nothing planned above it is no boundary: no line over it
+        List<int[]> c = new ArrayList<>();
+        for (int x = 0; x < 3; x++) { c.add(new int[] { x, 0, 0 }); c.add(new int[] { x, 1, 0 }); }
+        c.add(new int[] { 1, 2, 0 }); c.add(new int[] { 2, 2, 0 });
+        ConstructionGrid t = ConstructionGrid.of(c);
+        t.clear();
+        for (int[] p : c)
+            t.mark(p[0], p[1], p[2], p[1] == 0 || (p[1] == 1 && p[0] == 0));
+        t.finish();
+        assertTrue(!hasSeg(t, 0, 0, 2, 0, 1, 2, 0), "x 0 is finished: nothing above it in the plan");
+        assertTrue(hasSeg(t, 0, 1, 1, 0, 2, 1, 0));
+
+        ConstructionGrid done = ConstructionGrid.of(c);
+        done.clear();
+        for (int[] p : c) done.mark(p[0], p[1], p[2], true);
+        done.finish();
+        assertEquals(0, done.frontSegCount(), "all laid: no front");
     }
 }

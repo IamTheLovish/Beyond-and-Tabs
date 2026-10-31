@@ -99,4 +99,31 @@ class ConsFramingTest {
         assertEquals(1.0, ConsFraming.distance(BOX, 104, 199), 1e-9);
         assertEquals(0.0, ConsFraming.distance(BOX, 105, 205), 1e-9, "inside the footprint");
     }
+
+    /**
+     * Construction round 17 critic: no builder in either still - the log had four within 0.6 blocks, but on the FAR side
+     * of the site, behind the walls and the ghost (pink smears through it). The crew is first sent to a spot
+     * {@code dist} blocks off the footprint on the camera's side ({@link ConsFraming#approach}), and a builder counts
+     * as in view only on that side ({@link ConsFraming#nearSide}).
+     */
+    @Test
+    void theCrewIsSentToTheCamerasSideOfTheSite() {
+        double[] p = new double[3];
+        // yaw 0: the camera looks toward +z, so it stands at -z
+        ConsFraming.approach(BOX, 0, PITCH, 2, p);
+        assertEquals(105, p[0], 1e-6);
+        assertEquals(64, p[1], 1e-6);
+        assertEquals(198, p[2], 1e-6);
+        assertTrue(ConsFraming.nearSide(BOX, 0, PITCH, 105, 199));
+        assertFalse(ConsFraming.nearSide(BOX, 0, PITCH, 105, 211), "behind the site");
+        // the tour's yaw: 2 blocks off the footprint, on the camera's side
+        ConsFraming.approach(BOX, YAW, PITCH, 2, p);
+        assertEquals(2, ConsFraming.distance(BOX, p[0], p[2]), 0.3);
+        assertTrue(ConsFraming.nearSide(BOX, YAW, PITCH, p[0], p[2]));
+        double[] b = new double[9];
+        ConsFraming.basis(YAW, PITCH, b);
+        double fx = b[0], fz = b[2];
+        assertTrue((p[0] - 105) * fx + (p[2] - 205) * fz < 0, "toward the camera from the centre");
+        assertFalse(ConsFraming.nearSide(BOX, YAW, PITCH, 105 + fx * 8, 205 + fz * 8));
+    }
 }

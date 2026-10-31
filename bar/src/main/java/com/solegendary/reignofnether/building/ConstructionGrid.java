@@ -51,6 +51,11 @@ public final class ConstructionGrid {
     private final float[] course = new float[MAX_EDGES * 5];
     private final int[] courseSide = new int[MAX_EDGES];
     private int courseN;
+    // the front as drawn (round 17 critic): segments {x0, y0, z0, x1, y1, z1} along the laid/ghost boundary of the
+    // front course's outer faces, and their sides
+    private final float[] seg = new float[MAX_EDGES * 2 * 6];
+    private final int[] segSide = new int[MAX_EDGES * 2];
+    private int segN;
 
     private ConstructionGrid(int x0, int y0, int z0, int w, int h, int d) {
         this.x0 = x0; this.y0 = y0; this.z0 = z0; this.w = w; this.h = h; this.d = d;
@@ -162,6 +167,53 @@ public final class ConstructionGrid {
                     }
                     courseSide[courseN++] = side;
                 }
+        boundary();
+    }
+
+    /**
+     * The front as drawn (round 17 critic: "no line of any colour at the laid/ghost boundary" - the band along the BED
+     * of the lowest course with a block missing ran, on a course nearly laid, a whole laid course under the ghost: a
+     * gold seam in the white wall). On each outer edge of the front course: over the top of the laid stack there when
+     * the plan goes on above it (the ghost starts there), at the bed when the block is missing, nothing when the column
+     * is finished (no ghost over it); and up each step where two neighbouring edges meet at different heights - one
+     * continuous stepped line where the laid stone meets the ghost.
+     */
+    private void boundary() {
+        segN = 0;
+        if (courseL == Integer.MIN_VALUE)
+            return;
+        int l = courseL;
+        for (int i = 0; i < courseN && segN < seg.length / 6; i++) {
+            int side = courseSide[i], r = i * 5;
+            // the course cell this edge belongs to: just inside the edge, away from its outward side
+            float mx = (course[r] + course[r + 2]) * 0.5f, mz = (course[r + 1] + course[r + 3]) * 0.5f;
+            int ci = (int) Math.floor(mx - (side == 1 ? 0.5f : side == 3 ? -0.5f : 0)) - x0;
+            int ck = (int) Math.floor(mz - (side == 2 ? 0.5f : side == 0 ? -0.5f : 0)) - z0;
+            int j = l;
+            while (j < h && cells[(j * d + ck) * w + ci] == STANDING)
+                j++;
+            if (j > l && (j >= h || cells[(j * d + ck) * w + ci] != MISSING))
+                continue;   // finished up to the top of the plan there: no ghost over it
+            float y = y0 + j;
+            setSeg(course[r], y, course[r + 1], course[r + 2], y, course[r + 3], side);
+        }
+        // the steps: where one edge ends at another's start on the same side, at a different height
+        int horizontal = segN;
+        for (int a = 0; a < horizontal; a++)
+            for (int b = 0; b < horizontal && segN < seg.length / 6; b++) {
+                int pa = a * 6, pb = b * 6;
+                if (a == b || segSide[a] != segSide[b] || seg[pa + 3] != seg[pb] || seg[pa + 5] != seg[pb + 2]
+                        || seg[pa + 4] == seg[pb + 1])
+                    continue;
+                float lo = Math.min(seg[pa + 4], seg[pb + 1]), hi = Math.max(seg[pa + 4], seg[pb + 1]);
+                setSeg(seg[pa + 3], lo, seg[pa + 5], seg[pa + 3], hi, seg[pa + 5], segSide[a]);
+            }
+    }
+
+    private void setSeg(float ax, float ay, float az, float bx, float by, float bz, int side) {
+        int r = segN * 6;
+        seg[r] = ax; seg[r + 1] = ay; seg[r + 2] = az; seg[r + 3] = bx; seg[r + 4] = by; seg[r + 5] = bz;
+        segSide[segN++] = side;
     }
 
     private void setCourse(int r, float ax, float az, float bx, float bz, float y) {
@@ -396,30 +448,78 @@ public final class ConstructionGrid {
     public float courseY(int i) { return course[i * 5 + 4]; }
     public int courseSide(int i) { return courseSide[i]; }
 
+    /** The front as drawn ({@link #boundary}): its segments, from (x0, y0, z0) to (x1, y1, z1), each on a side of the
+     *  course (0: -z, 1: +x, 2: +z, 3: -x) - the horizontal runs and the steps between them. */
+    public int frontSegCount() { return segN; }
+    public float frontSegX0(int i) { return seg[i * 6]; }
+    public float frontSegY0(int i) { return seg[i * 6 + 1]; }
+    public float frontSegZ0(int i) { return seg[i * 6 + 2]; }
+    public float frontSegX1(int i) { return seg[i * 6 + 3]; }
+    public float frontSegY1(int i) { return seg[i * 6 + 4]; }
+    public float frontSegZ1(int i) { return seg[i * 6 + 5]; }
+    public int frontSegSide(int i) { return segSide[i]; }
+
+    /** The front course's layer as a height (its bed), or MIN_VALUE when nothing is missing. */
+    public int courseLayerY() { return courseL == Integer.MIN_VALUE ? Integer.MIN_VALUE : y0 + courseL; }
+
+    /** Ray-march step (blocks) of {@link #inView}. */
+    private static final float VIEW_STEP = 0.2f;
+
+    /**
+     * Block (x, y, z) can be seen from a camera looking along (lx, ly, lz) (round 17 critic: the next block's flash never
+     * showed - it sat on a block buried under or behind laid stone): a ray toward the camera from the centre of one of
+     * its faces turned to the camera meets no standing block of the site. Allocation-free.
+     */
+    public boolean inView(int x, int y, int z, float lx, float ly, float lz) {
+        float max = w + h + d + 2;
+        for (int f = 0; f < 3; f++) {
+            float n = f == 0 ? lx : f == 1 ? ly : lz;
+            if (Math.abs(n) < 1e-3f)
+                continue;
+            // the face turned to the camera: its normal against the look
+            float sx = x + 0.5f, sy = y + 0.5f, sz = z + 0.5f, out = n < 0 ? 0.51f : -0.51f;
+            if (f == 0) sx += out; else if (f == 1) sy += out; else sz += out;
+            boolean clear = true;
+            for (float t = 0; t <= max; t += VIEW_STEP) {
+                int cx = (int) Math.floor(sx - lx * t), cy = (int) Math.floor(sy - ly * t), cz = (int) Math.floor(sz - lz * t);
+                if (cell(cx, cy, cz) == STANDING) {
+                    clear = false;
+                    break;
+                }
+            }
+            if (clear)
+                return true;
+        }
+        return false;
+    }
+
     private final float[] tgt = new float[3], hands = new float[3];
 
     /**
      * The next block to be placed, into {@code cell} {x, y, z, valid} (round 16 critic: "being built now" read only as a
-     * faint dashed footprint outline; the next block flashes): kept while it is still missing - the builders' reports
-     * aim at a random queued block every beat, and the flash must not hop with them; else the block the builder at work
-     * nearest the camera aims at (looking along {@code lx, ly, lz}: the smallest hands . look), if that block is
-     * missing; else the front course's missing block nearest the camera. False (and {@code cell[3]} 0) when nothing is
-     * missing. Allocation-free.
+     * faint dashed footprint outline; the next block flashes): kept while it is still missing and in view - the
+     * builders' reports aim at a random queued block every beat, and the flash must not hop with them; else the block
+     * the builder at work nearest the camera aims at (looking along {@code lx, ly, lz}: the smallest hands . look), if
+     * that block is missing, in the front course (the server lays the lowest course first) and in view
+     * ({@link #inView}); else the front course's block in view nearest the camera; else its nearest. Round 17 critic:
+     * the flash never showed in a still - it sat on a block buried under or behind laid stone. False (and
+     * {@code cell[3]} 0) when nothing is missing. Allocation-free.
      */
     public boolean nextBlock(ConstructionCrew crew, float now, float lx, float ly, float lz, int[] cell) {
         if (missingN == 0) {
             cell[3] = 0;
             return false;
         }
-        if (cell[3] != 0 && isMissing(cell[0], cell[1], cell[2]))
+        if (cell[3] != 0 && isMissing(cell[0], cell[1], cell[2]) && inView(cell[0], cell[1], cell[2], lx, ly, lz))
             return true;
+        int courseY = courseLayerY();
         float best = Float.MAX_VALUE;
         boolean found = false;
         for (int i = 0; i < ConstructionCrew.SLOTS; i++) {
             if (!crew.target(i, now, tgt, hands))
                 continue;
             int x = (int) Math.floor(tgt[0]), y = (int) Math.floor(tgt[1]), z = (int) Math.floor(tgt[2]);
-            if (!isMissing(x, y, z))
+            if (!isMissing(x, y, z) || y != courseY || !inView(x, y, z, lx, ly, lz))
                 continue;
             float dd = hands[0] * lx + hands[1] * ly + hands[2] * lz;
             if (dd < best) {
@@ -428,16 +528,17 @@ public final class ConstructionGrid {
                 found = true;
             }
         }
-        if (!found) {
-            // the front course is the lowest layer with a block missing: the missing list is layer first, so its
-            // first entries are that course's
+        // the front course is the lowest layer with a block missing: the missing list is layer first, so its first
+        // entries are that course's - the one in view nearest the camera, else the nearest
+        for (int pass = 0; pass < 2 && !found; pass++) {
             int l = missing[0] / (w * d);
             for (int i = 0; i < missingN && missing[i] / (w * d) == l; i++) {
                 int x = missingX(i), y = missingY(i), z = missingZ(i);
                 float dd = (x + 0.5f) * lx + (y + 0.5f) * ly + (z + 0.5f) * lz;
-                if (dd < best) {
+                if (dd < best && (pass == 1 || inView(x, y, z, lx, ly, lz))) {
                     best = dd;
                     cell[0] = x; cell[1] = y; cell[2] = z;
+                    found = true;
                 }
             }
         }

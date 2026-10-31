@@ -150,4 +150,30 @@ public final class ConsFraming {
         }
         return best;
     }
+    /**
+     * Construction round 17 critic: no builder in either still - four stood within 0.6 blocks, but on the FAR side of
+     * the site, behind its walls and ghost (pink smears through it). The ground spot {@code dist} blocks off the
+     * footprint on the camera's side (from the box's centre, against the camera's horizontal forward), at the box's
+     * foot, into {@code out} {x, y, z}: where the tour sends the crew before they build.
+     */
+    public static void approach(double[] box, float yaw, float pitch, double dist, double[] out) {
+        double[] b = new double[9];
+        basis(yaw, pitch, b);
+        double fx = b[0], fz = b[2], l = Math.sqrt(fx * fx + fz * fz);
+        if (l < 1e-9) { fx = 0; fz = 1; l = 1; }
+        fx /= l; fz /= l;
+        double cx = (box[0] + box[3]) * 0.5, cz = (box[2] + box[5]) * 0.5;
+        double ext = (box[3] - box[0]) * 0.5 * Math.abs(fx) + (box[5] - box[2]) * 0.5 * Math.abs(fz);
+        out[0] = cx - fx * (ext + dist);
+        out[1] = box[1];
+        out[2] = cz - fz * (ext + dist);
+    }
+
+    /** (x, z) is on the camera's side of the box: nearer the camera than the box's centre (a builder there is not
+     *  hidden behind the building). */
+    public static boolean nearSide(double[] box, float yaw, float pitch, double x, double z) {
+        double[] b = new double[9];
+        basis(yaw, pitch, b);
+        return (x - (box[0] + box[3]) * 0.5) * b[0] + (z - (box[2] + box[5]) * 0.5) * b[2] < 0;
+    }
 }
