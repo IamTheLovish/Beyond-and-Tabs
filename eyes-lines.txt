@@ -1,0 +1,253 @@
+[06:56:03] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[06:56:05] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[06:56:05] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/render/chunk/compile/pipeline/FluidRenderer (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer)
+[06:56:05] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[06:56:05] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/model/color/ColorProviderRegistry (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.model.color.ColorProviderRegistry)
+[06:56:05] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/model/quad/blender/BlendedColorProvider (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.model.quad.blender.BlendedColorProvider)
+[06:56:05] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/render/chunk/RenderSectionManager (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager)
+[06:56:13] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[06:56:23] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[06:56:33] [Worker-ResourceReload-2/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[06:56:33] [Worker-ResourceReload-2/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[06:56:41] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[06:56:43] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[06:57:12] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[06:57:42] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[06:58:12] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[06:58:12] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793429892598
+[06:58:12] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[06:58:16] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793429896681
+[06:58:16] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[06:58:17] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[06:58:19] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[06:58:49] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 118 s left (client tick 265, camera at [-232, 92, 16]); our slot -223, 8; a bot's start 217, 8; markers: 2 boxes, 1 frames drawn; team 0 (mine) fill built (34376 columns, 1871 quads), 370 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known, rebuild pending
+[06:58:51] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 114 s left, zoom 36.0, camera at [-231, 92, 16]; markers: 2 boxes, 13 frames drawn; team 0 (mine) fill built (34376 columns, 1871 quads), 370 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[06:58:51] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793429931874
+[06:58:52] [IO-Worker-6/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[06:58:53] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 113 s left, zoom 60.0, camera at [-229, 92, 14]; markers: 2 boxes, 22 frames drawn; team 0 (mine) fill built (36333 columns, 1901 quads), 433 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[06:58:53] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793429933715
+[06:58:54] [IO-Worker-6/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[06:58:55] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 111 s left, zoom 100.0, camera at [-228, 92, 13]; markers: 2 boxes, 32 frames drawn; team 0 (mine) fill built (36333 columns, 1901 quads), 444 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[06:58:55] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793429935725
+[06:58:56] [IO-Worker-9/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[06:59:00] [Render thread/INFO]: [Eyes] 01f: eye at [217, 69, 28] y 70 looking at the start 217, 8 (20 blocks away; ground there 70); 106 s left; markers: 2 boxes, 75 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (36017 columns, 2091 quads), 438 perimeter heights known, rebuild pending
+[06:59:00] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793429940496
+[06:59:00] [IO-Worker-5/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[06:59:01] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:59:02] [Render thread/INFO]: [Eyes] 01e: start placed at -223, 8 with 104 s left; the phase ends 3 s later
+[06:59:04] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 102 s left, zoom 36.0, camera at [-230, 89, 15]; markers: 2 boxes, 95 frames drawn; team 0 (mine) fill built (17147 columns, 935 quads), 234 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[06:59:04] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793429944376
+[06:59:04] [IO-Worker-9/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[06:59:31] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:59:34] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793429974504
+[06:59:34] [Server thread/INFO]: [Eyes] ground 0:30 round [-231, 15]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:diorite_wall=3, minecraft:grass_block=2165, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=14, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=43, minecraft:stone_brick_stairs=8}
+[06:59:34] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793429974786
+[06:59:34] [IO-Worker-9/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[06:59:35] [IO-Worker-5/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[06:59:38] [Render thread/INFO]: [Eyes] clip-mark 03_rts_close 1793429978851
+[06:59:39] [IO-Worker-11/INFO]: [Eyes] 03_rts_close: Saved screenshot as bat_eyes_03_rts_close.png
+[06:59:44] [Render thread/INFO]: [Eyes] clip-mark 04_rts_far 1793429984854
+[06:59:45] [IO-Worker-5/INFO]: [Eyes] 04_rts_far: Saved screenshot as bat_eyes_04_rts_far.png
+[07:00:01] [Render thread/INFO]: [Eyes] step 4 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:00:31] [Render thread/INFO]: [Eyes] step 4 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:00:44] [Render thread/INFO]: [Eyes] clip-mark 05_rts_one_minute 1793430044958
+[07:00:44] [Server thread/INFO]: [Eyes] ground 1:00 round [-230, 14]: {minecraft:calcite=2, minecraft:diorite_wall=20, minecraft:gold_block=5, minecraft:grass_block=2090, minecraft:lantern=20, minecraft:moss_block=3, minecraft:polished_andesite=42, minecraft:polished_andesite_stairs=20, minecraft:quartz_stairs=44, minecraft:raw_iron_block=17, minecraft:smooth_quartz=36, minecraft:smooth_quartz_slab=8, minecraft:smooth_quartz_stairs=56, minecraft:smooth_stone=16, minecraft:stone_brick_stairs=8, minecraft:stone_bricks=14}
+[07:00:45] [IO-Worker-2/INFO]: [Eyes] 05_rts_one_minute: Saved screenshot as bat_eyes_05_rts_one_minute.png
+[07:00:47] [Render thread/INFO]: [Eyes] 06_build_menu: selected villager_unit (id 15), its card shows 42 buttons (abilities + buildings)
+[07:00:48] [Render thread/INFO]: [Eyes] clip-mark 06_build_menu 1793430048640
+[07:00:48] [Render thread/INFO]: [Eyes] 07_army_close: sent 24 summon commands; me 'Offline' at [-222, 70, 30], enemy 'Bot1 (medium)' at [-222, 70, 48], capitol -222, 79, 8, axis 0/1
+[07:00:49] [IO-Worker-4/INFO]: [Eyes] 06_build_menu: Saved screenshot as bat_eyes_06_build_menu.png
+[07:00:50] [Render thread/INFO]: [Eyes] mesh A/B #1 (Paladin 72, standing): cube body 128997 px, mesh body 128997 px, 0 of 460800 px differ - IDENTICAL; plain cube vs mesh: 0 px differ, fast vs plain cube: 0 px
+[07:00:51] [Render thread/INFO]: [Eyes] 07_army_close: veteran rank 2 on Squire Runner
+[07:00:52] [Render thread/INFO]: [Eyes] 07_army_close: mine 12 within 12 of [-222, 70, 30] spread 4.2 x 4.0 blocks: {iron_golem_unit=1, militia_unit=4, pillager_unit=4, vindicator_unit=2, witch_unit=1}; enemy 12 within 12 of [-222, 70, 48] spread 6.4 x 6.1 blocks: {creeper_unit=1, skeleton_unit=4, spider_unit=2, stray_unit=1, zombie_unit=4}; my fighters 12 (all my units 17), enemy 'Bot1 (medium)' units 12, projectiles in the air 3, 0 selected
+[07:00:52] [Render thread/INFO]: [Eyes] clip-mark 07_army_close 1793430052720
+[07:00:52] [Render thread/INFO]: [Eyes] 07b_paladin_close: zooming in to 7.02 on Tabard Paladin at [-220, 70, 32]
+[07:00:53] [IO-Worker-6/INFO]: [Eyes] 07_army_close: Saved screenshot as bat_eyes_07_army_close.png
+[07:00:57] [Render thread/INFO]: [Eyes] 07b_paladin_close: zoom 7.02 (target reached when it equals the zoom above)
+[07:00:57] [Render thread/INFO]: [Eyes] 07b_paladin_close framing: middle at (-0.24, 0.31), fills 22% of the frame height, zoom 7.0
+[07:00:57] [Render thread/INFO]: [Eyes] clip-mark 07b_paladin_close 1793430057667
+[07:00:57] [Render thread/INFO]: [Eyes] 07c_paladin_walk: moving it to -212, 70, 36
+[07:00:58] [IO-Worker-4/INFO]: [Eyes] 07b_paladin_close: Saved screenshot as bat_eyes_07b_paladin_close.png
+[07:00:59] [Render thread/INFO]: [Eyes] 07c_paladin_walk framing: middle at (-0.21, 0.36), fills 22% of the frame height, zoom 7.0
+[07:00:59] [Render thread/INFO]: [Eyes] clip-mark 07c_paladin_walk 1793430059698
+[07:00:59] [Render thread/INFO]: [Eyes] 07d_paladin_attack: two ghouls of 'Bot1 (medium)' at its feet, AI off (dummies)
+[07:01:00] [IO-Worker-9/INFO]: [Eyes] 07c_paladin_walk: Saved screenshot as bat_eyes_07c_paladin_walk.png
+[07:01:02] [Render thread/INFO]: [Eyes] step 7 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:01:04] [Render thread/INFO]: [Eyes] 07d_paladin_attack framing: middle at (-0.27, 0.30), fills 22% of the frame height, zoom 7.0
+[07:01:04] [Render thread/INFO]: [Eyes] clip-mark 07d_paladin_attack 1793430064754
+[07:01:04] [Render thread/INFO]: [Eyes] 07e_medic_close: zooming in to 5.07 on Field Medic at [-216, 71, 28]
+[07:01:05] [IO-Worker-9/INFO]: [Eyes] 07d_paladin_attack: Saved screenshot as bat_eyes_07d_paladin_attack.png
+[07:01:09] [Render thread/INFO]: [Eyes] 07e_medic_close: zoom 5.07 (target reached when it equals the zoom above)
+[07:01:09] [Render thread/INFO]: [Eyes] 07e_medic_close framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[07:01:09] [Render thread/INFO]: [Eyes] clip-mark 07e_medic_close 1793430069661
+[07:01:09] [Render thread/INFO]: [Eyes] 07f_medic_walk: moving it to -207, 71, 30
+[07:01:10] [IO-Worker-2/INFO]: [Eyes] 07e_medic_close: Saved screenshot as bat_eyes_07e_medic_close.png
+[07:01:11] [Render thread/INFO]: [Eyes] 07f_medic_walk framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[07:01:11] [Render thread/INFO]: [Eyes] clip-mark 07f_medic_walk 1793430071612
+[07:01:11] [Render thread/INFO]: [Eyes] 07g_medic_throw: two ghouls of 'Bot1 (medium)' at its feet, AI off (dummies)
+[07:01:12] [IO-Worker-2/INFO]: [Eyes] 07f_medic_walk: Saved screenshot as bat_eyes_07f_medic_walk.png
+[07:01:16] [Render thread/INFO]: [Eyes] 07g_medic_throw framing: middle at (-0.22, 0.34), fills 22% of the frame height, zoom 5.1
+[07:01:16] [Render thread/INFO]: [Eyes] clip-mark 07g_medic_throw 1793430076664
+[07:01:16] [Render thread/INFO]: [Eyes] 07h_halberdier_close: zooming in to 5.07 on Halberdier at [-219, 70, 41]
+[07:01:17] [IO-Worker-2/INFO]: [Eyes] 07g_medic_throw: Saved screenshot as bat_eyes_07g_medic_throw.png
+[07:01:17] [Render thread/INFO]: [Eyes] mesh A/B #2 (Paladin 72, walking): cube body 124714 px, mesh body 124714 px, 0 of 460800 px differ - IDENTICAL; plain cube vs mesh: 0 px differ, fast vs plain cube: 0 px
+[07:01:21] [Render thread/WARN]: [Eyes] 07h_halberdier_close: the subject died before its still - trying another one
+[07:01:21] [Render thread/INFO]: [Eyes] 07h_halberdier_close: zooming in to 5.07 on Halberdier at [-216, 70, 43]
+[07:01:26] [Render thread/INFO]: [Eyes] 07h_halberdier_close: zoom 5.07 (target reached when it equals the zoom above)
+[07:01:26] [Render thread/INFO]: [Eyes] 07h_halberdier_close framing: middle at (-0.34, 0.30), fills 22% of the frame height, zoom 5.1
+[07:01:26] [Render thread/INFO]: [Eyes] clip-mark 07h_halberdier_close 1793430086656
+[07:01:26] [Render thread/INFO]: [Eyes] 07i_halberdier_walk: moving it to -210, 70, 45
+[07:01:27] [IO-Worker-5/INFO]: [Eyes] 07h_halberdier_close: Saved screenshot as bat_eyes_07h_halberdier_close.png
+[07:01:28] [Render thread/WARN]: [Eyes] 07h_halberdier_close: the subject was gone before its still (phase 1)
+[07:01:28] [Render thread/INFO]: [Eyes] 07k_levy_close: zooming in to 5.07 on Crossbow Levy at [-229, 70, 26]
+[07:01:32] [Render thread/INFO]: [Eyes] step 7 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:01:33] [Render thread/INFO]: [Eyes] 07k_levy_close: zoom 5.07 (target reached when it equals the zoom above)
+[07:01:33] [Render thread/INFO]: [Eyes] 07k_levy_close framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[07:01:33] [Render thread/INFO]: [Eyes] clip-mark 07k_levy_close 1793430093599
+[07:01:33] [Render thread/INFO]: [Eyes] 07l_levy_walk: moving it to -222, 70, 26
+[07:01:34] [IO-Worker-4/INFO]: [Eyes] 07k_levy_close: Saved screenshot as bat_eyes_07k_levy_close.png
+[07:01:35] [Render thread/INFO]: [Eyes] 07l_levy_walk framing: middle at (-0.17, 0.41), fills 22% of the frame height, zoom 5.1
+[07:01:35] [Render thread/INFO]: [Eyes] clip-mark 07l_levy_walk 1793430095695
+[07:01:35] [Render thread/INFO]: [Eyes] 07m_levy_shoot: two ghouls of 'Bot1 (medium)' at its feet, AI off (dummies)
+[07:01:36] [IO-Worker-4/INFO]: [Eyes] 07l_levy_walk: Saved screenshot as bat_eyes_07l_levy_walk.png
+[07:01:40] [Render thread/INFO]: [Eyes] 07m_levy_shoot framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[07:01:40] [Render thread/INFO]: [Eyes] clip-mark 07m_levy_shoot 1793430100712
+[07:01:40] [Render thread/INFO]: [Eyes] 07n_squire_close: zooming in to 5.07 on Squire Runner at [-221, 70, 28]
+[07:01:41] [IO-Worker-9/INFO]: [Eyes] 07m_levy_shoot: Saved screenshot as bat_eyes_07m_levy_shoot.png
+[07:01:45] [Render thread/INFO]: [Eyes] 07n_squire_close: zoom 5.07 (target reached when it equals the zoom above)
+[07:01:45] [Render thread/INFO]: [Eyes] 07n_squire_close framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[07:01:45] [Render thread/INFO]: [Eyes] clip-mark 07n_squire_close 1793430105691
+[07:01:45] [Render thread/INFO]: [Eyes] 07o_squire_run: moving it to -214, 70, 28
+[07:01:46] [IO-Worker-2/INFO]: [Eyes] 07n_squire_close: Saved screenshot as bat_eyes_07n_squire_close.png
+[07:01:47] [Render thread/INFO]: [Eyes] 07o_squire_run framing: middle at (-0.10, 0.51), fills 22% of the frame height, zoom 5.1
+[07:01:47] [Render thread/INFO]: [Eyes] clip-mark 07o_squire_run 1793430107664
+[07:01:47] [Render thread/INFO]: [Eyes] 07p_squire_attack: two ghouls of 'Bot1 (medium)' at its feet, AI off (dummies)
+[07:01:48] [IO-Worker-2/INFO]: [Eyes] 07o_squire_run: Saved screenshot as bat_eyes_07o_squire_run.png
+[07:01:52] [Render thread/INFO]: [Eyes] 07p_squire_attack framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[07:01:52] [Render thread/INFO]: [Eyes] clip-mark 07p_squire_attack 1793430112588
+[07:01:52] [Render thread/INFO]: [Eyes] 07q_squire_bow_close: zooming in to 5.07 on Squire Runner at [-213, 71, 30]
+[07:01:53] [IO-Worker-9/INFO]: [Eyes] 07p_squire_attack: Saved screenshot as bat_eyes_07p_squire_attack.png
+[07:01:57] [Render thread/WARN]: [Eyes] 07q_squire_bow_close: the subject died before its still - trying another one
+[07:01:57] [Render thread/INFO]: [Eyes] 07q_squire_bow_close: zooming in to 5.07 on Squire Runner at [-214, 71, 28]
+[07:02:02] [Render thread/WARN]: [Eyes] 07q_squire_bow_close: the subject was gone before its still (phase 0)
+[07:02:02] [Render thread/WARN]: [Eyes] 07t_bone_dragon_close: no BoneDragonUnit left in the army (the battle took them); summoned a stand-in at -222 70 27
+[07:02:02] [Render thread/INFO]: [Eyes] 07t_bone_dragon_close: zooming in to 5.0 on Bone Dragon at [-222, 70, 27]
+[07:02:02] [Render thread/INFO]: [Eyes] step 7 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:02:08] [Render thread/INFO]: [Eyes] 07t_bone_dragon_close: zoom 5.0 (target reached when it equals the zoom above)
+[07:02:08] [Render thread/INFO]: [Eyes] 07t_bone_dragon_close framing: middle at (-0.15, 0.52), fills 20% of the frame height, zoom 5.0
+[07:02:08] [Render thread/INFO]: [Eyes] clip-mark 07t_bone_dragon_close 1793430128235
+[07:02:08] [Render thread/INFO]: [Eyes] 07u_bone_dragon_fly: moving it to -209, 78, 33
+[07:02:08] [IO-Worker-4/INFO]: [Eyes] 07t_bone_dragon_close: Saved screenshot as bat_eyes_07t_bone_dragon_close.png
+[07:02:10] [Render thread/INFO]: [Eyes] 07u_bone_dragon_fly framing: middle at (-0.25, 0.30), fills 20% of the frame height, zoom 5.0
+[07:02:10] [Render thread/INFO]: [Eyes] clip-mark 07u_bone_dragon_fly 1793430130231
+[07:02:10] [Render thread/INFO]: [Eyes] 07v_bone_dragon_bite: two ghouls of 'Bot1 (medium)' at its feet, AI off (dummies)
+[07:02:10] [IO-Worker-9/INFO]: [Eyes] 07u_bone_dragon_fly: Saved screenshot as bat_eyes_07u_bone_dragon_fly.png
+[07:02:15] [Render thread/INFO]: [Eyes] 07v_bone_dragon_bite framing: middle at (-0.25, 0.30), fills 20% of the frame height, zoom 5.0
+[07:02:15] [Render thread/INFO]: [Eyes] clip-mark 07v_bone_dragon_bite 1793430135257
+[07:02:15] [Render thread/WARN]: [Eyes] 07w_mossback_bison_close: no MossbackBisonUnit left in the army (the battle took them); summoned a stand-in at -222 70 27
+[07:02:15] [Render thread/INFO]: [Eyes] 07w_mossback_bison_close: zooming in to 6.0839996 on Mossback Bison at [-222, 70, 27]
+[07:02:15] [IO-Worker-9/INFO]: [Eyes] 07v_bone_dragon_bite: Saved screenshot as bat_eyes_07v_bone_dragon_bite.png
+[07:02:20] [Render thread/INFO]: [Eyes] 07w_mossback_bison_close: zoom 6.0839996 (target reached when it equals the zoom above)
+[07:02:20] [Render thread/INFO]: [Eyes] 07w_mossback_bison_close framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 6.1
+[07:02:20] [Render thread/INFO]: [Eyes] clip-mark 07w_mossback_bison_close 1793430140654
+[07:02:20] [Render thread/INFO]: [Eyes] 07x_mossback_bison_walk: moving it to -215, 70, 27
+[07:02:21] [IO-Worker-2/INFO]: [Eyes] 07w_mossback_bison_close: Saved screenshot as bat_eyes_07w_mossback_bison_close.png
+[07:02:22] [Render thread/INFO]: [Eyes] 07x_mossback_bison_walk framing: middle at (-0.15, 0.44), fills 22% of the frame height, zoom 6.1
+[07:02:22] [Render thread/INFO]: [Eyes] clip-mark 07x_mossback_bison_walk 1793430142653
+[07:02:22] [Render thread/INFO]: [Eyes] 07y_mossback_bison_attack: two ghouls of 'Bot1 (medium)' at its feet, AI off (dummies)
+[07:02:23] [IO-Worker-5/INFO]: [Eyes] 07x_mossback_bison_walk: Saved screenshot as bat_eyes_07x_mossback_bison_walk.png
+[07:02:27] [Render thread/INFO]: [Eyes] 07y_mossback_bison_attack framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 6.1
+[07:02:27] [Render thread/INFO]: [Eyes] clip-mark 07y_mossback_bison_attack 1793430147678
+[07:02:28] [IO-Worker-5/INFO]: [Eyes] 07y_mossback_bison_attack: Saved screenshot as bat_eyes_07y_mossback_bison_attack.png
+[07:02:29] [Render thread/INFO]: [Eyes] 08_box_drag: box (384.0, 84.0)-(150.0, 216.0) lights 2 units
+[07:02:29] [Render thread/INFO]: [Eyes] clip-mark 08_box_drag 1793430149722
+[07:02:30] [IO-Worker-4/INFO]: [Eyes] 08_box_drag: Saved screenshot as bat_eyes_08_box_drag.png
+[07:02:30] [Render thread/INFO]: [Eyes] 08_box_select: 2 selected (drag box), card shows pillager_unit
+[07:02:31] [Render thread/INFO]: [Eyes] clip-mark 08_box_select 1793430151793
+[07:02:31] [Render thread/INFO]: [Eyes] 09_fight: attack-move 2 units to [-222, 70, 48] (9 mine, 0 enemy alive)
+[07:02:32] [IO-Worker-4/INFO]: [Eyes] 08_box_select: Saved screenshot as bat_eyes_08_box_select.png
+[07:02:33] [Render thread/INFO]: [Eyes] step 9 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:02:33] [Render thread/INFO]: [Eyes] 09_fight: contact after 2 s (a unit died); armies ? blocks apart
+[07:02:34] [Render thread/INFO]: [Eyes] 09_fight: my fighters 7 (all my units 12), enemy 'Bot1 (medium)' units 0, projectiles in the air 0, 2 selected
+[07:02:34] [Render thread/INFO]: [Eyes] clip-mark 09_fight 1793430154763
+[07:02:35] [IO-Worker-2/INFO]: [Eyes] 09_fight: Saved screenshot as bat_eyes_09_fight.png
+[07:02:36] [Render thread/INFO]: [Eyes] 10_fight_strategic: zoom 85.0 (icons above 70.0); my fighters 7 (all my units 12), enemy 'Bot1 (medium)' units 0, projectiles in the air 0, 2 selected
+[07:02:36] [Render thread/INFO]: [Eyes] clip-mark 10_fight_strategic 1793430156774
+[07:02:37] [IO-Worker-2/INFO]: [Eyes] 10_fight_strategic: Saved screenshot as bat_eyes_10_fight_strategic.png
+[07:02:38] [Render thread/INFO]: [Eyes] 11_capitol_two_minutes: match 3:32 capitol -222, 79, 8 at zoom 30.0; my fighters 7 (all my units 12), enemy 'Bot1 (medium)' units 0, projectiles in the air 0, 0 selected
+[07:02:38] [Render thread/INFO]: [Eyes] clip-mark 11_capitol_two_minutes 1793430158851
+[07:02:38] [Server thread/INFO]: [Eyes] ground 2:00 round [-225, 11]: {minecraft:calcite=2, minecraft:diorite_wall=20, minecraft:gold_block=5, minecraft:grass_block=2065, minecraft:lantern=20, minecraft:moss_block=3, minecraft:polished_andesite=53, minecraft:polished_andesite_stairs=20, minecraft:quartz_stairs=44, minecraft:raw_iron_block=25, minecraft:smooth_quartz=36, minecraft:smooth_quartz_slab=8, minecraft:smooth_quartz_stairs=56, minecraft:smooth_stone=19, minecraft:stone_brick_stairs=8, minecraft:stone_bricks=17}
+[07:02:39] [IO-Worker-5/INFO]: [Eyes] 11_capitol_two_minutes: Saved screenshot as bat_eyes_11_capitol_two_minutes.png
+[07:02:40] [Render thread/INFO]: [Eyes] clip-mark 11b_capitol_selected 1793430160420
+[07:02:40] [Render thread/INFO]: [Eyes] 12_river_crossing: pad -266..-239 x 26..50 at y 70, water x -254..-251 (1 deep); mine at [-261, 70, 38], enemy at [-244, 70, 38]
+[07:02:41] [IO-Worker-2/INFO]: [Eyes] 11b_capitol_selected: Saved screenshot as bat_eyes_11b_capitol_selected.png
+[07:02:41] [Render thread/INFO]: [Eyes] 12_river_crossing: sent 20 summon commands
+[07:02:43] [Render thread/INFO]: [Eyes] 12_river_crossing: attack-move 12 units (12 mine, 8 enemy near the banks) to [-244, 70, 38]; mine: 0 in the water, 12 on the near bank, 5 on the far bank (spread 48.0 x 21.1 blocks); enemy 'Bot1 (medium)': 8 alive, 0 in the water; projectiles 0
+[07:02:43] [Render thread/INFO]: [Eyes] 12_river_crossing: contact after 0 s (the groups' centroids are within 8 blocks); groups 3.6 blocks apart; mine: 0 in the water, 12 on the near bank, 5 on the far bank (spread 48.0 x 21.1 blocks); enemy 'Bot1 (medium)': 8 alive, 0 in the water; projectiles 0
+[07:02:44] [Render thread/INFO]: [Eyes] 12_river_crossing (contact): mine: 0 in the water, 12 on the near bank, 5 on the far bank (spread 47.5 x 21.1 blocks); enemy 'Bot1 (medium)': 8 alive, 0 in the water; projectiles 0
+[07:02:44] [Render thread/INFO]: [Eyes] clip-mark 12_river_crossing 1793430164083
+[07:02:44] [IO-Worker-2/INFO]: [Eyes] 12_river_crossing: Saved screenshot as bat_eyes_12_river_crossing.png
+[07:02:50] [Render thread/INFO]: [Eyes] 12_river_crossing_6s: mine: 0 in the water, 12 on the near bank, 5 on the far bank (spread 45.3 x 21.1 blocks); enemy 'Bot1 (medium)': 8 alive, 0 in the water; projectiles 0
+[07:02:50] [Render thread/INFO]: [Eyes] clip-mark 12_river_crossing_6s 1793430170049
+[07:02:50] [Render thread/INFO]: [Eyes] 13_dome: pad round [-192, 72, 38]
+[07:02:50] [IO-Worker-4/INFO]: [Eyes] 12_river_crossing_6s: Saved screenshot as bat_eyes_12_river_crossing_6s.png
+[07:02:51] [Render thread/INFO]: [Eyes] 13_dome: sent 11 summon commands
+[07:02:52] [Render thread/INFO]: [Eyes] 13_dome: Bastion Aegis cast by 1073 at -194, 72, 39
+[07:02:53] [Render thread/INFO]: [Eyes] 13_dome: domes on the client 1
+[07:02:53] [Render thread/INFO]: [Eyes] clip-mark 13_dome 1793430173311
+[07:02:53] [IO-Worker-2/INFO]: [Eyes] 13_dome: Saved screenshot as bat_eyes_13_dome.png
+[07:02:54] [Render thread/INFO]: [Eyes] 13_dome_hit: domes on the client 1, projectiles 0
+[07:02:54] [Render thread/INFO]: [Eyes] clip-mark 13_dome_hit 1793430174223
+[07:02:54] [Render thread/INFO]: [Eyes] 14_first_person: RTS eye at y 89 (ground 72)
+[07:02:54] [IO-Worker-4/INFO]: [Eyes] 13_dome_hit: Saved screenshot as bat_eyes_13_dome_hit.png
+[07:02:59] [Render thread/INFO]: [Eyes] 14_first_person: eye at [-232, 74, -2] y 75 looking at the capitol -222, 79, 8
+[07:02:59] [Render thread/INFO]: [Eyes] clip-mark 14_first_person 1793430179170
+[07:02:59] [Render thread/INFO]: [Eyes] 16 scars: pad at -266, 70, 52 (capitol -222, 79, 8), fog of war on the client: true
+[07:02:59] [IO-Worker-9/INFO]: [Eyes] 14_first_person: Saved screenshot as bat_eyes_14_first_person.png
+[07:03:03] [Render thread/INFO]: [Eyes] step 21 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:03:08] [Render thread/INFO]: [Eyes] clip-mark 16_scars_before_rts 1793430188880
+[07:03:09] [IO-Worker-13/INFO]: [Eyes] 16_scars_before_rts: Saved screenshot as bat_eyes_16_scars_before_rts.png
+[07:03:17] [Render thread/INFO]: [Eyes] 16 scars: 0 chunks marked on the server; client: 0 chunk copies (0 marked), 17 regions (0 drawn, 0 quads), rebuilds 0, last build 0.00 ms, draw 0.00 ms
+[07:03:17] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts 1793430197061
+[07:03:17] [Render thread/INFO]: [Eyes] 16 probe client dirt path: (-272,58) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.dirt_path, surface 69.938, one below block.minecraft.dirt
+[07:03:17] [Render thread/INFO]: [Eyes] 16 probe client snow 1: (-260,59) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.125, one below block.minecraft.grass_block
+[07:03:17] [Render thread/INFO]: [Eyes] 16 probe client snow 2: (-259,59) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.250, one below block.minecraft.grass_block
+[07:03:17] [Render thread/INFO]: [Eyes] 16 probe client snow 4: (-257,59) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.500, one below block.minecraft.grass_block
+[07:03:17] [Render thread/INFO]: [Eyes] 16 probe client top slab: (-259,55) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 71.000, one below block.minecraft.grass_block
+[07:03:17] [Render thread/INFO]: [Eyes] 16 probe client bottom slab: (-258,55) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 70.500, one below block.minecraft.grass_block
+[07:03:17] [Render thread/INFO]: [Eyes] 16 probe client stairs: (-259,50) MOTION_BLOCKING 71 NO_LEAVES 71 top 71 = block.minecraft.grass_block, surface 72.000, one below block.minecraft.dirt
+[07:03:17] [Render thread/INFO]: [Eyes] 16 probe client flat grass: (-266,52) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[07:03:17] [Render thread/INFO]: [Eyes] 16 probe client game ender centre: (-270,63) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[07:03:17] [Server thread/INFO]: [Eyes] 16 probe server dirt path: (-272,58) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.dirt_path, surface 69.938, one below block.minecraft.dirt, scorch 0 crater 0
+[07:03:17] [Server thread/INFO]: [Eyes] 16 probe server snow 1: (-260,59) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.125, one below block.minecraft.grass_block, scorch 0 crater 0
+[07:03:17] [Server thread/INFO]: [Eyes] 16 probe server snow 2: (-259,59) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.250, one below block.minecraft.grass_block, scorch 0 crater 0
+[07:03:17] [Server thread/INFO]: [Eyes] 16 probe server snow 4: (-257,59) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.500, one below block.minecraft.grass_block, scorch 0 crater 0
+[07:03:17] [Server thread/INFO]: [Eyes] 16 probe server top slab: (-259,55) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 71.000, one below block.minecraft.grass_block, scorch 0 crater 0
+[07:03:17] [Server thread/INFO]: [Eyes] 16 probe server bottom slab: (-258,55) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 70.500, one below block.minecraft.grass_block, scorch 0 crater 0
+[07:03:17] [Server thread/INFO]: [Eyes] 16 probe server stairs: (-259,50) MOTION_BLOCKING 71 NO_LEAVES 71 top 71 = block.minecraft.grass_block, surface 72.000, one below block.minecraft.dirt, scorch 0 crater 0
+[07:03:17] [Server thread/INFO]: [Eyes] 16 probe server flat grass: (-266,52) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt, scorch 0 crater 0
+[07:03:17] [Server thread/INFO]: [Eyes] 16 probe server game ender centre: (-270,63) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt, scorch 0 crater 0
+[07:03:17] [IO-Worker-4/INFO]: [Eyes] 16_scars_rts: Saved screenshot as bat_eyes_16_scars_rts.png
+[07:03:21] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_close 1793430201120
+[07:03:21] [IO-Worker-4/INFO]: [Eyes] 16_scars_rts_close: Saved screenshot as bat_eyes_16_scars_rts_close.png
+[07:03:25] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_crater 1793430205181
+[07:03:25] [IO-Worker-13/INFO]: [Eyes] 16_scars_rts_crater: Saved screenshot as bat_eyes_16_scars_rts_crater.png
+[07:03:30] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_far 1793430210218
+[07:03:30] [IO-Worker-4/INFO]: [Eyes] 16_scars_rts_far: Saved screenshot as bat_eyes_16_scars_rts_far.png
+[07:03:33] [Render thread/INFO]: [Eyes] step 21 screen none level true
+[07:03:35] [Render thread/INFO]: [Eyes] clip-mark 16_scars_fp_crater 1793430215501
+[07:03:35] [IO-Worker-4/INFO]: [Eyes] 16_scars_fp_crater: Saved screenshot as bat_eyes_16_scars_fp_crater.png
+[07:03:40] [Render thread/INFO]: [Eyes] clip-mark 16_scars_fp_steps 1793430220659
+[07:03:40] [Render thread/INFO]: [Eyes] 16 scars: done, client: 0 chunk copies (0 marked), 17 regions (0 drawn, 0 quads), rebuilds 0, last build 0.00 ms, draw 0.00 ms
+[07:03:40] [Render thread/INFO]: [Eyes] 17_fog: fog of war on, 12 marchers summoned at [-197, 70, 7]
+[07:03:41] [IO-Worker-12/INFO]: [Eyes] 16_scars_fp_steps: Saved screenshot as bat_eyes_16_scars_fp_steps.png
+[07:04:03] [Render thread/INFO]: [Eyes] step 22 screen com.solegendary.reignofnether.matchstart.MatchEndScreen level true
+[07:04:20] [Render thread/WARN]: [Eyes] 17_fog: gave up - fog on the client false, 12 marchers (border 720 -> 720, fog on the server: true, 7 other units cleared off the route)
+[07:04:22] [Render thread/INFO]: [Eyes] unit textures with mips: 24 of 33 registered (up to 3 levels)
+[07:04:22] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[07:04:22] [Render thread/INFO]: [Eyes] tour complete
