@@ -53,7 +53,7 @@ LEAF = dict(persistent="true", distance="7", waterlogged="false")
 
 # the palette by role (camera values from design/vehicle_labs/camera_colours.json, west / south / up)
 PAVE = "mossy_stone_bricks"            # 0.25 / 0.34 / 0.41
-LANE_FLOOR = "deepslate_tiles"         # up 0.22: the dark mouth
+LANE_FLOOR = "mud"                     # the passage floor: dark and smooth (round 2's deepslate tiles read as "a grate")
 PLINTH = "deepslate_bricks"            # 0.18 / 0.26
 STONE = "stone_bricks"                 # 0.29 / 0.32
 MOSSY = "mossy_stone_bricks"
@@ -112,11 +112,14 @@ class Canvas:
 
 # ================================================================================================= ground
 def ground(c):
-    """y 0: mossy stone paving (one material: a calm ground), the passage floor dark under its ceiling (round 1's
-    dark apron outside the gate read as "a floor grate" from the RTS camera)."""
+    """y 0: the lawn runs in under the tree (grass, the ground's own value: round 2's full grey pad read as "a model
+    on a plinth"); mossy stone paving only where feet go - the gate's approach strip (x 0..1), round the hall and the
+    gallery, the well; the passage floor dark under its ceiling (round 1's dark apron outside read as a grate)."""
     for x in range(SX):
         for z in range(SZ):
-            c.b[(x, 0, z)] = (LANE_FLOOR if 2 <= x <= 7 and 6 <= z <= 10 else PAVE, {})
+            paved = x <= 1 or (x <= 9 and 2 <= z <= 13) or z >= 13 and x <= 10
+            c.b[(x, 0, z)] = (LANE_FLOOR if 2 <= x <= 7 and 6 <= z <= 10 else PAVE if paved else "grass_block",
+                              {"snowy": "false"} if not paved else {})
 
 
 # ================================================================================================= the hall
@@ -206,8 +209,8 @@ def gallery(c):
     for x in range(1, 10):
         if x in (1, 4, 7):
             continue
-        for y in range(1, 5):
-            c.clear(x, y, 16)
+        for y in (3, 4):                                      # windows, not tall arches (round 2: the
+            c.clear(x, y, 16)                                 # arcade competed with the gate's darkness)
         c.stair(x, 5, 16, "west" if x in (2, 5, 8) else "east", "top")       # the bay's arched head
         c.set(x, 6, 16, STRING, facing="south", shape="straight")
     for x in (1, 4, 7):
@@ -231,7 +234,7 @@ def _path(keys, ys):
 
 
 TRUNK_KEYS = [(1, 13.0, 12.2, 3.1), (4, 13.0, 11.3, 2.6), (8, 12.4, 9.6, 2.1), (13, 12.0, 8.0, 1.9),
-              (17, 11.7, 6.8, 1.7), (22, 11.5, 6.0, 1.4)]
+              (17, 11.0, 6.8, 1.7), (22, 10.3, 6.6, 1.4)]
 TRUNK_PATH = _path(TRUNK_KEYS, range(1, 13))
 TRUNK_L3 = _path(TRUNK_KEYS, range(13, 23))
 
@@ -271,7 +274,7 @@ def line(c, p0, p1, name=BARK, fill_down=False):
         prev = q
 
 
-def canopy(c, cx, cz, y0, y1, r, seed=0, keep=lambda x, y, z: True):
+def canopy(c, cx, cz, y0, y1, r, seed=0, keep=lambda x, y, z: True, valleys=True):
     """One canopy tier: a broad irregular disc, the belly (y0) spruce, the top all cherry (round 1's scattered spruce
     gaps read as "spots", "a chequer"), clumps with one-deep valleys between them on 3-thick tiers (shadow, not a
     lid), drips of spruce under the rim; the top steps in by a block (a rounded edge)."""
@@ -286,13 +289,13 @@ def canopy(c, cx, cz, y0, y1, r, seed=0, keep=lambda x, y, z: True):
                 rim = r + wob - (1.0 if y == y1 and y1 > y0 else 0)
                 if d > rim or not keep(x, y, z):
                     continue
-                if y == y1 and y1 - y0 >= 2 and hsh(x // 2, z // 2, seed + 13) % 3 == 0:
+                if valleys and y == y1 and y1 - y0 >= 2 and hsh(x // 2, z // 2, seed + 13) % 3 == 0:
                     continue                                  # a valley between clumps (shadow), cherry below it
                 under = y == y0 and y1 > y0 and d <= r + wob - 1.0      # covered by the top: the dark belly
                 nm = BELLY if under else TOP
                 c.put(x, y, z, nm, **LEAF)
             if r + wob - 1.0 < d <= r + wob and hsh(x, z, seed + 3) % 3 == 0 and keep(x, y0 - 1, z):
-                c.put(x, y0 - 1, z, BELLY, **LEAF)
+                c.put(x, y0 - 1, z, TOP, **LEAF)             # cherry drips (round 2: green bands)
 
 
 def smooth_grooves(c):
@@ -320,7 +323,8 @@ def bark_tops(c):
     """Every bark cell open to the sky shows end grain / grey bark (oak log, up 0.33, sat 0.30) instead of the
     stripped bark's sunlit top (stripped oak 0.63, sat 0.46 - a loud tan from above; stripped birch 0.62)."""
     for (x, y, z), (n, p) in list(c.b.items()):
-        if n == BARK and (x, y + 1, z) not in c.b:
+        if n == BARK and (x, y + 1, z) not in c.b and y <= 13:    # the limb keeps its pale top (round 2: log
+            # tops on its diagonal read as "a staircase of slabs")
             c.b[(x, y, z)] = ("oak_log", {"axis": "y"})
 
 
@@ -339,13 +343,14 @@ def great_tree(c, l3):
         for y in (1, 2):                                     # cameras look (round 1's faced the well: never seen)
             c.set(x, y, 15, GLOW)
             c.clear(x, y, 16)
-    canopy(c, 12.0, 8.0, 13, 15, 3.6, seed=1)                # the L1 tier (L3 keeps it as its lowest)
+    canopy(c, 12.0, 8.0, 13, 15, 3.6, seed=1, valleys=False)  # the L1 tier (L3 keeps it; round 2's valleys: a ring)
     if not l3:
         return
     trunk(c, TRUNK_L3)
     # the great limb (ref06's wrap and crescent): out of the trunk, arching over the well and onto the hall's ridge
     # with two cells of sky between it and the roof, its tip curling down onto the west end of the ridge (round 1:
     # "the tree does not wrap the hall", "no sky between limb and hall")
+    line(c, (11, 14, 7), (9, 17, 7))
     line(c, (11, 15, 7), (9, 18, 7))
     line(c, (11, 16, 8), (9, 19, 7))
     line(c, (9, 19, 7), (8, 20, 7))
@@ -357,8 +362,8 @@ def great_tree(c, l3):
     line(c, (11, 19, 6), (14, 21, 8))                        # the east bough under tier 2
     sky = lambda x, y, z: not (x <= 7 and y < 21)            # noqa: E731  - leave the air over the hall open
     canopy(c, 12.5, 6.5, 17, 18, 6.2, seed=2, keep=sky)
-    canopy(c, 12.0, 7.5, 20, 22, 5.3, seed=3)
-    canopy(c, 11.5, 5.5, 23, 24, 2.6, seed=4)
+    canopy(c, 9.5, 7.5, 21, 23, 5.8, seed=3)                 # over the hall and the limb: canopy and roof interlock
+    canopy(c, 10.0, 6.5, 24, 25, 3.0, seed=4)
     for (x, z) in ((11, 5), (12, 5), (11, 6)):
         c.put(x, 25, z, TOP, **LEAF)
 

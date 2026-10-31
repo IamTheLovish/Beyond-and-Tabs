@@ -58,3 +58,19 @@ west entries, 0.26 / 0.28 hue 225, came from another run and look like a covered
 Camera-model numbers on the round-2 table: canopy 0.800 / 0.247 / 336 (expected 0.80), one tone 1.00, canopy share
 0.334, trunk share 0.236 / 0.198, trunk value 0.328 / 0.337, walls 0.311, roofs 0.382; the glow is in the stills
 (orange on the trunk's south foot in rts and 34). All 21 camera tests green.
+
+## Detail round 3 (round 2's critics: 5 / 6 vs round 1 4 / 5 - a gain; both: next is the wrap, massing)
+Written Oct 31 ~02:45Z, before eyes. One change per element: canopy (tier 2 and 3 moved over the hall and the limb -
+"canopy and roof interlock"; cherry drips, no green bands; the L1 tier without valleys - round 2's "ring"); trunk (its
+top leans toward the hall); limb (a solid arch: a third line under the rise, no log tops on it - "a staircase");
+gate (the passage floor mud, not the tile "grate"; the gallery's bays shortened to windows so the gate is the one tall
+dark); ground (lawn under the tree, paving only where feet go - "a model on a plinth").
+
+| Item | Band (test) | Expected (camera model) |
+|---|---|---|
+| Canopy top value / sat / hue (rts) | 0.60-0.82 / 0.20-0.45 | 0.80 / 0.25 / 336 |
+| Canopy share (rts) | 0.30-0.50 | 0.37 |
+| Trunk + roots share (rts_close / 34) | 0.15-0.28 | 0.20 / 0.16 |
+| Trunk value (rts_close / 34) | 0.32-0.45 | 0.36 / 0.38 |
+| Walls / roofs | 0.30-0.42 / 0.34-0.46 | 0.31 / 0.38 |
+| Sky under the limb, glow seen, one tone, no bands | as round 2 | pass |
