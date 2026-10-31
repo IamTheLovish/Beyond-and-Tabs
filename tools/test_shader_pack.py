@@ -602,8 +602,14 @@ class ShaderPack(unittest.TestCase):
         # it again for the low sun; the dusk's sun fades from ~8 degrees, still full by t11800's height (~0.232); the
         # RTS view's mesh holes are filled from their sides (composite.fsh seamSource), never the map's edge
         light = _read("lib", "light.glsl")
-        self.assertIn("(facing * sideKey(n) * mix(1.0, texAo, 0.5))", light)
-        self.assertIn("return mix(mix(SIDE_SUN, 1.0, up), 1.0, lowSunFull());", light)
+        # Retired pin (light pass 20): "sideKey(n)" and its "mix(mix(SIDE_SUN, 1.0, up), ...)" - lp19's white south faces
+        # 0.74-0.79 against tops 0.95 (Complementary's lit sides nearly their tops): a wall the sun meets squarely takes
+        # SIDE_SUN_SQUARE, a grazed one (the east faces) keeps SIDE_SUN; still all of it for a low sun
+        self.assertIn("(facing * sideKey(n, facing) * mix(1.0, texAo, 0.5))", light)
+        self.assertIn("return mix(mix(side, 1.0, up), 1.0, lowSunFull());", light)
+        self.assertTrue(1.0 <= _const("SIDE_SUN_SQUARE") <= 1.6)
+        self.assertLess(_const("SIDE_SUN_FULL_LO"), _const("SIDE_SUN_FULL_HI"))
+        self.assertGreater(_const("SIDE_SUN_FULL_LO"), 0.26)          # the 5000 east faces stay grazed
         # Retired pin (light pass 16): "SIDE_SUN 0.35-0.75" - lp15 measured the white cubes' sun-lit sides 0.63-0.67
         # (target 0.74-0.78; lp14o 0.71-0.75, Complementary 0.76) with the sun at 0.38 of the light: a lit wall now takes
         # up to 1.3x the Lambert sun of a high sun (tops still brighter: N.L 0.48 x 1.2 against 0.88), never at t11800
@@ -613,6 +619,12 @@ class ShaderPack(unittest.TestCase):
         comp = _read("composite.fsh")
         self.assertIn("if (depth >= 1.0 && orthoView()) {", comp)
         self.assertLessEqual(_const("SEAM_SPAN_PX", comp), 48.0)
+        # light pass 20: lp19's two missing cube east faces (depth 1, the fog colour at the foot) were filled with the
+        # cube's top: a top-facing source costs SEAM_TOP_COST_PX, so the side below is copied; the probes ship off
+        self.assertIn("SEAM_TOP_COST_PX * topP", comp)
+        settings = _read("lib", "settings.glsl")
+        self.assertIn("#define SEAM_PROBE 0", settings)
+        self.assertIn("#define ALBEDO_PROBE 0", settings)
 
     def test_the_meadow_varies_across_the_field(self):
         # light pass 3 (round 41: the lawn read as uniform felt): a world-space low-frequency field on biome-tinted
