@@ -1133,6 +1133,8 @@ public class UnitClientEvents {
                 // The ghost has no blocks, so the picked block is the ground behind/under it: the order is aimed at
                 // the ghost's centre (inside its box: the server's Blueprints.findAt matches it, and the builder walks to the middle, not
                 // the corner origin, which can be off a pad edge). Shift queues it like any order.
+                // A friendly building under construction is found the same way (its missing upper blocks let the ray
+                // reach the ground, so preSelBuilding was null and the click became a move: tester, Oct 26).
                 else if (hudSelectedEntity instanceof WorkerUnit && preSelBuilding == null
                         && (ghost = com.solegendary.reignofnether.building.BlueprintClientEvents.ghostUnderCursor()) != null) {
                     sendUnitCommandAt(UnitAction.BUILD_REPAIR, null, ghost.centrePos);
