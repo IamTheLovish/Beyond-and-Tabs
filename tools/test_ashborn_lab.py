@@ -81,6 +81,8 @@ SUB_SHARE = (0.15, 0.45)        # thin / partial blocks on each camera face: ant
 RUN_MAX = 3
 SET_BACK = 2                    # the second tier stands >= 2 back from the west and south edges (ref29's terraces)
 CAPPED = 0.80                   # >= 80 % of the tier-edge tops are caps (slab / wall / stair / moulding)
+FULL_LIGHTS = ("shroomlight", "glowstone", "sea_lantern", "ochre_froglight", "verdant_froglight",
+               "pearlescent_froglight", "magma_block", "redstone_lamp")
 STALLS_MIN = 4                  # KEEP: >= 4 barred pen stalls in the south face between pilasters
 
 
@@ -90,6 +92,8 @@ def sub_block(n):
     if n.startswith("reignofnether:"):
         import gen_arch_blocks as A
         return n.split(":", 1)[1] in A.BLOCKS
+    if n in FULL_LIGHTS:
+        return False                    # a glowing full cube (shroomlight, froglight, glowstone) is a full block
     return (S.glyph(n) in "s_|=*gr" or n.endswith(("_button", "_pot", "rail", "_trapdoor", "_fence", "_rod"))
             or n.startswith(("potted_", "mcwroofs:", "mcwwindows:", "framedblocks:", "domum_ornamentum:"))
             or n in ("chain", "vine", "end_rod", "bell", "campfire"))

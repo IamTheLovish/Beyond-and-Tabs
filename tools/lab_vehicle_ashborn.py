@@ -55,7 +55,8 @@ OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 PLINTH = "polished_basalt"
 WALL = "deepslate_tiles"
-PAVE = "stone_bricks"                       # up 0.41 (tuff 0.34 sat on the band's floor once the joints' backs showed)
+BAND = "smooth_stone"                       # the plinth's top course on its seen edges (west 0.33 / south 0.44)
+PAVE = "tuff"                               # round 2: stone bricks (0.39) matched the caps from above (both round-1 critics)
 CAP = "andesite_wall"                      # a parapet: half the top area of a slab (round-1 model: slab caps = 20 % of the rts pixels, band 4-12 %)
 CORBEL = "polished_deepslate_stairs"
 ROOF = "mcwroofs:deepslate"
@@ -63,13 +64,16 @@ NEEDLE = "polished_deepslate_wall"
 LANE_FLOOR = "blackstone"
 COURT_FLOOR = "polished_deepslate"
 FLOOR = "polished_deepslate"
-GLOW = "magma_block"
+GLOW = "shroomlight"                        # round 2: magma read dark red (west 0.31, hue 12) and "a honeycomb"
+FORGE_GLOW = "magma_block"                  # the court forge (never seen by the cameras; it lights the court at dusk)
 BARS = "iron_bars"
 HIDE = "black_wool"
 PEN_POST = "deepslate_tiles"               # KEEP: the dark pilasters between the stalls
 DRY = dict(waterlogged="false")
 POST = dict(up="true", north="none", south="none", east="none", west="none", **DRY)
 AXIAL = (PLINTH, "basalt")
+GROOVE = {PLINTH: "polished_deepslate_wall", "deepslate_tiles": "deepslate_tile_wall", "smooth_stone": "stone_brick_wall",
+          "tuff": "andesite_wall"}               # an uncapped rim (the court's) gets light merlons
 
 
 class Grid:
@@ -175,15 +179,18 @@ def ground(g):
 
 
 def plinth(g):
-    """T1: the basalt-column cliff over the whole plot, y 1..6, the court cut out; the tuff terrace ring and a light
-    cap on its outer edge."""
+    """T1: the basalt-column cliff over the whole plot, y 1..6, the court cut out; the tuff terrace ring; on its west
+    and south edges a smooth-stone top course (round 2: a light band under the light parapet, so the first tier's
+    edge reads thick from above, as ref29's caps do, and the plinth separates from the deepslate walls by >= 0.06)."""
     for (x, z) in rect(0, 16, 0, 16):
         if (x, z) in COURT:
             continue
         for y in range(1, 7):
             g.set(x, y, z, PLINTH)
     ring_ = [c for c in rect(0, 16, 0, 16) if not (2 <= c[0] <= 14 and 2 <= c[1] <= 14)]
-    terrace(g, ring_, 6, sw_edge(0, 16, 0, 16), PLINTH)
+    terrace(g, ring_, 6, sw_edge(0, 16, 0, 16), BAND)
+
+
 
 
 def ring(g):
@@ -193,7 +200,7 @@ def ring(g):
     for (x, z) in cells:
         for y in range(7, 11):
             g.set(x, y, z, WALL)
-    terrace(g, cells, 11, sw_edge(2, 14, 2, 14), WALL, rim=[(x, 5) for x in range(3, 11)])    # the court's rim stays uncapped: a light ring round the
+    terrace(g, cells, 11, sw_edge(2, 14, 2, 14), WALL)    # the court's rim stays uncapped: a light ring round the
     #                                                     court read as the biggest light area (massing critic b)
 
 
@@ -203,7 +210,7 @@ def keep_terrace(g):
     for (x, z) in cells:
         for y in range(12, 14):
             g.set(x, y, z, WALL)
-    terrace(g, cells, 14, [(x, 12) for x in range(11, 16)], WALL, rim=[(11, z) for z in (4, 5, 11)])   # its south edge; the west side is the keep's
+    terrace(g, cells, 14, [(x, 12) for x in range(11, 16)], WALL)   # its south edge; the west side is the keep's
 
 
 def keep(g, l3):
@@ -320,7 +327,7 @@ def forge(g):
     for z in (7, 8, 9):
         for y in (1, 2, 3):
             g.set(11, y, z, BARS, **DRY)
-            g.set(12, y, z, GLOW)
+            g.set(12, y, z, FORGE_GLOW)
         g.stair(11, 4, z, "east", "top", CORBEL)
 
 
@@ -331,16 +338,20 @@ def grooves(g):
     depth, not more thin blocks (round-1 model: wall-post grooves put the faces' thin-block share at 50 %)."""
     occ = dict(g.b)
     for (x, y, z), (n, _) in sorted(occ.items()):
-        if y < 1 or n not in (PLINTH, WALL) or (x <= 1 and 4 <= z <= 12 and (y >= 9 or z in (4, 5, 11, 12))):
+        if y < 1 or n not in GROOVE or (x <= 1 and 4 <= z <= 12 and (y >= 9 or z in (4, 5, 11, 12))):
             continue                            # the gate pylon and its jambs have their own rhythm (organ pipes)
         for (dx, dz), k in (((-1, 0), z), ((0, 1), x)):
             nx, nz = x + dx, z + dz
             if 0 <= nx < SX and 0 <= nz < SZ and (nx, y, nz) in occ:
                 continue
             if k % 4 == 2 and (x - dx, y, z - dz) in occ:
-                g.clear(x, y, z)
-                if g.get(x - dx, y, z - dz) == PAVE:  # the joint's back is wall stone, not the terrace's tuff
-                    g.set(x - dx, y, z - dz, n)
+                if g.get(x - dx, y, z - dz) == PAVE:  # a tier's top course: a post, not a notch (round 1's notches
+                    #                                   showed their backs as dark squares in the paving): dark
+                    #                                   under a cap, a light merlon where the course is the top
+                    capped = (x, y + 1, z) in occ
+                    g.set(x, y, z, GROOVE[n] if capped else CAP, **POST)
+                else:
+                    g.clear(x, y, z)
                 break
 
 

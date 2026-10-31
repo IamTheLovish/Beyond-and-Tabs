@@ -21,3 +21,20 @@ Model numbers on the generator (rts_close / 34; colours from the table where mea
 - thin blocks: up 0.40 / 0.44, west 0.33 / 0.34, south 0.32 / 0.35 (band 0.15-0.45)
 - tier edges capped 88 of 93 (>= 80 %)
 - black wool (the pens' hides) not measured yet
+
+### Round 1 measured (eyes 41171365873; the control's noon stills in that run spoiled - dark noon - not used)
+- caps (andesite wall up) 0.511 (expected 0.50-0.54); lights 3.9 % (expected ~5 %: the magma did not read light)
+- magma west 0.31 / up 0.48, hue 0-12: dark red, NOT a glow (expected hue 15-30, value 0.6-0.8) -> glow 0 %
+- plinth - walls 0.0598 (expected 0.061: missed by 0.0002); black wool 0.08; 15/18 locally
+- critics 20261031-012710 (a) / -012718 (b): 5 / 5.5 vs the control's 3 / 3
+
+## Detail round 2, expected (before eyes; control = round 1, design/vehicle_labs/ashborn_l3_r1.nbt)
+One change per element (round 1's critics, both): (1) the heart's glow shroomlight, not magma (vanilla texture mean
+hue 27 / sat 0.71 / value 0.94: expect up 0.65-0.85 on camera, glow share 0.5-0.7 % from its up face alone - the
+table's shroomlight west / south entries were measured on another lab at hue 225 / 0.28 and stay, --add-only);
+(2) paving tuff (0.34), not stone bricks; (3) the joints of each tier's top course a post (dark under a cap, a light
+merlon on the uncapped court rim), not a notch - no dark squares in the paving; (4) the plinth's top course on its
+west / south edges smooth stone (a light band under the parapet).
+Model numbers (rts_close / 34): plinth 0.251 / 0.254, walls 0.183 / 0.183 (gap 0.068), roofs 0.224, paving 0.325 /
+0.331, caps 0.502 / 0.507; lights 4.0 % + the heart's up face (~0.6 % if >= 0.50) -> ~4.6 %; thin blocks up 0.40 /
+0.45 (34: on the edge), west 0.35 / 0.36, south 0.34 / 0.38; lead 8; gate seen 316.
