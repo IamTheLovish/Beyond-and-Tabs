@@ -24,7 +24,9 @@
   "eyes 41157506389 gravebound_l3 round 1 (build e7b4e94)",
   "eyes 41157506389 gravebound_l1 round 1 (build e7b4e94)",
   "eyes 41159362651 gravebound_l3 round 2 (build e7b4e94)",
-  "eyes 41159362651 gravebound_l1 round 2 (build e7b4e94)"
+  "eyes 41159362651 gravebound_l1 round 2 (build e7b4e94)",
+  "eyes 41161129778 gravebound_l3 round 3 (build e7b4e94)",
+  "eyes 41161129778 gravebound_l1 round 3 (build e7b4e94)"
  ],
  "blocks": {
   "andesite": {
@@ -1510,6 +1512,17 @@
      0.4406,
      0.5186,
      0.3171
+    ]
+   },
+   "south": {
+    "hue": 87.6,
+    "sat": 0.505,
+    "val": 0.392,
+    "n": 233,
+    "rgb": [
+     0.2872,
+     0.3717,
+     0.1895
     ]
    }
   },
