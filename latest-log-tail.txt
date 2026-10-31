@@ -1,0 +1,200 @@
+[02:08:07] [Render thread/INFO]: [Eyes] 15_block_sampler_3_golden_rts: the structure's box holds 598 non-air blocks on the client
+[02:08:07] [Server thread/INFO]: [Eyes] 15_block_sampler_3_golden_rts: ... and 598 on the server
+[02:08:07] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_golden_rts 1793412487132
+[02:08:07] [IO-Worker-13/INFO]: [Eyes] 15_block_sampler_3_golden_rts: Saved screenshot as bat_eyes_15_block_sampler_3_golden_rts.png
+[02:08:11] [Server thread/INFO]: [Tick] p50 14.0 ms, p95 26.6 ms, max 101.4 ms over the last 100 ticks; 75 units, 36 buildings, 1 players
+[02:08:11] [Server thread/INFO]: [Paths] last 10 s: 1 unit vanilla createPath, 1 short searches, 1 full-range fallbacks; chase cell memo 0/0 hits
+[02:08:11] [Server thread/INFO]: [Sys] 200 ticks, mean 14.4 ms/tick; ours 3.3 ms (23%): unit 1.34 (max 12.5, 73/t) | attacker 0.73 (max 88.8, 72/t) | buildings 0.42 (max 10.3, 1.0/t) | bots 0.10 (max 6.4, 0.1/t) | pushScan 0.09 (max 3.1, 72/t) | economy 0.08 (max 10.1, 1.0/t) | pathfinder 0.07 (max 3.0, 2.0/t) | targetGrid 0.07 (max 7.5, 0.3/t) | unstick 0.07 (max 3.1, 73/t) | unitGrid 0.06 (max 6.2, 1.0/t) | unitSync 0.04 (max 4.3, 0.1/t) | attacker/attackMove 0.04 (max 4.7, 12/t) | separation 0.04 (max 3.1, 73/t) | stuckNudge 0.03 (max 3.0, 73/t) (+10 smaller); vanilla 10.8 ms (75%): travel 2.97 (max 17.7, 106/t) | chunks 2.52 (max 13.0, 3.0/t) | unitTick 1.99 (max 14.1, 73/t) | aiGoals 1.48 (max 11.0, 106/t) | baseTick 1.37 (max 12.7, 108/t) | otherEntities 0.27 (max 3.2, 122/t) | levelRest 0.21 (max 6.2, 3.0/t); elsewhere 0.4 ms; gc 0 ms
+[02:08:14] [Notification Thread/INFO]: [GC] pause 50 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1179 MB of 4096 MB
+[02:08:16] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_t5000 1793412496459
+[02:08:16] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:08:17] [IO-Worker-8/INFO]: [Eyes] 15_block_sampler_3_rts_t5000: Saved screenshot as bat_eyes_15_block_sampler_3_rts_t5000.png
+[02:08:17] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at -1, 69, 111, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 12 ordered, nearest worker 77.8 blocks away at 53, 70, 55, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 29 at 162, 72, 58, goal: target metal_extractor_dark@1, 74, 113, dist 166.9, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 3/161 to 4, 70, 110, stalled 4 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 30 at 177, 70, 31, goal: target metal_extractor_dark@1, 74, 113, dist 190.6, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 10/185 to 4, 70, 110, stalled 4 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 31 at 164, 70, 31, goal: target metal_extractor_dark@1, 74, 113, dist 179.5, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 14/176 to 4, 70, 110, stalled 4 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 61 at 230, 70, -10, goal: target metal_extractor_dark@1, 74, 113, dist 256.3, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 14/241 to 4, 70, 110, stalled 0 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 101 at 75, 71, 33, goal: target metal_extractor_dark@1, 74, 113, dist 105.6, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 12/90 to 4, 70, 110, stalled 0 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 102 at 176, 72, 56, goal: target metal_extractor_dark@1, 74, 113, dist 181.3, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 39/212 to 4, 70, 110, stalled 5 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 114 at 53, 70, 55, goal: target metal_extractor_dark@1, 74, 113, dist 74.3, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 29/87 to 4, 70, 110, stalled 5 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 119 at 55, 70, 53, goal: target metal_extractor_dark@1, 74, 113, dist 76.6, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 4/61 to 4, 70, 110, stalled 0 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 132 at 159, 72, 59, goal: target metal_extractor_dark@1, 74, 113, dist 163.6, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 3/158 to 4, 70, 110, stalled 5 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 211 at 159, 72, 57, goal: target metal_extractor_dark@1, 74, 113, dist 164.1, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 22/177 to 4, 70, 110, stalled 0 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 224 at 165, 72, 65, goal: target metal_extractor_dark@1, 74, 113, dist 168.1, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 14/176 to 4, 70, 110, stalled 15 ticks, queue 0
+[02:08:17] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -1, 69, 111 cancelled for no progress: builder 562 at 231, 70, -10, goal: target metal_extractor_dark@1, 74, 113, dist 257.7, approach 4, 70, 110, building false, fromRange false, running true, pathPending false, backoff false, path node 13/241 to 4, 70, 110, stalled 0 ticks, queue 0
+[02:08:18] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -95, 67, -53 cancelled for no progress: builder 106 at 155, 70, -12, goal: target metal_extractor_dark@-93, 72, -51, dist 248.2, approach -90, 68, -48, building false, fromRange false, running true, pathPending false, backoff false, path node 55/301 to -90, 68, -48, stalled 5 ticks, queue 0
+[02:08:18] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -95, 67, -53 cancelled for no progress: builder 114 at 53, 70, 55, goal: target metal_extractor_dark@-93, 72, -51, dist 176.8, approach -90, 68, -48, building false, fromRange false, running true, pathPending true, backoff false, path none, stalled - ticks, queue 0
+[02:08:18] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -95, 67, -53 cancelled for no progress: builder 119 at 54, 70, 54, goal: target metal_extractor_dark@-93, 72, -51, dist 177.2, approach -90, 68, -48, building false, fromRange false, running true, pathPending true, backoff false, path none, stalled - ticks, queue 0
+[02:08:18] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -95, 67, -53 cancelled for no progress: builder 121 at 156, 70, -17, goal: target metal_extractor_dark@-93, 72, -51, dist 248.2, approach -90, 68, -48, building false, fromRange false, running true, pathPending false, backoff false, path node 30/276 to -90, 68, -48, stalled 0 ticks, queue 0
+[02:08:18] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -95, 67, -53 cancelled for no progress: builder 134 at 60, 68, -11, goal: target metal_extractor_dark@-93, 72, -51, dist 154.9, approach -90, 68, -48, building false, fromRange false, running true, pathPending false, backoff false, path node 18/168 to -90, 68, -48, stalled 15 ticks, queue 0
+[02:08:18] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -95, 67, -53 cancelled for no progress: builder 202 at 58, 68, -18, goal: target metal_extractor_dark@-93, 72, -51, dist 152.0, approach -90, 68, -48, building false, fromRange false, running true, pathPending false, backoff false, path node 25/173 to -90, 68, -48, stalled 15 ticks, queue 0
+[02:08:18] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -95, 67, -53 cancelled for no progress: builder 525 at 147, 71, 20, goal: target metal_extractor_dark@-93, 72, -51, dist 247.1, approach -90, 68, -48, building false, fromRange false, running true, pathPending false, backoff false, path node 23/262 to -90, 68, -48, stalled 0 ticks, queue 0
+[02:08:18] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -95, 67, -53 cancelled for no progress: builder 600 at 230, 70, -15, goal: target metal_extractor_dark@-93, 72, -51, dist 322.0, approach -90, 68, -48, building false, fromRange false, running true, pathPending false, backoff false, path node 14/334 to -90, 68, -48, stalled 0 ticks, queue 0
+[02:08:18] [Server thread/INFO]: [Bot] Bot1 (medium) site metal_extractor_dark at -95, 67, -53 cancelled for no progress: builder 688 at 155, 71, 15, goal: target metal_extractor_dark@-93, 72, -51, dist 253.1, approach -90, 68, -48, building false, fromRange false, running true, pathPending false, backoff false, path node 34/278 to -90, 68, -48, stalled 5 ticks, queue 0
+[02:08:21] [Server thread/INFO]: [Tick] p50 17.3 ms, p95 59.0 ms, max 118.9 ms over the last 100 ticks; 78 units, 36 buildings, 1 players
+[02:08:21] [Server thread/INFO]: [Paths] last 10 s: 7 unit vanilla createPath, 7 short searches, 7 full-range fallbacks; chase cell memo 0/0 hits
+[02:08:21] [Server thread/INFO]: [Sys] 200 ticks, mean 24.5 ms/tick; ours 12.8 ms (52%): pathfinder 8.68 (max 137.1, 2.0/t) | attacker 1.96 (max 71.4, 76/t) | unit 1.16 (max 12.3, 77/t) | bots 0.15 (max 6.1, 0.1/t) | pushScan 0.11 (max 5.1, 76/t) | unitSync 0.10 (max 7.8, 0.1/t) | buildings 0.09 (max 6.8, 1.0/t) | unitGrid 0.09 (max 6.1, 1.0/t) | attacker/entityScan 0.07 (max 4.7, 12/t) | neutralAggro 0.06 (max 3.1, 1.0/t) | separation 0.05 (max 3.1, 77/t) | unstick 0.04 (max 2.2, 77/t) | attacker/retarget 0.03 (max 2.3, 6.3/t) | attacker/attackMove 0.03 (max 2.7, 12/t) (+10 smaller); vanilla 11.5 ms (47%): chunks 3.45 (max 20.6, 3.0/t) | travel 2.93 (max 11.6, 110/t) | unitTick 1.57 (max 14.1, 77/t) | baseTick 1.50 (max 13.8, 112/t) | aiGoals 1.23 (max 7.9, 110/t) | otherEntities 0.52 (max 31.4, 122/t) | levelRest 0.27 (max 6.2, 3.0/t); elsewhere 0.3 ms; gc 57 ms
+[02:08:21] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_34_t5000 1793412501545
+[02:08:21] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:08:22] [IO-Worker-13/INFO]: [Eyes] 15_block_sampler_3_34_t5000: Saved screenshot as bat_eyes_15_block_sampler_3_34_t5000.png
+[02:08:24] [Render thread/INFO]: [Frame] p50 1342.7 ms (1 fps), p95 1810.9 ms, max 2457.1 ms over 240 frames; RTS view, zoom 30, 21 units known
+[02:08:24] [Render thread/INFO]: [FrameParts] 20 frames, mean 1575.2 ms/frame; ours 2.9 ms (0%): markersRange 1.13 (max 2.9, 1.0/f) | markersMapWorld 0.80 (max 4.4, 0.9/f) | worldFx 0.38 (max 5.4, 14/f) | buildingParts 0.22 (max 3.5, 14/f) | unitShadow 0.19 (max 3.7, 0.1/f) | markersWreck 0.08 (max 0.1, 1.0/f) | unitOverlays 0.05 (max 0.1, 11/f) | buildingBoxes 0.04 (max 0.1, 0.9/f) (+15 smaller); elsewhere 1572.3 ms; 0 section re-mesh requests/s
+[02:08:24] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:08:30] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_t11800 1793412510834
+[02:08:30] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:08:31] [Server thread/INFO]: [Tick] p50 14.7 ms, p95 39.0 ms, max 80.4 ms over the last 100 ticks; 75 units, 35 buildings, 1 players
+[02:08:31] [Server thread/INFO]: [Paths] last 10 s: 13 unit vanilla createPath, 13 short searches, 11 full-range fallbacks; chase cell memo 0/0 hits
+[02:08:31] [Server thread/INFO]: [Sys] 200 ticks, mean 18.1 ms/tick; ours 5.2 ms (29%): attacker 2.42 (max 62.2, 75/t) | unit 1.19 (max 12.3, 76/t) | pathfinder 0.65 (max 74.0, 2.0/t) | unstick 0.13 (max 5.3, 76/t) | pushScan 0.10 (max 5.5, 74/t) | buildings 0.09 (max 5.5, 1.0/t) | chunkLoader 0.08 (max 9.1, 0.1/t) | separation 0.08 (max 6.1, 76/t) | attacker/buildingScan 0.07 (max 9.9, 11/t) | unitGrid 0.06 (max 4.4, 1.0/t) | bots 0.05 (max 3.6, 0.1/t) | attacker/entityScan 0.04 (max 4.6, 12/t) | unitSync 0.03 (max 2.4, 0.1/t) | reactions 0.03 (max 3.1, 76/t) (+10 smaller); vanilla 12.6 ms (70%): travel 3.58 (max 14.1, 108/t) | chunks 3.20 (max 11.3, 3.0/t) | unitTick 2.12 (max 11.0, 76/t) | baseTick 1.55 (max 9.2, 110/t) | aiGoals 1.20 (max 11.6, 107/t) | otherEntities 0.74 (max 42.1, 129/t) | levelRest 0.21 (max 3.2, 3.0/t); elsewhere 0.3 ms; gc 12 ms
+[02:08:31] [IO-Worker-15/INFO]: [Eyes] 15_block_sampler_3_rts_t11800: Saved screenshot as bat_eyes_15_block_sampler_3_rts_t11800.png
+[02:08:37] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_34_t11800 1793412517181
+[02:08:37] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 71, 39)]
+[02:08:37] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-172, 71, 39)]
+[02:08:37] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 71, 57)]
+[02:08:37] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-172, 71, 57)]
+[02:08:37] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 71, 47)]
+[02:08:37] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 71, 49)]
+[02:08:37] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-160, 71, 47)]
+[02:08:37] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-160, 71, 49)]
+[02:08:37] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:08:37] [IO-Worker-8/INFO]: [Eyes] 15_block_sampler_3_34_t11800: Saved screenshot as bat_eyes_15_block_sampler_3_34_t11800.png
+[02:08:41] [Server thread/INFO]: [Tick] p50 50.0 ms, p95 60.8 ms, max 81.7 ms over the last 100 ticks; 84 units, 35 buildings, 1 players
+[02:08:41] [Server thread/INFO]: [Paths] last 10 s: 195 unit vanilla createPath, 195 short searches, 195 full-range fallbacks; chase cell memo 0/0 hits
+[02:08:41] [Server thread/INFO]: [Sys] 200 ticks, mean 44.9 ms/tick; ours 33.7 ms (75%): attacker 32.10 (max 62.1, 78/t) | unit 0.92 (max 7.9, 79/t) | pushScan 0.08 (max 3.1, 78/t) | unitSync 0.07 (max 5.5, 0.1/t) | unstick 0.05 (max 3.1, 79/t) | pathfinder 0.05 (max 3.2, 2.0/t) | unitGrid 0.05 (max 3.1, 1.0/t) | targetGrid 0.05 (max 3.1, 0.4/t) | separation 0.04 (max 3.0, 79/t) | attacker/entityScan 0.04 (max 3.1, 13/t) | autoCaster 0.04 (max 3.5, 1.0/t) | neutralAggro 0.04 (max 3.6, 1.0/t) | stuckNudge 0.04 (max 4.0, 79/t) | buildings 0.03 (max 0.9, 1.0/t) (+10 smaller); vanilla 11.0 ms (24%): chunks 4.16 (max 13.9, 3.0/t) | travel 2.43 (max 7.7, 110/t) | unitTick 1.46 (max 8.7, 79/t) | baseTick 1.40 (max 10.1, 111/t) | aiGoals 1.02 (max 14.7, 106/t) | otherEntities 0.31 (max 5.2, 128/t) | levelRest 0.22 (max 3.2, 3.0/t); elsewhere 0.2 ms; gc 10 ms
+[02:08:41] [Server thread/INFO]: [PerfAuto] the server is slow (p95 60.8 ms with 84 units): profiling the next 10 s
+[02:08:41] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 143.077937 ms
+[02:08:41] [Server thread/WARN]: Something's taking too long! 'root' took aprox 143.215554 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 147.626984 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root' took aprox 147.83024 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 123.121442 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root' took aprox 123.246702 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 139.747579 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root' took aprox 139.871476 ms
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 102.528829 ms
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 165.325978 ms
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root' took aprox 165.506268 ms
+[02:08:43] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 167.825875 ms
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root' took aprox 167.945365 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 141.699456 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 141.877363 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 141.378201 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 141.504783 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 134.57265 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 134.752221 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 114.116653 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 114.290724 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 107.605549 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 107.751119 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 100.900353 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root' took aprox 101.048737 ms
+[02:08:45] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2033ms or 40 ticks behind
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 156.016934 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root' took aprox 156.143184 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 105.278367 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root' took aprox 105.394763 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 162.048083 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 162.168723 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 155.945531 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 156.065521 ms
+[02:08:46] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_army 1793412526412
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 119.428021 ms
+[02:08:46] [Server thread/INFO]: [Offline: Killed 8 entities]
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 145.976012 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 102.597482 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 114.376033 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 115.699978 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 115.764705 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 115.92685 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 202.092988 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 202.157035 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 158.762297 ms
+[02:08:46] [IO-Worker-4/INFO]: [Eyes] 15_block_sampler_3_rts_army: Saved screenshot as bat_eyes_15_block_sampler_3_rts_army.png
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 110.772542 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 115.073503 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 115.118492 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 115.273385 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 274.437046 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 274.472199 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 132.342529 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root' took aprox 132.75566 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 101.303401 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root' took aprox 102.555879 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 102.082005 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 107.461882 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 107.62008 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 107.637417 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 107.781584 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 136.382488 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root' took aprox 137.062923 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 104.378035 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 106.401194 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 112.631123 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 112.686607 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 112.847128 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 113.213481 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root' took aprox 113.244746 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 105.219067 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 107.351111 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 107.494707 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 107.511973 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 107.647688 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 107.874471 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root' took aprox 107.908922 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 114.165275 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 119.860169 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 120.006367 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 120.02066 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 120.159028 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 120.514594 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root' took aprox 120.5518 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 103.348384 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 111.79374 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 118.704938 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 118.776084 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 118.927071 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 120.085125 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root' took aprox 120.14714 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 107.140377 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 118.479997 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 118.618236 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 118.661221 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 118.817697 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 123.060301 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root' took aprox 123.120823 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 106.190021 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 111.592848 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 111.656323 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 111.804126 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 112.679706 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root' took aprox 112.737202 ms
+[02:08:50] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 100.457237 ms
+[02:08:50] [Server thread/WARN]: Something's taking too long! 'root' took aprox 100.581363 ms
+[02:08:51] [IO-Worker-4/INFO]: Flushed metrics to /tmp/minecraft-profiling1515569485401567236/server/metrics/ticking.csv
+[02:08:51] [Server thread/INFO]: [PerfAuto] p95 60.8 ms with 84 units; 117 ticks profiled, 85.6 ms per tick; ours: bat:pathfinder 33.8% | bat:unit 2.2% | bat:aiGoals 1.0% (3.8% with what it calls) | bat:baseTick 0.5% (3.1% with what it calls) | bat:travel 0.4% (3.5% with what it calls) | bat:attacker 0.3% (39.0% with what it calls) | bat:pushScan 0.2% | bat:otherEntities 0.2% (4.3% with what it calls) | bat:buildings 0.2% | bat:neutralAggro 0.1%; heaviest: find_path (own) 38.1% | bat:pathfinder (own) 33.8% | reignofnether:zombie_unit (own) 1.7% | bat:unit (own) 1.5% | filteringLoadedChunks (own) 0.9% | entityBaseTick (own) 0.9% | spawnAndTick (own) 0.9% | chunks (own) 0.9% | rest (own) 0.9% | move (own) 0.7% | reignofnether:zombie_villager_unit (own) 0.7% | tick (own) 0.6% -> /home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/run/logs/perf-auto-2026-10-31-020851.txt
+[02:08:52] [Server thread/FATAL]: Preparing crash report with UUID 899b6641-a305-4502-a77c-040620580c9c
+[02:08:53] [Server thread/FATAL]: Preparing crash report with UUID f6e1ccc7-7910-484e-ba3b-de0b6881f55a
+[02:08:53] [Server thread/FATAL]: Preparing crash report with UUID 140ec803-a276-463d-b129-c222452f81b7
+[02:08:54] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[02:08:54] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[02:08:54] [Render thread/INFO]: [Eyes] tour complete
+[02:08:54] [Server thread/INFO]: [PerfAuto] the recorder's own report (zip with the section tree and metrics): /tmp/minecraft-profiling1515569485401567236
+[02:08:54] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[02:08:55] [Render thread/INFO]: Stopping!
+[02:08:55] [Server thread/INFO]: Offline lost connection: Disconnected
+[02:08:55] [Server thread/INFO]: Offline left the game
+[02:08:55] [Server thread/INFO]: Player logged out: Offline, id: 2
+[02:08:55] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[02:08:55] [Server thread/INFO]: RTSPlayerSaveData.load
+[02:08:55] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1500|0
+[02:08:55] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|4312|1762|0
+[02:08:55] [Server thread/INFO]: Stopping server
+[02:08:55] [Server thread/INFO]: Saving players
+[02:08:55] [Server thread/INFO]: Saving worlds
+[02:08:55] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[02:08:55] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[02:08:55] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[02:08:56] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[02:08:56] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[02:08:56] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[02:08:56] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[02:08:56] [Render thread/INFO]: Stopping worker threads

@@ -1,0 +1,203 @@
+(2520 first-launch config/mod-loading notices filtered out)
+[01:51:22] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[01:51:23] [main/WARN]: No graphics cards were found. Either you have no hardware devices supporting 3D acceleration, or something has gone terribly wrong!
+[01:51:23] [main/WARN]: Unable to determine desktop session type because the environment variable XDG_SESSION_TYPE is not set! Your user session may not be configured correctly.
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.world.sky.WorldRendererMixin' as rule 'mixin.features.render.world.sky' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.world.sky.ClientWorldMixin' as rule 'mixin.features.render.world.sky' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.world.sky.BackgroundRendererMixin' as rule 'mixin.features.render.world.sky' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.gui.font.GlyphRendererMixin' as rule 'mixin.features.render.gui.font' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.gui.font.FontSetMixin' as rule 'mixin.features.render.gui.font' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.entity.shadows.EntityRenderDispatcherMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.entity.remove_streams.ModelPartMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.entity.remove_streams.HierarchicalModelMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.entity.fast_render.ModelPartMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.entity.fast_render.CuboidMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[01:51:25] [main/WARN]: Force-disabling mixin 'features.render.entity.cull.EntityRendererMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[01:51:32] [Render thread/ERROR]: Failed to verify authentication
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+[01:51:33] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[01:51:33] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gui.SodiumGameOptions, which may cause instability.
+[01:51:35] [modloading-worker-0/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gui.SodiumOptionsGUI, which may cause instability.
+[01:51:41] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.vertex.VertexFormatDescriptionImpl, which may cause instability.
+[01:51:41] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.vertex.buffer.SodiumBufferBuilder, which may cause instability.
+[01:51:41] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.SodiumWorldRenderer, which may cause instability.
+[01:51:45] [Worker-ResourceReload-0/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_pattern.png
+[01:51:45] [Worker-ResourceReload-0/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_nopattern.png
+[01:51:51] [Worker-ResourceReload-1/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[01:51:51] [Worker-ResourceReload-1/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[01:51:57] [Worker-ResourceReload-1/WARN]: Missing textures in model supplementaries:confetti_popper#inventory:
+[01:51:59] [Render thread/WARN]: Missing sound for event: minecraft:item.goat_horn.play
+[01:51:59] [Render thread/WARN]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[01:51:59] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+[01:52:00] [Render thread/WARN]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[01:52:00] [Render thread/WARN]: Shader supplementaries:static_noise could not find sampler named Sampler1 in the specified shader program.
+[01:52:00] [Render thread/WARN]: Shader supplementaries:spherify could not find sampler named Sampler1 in the specified shader program.
+[01:52:00] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseSpeed in the specified shader program.
+[01:52:00] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseScale in the specified shader program.
+[01:52:00] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named Intensity in the specified shader program.
+[01:52:00] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named CameraPos in the specified shader program.
+[01:52:01] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find sampler named Sampler2 in the specified shader program.
+[01:52:01] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named IViewRotMat in the specified shader program.
+[01:52:01] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named FogShape in the specified shader program.
+[01:52:01] [Render thread/WARN]: Shader reignofnether:bat_mist could not find uniform named Height in the specified shader program.
+[01:52:02] [Render thread/WARN]: [Patcher] gl_FragColor is not supported yet, please use gl_FragData! Assuming that the shaderpack author intended to use gl_FragData[0]...
+[01:52:05] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.device.GLRenderDevice$ImmediateDrawCommandList, which may cause instability.
+[01:52:05] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.vertex.serializers.VertexSerializerRegistryImpl, which may cause instability.
+[01:52:06] [Render thread/WARN]: Game took 54.249 seconds to start
+[01:53:35] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.immediate.model.BakedModelEncoder, which may cause instability.
+[01:53:42] [Render thread/WARN]: Initial datapack load took 2.660 s
+[01:53:46] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-0 absolute]
+[01:53:46] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-15 absolute]
+[01:53:57] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[01:53:58] [Render thread/WARN]: [Patcher] gl_FragColor is not supported yet, please use gl_FragData! Assuming that the shaderpack author intended to use gl_FragData[0]...
+[01:54:00] [Render thread/WARN]: Mod(s) [reignofnether, oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderMeshingTask, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.format.ChunkMeshFormats, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.format.ChunkMeshAttribute, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.attribute.GlVertexFormat$Builder, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.attribute.GlVertexAttributeFormat, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.DefaultChunkRenderer, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.ShaderChunkRenderer, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.ChunkBuildBuffers, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.builder.ChunkMeshBufferBuilder, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.buffers.BakedChunkModelBuilder, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.light.smooth.SmoothLightPipeline, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.light.flat.FlatLightPipeline, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [reignofnether] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.color.ColorProviderRegistry, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [reignofnether] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.quad.blender.BlendedColorProvider, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [supplementaries] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer, which may cause instability.
+[01:54:00] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.shader.GlProgram, which may cause instability.
+[01:54:01] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.shader.ShaderType, which may cause instability.
+[01:54:04] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.immediate.CloudRenderer, which may cause instability.
+[01:54:04] [Render thread/WARN]: Shader clouds could not find uniform named ModelViewMat in the specified shader program.
+[01:54:04] [Render thread/WARN]: Shader clouds could not find uniform named ProjMat in the specified shader program.
+[01:54:04] [Render thread/WARN]: Shader clouds could not find uniform named ColorModulator in the specified shader program.
+[01:54:04] [Render thread/WARN]: Shader clouds could not find uniform named FogStart in the specified shader program.
+[01:54:04] [Render thread/WARN]: Shader clouds could not find uniform named FogEnd in the specified shader program.
+[01:54:04] [Render thread/WARN]: Shader clouds could not find uniform named FogColor in the specified shader program.
+[01:54:06] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion$DeviceResources, which may cause instability.
+[01:54:07] [Finalizer/WARN]: One or more BufferBuilders have been leaked, ModernFix will attempt to correct this.
+[01:54:16] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2143ms or 42 ticks behind
+[01:54:17] [Render thread/WARN]: Time from main menu to in-game was 35.01392 seconds
+[01:54:17] [Render thread/WARN]: Total time to load game and open world was 89.262924 seconds
+[02:03:23] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 94, 71, 56, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 9 ordered, nearest worker 21.1 blocks away at 111, 72, 44, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[02:03:28] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 104.96055 ms
+[02:03:28] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 108.218113 ms
+[02:03:28] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 108.271203 ms
+[02:03:28] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 109.089157 ms
+[02:03:28] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 120.233535 ms
+[02:03:28] [Server thread/WARN]: Something's taking too long! 'root' took aprox 120.325263 ms
+[02:03:34] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 120.58434 ms
+[02:03:34] [Server thread/WARN]: Something's taking too long! 'root' took aprox 126.3129 ms
+[02:03:34] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 113.78855 ms
+[02:03:34] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 131.478282 ms
+[02:03:34] [Server thread/WARN]: Something's taking too long! 'root' took aprox 131.640616 ms
+[02:03:41] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 3175ms or 63 ticks behind
+[02:04:13] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 109, 70, 122, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 10 ordered, nearest worker 22.2 blocks away at 111, 71, 102, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[02:05:00] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 7, 68, -2, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 9 ordered, nearest worker 75.0 blocks away at 65, 71, 50, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[02:05:34] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at -1, 68, 10, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 12 ordered, nearest worker 31.9 blocks away at 30, 70, 26, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[02:07:30] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at -1, 66, -108, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 1 ordered, nearest worker 40.3 blocks away at -3, 66, -66, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[02:08:17] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at -1, 69, 111, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 12 ordered, nearest worker 77.8 blocks away at 53, 70, 55, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[02:08:41] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 143.077937 ms
+[02:08:41] [Server thread/WARN]: Something's taking too long! 'root' took aprox 143.215554 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 147.626984 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root' took aprox 147.83024 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 123.121442 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root' took aprox 123.246702 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 139.747579 ms
+[02:08:42] [Server thread/WARN]: Something's taking too long! 'root' took aprox 139.871476 ms
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 102.528829 ms
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 165.325978 ms
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root' took aprox 165.506268 ms
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 167.825875 ms
+[02:08:43] [Server thread/WARN]: Something's taking too long! 'root' took aprox 167.945365 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 141.699456 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 141.877363 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 141.378201 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 141.504783 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 134.57265 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 134.752221 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 114.116653 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 114.290724 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 107.605549 ms
+[02:08:44] [Server thread/WARN]: Something's taking too long! 'root' took aprox 107.751119 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 100.900353 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root' took aprox 101.048737 ms
+[02:08:45] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2033ms or 40 ticks behind
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 156.016934 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root' took aprox 156.143184 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 105.278367 ms
+[02:08:45] [Server thread/WARN]: Something's taking too long! 'root' took aprox 105.394763 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 162.048083 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 162.168723 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 155.945531 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 156.065521 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 119.428021 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 145.976012 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 102.597482 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 114.376033 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 115.699978 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 115.764705 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 115.92685 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 202.092988 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 202.157035 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 158.762297 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 110.772542 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 115.073503 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 115.118492 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 115.273385 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 274.437046 ms
+[02:08:46] [Server thread/WARN]: Something's taking too long! 'root' took aprox 274.472199 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 132.342529 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root' took aprox 132.75566 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root' took aprox 102.555879 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 102.082005 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 107.461882 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 107.62008 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 107.637417 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 107.781584 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 136.382488 ms
+[02:08:47] [Server thread/WARN]: Something's taking too long! 'root' took aprox 137.062923 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 104.378035 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 112.631123 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 112.686607 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 112.847128 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 113.213481 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root' took aprox 113.244746 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 105.219067 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 107.351111 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 107.494707 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 107.511973 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 107.647688 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 107.874471 ms
+[02:08:48] [Server thread/WARN]: Something's taking too long! 'root' took aprox 107.908922 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 114.165275 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 119.860169 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 120.006367 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 120.02066 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 120.159028 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 120.514594 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root' took aprox 120.5518 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 103.348384 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 111.79374 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 118.704938 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 118.776084 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 118.927071 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 120.085125 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root' took aprox 120.14714 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 107.140377 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 118.479997 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 118.618236 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 118.661221 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 118.817697 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 123.060301 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root' took aprox 123.120823 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 106.190021 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 111.592848 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 111.656323 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 111.804126 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 112.679706 ms
+[02:08:49] [Server thread/WARN]: Something's taking too long! 'root' took aprox 112.737202 ms
+[02:08:50] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 100.457237 ms
+[02:08:50] [Server thread/WARN]: Something's taking too long! 'root' took aprox 100.581363 ms
+[02:08:54] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
