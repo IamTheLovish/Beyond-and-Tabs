@@ -49,7 +49,7 @@ loud); stone-brick plinth; mud-brick court (0.53, warm); a polished-blackstone-b
 ANCHORS (structure-local x, y, z; in game these become client-drawn moving parts later):
   gate        (0..1, 1..8, 6..10) the passage; the gate leaves fold against z 5 / z 11
   spawn cell  (8, 1, 8) on the road in the court; the column above it is air to the sky
-  storm vane  (13, 22, 8) the crown's core (a sea lantern) - arcs drawn round its rings at L3
+  storm vane  (13, 21, 8) the crown's core (a sea lantern) - arcs drawn round its rings at L3
 
 EXIT LANE: x 0..9, z 6..10, y 1..8 clear, straight out west.
 
@@ -75,6 +75,7 @@ OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
 INWARD = {"west": (1, 0), "south": (0, -1)}
 
 FIELD_ST, FIELD, FIELD_SL = "prismarine_brick_stairs", "prismarine_bricks", "prismarine_brick_slab"
+TIP_SL = "dark_prismarine_slab"             # round 3: a half-height upturn at each lip corner (round 2: "ziggurats, no flare")
 LIP_ST = "dark_prismarine_stairs"            # round 2: the lip ring = the dark eave line
 UNDER = "dark_prismarine_slab"
 TIMBER = "spruce_planks"
@@ -86,12 +87,11 @@ SB, SB_ST, CSB = "stone_bricks", "stone_brick_stairs", "chiseled_stone_bricks"
 MOSS = "mossy_stone_bricks"
 PAVE = "stone_bricks"
 COURT = "mud_bricks"
-ROAD = "polished_andesite"                # round 2 (was polished blackstone bricks, half width)
-KERB = "stone_bricks"
+ROAD = "polished_deepslate"               # round 3: 0.30 between the obsidian gate (0.09) and the mud court (0.53)
 THRESHOLD = "obsidian"                   # the gate's floor: the darkest spot (designer: gate interior 0.05-0.18)
 PASSAGE = "polished_blackstone_bricks"
 PASSAGE_CEIL = "deepslate_tiles"
-RING = "prismarine_wall"
+RING = "deepslate_brick_wall"             # round 3 (was prismarine wall: animated, flickers ice-blue)
 RING_FLAT = "dark_prismarine_slab"
 CORE = "sea_lantern"
 POST_UP = dict(up="true", north="none", south="none", east="none", west="none", waterlogged="false")
@@ -147,7 +147,8 @@ def hip(c, x1, x2, z1, z2, y, rings=99, dark_lip=None):
     """A flared hip roof, its lip the ring [x1..x2] x [z1..z2] at y (clipped to the plot; drawn only into free cells):
     on a pent eave (rings <= 2) the lip ring in dark-prismarine stairs - the eave line between the tiers (round 2;
     round 1's upturned corner tips, full-looking cubes, read as "studs / teeth / battlements" to both critics, and "no
-    dark eave line at RTS"); every ring in one higher in prismarine-brick stairs, a
+    dark eave line at RTS"); at each lip corner a dark-prismarine slab on the corner stair - a half-height upturn (round 3:
+    round 2 without tips read as "stepped ziggurats, no flare as in ref08 / ref42"); every ring in one higher in prismarine-brick stairs, a
     dark-prismarine underside one deep under the lip (the eave's shadow band), a ridge line / peaked
     pair / point at the top (a ridge line in slabs, so it never reads as a run of full blocks); `rings` stops it early (a pent eave round a body rising through it). Inside each ring a
     hidden timber fill. Returns the top y."""
@@ -182,6 +183,8 @@ def hip(c, x1, x2, z1, z2, y, rings=99, dark_lip=None):
             if f is None:
                 fz = "south" if z == b1 else "north"
                 put(x, yy, z, st, facing=fz, half="bottom", shape="straight", **DRY)
+                if k == 0:
+                    put(x, yy + 1, z, TIP_SL, type="bottom", **DRY)
             else:
                 put(x, yy, z, st, facing=OPP[f], half="bottom", shape="straight", **DRY)
             if k == 0 and c.free(x, yy - 1, z):
@@ -195,22 +198,18 @@ def hip(c, x1, x2, z1, z2, y, rings=99, dark_lip=None):
 
 
 def crown(c, cx, cz, y0):
-    """L3: the armillary (ref27) standing on the keep's point: ONE vertical ring (radius 2, the x-y plane) and a wide
-    flat ring (radius 3, 7 across - wider than the 5 x 5 top eave) at the centre height, round a sea-lantern core hung
-    from the ring's top (the one glow, storm-white). Round 2: round 1's two crossed rings read as "an X in a box" from
-    the RTS camera and its soul lantern showed no glow at dusk (both critics)."""
-    cy = y0 + 2
-    ring = [(-2, -1), (-2, 0), (-2, 1), (2, -1), (2, 0), (2, 1), (-1, -2), (0, -2), (1, -2), (-1, 2), (0, 2), (1, 2)]
-    for (u, v) in ring:
-        c.put(cx + u, cy + v, cz, RING, **POST_UP)
-    wide = [(-3, -1), (-3, 0), (-3, 1), (3, -1), (3, 0), (3, 1), (-1, -3), (0, -3), (1, -3), (-1, 3), (0, 3), (1, 3),
-            (-2, -2), (2, -2), (-2, 2), (2, 2)]
-    for (u, w) in wide:
-        c.put(cx + u, cy, cz + w, RING, **POST_UP)
-    for (u, w) in ((-2, -1), (-2, 1), (2, -1), (2, 1)):
+    """L3: the armillary (ref27) standing on the keep's point: a dark iron-grey ring (deepslate-brick walls, radius 3,
+    7 across - wider than the 5 x 5 top eave) on four spokes round a sea-lantern core on a one-block post (the one
+    glow, storm-white). Round 3: round 2's vertical prismarine ring read as "letters from above, a cross from 3/4"
+    and its prismarine (an animated texture) flickered teal / ice-blue - a cool-team-like hue (critics); round 1's two
+    crossed rings read as "an X in a box"."""
+    c.put(cx, y0, cz, RING, **POST_UP)
+    cy = y0 + 1
+    wide = [(u, w) for u in range(-3, 4) for w in range(-3, 4)
+            if (abs(u) == 3 or abs(w) == 3) and (abs(u), abs(w)) != (3, 3) or (abs(u), abs(w)) == (2, 2)]
+    for (u, w) in wide + [(-2, 0), (-1, 0), (1, 0), (2, 0), (0, -2), (0, -1), (0, 1), (0, 2)]:
         c.put(cx + u, cy, cz + w, RING, **POST_UP)
     c.put(cx, cy, cz, CORE)
-    c.chain(cx, cy + 1, cz)
 
 
 # ================================================================================================ the masses
@@ -219,7 +218,9 @@ def ground(c):
     threshold to the keep's door; the gate's floor (x 0..3, z 5..11) obsidian; grass in the garden. Round 2: the road
     the lane's full width (z 6..10, polished andesite between stone-brick kerbs) from the gate to the keep's door, the
     obsidian only under the gate's eaves (x 0..2) - round 1's half-width dark road read as "a half-width dark field, not a
-    lane", the court "split orange / black", the black threshold outside the gate as "a pit" (critics)."""
+    lane", the court "split orange / black", the black threshold outside the gate as "a pit" (critics). Round 3: the
+    road polished deepslate (0.30) with no kerbs, the court's strips (z 4..5, 11..12) mud brick - round 2's andesite road
+    between stone-brick kerbs read as "one grey court, no lane" (both critics): black gate -> dark-grey lane -> keep."""
     for x in range(SX):
         for z in range(SZ):
             name = PAVE
@@ -231,8 +232,6 @@ def ground(c):
     for x in range(3, 12):
         for z in range(6, 11):
             c.put(x, 0, z, ROAD)
-        for z in (5, 11):
-            c.put(x, 0, z, KERB)
     for x in range(0, 3):
         for z in range(5, 12):
             c.put(x, 0, z, THRESHOLD)
@@ -347,30 +346,25 @@ def south(c):
 
 
 def yard(c):
-    """Round 2: the WORKSHOP in the court, off the lane (both critics: "nothing in the court says vehicle lab"): a
-    half-built Rocket Battery on the north strip (x 3..7, z 3..5) - spruce wheels, a stripped-spruce axle and frame, a
-    granite-cheeked rack with fire-arrow tubes (lightning rods) aimed west - and on the south strip (z 11) barrels of
-    tubes, a rack of arrows and a spare wheel. Nothing full above y 1 (the court stays open to the sky)."""
-    for x in (4, 6):
-        for z in (3, 5):
-            c.put(x, 1, z, "spruce_trapdoor", facing="north" if z == 3 else "south", half="bottom", open="true",
-                  powered="false", **DRY)
-    for x in range(3, 8):
-        c.log(x, 1, 4, "stripped_spruce_log", axis="x")
-    for x in (4, 5, 6):
-        c.slab(x, 2, 4, "spruce_slab", "bottom")
-    for z in (3, 5):
-        c.st(5, 2, z, "west", "bottom", "granite_stairs")
+    """The WORKSHOP in the court, off the lane (round 1's critics: "nothing in the court says vehicle lab"). Round 3: the
+    half-built Rocket Battery moved out from under the north range's eave into open sky on the north strip (x 5..8,
+    z 4..5; round 2's at x 3..7, z 3..5 read as "a pile, half hidden" in the corner) - spruce wheels on its north
+    side, a stripped-spruce bed, granite rack cheeks, fire-arrow tubes in iron (round 2's lightning rods read
+    "orange copper"); on the south strip (z 11) barrels, a rack and a spare wheel. Nothing full above y 1."""
+    for x in (5, 7):
+        c.put(x, 1, 3, "spruce_trapdoor", facing="north", half="bottom", open="true", powered="false", **DRY)
+    for x in range(5, 9):
+        for z in (4, 5):
+            c.log(x, 1, z, "stripped_spruce_log", axis="x")
+    for z in (4, 5):
         c.st(6, 2, z, "west", "bottom", "granite_stairs")
-    for x in (5, 6):
-        c.rod(x, 3, 4, "west")
-    c.put(2, 1, 4, "spruce_fence")
+        c.st(7, 2, z, "west", "bottom", "granite_stairs")
+        c.put(8, 2, z, "iron_bars")
+        c.slab(5, 2, z, "spruce_slab", "bottom")
     for x in (3, 5, 8):
         c.put(x, 1, 11, "barrel", facing="up", open="false")
-        c.rod(x, 2, 11)
     c.put(4, 1, 11, "spruce_fence")
     c.put(4, 2, 11, "spruce_fence")
-    c.rod(4, 3, 11, "west")
     c.put(6, 1, 11, "spruce_trapdoor", facing="south", half="bottom", open="true", powered="false", **DRY)
 
 

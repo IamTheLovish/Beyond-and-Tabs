@@ -32,3 +32,15 @@ expected); white panels west 0.494 / sat 0.13; spruce stairs west 0.29 / sat 0.2
 | dusk | lanterns under the keep's second eave (x 10, z 11) | a warm band at dusk; 2 glow groups (band + core) |
 | court | the road the lane's full width (polished andesite 0.45, stone-brick kerbs); workshop props on the strips | a lane from the gate to the keep in rts; a half-built cart on the north strip |
 | gate | obsidian only under the gate's eaves (x 0..2) | gate interior mean ~0.15 (band 0.05-0.18); no black square in the court |
+
+## Detail round 2 - measured (eyes 41170130456)
+sea lantern up 0.90 (the core is the brightest cell); prismarine walls (the crown) up 0.62 / sat 0.40 (animated
+texture: teal / ice-blue between stills, critic b); 17 / 17 green. Critics 6 / 6.5 vs round 1 rescored 5.5 / 5.5.
+
+## Detail round 3 (the last detail round; one change per element) - expected
+| Element | Change | Expected |
+|---|---|---|
+| court lane | polished deepslate road z 6..10 (no kerbs), mud strips z 4..5 / 11..12 | lane 0.30 (up) vs court 0.53: a dark-grey lane from the black gate (0.09) to the keep |
+| props | the cart in open sky on the north strip (x 5..8, z 4..5), iron tubes (no copper rods) | the cart seen whole in rts_close; no orange in the court |
+| roofs | a dark-prismarine slab upturn on each lip corner | small dark corner lifts (sub-blocks), no cubes |
+| crown | a flat deepslate-brick ring 7 across on spokes round the sea-lantern core on a post (no vertical ring) | an "O" with a bright dot from the RTS camera, no cross / letters; deepslate brick wall up 0.32 (dark ring on light roofs); no flicker |
