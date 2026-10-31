@@ -465,14 +465,15 @@ public class HeroAiV2RolloutGameTests {
 
     /**
      * Diagnostic (review r3 on PR 416: held heroes stepped ~0.6 to cast at a spot in reach): each tick the hero moved
-     * more than 0.02, log where, its delta movement and what the cast goal and the navigator were doing.
+     * more than 0.002 (and every 10th tick), log where, its delta movement and what the cast goal and the navigator
+     * were doing.
      */
     static void logMove(String tag, int tick, Mob h, FactionHero fh, double[] last) {
         double moved = Math.hypot(h.getX() - last[0], h.getZ() - last[1]);
         last[0] = h.getX();
         last[1] = h.getZ();
-        if (moved <= 0.02)
-            return;
+        if (moved <= 0.002 && tick % 10 != 0)
+            return;   // a drift of a few hundredths a tick, and every 10 ticks regardless (CI 41168654794: no tick moved 0.02)
         String goal = "none";
         try {
             java.lang.reflect.Field f = fh.heroCore().getClass().getDeclaredField("castGoal");
