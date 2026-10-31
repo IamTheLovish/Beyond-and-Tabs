@@ -1,0 +1,823 @@
+[00:00:11] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[00:00:41] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[00:00:41] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793404841663
+[00:00:41] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[00:00:45] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793404845747
+[00:00:45] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[00:00:45] [Render thread/INFO]: [QuickBattle] launch
+[00:00:45] [Render thread/INFO]: Found new data pack Supplementaries Generated Pack, loading it automatically
+[00:00:45] [Render thread/INFO]: Starting runtime resource generation for pack type SERVER_DATA with generators from mods [moonlight, supplementaries, supplementaries]: [net.mehvahdjukaar.supplementaries.dynamicpack.ServerDynamicResourcesGenerator@212ce4fa]
+[00:00:45] [Render thread/INFO]: Generating runtime assets for pack Supplementaries Generated Pack (supplementaries)
+[00:00:45] [Render thread/INFO]: Generated runtime SERVER_DATA for pack Supplementaries Generated Pack (supplementaries) in: 83 ms (multithreaded)
+[00:00:45] [Render thread/INFO]: Finished runtime resources generation for 3 packs in a total of 84 ms
+[00:00:46] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[00:00:47] [Render thread/INFO]: Adding datapack listener capsid_recipes
+[00:00:47] [Notification Thread/INFO]: [GC] 10 collections took 627 ms of the last 105 s
+[00:00:47] [Notification Thread/INFO]: [GC] pause 69 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 977 MB of 4096 MB
+[00:00:47] [Notification Thread/INFO]: [GC] pause 59 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 971 MB of 4096 MB
+[00:00:47] [Render thread/INFO]: Skipping loading recipe supplementaries:inspirations/blackboard_clear as it's serializer returned null
+[00:00:47] [Render thread/INFO]: Skipping loading recipe supplementaries:inspirations/flag_dye as it's serializer returned null
+[00:00:47] [Render thread/INFO]: Skipping loading recipe supplementaries:inspirations/flag_clear as it's serializer returned null
+[00:00:48] [Render thread/INFO]: Loaded 16 recipes
+[00:00:48] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[00:00:48] [Render thread/INFO]: Loaded 2237 advancements
+[00:00:48] [Render thread/INFO]: Loaded 27 flute songs
+[00:00:48] [Render thread/INFO]: No mapping file found: reignofnether/custom_button_mappings.json
+[00:00:48] [Render thread/INFO]: Applied 18 data villager trades
+[00:00:48] [Render thread/INFO]: Finished additional setup in 0 ms
+[00:00:48] [Render thread/WARN]: Initial datapack load took 2.639 s
+[00:00:48] [Server thread/INFO]: Starting integrated minecraft server version 1.20.1
+[00:00:48] [Server thread/INFO]: Generating keypair
+[00:00:48] [Server thread/WARN]: Configuration file /home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/run/saves/beyondandtabs_skirmish_1/serverconfig/forge-server.toml is not correct. Correcting
+[00:00:48] [Server thread/WARN]: Incorrect key server was corrected from null to its default, SimpleCommentedConfig:{}. 
+[00:00:48] [Server thread/WARN]: Incorrect key server.removeErroringBlockEntities was corrected from null to its default, false. 
+[00:00:48] [Server thread/WARN]: Incorrect key server.removeErroringEntities was corrected from null to its default, false. 
+[00:00:48] [Server thread/WARN]: Incorrect key server.fullBoundingBoxLadders was corrected from null to its default, false. 
+[00:00:48] [Server thread/WARN]: Incorrect key server.zombieBaseSummonChance was corrected from null to its default, 0.1. 
+[00:00:48] [Server thread/WARN]: Incorrect key server.zombieBabyChance was corrected from null to its default, 0.05. 
+[00:00:48] [Server thread/WARN]: Incorrect key server.permissionHandler was corrected from null to its default, forge:default_handler. 
+[00:00:48] [Server thread/WARN]: Incorrect key server.advertiseDedicatedServerToLan was corrected from null to its default, true. 
+[00:00:48] [Server thread/WARN]: Incorrect key server.useItemWithDurationZero was corrected from null to its default, false. 
+[00:00:48] [Server thread/WARN]: Configuration file /home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/run/saves/beyondandtabs_skirmish_1/serverconfig/framedblocks-server.toml is not correct. Correcting
+[00:00:48] [Server thread/WARN]: Incorrect key general was corrected from null to its default, SimpleCommentedConfig:{}. 
+[00:00:48] [Server thread/WARN]: Incorrect key general.allowBlockEntities was corrected from null to its default, false. 
+[00:00:48] [Server thread/WARN]: Incorrect key general.enableIntangibleFeature was corrected from null to its default, false. 
+[00:00:48] [Server thread/WARN]: Incorrect key general.intangibleMarkerItem was corrected from null to its default, minecraft:phantom_membrane. 
+[00:00:48] [Server thread/WARN]: Incorrect key general.oneWayWindowOwnable was corrected from null to its default, true. 
+[00:00:48] [Server thread/WARN]: Incorrect key general.consumeCamoItem was corrected from null to its default, true. 
+[00:00:48] [Server thread/WARN]: Incorrect key general.glowstoneLightLevel was corrected from null to its default, 15. 
+[00:00:48] [Server thread/INFO]: Starting background profiler...
+[00:00:51] [Worker-Main-3/INFO]: vanilla surface rule behavior unchanged
+[00:00:51] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-0 absolute]
+[00:00:51] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-15 absolute]
+[00:00:52] [Server thread/INFO]: Preparing start region for dimension minecraft:overworld
+[00:00:52] [Render thread/INFO]: Preparing spawn area: 0%
+[00:00:52] [Render thread/INFO]: Preparing spawn area: 0%
+[00:00:53] [Render thread/INFO]: Preparing spawn area: 0%
+[00:00:53] [Render thread/INFO]: Preparing spawn area: 0%
+[00:00:54] [Render thread/INFO]: Preparing spawn area: 1%
+[00:00:54] [Notification Thread/INFO]: [GC] pause 90 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1063 MB of 4096 MB
+[00:00:54] [Render thread/INFO]: Preparing spawn area: 5%
+[00:00:55] [Render thread/INFO]: Preparing spawn area: 9%
+[00:00:55] [Render thread/INFO]: Preparing spawn area: 13%
+[00:00:56] [Render thread/INFO]: Preparing spawn area: 14%
+[00:00:56] [Render thread/INFO]: Preparing spawn area: 19%
+[00:00:57] [Render thread/INFO]: Preparing spawn area: 24%
+[00:00:57] [Render thread/INFO]: Preparing spawn area: 32%
+[00:00:58] [Render thread/INFO]: Preparing spawn area: 38%
+[00:00:58] [Render thread/INFO]: Preparing spawn area: 44%
+[00:00:58] [Notification Thread/INFO]: [GC] 3 collections took 218 ms of the last 11 s
+[00:00:58] [Notification Thread/INFO]: [GC] pause 108 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1106 MB of 4096 MB
+[00:00:59] [Render thread/INFO]: Preparing spawn area: 48%
+[00:00:59] [Render thread/INFO]: Preparing spawn area: 54%
+[00:01:00] [Render thread/INFO]: Preparing spawn area: 58%
+[00:01:00] [Render thread/INFO]: Preparing spawn area: 65%
+[00:01:01] [Render thread/INFO]: Preparing spawn area: 71%
+[00:01:01] [Render thread/INFO]: Preparing spawn area: 77%
+[00:01:02] [Render thread/INFO]: Preparing spawn area: 84%
+[00:01:02] [Render thread/INFO]: Preparing spawn area: 96%
+[00:01:02] [Server thread/INFO]: Successfully initialized permission handler forge:default_handler
+[00:01:02] [Server thread/INFO]: RTS pathfinder pool started (2 threads)
+[00:01:02] [Render thread/INFO]: Time elapsed: 10655 ms
+[00:01:02] [Server thread/INFO]: [Battlefield] fresh skirmish world: day time 5000 with the daylight cycle off
+[00:01:02] [Server thread/INFO]: Loaded 0 hero units in serverevents
+[00:01:02] [Server thread/INFO]: Loaded 0 gatherTargets in serverevents
+[00:01:02] [Server thread/INFO]: loaded 0 researchItems in serverevents
+[00:01:02] [Server thread/INFO]: loaded survival data: isEnabled: false
+[00:01:02] [Server thread/INFO]: loaded survival data: nextWave: 1
+[00:01:02] [Server thread/INFO]: loaded survival data: difficulty: null
+[00:01:02] [Server thread/INFO]: loaded 0 start positions in serverevents from save
+[00:01:02] [Server thread/INFO]: loaded scenario roles in serverevents
+[00:01:02] [Server thread/INFO]: [Battlefield] dimension height 176, sections per chunk 11 (y 48..223)
+[00:01:02] [Server thread/INFO]: [Match] resuming a saved LOBBY match: NOTHING
+[00:01:03] [Server thread/INFO]: Found Pupfish chunk at 1615 ~ 480 after 0 tries
+[00:01:03] [Server thread/INFO]: Changing view distance to 12, from 10
+[00:01:03] [Server thread/INFO]: Changing simulation distance to 12, from 0
+[00:01:03] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[00:01:03] [Netty Local Client IO #0/INFO]: Connected to a modded server.
+[00:01:03] [Server thread/INFO]: Offline[local:E:fc86096b] logged in with entity id 2 at (7.5, 69.0, 2.5)
+[00:01:03] [Server thread/INFO]: Using enhanced recipe sync for player Offline
+[00:01:03] [Render thread/INFO]: [FogMemory] cleared 0 chunks (new level)
+[00:01:03] [Server thread/INFO]: Offline joined the game
+[00:01:03] [Render thread/WARN]: @Final field f_112752_:Ljava/util/List; in reignofnether.mixins.json:fogofwar.CompiledChunkMixin should be final
+[00:01:03] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[00:01:03] [Render thread/WARN]: Mod(s) [reignofnether] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager, which may cause instability.
+[00:01:03] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[00:01:03] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[00:01:03] [Render thread/WARN]: Mod(s) [reignofnether] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.color.ColorProviderRegistry, which may cause instability.
+[00:01:03] [Render thread/WARN]: Mod(s) [reignofnether] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.quad.blender.BlendedColorProvider, which may cause instability.
+[00:01:03] [Render thread/WARN]: Mod(s) [supplementaries] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer, which may cause instability.
+[00:01:03] [Render thread/INFO]: Started 1 worker threads
+[00:01:03] [Server thread/INFO]: onPlayerJoined fired from ClientConfigEvents
+[00:01:03] [Server thread/INFO]: Attempting to rebake from client..
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.CREEPER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4b14c29f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BAT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@56e97c19
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ZOMBIE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5d884199
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ZOMBIE_VILLAGER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1017de6d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SKELETON, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7d7ae6ca
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STRAY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@606e54c8
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BOGGED, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7f7555d5
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HUSK, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@513f18e0
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.DROWNED, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7bd9e8bb
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SPIDER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@69032b1c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.POISON_SPIDER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3c8d1014
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WRAITH, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@15dce77d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SLIME, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2174494d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WARDEN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@51dfddb4
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.NECROMANCER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5067a2b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WRETCHED_WRAITH, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@771392f9
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ZOMBIE_PIGLIN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@74ae9377
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ZOGLIN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5bb3d22b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.VILLAGER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6d522c54
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SCOUT_DOG, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6bdff5d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SCOUT_CAT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@688e1d6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MILITIA, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@436f49a6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.IRON_GOLEM, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3fa3ed13
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.PILLAGER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@560dbaad
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WINDCALLER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@17ca77eb
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.VINDICATOR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2e513ecd
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WITCH, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@eba8561
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.EVOKER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@35d98ec9
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ANGEL_CALLER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7168c2b6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ANGEL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@56683d00
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RAVAGER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@c233b21
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SUN_COLOSSUS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@75f553aa
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WORLD_TREE_WALKER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@42bf52d0
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SEEDSHAPER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@55a8e7ba
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SHIPWRIGHT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4047341d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GULL_SPOTTER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1ff047bc
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.CUTLASS_RAIDER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2761bf40
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.REEF_GUARD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@35660921
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BOMBARD_CREW, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4c78344c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SIEGE_LOBBER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@512847d8
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.TIDE_PRIEST, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7b196902
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HARPOONER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7e335841
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.FLAK_SWIVEL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@73e4c99f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MUDSKIPPER_SLOOP, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@60e146bc
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HARBOURMASTER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@508072db
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.KRAKEN_CALLER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3415c9da
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MORTAR_GALLEY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@616846f6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SKY_CORSAIR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@b5638c1
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.LEVIATHAN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@589395da
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GEOMANCER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@42d2dc0b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.PAPER_CRANE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@61ae7d51
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BLADE_DANCER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5b04d195
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.FIRE_ADEPT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1ffda26a
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.JADE_GUARD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4b1b071a
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WIND_MONK, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@594dbfdd
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.INK_SCRIBE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@24b84518
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.FROST_ADEPT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@56245d17
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ROCKET_BATTERY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4594a31e
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.LEY_MASTER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@71135f26
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.THUNDER_DRAGON, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@17655499
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.EARTHSHAKER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@63dd7f87
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GRAVITY_MONK, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@331acb1
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MIRROR_MAGE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@68b0299e
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SPARK_SAGE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@554c798d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SEER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5de515e4
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.LANTERN_FORTRESS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@533f7ecd
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.PHOENIX, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3a2a51ed
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.CELESTIAL_DRAGON, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@c9cd734
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.TINKER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7923b976
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GYRO_SCOUT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@51426989
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STEAM_RUNNER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@390fef75
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RIFLE_SQUAD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5340ba17
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.IRON_WARDEN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@37cc5100
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.FLAK_CART, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@75007851
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MORTAR_CRAWLER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@333255c3
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SHIELD_PROJECTOR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@65f4d1b0
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SAPPER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@30e5d85f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.DEPLOYED_TURRET, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@46d1fce2
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.FOX_COURIER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@676c25b6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MOONWELL_BEARER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@245601ba
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.OWL_WATCHER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3aef024f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HIVE_KEEPER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7310cf1c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.LEAFBLADE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7557155d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.THORNBOW, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6198919c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SENTINEL_TREANT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@23a70a9a
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BONE_DRAGON, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@563a49dd
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ROYAL_ARCHITECT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1b0a53ba
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ELDER_DRUID, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3e3b3536
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STAG_LANCER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@25d31bb1
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SHADE_RANGER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@21a3ca77
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ELDER_TREANT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@687dda7a
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WISP_CHOIR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@f08c0c6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BLOOM_PRIESTESS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@32bb4c05
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.EMBALMER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@d74c857
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BONEWRIGHT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@b5c6d89
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WAR_MAMMOTH, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@429b82d4
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ROYAL_GUARD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2aa835e6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENCHANTER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1356694
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GRUNT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@696d731e
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STRIDER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@777ed1c5
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BRUTE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1c92cdc9
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HEADHUNTER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@36390909
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MARAUDER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@34ce6953
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HOGLIN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@353f76f6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BLAZE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3f49191d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WITHER_SKELETON, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@41462ebc
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GHAST, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6055336
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MAGMA_CUBE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@48c30dc6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.PIGLIN_MERCHANT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3f356432
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WILDFIRE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4f768ea6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENDERMAN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6346e89d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.POLAR_BEAR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@333b740e
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GRIZZLY_BEAR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@273b82af
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.PANDA, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5c432b50
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WOLF, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@8153245
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.LLAMA, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@60e6bc4d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BEE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1bb37404
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.KILLER_RABBIT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5e6fd589
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SILVERFISH, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7fc9431b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HERO_BASE_REVIVE_COST, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2a189c7b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HERO_REVIVE_COST_PER_LEVEL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2a0bce68
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENGINEER_CAPTAIN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@ae8853d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STEAM_JUGGERNAUT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3f0cdee0
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.TESLA_WALKER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5199763e
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GYROCOPTER_GUNSHIP, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@25159aeb
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.DRILL_BURROWER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6b1a3219
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.REPAIR_CRAWLER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@32380a44
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SOUL_ENGINEER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@280aa2bb
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.CLOCKWORK_SPIDER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2141a793
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.IRON_LEVIATHAN_ENGINE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1bf1c358
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ORIFLAMME_ELEPHANT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@69699048
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GOREHORN_RHINO, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@140bf8a4
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.OSSUARY_BEHEMOTH, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@38dab889
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MOSSBACK_BISON, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2d2447c9
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SHELLBACK_TURTLE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@8ea69f5
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.JADE_QILIN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@436f6e94
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STEAM_HAULER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2e1c9880
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.FIELD_MASON, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@21899885
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BONESETTER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7af7f880
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WRECKER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@42543284
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ROOTWARDEN, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@8c67ad6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SALVAGER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@65e686fb
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.JADE_MENDER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2090413f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.PIONEER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@43b397bb
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BEACON, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@789855d1
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STOCKPILE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2918c567
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.METAL_EXTRACTOR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@b23f0c2
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WIND_GENERATOR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5472b052
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENERGY_CONVERTER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6e7e51d0
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STORAGE_VAULT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1229285
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.OAK_BRIDGE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1593d783
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SPRUCE_BRIDGE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@54a20543
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BLACKSTONE_BRIDGE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@48ce3ed6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MAUSOLEUM, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5d6d3bf0
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HAUNTED_HOUSE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@56c9d011
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.PUMPKIN_FARM, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@12855f96
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SKULK_CATALYST, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2b84eb9e
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GRAVEYARD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1f02e7a5
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SPIDER_LAIR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7d3f50c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.DUNGEON, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3f92738f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.LABORATORY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3346a7f8
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.DARK_WATCHTOWER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3b7141fa
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SLIME_PIT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2312b80d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STRONGHOLD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@f30a9eb
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ALTAR_OF_DARKNESS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@9cfa692
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MONSTER_MARKET, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@388048c0
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.TOWN_CENTRE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@e644d0d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HEARTWOOD_HALL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@411c2db
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GROVE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@709e0ffd
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WRECK_HARBOUR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4a628f66
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SLIPWAY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6642af02
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.DRYDOCK, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6ccfbe0b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.LIGHTHOUSE_BATTERY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6caea588
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ABYSSAL_SHIPYARD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@32e90ec4
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.JADE_PAGODA, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@41a08d24
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.LOTUS_ACADEMY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@500e5cfd
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.CELESTIAL_OBSERVATORY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@49952191
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HEAVENS_GATE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@33708949
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.FOUNDRY_HALL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@76fcfbae
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MACHINE_SHOP, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@54b7b838
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.VILLAGER_HOUSE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@344e8296
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WHEAT_FARM, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3437f97
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BARRACKS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1273d5da
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BLACKSMITH, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7becd9d4
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WITCH_HUT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3bf6ae0d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ARCANE_TOWER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2351c123
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.CIRCLE_OF_ELDERS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2f000d96
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.LIBRARY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@32bf53db
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WATCHTOWER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3c370547
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.CASTLE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1142933b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HEART_OF_THE_WILD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3e015038
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.STORM_OAK, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7668eda8
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.IRON_GOLEM_BUILDING, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7271d31f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SHRINE_OF_PROSPERITY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@772f5d21
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.VILLAGER_MARKET, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@431b436c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.CENTRAL_PORTAL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@72aff30a
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BASIC_PORTAL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@e3a3f6b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.CIVILIAN_PORTAL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3f1add8
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.POCKET_PORTAL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1ae88ee9
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.NETHERWART_FARM, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@17d2191d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BASTION, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@48ccbdeb
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HOGLIN_STABLES, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@46dd5647
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.FLAME_SANCTUARY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@181c07b3
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WITHER_SHRINE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1f81ef5c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.BASALT_SPRINGS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@320f3aa2
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.FORTRESS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1ecc3dca
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.INFERNAL_PORTAL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6615903f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.PIGLIN_MARKET, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@767e68ae
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ASSEMBLY_WORKS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3def86e9
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RAIL_BATTERY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4232def3
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.GREAT_FORGE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@86c2ae2
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.SUN_SPIRE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@d521859
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.NECROPOLIS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4c4b1fd4
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WARD_SPIRE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@185a95e8
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.DOOM_FORGE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7188873b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.WORLD_SEED, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6c05c983
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.MAELSTROM_ENGINE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@78a4ce68
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.HEAVENS_BELL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@341de141
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.EARTHCRACKER, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@19909a6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_GOLEM_SMITHING, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@439291c7
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_SUPERIOR_BLACKSMITH, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1d1bc053
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_MILITIA_BOWS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@46d73d58
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_LAB_LIGHTNING_ROD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@fcac81d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_RESOURCE_CAPACITY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@58017c8a
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_STEWARD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1bdb2681
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_ITEM_BACKPACK, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6499e55f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_SPIDER_JOCKEYS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3d4a43f1
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_SPIDER_WEBS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6e7c8dfe
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_POISON_SPIDERS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2c51519e
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_HUSKS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@749fa56
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_DROWNED, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@68737485
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_STRAYS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@626a0708
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_BOGGED, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4411677a
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_OVERFLOWING_GRAVEYARD, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@c42bee4
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_MASS_BURIALS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7fe624b5
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_POSSESSION, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4d062e06
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_SLIME_CONVERSION, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2e3ba6b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_LINGERING_POTIONS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@1bcf814d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_HEALING_POTIONS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@55c2cd0d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_WATER_POTIONS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@29c8bfad
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_EVOKER_VEXES, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3667781d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_UPGRADED_WINDCALLERS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@51c55275
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_CASTLE_FLAG, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@12ac57e5
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_TIER_2, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@7e75a7ca
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_TIER_3, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@73df9f89
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.UPGRADE_EXTRACTOR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@8f23d7d
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_GRAND_LIBRARY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@781150f9
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_SILVERFISH, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2b89f3c6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_SCULK_AMPLIFIERS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@242502e9
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_RAVAGER_ARTILLERY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3da5dac5
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_BRUTE_SHIELDS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4f41d310
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_HOGLIN_CAVALRY, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2b320efd
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_HEAVY_TRIDENTS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@278c7338
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_GREEDY_TRIDENTS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@34ece6fe
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_CLEAVING_FLAILS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@75747a20
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_BLAZE_FIRE_WALL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4e8ac795
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_FIRE_RESISTANCE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@a5b68cf
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_WITHER_CLOUDS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5953b46c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_BLOODLUST, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@fa0601c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_ADVANCED_PORTALS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@170eb812
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_CIVILIAN_PORTAL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4642b72c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_MILITARY_PORTAL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@2769b5c
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_TRANSPORT_PORTAL, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@edaab8e
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_CUBE_MAGMA, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6c765c6f
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_SOUL_FIREBALLS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3fde6d1a
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_UPGRADE_MARKET, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@944adc6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_BEACON_LEVEL1, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@5299e1bb
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_BEACON_LEVEL2, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@c524aa3
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_BEACON_LEVEL3, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@40a8508e
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_BEACON_LEVEL4, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6c2effc0
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_BEACON_LEVEL5, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@71a75fc7
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_VINDICATOR_AXES, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6fbe0402
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.RESEARCH_PILLAGER_CROSSBOWS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@6d10055b
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENCHANT_MAIMING, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@76db37c6
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.THICKET, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@3dc917bd
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENCHANT_QUICK_CHARGE, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@22c88a12
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENCHANT_SHARPNESS, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@4f9f69cd
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENCHANT_MULTISHOT, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@60d502ff
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENCHANT_VIGOR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@155485a7
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.ENCHANT_GUST, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@73aa1505
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.EQUIP_LEATHER_ARMOR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@47cfdbbc
+[00:01:03] [Server thread/INFO]: ID found: reignofnether.EQUIP_CHAINMAIL_ARMOR, replacing resourcecost com.solegendary.reignofnether.resources.ResourceCost@fc5eb40
+[00:01:03] [Server thread/INFO]: Player logged in: Offline, id: 2
+[00:01:03] [Server thread/INFO]: [Player] Offline joined a skirmish world: the login chat lesson is skipped
+[00:01:03] [Server thread/INFO]: No mapping file found: reignofnether/custom_button_mappings.json
+[00:01:04] [Render thread/INFO]: Synced Flute Songs
+[00:01:04] [Render thread/INFO]: Synced Captured Mobs settings
+[00:01:04] [Render thread/INFO]: Synced Globe data
+[00:01:04] [Render thread/INFO]: Synced Hourglass data
+[00:01:04] [Notification Thread/INFO]: [GC] pause 50 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1082 MB of 4096 MB
+[00:01:04] [Render thread/INFO]: Stopping worker threads
+[00:01:04] [Render thread/INFO]: Started 1 worker threads
+[00:01:04] [Render thread/INFO]: [Parts] extractor rigs: 2 variants, setting Full (default, from building_ambience)
+[00:01:05] [Render thread/INFO]: World look: subtle
+[00:01:06] [Render thread/INFO]: Loaded 23 advancements
+[00:01:07] [Server thread/INFO]: [Sys] the server is slow (tick p95 66.6 ms): per-system timing on
+[00:01:08] [Notification Thread/INFO]: [GC] pause 55 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1105 MB of 4096 MB
+[00:01:09] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:01:09] [Render thread/INFO]: Entity Culling found: its culling is switched off while the RTS view is on
+[00:01:10] [Render thread/WARN]: Time from main menu to in-game was 21.96757 seconds
+[00:01:10] [Render thread/WARN]: Total time to load game and open world was 70.14257 seconds
+[00:01:10] [Server thread/INFO]: [DayClock] start time MORNING (day time 5000), cycle OFF (0 game ticks per day-time tick)
+[00:01:10] [Server thread/INFO]: [Skirmish] time of day MORNING, map seed 0
+[00:01:10] [Server thread/INFO]: [FogOfWar] match border set to 720 blocks round [8, 1] so fog of war can run
+[00:01:10] [Server thread/INFO]: [Match] LOBBY -> MAP_RISING (the battlefield for 2 sides)
+[00:01:10] [Server thread/INFO]: [Prep] preparing the battlefield for 2 players.
+[00:01:10] [Server thread/INFO]: [Prep] Vanilla terrain (legacy) for 2 sides at [8, 1], radius 280: starting at CLEAR
+[00:01:10] [Render thread/INFO]: Stopping worker threads
+[00:01:10] [Render thread/INFO]: Started 1 worker threads
+[00:01:11] [Server thread/INFO]: [StartAreaClearing] cleared 2 start areas and lanes to [8.5, 1.5]
+[00:01:11] [Server thread/INFO]: [Prep] stage CLEAR -> WALL
+[00:01:11] [Server thread/INFO]: [ArenaPathing] RTS pathfinding on for this match (arena radius 280)
+[00:01:11] [Server thread/INFO]: [ArenaPathing] warming the navmesh: 1177 arena chunks over the next ticks
+[00:01:11] [Server thread/INFO]: [BattlefieldWall] raising a stone brick ring wall: centre [8, 1], radius 280, 1710 columns at 160 a tick
+[00:01:12] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2046ms or 40 ticks behind
+[00:01:14] [Notification Thread/INFO]: [GC] 4 collections took 241 ms of the last 16 s
+[00:01:14] [Render thread/INFO]: [FogMemory] cleared 0 chunks (match preparation started)
+[00:01:14] [Render thread/INFO]: [Prep] loading veil up (the battlefield is being prepared)
+[00:01:14] [Render thread/INFO]: [Prep] camera on our slot at -212, 1
+[00:01:14] [Render thread/INFO]: [Prep] chunks present 42%
+[00:01:15] [Server thread/INFO]: [BattlefieldWall] the wall is complete (1710 columns)
+[00:01:15] [Server thread/INFO]: [Prep] stage WALL -> SCOUT
+[00:01:15] [Server thread/INFO]: [ArenaPregen] queued 1373 arena chunks round [8, 1] (radius 312, 8 in flight)
+[00:01:16] [Render thread/INFO]: [Prep] chunks present 83%
+[00:01:16] [Render thread/INFO]: [Frame] p50 119.6 ms (8 fps), p95 361.0 ms, max 2795.3 ms over 240 frames; RTS view, zoom 30, 0 units known
+[00:01:16] [Render thread/INFO]: [FrameParts] 35 frames, mean 353.6 ms/frame; ours 18.8 ms (5%): minimap 14.30 (max 409.2, 27/f) | hud 3.35 (max 62.6, 0.6/f) | buildingBoxes 0.49 (max 11.6, 0.7/f) | unitOverlays 0.47 (max 8.1, 10/f) | worldFx 0.07 (max 1.4, 10/f) | buildingParts 0.07 (max 2.1, 10/f) (+18 smaller); elsewhere 334.7 ms; 0 section re-mesh requests/s
+[00:01:16] [Render thread/INFO]: [Prep] chunks present 97%
+[00:01:17] [Render thread/INFO]: [Prep] chunks present 100%
+[00:01:18] [Server thread/INFO]: [ArenaPregen] arena ready (562 chunks generated or loaded, 0 given up)
+[00:01:18] [Server thread/INFO]: [Prep] stage SCOUT -> LIGHT
+[00:01:18] [Server thread/INFO]: [Prep] stage LIGHT -> READY
+[00:01:18] [Server thread/INFO]: [Prep] READY in 7 s
+[00:01:18] [Server thread/INFO]: [Journal] recording the battlefield (0 block(s) already kept)
+[00:01:18] [Server thread/INFO]: [Match] MAP_RISING -> START_POSITIONS (2 sides placing starts)
+[00:01:18] [Server thread/INFO]: [StartPhase] 2 sides placing their starts (120 s)
+[00:01:18] [Server thread/INFO]: [StartPhase] start position mode: 120 s to place
+[00:01:18] [Render thread/INFO]: [FogMemory] cleared 0 chunks (match preparation ended)
+[00:01:18] [Render thread/INFO]: [Prep] the server reports the battlefield READY
+[00:01:18] [Render thread/INFO]: [Prep] chunks present 100%
+[00:01:18] [Render thread/INFO]: [Prep] cut after 3.5 s (ready)
+[00:01:18] [Server thread/INFO]: [Sys] 180 ticks, mean 11.6 ms/tick; ours 0.1 ms (0%): fogOfWar 0.02 (max 3.7, 1.0/t) (+8 smaller); vanilla 10.0 ms (86%): chunks 7.69 (max 45.6, 3.0/t) | levelRest 0.99 (max 38.3, 3.0/t) | otherEntities 0.47 (max 23.8, 3.4/t) | baseTick 0.43 (max 7.5, 3.4/t) | travel 0.40 (max 7.3, 3.4/t) | aiGoals 0.04 (max 2.1, 3.4/t); elsewhere 1.5 ms; gc 1563 ms
+[00:01:19] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 118 s left (client tick 269, camera at [-220, 90, 8]); our slot -212, 1; a bot's start 228, 1; markers: 2 boxes, 1 frames drawn; team 0 (mine) fill built (33969 columns, 1873 quads), 370 perimeter heights known; team 1 fill none (0 columns, 0 quads), 51 perimeter heights known, rebuild pending
+[00:01:19] [Notification Thread/INFO]: [GC] pause 54 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1162 MB of 4096 MB
+[00:01:20] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 9.7 ms): per-system timing off
+[00:01:21] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 116 s left, zoom 36.0, camera at [-219, 90, 8]; markers: 2 boxes, 14 frames drawn; team 0 (mine) fill built (33969 columns, 1873 quads), 395 perimeter heights known; team 1 fill built (837 columns, 153 quads), 51 perimeter heights known
+[00:01:21] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793404881658
+[00:01:22] [Server thread/INFO]: [Sys] the server is slow (tick p95 27.3 ms): per-system timing on
+[00:01:22] [IO-Worker-9/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[00:01:23] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 114 s left, zoom 60.0, camera at [-218, 90, 7]; markers: 2 boxes, 22 frames drawn; team 0 (mine) fill built (35874 columns, 1953 quads), 412 perimeter heights known; team 1 fill built (837 columns, 153 quads), 51 perimeter heights known
+[00:01:23] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793404883528
+[00:01:23] [IO-Worker-5/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[00:01:25] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 112 s left, zoom 100.0, camera at [-217, 90, 6]; markers: 2 boxes, 33 frames drawn; team 0 (mine) fill built (37042 columns, 1999 quads), 449 perimeter heights known; team 1 fill built (837 columns, 153 quads), 51 perimeter heights known
+[00:01:25] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793404885622
+[00:01:25] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:01:25] [Render thread/INFO]: [Frame] p50 160.1 ms (6 fps), p95 383.8 ms, max 2795.3 ms over 240 frames; first-person view, zoom 100, 0 units known
+[00:01:25] [Render thread/INFO]: [FrameParts] 42 frames, mean 240.0 ms/frame; ours 14.5 ms (6%): markersMap 8.36 (max 116.7, 1.0/f) | minimap 2.18 (max 8.5, 36/f) | markersMapWorld 1.68 (max 39.6, 1.0/f) | hud 1.52 (max 6.1, 0.8/f) | buildingBoxes 0.34 (max 11.3, 1.0/f) | unitOverlays 0.23 (max 4.1, 11/f) | worldFx 0.09 (max 3.0, 11/f) | unitRings 0.03 (max 1.1, 10/f) | strategicIcons 0.03 (max 0.5, 0.3/f) (+16 smaller); elsewhere 225.5 ms; 0 section re-mesh requests/s
+[00:01:26] [IO-Worker-4/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[00:01:28] [Server thread/INFO]: [Sys] 120 ticks, mean 12.4 ms/tick; ours 0.0 ms (0%): nothing timed (+9 smaller); vanilla 11.7 ms (94%): chunks 9.49 (max 43.4, 3.0/t) | travel 0.99 (max 8.4, 8.6/t) | levelRest 0.47 (max 7.9, 3.0/t) | otherEntities 0.37 (max 5.3, 8.6/t) | baseTick 0.33 (max 6.4, 8.6/t) (+1 smaller); elsewhere 0.7 ms; gc 105 ms
+[00:01:30] [Render thread/INFO]: [Eyes] 01f: eye at [228, 69, 21] y 70 looking at the start 228, 1 (20 blocks away; ground there 71); 107 s left; markers: 2 boxes, 78 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (38211 columns, 2336 quads), 493 perimeter heights known, rebuild pending
+[00:01:30] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793404890257
+[00:01:30] [Notification Thread/INFO]: [GC] 5 collections took 164 ms of the last 15 s
+[00:01:30] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:01:30] [IO-Worker-2/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[00:01:31] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[00:01:32] [Render thread/INFO]: [Eyes] 01e: start placed at -212, 1 with 105 s left; the phase ends 3 s later
+[00:01:34] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 103 s left, zoom 36.0, camera at [-219, 89, 8]; markers: 2 boxes, 94 frames drawn; team 0 (mine) fill built (11550 columns, 687 quads), 171 perimeter heights known; team 1 fill built (837 columns, 153 quads), 51 perimeter heights known
+[00:01:34] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793404894116
+[00:01:34] [IO-Worker-2/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[00:01:35] [Server thread/INFO]: [Player] startRTS: playerId=2, pos=[-211.5,69.0,1.5], faction=com.solegendary.reignofnether.faction.Faction@443ad06e, startPosColorId=25
+[00:01:35] [Server thread/INFO]: [FogChunkSnapshot] capturing 2070 chunks inside world border over the next ticks
+[00:01:35] [Server thread/INFO]: [Player] bot Bot1 (medium) (monsters) added; 2 RTS player(s) now in play
+[00:01:35] [Server thread/INFO]: [Lobby] match started: 2 side(s), teams {0=[Offline], 1=[Bot1 (medium)]}
+[00:01:35] [Server thread/INFO]: [Match] START_POSITIONS -> PLAYING (SKIRMISH match seated: [Offline, Bot1 (medium)])
+[00:01:35] [Server thread/INFO]: [FogOfWar] new match: turning fog of war on (default on, border 720)
+[00:01:35] [Server thread/INFO]: [Skirmish] Offline started on Vanilla terrain (legacy) with 2 side(s)
+[00:01:35] [Server thread/INFO]: [Player] literal{Offline} performed REQUEST_MARKET_RATES (pos: [0.0, 0.0, 0.0])
+[00:01:36] [Render thread/INFO]: [System] [CHAT] 
+[00:01:36] [Render thread/INFO]: [System] [CHAT] Enabled fog of war for all players
+[00:01:36] [Render thread/INFO]: [System] [CHAT] 
+[00:01:36] [Render thread/INFO]: Stopping worker threads
+[00:01:36] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_PRODUCTION_SYNC (itemName: , pos: BlockPos{x=-218, y=69, z=-6})
+[00:01:36] [Render thread/INFO]: Started 1 worker threads
+[00:01:36] [Render thread/INFO]: [Frame] p50 169.3 ms (6 fps), p95 389.5 ms, max 2795.3 ms over 240 frames; RTS view, zoom 36, 5 units known
+[00:01:36] [Render thread/INFO]: [FrameParts] 69 frames, mean 142.6 ms/frame; ours 19.1 ms (13%): markersMapWorld 8.68 (max 242.7, 0.4/f) | markersMap 4.56 (max 40.1, 1.0/f) | unitBodies 2.91 (max 0.0, 0.1/f) | hud 1.36 (max 4.0, 0.3/f) | unitOverlays 0.78 (max 2.1, 11/f) | minimap 0.74 (max 5.8, 14/f) | buildingBoxes 0.05 (max 2.4, 0.4/f) (+18 smaller); elsewhere 123.4 ms; 0 section re-mesh requests/s
+[00:01:36] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:01:36] [Render thread/INFO]: [FogRemesh] 10 s: 0 fog updates, sections marked 0/s (skipped 0/s under the surface band, flushed 0/s), rebuilt 8/s (+6/s all air) on embeddium, band 0.00 ms/s, surface mode, 0 stale columns
+[00:01:36] [Notification Thread/INFO]: [GC] pause 56 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1144 MB of 4096 MB
+[00:01:39] [Server thread/INFO]: [Tick] p50 11.2 ms, p95 88.6 ms, max 123.1 ms over the last 100 ticks; 8 units, 2 buildings, 1 players
+[00:01:39] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:01:39] [Server thread/INFO]: [Sys] 200 ticks, mean 17.6 ms/tick; ours 8.9 ms (51%): pathfinder 7.13 (max 101.4, 2.0/t) | buildings 0.67 (max 20.1, 1.0/t) | bots 0.58 (max 94.1, 0.0/t) | fogOfWar 0.19 (max 19.7, 1.0/t) | unit 0.12 (max 12.6, 2.0/t) | attacker 0.05 (max 5.2, 2.0/t) | unitSync 0.04 (max 7.8, 0.1/t) | economy 0.03 (max 2.2, 1.0/t) | pushScan 0.02 (max 0.4, 2.0/t) (+11 smaller); vanilla 8.5 ms (48%): chunks 6.04 (max 49.2, 3.0/t) | travel 0.54 (max 7.3, 12/t) | otherEntities 0.50 (max 6.2, 9.7/t) | baseTick 0.43 (max 8.3, 12/t) | levelRest 0.35 (max 8.9, 3.0/t) | aiGoals 0.34 (max 10.4, 12/t) | unitTick 0.31 (max 14.8, 2.0/t); elsewhere 0.2 ms; gc 116 ms
+[00:01:39] [Server thread/INFO]: [BattlefieldSetup] forming the battlefield for 2 bases (mex richness 1.00) (prepared: the wall stands)
+[00:01:39] [Server thread/INFO]: [CapturePoints] placed 4 neutral sites at radius 154
+[00:01:39] [Server thread/INFO]: [StartAreaClearing] cleared 2 start areas and lanes to [8.5, 1.5]
+[00:01:43] [Notification Thread/INFO]: [GC] 3 collections took 116 ms of the last 13 s
+[00:01:45] [Server thread/INFO]: [FogChunkSnapshot] progress 1542/2070, waiting 64 (unloaded 49, light-incorrect 0, barrier 15), relight 0, forced 0
+[00:01:46] [Render thread/INFO]: [Frame] p50 191.0 ms (5 fps), p95 383.8 ms, max 2350.7 ms over 240 frames; RTS view, zoom 36, 5 units known
+[00:01:46] [Render thread/INFO]: [Anim] 5 units/frame (max 5): animation p50 0.1 ms, p95 0.7 ms; unit render p50 13.5 ms, p95 32.0 ms; per unit 91.5 us anim, 4278.2 us render (anim 2%); RTS view, zoom 36, detail on, over 41 frames
+[00:01:46] [Render thread/INFO]: [FrameParts] 43 frames, mean 237.0 ms/frame; ours 25.9 ms (11%): unitBodies 16.07 (max 119.6, 4.8/f) | hud 3.48 (max 9.0, 1.0/f) | minimap 2.15 (max 9.0, 38/f) | bars 1.04 (max 11.3, 22/f) | worldFx 1.02 (max 10.8, 11/f) | markersMetal 0.74 (max 10.4, 2.0/f) | unitOverlays 0.65 (max 3.4, 11/f) | buildingBoxes 0.59 (max 12.3, 1.0/f) | markersMapWorld 0.05 (max 0.3, 1.0/f) | markersRange 0.03 (max 0.5, 1.0/f) | markersChunks 0.02 (max 0.1, 1.0/f) (+14 smaller); elsewhere 211.1 ms; 15 section re-mesh requests/s
+[00:01:46] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.04 (max 0.7, 5.0/t)
+[00:01:46] [Render thread/INFO]: [FogRemesh] 10 s: 1 fog updates, sections marked 15/s (skipped 63/s under the surface band, flushed 0/s), rebuilt 8/s (+32/s all air) on embeddium, band 0.36 ms/s, surface mode, 0 stale columns
+[00:01:48] [Server thread/INFO]: [Tick] p50 12.8 ms, p95 28.6 ms, max 42.0 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[00:01:48] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:01:48] [Server thread/INFO]: [Sys] 200 ticks, mean 14.0 ms/tick; ours 3.8 ms (27%): buildings 2.04 (max 14.8, 1.0/t) | pathfinder 0.90 (max 38.3, 2.0/t) | bots 0.22 (max 16.1, 0.1/t) | unit 0.14 (max 3.2, 8.0/t) | attacker 0.11 (max 9.8, 8.0/t) | economy 0.10 (max 3.2, 1.0/t) | fogOfWar 0.07 (max 2.9, 1.0/t) | pushScan 0.06 (max 3.0, 8.0/t) | unstick 0.04 (max 1.2, 8.0/t) | separation 0.03 (max 3.3, 8.0/t) | reactions 0.03 (max 3.6, 8.0/t) | unitSync 0.03 (max 1.6, 0.1/t) (+8 smaller); vanilla 9.9 ms (71%): chunks 6.34 (max 36.0, 3.0/t) | travel 0.80 (max 7.6, 21/t) | baseTick 0.69 (max 7.1, 28/t) | aiGoals 0.65 (max 11.3, 21/t) | otherEntities 0.63 (max 13.9, 24/t) | unitTick 0.49 (max 12.4, 8.0/t) | levelRest 0.30 (max 5.2, 3.0/t); elsewhere 0.3 ms; gc 17 ms
+[00:01:50] [Server thread/INFO]: [FogChunkSnapshot] captured 2070 chunks inside world border to /home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/run/saves/beyondandtabs_skirmish_1/./reignofnether/fogsnapshot over 14824 ms (longest server-thread step 7.7 ms, longest chunk build 6.1 ms, 0 pending block entities created; files are written in the background)
+[00:01:51] [Server thread/INFO]: [ArenaPathing] navmesh warm: 848 of 1177 arena chunks in 40576 ms (the rest were not loaded)
+[00:01:55] [Render thread/INFO]: [Frame] p50 194.5 ms (5 fps), p95 348.5 ms, max 636.1 ms over 240 frames; RTS view, zoom 36, 5 units known
+[00:01:55] [Render thread/INFO]: [Anim] 5 units/frame (max 5): animation p50 0.1 ms, p95 0.2 ms; unit render p50 6.0 ms, p95 20.5 ms; per unit 48.0 us anim, 1636.1 us render (anim 3%); RTS view, zoom 36, detail on, over 59 frames
+[00:01:55] [Render thread/INFO]: [FrameParts] 59 frames, mean 169.4 ms/frame; ours 15.5 ms (9%): unitBodies 8.07 (max 24.4, 5.0/f) | hud 2.17 (max 6.8, 1.0/f) | minimap 1.66 (max 5.6, 38/f) | bars 1.23 (max 26.2, 22/f) | worldFx 0.58 (max 9.2, 11/f) | unitOverlays 0.55 (max 7.4, 11/f) | markersMetal 0.52 (max 8.3, 2.0/f) | markersMapWorld 0.40 (max 9.2, 1.0/f) | buildingBoxes 0.20 (max 0.3, 1.0/f) | markersChunks 0.11 (max 5.9, 1.0/f) (+15 smaller); elsewhere 153.8 ms; 0 section re-mesh requests/s
+[00:01:55] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:01:55] [Render thread/INFO]: [FogRemesh] 10 s: 0 fog updates, sections marked 0/s (skipped 0/s under the surface band, flushed 0/s), rebuilt 12/s (+9/s all air) on embeddium, band 0.00 ms/s, surface mode, 0 stale columns
+[00:01:58] [Server thread/INFO]: [Tick] p50 7.5 ms, p95 21.6 ms, max 28.4 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[00:01:58] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:01:58] [Server thread/INFO]: [Sys] 200 ticks, mean 11.6 ms/tick; ours 2.7 ms (23%): buildings 1.93 (max 9.7, 1.0/t) | pathfinder 0.21 (max 5.2, 2.0/t) | unit 0.12 (max 3.3, 8.0/t) | attacker 0.08 (max 5.1, 8.0/t) | fogOfWar 0.07 (max 4.1, 1.0/t) | unstick 0.04 (max 2.2, 8.0/t) | separation 0.04 (max 6.1, 8.0/t) | stuckNudge 0.04 (max 6.1, 8.0/t) | economy 0.03 (max 1.1, 1.0/t) (+11 smaller); vanilla 8.4 ms (73%): chunks 6.48 (max 55.3, 3.0/t) | aiGoals 0.38 (max 8.9, 23/t) | travel 0.36 (max 6.2, 23/t) | baseTick 0.34 (max 6.3, 30/t) | otherEntities 0.33 (max 6.3, 26/t) | unitTick 0.30 (max 9.2, 8.0/t) | levelRest 0.23 (max 5.2, 3.0/t); elsewhere 0.5 ms; gc 49 ms
+[00:02:00] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 12.6 ms): per-system timing off
+[00:02:01] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[00:02:04] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793404924275
+[00:02:04] [Server thread/INFO]: [Eyes] ground 0:30 round [-220, 8]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:coal_ore=3, minecraft:diorite_wall=3, minecraft:grass_block=2162, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=14, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=43, minecraft:stone_brick_stairs=8}
+[00:02:04] [Render thread/INFO]: World look: off
+[00:02:04] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793404924542
+[00:02:04] [Render thread/INFO]: World look: subtle
+[00:02:04] [Render thread/INFO]: [Eyes] 15 structures: ambient life off for the structure photos
+[00:02:04] [Render thread/INFO]: [Eyes] 15 structures: site axis (1, 1) from the capitol -211, 79, 1 (the wall's ring round 9, 2, radius 280: a 64-wide pad here keeps 49 blocks from it)
+[00:02:04] [Render thread/INFO]: [Eyes] 15_sunforged_l3: fog of war off for the structure photos
+[00:02:04] [Render thread/INFO]: Stopping worker threads
+[00:02:04] [Render thread/INFO]: Started 1 worker threads
+[00:02:04] [IO-Worker-2/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[00:02:04] [Server thread/INFO]: [Eyes] 15 structures: fog of war off, day time 6000 (noon)
+[00:02:04] [Server thread/INFO]: [Eyes] 15_sunforged_l3: pad x -182..-150, z 30..62 keeps 79.8 blocks from the arena wall's ring (centre 9, 2, radius 280)
+[00:02:04] [Render thread/INFO]: [System] [CHAT] 
+[00:02:04] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[00:02:04] [Render thread/INFO]: [System] [CHAT] 
+[00:02:05] [Render thread/INFO]: [System] [CHAT] 
+[00:02:05] [Render thread/INFO]: [System] [CHAT] Dawn breaks
+[00:02:05] [Render thread/INFO]: [System] [CHAT] 
+[00:02:05] [Render thread/INFO]: [System] [CHAT] 
+[00:02:05] [Render thread/INFO]: [System] [CHAT] 
+[00:02:05] [IO-Worker-11/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[00:02:05] [Render thread/INFO]: [Eyes] 15_sunforged_l3: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/sunforged_l3.nbt' 17x26x17 placed at -174, 71, 38 (pad centre -166, 71, 46)
+[00:02:05] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=228, y=69, z=1})
+[00:02:05] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=229, y=69, z=-18})
+[00:02:05] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=209, y=70, z=-5})
+[00:02:05] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=242, y=68, z=-9})
+[00:02:06] [Render thread/INFO]: [Frame] p50 138.0 ms (7 fps), p95 263.4 ms, max 564.0 ms over 240 frames; RTS view, zoom 30, 5 units known
+[00:02:06] [Render thread/INFO]: [Anim] 5 units/frame (max 5): animation p50 0.0 ms, p95 0.1 ms; unit render p50 2.7 ms, p95 10.2 ms; per unit 6.4 us anim, 901.8 us render (anim 1%); RTS view, zoom 30, detail on, over 79 frames
+[00:02:06] [Render thread/INFO]: [FrameParts] 85 frames, mean 118.2 ms/frame; ours 8.3 ms (7%): unitBodies 4.10 (max 18.8, 4.6/f) | hud 1.39 (max 5.1, 0.9/f) | minimap 1.14 (max 5.0, 35/f) | markersMetal 0.45 (max 6.3, 2.0/f) | worldFx 0.34 (max 3.2, 11/f) | bars 0.22 (max 3.8, 22/f) | unitOverlays 0.21 (max 2.7, 11/f) | buildingBoxes 0.20 (max 3.7, 1.0/f) | markersMapWorld 0.16 (max 0.2, 1.0/f) (+16 smaller); elsewhere 109.9 ms; 0 section re-mesh requests/s
+[00:02:06] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 2.7, 5.0/t)
+[00:02:08] [Server thread/INFO]: [Tick] p50 6.7 ms, p95 22.5 ms, max 61.3 ms over the last 100 ticks; 8 units, 5 buildings, 1 players
+[00:02:08] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:02:08] [Server thread/INFO]: [Sys] 40 ticks, mean 6.6 ms/tick; ours 2.4 ms (37%): buildings 1.37 (max 4.4, 1.0/t) | fogOfWar 0.26 (max 7.8, 1.0/t) | unit 0.24 (max 3.7, 8.0/t) | pathfinder 0.16 (max 1.4, 2.0/t) | attacker 0.14 (max 4.1, 8.0/t) | separation 0.11 (max 4.1, 8.0/t) | unstick 0.06 (max 1.1, 8.0/t) | economy 0.02 (max 0.2, 1.0/t) (+12 smaller); vanilla 3.8 ms (57%): chunks 2.15 (max 7.6, 3.0/t) | baseTick 0.51 (max 4.3, 31/t) | unitTick 0.29 (max 3.3, 8.0/t) | aiGoals 0.26 (max 3.2, 24/t) | otherEntities 0.25 (max 2.6, 27/t) | travel 0.24 (max 3.3, 24/t) | levelRest 0.08 (max 0.1, 3.0/t); elsewhere 0.4 ms; gc 0 ms
+[00:02:10] [Render thread/INFO]: [Eyes] 15_sunforged_l3_rts: aimed at -166, 79, 47 - the camera at -171, 95, 52 looks at -166, 47 (55 frames, 5.0 s in the phase)
+[00:02:10] [Render thread/INFO]: [Eyes] 15_sunforged_l3_rts: the structure's box holds 2853 non-air blocks on the client
+[00:02:10] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_rts 1793404930112
+[00:02:10] [Server thread/INFO]: [Eyes] 15_sunforged_l3_rts: ... and 2853 on the server
+[00:02:10] [IO-Worker-11/INFO]: [Eyes] 15_sunforged_l3_rts: Saved screenshot as bat_eyes_15_sunforged_l3_rts.png
+[00:02:16] [Render thread/INFO]: [Frame] p50 102.4 ms (10 fps), p95 160.2 ms, max 413.9 ms over 240 frames; RTS view, zoom 30, 5 units known
+[00:02:16] [Render thread/INFO]: [FrameParts] 114 frames, mean 87.8 ms/frame; ours 0.6 ms (1%): markersMapWorld 0.22 (max 9.1, 1.0/f) | worldFx 0.10 (max 11.0, 11/f) | bars 0.08 (max 7.0, 22/f) | unitOverlays 0.06 (max 2.6, 11/f) | buildingBoxes 0.06 (max 1.4, 1.0/f) (+17 smaller); elsewhere 87.3 ms; 0 section re-mesh requests/s
+[00:02:16] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:02:17] [Render thread/INFO]: [ShaderBench] 15_sunforged_l3_rts: 60 frames, p50 78.91 ms, p95 120.92 ms, mean 81.38 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[00:02:18] [Server thread/INFO]: [Tick] p50 6.7 ms, p95 12.6 ms, max 26.0 ms over the last 100 ticks; 8 units, 5 buildings, 1 players
+[00:02:18] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:02:21] [Render thread/INFO]: [Eyes] 15_sunforged_l3_rts_close: aimed at -166, 79, 47 - the camera at -171, 95, 52 looks at -166, 47 (58 frames, 4.0 s in the phase)
+[00:02:21] [Render thread/INFO]: [Eyes] 15_sunforged_l3_rts_close: the structure's box holds 2853 non-air blocks on the client
+[00:02:21] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_rts_close 1793404941191
+[00:02:21] [Server thread/INFO]: [Eyes] 15_sunforged_l3_rts_close: ... and 2853 on the server
+[00:02:21] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:02:21] [IO-Worker-2/INFO]: [Eyes] 15_sunforged_l3_rts_close: Saved screenshot as bat_eyes_15_sunforged_l3_rts_close.png
+[00:02:25] [Render thread/INFO]: [Frame] p50 80.9 ms (12 fps), p95 122.2 ms, max 170.1 ms over 240 frames; first-person view, zoom 26, 5 units known
+[00:02:25] [Render thread/INFO]: [FrameParts] 124 frames, mean 80.2 ms/frame; ours 1.3 ms (2%): markersRange 0.97 (max 9.3, 1.0/f) | buildingDecor 0.10 (max 9.1, 4.0/f) | markersMapWorld 0.07 (max 1.1, 0.6/f) | buildingBoxes 0.04 (max 3.1, 0.6/f) | unitOverlays 0.03 (max 0.1, 11/f) (+17 smaller); elsewhere 79.0 ms; 0 section re-mesh requests/s
+[00:02:25] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:02:26] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_34 1793404946208
+[00:02:26] [Render thread/INFO]: [Eyes] 15_sunforged_l3_close: standing at -169.0, 89.6, 50.0 (direction -1, 1 from the middle), eye 17.62 over the aim, pitch 74 down
+[00:02:26] [IO-Worker-5/INFO]: [Eyes] 15_sunforged_l3_34: Saved screenshot as bat_eyes_15_sunforged_l3_34.png
+[00:02:28] [Server thread/INFO]: [Tick] p50 6.2 ms, p95 10.5 ms, max 13.5 ms over the last 100 ticks; 8 units, 5 buildings, 1 players
+[00:02:28] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:02:31] [Render thread/INFO]: [Eyes] 15_sunforged_l3_close: aimed at -166, 72, 47 - the camera at -169, 90, 50 looks at -165, 46 (76 frames, 5.0 s in the phase)
+[00:02:31] [Render thread/INFO]: [Eyes] 15_sunforged_l3_close: the structure's box holds 2853 non-air blocks on the client
+[00:02:31] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_close 1793404951224
+[00:02:31] [Server thread/INFO]: [Eyes] 15_sunforged_l3_close: ... and 2853 on the server
+[00:02:31] [Render thread/INFO]: [System] [CHAT] 
+[00:02:31] [Render thread/INFO]: [System] [CHAT] Night falls...
+[00:02:31] [Render thread/INFO]: [System] [CHAT] 
+[00:02:31] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[00:02:31] [IO-Worker-5/INFO]: [Eyes] 15_sunforged_l3_close: Saved screenshot as bat_eyes_15_sunforged_l3_close.png
+[00:02:35] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_dusk 1793404955479
+[00:02:35] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:02:35] [IO-Worker-5/INFO]: [Eyes] 15_sunforged_l3_dusk: Saved screenshot as bat_eyes_15_sunforged_l3_dusk.png
+[00:02:35] [Render thread/INFO]: [Frame] p50 77.3 ms (13 fps), p95 112.2 ms, max 170.1 ms over 240 frames; RTS view, zoom 30, 5 units known
+[00:02:35] [Render thread/INFO]: [FrameParts] 127 frames, mean 78.8 ms/frame; ours 1.6 ms (2%): markersRange 1.47 (max 8.6, 1.0/f) | markersRangeRefresh 0.05 (max 3.1, 1.0/f) | buildingDecor 0.04 (max 3.1, 4.0/f) | unitOverlays 0.03 (max 0.2, 11/f) (+18 smaller); elsewhere 77.2 ms; 0 section re-mesh requests/s
+[00:02:35] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:02:38] [Server thread/INFO]: [Tick] p50 5.3 ms, p95 9.1 ms, max 10.7 ms over the last 100 ticks; 8 units, 6 buildings, 1 players
+[00:02:38] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:02:40] [Render thread/INFO]: [Eyes] 15_sunforged_l3_golden_rts: aimed at -166, 79, 47 - the camera at -173, 101, 54 looks at -166, 47 (71 frames, 5.0 s in the phase)
+[00:02:40] [Render thread/INFO]: [Eyes] 15_sunforged_l3_golden_rts: the structure's box holds 2853 non-air blocks on the client
+[00:02:40] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_golden_rts 1793404960534
+[00:02:40] [Server thread/INFO]: [Eyes] 15_sunforged_l3_golden_rts: ... and 2853 on the server
+[00:02:41] [IO-Worker-9/INFO]: [Eyes] 15_sunforged_l3_golden_rts: Saved screenshot as bat_eyes_15_sunforged_l3_golden_rts.png
+[00:02:43] [Server thread/INFO]: [Sys] the server is slow (tick p95 40.8 ms): per-system timing on
+[00:02:44] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_rts_t6000 1793404964552
+[00:02:44] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:02:45] [IO-Worker-10/INFO]: [Eyes] 15_sunforged_l3_rts_t6000: Saved screenshot as bat_eyes_15_sunforged_l3_rts_t6000.png
+[00:02:45] [Render thread/INFO]: [Frame] p50 69.5 ms (14 fps), p95 113.4 ms, max 153.7 ms over 240 frames; first-person view, zoom 30, 5 units known
+[00:02:45] [Render thread/INFO]: [FrameParts] 136 frames, mean 73.2 ms/frame; ours 1.7 ms (2%): markersRange 0.97 (max 9.6, 1.0/f) | markersMapWorld 0.55 (max 6.4, 0.9/f) | unitOverlays 0.07 (max 3.0, 11/f) | buildingBoxes 0.02 (max 0.1, 0.9/f) (+18 smaller); elsewhere 71.6 ms; 0 section re-mesh requests/s
+[00:02:45] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:02:48] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 11.3 ms): per-system timing off
+[00:02:48] [Server thread/INFO]: [Tick] p50 5.8 ms, p95 11.3 ms, max 36.5 ms over the last 100 ticks; 9 units, 6 buildings, 1 players
+[00:02:48] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:02:48] [Server thread/INFO]: [Sys] 100 ticks, mean 6.4 ms/tick; ours 0.9 ms (14%): pathfinder 0.51 (max 33.0, 2.0/t) | unit 0.13 (max 7.2, 9.0/t) | buildings 0.05 (max 1.5, 1.0/t) | chunkLoader 0.03 (max 3.1, 0.1/t) | unstick 0.03 (max 0.7, 9.0/t) | bots 0.03 (max 0.8, 0.1/t) | economy 0.03 (max 0.2, 1.0/t) | pushScan 0.02 (max 1.2, 9.0/t) | attacker 0.02 (max 0.1, 9.0/t) (+11 smaller); vanilla 5.0 ms (78%): chunks 2.93 (max 9.2, 3.0/t) | travel 0.65 (max 6.5, 28/t) | baseTick 0.37 (max 6.3, 47/t) | otherEntities 0.35 (max 3.3, 42/t) | aiGoals 0.34 (max 4.2, 28/t) | unitTick 0.30 (max 9.5, 9.0/t) | levelRest 0.11 (max 1.4, 3.0/t); elsewhere 0.5 ms; gc 0 ms
+[00:02:49] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_34_t6000 1793404969624
+[00:02:49] [Server thread/INFO]: [Offline: Gamerule sendCommandFeedback is now set to: false]
+[00:02:49] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-167, 71, 35)]
+[00:02:49] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 35)]
+[00:02:49] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-167, 71, 57)]
+[00:02:49] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 57)]
+[00:02:49] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 71, 45)]
+[00:02:49] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 71, 47)]
+[00:02:49] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-155, 71, 45)]
+[00:02:49] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-155, 71, 47)]
+[00:02:49] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:02:49] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit.png (1024x1024) uploaded with 3 mip levels
+[00:02:49] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_team.png (1024x1024) uploaded with 3 mip levels
+[00:02:50] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_glow.png (1024x1024) uploaded with 3 mip levels
+[00:02:50] [IO-Worker-8/INFO]: [Eyes] 15_sunforged_l3_34_t6000: Saved screenshot as bat_eyes_15_sunforged_l3_34_t6000.png
+[00:02:54] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_rts_army 1793404974693
+[00:02:54] [Server thread/INFO]: [Offline: Killed 8 entities]
+[00:02:54] [Server thread/INFO]: [Eyes] 15_sunforged_l3_r2: pad x -182..-150, z 30..62 keeps 79.8 blocks from the arena wall's ring (centre 9, 2, radius 280)
+[00:02:55] [Render thread/INFO]: [System] [CHAT] 
+[00:02:55] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[00:02:55] [Render thread/INFO]: [System] [CHAT] 
+[00:02:55] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/sunforged_l3_r2.nbt' 17x26x17 placed at -174, 71, 38 (pad centre -166, 71, 46)
+[00:02:55] [IO-Worker-9/INFO]: [Eyes] 15_sunforged_l3_rts_army: Saved screenshot as bat_eyes_15_sunforged_l3_rts_army.png
+[00:02:55] [Render thread/INFO]: [Frame] p50 79.9 ms (13 fps), p95 126.6 ms, max 467.7 ms over 240 frames; RTS view, zoom 30, 5 units known
+[00:02:55] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.2 ms, p95 1.0 ms; unit render p50 17.8 ms, p95 38.6 ms; per unit 47.7 us anim, 2744.4 us render (anim 2%); RTS view, zoom 30, detail on, over 61 frames
+[00:02:55] [Render thread/INFO]: [FrameParts] 100 frames, mean 100.3 ms/frame; ours 16.1 ms (16%): unitBodies 13.63 (max 250.3, 5.0/f) | markersRange 0.97 (max 6.7, 1.0/f) | worldFx 0.77 (max 64.2, 11/f) | unitOverlays 0.24 (max 6.4, 11/f) | markersMapWorld 0.22 (max 2.6, 0.6/f) | bars 0.10 (max 6.4, 22/f) | markersWreck 0.09 (max 4.1, 1.0/f) | buildingBoxes 0.03 (max 1.5, 0.6/f) (+15 smaller); elsewhere 84.2 ms; 0 section re-mesh requests/s
+[00:02:55] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.2, 8.0/t)
+[00:02:58] [Server thread/INFO]: [Tick] p50 7.2 ms, p95 18.0 ms, max 32.5 ms over the last 100 ticks; 9 units, 7 buildings, 1 players
+[00:02:58] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:03:00] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2_rts: aimed at -166, 79, 47 - the camera at -173, 101, 54 looks at -166, 47 (56 frames, 5.0 s in the phase)
+[00:03:00] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2_rts: the structure's box holds 2853 non-air blocks on the client
+[00:03:00] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_r2_rts 1793404980139
+[00:03:00] [Server thread/INFO]: [Eyes] 15_sunforged_l3_r2_rts: ... and 2853 on the server
+[00:03:00] [IO-Worker-10/INFO]: [Eyes] 15_sunforged_l3_r2_rts: Saved screenshot as bat_eyes_15_sunforged_l3_r2_rts.png
+[00:03:01] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[00:03:05] [Render thread/INFO]: [Frame] p50 83.8 ms (12 fps), p95 124.9 ms, max 467.7 ms over 240 frames; RTS view, zoom 30, 5 units known
+[00:03:05] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 1.1 ms; unit render p50 22.5 ms, p95 39.1 ms; per unit 66.3 us anim, 2978.3 us render (anim 2%); RTS view, zoom 30, detail on, over 17 frames
+[00:03:05] [Render thread/INFO]: [FrameParts] 129 frames, mean 77.9 ms/frame; ours 5.6 ms (7%): unitBodies 2.96 (max 55.7, 1.0/f) | markersRange 0.91 (max 6.6, 1.0/f) | markersWreck 0.88 (max 7.5, 1.0/f) | markersMapWorld 0.34 (max 5.1, 1.0/f) | worldFx 0.29 (max 6.6, 11/f) | buildingBoxes 0.05 (max 2.7, 1.0/f) | unitOverlays 0.05 (max 2.4, 11/f) | markersMetal 0.03 (max 3.0, 2.0/f) (+15 smaller); elsewhere 72.4 ms; 0 section re-mesh requests/s
+[00:03:05] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:03:06] [Render thread/INFO]: [ShaderBench] 15_sunforged_l3_r2_rts: 60 frames, p50 67.00 ms, p95 84.96 ms, mean 69.27 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[00:03:08] [Server thread/INFO]: [Tick] p50 5.6 ms, p95 12.0 ms, max 51.5 ms over the last 100 ticks; 10 units, 7 buildings, 1 players
+[00:03:08] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:03:10] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2_rts_close: aimed at -166, 79, 47 - the camera at -174, 101, 55 looks at -166, 47 (61 frames, 4.0 s in the phase)
+[00:03:10] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2_rts_close: the structure's box holds 2853 non-air blocks on the client
+[00:03:10] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_r2_rts_close 1793404990412
+[00:03:10] [Server thread/INFO]: [Eyes] 15_sunforged_l3_r2_rts_close: ... and 2853 on the server
+[00:03:10] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:03:10] [IO-Worker-2/INFO]: [Eyes] 15_sunforged_l3_r2_rts_close: Saved screenshot as bat_eyes_15_sunforged_l3_r2_rts_close.png
+[00:03:15] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_r2_34 1793404995474
+[00:03:15] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2_close: standing at -169.0, 89.6, 50.0 (direction -1, 1 from the middle), eye 17.62 over the aim, pitch 74 down
+[00:03:15] [IO-Worker-11/INFO]: [Eyes] 15_sunforged_l3_r2_34: Saved screenshot as bat_eyes_15_sunforged_l3_r2_34.png
+[00:03:15] [Render thread/INFO]: [Frame] p50 73.1 ms (14 fps), p95 106.5 ms, max 142.3 ms over 240 frames; first-person view, zoom 26, 5 units known
+[00:03:15] [Render thread/INFO]: [FrameParts] 124 frames, mean 80.8 ms/frame; ours 1.3 ms (2%): markersRange 0.76 (max 3.6, 1.0/f) | markersWreck 0.25 (max 3.4, 1.0/f) | markersMapWorld 0.21 (max 3.3, 0.5/f) | unitOverlays 0.03 (max 0.1, 11/f) (+18 smaller); elsewhere 79.5 ms; 0 section re-mesh requests/s
+[00:03:15] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:03:18] [Server thread/INFO]: [Tick] p50 5.9 ms, p95 11.2 ms, max 23.8 ms over the last 100 ticks; 10 units, 9 buildings, 1 players
+[00:03:18] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:03:20] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2_close: aimed at -166, 72, 47 - the camera at -169, 90, 50 looks at -165, 46 (84 frames, 5.0 s in the phase)
+[00:03:20] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2_close: the structure's box holds 2853 non-air blocks on the client
+[00:03:20] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_r2_close 1793405000489
+[00:03:20] [Server thread/INFO]: [Eyes] 15_sunforged_l3_r2_close: ... and 2853 on the server
+[00:03:20] [Render thread/INFO]: [System] [CHAT] 
+[00:03:20] [Render thread/INFO]: [System] [CHAT] Night falls...
+[00:03:20] [Render thread/INFO]: [System] [CHAT] 
+[00:03:20] [IO-Worker-11/INFO]: [Eyes] 15_sunforged_l3_r2_close: Saved screenshot as bat_eyes_15_sunforged_l3_r2_close.png
+[00:03:24] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_r2_dusk 1793405004535
+[00:03:24] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:03:24] [IO-Worker-2/INFO]: [Eyes] 15_sunforged_l3_r2_dusk: Saved screenshot as bat_eyes_15_sunforged_l3_r2_dusk.png
+[00:03:25] [Render thread/INFO]: [Frame] p50 68.0 ms (15 fps), p95 115.5 ms, max 142.3 ms over 240 frames; RTS view, zoom 30, 5 units known
+[00:03:25] [Render thread/INFO]: [FrameParts] 139 frames, mean 71.8 ms/frame; ours 1.1 ms (2%): markersRange 0.84 (max 6.6, 1.0/f) | markersMapWorld 0.11 (max 6.4, 0.1/f) | markersWreck 0.05 (max 0.5, 1.0/f) | markersGate 0.04 (max 6.0, 2.0/f) | worldMarkers 0.03 (max 3.0, 11/f) | unitOverlays 0.02 (max 0.1, 11/f) (+16 smaller); elsewhere 70.7 ms; 0 section re-mesh requests/s
+[00:03:25] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:03:28] [Server thread/INFO]: [Tick] p50 5.3 ms, p95 9.0 ms, max 12.7 ms over the last 100 ticks; 11 units, 9 buildings, 1 players
+[00:03:28] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:03:29] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2_golden_rts: aimed at -166, 79, 47 - the camera at -173, 101, 54 looks at -166, 47 (74 frames, 5.0 s in the phase)
+[00:03:29] [Render thread/INFO]: [Eyes] 15_sunforged_l3_r2_golden_rts: the structure's box holds 2853 non-air blocks on the client
+[00:03:29] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_r2_golden_rts 1793405009576
+[00:03:29] [Server thread/INFO]: [Eyes] 15_sunforged_l3_r2_golden_rts: ... and 2853 on the server
+[00:03:29] [IO-Worker-10/INFO]: [Eyes] 15_sunforged_l3_r2_golden_rts: Saved screenshot as bat_eyes_15_sunforged_l3_r2_golden_rts.png
+[00:03:31] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[00:03:33] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_r2_rts_t6000 1793405013598
+[00:03:33] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:03:34] [IO-Worker-11/INFO]: [Eyes] 15_sunforged_l3_r2_rts_t6000: Saved screenshot as bat_eyes_15_sunforged_l3_r2_rts_t6000.png
+[00:03:36] [Render thread/INFO]: [Frame] p50 67.8 ms (15 fps), p95 108.7 ms, max 152.9 ms over 240 frames; first-person view, zoom 30, 5 units known
+[00:03:36] [Render thread/INFO]: [FrameParts] 136 frames, mean 73.8 ms/frame; ours 2.0 ms (3%): markersRange 0.96 (max 6.7, 1.0/f) | markersWreck 0.46 (max 5.2, 1.0/f) | markersMapWorld 0.43 (max 6.4, 0.8/f) | buildingBoxes 0.05 (max 4.1, 0.8/f) | unitOverlays 0.03 (max 0.1, 11/f) | markersDraw 0.02 (max 3.0, 1.0/f) (+16 smaller); elsewhere 71.8 ms; 0 section re-mesh requests/s
+[00:03:36] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:03:38] [Server thread/INFO]: [Tick] p50 6.1 ms, p95 11.3 ms, max 16.6 ms over the last 100 ticks; 12 units, 10 buildings, 1 players
+[00:03:38] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:03:38] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_r2_34_t6000 1793405018668
+[00:03:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-167, 71, 35)]
+[00:03:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 35)]
+[00:03:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-167, 71, 57)]
+[00:03:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 57)]
+[00:03:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 71, 45)]
+[00:03:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 71, 47)]
+[00:03:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-155, 71, 45)]
+[00:03:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-155, 71, 47)]
+[00:03:38] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:03:39] [IO-Worker-11/INFO]: [Eyes] 15_sunforged_l3_r2_34_t6000: Saved screenshot as bat_eyes_15_sunforged_l3_r2_34_t6000.png
+[00:03:43] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l3_r2_rts_army 1793405023690
+[00:03:43] [Server thread/INFO]: [Offline: Killed 8 entities]
+[00:03:43] [Server thread/INFO]: [Eyes] 15_sunforged_l1: pad x -182..-150, z 30..62 keeps 79.8 blocks from the arena wall's ring (centre 9, 2, radius 280)
+[00:03:43] [Render thread/INFO]: [System] [CHAT] 
+[00:03:43] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[00:03:43] [Render thread/INFO]: [System] [CHAT] 
+[00:03:43] [Render thread/INFO]: [Eyes] 15_sunforged_l1: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/sunforged_l1.nbt' 17x16x17 placed at -174, 71, 38 (pad centre -166, 71, 46)
+[00:03:44] [IO-Worker-5/INFO]: [Eyes] 15_sunforged_l3_r2_rts_army: Saved screenshot as bat_eyes_15_sunforged_l3_r2_rts_army.png
+[00:03:45] [Render thread/INFO]: [Frame] p50 76.0 ms (13 fps), p95 112.8 ms, max 206.6 ms over 240 frames; RTS view, zoom 30, 5 units known
+[00:03:45] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 12.1 ms, p95 26.8 ms; per unit 18.3 us anim, 1789.5 us render (anim 1%); RTS view, zoom 30, detail on, over 82 frames
+[00:03:45] [Render thread/INFO]: [FrameParts] 112 frames, mean 88.7 ms/frame; ours 12.8 ms (14%): unitBodies 10.58 (max 43.4, 5.9/f) | markersRange 1.18 (max 29.8, 1.0/f) | markersWreck 0.42 (max 4.4, 1.0/f) | markersMapWorld 0.23 (max 5.3, 0.8/f) | worldFx 0.14 (max 1.1, 11/f) | unitOverlays 0.10 (max 0.3, 11/f) | buildingBoxes 0.07 (max 5.2, 0.8/f) | bars 0.05 (max 1.8, 22/f) (+15 smaller); elsewhere 75.9 ms; 0 section re-mesh requests/s
+[00:03:45] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.1, 8.5/t)
+[00:03:48] [Server thread/INFO]: [Tick] p50 6.5 ms, p95 13.0 ms, max 37.9 ms over the last 100 ticks; 12 units, 11 buildings, 1 players
+[00:03:48] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:03:48] [Render thread/INFO]: [Eyes] 15_sunforged_l1_rts: aimed at -166, 76, 47 - the camera at -174, 101, 55 looks at -166, 47 (68 frames, 5.1 s in the phase)
+[00:03:48] [Render thread/INFO]: [Eyes] 15_sunforged_l1_rts: the structure's box holds 2503 non-air blocks on the client
+[00:03:48] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l1_rts 1793405028955
+[00:03:48] [Server thread/INFO]: [Eyes] 15_sunforged_l1_rts: ... and 2503 on the server
+[00:03:49] [IO-Worker-5/INFO]: [Eyes] 15_sunforged_l1_rts: Saved screenshot as bat_eyes_15_sunforged_l1_rts.png
+[00:03:54] [Render thread/INFO]: [ShaderBench] 15_sunforged_l1_rts: 60 frames, p50 61.75 ms, p95 76.38 ms, mean 62.30 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[00:03:55] [Render thread/INFO]: [Frame] p50 68.2 ms (15 fps), p95 104.8 ms, max 206.6 ms over 240 frames; RTS view, zoom 26, 5 units known
+[00:03:55] [Render thread/INFO]: [FrameParts] 153 frames, mean 65.7 ms/frame; ours 3.5 ms (5%): markersWreck 1.09 (max 3.9, 1.0/f) | unitBodies 0.92 (max 23.7, 0.4/f) | markersRange 0.86 (max 3.6, 1.0/f) | markersMapWorld 0.26 (max 2.3, 1.0/f) | worldFx 0.11 (max 0.9, 11/f) | buildingBoxes 0.10 (max 6.1, 1.0/f) | markersChunks 0.06 (max 3.0, 1.0/f) | unitOverlays 0.03 (max 0.0, 11/f) | markersRangeRefresh 0.02 (max 2.9, 1.0/f) (+14 smaller); elsewhere 62.2 ms; 0 section re-mesh requests/s
+[00:03:55] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:03:58] [Server thread/INFO]: [Tick] p50 5.5 ms, p95 9.6 ms, max 18.5 ms over the last 100 ticks; 14 units, 12 buildings, 1 players
+[00:03:58] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:03:58] [Render thread/INFO]: [Eyes] 15_sunforged_l1_rts_close: aimed at -166, 76, 47 - the camera at -175, 101, 56 looks at -166, 47 (65 frames, 4.1 s in the phase)
+[00:03:58] [Render thread/INFO]: [Eyes] 15_sunforged_l1_rts_close: the structure's box holds 2503 non-air blocks on the client
+[00:03:58] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l1_rts_close 1793405038821
+[00:03:58] [Server thread/INFO]: [Eyes] 15_sunforged_l1_rts_close: ... and 2503 on the server
+[00:03:58] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:03:59] [IO-Worker-10/INFO]: [Eyes] 15_sunforged_l1_rts_close: Saved screenshot as bat_eyes_15_sunforged_l1_rts_close.png
+[00:04:01] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[00:04:03] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l1_34 1793405043827
+[00:04:03] [Render thread/INFO]: [Eyes] 15_sunforged_l1_close: standing at -169.0, 87.6, 50.0 (direction -1, 1 from the middle), eye 15.62 over the aim, pitch 72 down
+[00:04:04] [IO-Worker-10/INFO]: [Eyes] 15_sunforged_l1_34: Saved screenshot as bat_eyes_15_sunforged_l1_34.png
+[00:04:05] [Render thread/INFO]: [Frame] p50 62.3 ms (16 fps), p95 106.5 ms, max 172.4 ms over 240 frames; first-person view, zoom 26, 5 units known
+[00:04:05] [Render thread/INFO]: [FrameParts] 131 frames, mean 76.3 ms/frame; ours 1.8 ms (2%): markersRange 1.13 (max 7.4, 1.0/f) | markersWreck 0.34 (max 3.8, 1.0/f) | markersMapWorld 0.22 (max 3.3, 0.3/f) | unitOverlays 0.03 (max 0.1, 11/f) (+18 smaller); elsewhere 74.5 ms; 0 section re-mesh requests/s
+[00:04:05] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:04:08] [Server thread/INFO]: [Tick] p50 7.3 ms, p95 13.9 ms, max 19.2 ms over the last 100 ticks; 15 units, 13 buildings, 1 players
+[00:04:08] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:04:08] [Render thread/INFO]: [Eyes] 15_sunforged_l1_close: aimed at -166, 72, 47 - the camera at -169, 88, 50 looks at -166, 47 (87 frames, 5.0 s in the phase)
+[00:04:08] [Render thread/INFO]: [Eyes] 15_sunforged_l1_close: the structure's box holds 2503 non-air blocks on the client
+[00:04:08] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l1_close 1793405048880
+[00:04:08] [Server thread/INFO]: [Eyes] 15_sunforged_l1_close: ... and 2503 on the server
+[00:04:08] [Render thread/INFO]: [System] [CHAT] 
+[00:04:08] [Render thread/INFO]: [System] [CHAT] Night falls...
+[00:04:08] [Render thread/INFO]: [System] [CHAT] 
+[00:04:09] [IO-Worker-11/INFO]: [Eyes] 15_sunforged_l1_close: Saved screenshot as bat_eyes_15_sunforged_l1_close.png
+[00:04:12] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l1_dusk 1793405052504
+[00:04:12] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:04:12] [IO-Worker-11/INFO]: [Eyes] 15_sunforged_l1_dusk: Saved screenshot as bat_eyes_15_sunforged_l1_dusk.png
+[00:04:15] [Render thread/INFO]: [Frame] p50 65.7 ms (15 fps), p95 117.2 ms, max 172.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[00:04:15] [Render thread/INFO]: [FrameParts] 138 frames, mean 72.4 ms/frame; ours 1.5 ms (2%): markersRange 0.81 (max 4.9, 1.0/f) | markersWreck 0.44 (max 3.8, 1.0/f) | markersMapWorld 0.11 (max 0.4, 0.4/f) | buildingBoxes 0.03 (max 3.1, 0.4/f) | unitOverlays 0.03 (max 0.1, 11/f) (+17 smaller); elsewhere 70.9 ms; 0 section re-mesh requests/s
+[00:04:15] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:04:17] [Render thread/INFO]: [Eyes] 15_sunforged_l1_golden_rts: aimed at -166, 76, 47 - the camera at -171, 92, 52 looks at -166, 47 (79 frames, 5.0 s in the phase)
+[00:04:17] [Render thread/INFO]: [Eyes] 15_sunforged_l1_golden_rts: the structure's box holds 2503 non-air blocks on the client
+[00:04:17] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l1_golden_rts 1793405057547
+[00:04:17] [Server thread/INFO]: [Eyes] 15_sunforged_l1_golden_rts: ... and 2503 on the server
+[00:04:17] [IO-Worker-11/INFO]: [Eyes] 15_sunforged_l1_golden_rts: Saved screenshot as bat_eyes_15_sunforged_l1_golden_rts.png
+[00:04:18] [Server thread/INFO]: [Tick] p50 5.9 ms, p95 11.0 ms, max 13.9 ms over the last 100 ticks; 16 units, 13 buildings, 1 players
+[00:04:18] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:04:21] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l1_rts_t6000 1793405061576
+[00:04:21] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:04:22] [IO-Worker-2/INFO]: [Eyes] 15_sunforged_l1_rts_t6000: Saved screenshot as bat_eyes_15_sunforged_l1_rts_t6000.png
+[00:04:26] [Render thread/INFO]: [Frame] p50 65.6 ms (15 fps), p95 115.6 ms, max 160.8 ms over 240 frames; first-person view, zoom 30, 5 units known
+[00:04:26] [Render thread/INFO]: [FrameParts] 135 frames, mean 74.1 ms/frame; ours 1.9 ms (2%): markersRange 0.82 (max 10.6, 1.0/f) | markersWreck 0.60 (max 3.7, 1.0/f) | markersMapWorld 0.29 (max 3.3, 0.7/f) | markersChunks 0.04 (max 4.6, 1.0/f) | bars 0.03 (max 3.0, 22/f) | unitOverlays 0.03 (max 0.2, 11/f) (+16 smaller); elsewhere 72.3 ms; 0 section re-mesh requests/s
+[00:04:26] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:04:26] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l1_34_t6000 1793405066655
+[00:04:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-167, 71, 35)]
+[00:04:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 35)]
+[00:04:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-167, 71, 57)]
+[00:04:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 57)]
+[00:04:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 71, 45)]
+[00:04:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 71, 47)]
+[00:04:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-155, 71, 45)]
+[00:04:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-155, 71, 47)]
+[00:04:26] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:04:27] [IO-Worker-2/INFO]: [Eyes] 15_sunforged_l1_34_t6000: Saved screenshot as bat_eyes_15_sunforged_l1_34_t6000.png
+[00:04:28] [Server thread/INFO]: [Tick] p50 6.4 ms, p95 11.3 ms, max 14.3 ms over the last 100 ticks; 25 units, 14 buildings, 1 players
+[00:04:28] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:04:31] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[00:04:31] [Render thread/INFO]: [Eyes] clip-mark 15_sunforged_l1_rts_army 1793405071681
+[00:04:31] [Server thread/INFO]: [Offline: Killed 8 entities]
+[00:04:32] [IO-Worker-2/INFO]: [Eyes] 15_sunforged_l1_rts_army: Saved screenshot as bat_eyes_15_sunforged_l1_rts_army.png
+[00:04:33] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[00:04:33] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[00:04:33] [Render thread/INFO]: [Eyes] tour complete
+[00:04:33] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[00:04:34] [Render thread/INFO]: Stopping!
+[00:04:34] [Server thread/INFO]: Offline lost connection: Disconnected
+[00:04:34] [Server thread/INFO]: Offline left the game
+[00:04:34] [Server thread/INFO]: Player logged out: Offline, id: 2
+[00:04:34] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[00:04:34] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:04:34] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1275|0
+[00:04:34] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|2434|489|0
+[00:04:34] [Server thread/INFO]: Stopping server
+[00:04:34] [Server thread/INFO]: Saving players
+[00:04:34] [Server thread/INFO]: Saving worlds
+[00:04:34] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[00:04:34] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[00:04:34] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[00:04:34] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[00:04:34] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[00:04:34] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[00:04:34] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[00:04:34] [Render thread/INFO]: Stopping worker threads
