@@ -28,6 +28,8 @@ public final class VanillaPathBudget {
 
     /** Counters since the last [Paths] line: unit createPath calls, how many took the short search, how many fell back. */
     public static int calls = 0, shortSearches = 0, fallbacks = 0;
+    /** Fallbacks a wide unit skipped since the last [Paths] line: the same search failed a moment ago (WidePathMemo). */
+    public static int wideRepeats = 0;
     /** Every fallback since the server started (never reset: tests compare it before and after). */
     public static long fallbacksTotal = 0;
 
@@ -63,8 +65,9 @@ public final class VanillaPathBudget {
 
     public static String report() {
         String s = "[Paths] last 10 s: " + calls + " unit vanilla createPath, " + shortSearches + " short searches, "
-            + fallbacks + " full-range fallbacks";
+            + fallbacks + " full-range fallbacks, " + wideRepeats + " wide-body repeats skipped";
         calls = 0;
+        wideRepeats = 0;
         shortSearches = 0;
         fallbacks = 0;
         return s;
