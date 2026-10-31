@@ -1,0 +1,53 @@
+(19 first-launch config/mod-loading notices filtered out)
+[00:00:14] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.immediate.model.BakedModelEncoder, which may cause instability.
+[00:00:21] [Render thread/WARN]: Initial datapack load took 2.704 s
+[00:00:24] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-0 absolute]
+[00:00:24] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-15 absolute]
+[00:00:35] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[00:00:36] [Render thread/WARN]: [Patcher] gl_FragColor is not supported yet, please use gl_FragData! Assuming that the shaderpack author intended to use gl_FragData[0]...
+[00:00:37] [Render thread/WARN]: Mod(s) [reignofnether, oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderMeshingTask, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.format.ChunkMeshFormats, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.format.ChunkMeshAttribute, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.attribute.GlVertexFormat$Builder, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.attribute.GlVertexAttributeFormat, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.DefaultChunkRenderer, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.ShaderChunkRenderer, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.ChunkBuildBuffers, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.builder.ChunkMeshBufferBuilder, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.buffers.BakedChunkModelBuilder, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.light.smooth.SmoothLightPipeline, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.light.flat.FlatLightPipeline, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [supplementaries] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer, which may cause instability.
+[00:00:38] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.shader.GlProgram, which may cause instability.
+[00:00:39] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.shader.ShaderType, which may cause instability.
+[00:00:39] [Finalizer/WARN]: One or more BufferBuilders have been leaked, ModernFix will attempt to correct this.
+[00:00:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.immediate.CloudRenderer, which may cause instability.
+[00:00:42] [Render thread/WARN]: Shader clouds could not find uniform named ModelViewMat in the specified shader program.
+[00:00:42] [Render thread/WARN]: Shader clouds could not find uniform named ProjMat in the specified shader program.
+[00:00:42] [Render thread/WARN]: Shader clouds could not find uniform named ColorModulator in the specified shader program.
+[00:00:42] [Render thread/WARN]: Shader clouds could not find uniform named FogStart in the specified shader program.
+[00:00:42] [Render thread/WARN]: Shader clouds could not find uniform named FogEnd in the specified shader program.
+[00:00:42] [Render thread/WARN]: Shader clouds could not find uniform named FogColor in the specified shader program.
+[00:00:43] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion$DeviceResources, which may cause instability.
+[00:00:52] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2179ms or 43 ticks behind
+[00:00:53] [Render thread/WARN]: Time from main menu to in-game was 31.984333 seconds
+[00:00:53] [Render thread/WARN]: Total time to load game and open world was 84.599335 seconds
+[00:00:59] [Server thread/WARN]: Tried to load a DUMMY block entity @ BlockPos{x=-228, y=71, z=45} but found not block entity block Block{minecraft:air} at location
+[00:00:59] [Server thread/WARN]: Tried to load a block entity for block Block{minecraft:air} but failed at location BlockPos{x=-228, y=71, z=45}
+[00:09:57] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 86, 70, 61, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 14 ordered, nearest worker 35.7 blocks away at 95, 71, 28, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[00:10:25] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 132.224756 ms
+[00:10:25] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 150.234397 ms
+[00:10:25] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 150.618446 ms
+[00:10:25] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 150.649633 ms
+[00:10:25] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 151.565293 ms
+[00:10:25] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 164.72995 ms
+[00:10:25] [Server thread/WARN]: Something's taking too long! 'root' took aprox 164.821998 ms
+[00:10:25] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 100.12213 ms
+[00:10:25] [Server thread/WARN]: Something's taking too long! 'root' took aprox 100.302773 ms
+[00:10:38] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2641ms or 52 ticks behind
+[00:10:47] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 101, 70, 127, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 12 ordered, nearest worker 30.7 blocks away at 108, 71, 99, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[00:11:33] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 92, 67, -114, cancelled: blocks 41/97, paid 0.42, builders in range 0 of 9 ordered, nearest worker 8.2 blocks away at 100, 69, -118, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 56 / changed after placing 0, built false
+[00:12:07] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 101, 71, 136, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 9 ordered, nearest worker 7.0 blocks away at 106, 71, 132, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[00:14:06] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at -8, 66, -103, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 6 ordered, nearest worker 28.8 blocks away at -2, 66, -72, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[00:14:20] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
