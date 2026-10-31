@@ -168,7 +168,10 @@ const float CONTACT_SUN_SHARE = 0.0;
 // block (~5 -> ~9 px at the default zoom's ~33 px a block) over four rings, the inner ones weighed more, so the crease
 // is darkest at the foot and fades over its width
 const float CONTACT_RADIUS = 0.26;            // ~9 px at the default RTS zoom
-const float CONTACT_GAIN = 1.0;
+// light pass 20: 1.0 -> 1.8 - with VERTEX_AO_SHADOW_FLOOR (pass 19) the pad's near-foot shadow (3-9 px) read 0.72, as
+// flat as the far shadow: the seating had been the vertex AO's. The crease now reaches its floor further out from the
+// foot and fades over the radius (~9 px): ~0.60 of lit at the foot, ~0.73 by 6-8 px
+const float CONTACT_GAIN = 1.8;
 const float CONTACT_FLOOR = 0.75;
 // the display's S-curve (final.fsh, light pass 2), on luma as a ratio, after the grade. The lit lawn is its pivot and
 // stays where it is (lovish: the lawn mid-toned on the palette band, ~0.42; buildings own the lights). Below the
@@ -415,6 +418,13 @@ const float WALL_FILL = 0.31;
 // light pass 17: 1.20 -> 0.95 - lp16 measured the white sides 0.82-0.86 (model 0.80 at 1.20: lp15's shortfall was not
 // the pack's). Model 0.75 at 0.95, ~0.78-0.79 on screen with lp16's +0.04
 const float SIDE_SUN = 0.95;
+// light pass 20: and SIDE_SUN_SQUARE for a wall the sun meets past SIDE_SUN_FULL_HI of N.L (lib/light.glsl sideKey).
+// lp19 measured the white cubes' south faces (N.L ~0.48) 0.79 / 0.77 / 0.74 against tops 0.95 (Complementary nearly as
+// bright as its tops: the cubes read as solid white, ours as grey slabs); lp16 at 1.20 gave 0.82-0.86, so ~0.29 of
+// luma per unit: 1.40 -> ~0.87-0.89. The east faces (N.L ~0.26, under SIDE_SUN_FULL_LO) keep 0.95
+const float SIDE_SUN_SQUARE = 1.40;
+const float SIDE_SUN_FULL_LO = 0.30;
+const float SIDE_SUN_FULL_HI = 0.45;
 // the low sun's full share by the sine of its height: 1 at or below LOW_SUN_FULL_LO (t11800 is 0.232), 0 from
 // LOW_SUN_FULL_HI (light pass 13). SIDE_SUN's fade and the low shoulder (final.fsh) read it: the light table's own low
 // row (0.10-0.55) left t11800 only 0.80 low, so its whites' shoulder stopped at 0.86 (tops measured 0.87, target ~0.80)
@@ -533,6 +543,13 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 // SHADE_PROBE_WHITE 1: magenta where a white side takes the cool (weight > 0.5), yellow where a white side (whiteness
 // and side > 0.5) does not - what the cubes' shade faces show answers whether the path runs
 #define SHADE_PROBE_WHITE 0 // [0 1]
+// SEAM_PROBE 1 (light pass 20, composite.fsh): pixels the RTS seam fill drew are painted flat - magenta when copied from
+// a top-facing neighbour, cyan from a side. The fog colour that is left shows the rest of a hole (no geometry)
+#define SEAM_PROBE 0 // [0 1]
+// ALBEDO_PROBE (light pass 20, lit.fsh / composite / final): terrain drawn unlit - 1 the texture x vertex colour as the
+// loader hands it (the biome tint), 2 after the shader's own albedo work (meadow, plant caps); no AO, haze, glow or grade.
+// A near/far hue gap still in this image is the texture's or the world's, not the light's
+#define ALBEDO_PROBE 0 // [0 1 2]
 // light pass 17: and the LIGHT on such a side goes the same share to WHITE_SHADE_COOL at its own luma. lp16 kept b-r
 // +6..+9 on 4 of 5 white sides, +16 on one: the albedo neutral had nothing to take (gen_blocks paints quartz at sat
 // 0.03-0.04); the cast is the light's - the sky's part (the cool) scales with the vertex and material AO, the warm
@@ -544,7 +561,9 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 // adds near-neutral light, which drops the pixel under the grade's grey gate (GREY_GATE 0.03-0.10: no saturation or
 // vibrance) while the split tone's HIGHLIGHT_TINT (1.03, 1, 0.96) still warms it - +12.4 -> +9 at ~0.35 of the
 // glow estimate, the measured +9. Model with this cool: +16..+20 over glow 0.3-0.5
-const vec3 WHITE_SHADE_COOL = vec3(0.90, 1.0025, 1.27);
+// light pass 20: (0.90, 1.0025, 1.27) -> (0.88, 0.9976, 1.38): lp19 measured +12 median (lp18 +9 at blue 1.19): ~+3.7
+// on screen per 0.08 of blue, so +0.11 for ~+16
+const vec3 WHITE_SHADE_COOL = vec3(0.88, 0.9976, 1.38);
 // and under a low sun every near-white face, tops too, by this much (light pass 7: t11800's whites read 235/221/213, a
 // 22 spread; target <= 12 while the lawn keeps the warm light)
 const float WHITE_LOW_NEUTRAL = 0.55;

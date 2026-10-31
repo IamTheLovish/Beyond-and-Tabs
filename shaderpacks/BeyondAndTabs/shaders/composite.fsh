@@ -230,9 +230,30 @@ bool seamHit(vec2 uv) {
     return texture2D(depthtex0, uv).r < 1.0;
 }
 
+// light pass 20: how much a drawn pixel's surface faces up (from its depth neighbours). The lp19 stills lost two cubes'
+// whole east faces (depth 1: 460 px of exactly the fog colour (41, 47, 29) at a sandstone's foot - no lit draw is
+// that flat) and the fill copied the cube's TOP down them. A top-facing source now costs SEAM_TOP_COST_PX of span,
+// so a hole with a side face on its other side (the column's lower block) is filled from that side
+const float SEAM_TOP_COST_PX = 40.0;
+
+float seamUpness(vec2 uv) {
+    vec2 px = 1.0 / vec2(viewWidth, viewHeight);
+    vec3 p = viewPosAt(uv, texture2D(depthtex0, uv).r);
+    vec2 ux = seamHit(uv + vec2(px.x, 0.0)) ? vec2(px.x, 0.0) : vec2(-px.x, 0.0);
+    vec2 uy = seamHit(uv + vec2(0.0, px.y)) ? vec2(0.0, px.y) : vec2(0.0, -px.y);
+    vec3 dx = viewPosAt(uv + ux, texture2D(depthtex0, uv + ux).r) - p;
+    vec3 dy = viewPosAt(uv + uy, texture2D(depthtex0, uv + uy).r) - p;
+    vec3 n = normalize(cross(dx, dy));
+    return abs(dot(n, normalize(upPosition)));
+}
+
+// 1 where the pixel was filled from a neighbour (SEAM_PROBE)
+float gSeamFilled = 0.0;
+float gSeamFromTop = 0.0;
+
 vec2 seamSource(vec2 uv) {
     vec2 px = 1.0 / vec2(viewWidth, viewHeight);
-    float bestSpan = SEAM_SPAN_PX;
+    float bestSpan = 1e9;
     vec2 src = uv;
     for (int a = 0; a < 4; a++) {
         vec2 dir = a == 0 ? vec2(1.0, 0.0) : (a == 1 ? vec2(0.0, 1.0) : (a == 2 ? vec2(1.0, 1.0) : vec2(1.0, -1.0)));
@@ -248,12 +269,23 @@ vec2 seamSource(vec2 uv) {
                 break;
         }
         float span = (kp + kn) * SEAM_STEP_PX * length(dir);
-        if (kp > 0.0 && kn > 0.0 && span <= bestSpan) {
-            bestSpan = span;
-            // the nearer side, mirrored about the hole's edge; the edge pixel itself if the mirror falls off it
-            vec2 toward = kp <= kn ? e : -e;
-            float k = min(kp, kn);
-            src = seamHit(uv + toward * (2.0 * k)) ? uv + toward * (2.0 * k) : uv + toward * k;
+        if (kp > 0.0 && kn > 0.0 && span <= SEAM_SPAN_PX) {
+            // each side's cost: its distance, and SEAM_TOP_COST_PX if its surface faces up (light pass 20)
+            float topP = smoothstep(0.6, 0.85, seamUpness(uv + e * kp));
+            float topN = smoothstep(0.6, 0.85, seamUpness(uv - e * kn));
+            float costP = span + kp * SEAM_STEP_PX + SEAM_TOP_COST_PX * topP;
+            float costN = span + kn * SEAM_STEP_PX + SEAM_TOP_COST_PX * topN;
+            bool usePos = costP <= costN;
+            float cost = min(costP, costN);
+            if (cost <= bestSpan) {
+                bestSpan = cost;
+                // that side, mirrored about the hole's edge; the edge pixel itself if the mirror falls off it
+                vec2 toward = usePos ? e : -e;
+                float k = usePos ? kp : kn;
+                src = seamHit(uv + toward * (2.0 * k)) ? uv + toward * (2.0 * k) : uv + toward * k;
+                gSeamFilled = 1.0;
+                gSeamFromTop = usePos ? topP : topN;
+            }
         }
     }
     return src;
@@ -322,6 +354,14 @@ void main() {
     gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
 #endif
     vec3 c = toDisplay(toneMap(lin));
+#if SEAM_PROBE == 1
+    // light pass 20: what the seam fill drew - magenta from a top-facing neighbour, cyan from a side
+    if (gSeamFilled > 0.5) {
+        gl_FragData[0] = vec4(mix(vec3(0.0, 1.0, 1.0), vec3(1.0, 0.0, 1.0), step(0.5, gSeamFromTop)), 1.0);
+        gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+#endif
     if (depth >= 1.0) {
         // nothing drawn: in the RTS view that is past the map's edge, where the mod sets its own edge tone as the fog
         // colour (OrthoviewClientEvents.onFogColor) - shown as is, as without a pack
@@ -338,7 +378,7 @@ void main() {
             if (texture2D(colortex1, uv).g < 0.5)
                 c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(uv, 1.0))))), skyOwn());
 #endif
-    } else if (isEyeInWater == 0) {
+    } else if (isEyeInWater == 0 && ALBEDO_PROBE == 0) {
         vec3 pos = viewPosAt(uv, depth);
         float dist = ortho ? -pos.z : length(pos);
         // a perspective view (first person, the 3/4 camera) gets aerial perspective: sky-tinted air from

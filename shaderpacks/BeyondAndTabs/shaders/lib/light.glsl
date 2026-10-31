@@ -130,9 +130,13 @@ float lowSunFull() {
 // the share of the sun's term a face takes by how far it looks up (SIDE_SUN, light pass 13): tops all of it, walls
 // SIDE_SUN under a high sun, so a sun-lit side parts from its top instead of both sitting in the display's shoulder.
 // A low sun keeps its whole light on the walls it rakes (t11800's golden faces)
-float sideKey(vec3 n) {
+// light pass 20: a wall the sun meets squarely (N.L past SIDE_SUN_FULL_HI) takes SIDE_SUN_SQUARE, one it grazes (under
+// SIDE_SUN_FULL_LO) keeps SIDE_SUN: the white cubes' south faces (N.L ~0.48) up toward their tops, their east faces (~0.26)
+// as they were
+float sideKey(vec3 n, float facing) {
     float up = clamp(dot(n, normalize(upPosition)), 0.0, 1.0);
-    return mix(mix(SIDE_SUN, 1.0, up), 1.0, lowSunFull());
+    float side = mix(SIDE_SUN, SIDE_SUN_SQUARE, smoothstep(SIDE_SUN_FULL_LO, SIDE_SUN_FULL_HI, facing));
+    return mix(mix(side, 1.0, up), 1.0, lowSunFull());
 }
 
 // the grass's facing (light pass 4: biome-tinted terrain only, lit.fsh): eased further toward a square root as the sun
@@ -210,7 +214,7 @@ float fillDirection(vec3 n) {
 vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, float texAo, vec3 sunColour,
                   vec3 skyColour) {
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
-    vec3 light = sunArriving(shadow, levels, sunColour) * (facing * sideKey(n) * mix(1.0, texAo, 0.5));
+    vec3 light = sunArriving(shadow, levels, sunColour) * (facing * sideKey(n, facing) * mix(1.0, texAo, 0.5));
     float direction = fillDirection(n);
     light += skyFill(n, levels, ao, texAo, sunColour, skyColour) * direction;
     // the sky's part of the fill, cooled where no sun arrives (shadeTint); the ground's bounce keeps its warmth

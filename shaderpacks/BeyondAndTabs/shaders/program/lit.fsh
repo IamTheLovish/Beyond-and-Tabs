@@ -101,6 +101,13 @@ void main() {
 #endif
     vec4 tex = texture2D(texture, texcoord, lodBias);
     vec3 albedo = tex.rgb * glcolor.rgb;
+#if ALBEDO_PROBE == 1 && defined LIT_TERRAIN
+    if (tex.a < 0.1)
+        discard;
+    gl_FragData[0] = vec4(toLinear(albedo), 1.0);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+#endif
 #if defined LIT_TERRAIN || defined LIT_WATER
     float ao = glcolor.a;              // separateAo: the vertex AO, not an alpha
     float alpha = tex.a;
@@ -199,6 +206,11 @@ void main() {
     }
 #endif
 
+#if ALBEDO_PROBE == 2 && defined LIT_TERRAIN
+    gl_FragData[0] = vec4(toLinear(albedo), 1.0);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+#endif
     // grass, flowers and crops are crossed planes whose normals point sideways: lit as the ground they stand on, so a
     // tuft reads as part of the lawn (no dark patches on the planes turned from the sun)
     // a draw with no normal (all zero) would light as NaN, and the glow and edge smoothing would spread it: up instead
