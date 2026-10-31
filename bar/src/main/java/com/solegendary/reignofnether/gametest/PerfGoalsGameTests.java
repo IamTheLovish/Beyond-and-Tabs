@@ -30,12 +30,13 @@ public class PerfGoalsGameTests {
     static final String ARENA = SkirmishGameTests.ARENA;
 
     /**
-     * 20 idle vindicators measured for 60 ticks: their RandomLookAroundUnitGoal's calls are counted under its class, and
-     * the [Goals] line has rows. Not that the line names it: it is cheap, so with every other mob in the test world in
-     * the window it folds into "(+N smaller)" (PR build 41182502247: 179 calls, folded).
+     * 20 idle vindicators measured for 60 ticks: their RandomLookAroundUnitGoal's calls are counted under its class, at
+     * least one per unit (each idle unit thinks every 4th tick, so ~15 times in the window; the green samples counted
+     * 180-240). Not that the line prints it: it is cheap, so with every other mob in the test world in the window it
+     * folds into "(+N smaller)" (PR build 41182502247: 179 calls, folded).
      */
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "perf_goals")
-    public static void the_goals_line_names_the_goal_classes_units_run(GameTestHelper helper) {
+    public static void the_goals_line_counts_the_goal_calls_of_every_unit(GameTestHelper helper) {
         BlockPos pad = ArenaReady.pad(helper, 215);
         String owner = "gametest_goals_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Entity> made = new ArrayList<>();
@@ -62,13 +63,12 @@ public class PerfGoalsGameTests {
             String line = GoalTimes.snapshot();
             Sys.force(hold, false);
             cleanUp(made);
-            ReignOfNether.LOGGER.info("GameTest [Goals] 20 idle vindicators, 60 ticks: {}", line);
+            ReignOfNether.LOGGER.info("GameTest [Goals] 20 idle vindicators, 60 ticks: {} RandomLookAroundUnitGoal calls; {}", looks, line);
             if (line == null)
                 helper.fail("no [Goals] line came back");
-            else if (looks == 0)
-                helper.fail("the idle units' RandomLookAroundUnitGoal was not timed (0 calls): " + line);
-            else if (line.endsWith("nothing timed"))
-                helper.fail(looks + " goal calls counted but the line has no rows: " + line);
+            else if (looks < made.size())
+                helper.fail("the idle units' RandomLookAroundUnitGoal was timed " + looks + " times in 60 ticks (at least "
+                    + made.size() + ", one per unit): " + line);
             else
                 helper.succeed();
         });

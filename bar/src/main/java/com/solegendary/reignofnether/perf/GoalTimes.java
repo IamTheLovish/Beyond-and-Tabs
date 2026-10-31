@@ -9,14 +9,21 @@ import java.util.Map;
  * Which GOALS the units' AI time goes to (lovish Oct 31: "the game keeps lagging"). The [Sys] line and vanilla's profiler
  * stop at the goal selector: in lovish's Oct 29 22:44 server profile 213 skull hurlers spent 13.4 ms a tick, the biggest
  * share under {@code goalTick} "unspecified" - the running goals' own ticks, which no section names. This times every
- * call GoalSelector makes on a goal (mixin/goals/WrappedGoalMixin: tick, canUse, canContinueToUse, start) and sums it
+ * call GoalSelector makes on a goal (mixin/goals/GoalSelectorMixin: tick, canUse, canContinueToUse, start) and sums it
  * per goal CLASS over every unit, so the next game's log names the expensive goals - one row per system, never one per
  * unit - and the fix can be made where it pays for every unit that runs that goal.
  *
  * <p>A {@code [Goals]} line beside each [Sys] line (every 10 s), only while [Sys] measures: the server is slow (tick p95
  * 25 ms and up), a lag capture or /rts-perf runs, or a test forces it ({@link Sys#force}). Cost while it does not: one
- * volatile read per goal call. While it does: two nanoTime calls and a map lookup per goal call, under 0.1 us
- * (~5,000 goal calls a tick at 700 units: under 0.5 ms a tick, only in a slow window). Server thread only, like [Sys].
+ * volatile read per goal call, nothing allocated (redirects, not injects: no CallbackInfo per call). While it does: two
+ * nanoTime calls and a map lookup per goal call, under 0.1 us (~5,000 goal calls a tick at 700 units: under 0.5 ms a
+ * tick, only in a slow window; that overhead shows in [Sys]'s aiGoals self time). Server thread only, like [Sys].
+ *
+ * <p>What it cannot see: a goal ticked directly by unit code instead of by its GoalSelector - about 46 call sites
+ * ({@code goal.tick()} in AttackerUnit (the melee goal on a vehicle, the attack-building goal), WorkerUnit (build /
+ * repair, gather), Unit, HeroCore, NecromancerUnit, WardenUnit, the casters' ability goals...). Those ticks are missing
+ * from their class's row or understate it (AttackBuildingGoal is in the selector too). Most run inside a [Sys] section
+ * (attacker, unit), so the time is not lost, but read a cheap [Goals] row for those goals with that in mind.
  */
 public final class GoalTimes {
     private GoalTimes() { }
