@@ -73,3 +73,13 @@ camera only by value, and both ends overshoot (granite 0.55 "salmon", slate 0.18
 "in the ground mids") - its place on the gate-rose axis and its footprint are massing, not material; re-measuring a
 camera-table entry another lab's tests rely on moves their numbers (copper blotch 0.050 -> 0.052): measure with
 camera_colour.py --add-only.
+
+## Charnel Works r2 (Gravebound T1 vehicle lab, the r12 method; PR #458) - ref24, 17 x 17 x 26, one fixed rubric
+Designer pass: itachi2-api run 20261030-211330-gravebound-r1-design (rubric = r12's 7 axes; bands in
+design/vehicle_labs/gravebound_expected.md). Each round photographed with its control in ONE eyes run (build e7b4e94 =
+build_run 41096418230, branch pack, plain lane, keep_only, times 6000); two fresh API critics per round, a / b.
+
+| Round | Eyes run | RTS | Close | Landmark | Gate | Roofs | Materials | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| round 1 (control, Oct 28) | - | 4 overall (round 1 critic) | | | | | | | five equal spikes, no landmark; gate not the biggest opening; floating bone; noisy faces; cyan dots, lava; too many materials; flat messy roof | the rib-vault, the bone gate posts |
+| massing A / B / C + control | 41155033682 | A 6 / 6, B 5 / 5, C 4 / 5, control 6 / 6 | - | A 6 / 6, B 4 / 4, C 5 / 5, control 7 / 7 | A 6 / 7, control 5 / 4 | A 6 / 6, control 4 / 5 | - | - | both rank A first (2 > 3 > 4 > 1 and 2 > 3 > 1 > 4), close to the control: the centre a stub that barely leads, three similar square caps; a sheer front, not a climbing pyramid; the light focus on the vault, a flat deck, a pale gate floor, no heart glow | A (ref24's triad on the gate axis, the vault behind) |
