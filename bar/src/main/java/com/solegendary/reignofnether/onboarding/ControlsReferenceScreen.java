@@ -107,6 +107,11 @@ public class ControlsReferenceScreen extends Screen {
             + k(Keybindings.panRight) + "  /  " + t("edges"));
         mouse("rotate", alt + " + " + t("middle_drag") + "  /  " + alt + " + " + k(Keybindings.panLeft) + k(Keybindings.panRight));
         mouse("tilt", t("ctrl") + " + " + t("wheel"));
+        // BAR camera anchors (Keybindings.cameraAnchors, F5-F8): the key jumps back, Ctrl + the key saves the spot
+        Keybinding[] anchors = Keybindings.cameraAnchors;
+        slots("camera_anchor_jump", anchors);
+        mouse("camera_anchor_store", t("ctrl") + " + " + k(anchors[0]) + " / " + k(anchors[1]) + " / "
+            + k(anchors[2]) + " / " + k(anchors[3]));
         bind("reset", Keybindings.reset);
         bind("toggle_camera", Keybindings.toggleCamera);
         bind("free_fly", Keybindings.toggleFreeFly);
@@ -126,6 +131,10 @@ public class ControlsReferenceScreen extends Screen {
         mouse("remove", t("ctrl") + " + " + t("left_click"));
         mouse("select_all_units_ctrl_a", t("ctrl") + " + A");
         mouse("select_same_type_ctrl_z", t("ctrl") + " + Z");
+        // keybinds/ChordKeys: BAR's SelectPart_50, damaged filter and cycleselected
+        mouse("select_half_ctrl_q", t("ctrl") + " + Q");
+        mouse("select_damaged_alt_q", alt + " + Q");
+        mouse("cycle_selected", t("ctrl") + " + .  /  " + t("ctrl") + " + ,");
         mouse("esc_cancel", "Esc");
         bind("deselect", Keybindings.deselect);
         bind("cycle", Keybindings.tab);

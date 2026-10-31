@@ -47,6 +47,25 @@ public final class KeyConflicts {
             && !(key == defaultKey && panKey == panDefaultKey);
     }
 
+    public enum FKeyOwner { NONE, ANCHOR, RESIGN_VOTE, SPECTATE }
+
+    /**
+     * Who owns a key that a camera anchor (F5-F8 by default, Keybindings.cameraAnchors) is bound to: the F-key meaning
+     * that is live on it wins - the resign vote's yes / no (fn_6 / fn_7) while a vote is open, the spectator's view
+     * cycle (fn_8) while spectating - else the anchor. NONE when no anchor is on the key, so the other F-key handlers
+     * (debug F7, ops fog reset F8) only act on NONE. The keys are those bindings' keys now (Keybindings.fKeyOwner).
+     */
+    public static FKeyOwner fKeyOwner(int key, boolean isAnchorKey, boolean voteOpen, int voteYesKey, int voteNoKey,
+                                      boolean spectating, int spectateKey) {
+        if (key < 0 || !isAnchorKey)
+            return FKeyOwner.NONE;
+        if (voteOpen && (key == voteYesKey || key == voteNoKey))
+            return FKeyOwner.RESIGN_VOTE;
+        if (spectating && key == spectateKey)
+            return FKeyOwner.SPECTATE;
+        return FKeyOwner.ANCHOR;
+    }
+
     /** Every RTS binding that sits on a pan key it does not ship on. {@code currentKey} maps a translation key to its key now. */
     public static List<Overlap> panOverlaps(ToIntFunction<String> currentKey) {
         List<Overlap> out = new ArrayList<>();
