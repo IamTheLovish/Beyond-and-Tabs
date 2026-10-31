@@ -63,7 +63,7 @@ public abstract class PathNavigationMixin implements WidePathMemo.Holder {
         long now = mob.level().getGameTime();
         // the same targets from about here found no way under a second ago: a chase asking every tick (a ranged unit's
         // moveTo(target) at the end of a partial path) gets that answer again instead of a ~5 ms search (Oct 31)
-        Path lately = null;   // RED HEAD: the repeat answer off (old behaviour), the counters on
+        Path lately = reignofnether$wideMemo.repeatOf(from, targets, now);
         if (lately != null) {
             VanillaPathBudget.repeats++;
             cir.setReturnValue(lately);
@@ -97,7 +97,7 @@ public abstract class PathNavigationMixin implements WidePathMemo.Holder {
         }
         // this unit searched the whole range for these targets from here a moment ago and found no way: the same
         // answer again (12-33 ms for a wide body, ~5 ms for a headhunter) - keep the short search's
-        if (wide && reignofnether$wideMemo.failedLately(from, targets, now)) {   // RED HEAD: wide bodies only, as #451
+        if (reignofnether$wideMemo.failedLately(from, targets, now)) {
             VanillaPathBudget.wideRepeats++;
             reignofnether$wideMemo.searched(from, targets, now, p);
             cir.setReturnValue(p);
