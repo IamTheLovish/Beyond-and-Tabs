@@ -4,7 +4,10 @@ import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.ability.abilities.PlantThicket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.barfx.FeelFx;
 import com.solegendary.reignofnether.barfx.LightningFx;
+import com.solegendary.reignofnether.barfx.ParticleBudget;
+import com.solegendary.reignofnether.barfx.Telegraphs;
 import com.solegendary.reignofnether.brass.MachineRepair;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
 import com.solegendary.reignofnether.hero.HeroKit.AbilitySpec;
@@ -191,14 +194,22 @@ public final class HeroKits {
         int stun = ticks(c.b());
         HeroFx.trail(c.level, ParticleTypes.CLOUD, c.hero.position().add(0, 0.3, 0), to.add(0, 0.3, 0));
         HeroFx.sound(c.level, c.hero.position(), SoundEvents.SHIELD_BLOCK, 1.2f, 0.7f);
-        c.fh.heroCore().startMotion(to, (int) (dist * 0.8) + 3, 0.6, m -> {
+        // feel kit (H3): the landing ring is shown to everyone first, and the stun never lands sooner than 400 ms
+        // after it appears (short dashes take up to 8 ticks); the impact then gets hit-stop, shake and sound layers
+        int flight = Telegraphs.lead((int) (dist * 0.8) + 3);
+        Telegraphs.announce(c.level, to, c.spec.radius, flight);
+        ParticleBudget budget = ParticleBudget.high();
+        c.fh.heroCore().startMotion(to, flight, 0.6, m -> {
+            LivingEntity first = null;
             for (LivingEntity e : HeroFx.enemies(c.level, m, m.position(), c.spec.radius)) {
                 HeroFx.damage(m, e, dmg, false);
                 HeroFx.stun(e, stun);
                 HeroFx.knockback(m.position(), e, 0.8);
+                if (first == null)
+                    first = e;
             }
-            HeroFx.particles(c.level, ParticleTypes.CRIT, m.position().add(0, 0.5, 0), 20, 1.0, 0.2);
-            HeroFx.sound(c.level, m.position(), SoundEvents.ANVIL_LAND, 0.8f, 1.3f);
+            HeroFx.particles(c.level, ParticleTypes.CRIT, m.position().add(0, 0.5, 0), budget.take(20), 1.0, 0.2);
+            FeelFx.impact(c.level, m.position(), m, first, FeelFx.BIG);
         });
         return true;
     }
