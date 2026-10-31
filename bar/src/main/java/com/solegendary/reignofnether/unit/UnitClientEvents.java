@@ -23,6 +23,7 @@ import com.solegendary.reignofnether.gamerules.GameruleClient;
 import com.solegendary.reignofnether.hero.HeroServerboundPacket;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.IdleButtons;
+import com.solegendary.reignofnether.hud.InspectView;
 import com.solegendary.reignofnether.player.CommanderServerEvents;
 import com.solegendary.reignofnether.hud.TextInputClientEvents;
 import com.solegendary.reignofnether.hud.effecticons.MobEffectIcon;
@@ -225,11 +226,9 @@ public class UnitClientEvents {
     }
     public static void addSelectedUnitNoSort(LivingEntity unit) {
         CursorClientEvents.setLeftClickAction(null);
-        if (!FogOfWarClientEvents.isInBrightChunk(unit))
-            return;
-        if (isHiddenFromLocalPlayer(unit))
-            return;
-        if (unit.isPassenger())
+        // only what the player sees now: lit, not cloaked from this side, not a rider (InspectRules, enemies too)
+        if (!InspectRules.mayInspect(FogOfWarClientEvents.isInBrightChunk(unit), isHiddenFromLocalPlayer(unit),
+                unit.isPassenger()))
             return;
         tellServerIfOwnHero(unit);
         selectedUnits.add(unit);
@@ -239,11 +238,9 @@ public class UnitClientEvents {
     }
     public static void addSelectedUnit(LivingEntity unit) {
         CursorClientEvents.setLeftClickAction(null);
-        if (!FogOfWarClientEvents.isInBrightChunk(unit))
-            return;
-        if (isHiddenFromLocalPlayer(unit))
-            return;
-        if (unit.isPassenger())
+        // only what the player sees now: lit, not cloaked from this side, not a rider (InspectRules, enemies too)
+        if (!InspectRules.mayInspect(FogOfWarClientEvents.isInBrightChunk(unit), isHiddenFromLocalPlayer(unit),
+                unit.isPassenger()))
             return;
         tellServerIfOwnHero(unit);
         selectedUnits.add(unit);
@@ -453,8 +450,13 @@ public class UnitClientEvents {
         if (MC.player != null) {
             var selUnits = new LinkedList<LivingEntity>();
             int targetEntityId = !preselectedUnits.isEmpty() ? preselectedUnits.get(0).getId() : -1;
+            String senderName = MC.player.getName().getString();
+            boolean senderSandbox = UnitActionItem.isSandboxOwner(MC.level, senderName);
             loop:
             for (LivingEntity livingEntity : selectedUnits) {
+                // an inspected enemy / neutral unit is never named in an order (the server drops it too: PacketAuth)
+                if (livingEntity instanceof Unit u && !UnitActionItem.mayCommand(MC.level, senderName, u, senderSandbox))
+                    continue;
                 if (livingEntity instanceof Unit unit) {
                     for (Ability ability : unit.getAbilities().get()) {
                         if (ability.isCasting(unit) && ability.oneClickOneUse && ability.action == action) continue loop;
@@ -729,7 +731,9 @@ public class UnitClientEvents {
 
             // prevent selection of units out of view
             // (an enemy that went under cover - cloak / thicket - drops out of the selection the same way)
-            selectedUnits.removeIf(e -> !FogOfWarClientEvents.isInBrightChunk(e) || isHiddenFromLocalPlayer(e));
+            if (selectedUnits.removeIf(e -> !InspectRules.mayInspect(FogOfWarClientEvents.isInBrightChunk(e),
+                    isHiddenFromLocalPlayer(e), false)))
+                markSelectedUnitsChanged();
         }
 
         // calculate vecs used to hide leaf blocks around units
@@ -1044,10 +1048,8 @@ public class UnitClientEvents {
             // deselect any non-owned units if we managed to select them with owned units
             // and disallow selecting > 1 non-owned unit or the client player
             if (selectedUnits.size() > 1) {
-                selectedUnits.removeIf(e ->
-                    (getPlayerToEntityRelationship(e) != Relationship.OWNED && !NonUnitClientEvents.canControlAllMobs() && !AlliancesClient.canControlAlly(e)) ||
-                            e.getId() == MC.player.getId()
-                );
+                final int selSize = selectedUnits.size();
+                selectedUnits.removeIf(e -> !InspectView.keepInSelection(selSize, e) || e.getId() == MC.player.getId());
             }
             lastLeftClickTime = System.currentTimeMillis();
         }
@@ -1726,16 +1728,9 @@ public class UnitClientEvents {
                 return Relationship.NEUTRAL;
             }
 
-            // For Units, check ownership and alliance
+            // For Units, check ownership and alliance (the one rule the inspect tests check)
             String ownerName = ((Unit) entity).getOwnerName();
-
-            if (playerName.equals(ownerName)) {
-                return Relationship.OWNED;
-            } else if (AlliancesClient.isAllied(playerName, ownerName)) {
-                return Relationship.FRIENDLY;
-            } else {
-                return Relationship.HOSTILE;
-            }
+            return InspectRules.relation(playerName, ownerName, AlliancesClient.isAllied(playerName, ownerName));
         }
 
         // If the world or player is null, return NEUTRAL

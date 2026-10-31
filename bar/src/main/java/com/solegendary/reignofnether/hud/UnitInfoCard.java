@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.hud.buttons.Button;
 import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.unit.InspectRules;
 import com.solegendary.reignofnether.unit.UnitKills;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
@@ -198,6 +199,9 @@ public final class UnitInfoCard {
 
     /** How many ability rows {@link #abilities} will draw for this unit (same filter, same cap). */
     public static int abilityRowCount(Unit unit) {
+        // an enemy's (or neutral's) abilities and cooldowns are its plans: not on its card (InspectRules)
+        if (!InspectView.shows(InspectRules.Info.ABILITIES, (LivingEntity) unit))
+            return 0;
         List<Button> buttons = unit.getAbilityButtons();
         int rows = 0;
         for (int i = 0; i < buttons.size() && rows < MAX_ABILITY_ROWS; i++)
@@ -503,6 +507,8 @@ public final class UnitInfoCard {
     /** One row per ability: icon, name, and "Ready" or the seconds left (BAR shows cooldowns on the card too). */
     private static void abilities(GuiGraphics gg, Font font, int x, int y, int w, int bottom, Unit unit,
                                   int mouseX, int mouseY) {
+        if (!InspectView.shows(InspectRules.Info.ABILITIES, (LivingEntity) unit))
+            return;
         List<Button> buttons = unit.getAbilityButtons();
         int rows = 0;
         for (int i = 0; i < buttons.size() && rows < MAX_ABILITY_ROWS && y + 9 <= bottom; i++) {
