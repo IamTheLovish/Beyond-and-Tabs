@@ -1,0 +1,180 @@
+[02:19:02] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[02:19:04] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[02:19:04] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[02:19:05] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[02:19:05] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+[02:19:13] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[02:19:14] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[02:19:23] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[02:19:33] [Worker-ResourceReload-0/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[02:19:33] [Worker-ResourceReload-0/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[02:19:41] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[02:19:42] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[02:20:16] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[02:20:46] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[02:21:16] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[02:21:16] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793413276629
+[02:21:16] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[02:21:20] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793413280733
+[02:21:20] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/VNR, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[02:21:21] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[02:21:23] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[02:21:41] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[02:21:41] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[02:22:07] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 114 s left (client tick 187, camera at [-236, 89, 14]); our slot -228, 7; a bot's start 212, 7; markers: 2 boxes, 3 frames drawn; team 0 (mine) fill built (26845 columns, 1689 quads), 282 perimeter heights known; team 1 fill built (840 columns, 111 quads), 0 perimeter heights known
+[02:22:11] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 110 s left, zoom 35.996723, camera at [-235, 89, 14]; markers: 2 boxes, 7 frames drawn; team 0 (mine) fill built (36459 columns, 1932 quads), 421 perimeter heights known; team 1 fill built (840 columns, 111 quads), 51 perimeter heights known
+[02:22:11] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793413331071
+[02:22:11] [IO-Worker-9/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[02:22:13] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 109 s left, zoom 58.773575, camera at [-234, 89, 13]; markers: 2 boxes, 9 frames drawn; team 0 (mine) fill built (36459 columns, 1932 quads), 450 perimeter heights known; team 1 fill built (840 columns, 111 quads), 51 perimeter heights known
+[02:22:13] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793413333081
+[02:22:13] [IO-Worker-6/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[02:22:14] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 107 s left, zoom 86.1431, camera at [-233, 89, 12]; markers: 2 boxes, 10 frames drawn; team 0 (mine) fill built (36459 columns, 1932 quads), 450 perimeter heights known; team 1 fill built (840 columns, 111 quads), 51 perimeter heights known
+[02:22:14] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793413334426
+[02:22:14] [IO-Worker-5/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[02:22:19] [Render thread/INFO]: [Eyes] 01f: eye at [212, 69, 27] y 70 looking at the start 212, 7 (20 blocks away; ground there 70); 102 s left; markers: 2 boxes, 18 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (39160 columns, 2234 quads), 434 perimeter heights known
+[02:22:19] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793413339247
+[02:22:19] [IO-Worker-5/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[02:22:21] [Render thread/INFO]: [Eyes] 01e: start placed at -228, 7 with 100 s left; the phase ends 3 s later
+[02:22:24] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 97 s left, zoom 36.018288, camera at [-234, 89, 13]; markers: 2 boxes, 22 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (840 columns, 111 quads), 539 perimeter heights known
+[02:22:24] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793413344527
+[02:22:24] [IO-Worker-9/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[02:22:43] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:23:31] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793413411839
+[02:23:31] [Server thread/INFO]: [Eyes] ground 0:30 round [-236, 14]: {minecraft:calcite=2, minecraft:diorite_wall=20, minecraft:gold_block=5, minecraft:grass_block=2157, minecraft:lantern=20, minecraft:moss_block=3, minecraft:polished_andesite=3, minecraft:polished_andesite_stairs=20, minecraft:quartz_stairs=44, minecraft:raw_iron_block=14, minecraft:smooth_quartz=36, minecraft:smooth_quartz_slab=8, minecraft:smooth_quartz_stairs=56, minecraft:smooth_stone=2, minecraft:stone_brick_stairs=8, minecraft:stone_bricks=3}
+[02:23:31] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793413411857
+[02:23:31] [Server thread/INFO]: [Eyes] 15 structures: fog of war off, day time 6000 (noon)
+[02:23:32] [IO-Worker-4/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[02:23:32] [IO-Worker-2/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[02:23:33] [Render thread/INFO]: [Eyes] 15_block_sampler_1: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/block_sampler_1.nbt' 22x7x13 placed at -283, 70, 46 (pad centre -272, 70, 52)
+[02:23:38] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_rts 1793413418741
+[02:23:39] [IO-Worker-13/INFO]: [Eyes] 15_block_sampler_1_rts: Saved screenshot as bat_eyes_15_block_sampler_1_rts.png
+[02:23:45] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:24:53] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:24:55] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_rts_close 1793413495122
+[02:24:56] [IO-Worker-6/INFO]: [Eyes] 15_block_sampler_1_rts_close: Saved screenshot as bat_eyes_15_block_sampler_1_rts_close.png
+[02:25:00] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_34 1793413500334
+[02:25:00] [IO-Worker-4/INFO]: [Eyes] 15_block_sampler_1_34: Saved screenshot as bat_eyes_15_block_sampler_1_34.png
+[02:25:07] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_dusk 1793413507917
+[02:25:08] [IO-Worker-6/INFO]: [Eyes] 15_block_sampler_1_dusk: Saved screenshot as bat_eyes_15_block_sampler_1_dusk.png
+[02:25:12] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_rts_t5000 1793413512821
+[02:25:13] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_1_rts_t5000: Saved screenshot as bat_eyes_15_block_sampler_1_rts_t5000.png
+[02:25:17] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_34_t5000 1793413517846
+[02:25:18] [IO-Worker-2/INFO]: [Eyes] 15_block_sampler_1_34_t5000: Saved screenshot as bat_eyes_15_block_sampler_1_34_t5000.png
+[02:25:22] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_rts_t11800 1793413522981
+[02:25:23] [IO-Worker-6/INFO]: [Eyes] 15_block_sampler_1_rts_t11800: Saved screenshot as bat_eyes_15_block_sampler_1_rts_t11800.png
+[02:25:28] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_34_t11800 1793413528830
+[02:25:29] [IO-Worker-2/INFO]: [Eyes] 15_block_sampler_1_34_t11800: Saved screenshot as bat_eyes_15_block_sampler_1_34_t11800.png
+[02:25:34] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_rts_army 1793413534702
+[02:25:35] [IO-Worker-2/INFO]: [Eyes] 15_block_sampler_1_rts_army: Saved screenshot as bat_eyes_15_block_sampler_1_rts_army.png
+[02:25:36] [Render thread/INFO]: [Eyes] 15_block_sampler_2: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/block_sampler_2.nbt' 22x7x13 placed at -283, 70, 46 (pad centre -272, 70, 52)
+[02:25:41] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts 1793413541134
+[02:25:41] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_2_rts: Saved screenshot as bat_eyes_15_block_sampler_2_rts.png
+[02:26:04] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:26:58] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts_close 1793413618949
+[02:26:59] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_2_rts_close: Saved screenshot as bat_eyes_15_block_sampler_2_rts_close.png
+[02:27:04] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_34 1793413624316
+[02:27:04] [IO-Worker-14/INFO]: [Eyes] 15_block_sampler_2_34: Saved screenshot as bat_eyes_15_block_sampler_2_34.png
+[02:27:12] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_dusk 1793413632441
+[02:27:12] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_2_dusk: Saved screenshot as bat_eyes_15_block_sampler_2_dusk.png
+[02:27:13] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:27:17] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts_t5000 1793413637411
+[02:27:17] [IO-Worker-14/INFO]: [Eyes] 15_block_sampler_2_rts_t5000: Saved screenshot as bat_eyes_15_block_sampler_2_rts_t5000.png
+[02:27:23] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_34_t5000 1793413643033
+[02:27:23] [IO-Worker-14/INFO]: [Eyes] 15_block_sampler_2_34_t5000: Saved screenshot as bat_eyes_15_block_sampler_2_34_t5000.png
+[02:27:28] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts_t11800 1793413648090
+[02:27:28] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_2_rts_t11800: Saved screenshot as bat_eyes_15_block_sampler_2_rts_t11800.png
+[02:27:33] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_34_t11800 1793413653105
+[02:27:33] [IO-Worker-15/INFO]: [Eyes] 15_block_sampler_2_34_t11800: Saved screenshot as bat_eyes_15_block_sampler_2_34_t11800.png
+[02:27:38] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts_army 1793413658695
+[02:27:39] [IO-Worker-2/INFO]: [Eyes] 15_block_sampler_2_rts_army: Saved screenshot as bat_eyes_15_block_sampler_2_rts_army.png
+[02:27:40] [Render thread/INFO]: [Eyes] 15_block_sampler_3: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/block_sampler_3.nbt' 22x7x13 placed at -283, 70, 46 (pad centre -272, 70, 52)
+[02:27:45] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts 1793413665814
+[02:27:46] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_3_rts: Saved screenshot as bat_eyes_15_block_sampler_3_rts.png
+[02:28:25] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:29:04] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_close 1793413744347
+[02:29:04] [IO-Worker-2/INFO]: [Eyes] 15_block_sampler_3_rts_close: Saved screenshot as bat_eyes_15_block_sampler_3_rts_close.png
+[02:29:10] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_34 1793413750003
+[02:29:10] [IO-Worker-14/INFO]: [Eyes] 15_block_sampler_3_34: Saved screenshot as bat_eyes_15_block_sampler_3_34.png
+[02:29:18] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_dusk 1793413758895
+[02:29:19] [IO-Worker-14/INFO]: [Eyes] 15_block_sampler_3_dusk: Saved screenshot as bat_eyes_15_block_sampler_3_dusk.png
+[02:29:24] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_t5000 1793413764091
+[02:29:24] [IO-Worker-14/INFO]: [Eyes] 15_block_sampler_3_rts_t5000: Saved screenshot as bat_eyes_15_block_sampler_3_rts_t5000.png
+[02:29:30] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_34_t5000 1793413770097
+[02:29:30] [IO-Worker-15/INFO]: [Eyes] 15_block_sampler_3_34_t5000: Saved screenshot as bat_eyes_15_block_sampler_3_34_t5000.png
+[02:29:35] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_t11800 1793413775244
+[02:29:35] [IO-Worker-4/INFO]: [Eyes] 15_block_sampler_3_rts_t11800: Saved screenshot as bat_eyes_15_block_sampler_3_rts_t11800.png
+[02:29:37] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[02:29:40] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_34_t11800 1793413780496
+[02:29:40] [IO-Worker-4/INFO]: [Eyes] 15_block_sampler_3_34_t11800: Saved screenshot as bat_eyes_15_block_sampler_3_34_t11800.png
+[02:29:45] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_army 1793413785782
+[02:29:46] [IO-Worker-15/INFO]: [Eyes] 15_block_sampler_3_rts_army: Saved screenshot as bat_eyes_15_block_sampler_3_rts_army.png
+[02:29:47] [Render thread/INFO]: [Eyes] 15_terrain_sampler: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/terrain_sampler.nbt' 44x12x12 placed at -294, 70, 46 (pad centre -272, 70, 52)
+[02:29:52] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_rts 1793413792388
+[02:29:52] [IO-Worker-14/INFO]: [Eyes] 15_terrain_sampler_rts: Saved screenshot as bat_eyes_15_terrain_sampler_rts.png
+[02:30:53] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:31:14] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_rts_close 1793413874328
+[02:31:14] [IO-Worker-15/INFO]: [Eyes] 15_terrain_sampler_rts_close: Saved screenshot as bat_eyes_15_terrain_sampler_rts_close.png
+[02:31:19] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_34 1793413879372
+[02:31:20] [IO-Worker-16/INFO]: [Eyes] 15_terrain_sampler_34: Saved screenshot as bat_eyes_15_terrain_sampler_34.png
+[02:31:31] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_dusk 1793413891317
+[02:31:31] [IO-Worker-16/INFO]: [Eyes] 15_terrain_sampler_dusk: Saved screenshot as bat_eyes_15_terrain_sampler_dusk.png
+[02:31:38] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_rts_t5000 1793413898822
+[02:31:39] [IO-Worker-16/INFO]: [Eyes] 15_terrain_sampler_rts_t5000: Saved screenshot as bat_eyes_15_terrain_sampler_rts_t5000.png
+[02:31:44] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_34_t5000 1793413904019
+[02:31:44] [IO-Worker-2/INFO]: [Eyes] 15_terrain_sampler_34_t5000: Saved screenshot as bat_eyes_15_terrain_sampler_34_t5000.png
+[02:31:48] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_rts_t11800 1793413908978
+[02:31:49] [IO-Worker-16/INFO]: [Eyes] 15_terrain_sampler_rts_t11800: Saved screenshot as bat_eyes_15_terrain_sampler_rts_t11800.png
+[02:31:55] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_34_t11800 1793413915366
+[02:31:55] [IO-Worker-14/INFO]: [Eyes] 15_terrain_sampler_34_t11800: Saved screenshot as bat_eyes_15_terrain_sampler_34_t11800.png
+[02:32:01] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_rts_army 1793413921636
+[02:32:02] [IO-Worker-14/INFO]: [Eyes] 15_terrain_sampler_rts_army: Saved screenshot as bat_eyes_15_terrain_sampler_rts_army.png
+[02:32:03] [Render thread/INFO]: [Eyes] 15_material_sampler: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/material_sampler.nbt' 17x10x13 placed at -280, 70, 46 (pad centre -272, 70, 52)
+[02:32:08] [Render thread/INFO]: [Eyes] clip-mark 15_material_sampler_rts 1793413928330
+[02:32:08] [IO-Worker-14/INFO]: [Eyes] 15_material_sampler_rts: Saved screenshot as bat_eyes_15_material_sampler_rts.png
+[02:32:18] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:33:34] [Render thread/INFO]: [Eyes] clip-mark 15_material_sampler_rts_close 1793414014650
+[02:33:35] [IO-Worker-14/INFO]: [Eyes] 15_material_sampler_rts_close: Saved screenshot as bat_eyes_15_material_sampler_rts_close.png
+[02:33:36] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[02:33:39] [Render thread/INFO]: [Eyes] clip-mark 15_material_sampler_34 1793414019878
+[02:33:40] [IO-Worker-14/INFO]: [Eyes] 15_material_sampler_34: Saved screenshot as bat_eyes_15_material_sampler_34.png
+[02:33:49] [Render thread/INFO]: [Eyes] clip-mark 15_material_sampler_dusk 1793414029894
+[02:33:50] [IO-Worker-16/INFO]: [Eyes] 15_material_sampler_dusk: Saved screenshot as bat_eyes_15_material_sampler_dusk.png
+[02:33:55] [Render thread/INFO]: [Eyes] clip-mark 15_material_sampler_rts_t5000 1793414035498
+[02:33:56] [IO-Worker-14/INFO]: [Eyes] 15_material_sampler_rts_t5000: Saved screenshot as bat_eyes_15_material_sampler_rts_t5000.png
+[02:34:00] [Render thread/INFO]: [Eyes] clip-mark 15_material_sampler_34_t5000 1793414040982
+[02:34:01] [IO-Worker-14/INFO]: [Eyes] 15_material_sampler_34_t5000: Saved screenshot as bat_eyes_15_material_sampler_34_t5000.png
+[02:34:05] [Render thread/INFO]: [Eyes] clip-mark 15_material_sampler_rts_t11800 1793414045225
+[02:34:05] [IO-Worker-16/INFO]: [Eyes] 15_material_sampler_rts_t11800: Saved screenshot as bat_eyes_15_material_sampler_rts_t11800.png
+[02:34:11] [Render thread/INFO]: [Eyes] clip-mark 15_material_sampler_34_t11800 1793414051411
+[02:34:11] [IO-Worker-16/INFO]: [Eyes] 15_material_sampler_34_t11800: Saved screenshot as bat_eyes_15_material_sampler_34_t11800.png
+[02:34:17] [Render thread/INFO]: [Eyes] clip-mark 15_material_sampler_rts_army 1793414057683
+[02:34:18] [IO-Worker-16/INFO]: [Eyes] 15_material_sampler_rts_army: Saved screenshot as bat_eyes_15_material_sampler_rts_army.png
+[02:34:19] [Render thread/INFO]: [Eyes] 15_bare_sampler_plain: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/bare_sampler_plain.nbt' 80x31x34 placed at -312, 70, 35 (pad centre -272, 70, 52)
+[02:34:24] [Render thread/INFO]: [Eyes] clip-mark 15_bare_sampler_plain_rts 1793414064377
+[02:34:24] [IO-Worker-17/INFO]: [Eyes] 15_bare_sampler_plain_rts: Saved screenshot as bat_eyes_15_bare_sampler_plain_rts.png
+[02:34:56] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:35:45] [Render thread/INFO]: [Eyes] clip-mark 15_bare_sampler_plain_rts_close 1793414145703
+[02:35:46] [IO-Worker-4/INFO]: [Eyes] 15_bare_sampler_plain_rts_close: Saved screenshot as bat_eyes_15_bare_sampler_plain_rts_close.png
+[02:35:51] [Render thread/INFO]: [Eyes] clip-mark 15_bare_sampler_plain_34 1793414151693
+[02:35:52] [IO-Worker-18/INFO]: [Eyes] 15_bare_sampler_plain_34: Saved screenshot as bat_eyes_15_bare_sampler_plain_34.png
+[02:36:01] [Render thread/INFO]: [Eyes] clip-mark 15_bare_sampler_plain_dusk 1793414161586
+[02:36:01] [IO-Worker-17/INFO]: [Eyes] 15_bare_sampler_plain_dusk: Saved screenshot as bat_eyes_15_bare_sampler_plain_dusk.png
+[02:36:07] [Render thread/INFO]: [Eyes] clip-mark 15_bare_sampler_plain_rts_t5000 1793414167272
+[02:36:07] [IO-Worker-2/INFO]: [Eyes] 15_bare_sampler_plain_rts_t5000: Saved screenshot as bat_eyes_15_bare_sampler_plain_rts_t5000.png
+[02:36:12] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[02:36:13] [Render thread/INFO]: [Eyes] clip-mark 15_bare_sampler_plain_34_t5000 1793414173186
+[02:36:13] [IO-Worker-16/INFO]: [Eyes] 15_bare_sampler_plain_34_t5000: Saved screenshot as bat_eyes_15_bare_sampler_plain_34_t5000.png
+[02:36:18] [Render thread/INFO]: [Eyes] clip-mark 15_bare_sampler_plain_rts_t11800 1793414178038
+[02:36:18] [IO-Worker-2/INFO]: [Eyes] 15_bare_sampler_plain_rts_t11800: Saved screenshot as bat_eyes_15_bare_sampler_plain_rts_t11800.png
+[02:36:24] [Render thread/INFO]: [Eyes] clip-mark 15_bare_sampler_plain_34_t11800 1793414184152
+[02:36:24] [IO-Worker-17/INFO]: [Eyes] 15_bare_sampler_plain_34_t11800: Saved screenshot as bat_eyes_15_bare_sampler_plain_34_t11800.png
+[02:36:29] [Render thread/INFO]: [Eyes] clip-mark 15_bare_sampler_plain_rts_army 1793414189570
+[02:36:30] [IO-Worker-18/INFO]: [Eyes] 15_bare_sampler_plain_rts_army: Saved screenshot as bat_eyes_15_bare_sampler_plain_rts_army.png
+[02:36:35] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[02:36:35] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[02:36:35] [Render thread/INFO]: [Eyes] tour complete
