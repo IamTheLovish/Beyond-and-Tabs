@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -44,5 +45,20 @@ class MeshingColourThreadTest {
             assertFalse(src.contains("Minecraft.getInstance()"), file + " reaches the client (its level) from a meshing thread");
             assertFalse(src.contains("ClientLevel"), file + " names the client level on a meshing path");
         }
+    }
+
+    /**
+     * The world-border tint (BiomeColorsMixin.applyTint) is asked from meshing threads and reads the client level:
+     * read twice ("MC.level != null && MC.level...") the render thread can clear it in between (leaving a world) and
+     * the second read throws on a meshing worker. One read into a local.
+     */
+    @Test
+    void worldBorderTintReadsTheClientLevelOnce() throws IOException {
+        String src = source("worldborder/WorldBorderClientEvents.java");
+        int at = src.indexOf("boolean isOutsideWorldBorder(");
+        assertTrue(at >= 0, "isOutsideWorldBorder not found");
+        String body = src.substring(at, src.indexOf("\n    }", at));
+        int reads = body.split("MC\\.level", -1).length - 1;
+        assertEquals(1, reads, "isOutsideWorldBorder reads MC.level " + reads + " times:\n" + body);
     }
 }
