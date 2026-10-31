@@ -465,10 +465,16 @@ class CharnelWorks(unittest.TestCase):
 
     # ------------------------------------------------------------------------------------------------ the rib-vault
     def ribs(self, n):
-        """Bone arcs over the roof: connected groups of bone cells (26-neighbour) that rise >= 3 above the roof under
-        them somewhere and run >= RIB_SPAN cells in plan along x or z."""
-        under = tops({q: 1 for q, v in n.items() if not bone(v)})
+        """Bone arcs over the roof: connected groups of bone cells (26-neighbour) that rise somewhere >= 3 above the
+        roof under them (the highest non-bone block below, at y >= 6: a roof, not the ground or the lane) and run
+        >= RIB_SPAN cells in plan along x or z."""
+        solid = {q for q, v in n.items() if not bone(v)}
         bones = {q for q, v in n.items() if bone(v)}
+
+        def under(x, y, z):
+            """The highest non-bone block below (x, y, z): the roof the rib stands over (-1: none)."""
+            return max([yy for yy in range(y) if (x, yy, z) in solid], default=-1)
+
         out = []
         while bones:
             seed = bones.pop()
@@ -483,7 +489,7 @@ class CharnelWorks(unittest.TestCase):
                                 bones.discard(q)
                                 comp.add(q)
                                 todo.append(q)
-            over = any(y >= under.get((x, z), -1) + 3 or (x, z) not in under for (x, y, z) in comp if y >= 8)
+            over = any(under(x, y, z) >= 6 and y >= under(x, y, z) + 3 for (x, y, z) in comp)
             span = max(max(q[0] for q in comp) - min(q[0] for q in comp),
                        max(q[2] for q in comp) - min(q[2] for q in comp)) + 1
             if over and span >= RIB_SPAN:
