@@ -574,6 +574,20 @@ def audit(path, tag, sy):
     return one_way, ground_, roof, note, hot, off
 
 
+def build_level(level):
+    """The rig of one level (1 or 3), written nowhere - tools/test_ashborn_lab.py builds the lab through this."""
+    p1, p3 = ap.new(), ap.new()
+    draw_l1(p1)
+    draw_l3(p3)
+    r1 = to_rig(p1, L1_MAX_H, "ashborn L1")
+    if level == 1:
+        return r1
+    for c in {c for c, (n, _) in r1.b.items() if n not in ("air", "cave_air")}:
+        if c not in p3.b:
+            p3.b[c] = r1.b[c]
+    return to_rig(p3, L3_MAX_H, "ashborn L3", keep=set(r1.b))
+
+
 def main(out_dir):
     os.makedirs(out_dir, exist_ok=True)
     p1, p3 = ap.new(), ap.new()
