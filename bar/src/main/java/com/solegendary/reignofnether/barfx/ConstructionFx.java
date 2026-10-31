@@ -52,8 +52,11 @@ final class ConstructionFx {
     /** The next block's flash (round 16 critic). */
     private static final int FRONT = 0xFFB347;
     /** The build front (round 17 critic: never seen in a still - at its breath's low point #FFB347 x 0.65 read as a gold
-     *  trim on the Sunforged white): #FFD080, fully opaque, no breath - the flash is what moves. */
-    private static final int FRONT_LINE = 0xFFD080;
+     *  trim on the Sunforged white): fully opaque, no breath - the flash is what moves. Round 18 critic: #FFD080 and the
+     *  flash were "nearly the same hue and blur together", and the line read 1-2 px (the still measures 3-4 px vertical
+     *  runs on its 30-degree slopes, i.e. 3 px across: its luminance, L ~212 against the lit white's ~233, is what got
+     *  lost). Now a deeper, quieter amber, L ~160: a line by contrast, not by glow; the flash is the white one. */
+    private static final int FRONT_LINE = 0xE0973E;
     /**
      * The ghost, LIGHTENED onto the scene (BarFxRenderTypes.LIGHTEN: each channel max(scene, ghost)). Round 15 critic:
      * blended over at 0.45, #4C6BA8 tinted the laid white wall top under the ghost of the courses above it pale blue
@@ -82,8 +85,16 @@ final class ConstructionFx {
      */
     private static final int GHOST_TINT = 0x6E91FF;
     private static final float GHOST_TINT_A = 0.32f;
-    /** The next block to be placed (round 16 critic): its cell's faces flash #FFB347 at 0.7, 2 Hz. */
-    private static final float NEXT_A = 0.7f, NEXT_HZ = 2f;
+    /** Round 18 critic: the ghost's lit TOP faces over the laid white read (194, 198, 219), "pale lavender stone" at the
+     *  RTS distance. The tint on top faces only goes to 0.42: the lit white (243, 232, 214) under it -> (187, 196, 231),
+     *  B - R +44 (was +27); the walls' faces over the grass keep 0.32 (B - R ~+35). */
+    private static final float GHOST_TINT_TOP_A = 0.42f;
+    /** The next block to be placed (round 16 critic): it flashes at 2 Hz. Round 18 critic: the flash and the front were
+     *  "nearly the same hue and blur together" - the flash is now an EVENT: a white core #FFF4D6 at 0.9 in an amber
+     *  #FFB347 halo at 0.6, both popping in (the core from 1.2x, the halo from 0.3 block out to 0.12) over the first
+     *  NEXT_POP of each beat. */
+    private static final float NEXT_A = 0.9f, NEXT_HZ = 2f, NEXT_HALO_A = 0.6f, NEXT_POP = 0.12f;
+    private static final int NEXT_CORE = 0xFFF4D6;
     /** The beams: #FFE2A0, 0.45 at most, normal-blended (round 13 critic: peak L <= 200). */
     private static final int BEAM = 0xFFE2A0;
     private static final float BEAM_A = 0.45f;
@@ -334,17 +345,17 @@ final class ConstructionFx {
         BarFxClient.begin(buffers, BarFxRenderTypes.DEPTH_ONLY, mat);
         for (BuildingPlacement p : scratch)
             if (!p.isBuilt)
-                ghostFaces(SITES.get(p), GHOST_FILL, 1f);
+                ghostFaces(SITES.get(p), GHOST_FILL, 1f, 1f);
         buffers.endBatch(BarFxRenderTypes.DEPTH_ONLY);
         BarFxClient.begin(buffers, BarFxRenderTypes.LIGHTEN, mat);
         for (BuildingPlacement p : scratch)
             if (!p.isBuilt)
-                dGhost += ghostFaces(SITES.get(p), GHOST_FILL, 1f);
+                dGhost += ghostFaces(SITES.get(p), GHOST_FILL, 1f, 1f);
         buffers.endBatch(BarFxRenderTypes.LIGHTEN);
         BarFxClient.begin(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
         for (BuildingPlacement p : scratch)
             if (!p.isBuilt)
-                ghostFaces(SITES.get(p), GHOST_TINT, GHOST_TINT_A);
+                ghostFaces(SITES.get(p), GHOST_TINT, GHOST_TINT_A, GHOST_TINT_TOP_A);
         for (BuildingPlacement p : scratch) {
             Site s = SITES.get(p);
             if (s == null || p.isBuilt || far)   // done: the workers walk off, their tools with them
@@ -363,7 +374,7 @@ final class ConstructionFx {
             for (BuildingPlacement p : scratch) {
                 Site s = SITES.get(p);
                 if (s != null && !p.isBuilt && s.next[3] != 0)
-                    dFlash += nextFaces(s, NEXT_NUDGE);
+                    dFlash += nextFaces(s, NEXT_NUDGE, ((clock * NEXT_HZ) % 1f) * 2);
             }
             buffers.endBatch(BarFxRenderTypes.TRANSLUCENT_SEE_THROUGH);
         }
@@ -571,7 +582,7 @@ final class ConstructionFx {
      *   <li>one colour throughout (round 14 critic: no brighter next course - it nested).</li>
      * </ul>
      */
-    static int ghostFaces(Site s, int c, float a) {
+    static int ghostFaces(Site s, int c, float a, float aTop) {
         if (s == null)
             return 0;
         int quads = 0;
@@ -586,8 +597,9 @@ final class ConstructionFx {
                 if (!g.ghostFace(x, y, z, dir))
                     continue;
                 ConstructionGrid.ghostQuad(x, y, z, dir, GHOST_INSET, q);
+                float fa = dir == 4 ? aTop : a;
                 for (int j = 0; j < 12; j += 3)
-                    BarFxClient.v(q[j], q[j + 1], q[j + 2], c, a);
+                    BarFxClient.v(q[j], q[j + 1], q[j + 2], c, fa);
                 quads++;
             }
         }
@@ -600,26 +612,58 @@ final class ConstructionFx {
 
     /**
      * The next block to be placed (ConstructionGrid.nextBlock: the cell the builder at work nearest the camera aims at,
-     * else the front course's missing cell nearest the camera; round 17: one in view): its three faces turned to the
-     * camera, #FFB347 at 0.7, just outside its cell and pulled {@code nudge} toward the camera, drawn with no depth test.
+     * else the front course's missing cell nearest the camera; round 17: one in view; round 18: a wall block, never a
+     * lone prop): its three faces turned to the camera - a white core in an amber halo popping in at each beat
+     * ({@code beat} 0-1 through the lit half), pulled {@code nudge} toward the camera, drawn with no depth test.
      * Round 16 critic: "being built now" read only as a faint dashed footprint outline; round 17: never seen - it was
      * drawn before the ghost on whatever block the builder aimed at, often one under or behind laid stone. Returns the
      * quads drawn.
      */
-    static int nextFaces(Site s, float nudge) {
+    static int nextFaces(Site s, float nudge, float beat) {
         int[] n = s.next;
         if (n[3] == 0)
             return 0;
         float lx = BarFxClient.lookX, lz = BarFxClient.lookZ;
         int dx = lx > 0 ? 3 : 1, dz = lz > 0 ? 0 : 2, dy = BarFxClient.lookY <= 0 ? 4 : 5;
         float ox = -lx * nudge, oy = -BarFxClient.lookY * nudge, oz = -lz * nudge;
-        float[] q = s.quad;
-        for (int k = 0; k < 3; k++) {
-            ConstructionGrid.ghostQuad(n[0], n[1], n[2], k == 0 ? dy : k == 1 ? dx : dz, -0.01f, q);
-            for (int j = 0; j < 12; j += 3)
-                BarFxClient.v(q[j] + ox, q[j + 1] + oy, q[j + 2] + oz, FRONT, NEXT_A);
+        // the pop: over the first 40% of the beat the halo shrinks from 0.3 block out to NEXT_POP and the core from 1.2x
+        float e = Math.max(0, 1 - beat / 0.4f);
+        e *= e;
+        float halo = NEXT_POP + 0.18f * e, core = 0.1f * e;
+        float cx = n[0] + 0.5f + ox, cy = n[1] + 0.5f + oy, cz = n[2] + 0.5f + oz;
+        for (int k = 0; k < 3; k++)   // the halo first, the core over it (no depth test: the order is the layering)
+            cubeFace(cx, cy, cz, 0.5f + halo, k == 0 ? dy : k == 1 ? dx : dz, FRONT, NEXT_HALO_A);
+        for (int k = 0; k < 3; k++)
+            cubeFace(cx, cy, cz, 0.51f + core, k == 0 ? dy : k == 1 ? dx : dz, NEXT_CORE, NEXT_A);
+        return 6;
+    }
+
+    /** One face (toward {@code dir}, ConstructionGrid's numbering) of a cube centred on (cx, cy, cz), half-size r. */
+    private static void cubeFace(float cx, float cy, float cz, float r, int dir, int c, float a) {
+        float x0 = cx - r, x1 = cx + r, y0 = cy - r, y1 = cy + r, z0 = cz - r, z1 = cz + r;
+        switch (dir) {
+            case 0 -> { BarFxClient.v(x0, y0, z0, c, a); BarFxClient.v(x1, y0, z0, c, a); BarFxClient.v(x1, y1, z0, c, a); BarFxClient.v(x0, y1, z0, c, a); }
+            case 1 -> { BarFxClient.v(x1, y0, z0, c, a); BarFxClient.v(x1, y0, z1, c, a); BarFxClient.v(x1, y1, z1, c, a); BarFxClient.v(x1, y1, z0, c, a); }
+            case 2 -> { BarFxClient.v(x0, y0, z1, c, a); BarFxClient.v(x1, y0, z1, c, a); BarFxClient.v(x1, y1, z1, c, a); BarFxClient.v(x0, y1, z1, c, a); }
+            case 3 -> { BarFxClient.v(x0, y0, z0, c, a); BarFxClient.v(x0, y0, z1, c, a); BarFxClient.v(x0, y1, z1, c, a); BarFxClient.v(x0, y1, z0, c, a); }
+            case 4 -> { BarFxClient.v(x0, y1, z0, c, a); BarFxClient.v(x1, y1, z0, c, a); BarFxClient.v(x1, y1, z1, c, a); BarFxClient.v(x0, y1, z1, c, a); }
+            default -> { BarFxClient.v(x0, y0, z0, c, a); BarFxClient.v(x1, y0, z0, c, a); BarFxClient.v(x1, y0, z1, c, a); BarFxClient.v(x0, y0, z1, c, a); }
         }
-        return 3;
+    }
+
+    /** The block flashing on {@code p} into {@code out} {x, y, z}; false when none (or the site was never drawn). */
+    static boolean nextOf(BuildingPlacement p, int[] out) {
+        Site s = p == null ? null : SITES.get(p);
+        if (s == null || s.next[3] == 0)
+            return false;
+        out[0] = s.next[0]; out[1] = s.next[1]; out[2] = s.next[2];
+        return true;
+    }
+
+    /** How many of {@code p}'s builders hold a tool at {@code now} (-1: the site is not drawn). */
+    static int toolsOf(BuildingPlacement p, float now) {
+        Site s = p == null ? null : SITES.get(p);
+        return s == null ? -1 : s.crew.active(now);
     }
 
     /** The ghost's outline, on its silhouette only: at most EDGE_CAP edges a building. */
@@ -697,9 +741,10 @@ final class ConstructionFx {
      * <ul>
      *   <li>ON the laid/ghost boundary (ConstructionGrid.frontSeg*): over the top of each laid block of the front course
      *   that has ghost above it, along the bed of each missing one, and up the step between - one continuous stepped
-     *   line, on every outer face of the course turned to the camera;</li>
-     *   <li>#FFD080, fully opaque, normal-blended, 3 px on screen at every zoom, no breath (the next block's flash is
-     *   what moves); polygon-offset and pulled FRONT_NUDGE toward the camera so the laid stone it lies on never covers
+     *   line, on every outer face of the course turned to the camera - on WALL cells only (round 18 critic: amber pads
+     *   on a lone lamp post or pedestal, ConstructionGrid.isWall);</li>
+     *   <li>FRONT_LINE (#E0973E since round 18), fully opaque, normal-blended, 3 px on screen at every zoom (FRONT_PX x
+     *   the frame's blocks per px), no breath (the next block's flash is what moves); polygon-offset and pulled FRONT_NUDGE toward the camera so the laid stone it lies on never covers
      *   it. No see-through pass (its 0.4 stretches crossed the laid tops as beige noise).</li>
      * </ul>
      */

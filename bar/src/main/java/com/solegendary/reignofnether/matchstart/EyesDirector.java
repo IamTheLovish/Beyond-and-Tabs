@@ -114,7 +114,8 @@ public final class EyesDirector {
     private static int closeUpRetried = -1;       // the subject (CLOSE_UPS index) already restarted once
     // 06b/06c: a site rising (each faction's way of building, claude/faction-construction-oct29.md)
     private static int consPhase = 0;             // 0 order, 1 wait for the site, 5 the crew to the camera's side, 2
-                                                  // wait for half built, 4 wait for a builder in view, 3 the two shots
+                                                  // wait for half built, 6 the crew spread round the flash, 4 wait for
+                                                  // a builder in view, 3 the two shots
     private static int consTry = 0, consAt = -1;
     private static int consStep = 0, consRetried = 0;   // phase 3: framing 06b, 06b, framing 06c, 06c
     /** Phase 4 waits at most this long (ticks) for one of the site's builders to stand within CONS_NEAR of it. */
@@ -123,8 +124,14 @@ public final class EyesDirector {
     private static BuildingPlacement consSite = null;
     private static int[] consIds = new int[0];     // the crew ordered to build the site
     private static final double[] consSpot = new double[3];   // where phase 5 sends them (ConsFraming.approach)
+    /** Round 18 critic: one spot for the whole crew piled them on one block. Each worker's own ground cell round the
+     *  course (ConsFraming.builderSpots), {x, y, z}; consSpotOf[i] is consIds[i]'s. */
+    private static final int[][] consSpotCells = new int[8][2];
+    private static final double[][] consSpotOf = new double[8][3];
     /** Phase 5 waits at most this long (ticks) for the crew to reach the camera's side of the site. */
     private static final int CONS_WALK = 20 * 8;
+    /** The most builders the tour puts round the site (round 18 critic: "spread the 3-4 builders"). */
+    private static final int CONS_CREW = 4;
     private static final int[][] CONS_OFFSETS = { { 10, 10 }, { -12, 10 }, { 10, -12 }, { -12, -12 } };
     private static final int ZOOM_CLOSE_SITE = 16;
     private static final int ZOOM_STRATEGIC = 85; // past StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER (70), below
@@ -1497,11 +1504,9 @@ public final class EyesDirector {
                         // perimeter cell nearest where it stands (BuildRepairGoal: getClosestGroundPos)
                         ConsFraming.approach(consBox(b), OrthoviewClientEvents.getCamRotX(),
                                 OrthoviewClientEvents.getCamRotY(), 2, consSpot);
-                        Vec3 spot = ground(mc, (int) Math.floor(consSpot[0]), (int) Math.floor(consSpot[2]), b.minCorner.getY());
-                        consSpot[1] = spot.y;
-                        UnitClientEvents.sendUnitCommandManual(UnitAction.MOVE, -1, consIds, BlockPos.containing(spot));
-                        ReignOfNether.LOGGER.info("[Eyes] 06b_construction: the crew of {} sent to the camera's side of the site, {}",
-                                consIds.length, fmt(spot));
+                        // round 18 critic: sent to ONE spot the crew stood piled on one block - each its own cell
+                        consClearAnimals(mc, b);
+                        consSpread(mc, b, "sent to the camera's side of the site");
                         consPhase = 5;
                         consAt = ticks + CONS_WALK;
                         return;
@@ -1523,16 +1528,13 @@ public final class EyesDirector {
                     giveUp("06b_construction", "the site finished before it was shot");
                     return;
                 }
-                double best = Double.MAX_VALUE;
-                for (int id : consIds)
-                    if (mc.level != null && mc.level.getEntity(id) instanceof LivingEntity le && le.isAlive())
-                        best = Math.min(best, Math.hypot(le.getX() - consSpot[0], le.getZ() - consSpot[2]));
-                if (best > 2.5 && ticks < consAt)
+                double worst = consFarthestFromSpot(mc);
+                if (worst > 1.2 && ticks < consAt)
                     return;
                 UnitClientEvents.sendUnitCommandManual(UnitAction.BUILD_REPAIR, -1, consIds, b.originPos);
-                ReignOfNether.LOGGER.info("[Eyes] 06b_construction: the crew is on the camera's side (nearest {} blocks from the spot{}); building from there",
-                        best == Double.MAX_VALUE ? "-" : String.format(java.util.Locale.ROOT, "%.1f", best),
-                        best > 2.5 ? ", the walk timed out" : "");
+                ReignOfNether.LOGGER.info("[Eyes] 06b_construction: the crew is on the camera's side (farthest {} blocks from its spot{}); building from there",
+                        worst == Double.MAX_VALUE ? "-" : String.format(java.util.Locale.ROOT, "%.1f", worst),
+                        worst > 1.2 ? ", the walk timed out" : "");
                 consPhase = 2;
             }
             case 2 -> {
@@ -1546,6 +1548,27 @@ public final class EyesDirector {
                     ReignOfNether.LOGGER.info("[Eyes] 06b_construction: {}% laid", Math.round(k * 100));
                 if (k < 0.4f)
                     return;
+                // round 18 critic: the builders at the flash block - the crew spread again round the course, the first
+                // beside the block flashing NOW, before the shots
+                consClearAnimals(mc, b);
+                consSpread(mc, b, "spread round the course");
+                consPhase = 6;
+                consAt = ticks + CONS_WALK;
+            }
+            case 6 -> {
+                BuildingPlacement b = consSite;
+                if (b == null || b.isBuilt) {
+                    giveUp("06b_construction", "the site finished before it was shot");
+                    return;
+                }
+                float k = b.getBlocksTotal() <= 0 ? 0 : (float) b.serverBlocksPlaced / b.getBlocksTotal();
+                double worst = consFarthestFromSpot(mc);
+                if (worst > 1.2 && ticks < consAt && k < 0.8f)
+                    return;
+                UnitClientEvents.sendUnitCommandManual(UnitAction.BUILD_REPAIR, -1, consIds, b.originPos);
+                ReignOfNether.LOGGER.info("[Eyes] 06b_construction: the crew is round the course (farthest {} blocks from its spot{}, {}% laid); building from there",
+                        worst == Double.MAX_VALUE ? "-" : String.format(java.util.Locale.ROOT, "%.1f", worst),
+                        worst > 1.2 ? ", the walk timed out" : "", Math.round(k * 100));
                 consPhase = 4;
                 consAt = ticks + CONS_WAIT;
             }
@@ -1598,12 +1621,15 @@ public final class EyesDirector {
                             return;
                         }
                         OrthoviewClientEvents.centreCameraOnPosInstant(consAim(mc, b));
+                        consClearAnimals(mc, b);
+                        consFaceFlash(mc, b);
                         consStep++;
                         consAt = ticks + 8;
                     }
                     case 1 -> {
                         ReignOfNether.LOGGER.info("[Eyes] 06b_construction_rts fx: {}",
                                 com.solegendary.reignofnether.barfx.BarFxClient.constructionDiag());
+                        consBuildersLine(mc, b, "06b_construction");
                         shot(mc, "06b_construction_rts");
                         setZoom(consFit(mc, b, ZOOM_CLOSE_SITE));
                         consStep = 2;
@@ -1613,6 +1639,7 @@ public final class EyesDirector {
                     default -> {
                         ReignOfNether.LOGGER.info("[Eyes] 06c_construction_close fx: {}",
                                 com.solegendary.reignofnether.barfx.BarFxClient.constructionDiag());
+                        consBuildersLine(mc, b, "06c_construction");
                         shot(mc, "06c_construction_close");
                         setZoom(ZOOM_NORMAL);
                         next();
@@ -1682,6 +1709,158 @@ public final class EyesDirector {
             consNearest = Math.min(consNearest, ConsFraming.distance(box, le.getX(), le.getZ()));
         }
         return n;
+    }
+
+    /**
+     * Round 18 critic: the crew, sent to ONE spot, stood piled on one block outside the site's near corner ("a brown
+     * blob, no tool, not facing the work"), and under the info panel in the close still. Each worker gets its own ground
+     * cell round the course (ConsFraming.builderSpots: a block off a face turned to the camera, BUILDER_GAP apart, the
+     * first beside the block flashing now, none under the info panel at either still's zoom, none in another building or
+     * water) and walks there (a MOVE each). With no cell at all, the old single spot (consSpot).
+     */
+    private static void consSpread(Minecraft mc, BuildingPlacement b, String what) {
+        int[] flash = new int[3];
+        boolean hasFlash = com.solegendary.reignofnether.barfx.BarFxClient.constructionNext(b, flash);
+        float[] zooms = { consFit(mc, b, ZOOM_NORMAL), consFit(mc, b, ZOOM_CLOSE_SITE) };
+        int y0 = b.minCorner.getY();
+        java.util.function.BiPredicate<Integer, Integer> blocked = (x, z) -> {
+            if (com.solegendary.reignofnether.building.BuildingUtils.isPosInsideAnyBuilding(true, new BlockPos(x, y0, z)))
+                return true;
+            int y = surfaceY(mc, x, z);
+            return y == Integer.MIN_VALUE || Math.abs(y - y0) > 2
+                    || !mc.level.getBlockState(new BlockPos(x, y - 1, z)).getFluidState().isEmpty();
+        };
+        int n = Math.min(consIds.length, consSpotCells.length);
+        int got = ConsFraming.builderSpots(consBox(b), hasFlash ? flash : null, OrthoviewClientEvents.getCamRotX(),
+                OrthoviewClientEvents.getCamRotY(), consAspect(mc), zooms, blocked, n, consSpotCells);
+        // the crew is CONS_CREW at most, one to a cell (never two on one block): a worker without a cell of its own
+        // leaves the site - it walks off 8 blocks behind the building (the far side, out of the shot) and builds nothing
+        int keep = Math.min(Math.min(CONS_CREW, n), got > 0 ? got : 1);
+        StringBuilder where = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            Vec3 spot;
+            if (i < keep) {
+                spot = got > 0 ? ground(mc, consSpotCells[i][0], consSpotCells[i][1], y0)
+                        : ground(mc, (int) Math.floor(consSpot[0]), (int) Math.floor(consSpot[2]), y0);
+                consSpotOf[i][0] = spot.x; consSpotOf[i][1] = spot.y; consSpotOf[i][2] = spot.z;
+                where.append(i == 0 ? "" : ", ").append(fmt(spot));
+            } else {
+                double cx = (b.minCorner.getX() + b.maxCorner.getX() + 1) * 0.5, cz = (b.minCorner.getZ() + b.maxCorner.getZ() + 1) * 0.5;
+                double vx = cx - consSpot[0], vz = cz - consSpot[2], len = Math.max(1, Math.hypot(vx, vz));
+                spot = ground(mc, (int) Math.floor(cx + vx * (1 + 8 / len)), (int) Math.floor(cz + vz * (1 + 8 / len)), y0);
+            }
+            UnitClientEvents.sendUnitCommandManual(UnitAction.MOVE, -1, new int[] { consIds[i] }, BlockPos.containing(spot));
+        }
+        if (keep < n)
+            consIds = java.util.Arrays.copyOf(consIds, keep);
+        ReignOfNether.LOGGER.info("[Eyes] 06b_construction: the crew of {} {}: {} ({} own cells{}{})", keep, what, where, got,
+                hasFlash ? ", flash at " + flash[0] + " " + flash[1] + " " + flash[2] : ", no flash yet",
+                keep < n ? "; " + (n - keep) + " sent off behind the building" : "");
+    }
+
+    /** The farthest of the crew from its own spot (blocks, horizontal); MAX_VALUE with none alive. */
+    private static double consFarthestFromSpot(Minecraft mc) {
+        double worst = -1;
+        for (int i = 0; i < consIds.length && i < consSpotOf.length; i++)
+            if (mc.level != null && mc.level.getEntity(consIds[i]) instanceof LivingEntity le && le.isAlive())
+                worst = Math.max(worst, Math.hypot(le.getX() - consSpotOf[i][0], le.getZ() - consSpotOf[i][2]));
+        return worst < 0 ? Double.MAX_VALUE : worst;
+    }
+
+    /**
+     * Round 18 critic: a pig stood inside the ghost. The eyes tour only (a test harness, never gameplay): passive animals
+     * (not units) within the site's box + 2 are removed, on the integrated server's thread.
+     */
+    private static void consClearAnimals(Minecraft mc, BuildingPlacement b) {
+        var server = mc.getSingleplayerServer();
+        if (server == null || mc.level == null)
+            return;
+        var dim = mc.level.dimension();
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(b.minCorner.getX(), b.minCorner.getY() - 1,
+                b.minCorner.getZ(), b.maxCorner.getX() + 1, b.maxCorner.getY() + 2, b.maxCorner.getZ() + 1).inflate(2);
+        server.execute(() -> {
+            net.minecraft.server.level.ServerLevel level = server.getLevel(dim);
+            if (level == null)
+                return;
+            List<net.minecraft.world.entity.animal.Animal> found = level.getEntitiesOfClass(
+                    net.minecraft.world.entity.animal.Animal.class, box, a -> !(a instanceof Unit));
+            for (var a : found)
+                a.discard();
+            if (!found.isEmpty())
+                ReignOfNether.LOGGER.info("[Eyes] 06b_construction: removed {} animal(s) from the site (test harness)", found.size());
+        });
+    }
+
+    /** Before each still the site's builders turn to the block flashing now (the tour only; the build goal looks at
+     *  the site's centre). */
+    private static void consFaceFlash(Minecraft mc, BuildingPlacement b) {
+        int[] flash = new int[3];
+        var server = mc.getSingleplayerServer();
+        if (server == null || mc.level == null
+                || !com.solegendary.reignofnether.barfx.BarFxClient.constructionNext(b, flash))
+            return;
+        var dim = mc.level.dimension();
+        int[] ids = consIds.clone();
+        server.execute(() -> {
+            net.minecraft.server.level.ServerLevel level = server.getLevel(dim);
+            if (level == null)
+                return;
+            for (int id : ids)
+                if (level.getEntity(id) instanceof net.minecraft.world.entity.Mob m && m.isAlive()) {
+                    double dx = flash[0] + 0.5 - m.getX(), dz = flash[2] + 0.5 - m.getZ();
+                    if (dx * dx + dz * dz > 6 * 6)
+                        continue;   // too far to be at that block's work
+                    float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90);
+                    m.setYRot(yaw);
+                    m.setYHeadRot(yaw);
+                    m.setYBodyRot(yaw);
+                    m.getLookControl().setLookAt(flash[0] + 0.5, flash[1] + 0.5, flash[2] + 0.5);
+                }
+        });
+    }
+
+    /**
+     * With each still (round 18 critic: "BUILDERS AT THE FLASH BLOCK - the single missing cue"): "[Eyes] {still}: builders
+     * at (x, y, z), ..., nearest to flash D blocks, in panel rect N" - the site's own builders, the nearest one's distance
+     * from the flashing block, how many have feet or head under the info panel on this frame - then the least spacing,
+     * how many swing (client-side isBuilding: the build animation) and how many hold a tool (ConstructionCrew).
+     */
+    private static void consBuildersLine(Minecraft mc, BuildingPlacement b, String still) {
+        int n = siteWorkers(mc, b);
+        int[] flash = new int[3];
+        boolean hasFlash = com.solegendary.reignofnether.barfx.BarFxClient.constructionNext(b, flash);
+        var cam = mc.gameRenderer.getMainCamera();
+        double viewH = OrthoviewClientEvents.getZoom();
+        double viewW = viewH * mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
+        StringBuilder at = new StringBuilder();
+        double nearest = Double.MAX_VALUE, gap = Double.MAX_VALUE;
+        int inPanel = 0;
+        for (int i = 0; i < consPickN; i++) {
+            double[] p = consPick[i];
+            at.append(i == 0 ? "" : ", ").append(String.format(java.util.Locale.ROOT, "(%.1f, %.1f, %.1f)", p[0], p[1], p[2]));
+            if (hasFlash)
+                nearest = Math.min(nearest, Math.hypot(p[0] - flash[0] - 0.5, p[2] - flash[2] - 0.5));
+            for (int j = 0; j < i; j++)
+                gap = Math.min(gap, Math.hypot(p[0] - consPick[j][0], p[2] - consPick[j][2]));
+            boolean under = false;
+            for (int e = 0; e < 2 && !under; e++) {
+                double[] q = ndc(cam, new Vec3(p[0], p[1] + e * ConsFraming.BUILDER_H, p[2]), viewW, viewH);
+                under = ConsFraming.inPanel((q[0] + 1) / 2, (1 - q[1]) / 2);
+            }
+            if (under)
+                inPanel++;
+        }
+        int swinging = 0;
+        for (int id : consIds)
+            if (mc.level != null && mc.level.getEntity(id) instanceof WorkerUnit w && w.getBuildRepairGoal() != null
+                    && w.getBuildRepairGoal().isBuilding())
+                swinging++;
+        ReignOfNether.LOGGER.info("[Eyes] {}: builders at {}, nearest to flash {} blocks, in panel rect {}; {} on this site, least spacing {} blocks, {} of the crew of {} swinging (build animation), {} holding a tool{}",
+                still, n == 0 ? "none" : at.toString(),
+                nearest == Double.MAX_VALUE ? "-" : String.format(java.util.Locale.ROOT, "%.1f", nearest), inPanel, n,
+                gap == Double.MAX_VALUE ? "-" : String.format(java.util.Locale.ROOT, "%.1f", gap), swinging, consIds.length,
+                com.solegendary.reignofnether.barfx.BarFxClient.constructionTools(b),
+                hasFlash ? ", flash at " + flash[0] + " " + flash[1] + " " + flash[2] : ", no flash");
     }
 
     private static float consAspect(Minecraft mc) {

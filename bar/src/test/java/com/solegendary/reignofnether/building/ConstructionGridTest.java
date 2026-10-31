@@ -567,4 +567,43 @@ class ConstructionGridTest {
         done.finish();
         assertEquals(0, done.frontSegCount(), "all laid: no front");
     }
+
+    /**
+     * Construction round 18 critic: "amber pads under the target block and the lamp at floor level that read as decals"
+     * - the front and the flash went on a lone prop (a lamp post, a pedestal) in the yard as readily as on the wall. A
+     * course cell is WALL when it is part of a run of at least WALL_RUN site cells along x or z in its course; the front
+     * runs only on wall cells, and the flash prefers a wall cell in view to a prop nearer the camera.
+     */
+    @Test
+    void theFrontAndTheFlashKeepToTheWallNotToALoneProp() {
+        // a wall x 0-4 at z 0, three courses; a lamp post two high at (2, z 3) in the yard in front of it
+        List<int[]> b = new ArrayList<>();
+        for (int y = 0; y < 3; y++) for (int x = 0; x < 5; x++) b.add(new int[] { x, y, 0 });
+        b.add(new int[] { 2, 0, 3 });
+        b.add(new int[] { 2, 1, 3 });
+        ConstructionGrid g = ConstructionGrid.of(b);
+        g.clear();
+        for (int[] p : b) g.mark(p[0], p[1], p[2], p[1] == 0);   // the foot course laid, the lamp's head missing
+        g.finish();
+        assertEquals(1, g.courseLayerY());
+        assertTrue(g.isWall(0, 1, 0) && g.isWall(4, 1, 0), "the wall's course cells, its ends too");
+        assertTrue(!g.isWall(2, 1, 3), "the lamp post is no wall");
+        for (int i = 0; i < g.frontSegCount(); i++) {
+            float mz = (g.frontSegZ0(i) + g.frontSegZ1(i)) * 0.5f;
+            assertTrue(mz < 2, "no front on the lamp post: segment " + i + " at z " + mz);
+        }
+        assertTrue(hasSeg(g, 2, 0, 1, 1, 1, 1, 1), "the wall's +z face keeps its front");
+        // the camera at +z (looking toward -z): the lamp's head is the course's missing block nearest it, but the flash
+        // goes on the wall
+        int[] cell = new int[4];
+        assertTrue(g.nextBlock(new ConstructionCrew(), 1f, 0f, -0.7f, -0.7f, cell));
+        assertEquals(0, cell[2], "the flash on the wall (z 0), not on the lamp (z 3)");
+        assertEquals(1, cell[1]);
+        // a builder aiming at the lamp's head: still the wall
+        ConstructionCrew crew = new ConstructionCrew();
+        crew.report(2.5f, 1f, 4.5f, 2.5f, 1.5f, 3.5f, 2f);
+        int[] c2 = new int[4];
+        assertTrue(g.nextBlock(crew, 2.1f, 0f, -0.7f, -0.7f, c2));
+        assertEquals(0, c2[2]);
+    }
 }

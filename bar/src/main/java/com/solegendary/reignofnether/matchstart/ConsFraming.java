@@ -176,4 +176,86 @@ public final class ConsFraming {
         basis(yaw, pitch, b);
         return (x - (box[0] + box[3]) * 0.5) * b[0] + (z - (box[2] + box[5]) * 0.5) * b[2] < 0;
     }
+
+    /** The info panel the stills show at the bottom left (a building's name, owner and "Construction 43%"): x 455-870,
+     *  y 705-900 of the 1600 x 900 frame, as fractions. A builder there is invisible (round 18 critic, 06c). */
+    public static final double PANEL_X0 = 455 / 1600.0, PANEL_X1 = 870 / 1600.0, PANEL_Y0 = 705 / 900.0, PANEL_Y1 = 1.0;
+    /** The least distance (blocks, cell to cell) between two builders' spots: never stacked (the critic asked >= 1.5). */
+    public static final double BUILDER_GAP = 2.5;
+    /** A builder's height (blocks): its head as well as its feet must clear the panel. */
+    public static final double BUILDER_H = 1.9;
+
+    /** Screen point (x, y fractions, y from the top) is under the info panel. */
+    public static boolean inPanel(double x, double y) {
+        return x >= PANEL_X0 && x <= PANEL_X1 && y >= PANEL_Y0 && y <= PANEL_Y1;
+    }
+
+    /**
+     * Construction round 18 critic: the ~3 workers stood piled on top of each other outside the site's near corner in
+     * 06b ("a brown blob, no tool, not facing the work, not at the front") and under the info panel in 06c - the whole
+     * crew had been sent to ONE spot. Up to {@code n} ground cells {x, z} into {@code out}, one per builder, returns how
+     * many: each a block off the footprint beside a face (never a corner cell) turned to the camera; never one
+     * {@code blocked} says no to (another building, water; null: none); none whose feet or head fall under the info
+     * panel or outside the safe area at any of {@code zooms} (the building centred, as {@link #aim} frames it with no
+     * worker); at least {@link #BUILDER_GAP} apart. The first is the cell nearest the flashing block {@code flash}
+     * {x, y, z} - straight out from it when that one is clear - and the rest the nearest to it that keep the gap, the
+     * higher on screen first at equal distance. With no flash (null), the highest on screen first: the camera-facing
+     * sides' far ends, clear of the panel in the bottom-left.
+     */
+    public static int builderSpots(double[] box, int[] flash, float yaw, float pitch, float aspect, float[] zooms,
+                                   java.util.function.BiPredicate<Integer, Integer> blocked, int n, int[][] out) {
+        double[] b = new double[9];
+        basis(yaw, pitch, b);
+        double fx = b[0], fz = b[2], fl = Math.sqrt(fx * fx + fz * fz);
+        if (fl < 1e-9) { fx = 0; fz = 1; fl = 1; }
+        fx /= fl; fz /= fl;
+        int x0 = (int) Math.floor(box[0]), z0 = (int) Math.floor(box[2]);
+        int x1 = (int) Math.round(box[3]), z1 = (int) Math.round(box[5]);   // exclusive
+        double[][] aims = new double[zooms.length][3];
+        for (int k = 0; k < zooms.length; k++)
+            aim(box, yaw, pitch, aspect, zooms[k], null, aims[k]);
+        java.util.List<double[]> cand = new java.util.ArrayList<>();   // {x, z, distance to the flash, screen y}
+        double[] s = new double[2];
+        for (int side = 0; side < 4; side++) {
+            int nx = side == 1 ? 1 : side == 3 ? -1 : 0, nz = side == 2 ? 1 : side == 0 ? -1 : 0;
+            if (nx * fx + nz * fz > -0.05)
+                continue;   // a face turned away: a builder there stands behind the building
+            int len = nx != 0 ? z1 - z0 : x1 - x0;
+            for (int t = 0; t < len; t++) {
+                int x = nx > 0 ? x1 : nx < 0 ? x0 - 1 : x0 + t;
+                int z = nz > 0 ? z1 : nz < 0 ? z0 - 1 : z0 + t;
+                if (blocked != null && blocked.test(x, z))
+                    continue;
+                boolean clear = true;
+                double sy = 0;
+                for (int k = 0; k < zooms.length && clear; k++)
+                    for (int e = 0; e < 3 && clear; e++) {
+                        screen(x + 0.5, box[1] + BUILDER_H * e / 2, z + 0.5, aims[k], yaw, pitch, aspect, zooms[k], s);
+                        clear = !inPanel(s[0], s[1]) && s[0] >= SAFE_X0 && s[0] <= SAFE_X1 && s[1] >= SAFE_Y0
+                                && s[1] <= SAFE_Y1;
+                        if (k == 0 && e == 0)
+                            sy = s[1];
+                    }
+                if (!clear)
+                    continue;
+                double dist = flash == null ? 0 : Math.hypot(x - flash[0], z - flash[2]);
+                cand.add(new double[] { x, z, dist, sy });
+            }
+        }
+        cand.sort((p, q) -> p[2] != q[2] ? Double.compare(p[2], q[2]) : Double.compare(p[3], q[3]));
+        int m = 0;
+        for (double[] c : cand) {
+            if (m >= n)
+                break;
+            boolean ok = true;
+            for (int j = 0; j < m && ok; j++)
+                ok = Math.hypot(c[0] - out[j][0], c[1] - out[j][1]) >= BUILDER_GAP;
+            if (!ok)
+                continue;
+            out[m][0] = (int) c[0];
+            out[m][1] = (int) c[1];
+            m++;
+        }
+        return m;
+    }
 }

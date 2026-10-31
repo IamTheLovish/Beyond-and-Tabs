@@ -126,4 +126,76 @@ class ConsFramingTest {
         assertTrue((p[0] - 105) * fx + (p[2] - 205) * fz < 0, "toward the camera from the centre");
         assertFalse(ConsFraming.nearSide(BOX, YAW, PITCH, 105 + fx * 8, 205 + fz * 8));
     }
+
+    /** Spot {x, z} (a ground cell) on screen at {@code zoom} with the building centred: foot and head both outside the
+     *  info panel's rectangle. */
+    private static boolean clearOfPanel(int[] c, float zoom) {
+        double[] aim = new double[3], s = new double[2];
+        ConsFraming.aim(BOX, YAW, PITCH, ASPECT, zoom, null, aim);
+        for (double up = 0; up <= ConsFraming.BUILDER_H + 1e-9; up += ConsFraming.BUILDER_H / 2) {
+            ConsFraming.screen(c[0] + 0.5, BOX[1] + up, c[1] + 0.5, aim, YAW, PITCH, ASPECT, zoom, s);
+            if (ConsFraming.inPanel(s[0], s[1]))
+                return false;
+        }
+        return true;
+    }
+
+    /**
+     * Construction round 18 critic: "the ~3 workers stand piled on top of each other outside the south corner, a brown
+     * blob, no tool, not facing the work, not at the front" (06b), and under the info panel in 06c. The crew is spread
+     * round the course: each on its own ground cell just off the footprint (a block out, never a corner), on a face
+     * turned to the camera, at least BUILDER_GAP (>= 1.5) apart, the first beside the flashing block (the cell straight
+     * out from it), the rest the nearest cells to it that keep the gap - and none whose feet or head fall in the info
+     * panel's rectangle (bottom-left, x 455-870, y 705-900 of 1600 x 900) at either zoom of the two stills.
+     */
+    @Test
+    void theBuildersSpreadRoundTheCourseBesideTheFlash() {
+        float rts = ConsFraming.fitZoom(BOX, YAW, PITCH, ASPECT, 30), close = ConsFraming.fitZoom(BOX, YAW, PITCH, ASPECT, 18);
+        float[] zooms = { rts, close };
+        int[][] out = new int[4][2];
+        // the camera (yaw 45) stands at +x -z: the +x face (x 110) and the -z face (z 199) are the ones it sees
+        int[] flash = { 109, 66, 204 };   // on the +x wall, mid-face
+        int n = ConsFraming.builderSpots(BOX, flash, YAW, PITCH, ASPECT, zooms, null, 4, out);
+        assertEquals(4, n, "four builders, four spots");
+        assertEquals(110, out[0][0], "the first beside the flash: the cell straight out from it");
+        assertEquals(204, out[0][1]);
+        for (int i = 0; i < n; i++) {
+            double cx = out[i][0] + 0.5, cz = out[i][1] + 0.5;
+            assertEquals(0.5, ConsFraming.distance(BOX, cx, cz), 1e-9, "a block off the footprint, never a corner: " + i);
+            assertTrue(ConsFraming.nearSide(BOX, YAW, PITCH, cx, cz), "on the camera's side: " + i);
+            for (float z : zooms)
+                assertTrue(clearOfPanel(out[i], z), "out of the info panel at zoom " + z + ": " + i);
+            for (int j = 0; j < i; j++) {
+                double d = Math.hypot(out[i][0] - out[j][0], out[i][1] - out[j][1]);
+                assertTrue(d >= ConsFraming.BUILDER_GAP && ConsFraming.BUILDER_GAP >= 1.5,
+                        "never stacked: " + i + " and " + j + " are " + d + " apart");
+            }
+            assertTrue(Math.hypot(cx - 109.5, cz - 204.5) < 8, "round the work, not across the site: " + i);
+        }
+
+        // the flash at the near corner: the cells beside it project into the info panel - the nearest clear one instead
+        int[] corner = { 109, 66, 200 };
+        n = ConsFraming.builderSpots(BOX, corner, YAW, PITCH, ASPECT, zooms, null, 3, out);
+        assertEquals(3, n);
+        assertFalse(clearOfPanel(new int[] { 110, 200 }, close) && clearOfPanel(new int[] { 109, 199 }, close),
+                "(the test's premise: beside the near corner is under the panel in the close still)");
+        for (int i = 0; i < n; i++)
+            for (float z : zooms)
+                assertTrue(clearOfPanel(out[i], z), "out of the info panel: " + i);
+
+        // a blocked cell (another building, water) is never chosen
+        n = ConsFraming.builderSpots(BOX, flash, YAW, PITCH, ASPECT, zooms, (x, z) -> x == 110 && z == 204, 4, out);
+        for (int i = 0; i < n; i++)
+            assertFalse(out[i][0] == 110 && out[i][1] == 204, "blocked: " + i);
+        assertTrue(n >= 3);
+
+        // no flash known yet: still spread, on the camera's side, out of the panel - favouring the higher cells on screen
+        n = ConsFraming.builderSpots(BOX, null, YAW, PITCH, ASPECT, zooms, null, 4, out);
+        assertEquals(4, n);
+        double[] aim = new double[3], s = new double[2], t = new double[2];
+        ConsFraming.aim(BOX, YAW, PITCH, ASPECT, rts, null, aim);
+        ConsFraming.screen(out[0][0] + 0.5, BOX[1], out[0][1] + 0.5, aim, YAW, PITCH, ASPECT, rts, s);
+        ConsFraming.screen(110.5, BOX[1], 199.5, aim, YAW, PITCH, ASPECT, rts, t);
+        assertTrue(s[1] < t[1], "the first is higher on screen than the near corner");
+    }
 }

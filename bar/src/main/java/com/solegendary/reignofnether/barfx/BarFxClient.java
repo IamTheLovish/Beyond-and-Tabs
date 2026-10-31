@@ -1183,6 +1183,17 @@ public final class BarFxClient {
         return ConstructionFx.lastDiag();
     }
 
+    /** The block flashing on site {@code p} as {x, y, z} into {@code out}; false when none (the eyes tour stands a
+     *  builder beside it). */
+    public static boolean constructionNext(com.solegendary.reignofnether.building.BuildingPlacement p, int[] out) {
+        return ConstructionFx.nextOf(p, out);
+    }
+
+    /** How many of site {@code p}'s builders hold a tool now (ConstructionCrew; -1: the site is not drawn). */
+    public static int constructionTools(com.solegendary.reignofnether.building.BuildingPlacement p) {
+        return ConstructionFx.toolsOf(p, clock);
+    }
+
     static void begin(MultiBufferSource.BufferSource buffers, RenderType type, Matrix4f m) {
         vc = buffers.getBuffer(type);
         mat = m;

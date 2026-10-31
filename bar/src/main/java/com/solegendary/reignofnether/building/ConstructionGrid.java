@@ -194,6 +194,8 @@ public final class ConstructionGrid {
                 j++;
             if (j > l && (j >= h || cells[(j * d + ck) * w + ci] != MISSING))
                 continue;   // finished up to the top of the plan there: no ghost over it
+            if (!isWall(x0 + ci, y0 + l, z0 + ck))
+                continue;   // round 18 critic: a lone prop (a lamp post, a pedestal) - its front read as an amber decal
             float y = y0 + j;
             setSeg(course[r], y, course[r + 1], course[r + 2], y, course[r + 3], side);
         }
@@ -462,6 +464,29 @@ public final class ConstructionGrid {
     /** The front course's layer as a height (its bed), or MIN_VALUE when nothing is missing. */
     public int courseLayerY() { return courseL == Integer.MIN_VALUE ? Integer.MIN_VALUE : y0 + courseL; }
 
+    /** The shortest run of site cells along x or z (in one course) that counts as a wall ({@link #isWall}). */
+    public static final int WALL_RUN = 3;
+
+    /**
+     * Cell (x, y, z) is part of a WALL: a block of the site in a run of at least {@link #WALL_RUN} site blocks along x or
+     * along z in its course (a 1-thick wall's end counts - its run goes along the wall). Round 18 critic: the front and
+     * the flash went on lone props in the yard as readily as on the wall ("amber pads under the target block and the
+     * lamp at floor level that read as decals"); a lamp post or a pedestal is no wall. Allocation-free.
+     */
+    public boolean isWall(int x, int y, int z) {
+        if (cell(x, y, z) == EMPTY)
+            return false;
+        int run = 1;
+        for (int t = x - 1; cell(t, y, z) != EMPTY && run < WALL_RUN; t--) run++;
+        for (int t = x + 1; cell(t, y, z) != EMPTY && run < WALL_RUN; t++) run++;
+        if (run >= WALL_RUN)
+            return true;
+        run = 1;
+        for (int t = z - 1; cell(x, y, t) != EMPTY && run < WALL_RUN; t--) run++;
+        for (int t = z + 1; cell(x, y, t) != EMPTY && run < WALL_RUN; t++) run++;
+        return run >= WALL_RUN;
+    }
+
     /** Ray-march step (blocks) of {@link #inView}. */
     private static final float VIEW_STEP = 0.2f;
 
@@ -519,7 +544,7 @@ public final class ConstructionGrid {
             if (!crew.target(i, now, tgt, hands))
                 continue;
             int x = (int) Math.floor(tgt[0]), y = (int) Math.floor(tgt[1]), z = (int) Math.floor(tgt[2]);
-            if (!isMissing(x, y, z) || y != courseY || !inView(x, y, z, lx, ly, lz))
+            if (!isMissing(x, y, z) || y != courseY || !isWall(x, y, z) || !inView(x, y, z, lx, ly, lz))
                 continue;
             float dd = hands[0] * lx + hands[1] * ly + hands[2] * lz;
             if (dd < best) {
@@ -529,13 +554,14 @@ public final class ConstructionGrid {
             }
         }
         // the front course is the lowest layer with a block missing: the missing list is layer first, so its first
-        // entries are that course's - the one in view nearest the camera, else the nearest
-        for (int pass = 0; pass < 2 && !found; pass++) {
+        // entries are that course's - the WALL block in view nearest the camera (round 18 critic: not a lone prop in
+        // the yard), else any in view, else the nearest
+        for (int pass = 0; pass < 3 && !found; pass++) {
             int l = missing[0] / (w * d);
             for (int i = 0; i < missingN && missing[i] / (w * d) == l; i++) {
                 int x = missingX(i), y = missingY(i), z = missingZ(i);
                 float dd = (x + 0.5f) * lx + (y + 0.5f) * ly + (z + 0.5f) * lz;
-                if (dd < best && (pass == 1 || inView(x, y, z, lx, ly, lz))) {
+                if (dd < best && (pass == 2 || ((pass == 1 || isWall(x, y, z)) && inView(x, y, z, lx, ly, lz)))) {
                     best = dd;
                     cell[0] = x; cell[1] = y; cell[2] = z;
                     found = true;
