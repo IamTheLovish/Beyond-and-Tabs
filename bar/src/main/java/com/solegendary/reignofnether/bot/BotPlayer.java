@@ -79,7 +79,10 @@ public class BotPlayer {
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, null, null,   // no house or farm any more (Factions)
                     Buildings.METAL_EXTRACTOR_MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Buildings.GRAVEYARD,
-                    Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON),
+                    // the Tombcaller (essence caster, tier 1: lovish Oct 29; "bots build and use all 7 casters") casts by
+                    // its own autocast: tombstones on a crowd, Grave Tide in a fight, its Grave Adept when it has none
+                    Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER,
+                    List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON, ProductionItems.TOMBCALLER),
                     Buildings.DUNGEON, ProductionItems.EMBALMER,
                     List.of(ProductionItems.CREEPER, ProductionItems.WRAITH, ProductionItems.WARDEN, ProductionItems.OSSUARY_BEHEMOTH),
                     Buildings.STRONGHOLD, ProductionItems.BONE_DRAGON, Buildings.ENERGY_CONVERTER_MONSTERS);

@@ -179,6 +179,12 @@ public class BombardShell extends ThrowableItemProjectile {
         // an explosion source, not a mob attack: RoN rewrites mob-attack damage to the attacker's melee damage
         var src = sl.damageSources().explosion(this, shooter);
         for (LivingEntity le : hit) {
+            if (halfOffDefences && le instanceof com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit) {
+                // a siege lobber's shell takes a tombstone down as a defence: its 54, no falloff (Revision 1)
+                le.invulnerableTime = 0;
+                com.solegendary.reignofnether.unit.UnitDamage.hurtExplicit(le, src, SiegeTuning.healthPerShell(true));
+                continue;
+            }
             double d = Math.sqrt((le.getX() - x) * (le.getX() - x) + (le.getZ() - z) * (le.getZ() - z));
             float falloff = (float) (1.0 - 0.5 * Math.min(1.0, d / splash));
             le.hurt(src, damage * falloff);

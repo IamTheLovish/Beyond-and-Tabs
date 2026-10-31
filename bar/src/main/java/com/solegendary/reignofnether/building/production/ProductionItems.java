@@ -19,6 +19,7 @@ import java.util.List;
 public class ProductionItems {
     public static final CreeperProd CREEPER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "creeper"), new CreeperProd());
     public static final WraithProd WRAITH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wraith"), new WraithProd());
+    public static final com.solegendary.reignofnether.unit.units.monsters.TombcallerProd TOMBCALLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tombcaller"), new com.solegendary.reignofnether.unit.units.monsters.TombcallerProd());
     public static final SkeletonProd SKELETON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "skeleton"), new SkeletonProd());
     public static final BoggedProd BOGGED = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bogged"), new BoggedProd());
     public static final ZombieProd ZOMBIE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "zombie"), new ZombieProd());
@@ -278,6 +279,7 @@ public class ProductionItems {
     private static final List<ProductionItem> ALL = List.of(
         CREEPER,
         WRAITH,
+        TOMBCALLER,
         SKELETON,
         BOGGED,
         ZOMBIE,
