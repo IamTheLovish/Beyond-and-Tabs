@@ -266,6 +266,12 @@ void main() {
         // a plant looks its shadow up a block toward the light: plants cast shadows now (FOLIAGE_SHADOW_LIFT)
         vec3 lookup = playerPos + (mat3(gbufferModelViewInverse) * l) * (FOLIAGE_SHADOW_LIFT * foliage);
         shadow = sunShadow(lookup, worldNormal, fit);
+        // light pass 23: a plant's shadow keeps PLANT_SHADOW_SUN of the sun and takes no shade tint
+        if (shadow < 0.999) {
+            float plantMark = smoothstep(0.0, 0.4, plantCasterShare(lookup, fit));
+            shadow = mix(shadow, PLANT_SHADOW_SUN + (1.0 - PLANT_SHADOW_SUN) * shadow, plantMark);
+            gShadeTintSkip = plantMark;
+        }
 #if SHADOW_PROBE == 1
         plantShadow = shadow < 0.8 ? plantShadowProbe(lookup, fit) : 0.0;
 #endif

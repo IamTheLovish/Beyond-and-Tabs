@@ -178,6 +178,8 @@ vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 sunColour, vec3 sk
 // lit.fsh sets this per draw from the block id - 1 grass, dirt and the like (block.properties 10005), 0.5 plants, 0
 // everything else, which takes the walls' tint whichever way it faces
 float gShadeGround = 0.0;
+// light pass 23: 1 where the shadow is a plant's (lit.fsh): no shade tint there
+float gShadeTintSkip = 0.0;
 
 // 0..1: the high sun (light pass 16): 0 at t11800 and below, 1 from SHADE_TINT_HIGH_HI up
 float highSunTint() {
@@ -221,7 +223,7 @@ vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, flo
     float upness = dot(n, normalize(upPosition));
     float skySeen = 0.5 + 0.5 * upness;
     vec3 skyPart = skyColour * (skySeen * mix(SKY_FILL_FLOOR, 1.0, levels.y) * ao * texAo * direction);
-    light += skyPart * (shadeTint(shadow * min(facing * 4.0, 1.0), upness) - 1.0);
+    light += skyPart * (shadeTint(max(shadow * min(facing * 4.0, 1.0), gShadeTintSkip), upness) - 1.0);
     light += BLOCK_LIGHT * (pow(levels.x, 3.0) * mix(1.0, 0.35, daylight) * mix(0.6, 1.0, ao));
     return light + MIN_LIGHT;
 }

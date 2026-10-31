@@ -486,7 +486,14 @@ class ShaderPack(unittest.TestCase):
             self.assertGreater(t[2], t[1])
             self.assertGreater(t[1], t[0])                    # blue-cyan, never violet (red above green)
         light = _read("lib", "light.glsl")
-        self.assertIn("light += skyPart * (shadeTint(shadow * min(facing * 4.0, 1.0), upness) - 1.0);", light)
+        # light pass 23: a plant's shadow (shadowcolor0's mark) takes no tint (gShadeTintSkip) and keeps PLANT_SHADOW_SUN
+        self.assertIn("light += skyPart * (shadeTint(max(shadow * min(facing * 4.0, 1.0), gShadeTintSkip), upness) - 1.0);", light)
+        self.assertIn("float plantMark = smoothstep(0.0, 0.4, plantCasterShare(lookup, fit));", _read("program", "lit.fsh"))
+        self.assertTrue(0.0 <= _const("PLANT_SHADOW_SUN") <= 0.7)
+        # light pass 23: the foot line, a separate 1-3 px term on upward faces where a wall stands (composite.fsh)
+        comp = _read("composite.fsh")
+        self.assertIn("lin *= 1.0 - FOOT_LINE_STRENGTH * foot;", comp)
+        self.assertTrue(_const("FOOT_LINE_PX") <= 4.0 and 0.0 < _const("FOOT_LINE_STRENGTH") <= 0.25)
         # light pass 5: the fill has a direction (the castle's walls at noon 0.68 / 0.67): a face toward the sun's
         # azimuth against one turned away >= 1.5x of fill, tops untouched
         d = _const("FILL_DIRECTION")
