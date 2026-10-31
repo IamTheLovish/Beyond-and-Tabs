@@ -73,3 +73,14 @@ camera only by value, and both ends overshoot (granite 0.55 "salmon", slate 0.18
 "in the ground mids") - its place on the gate-rose axis and its footprint are massing, not material; re-measuring a
 camera-table entry another lab's tests rely on moves their numbers (copper blotch 0.050 -> 0.052): measure with
 camera_colour.py --add-only.
+
+## Thunder Arsenal r1 (Stormcallers T1 vehicle lab, the r12 method; PR #459) - ref08, 17 x 17 x 26, one fixed rubric
+Designer pass: itachi2-api run 20261030-234157-storm-design (rubric = r12's 7 axes). Each round photographed with its
+control in ONE eyes run (build 39266a8 = build_run 41124019976, branch pack, plain lane, keep_only, times 6000); two
+fresh API critics per round, a / b. Expected and measured numbers: design/vehicle_labs/storm_expected.md.
+
+| Round | Eyes run | RTS | Close | Landmark | Gate | Roofs | Materials | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| round 1 (the old lab, Oct 28) | - | 4 overall (round 1 critic) | | | | | | | one roof slab on a box; the tower a bump, the armillary floats; no yard; gate unreadable; flat roofs; gold / copper noise; scattered light | - |
+| massing A / B / C + control | 41166006117 | A 6 / 7, B 6 / 7, C 6 / 7, old 4 / 4 | - | A 6 / 6, B 7 / 7, C 5 / 5, old 3 / 3 | A 5 / 6, B 5 / 6, old 4 / 4 | A 7 / 7, B 6 / 6, old 4 / 4 | - | - | sums of 60: A 37 / 39, B 37 / 39, C 33 / 38, old 21 / 22; both pick A (resemblance, roof rhythm); A's keep a bump with equal tiers and a ring on a pole; gate lighter than its wall, no road; the court a strip; every option reads temple / palace before arsenal | A + the shared faults |
+| detail r1 (8a67a4c9) | 41168410538 | 7 / 6 (control 6 / 5) | 5 / 4.5 | 6 / 6 | 6 / 6 | 6 / 5 | 6 / 5 | 4 / 4.5 | overall 6 / 5.5 vs the greybox 5 / 4.5: the keep clearly tallest, the gate the darkest opening, the court open, muted salmon posts (not team red); faults: the cart route does not read (a black "pit" at the gate, a half-width dark road, the court split orange / black); the keep a "striped lighthouse" (post / panel on 3-wide bodies), its top tiers equal, the crown "an X in a box", no glow at dusk; roofs one tone, the full-cube corner tips "studs / teeth / battlements"; no workshop props | one face grammar, granite posts, no gold, the keep's lead |
