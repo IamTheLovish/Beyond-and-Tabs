@@ -235,9 +235,14 @@ class ShaderPack(unittest.TestCase):
         self.assertTrue(0.70 <= _const("CONTACT_FLOOR") <= 0.80)
         # Retired (light pass 14): "CONTACT_RADIUS <= 0.2" - the critic on pass 12 found a 1-2 px hard band at the
         # pillars' feet (target a 3-5 px gradient): 0.26 over four rings weighed toward the foot
-        self.assertTrue(0.08 <= _const("CONTACT_RADIUS") <= 0.3)
+        # Retired pin (light pass 21): "CONTACT_RADIUS <= 0.3" - a model of the taps against a wall's foot put the 0.26
+        # crease inside ~4 px, invisible at 3-9 px (lp20 near-foot = far shadow); 0.40 (~13 px) with gain 2.5 and floor
+        # 0.80 grades it 0.80 -> 0.98 over ~9 px. The probe ships off
+        self.assertTrue(0.08 <= _const("CONTACT_RADIUS") <= 0.45)
+        self.assertIn("#define CONTACT_PROBE 0", _read("lib", "settings.glsl"))
         self.assertIn("float w = 1.0 - 0.15 * ring;", _read("composite.fsh"))
-        self.assertIn("lin *= contactOcclusion(uv, texture2D(depthtex1, uv).r);", _read("composite.fsh"))
+        # light pass 21: the crease kept in a variable for CONTACT_PROBE, still on all the light
+        self.assertIn("float crease = contactOcclusion(uv, texture2D(depthtex1, uv).r);\n            lin *= crease;", _read("composite.fsh"))
         self.assertIn("const float AO_FLOOR = CONTACT_AO_FLOOR;", _read("lib", "ao.glsl"))
         self.assertIn("max(ao, AO_FLOOR)", _read("deferred.fsh"))
 
@@ -607,7 +612,9 @@ class ShaderPack(unittest.TestCase):
         # SIDE_SUN_SQUARE, a grazed one (the east faces) keeps SIDE_SUN; still all of it for a low sun
         self.assertIn("(facing * sideKey(n, facing) * mix(1.0, texAo, 0.5))", light)
         self.assertIn("return mix(mix(side, 1.0, up), 1.0, lowSunFull());", light)
-        self.assertTrue(1.0 <= _const("SIDE_SUN_SQUARE") <= 1.6)
+        # Retired pin (light pass 21): "SIDE_SUN_SQUARE 1.0-1.6" - lp20's south faces 0.81-0.86 at 1.40 (target 0.87),
+        # ~0.12 of luma per unit near the shoulder
+        self.assertTrue(1.0 <= _const("SIDE_SUN_SQUARE") <= 2.0)
         self.assertLess(_const("SIDE_SUN_FULL_LO"), _const("SIDE_SUN_FULL_HI"))
         self.assertGreater(_const("SIDE_SUN_FULL_LO"), 0.26)          # the 5000 east faces stay grazed
         # Retired pin (light pass 16): "SIDE_SUN 0.35-0.75" - lp15 measured the white cubes' sun-lit sides 0.63-0.67
@@ -637,7 +644,11 @@ class ShaderPack(unittest.TestCase):
         # light pass 8: 0.55 -> 0.70 (the lawn to read "full" without more exposure)
         # Retired (light pass 9): "0.60-0.80" - 0.70 read as broad bands along the block axes; blobs at <= 0.03 now,
         # on a lattice turned off the axes
-        self.assertTrue(0.15 <= _const("MEADOW_VALUE") <= 0.30)
+        # Retired pin (light pass 21): "MEADOW_VALUE 0.15-0.30" - lp20's critic read low-frequency dark blotches that
+        # compete with real shadows; the field's swing a third smaller
+        # Retired pin (light pass 22): "MEADOW_VALUE 0.10-0.30" - the genuine albedo probes put this field at ~0.044 of
+        # the lawn's 48-px cv (target block sd <= 0.032): a trace of it now
+        self.assertTrue(0.0 <= _const("MEADOW_VALUE") <= 0.30)
         self.assertIn("TURN_A * xz / MEADOW_CELL", _read("lib", "meadow.glsl"))
         meadow = _read("lib", "meadow.glsl")
         self.assertIn("- 0.5 * (MEADOW_VALUE * 0.45) * (MEADOW_VALUE * 0.45)", meadow)

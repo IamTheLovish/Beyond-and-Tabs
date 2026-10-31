@@ -104,14 +104,14 @@ TARGETS = {
     # (the render brightens the pale end), std 0.08 -> 0.11 - the chunk faces 0.50-0.60 against crevice floors <= 0.25
     # r55 (the first real in-game grade: stone L 0.559 on screen against the 0.58 target; screen ~1.2x the albedo):
     # luma 0.45 -> 0.48 - the ladder on screen cobble 0.50 < stone_bricks 0.55 < stone 0.58 < gravel 0.62
-    "stone":            dict(luma=0.47, std=0.125, sat=0.04, lf=0.0, ao=0.7, tilt=12.0, smooth=22, pore=12, soften=1.2,
-                             mid=0.3, hspan=0.30, toe=0.18),   # r57: luma 0.48 -> 0.47 (a step under gravel), std 0.125 (chunk tones)
+    "stone":            dict(luma=0.51, std=0.120, sat=0.04, lf=0.0, ao=0.7, tilt=12.0, smooth=22, pore=12, soften=1.2,
+                             mid=0.3, hspan=0.30, toe=0.24),   # r58: 0.47 -> 0.51, toe 0.18 -> 0.24 (in game 0.55 / dark 19% on the wall face; want ~0.60)   # r57: luma 0.48 -> 0.47 (a step under gravel), std 0.125 (chunk tones)
     # r53 (the in-game critic: cobblestone the brightest grey on screen, 0.73-0.78 at t5000 against stone 0.67 and
     # stone_bricks 0.65 - the ladder inverted; target cobble ~0.50 < stone ~0.58 < bricks ~0.60 < gravel ~0.62):
     # luma 0.41 -> 0.33 and smooth 32 -> 24 (the domes' sheen added to the pale read)
     # r55 (the first real in-game grade: cobble L 0.41 on screen against the 0.50 target, screen ~1.2x the albedo):
     # luma 0.33 -> 0.41; sat 0.08 -> 0.06 (neutral-warm stones, no blue / tan shards)
-    "cobblestone":      dict(luma=0.41, std=0.115, sat=0.05, tilt=22.0, smooth=24, pore=16),   # r48: stones apart from the mortar; r57: sat 0.05 (peach stones), std 0.115 (the dome's crescent / base)
+    "cobblestone":      dict(luma=0.41, std=0.115, sat=0.03, tilt=22.0, smooth=24, pore=16),   # r48: stones apart from the mortar; r57: sat 0.05 (peach stones), std 0.115 (the dome's crescent / base); r58: sat 0.03 (in game sat 0.10 at 0.05)
     # Oct 29 (claude/environment-palette-oct29.md): luma 0.67 -> 0.50 - at 0.67 the river banks were the brightest
     # ground on screen (luma 0.72-0.75 after the grade, r54) and competed with buildings and units; the palette band
     # for sand is 0.48-0.58 (lights belong to what matters). Screen / texture was ~1.09 on r54.
@@ -120,10 +120,10 @@ TARGETS = {
     # can ship them and keep working on them"): gravel's smoothness 50 -> 24 (a blue sky sheen at the 30-degree view)
     # and tilt 26 -> 16 (bubble wrap); oak planks sat 0.46 -> 0.40, smooth 70 -> 45 (orange, satin); oak bark sat
     # 0.38 -> 0.34 (grey-brown) and tilt 27 -> 22; `soften` (see soften()) keeps the plain game free of pepper
-    "gravel":           dict(luma=0.50, std=0.130, sat=0.07, tilt=15.0, smooth=24, pore=30, soften=0.8, shoulder=0.62),   # r52: distinct stones; r53: 0.46 -> 0.43; r54: 0.49 - the TOP of the greys ladder; r57: 0.51 -> 0.50, tilt 18 -> 15, shoulder 0.62 (the whitest stones): mean <= 0.62 on screen
+    "gravel":           dict(luma=0.505, std=0.160, sat=0.07, tilt=15.0, smooth=24, pore=30, soften=0.8, shoulder=0.62),   # r52: distinct stones; r53: 0.46 -> 0.43; r54: 0.49 - the TOP of the greys ladder; r57: 0.51 -> 0.50, tilt 18 -> 15, shoulder 0.62 (the whitest stones): mean <= 0.62 on screen
     # r35 (critic: the planks too dark and too close in value - oak ~0.55, jungle ~0.48, dark oak ~0.35): oak lifted
     "oak_planks":       dict(luma=0.55, std=0.055, sat=0.40, tilt=8.5, smooth=45, pore=24, soften=0.4, lf=0.3),
-    "oak_log":          dict(luma=0.33, std=0.190, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=2.0),   # r55: std 0.060 -> 0.085 (plates against fissures)
+    "oak_log":          dict(luma=0.33, std=0.240, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=2.0, lmean=0.39, shoulder=0.56),   # r58: std 0.19 -> 0.24 at the LINEAR mean of r57 (fit_albedo lmean)   # r55: std 0.060 -> 0.085 (plates against fissures)
     "oak_log_top":      dict(luma=0.44, std=0.073, sat=0.48, tilt=12.0, smooth=40, pore=30),
     # round 3 (Oct 15): what the RTS view shows most after grass and water (the eyes ground census); new keys go at
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
@@ -176,15 +176,15 @@ TARGETS = {
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
     # flat dark slab (reviewer, eyes run 39548166615); the reference's numbers were for a lit flat view
-    "spruce_log":       dict(luma=0.23, std=0.135, sat=0.42, tilt=26.2, smooth=40, pore=36),   # r53: the flakes apart; r54: lifted 0.19 -> 0.22, std 0.085 (near-black at 30 px)
+    "spruce_log":       dict(luma=0.23, std=0.110, lmean=0.27, shoulder=0.30, sat=0.42, tilt=26.2, smooth=40, pore=36),   # r53: the flakes apart; r54: lifted 0.19 -> 0.22, std 0.085 (near-black at 30 px)
     "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
     "birch_log":        dict(luma=0.72, std=0.210, sat=0.06, tilt=12.0, smooth=50, pore=30),   # r54: 2-3 dark bands (~0.25) on the 0.80 paper carry the spread; tilt 26 -> 12 (the paper's relief lit as speckle at 30 px)
     "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
-    "acacia_log":       dict(luma=0.35, std=0.140, sat=0.10, tilt=26.1, smooth=40, pore=36),   # r54: std 0.063 -> 0.080
+    "acacia_log":       dict(luma=0.35, std=0.190, lmean=0.39, shoulder=0.60, sat=0.10, tilt=26.1, smooth=40, pore=36),   # r54: std 0.063 -> 0.080
     "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
-    "jungle_log":       dict(luma=0.29, std=0.155, sat=0.33, tilt=31.2, smooth=40, pore=36),   # r54: std 0.070 -> 0.085
+    "jungle_log":       dict(luma=0.29, std=0.200, lmean=0.43, shoulder=0.62, sat=0.35, tilt=31.2, smooth=40, pore=36),   # r54: std 0.070 -> 0.085
     "jungle_log_top":   dict(luma=0.43, std=0.100, sat=0.55, tilt=12.0, smooth=40, pore=30),
-    "dark_oak_log":     dict(luma=0.16, std=0.140, sat=0.40, tilt=31.3, smooth=40, pore=36),   # r53: the blocks apart; r54: darker, coarser than oak
+    "dark_oak_log":     dict(luma=0.16, std=0.130, lmean=0.19, shoulder=0.36, sat=0.34, tilt=31.3, smooth=40, pore=36),   # r53: the blocks apart; r54: darker, coarser than oak
     "dark_oak_log_top": dict(luma=0.21, std=0.039, sat=0.61, tilt=12.0, smooth=40, pore=30),
     # round 11: the other factions' buildings (structure census) - single-block numbers from pack-study 38760372803
     # (reference) beside 38760380796 (vanilla); std a little under the reference where rts_view says busy
@@ -279,7 +279,7 @@ TARGETS = {
     tilt=8.9, smooth=102, pore=64),
     "red_sand": dict(luma=0.52, std=0.040, sat=0.60, tilt=12.9, smooth=34, pore=60),
     # r53: luma 0.22 -> 0.24, std 0.055 -> 0.080 (the hollows' floors ~0.10 against the dry clods ~0.40)
-    "mud": dict(luma=0.32, std=0.125, sat=0.28, tilt=18.0, smooth=90, pore=64),   # r31: the cracks carry the spread; r52: the hollows; r55: warm (sat 0.28); r56: 0.25 -> 0.32; r57: std 0.110 (bowls against rims)
+    "mud": dict(luma=0.31, std=0.112, sat=0.28, tilt=18.0, smooth=90, pore=64),   # r31: the cracks carry the spread; r52: the hollows; r55: warm (sat 0.28); r56: 0.25 -> 0.32; r57: std 0.110 (bowls against rims)
     # r35 (calcite / diorite / snow indistinguishable at 32 px): calcite a smooth bright white (std 0.075 -> 0.035,
     # tilt 19 -> 8), diorite keeps its speckle, snow the brightest and bluish
     "calcite": dict(luma=0.64, std=0.065, sat=0.02, tilt=14.0, smooth=36, pore=10),   # r42-44: grain and pits; r48
@@ -990,8 +990,17 @@ def m_gravel_r25(F, n):
     patch = 1 + 0.32 * np.clip(F.noise(1, 4, 0.7), -1.6, 0.7) + 0.12 * np.clip(F.noise(2, 5, 0.7), -1.6, 0.7)
     # r57: the raw gaps were near black (relative std 0.73 against the fitted 0.24): the fit crushed everything 3x,
     # the damp sweeps with it - the raw contrast now near the fitted one, so the fit is close to the identity
+    # r58 (the in-game grade: macro 0.027 against 0.035, floor p5 0.405 against <= 0.38): PEBBLE CLUSTERS - the
+    # stones lie in drifts ~1/3 block across (the large cells' regions, own generator so F.rng's stream is unchanged),
+    # a drift of darker wet stones beside a drift of pale dry ones, the edges softened over a few texels; and the grit
+    # between the stones darker
+    crng = np.random.default_rng(SEEDS["gravel"] * 31 + n)
+    ctone = crng.uniform(-1.0, 1.0, bk)
+    ctone = np.sign(ctone) * np.abs(ctone) ** 0.5
+    cluster = F.blur(ctone[bidx], n / 64)
+    patch = patch * (1 + 0.32 * cluster)
     shade = (0.84 + 0.22 * tone[pid]) * (0.66 + 0.34 * dome) * (0.45 + 0.55 * gap) * (1 + 0.03 * grit) * baked * patch   # r56: the stones' tones further apart
-    base = base * gap[..., None] + np.array([0.30, 0.29, 0.27]) * (1 - gap[..., None])   # the grit between (r57: the fit sets its depth)
+    base = base * gap[..., None] + np.array([0.21, 0.20, 0.19]) * (1 - gap[..., None])   # the grit between (r57: the fit sets its depth; r58: 0.30 -> 0.21)
     return H, np.clip(base * shade[..., None], 0, 1)
 
 
@@ -2213,8 +2222,8 @@ def m_birch_log(F, n):
 WOODS = {
     "spruce": ((0.40, 0.21, 0.13), (0.62, 0.45, 0.28)),     # r55: reddish plates (R - B >= 30 on screen)
     "acacia": ((0.44, 0.42, 0.39), (0.78, 0.42, 0.20)),     # r55: neutral grey ridges
-    "jungle": ((0.42, 0.37, 0.20), (0.72, 0.56, 0.36)),     # r57: greener-tan (its own against oak)
-    "dark_oak": ((0.25, 0.18, 0.10), (0.45, 0.30, 0.18)),
+    "jungle": ((0.42, 0.40, 0.27), (0.72, 0.56, 0.36)),     # r57: greener-tan (its own against oak); r58: greener still (95, 90, 62)
+    "dark_oak": ((0.25, 0.21, 0.15), (0.45, 0.30, 0.18)),   # r58: a neutral near-black (60, 52, 40), not red-brown
     "cherry": ((0.30, 0.16, 0.16), (0.82, 0.58, 0.52)),     # dark red-brown bark, pale pink heartwood
 }
 
@@ -2639,8 +2648,11 @@ def m_mud(F, n):
     facing = np.tanh(-slope * n / 8)                                       # +: a wall facing the sun
     baked = 1 + 0.28 * facing * (1 - puddle)
     wet_rim = smoothstep(0.05, 0.6, bowl) * (1 - puddle) * np.clip(facing, 0, 1)   # the sun-side bank, wet and lit
-    shade = (0.76 + 0.36 * dry + 0.10 * clod + 0.02 * grain + 0.03 * smear - 0.42 * hollow - 0.16 * puddle
-             + 0.04 * rim + 0.70 * wet_rim - 0.18 * crack) * baked           # r56: the bowls the form, the rim +0.70; r57: -0.42 / puddle -0.16 (floors clamped at 0.17 in R["mud"]), dry +0.36
+    # r58 (the in-game grade: "hollows visible but reads as dry cracked dirt" - pools 0.30, rims p90 0.575, macro
+    # 0.018): the dry tops and the lit rim a step down (+0.36 -> +0.16, +0.70 -> +0.30), the bowls deeper (-0.42 ->
+    # -0.60, the puddle -0.16 -> -0.22; R["mud"] floors 0.17 -> 0.13), the cracks fainter - wet mud, not dry dirt
+    shade = (0.82 + 0.16 * dry + 0.08 * clod + 0.02 * grain + 0.03 * smear - 0.60 * hollow - 0.22 * puddle
+             + 0.04 * rim + 0.30 * wet_rim - 0.08 * crack) * baked           # r56: the bowls the form, the rim +0.70; r57: -0.42 / puddle -0.16 (floors clamped at 0.17 in R["mud"]), dry +0.36
     alb = tint((0.37, 0.29, 0.21), shade)
     alb = alb * (1 - 0.12 * dry[..., None] * np.array([0.1, 0.1, 0.0])[None, None, :])    # dry mud: paler, greyer, NOT cream
     alb = alb * (1 + 0.10 * puddle[..., None] * np.array([-0.5, 0.0, 0.6])[None, None, :])  # the water: a sky cast
@@ -2666,8 +2678,10 @@ def m_mud_side(F, n):
     shade = (0.84 + 0.12 * hump + 0.015 * smear + 0.02 * grain - 0.16 * damp) * baked
     alb = tint((0.37, 0.29, 0.21), shade)
     wet = np.clip(0.4 + 0.6 * damp, 0, 1)
-    smooth = 40 + 70 * wet
-    return dict(H=H, alb=alb, smooth=np.clip(smooth, 20, 160))
+    # r58 (in game the right side face p95 0.52 with white streaks while the albedo is capped at 0.33 - x1.2 = 0.40:
+    # the streaks are the sky's reflection on a smooth vertical face, not the colour): the side satin-matte
+    smooth = 24 + 36 * wet
+    return dict(H=H, alb=alb, smooth=np.clip(smooth, 20, 90))
 
 
 def m_bone(F, n, top):
@@ -4196,11 +4210,11 @@ BARK56 = {
     # staggered per column with merges - _bark_plates), the tone spread doubled with a 1/2-1-block sweep over the
     # plates (the meso band at the 12-15 px side face), dark oak darker (TARGETS 0.21 -> 0.16), jungle greener-tan
     # and mottled
-    "oak": ("ridge", 3, 2, 0.90, 0.060, 0.22, 0.8, 0.00, 0.30, 0.0),       # warm mid-brown, plates 1/3 wide, 1/2 tall
+    "oak": ("ridge", 3, 3, 0.90, 0.060, 0.22, 0.8, 0.00, 0.30, 0.0),       # warm mid-brown, plates 1/3 wide, 1/2 tall
     "spruce": ("ridge", 4, 4, 0.80, 0.040, 0.22, 0.9, 0.10, 0.15, 0.0),    # reddish flakes: narrow breaks across, staggered
-    "acacia": ("ridge", 4, 2, 0.60, 0.055, 0.22, 1.0, 0.00, 0.50, 0.0),    # grey fibrous ridges: long plates
-    "jungle": ("ridge", 3, 3, 0.80, 0.050, 0.18, 0.5, 0.60, 0.20, 0.0),    # smoother, mottled, greener
-    "dark_oak": ("ridge", 3, 3, 0.90, 0.070, 0.22, 0.6, 0.00, 0.20, 0.80), # near-black blocks with pale crests
+    "acacia": ("ridge", 4, 2, 0.85, 0.055, 0.22, 1.0, 0.00, 0.50, 0.0),    # grey fibrous ridges: long plates
+    "jungle": ("ridge", 3, 3, 1.10, 0.050, 0.18, 0.5, 0.60, 0.20, 0.0),    # smoother, mottled, greener
+    "dark_oak": ("ridge", 3, 3, 1.20, 0.070, 0.22, 0.6, 0.00, 0.20, 0.80), # near-black blocks with pale crests
 }
 
 
@@ -4243,8 +4257,11 @@ def _bark_plates(F, n, mode, cols, rows):
     group = np.zeros((cols, rows + 1), np.int32)
     for c in range(cols):
         rc = int(rows_c[c])
-        if not keep[c, :rc].any():
-            keep[c, 0] = True                                              # at least one break per column
+        if keep[c, :rc].sum() < 2:
+            # r58: at least TWO breaks per column - a column merged into one plate the height of the tile was a pale
+            # (or black) stripe straight up every block, the ridge on the wood blocks
+            keep[c, 0] = True
+            keep[c, rc // 2] = True
         g = 0
         for r in range(rc):
             if keep[c, r]:
@@ -4272,7 +4289,26 @@ def m_bark_r56(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     rng = F.rng
     edge_d, vert, pidx, pk = _bark_plates(F, n, mode, cols, rows)
     lvl = rng.uniform(-1.0, 1.0, pk)[pidx]                                  # each plate's own level and tone
-    tone = rng.uniform(-1.0, 1.0, pk)[pidx]
+    tone = rng.uniform(-1.0, 1.0, pk)
+    tone = np.sign(tone) * np.sqrt(np.abs(tone))                           # r58: two-sided - plates pale or dark, few middling
+    # r58: dealt out over the plates so no tile-sized pale or dark region forms (one merged pale plate read as a
+    # pale stripe on every block): of 96 shuffles (own generator) the least tone power at the tile's lowest
+    # frequencies, weighted by each plate's area
+    area = np.bincount(pidx.ravel(), minlength=pk).astype(np.float64)
+    ang = 2 * math.pi
+    pu = np.arctan2(np.bincount(pidx.ravel(), np.sin(ang * F.u).ravel(), pk),
+                    np.bincount(pidx.ravel(), np.cos(ang * F.u).ravel(), pk)) / ang
+    pv = np.arctan2(np.bincount(pidx.ravel(), np.sin(ang * F.v).ravel(), pk),
+                    np.bincount(pidx.ravel(), np.cos(ang * F.v).ravel(), pk)) / ang
+    ph = [np.exp(2j * math.pi * (pu * a_ + pv * b_)) for a_, b_ in ((1, 0), (0, 1), (1, 1), (1, -1), (2, 0))]
+    loc = np.random.default_rng(pk * 7907 + cols * 31 + rows)
+    best, best_e = tone, 1e9
+    for _ in range(96):
+        cand = loc.permutation(tone)
+        e = sum(abs(np.sum(area * cand * p_)) for p_ in ph)
+        if e < best_e:
+            best, best_e = cand, e
+    tone = best[pidx]
     # a vertical fissure (between side-by-side plates) is wider and deeper than a break across a ridge
     w = fw * (1 + vbias * (vert - 0.5)) * np.clip(1 + 0.25 * F.noise(3, 10, 0.5), 0.6, 1.4)
     fissure = 1 - smoothstep(0.0, w, edge_d)                                # 1 in the crack
@@ -4290,17 +4326,27 @@ def m_bark_r56(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     Hb = F.blur(H, 2.0)
     slope_v = (np.roll(Hb, -1, 0) - np.roll(Hb, 1, 0))
     slope_u = (np.roll(Hb, -1, 1) - np.roll(Hb, 1, 1))
-    sun = np.tanh(-(slope_v + 0.4 * slope_u) * n / 6)                      # +: a face toward the top-left
+    # r58: the sun on the plates' UPPER edges only - r57's 0.4 x slope_u lit every vertical fissure's one side, a
+    # pale line straight up the tile (oak column mean 0.78 on a 0.33 bark) that the wood blocks showed as a bright
+    # ridge on every block
+    sun = np.tanh(-(slope_v + 0.0 * slope_u) * n / 6)                      # +: a face toward the top
     rgb = np.asarray(base, dtype=np.float64)
     grey = rgb.mean()
     weathered = rgb + (grey - rgb) * greying + 0.03                        # the plate faces sun-greyed
     col = rgb[None, None, :] * (1 - plate[..., None]) + weathered[None, None, :] * plate[..., None]
-    sweep = 0.30 * F.noise(1, 3, 0.7, sx=1.0, sy=1.6)                      # r57: the 1/2-1-block tone sweep (weathering, damp)
+    # r58 (in game: spruce_wood / dark_oak_wood "a bright ridge on every block, still repeats"): r57's sweep was a
+    # 1-3 cycle noise long up the trunk (sy 1.6) - one bright and one dark vertical band per tile, a stripe per block
+    # on a wood block's top. The meso now comes from the plates themselves (each plate its own tone, two-sided so
+    # some plates read dark and some pale) and a sweep at 2-5 cycles, round, a third as strong
+    sweep = 0.10 * F.noise(2, 5, 0.7)
     shade = (1 + lvl_amp * tone * plate + edge * sun * (1 - floor) + (mot + sweep) * plate + 0.02 * fib
              - 0.55 * fissure - 0.25 * floor)
     if crest > 0:
         # dark oak: a pale weathered crest along the middle of each plate (pale on black, what tells it from oak)
-        shade = shade + crest * dome * smoothstep(0.0, 0.8, F.noise(2, 6, 0.6, sx=1.0, sy=3.0))
+        # r58: per PLATE (half the plates crested), not a noise long up the trunk - that made one pale column per
+        # tile (column mean 0.47 on a 0.16 bark), the bright ridge on every dark_oak_wood block
+        on = (rng.random(pk) < 0.5)[pidx].astype(np.float64)
+        shade = shade + crest * dome * F.blur(on, 1.5) * smoothstep(-0.6, 0.6, F.noise(3, 8, 0.6))
     lichen = F.blur(smoothstep(1.0, 1.7, F.noise(3, 9, 0.6)) * plate, 1.5) * 0.30
     col = col * (1 - lichen[..., None]) + np.array([0.52, 0.55, 0.42])[None, None, :] * grey / 0.5 * lichen[..., None]
     col = col * (1 + 0.08 * fissure[..., None] * np.array([-1.0, -0.4, 0.6]))   # the cracks cooler and damper
@@ -5147,7 +5193,23 @@ def rock_chunks(F, n, cells=5, depth=0.60, core=0.030, shoulder=0.090, blocks=1,
     # r57 (the in-game grade: the stone floor's macro 0.021 against 0.032 wanted - the chunks were unchanged since r53;
     # the macro band answers to 1/2-2-block wavelengths): the chunks' own tones further apart (+-0.14 -> +-0.24),
     # the large chunks a touch darker than the small ones on average, and a slow 1-2-block damp drift across the face
-    tone = rng.uniform(0.72, 1.28, k)[idx] * (1 + 0.14 * np.clip(N(1, 3, 0.7) if b == 1 else F.noise(1, 3, 0.7), -1.5, 1.0))
+    # r58 (in game: "large diagonal slab bands", the floor 0.594 -> 0.550): the 1-3-cycle damp drift dropped (it laid
+    # light and dark bands across the sheet), the chunk tones kept apart (+-0.24) - the chunks carry the macro
+    tone_k = rng.uniform(0.76, 1.24, k)
+    # r58: and dealt out so they do not line up - with ~5 big chunks a tile, a random deal often put the pale ones on
+    # one diagonal and the dark on the next, a band that the repeat (and the sheet) ran on as "diagonal slab bands":
+    # of 96 shuffles (own generator: F.rng's stream unchanged) the one with the least tone power at the tile's lowest
+    # frequencies (along u, v and both diagonals) wins
+    area = np.bincount(idx.ravel(), minlength=k).astype(np.float64)
+    ph = [np.exp(2j * math.pi * (cx * fu_ + cy * fv_) * b) for fu_, fv_ in ((1, 0), (0, 1), (1, 1), (1, -1))]
+    loc = np.random.default_rng(int(k) * 7919 + int(b))
+    best, best_e = tone_k, 1e9
+    for _ in range(96):
+        cand = loc.permutation(tone_k)
+        e = sum(abs(np.sum(area * (cand - cand.mean()) * p_)) for p_ in ph)
+        if e < best_e:
+            best, best_e = cand, e
+    tone = best[idx]
     # r53: the baked sun (from -u, -v): a chunk's plane tilted toward it is lit, away from it shaded; a crevice's far
     # wall (where the depth climbs toward +u, +v) lit, its near wall in shadow (the slope of the crevice, per texel)
     facing = -(gx[idx] + gy[idx]) / math.sqrt(2)                           # the plane's tilt toward the sun
@@ -5162,7 +5224,7 @@ def rock_chunks(F, n, cells=5, depth=0.60, core=0.030, shoulder=0.090, blocks=1,
     ext = np.zeros(k)
     np.maximum.at(ext, idx.ravel(), (np.abs(dx) + np.abs(dy)).ravel())
     across = np.clip(-(dx + dy) / np.maximum(ext[idx], 0.05), -1, 1)      # +1 at the sun side, -1 at the far side
-    gstr = rng.uniform(0.13, 0.19, k)[idx]
+    gstr = rng.uniform(0.06, 0.10, k)[idx]                                 # r58: 0.13-0.19 -> 0.06-0.10 (the diagonal slab bands)
     H = H + 0.06 * across * (1 - crevice)
     shade = tone * (1 - 0.42 * crevice - 0.22 * dark - 0.18 * crack + 0.05 * arris) \
         * (1 + 0.5 * (plane - plane.mean()) * 0.3) * baked * (1 + gstr * across * (1 - crevice))
@@ -5186,7 +5248,11 @@ def stone_rock(F, n, blocks=1):
     H = H + 0.035 * grain * (1 - 0.6 * crevice)
     alb = np.clip(alb * shade[..., None], 0, 1)
     # the crevice floors a touch cooler (sky light, damp), the chunk faces as the scan has them
-    alb = alb * (1 + 0.06 * crevice[..., None] * np.array([-1.0, -0.3, 1.0]))
+    # r58 (in game: the stone walltop hue 190, the wall face a cyan cast - the albedo itself was blue-grey, RGB
+    # 118 / 120 / 123, and the shader's sky light in the crevices adds more blue): the crevices neutral, the whole
+    # rock a hair warm of neutral (the fit keeps the hue, sat 0.04)
+    gm = alb.reshape(-1, 3).mean(0)
+    alb = alb * (gm.mean() / gm) * np.array([1.02, 1.0, 0.97])
     return H, np.clip(alb, 0, 1)
 
 
@@ -5794,9 +5860,24 @@ def fit_albedo(alb, t, mask=None):
     lv = cal_mip(L.shape[0])
     Lm, mm = mip(L, lv), mip(m.astype(np.float64), lv) > 0.5
     sd = Lm[mm].std() if mm.any() else L[m].std()
-    L2 = t["luma"] + (L - mu) * (t["std"] / max(sd, 1e-6))
-    scale = np.where(L > 1e-4, L2 / np.maximum(L, 1e-4), 1.0)
-    return np.clip(alb * scale[..., None], 0, 1)
+    def fit(luma):
+        L2 = luma + (L - mu) * (t["std"] / max(sd, 1e-6))
+        scale = np.where(L > 1e-4, L2 / np.maximum(L, 1e-4), 1.0)
+        return np.clip(alb * scale[..., None], 0, 1)
+    if "lmean" not in t:
+        return fit(t["luma"])
+    # r58 (the bark diagnosis): the game mips the atlas in gamma 2.2 (MipmapGenerator) and lights / averages in LINEAR
+    # light, so what the RTS camera shows follows the LINEAR mean of the albedo, not its sRGB mean - r57 doubled the
+    # bark's tone spread at a fixed sRGB mean and dark oak came out no darker on screen (sRGB 0.21 -> 0.16, linear
+    # 0.241 -> 0.227, in game 0.28 -> 0.29). With `lmean` the sRGB mean is solved so the linear mean (luma of the
+    # per-channel linear means) lands on lmean, whatever the spread
+    def lin_mean(a):
+        return float(((a[m] ** 2.2).mean(0) ** (1 / 2.2)) @ LUMA)
+    lo, hi = 0.01, 0.95
+    for _ in range(30):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if lin_mean(fit(mid)) < t["lmean"] else (lo, mid)
+    return fit((lo + hi) / 2)
 
 
 def normals(H, strength):
@@ -6405,7 +6486,12 @@ def soften(F, alb, t):
 def _plain(fn):
     def r(F, n, t):
         H, alb = fn(F, n)
-        return dict(H=H, alb=tone_limits(soften(F, fit_albedo(alb, t), t), t))   # r41: `shoulder` / `toe` cap the extremes
+        alb = tone_limits(soften(F, fit_albedo(alb, t), t), t)               # r41: `shoulder` / `toe` cap the extremes
+        if "lmean" in t:   # r58: the shoulder / soften moved the linear mean - one gain puts it back on lmean
+            for _ in range(4):
+                lm = float(((alb ** 2.2).mean((0, 1)) ** (1 / 2.2)) @ LUMA)
+                alb = np.clip(alb * (t["lmean"] / max(lm, 1e-4)), 0, 1)
+        return dict(H=H, alb=alb)
     return r
 
 
@@ -6627,12 +6713,12 @@ def recipes():
         # speckles - the hollows' depth is the lit wall against the shaded one, not a black floor)
         # r56: the floors held at 0.22 (screen p5 >= 0.30, dark fraction <= 10%) - the in-game r55 dark fraction was
         # still 29% at a 0.13 floor
-        alb = tone_limits(d["alb"], dict(toe=0.22))               # r57: 0.28 -> 0.22
+        alb = tone_limits(d["alb"], dict(toe=0.18))               # r57: 0.28 -> 0.22; r58: 0.18
         L = alb @ LUMA
-        floor = np.array([0.37, 0.29, 0.21]) * (0.17 / (np.array([0.37, 0.29, 0.21]) @ LUMA))   # mud's hue at 0.17
+        floor = np.array([0.37, 0.29, 0.21]) * (0.13 / (np.array([0.37, 0.29, 0.21]) @ LUMA))   # mud's hue at 0.13 (r58)
         alb = np.where((L < 0.02)[..., None], floor[None, None, :], alb)
         L = alb @ LUMA
-        d["alb"] = np.clip(alb * (np.maximum(L, 0.17) / np.maximum(L, 1e-4))[..., None], 0, 1)   # r57: 0.25 -> 0.17 (the puddles' middles)
+        d["alb"] = np.clip(alb * (np.maximum(L, 0.13) / np.maximum(L, 1e-4))[..., None], 0, 1)   # r57: 0.25 -> 0.17 (the puddles' middles); r58: 0.13 (pools 0.30 -> 0.26-0.28 on screen)
         return d
     R["mud"] = _mud_r54
     R["mud_side"] = _parts(m_mud_side)       # r56: the column's side (own smoothness: damp)
@@ -6838,7 +6924,7 @@ GIANT = {   # name: (sheet recipe(F, blocks) -> (H, alb), blocks per side, tilt 
     "smooth_stone": (m_flagstone_sheet, 4, 0.6),
     # r51: the rock face runs on across the blocks; std / tilt are compensated for the sheet's calibration mip (8 texels
     # per block: the chunk contrast is mostly averaged away there) so one block of the sheet measures like the tile
-    "stone": (m_stone_sheet, 4, 1.0, dict(std=0.090, toe=0.25)),   # r53: 0.053 -> 0.073 with the tile 0.08 -> 0.11; r57: 0.090 with the tile 0.125
+    "stone": (m_stone_sheet, 4, 1.0, dict(std=0.088, toe=0.28)),   # r58: toe 0.25 -> 0.28 (the floor lifted, fewer dark crevice floors); r53: 0.053 -> 0.073 with the tile 0.08 -> 0.11; r57: 0.090 with the tile 0.125
 }
 
 
