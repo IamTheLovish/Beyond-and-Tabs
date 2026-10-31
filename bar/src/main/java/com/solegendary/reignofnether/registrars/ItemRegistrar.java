@@ -481,6 +481,10 @@ public class ItemRegistrar {
             ITEMS.register("bloom_priestess_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BLOOM_PRIESTESS_UNIT,
                     0xF2C4D6, 0x6FA35A, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> THORNWEAVER_UNIT_SPAWN_EGG =
+            ITEMS.register("thornweaver_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.THORNWEAVER_UNIT,
+                    0x4E6B3A, 0x9BD3C8, new Item.Properties()));
+
     // Brassworks slice 2
     public static final RegistryObject<ForgeSpawnEggItem> ENGINEER_CAPTAIN_UNIT_SPAWN_EGG =
             ITEMS.register("engineer_captain_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.ENGINEER_CAPTAIN_UNIT,
