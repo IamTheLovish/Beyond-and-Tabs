@@ -36,7 +36,10 @@ Round 2 (eyes 41159362651): 19 / 19 tests green locally; gate seen 313, roofs 0.
 Critics 20261030-223653 (a) / -223652 (b): 5.5 / 5.5 vs round 1's 5 / 5. One change per element:
 | Element | Change | Expected | Measured |
 |---|---|---|---|
-| Spire | a lantern course at 19 under the cap: lime glass in the middle of the south / north / east faces between blackstone mullions, froglights inside; the crown cornice moves to 18 | the spire differs from the flank caps in plan by a lit band; green 2.1 % rts / 3.7 % 34 (<= 4 %) | |
-| Lancets (dusk) | smoke glass lit from behind -> dark blackstone slits | one glow story at dusk: the heart and the lantern on one axis; no pale lancets | |
-| Portal frame | the heart ring's sides in bone (the posts' frame carried up) | the posts and the heart read as one frame | |
-| Ribs | no change (the bone budget vs the heart is lovish's call, critic b) | still the largest pale area | |
+| Spire | a lantern course at 19 under the cap: lime glass in the middle of the south / north / east faces between blackstone mullions, froglights inside; the crown cornice moves to 18 | the spire differs from the flank caps in plan by a lit band; green 2.1 % rts / 3.7 % 34 (<= 4 %) | green 2.1 % / 3.7 %; the lantern only 86 sampled px in rts (the heart 1496): small |
+| Lancets (dusk) | smoke glass lit from behind -> dark blackstone slits | one glow story at dusk: the heart and the lantern on one axis; no pale lancets | dusk still: slits dark; the heart and a small lantern glow |
+| Portal frame | the heart ring's sides in bone (the posts' frame carried up) | the posts and the heart read as one frame | at mid zoom yes (both critics); at RTS still two posts, the top dark |
+| Ribs | no change (the bone budget vs the heart is lovish's call, critic b) | still the largest pale area | unchanged; snow 3.3 % rts |
+
+Round 3 (eyes 41161129778): 19 / 19 tests green; lead 6.
+Critics 20261030-230039 (a) / -230031 (b): 6 / 6 vs round 2's 5.5 / 5.5 - round 3 kept; detail rounds stop here (three rounds, +0.5 each; the rest is value budget and plan - lovish's calls).
