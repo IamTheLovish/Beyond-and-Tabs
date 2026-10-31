@@ -165,10 +165,9 @@ public class PartRenderClientEvents {
     private static int pickedLightCount = 0;
     private static boolean firstLightLogged = false;
     private static long refreshedAt = Long.MIN_VALUE;
-    // client ticks since the game started: the refresh and the window light run on this, not on the level's game time,
-    // which this mod's client holds equal to the day time (ClientLevelMixin.tickTime) - it stands still whenever the day
-    // time does (eyes run 41123019484: the windows never refreshed at a fixed noon and stayed half-lit at dusk)
-    private static long clientTicks = 0;
+    // the refresh and the window light run on ClientTicks, not on the level's game time, which this mod's client holds
+    // equal to the day time (ClientLevelMixin.tickTime) - it stands still whenever the day time does (eyes run
+    // 41123019484: the windows never refreshed at a fixed noon and stayed half-lit at dusk)
     private static int refreshedCount = -1;
     private static final BlockPos.MutableBlockPos MUT = new BlockPos.MutableBlockPos();
 
@@ -243,12 +242,11 @@ public class PartRenderClientEvents {
             refreshedAt = Long.MIN_VALUE;
             return;
         }
-        clientTicks++;
         if (disabled)
             return;
         try {
             watchFrameRate();
-            long now = clientTicks;
+            long now = ClientTicks.now();
             List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
             // MIN_VALUE = refresh now (now - MIN_VALUE overflowed negative, and that skipped the refresh)
             if (refreshedAt != Long.MIN_VALUE && now - refreshedAt < REFRESH_TICKS && now >= refreshedAt
@@ -543,7 +541,7 @@ public class PartRenderClientEvents {
                     drawRig(s, now, cam, px < lodPx, full);
             }
             if (pickedLightCount > 0)
-                windows(cam, evt.getCamera().getLookVector(), clientTicks, ortho, orthoPx, screenH);
+                windows(cam, evt.getCamera().getLookVector(), ClientTicks.now(), ortho, orthoPx, screenH);
         } finally {
             for (int i = 0; i < pickedCount; i++)
                 picked[i] = null;

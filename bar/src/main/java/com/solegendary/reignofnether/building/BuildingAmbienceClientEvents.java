@@ -99,9 +99,8 @@ public class BuildingAmbienceClientEvents {
     /** Every lab's stack cells (BlockPos.asLong): their vanilla campfire smoke is off. Client thread only. */
     private static final LongOpenHashSet quietStacks = new LongOpenHashSet();
     private static final int QUIET_REFRESH = 20;
-    // client ticks: the working passes count these, not the level's game time, which this mod's client holds equal to the
-    // day time (ClientLevelMixin.tickTime) - frozen while the day time is, or stepping in 20s (eyes run 41123019484)
-    private static long ticks = 0;
+    // the working passes run on ClientTicks, not the level's game time, which this mod's client holds equal to the day
+    // time (ClientLevelMixin.tickTime) - frozen while the day time is, or stepping in 20s (eyes run 41123019484)
 
     /** CampfireBlockEntityMixin: true when this campfire is a lab's stack, whose smoke is ours (working only). */
     public static boolean isQuietStack(BlockPos pos) {
@@ -134,13 +133,13 @@ public class BuildingAmbienceClientEvents {
         }
         if (MC.player == null || MC.isPaused())
             return;
-        ticks++;
+        long ticks = ClientTicks.now();
         if (ticks % QUIET_REFRESH == 1)
             refreshQuietStacks();
         // particles are invisible at strategic zoom; don't pay for them (zoom-out performance)
         if (StrategicViewClientEvents.isStrategicView() || !DisplaySettings.buildingAmbience())
             return;
-        if (ClientTicks.now() % IDLE_PERIOD == 0)
+        if (ticks % IDLE_PERIOD == 0)
             idleLife();
         if (ticks % BuildingWork.SMOKE_PERIOD != 0)
             return;
