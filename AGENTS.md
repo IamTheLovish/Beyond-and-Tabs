@@ -152,6 +152,11 @@ NOTES.md                  older session log; README.md is out of date (this file
     replaced has a CANCELLED run, `ci_wait --sha` says so) - bisect with `flake-stress.yml` if a regression has to be
     pinned to one commit. PR builds still cancel their own older run on a new push; manual runs never cancel each other.
     So **merge several PRs in quick succession** (design/LANES.md).
+  - **A tests-only head (tests first, before its red run): put `[compile-only]` in that commit's subject line.** Its PR build
+    then compiles the jar and runs JUnit only (~7 runner-minutes instead of ~75, no GameTests) and job `compile-only`
+    fails on purpose, so the head can never merge; read job `bar` for the compile, then dispatch the red flake-stress
+    run. The tag counts only on the head commit: the next push (the fix, a main merge) runs the full suite. Never tag a
+    head that is meant to merge (tools/ci_plan.py).
   - Read failures from check-run annotations (`gh api repos/<owner>/<repo>/check-runs/<job-id>/annotations`) of
     the job that ran the test (`bar` or one of the `bar-tests` entries) - test failures appear as
     `... failed! <message>`; measurements from passing tests appear as `[Melee]`, `[Stress]`, `[Soak]` notices.
