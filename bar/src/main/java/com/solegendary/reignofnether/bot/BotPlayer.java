@@ -589,8 +589,15 @@ public class BotPlayer {
         }
 
         // 1a) stranded workers (BotStranded) build nothing: out of every builder pick and the worker count from here on,
-        // so the capitol trains replacements, and walked home now and then
-        dropStranded(gameTime, workers);
+        // so the capitol trains replacements, and walked home now and then. Only once the capitol stands: until then
+        // nothing can train a replacement, and the site watch must see the capitol's builders to relocate a capitol on
+        // ground they cannot reach. The watch always gets every worker (allWorkers): a site ordered only to stranded
+        // workers must still be cancelled at 45 s, or it holds the site allowance for good
+        List<LivingEntity> allWorkers = new ArrayList<>(workers);
+        if (capitol.isBuilt)
+            dropStranded(gameTime, workers, capitol);
+        else
+            strandedNow = 0;
 
         // the economy snapshot every step below reads: income, and how full the two pools are
         var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name);
@@ -617,7 +624,7 @@ public class BotPlayer {
         // Tidewrought capitol and two extractors sat unbuilt for four minutes, filled the bot's site allowance and
         // it never placed, trained or logged again). The watch says why, cancels the site for its refund and, for
         // the capitol, lays the next one a step away; the think step starts over on the next second
-        if (siteWatch.think(level, gameTime, buildings, workers))
+        if (siteWatch.think(level, gameTime, buildings, allWorkers))
             return;
 
         // 3b) reclaim: idle workers walk to the nearest wrecks in our territory (BAR players do this by habit)
@@ -858,7 +865,7 @@ public class BotPlayer {
         if (!t2LabMissing)
             t2SaveSince = -1;
         boolean researchStarved = !tier2 && researching && metalFill < 0.1f;
-        boolean wantsT2Save = t2LabMissing && (tier2 || researchStarved) && !floating() && army.size() >= tuning.t2MinArmy();
+        boolean wantsT2Save = t2LabMissing && (tier2 || researchStarved) && !floating() && t2Fighters(army) >= tuning.t2MinArmy();
         if (wantsT2Save && t2SaveSince < 0)
             t2SaveSince = gameTime;
         boolean savingForT2Lab = wantsT2Save && gameTime - t2SaveSince < T2_SAVE_MAX_TICKS;
@@ -1024,7 +1031,7 @@ public class BotPlayer {
     public int strandedNow = 0;
 
     /** Takes this think's stranded workers out of {@code workers}; each is walked home every BotStranded.RESCUE_EVERY_TICKS. */
-    void dropStranded(long gameTime, List<LivingEntity> workers) {
+    void dropStranded(long gameTime, List<LivingEntity> workers, BuildingPlacement capitol) {
         java.util.Set<Integer> alive = new java.util.HashSet<>();
         List<LivingEntity> out = new ArrayList<>();
         for (LivingEntity w : workers) {
@@ -1033,7 +1040,9 @@ public class BotPlayer {
                 continue;
             var goal = wu.getBuildRepairGoal();
             boolean ordered = goal.getBuildingTarget() != null;
-            if (stranded.sample(w.getId(), w.getX(), w.getZ(), ordered, ordered && goal.isBuilding(), gameTime))
+            // at the capitol is home, not stranded (a rescued worker that reached it, or one waiting beside it)
+            boolean atHome = capitol.isPosInsideBuilding(w.getOnPos(), 3);
+            if (stranded.sample(w.getId(), w.getX(), w.getZ(), ordered, atHome || (ordered && goal.isBuilding()), gameTime))
                 out.add(w);
         }
         stranded.retain(alive);
@@ -1055,7 +1064,10 @@ public class BotPlayer {
     boolean armyFirst = false;
 
     void trainWorkers(BuildingPlacement capitol, int workerCount) {
-        if (techPending || armyFirst || workerCount >= targetWorkers() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
+        // (stranded workers are replaced, but the bot never keeps more than workerCap + workerBase in all: an easy bot reached
+        // 5 working and 12 stranded, flake-stress 41172556017 runner 3)
+        if (techPending || armyFirst || workerCount >= targetWorkers()
+                || workerCount + strandedNow >= tuning.workerCap() + tuning.workerBase() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
             return;
         // (two at a time while metal floats: more constructors is the fastest way to turn a stockpile into buildings)
         if (pp.productionQueue.size() < (floating() ? 2 : 1))
