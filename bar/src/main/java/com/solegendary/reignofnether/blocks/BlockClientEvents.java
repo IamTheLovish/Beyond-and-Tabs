@@ -18,6 +18,7 @@ import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.MyRenderer;
+import com.solegendary.reignofnether.time.ClientTicks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
@@ -45,7 +46,7 @@ public class BlockClientEvents {
     private static void refreshRangeSubsets() {
         java.util.List<BuildingPlacement> all = BuildingClientEvents.getBuildings();
         ArrayList<LivingEntity> units = UnitClientEvents.getAllUnits();
-        long t = MC.level == null ? 0 : MC.level.getGameTime();
+        long t = MC.level == null ? 0 : ClientTicks.now();
         if (!RANGE_GATE.due(t, all.size() * 31 + units.size()))
             return;
         rangeBuildings.clear();

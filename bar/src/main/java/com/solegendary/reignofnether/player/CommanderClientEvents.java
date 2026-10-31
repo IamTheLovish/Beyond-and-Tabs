@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.player;
 
 import com.solegendary.reignofnether.unit.UnitClientEvents;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,7 +16,7 @@ public class CommanderClientEvents {
         if (evt.phase != TickEvent.Phase.END)
             return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.level.getGameTime() % 20 != 0)
+        if (mc.level == null || ClientTicks.now() % 20 != 0)
             return;
         for (LivingEntity le : UnitClientEvents.getAllUnits())
             if (CommanderServerEvents.looksLikeCommander(le))
