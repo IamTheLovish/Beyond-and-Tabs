@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -96,7 +97,7 @@ public class ScaffoldRenderClientEvents {
             if (MC.level == null || StrategicViewClientEvents.isStrategicView())
                 return;
 
-            long now = MC.level.getGameTime();
+            long now = ClientTicks.now();
             float partial = evt.getPartialTick();
             Vec3 cam = evt.getCamera().getPosition();
             camX = cam.x;
@@ -141,7 +142,9 @@ public class ScaffoldRenderClientEvents {
                 if (pickedCount == MAX_SCAFFOLDS && d2 >= pickedDist[MAX_SCAFFOLDS - 1])
                     continue;
                 // a scaffold gives away construction progress, so only draw sites in sight (cached per site)
-                if (now - s.visCheckedAt >= VIS_RECHECK_TICKS || now < s.visCheckedAt) {
+                // MIN_VALUE = never checked (now - MIN_VALUE overflowed negative: the check never ran, no scaffold drew)
+                if (s.visCheckedAt == Long.MIN_VALUE || now - s.visCheckedAt >= VIS_RECHECK_TICKS
+                    || now < s.visCheckedAt) {
                     s.visible = FogOfWarClientEvents.isInBrightChunk(p.centrePos);
                     s.visCheckedAt = now;
                 }
@@ -159,6 +162,11 @@ public class ScaffoldRenderClientEvents {
             VertexConsumer solid = buffers.getBuffer(Sheets.cutoutBlockSheet());
             VertexConsumer fading = null;
 
+            if (!firstDrawnLogged) {   // once a session, as the statues and parts say theirs (eyes reads it)
+                firstDrawnLogged = true;
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Scaffolds] first scaffold drawn: {} site(s) in "
+                    + "view, the nearest at {}", pickedCount, picked[0].centrePos.toShortString());
+            }
             matrix.pushPose();
             pose = matrix.last();
             basePose.set(pose.pose());
@@ -185,6 +193,14 @@ public class ScaffoldRenderClientEvents {
         } finally {
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
+    }
+
+    private static boolean firstDrawnLogged = false;
+
+    // a new session (rejoin, another world) logs its first scaffold again
+    @SubscribeEvent
+    public static void onLogout(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut evt) {
+        firstDrawnLogged = false;
     }
 
     /** Insertion into the distance-sorted pick list, dropping the furthest when full. */
