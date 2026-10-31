@@ -12,8 +12,16 @@
 #include "/lib/shadowfit.glsl"
 #include "/lib/shadow.glsl"
 #include "/lib/light.glsl"
+#include "/lib/pbrswitch.glsl"
+#ifdef LIT_PBR
+#include "/lib/pbr.glsl"
+#endif
 
 uniform sampler2D texture;
+#ifdef LIT_PBR
+uniform sampler2D normals;             // the _n and _s maps beside each texture (the loader binds flat defaults where
+uniform sampler2D specular;            // a texture has none)
+#endif
 #ifdef LIT_ENTITY
 uniform vec4 entityColor;              // the hurt / creeper flash
 #endif
@@ -26,6 +34,10 @@ varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
 varying float asDrawn;
+#ifdef LIT_PBR
+varying vec3 vT;
+varying vec3 vB;
+#endif
 
 /* DRAWBUFFERS:0 */
 void main() {
@@ -57,17 +69,55 @@ void main() {
     // grass, flowers and crops are crossed planes whose normals point sideways: lit as the ground they stand on, so a
     // tuft reads as part of the lawn (no dark patches on the planes turned from the sun)
     // a draw with no normal (all zero) would light as NaN, and the glow and edge smoothing would spread it: up instead
-    vec3 n = foliage > 0.5 || dot(viewNormal, viewNormal) < 1e-6 ? normalize(upPosition) : normalize(viewNormal);
-    float facing = sunFacing(n, normalize(shadowLightPosition));
+    // geomN is the surface's own normal: the shadow lookup's offset and the terminator use it, so a bump on a face
+    // turned from the sun never catches light through the block; n, the mapped one, shades
+    bool plane = foliage > 0.5 || dot(viewNormal, viewNormal) < 1e-6;
+    vec3 geomN = plane ? normalize(upPosition) : normalize(viewNormal);
+    vec3 l = normalize(shadowLightPosition);
+    vec3 lin = toLinear(albedo);
+    vec2 levels = lightLevels(lmcoord);
+#ifdef LIT_PBR
+    // the plants keep their up normal: their maps would tilt it back toward the planes' sideways look
+    Material mat = readMaterial(texture2D(normals, texcoord), texture2D(specular, texcoord), lin, geomN, vT, vB,
+                                !plane);
+    vec3 n = mat.normal;
+    float texAo = mat.ao;
+#else
+    vec3 n = geomN;
+    float texAo = 1.0;
+#endif
+    float facing = sunFacing(n, l);
+#ifdef LIT_PBR
+    // past the face's own terminator no bump is lit (a soft step, for the smooth normals of round entity parts)
+    float terminator = clamp(dot(geomN, l) * 20.0, 0.0, 1.0);
+    facing *= terminator;
+#endif
     float shadow = 0.0;
     if (facing > 0.0) {
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
-        vec3 worldNormal = mat3(gbufferModelViewInverse) * n;
+        vec3 worldNormal = mat3(gbufferModelViewInverse) * geomN;
         shadow = sunShadow(playerPos, worldNormal, fit);
     }
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
-    vec3 c = toLinear(albedo) * surfaceLight(n, facing, shadow, lightLevels(lmcoord), ao, sunColour, skyColour);
+    vec3 c = lin * surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
+#ifdef LIT_PBR
+    // the RTS camera is orthographic: every pixel looks along the same direction, the view's -z, so the direction to
+    // the eye is +z everywhere (-viewPos would point at an eye that does not exist). First person keeps the real eye
+    vec3 v = orthoView() ? vec3(0.0, 0.0, 1.0) : normalize(-viewPos);
+    // a metal's light is its reflection: little diffuse. A dielectric gives up what it reflects (F0, 4% for most of
+    // ours), so the lawn's sheen does not lift the lawn off its noon value target (design, slice 1 bands)
+    c *= mix(1.0 - mat.f0.g, METAL_DIFFUSE, mat.metal);
+    // the fog of war and a dark vertex colour dim the reflections as they dim the albedo (no light in the fog); the
+    // brightest channel, so a biome's green tint does not count as darkening. A metal's F0 is its albedo, already tinted
+    float tint = mix(max(glcolor.r, max(glcolor.g, glcolor.b)), 1.0, mat.metal);
+    vec3 reflected = min(sunSpecular(mat, v, l) * sunArriving(shadow, levels, sunColour) * terminator,
+                         vec3(SPEC_MAX));
+    reflected += skyReflection(mat, v, levels.y, skyColour, sunColour) * (ao * texAo);
+    c += reflected * tint;
+    // emission: the texture glows with its own colour, unlit (lanterns, spell glass, the Bone Dragon's thread)
+    c += lin * mat.emission;
+#endif
 
     gl_FragData[0] = vec4(c, alpha);
 }

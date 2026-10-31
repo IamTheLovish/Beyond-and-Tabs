@@ -41,6 +41,17 @@ class ShaderPack(unittest.TestCase):
         for name, want, got in pairs:
             self.assertAlmostEqual(want, got, places=4, msg=name)
 
+    def test_material_maps_reach_the_lit_draws_but_not_water(self):
+        # slice 2 reads our _n / _s maps through one switch (lib/pbrswitch.glsl): terrain, entities, block entities and
+        # the hand pass LIT_PBR; water keeps slice 1's surface until slice 4 (design/own_shader_pack.md)
+        switch = open(os.path.join(spc.SHADERS, "lib", "pbrswitch.glsl"), encoding="utf-8").read()
+        self.assertIn("!defined LIT_WATER", switch)
+        for name in ("gbuffers_terrain.fsh", "gbuffers_entities.fsh", "gbuffers_block.fsh", "gbuffers_hand.fsh"):
+            src = spc.expand(os.path.join(spc.SHADERS, name))
+            self.assertIn("uniform sampler2D normals;", src, name)
+            self.assertIn("uniform sampler2D specular;", src, name)
+        self.assertIn("#define LIT_WATER", open(os.path.join(spc.SHADERS, "gbuffers_water.fsh"), encoding="utf-8").read())
+
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
     def test_every_program_compiles(self):
         self.assertEqual(spc.check(spc.find_glslang()), [])
