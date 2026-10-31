@@ -1353,6 +1353,16 @@ public class PlayerServerEvents {
             for (BuildingPlacement building : BuildingServerEvents.getBuildings())
                 building.ownerName = "";
 
+        // nothing the match dropped outlives it: loose items and experience orbs (lovish's Oct 29 game left ~1,300
+        // items and 2,600 entities in all, 8.9 ms of every tick of the lobby after it; perf survey Oct 30)
+        if (!isSandboxOrScenario) {
+            List<net.minecraft.world.entity.Entity> loose = new ArrayList<>();
+            for (net.minecraft.world.entity.Entity e : serverLevel.getAllEntities())
+                if (e instanceof net.minecraft.world.entity.item.ItemEntity || e instanceof net.minecraft.world.entity.ExperienceOrb)
+                    loose.add(e);
+            loose.forEach(net.minecraft.world.entity.Entity::discard);
+        }
+
         ResearchServerEvents.removeAllResearch();
         ResearchServerEvents.removeAllCheats();
         PlayerClientboundPacket.resetRTS(hardReset);

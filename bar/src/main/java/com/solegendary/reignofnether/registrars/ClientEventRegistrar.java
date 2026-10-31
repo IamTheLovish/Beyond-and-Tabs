@@ -86,6 +86,7 @@ public class ClientEventRegistrar {
         // entity shadows: the cells found bare this frame, forgotten at the next (EntityShadowMixin)
         vanillaEventBus.register(com.solegendary.reignofnether.perf.ShadowCells.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.time.ClientTicks.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.AnimStates.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.Corpses.class);   // bodies held
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.LivingArmyToggle.class);
@@ -147,6 +148,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(CameraFadeClientEvents.class);
         vanillaEventBus.register(ItemClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hero.HeroMarkerClientEvents.class);   // the hero ring and crest
         // the world look: haze + grade + vignette after the world, before the hand and HUD (postfx/WorldLookPass)
         vanillaEventBus.register(com.solegendary.reignofnether.postfx.WorldLookClientEvents.class);
         // frame times over a fixed number of frames: the shader pack's cost (eyes, /rts-shaderbench)

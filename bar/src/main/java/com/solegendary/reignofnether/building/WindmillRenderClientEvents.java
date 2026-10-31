@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.building;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.building.buildings.shared.WindGenerator;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -169,7 +170,7 @@ public class WindmillRenderClientEvents {
             Vec3 cam = evt.getCamera().getPosition();
             BlockRenderDispatcher renderer = MC.getBlockRenderer();
             MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
-            float time = MC.level.getGameTime() + evt.getPartialTick();
+            float time = ClientTicks.at(evt.getPartialTick());
             // wind-driven parts run on a wind clock (resources/Wind): it advances faster in a strong wind and slower in a
             // calm one, so the sails speed up and slow down smoothly instead of jumping when the wind changes
             float dt = lastFrameTime < 0 ? 0 : Math.max(0, Math.min(5, time - lastFrameTime));

@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.matchstart.EyesPhotoBooth;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.registrars.ParticleRegistrar;
+import com.solegendary.reignofnether.time.ClientTicks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -83,7 +84,7 @@ public class MistClientEvents {
             lastLevel = level;
             MistParticle.alive = 0;
         }
-        if (level.getGameTime() % PERIOD != 0 || !mayShow())
+        if (ClientTicks.now() % PERIOD != 0 || !mayShow())
             return;
         double density = MistMath.density(level.getDayTime());
         if (density <= 0)

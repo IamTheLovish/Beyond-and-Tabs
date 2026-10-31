@@ -96,8 +96,7 @@
             3,
             7
           ],
-          "texture": "#ring",
-          "cullface": "east"
+          "texture": "#ring"
         },
         "down": {
           "uv": [
@@ -271,8 +270,7 @@
             14,
             16
           ],
-          "texture": "#ring",
-          "cullface": "up"
+          "texture": "#ring"
         }
       }
     },
@@ -288,6 +286,16 @@
         16
       ],
       "faces": {
+        "north": {
+          "uv": [
+            4,
+            0,
+            6,
+            6
+          ],
+          "texture": "#ring",
+          "cullface": "north"
+        },
         "south": {
           "uv": [
             10,
@@ -321,7 +329,7 @@
     },
     {
       "from": [
-        10,
+        11,
         10,
         -3
       ],
@@ -335,23 +343,14 @@
           "uv": [
             4,
             0,
-            6,
-            6
-          ],
-          "texture": "#ring"
-        },
-        "west": {
-          "uv": [
-            13,
-            0,
-            16,
+            5,
             6
           ],
           "texture": "#ring"
         },
         "down": {
           "uv": [
-            10,
+            11,
             0,
             12,
             3
@@ -360,13 +359,12 @@
         },
         "up": {
           "uv": [
-            10,
+            11,
             13,
             12,
             16
           ],
-          "texture": "#ring",
-          "cullface": "up"
+          "texture": "#ring"
         }
       }
     },
@@ -616,8 +614,7 @@
             4,
             16
           ],
-          "texture": "#ring",
-          "cullface": "up"
+          "texture": "#ring"
         }
       }
     },
@@ -701,8 +698,7 @@
             16,
             7
           ],
-          "texture": "#ring",
-          "cullface": "west"
+          "texture": "#ring"
         },
         "east": {
           "uv": [
@@ -851,8 +847,7 @@
             11,
             16
           ],
-          "texture": "#key",
-          "cullface": "up"
+          "texture": "#key"
         }
       }
     },
