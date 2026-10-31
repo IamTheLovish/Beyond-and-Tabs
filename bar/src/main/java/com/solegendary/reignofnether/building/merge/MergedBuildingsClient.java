@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.building.BuildingServerboundPacket;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.unit.Relationship;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
@@ -55,7 +56,7 @@ public final class MergedBuildingsClient {
             lastListSize = -1;
             return;
         }
-        long now = MC.level.getGameTime();
+        long now = ClientTicks.now();
         if (levelSince == Long.MIN_VALUE)
             levelSince = now;
         List<BuildingPlacement> all = BuildingClientEvents.getBuildings();

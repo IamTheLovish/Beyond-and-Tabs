@@ -123,6 +123,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.SPIDER_UNIT.get(), SpiderRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.POISON_SPIDER_UNIT.get(), PoisonSpiderUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WRAITH_UNIT.get(), WraithRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.TOMBCALLER_UNIT.get(), WraithRenderer::new);   // placeholder: the Wraith's body
+        evt.registerEntityRenderer(EntityRegistrar.TOMBSTONE_UNIT.get(), TotemOfRegenerationRenderer::new);   // placeholder: a totem's body
         evt.registerEntityRenderer(EntityRegistrar.VILLAGER_UNIT.get(), VillagerUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), RoyalArchitectRenderer::new);
         // Verdant Court T2: the Stag Lancer wears Alex's Mobs' own moose renderer (always antlered, StagLancerUnit)
@@ -132,6 +134,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.ELDER_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ElderTreantRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WISP_CHOIR_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WispChoirRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BloomPriestessRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.THORNWEAVER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ThornweaverRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.RENEWAL_SAPLING_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RenewalSaplingRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_DOG_UNIT.get(), DogUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_CAT_UNIT.get(), CatUnitRenderer::new);
         // the Sunforged Squire Runner (trained militia): a generated body (tools/gen_squire.py -> tools/dsl_to_game.py);

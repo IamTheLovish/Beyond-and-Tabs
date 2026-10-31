@@ -20,5 +20,7 @@ public enum HeroAction {
     AUTO_LEARN_OFF,
     // the sender opened / closed their hero's rank-up menu (auto-learn waits while it is open): unitId = the hero
     RANK_MENU_OPEN,
-    RANK_MENU_CLOSED
+    RANK_MENU_CLOSED,
+    // kill XP the hero just earned, for the owner's "+N XP" float: value = the XP
+    XP_GAINED
 }
