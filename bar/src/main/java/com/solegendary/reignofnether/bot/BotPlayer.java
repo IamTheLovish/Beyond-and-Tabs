@@ -289,9 +289,17 @@ public class BotPlayer {
      * BOT_MIN_ENERGY_INCOME. {@link BotTuning#T2_PATIENCE_MINUTES} after the earliest minute it goes anyway with a lab
      * and half the army, so a map with few patches cannot stop it for ever.
      */
-    /** The fighters of the army list that count toward {@code t2MinArmy}. */
+    /**
+     * The fighters of the army list that count toward {@code t2MinArmy}: an essence caster is support, not army (lovish,
+     * Oct 31: "Count as support") - the Voodoo Shaman is the one caster that is also an AttackerUnit, so it marches in
+     * the army list, but like every other healer and caster it does not make the army a bot fields before Tier 2.
+     */
     public static int t2Fighters(List<? extends LivingEntity> army) {
-        return army.size();
+        int n = 0;
+        for (LivingEntity le : army)
+            if (!(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))
+                n++;
+        return n;
     }
 
     boolean t2Ready(long minutes, int fighters, float energyIncome, List<BuildingPlacement> buildings) {
