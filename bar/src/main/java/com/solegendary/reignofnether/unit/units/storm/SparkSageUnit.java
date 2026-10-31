@@ -43,7 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Stormcallers T2 essence caster - the <b>Spark Sage</b> (placeholder name; design/essence_casters.md, "Last three
+ * Stormcallers essence caster, tier 1 (Lotus Academy) - the <b>Spark Sage</b> (placeholder name; design/essence_casters.md, "Last three
  * casters"; lovish approved draft 2 on Oct 29: "one caster per race"). A monk who spends the essence the fallen leave
  * behind ({@link EssenceCarrier}: it pulls the wisps within 8 blocks in and holds up to 30) on three spells - Static Step
  * (5), Captured Spark (10) and Thunderhead (20) - and the casters' shared Empower (15). It does not fight: the support
