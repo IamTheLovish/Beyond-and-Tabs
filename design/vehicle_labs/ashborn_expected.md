@@ -51,3 +51,8 @@ floor (one compact lit ledge over the mouth, not an L) - glow 0.59 % (the floor'
 course (top-half deepslate-tile slab) across every seen deepslate face at y 9 (ring) and y 16 (keep) - walls 0.185
 (from 0.183), thin blocks west 0.40 / south 0.40-0.43 (from 0.35-0.38); (3) the crest's every column and the recessed
 jamb columns end in a light cap, the keep band's far sides are tuff (the paving: 0.334 from 0.325). Lights 5.0 %.
+
+### Round 3 measured (eyes 41174706151, clean)
+- 18/18 locally (no new block); glow 0.59 %, lights 5.0 %, walls 0.185, paving 0.334, gap plinth - walls 0.066 (as
+  expected)
+- critics 20261031-021654 (a) / -021702 (b): 6 / 6.5 vs round 2 6 / 6 - kept as the final; detail rounds stop
