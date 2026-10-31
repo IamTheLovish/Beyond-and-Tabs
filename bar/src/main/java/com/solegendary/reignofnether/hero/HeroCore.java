@@ -130,6 +130,17 @@ public final class HeroCore {
             castGoal = new GenericTargetedSpellGoal(mob, 0, 8, null, null, null) {
                 @Override
                 public int getChannelTicksMax() { return castChannel; }
+
+                // the wind-up starts where the hero stands: the move control drops whatever it was still walking to
+                // (setTarget asks for a path before the goal sees the aim is in range, and navigation.stop() leaves
+                // the move control's wanted spot), or the hero slides there while it channels - review r3 on PR 416:
+                // held heroes drifted 0.57-0.66 blocks during the cast with the navigation done and no path
+                @Override
+                public void startCasting() {
+                    super.startCasting();
+                    mob.getNavigation().stop();
+                    mob.getMoveControl().setWantedPosition(mob.getX(), mob.getY(), mob.getZ(), 0);
+                }
             };
         }
         return castGoal;
