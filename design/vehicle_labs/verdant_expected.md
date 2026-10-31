@@ -88,3 +88,8 @@ Round 4's first eyes run (41161071265) photographed verdant_l3 with a harness fa
 Force start") over the still, a green tint, and its noon stills dark (mean grey 0.16 vs the control's 0.36 in the same
 run). Not judged, not measured. Those stills did show the clump valleys in the crown reading as a lattice again, so
 the crown tier (tier 2) also loses its valleys (same element). Re-shot in a new run.
+
+### Measured, round 4 (re-shoot eyes 41162307013; control first; table --add-only)
+Stills normal (mean grey rts 0.358 vs control 0.354; no lobby overlay). Camera-model numbers on the table: 0 open crown
+columns, belly 0 % of the seen leaf pixels, canopy 0.80 / 0.25 / 336, canopy share 0.386, trunk share 0.184 (rts_close),
+trunk value 0.342, walls 0.312, roofs 0.382 - as expected. All 22 camera tests green.
