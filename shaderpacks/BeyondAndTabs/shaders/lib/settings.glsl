@@ -608,7 +608,7 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 #endif
 // CONTACT_PROBE 1 (light pass 21, composite.fsh; light pass 23: the foot line in green): the contact crease's strength in red (1 - its factor, x 1 / (1 -
 // CONTACT_FLOOR), so the floor reads full red) over the frame's grey: no red at a cube's foot means it never ran
-#define CONTACT_PROBE 0 // [0 1]
+#define CONTACT_PROBE 1 // [0 1]
 // light pass 17: and the LIGHT on such a side goes the same share to WHITE_SHADE_COOL at its own luma. lp16 kept b-r
 // +6..+9 on 4 of 5 white sides, +16 on one: the albedo neutral had nothing to take (gen_blocks paints quartz at sat
 // 0.03-0.04); the cast is the light's - the sky's part (the cool) scales with the vertex and material AO, the warm
