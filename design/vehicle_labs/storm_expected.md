@@ -44,3 +44,7 @@ texture: teal / ice-blue between stills, critic b); 17 / 17 green. Critics 6 / 6
 | props | the cart in open sky on the north strip (x 5..8, z 4..5), iron tubes (no copper rods) | the cart seen whole in rts_close; no orange in the court |
 | roofs | a dark-prismarine slab upturn on each lip corner | small dark corner lifts (sub-blocks), no cubes |
 | crown | a flat deepslate-brick ring 7 across on spokes round the sea-lantern core on a post (no vertical ring) | an "O" with a bright dot from the RTS camera, no cross / letters; deepslate brick wall up 0.32 (dark ring on light roofs); no flicker |
+
+## Detail round 3 - measured (eyes 41171665335)
+polished deepslate (the lane) up 0.298, deepslate brick wall (the crown ring) up 0.32 / west 0.22, granite stairs (the
+cart's cheeks) up 0.52; no orange in the court (no copper); 17 / 17 green. Critics 6 / 6.5 vs round 2 rescored 6 / 6.
