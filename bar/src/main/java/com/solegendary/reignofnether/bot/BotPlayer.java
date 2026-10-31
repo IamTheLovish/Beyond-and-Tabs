@@ -285,27 +285,49 @@ public class BotPlayer {
     }
     // ---- the tier gate (resources/TierGate): a bot techs when it is ready, not just when the clock says so ----
 
-    /** The essence casters among the bot's units (EssenceCarrier: no AttackerUnit, so the army list never holds them). */
+    /** The essence casters among the bot's units (for the [T2Snap] line; they do not count toward t2MinArmy). */
     static int casters(List<LivingEntity> mine) {
         int n = 0;
         for (LivingEntity le : mine)
-            if (le instanceof com.solegendary.reignofnether.essence.EssenceCarrier && !(le instanceof AttackerUnit) && !(le instanceof WorkerUnit))
+            if (le instanceof com.solegendary.reignofnether.essence.EssenceCarrier && !(le instanceof WorkerUnit))
                 n++;
         return n;
     }
+
+    /**
+     * The fighters of the army list that count toward {@code t2MinArmy}: an essence caster is support, not army (lovish,
+     * Oct 31: "Count as support") - the Voodoo Shaman is the one caster that is also an AttackerUnit, so it marches in
+     * the army list, but like every other healer and caster it does not make the army a bot fields before Tier 2.
+     */
+    public static int t2Fighters(List<? extends LivingEntity> army) {
+        int n = 0;
+        for (LivingEntity le : army)
+            if (!(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))
+                n++;
+        return n;
+    }
+
+    /**
+     * A kit's essence caster (support, not army: lovish, Oct 31). Before Tier 2, while the bot's fighters are short of
+     * t2MinArmy, its T1 labs train fighters only (pickArmyItem): the Angel Caller was a third of a Villagers bot's T1 mix,
+     * so a hard Villagers bot fielded about a fighter a minute, waited on its gate's 8 till 8:35-8:47 and teched after
+     * the medium bot (bots_reach_tier_2, flake-stress 41168069584 runners 2 and 8).
+     */
+    static boolean isCasterItem(ProductionItem item) {
+        return item == ProductionItems.ANGEL_CALLER || item == ProductionItems.TOMBCALLER
+            || item == ProductionItems.SPARK_SAGE || item == ProductionItems.SOUL_ENGINEER;
+    }
+
+    /** Before Tier 2 with fewer than t2MinArmy fighters (t2Fighters): T1 labs train no casters (set each think). */
+    boolean fightersFirst = false;
 
     /**
      * Whether the bot may start Tier 2: it has a finished army lab, has fielded {@code t2MinArmy} fighters (the army comes
      * first - the tier gate's whole point) and its income can pay the research: TierGate.BOT_MIN_METAL_INCOME and
      * BOT_MIN_ENERGY_INCOME. {@link BotTuning#T2_PATIENCE_MINUTES} after the earliest minute it goes anyway with a lab
      * and half the army, so a map with few patches cannot stop it for ever.
-     * <p>
-     * The essence casters its labs train count toward that army ({@code casters}): they are a third of a Villagers bot's
-     * T1 mix (Vindicator, Pillager, Angel Caller) and no AttackerUnit, so a hard Villagers bot waited for 8 fighters till
-     * 8:35-8:47 with its casters out and teched after the medium bot (bots_reach_tier_2, flake-stress 41168069584
-     * runners 2 and 8). Half the army must still be fighters, the bar the patience rule already sets.
      */
-    boolean t2Ready(long minutes, int fighters, int casters, float energyIncome, List<BuildingPlacement> buildings) {
+    boolean t2Ready(long minutes, int fighters, float energyIncome, List<BuildingPlacement> buildings) {
         boolean labBuilt = false;
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && isLab(bp))
@@ -314,7 +336,7 @@ public class BotPlayer {
             return false;
         if (minutes >= tuning.t2Minute() + BotTuning.T2_PATIENCE_MINUTES)
             return fighters >= tuning.t2MinArmy() / 2;
-        return fighters >= tuning.t2MinArmy() / 2 && fighters + casters >= tuning.t2MinArmy()
+        return fighters >= tuning.t2MinArmy()
             && metalIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_METAL_INCOME
             && energyIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_ENERGY_INCOME;
     }
@@ -581,11 +603,11 @@ public class BotPlayer {
         // eight workers out), so the metal goes to the labs: a hard bot kept training toward 24-28 workers on an empty pool,
         // fielded a fighter a minute and teched at 8:35-8:47, after the medium bot (flake-stress 41168069584). Only up to
         // the patience minute: a bot whose army keeps dying in fights must not stop growing its economy for good
-        armyFirst = labBuilt && minutesIn >= tuning.t2Minute() && minutesIn < tuning.t2Minute() + BotTuning.T2_PATIENCE_MINUTES
-            && workers.size() >= 8
-            && army.size() + casters(mine) < tuning.t2MinArmy()
+        fightersFirst = t2Fighters(army) < tuning.t2MinArmy()
             && !ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name)
             && !com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name, ProductionItems.RESEARCH_TIER_2);
+        armyFirst = fightersFirst && labBuilt && minutesIn >= tuning.t2Minute()
+            && minutesIn < tuning.t2Minute() + BotTuning.T2_PATIENCE_MINUTES && workers.size() >= 8;
         trainWorkers(capitol, workers.size());
 
         // 3) build sites need builders: any unbuilt or damaged building gets the nearest idle worker
@@ -777,7 +799,7 @@ public class BotPlayer {
         // ready to tech: the capitol stops training workers so its queue empties and the research can start (a hard bot's
         // worker target keeps growing, so its queue was never empty and it only teched after twelve minutes)
         techPending = !tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
-            && t2Ready(minutes, army.size(), casters(mine), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
+            && t2Ready(minutes, t2Fighters(army), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
         if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (techDiagOn)
@@ -852,7 +874,9 @@ public class BotPlayer {
                     pp.setRepeatQueue(false);
                     continue;
                 }
-                pp.setRepeatQueue(true);
+                // (no repeat while the fighters come first: repeat re-queues the finished item, a caster too; the top-up
+                // below keeps the queue full each think)
+                pp.setRepeatQueue(!fightersFirst);
                 queueAntiAir(pp, mine, gameTime);   // the Tidewrought's anti-air is T1 (the Court's is in its T2 lab)
                 while (pp.productionQueue.size() < tuning.queueDepth() && pp.startProductionItem(pickArmyItem(kit.army(), mine, false)))
                     ;   // (startProductionItem false = the queue is full or an emerald cost can't be met: stop)
@@ -967,6 +991,15 @@ public class BotPlayer {
                 }
             if (sieges * 5 < fighters)
                 return siege;
+        }
+        if (!t2 && fightersFirst) {
+            // before Tier 2 the T1 labs fill t2MinArmy with fighters; the kit's casters come after (isCasterItem)
+            List<ProductionItem> fighterItems = new ArrayList<>();
+            for (ProductionItem item : list)
+                if (!isCasterItem(item))
+                    fighterItems.add(item);
+            if (!fighterItems.isEmpty())
+                return fighterItems.get(rng.nextInt(fighterItems.size()));
         }
         return list.get(rng.nextInt(list.size()));
     }
