@@ -163,13 +163,24 @@ def horde_warchief():
     return im
 
 
+def ash_shaman():
+    """The Horde's T2-lab hero (lovish, Oct 30: its own skin now, the real body later): the Warchief's piglin source
+    re-dyed in ash grey with ember-orange highlights, an ember rim on the head's top and ember points for a crown."""
+    ember, ember_l = (232, 110, 30), (255, 190, 90)
+    im = redye(src("bonewright_unit.png"), ((34, 30, 30), (96, 88, 84), (236, 132, 52)), keep_rects=[(0, 0, 36, 16)])
+    top_rim(im, 0, 0, 10, 8, ember)
+    for i in range(1, 10, 3):
+        put(im, 8 + i, 8, ember_l)   # ember points along the front edge of the head's top
+    return im
+
+
 def storm_witch():
     return redye(src("windcaller_unit.png"), ((24, 30, 70), (70, 100, 190), (210, 230, 255)), keep_skin=True)
 
 
 SKINS = {"dawn_paladin": dawn_paladin, "corsair_captain": corsair_captain, "arch_engineer": arch_engineer,
          "gravecaller": gravecaller, "thornheart_druid": thornheart_druid, "horde_warchief": horde_warchief,
-         "storm_witch": storm_witch}
+         "storm_witch": storm_witch, "ash_shaman": ash_shaman}
 
 # ------------------------------------------------------------------ portraits (16x16 at 4x)
 
