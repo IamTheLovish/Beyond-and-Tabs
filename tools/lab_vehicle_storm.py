@@ -49,7 +49,7 @@ loud); stone-brick plinth; mud-brick court (0.53, warm); a polished-blackstone-b
 ANCHORS (structure-local x, y, z; in game these become client-drawn moving parts later):
   gate        (0..1, 1..8, 6..10) the passage; the gate leaves fold against z 5 / z 11
   spawn cell  (8, 1, 8) on the road in the court; the column above it is air to the sky
-  storm vane  (13, 22, 8) the crown's core (a soul lantern) - arcs drawn round its rings at L3
+  storm vane  (13, 22, 8) the crown's core (a sea lantern) - arcs drawn round its rings at L3
 
 EXIT LANE: x 0..9, z 6..10, y 1..8 clear, straight out west.
 
@@ -75,7 +75,7 @@ OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
 INWARD = {"west": (1, 0), "south": (0, -1)}
 
 FIELD_ST, FIELD, FIELD_SL = "prismarine_brick_stairs", "prismarine_bricks", "prismarine_brick_slab"
-TIP_ST = "dark_prismarine_stairs"
+LIP_ST = "dark_prismarine_stairs"            # round 2: the lip ring = the dark eave line
 UNDER = "dark_prismarine_slab"
 TIMBER = "spruce_planks"
 TIMBER_ST = "spruce_stairs"
@@ -86,13 +86,14 @@ SB, SB_ST, CSB = "stone_bricks", "stone_brick_stairs", "chiseled_stone_bricks"
 MOSS = "mossy_stone_bricks"
 PAVE = "stone_bricks"
 COURT = "mud_bricks"
-ROAD = "polished_blackstone_bricks"
+ROAD = "polished_andesite"                # round 2 (was polished blackstone bricks, half width)
+KERB = "stone_bricks"
 THRESHOLD = "obsidian"                   # the gate's floor: the darkest spot (designer: gate interior 0.05-0.18)
 PASSAGE = "polished_blackstone_bricks"
 PASSAGE_CEIL = "deepslate_tiles"
 RING = "prismarine_wall"
 RING_FLAT = "dark_prismarine_slab"
-CORE = "soul_lantern"
+CORE = "sea_lantern"
 POST_UP = dict(up="true", north="none", south="none", east="none", west="none", waterlogged="false")
 
 
@@ -142,10 +143,12 @@ def dress(c, face, plane, u0, u1, y0, y1, plinth=True):
                     c.put(*b, LIGHT)
 
 
-def hip(c, x1, x2, z1, z2, y, rings=99):
+def hip(c, x1, x2, z1, z2, y, rings=99, dark_lip=None):
     """A flared hip roof, its lip the ring [x1..x2] x [z1..z2] at y (clipped to the plot; drawn only into free cells):
-    every ring in one higher in prismarine-brick stairs, the corners upturned (a dark-prismarine stair under an
-    inverted one), a dark-prismarine underside one deep under the lip (the eave's shadow band), a ridge line / peaked
+    on a pent eave (rings <= 2) the lip ring in dark-prismarine stairs - the eave line between the tiers (round 2;
+    round 1's upturned corner tips, full-looking cubes, read as "studs / teeth / battlements" to both critics, and "no
+    dark eave line at RTS"); every ring in one higher in prismarine-brick stairs, a
+    dark-prismarine underside one deep under the lip (the eave's shadow band), a ridge line / peaked
     pair / point at the top (a ridge line in slabs, so it never reads as a run of full blocks); `rings` stops it early (a pent eave round a body rising through it). Inside each ring a
     hidden timber fill. Returns the top y."""
     def put(x, yy, z, name, **p):
@@ -174,14 +177,13 @@ def hip(c, x1, x2, z1, z2, y, rings=99):
                     f = ("north" if z == b1 else "south") if w >= d else ("west" if x == a1 else "east")
                     put(x, yy, z, FIELD_ST, facing=OPP[f], half="bottom", shape="straight", **DRY)
             break
+        st = LIP_ST if k == 0 and (rings <= 2 if dark_lip is None else dark_lip) else FIELD_ST
         for (x, z, f) in P.rect_ring(a1, a2, b1, b2):
             if f is None:
                 fz = "south" if z == b1 else "north"
-                put(x, yy, z, TIP_ST if k == 0 else FIELD_ST, facing=fz, half="bottom", shape="straight", **DRY)
-                if k == 0:
-                    put(x, yy + 1, z, TIP_ST, facing=OPP[fz], half="top", shape="straight", **DRY)
+                put(x, yy, z, st, facing=fz, half="bottom", shape="straight", **DRY)
             else:
-                put(x, yy, z, FIELD_ST, facing=OPP[f], half="bottom", shape="straight", **DRY)
+                put(x, yy, z, st, facing=OPP[f], half="bottom", shape="straight", **DRY)
             if k == 0 and c.free(x, yy - 1, z):
                 c.slab(x, yy - 1, z, UNDER, "top")
         for x in range(a1 + 1, a2):
@@ -193,24 +195,31 @@ def hip(c, x1, x2, z1, z2, y, rings=99):
 
 
 def crown(c, cx, cz, y0):
-    """L3: the armillary (ref27) standing on the keep's point: two crossed vertical rings (radius 2, in the x-y and
-    z-y planes) and a flat ring at the centre height, round a soul-lantern core hung from the ring's top (the one glow,
-    storm-blue)."""
+    """L3: the armillary (ref27) standing on the keep's point: ONE vertical ring (radius 2, the x-y plane) and a wide
+    flat ring (radius 3, 7 across - wider than the 5 x 5 top eave) at the centre height, round a sea-lantern core hung
+    from the ring's top (the one glow, storm-white). Round 2: round 1's two crossed rings read as "an X in a box" from
+    the RTS camera and its soul lantern showed no glow at dusk (both critics)."""
     cy = y0 + 2
     ring = [(-2, -1), (-2, 0), (-2, 1), (2, -1), (2, 0), (2, 1), (-1, -2), (0, -2), (1, -2), (-1, 2), (0, 2), (1, 2)]
     for (u, v) in ring:
         c.put(cx + u, cy + v, cz, RING, **POST_UP)
-        c.put(cx, cy + v, cz + u, RING, **POST_UP)
-    for (u, w) in ((-2, -1), (-2, 1), (2, -1), (2, 1), (-1, -2), (1, -2), (-1, 2), (1, 2)):
-        c.slab(cx + u, cy, cz + w, RING_FLAT, "bottom")
-    c.put(cx, cy, cz, CORE, hanging="true", **DRY)
+    wide = [(-3, -1), (-3, 0), (-3, 1), (3, -1), (3, 0), (3, 1), (-1, -3), (0, -3), (1, -3), (-1, 3), (0, 3), (1, 3),
+            (-2, -2), (2, -2), (-2, 2), (2, 2)]
+    for (u, w) in wide:
+        c.put(cx + u, cy, cz + w, RING, **POST_UP)
+    for (u, w) in ((-2, -1), (-2, 1), (2, -1), (2, 1)):
+        c.put(cx + u, cy, cz + w, RING, **POST_UP)
+    c.put(cx, cy, cz, CORE)
     c.chain(cx, cy + 1, cz)
 
 
 # ================================================================================================ the masses
 def ground(c):
     """Layer 0: stone-brick paving; the court in mud brick; the road (blackstone bricks) z 7..9 from the gate's
-    threshold to the keep's door; the gate's floor (x 0..3, z 5..11) obsidian; grass in the garden."""
+    threshold to the keep's door; the gate's floor (x 0..3, z 5..11) obsidian; grass in the garden. Round 2: the road
+    the lane's full width (z 6..10, polished andesite between stone-brick kerbs) from the gate to the keep's door, the
+    obsidian only under the gate's eaves (x 0..2) - round 1's half-width dark road read as "a half-width dark field, not a
+    lane", the court "split orange / black", the black threshold outside the gate as "a pit" (critics)."""
     for x in range(SX):
         for z in range(SZ):
             name = PAVE
@@ -219,10 +228,12 @@ def ground(c):
             if x >= 10 and z <= 3:
                 name = "grass_block"
             c.put(x, 0, z, name)
-    for x in range(0, 12):
-        for z in (7, 8, 9):
+    for x in range(3, 12):
+        for z in range(6, 11):
             c.put(x, 0, z, ROAD)
-    for x in range(0, 4):
+        for z in (5, 11):
+            c.put(x, 0, z, KERB)
+    for x in range(0, 3):
         for z in range(5, 12):
             c.put(x, 0, z, THRESHOLD)
 
@@ -241,8 +252,6 @@ def gatehouse(c):
         c.st(0, 1, z, "east", "bottom", SB_ST)
         for y in range(2, 9):
             c.put(0, y, z, POST if y in (2, 8) else PANEL)
-            if y not in (2, 8):
-                c.put(1, y, z, LIGHT)
     for z in range(6, 11):
         c.put(1, 9, z, PASSAGE_CEIL)
     hip(c, 0, 2, 4, 12, 9, rings=1)
@@ -253,8 +262,9 @@ def gatehouse(c):
 
 def keep(c, level):
     """THE KEEP (centre (13, 8)): body 5 x 5 (y 1..6) under a 7 x 7 eave (lip 7, a second ring at 8); body 3 x 3
-    (9..11) under a 5 x 5 eave (12); at L3 body 3 x 3 (13..16), the top hip (lip 5 x 5 at 17, point 19) and the crown;
-    at L1 a temporary hip on the second eave (12 -> point 14). A dark door niche on the road's axis (x 11, z 7..9)."""
+    (9..11) under a second 7 x 7 eave (lip 12, a ring at 13 - round 2: was 5 x 5, "the top two tiers equal", "lips
+    narrow next to ref42"); at L3 body 3 x 3 (14..16), the top hip (lip 5 x 5 at 17, point 19) and the crown - the
+    eaves 7 / 7 / 5; at L1 a hip on the second eave (12 -> point 15). A dark door niche on the road's axis."""
     core(c, 11, 15, 6, 10, 1, 6)
     dress(c, "west", 11, 6, 10, 1, 6)
     dress(c, "south", 10, 11, 15, 1, 6)
@@ -265,17 +275,44 @@ def keep(c, level):
     c.st(11, 4, 8, "east", "top", TIMBER_ST)
     hip(c, 10, 16, 5, 11, 7, rings=2)
     core(c, 12, 14, 7, 9, 9, 11)
-    dress(c, "west", 12, 7, 9, 9, 11, plinth=False)
-    dress(c, "south", 9, 12, 14, 9, 11, plinth=False)
+    quiet(c, 12, 14, 7, 9, 9, 11)
     if level < 3:
-        hip(c, 11, 15, 6, 10, 12)
+        hip(c, 10, 16, 5, 11, 12)
         return
-    hip(c, 11, 15, 6, 10, 12, rings=1)
-    core(c, 12, 14, 7, 9, 13, 16)
-    dress(c, "west", 12, 7, 9, 13, 16, plinth=False)
-    dress(c, "south", 9, 12, 14, 13, 16, plinth=False)
+    hip(c, 10, 16, 5, 11, 12, rings=2)
+    eave_band(c)
+    core(c, 12, 14, 7, 9, 14, 16)
+    quiet(c, 12, 14, 7, 9, 14, 16)
     top = hip(c, 11, 15, 6, 10, 17)
     crown(c, KEEP[0], KEEP[1], top + 1)
+
+
+def quiet(c, x1, x2, z1, z2, y1, y2):
+    """Round 2: a keep's upper body (3 x 3) as a QUIET storey - dark spruce-log corner posts, spruce-plank walls, ONE
+    lit paper window in the middle of each camera face under a stair lintel (round 1's post / panel / post on a 3-wide
+    face read as "candy stripes", "a striped lighthouse", both critics)."""
+    for face, plane, u0, u1 in (("west", x1, z1, z2), ("south", z2, x1, x2)):
+        dx, dz = INWARD[face]
+        for u in range(u0, u1 + 1):
+            for y in range(y1, y2 + 1):
+                q = face_cell(face, plane, u, y)
+                if u in (u0, u1):
+                    c.log(*q, "spruce_log")
+                elif y == y2:
+                    c.st(*q, OPP[face], "top", TIMBER_ST)
+                elif y == y2 - 1 or (y2 - y1 >= 3 and y == y2 - 2):
+                    c.put(*q, PANEL)
+                    c.put(q[0] + dx, q[1], q[2] + dz, LIGHT)
+                else:
+                    c.put(*q, TIMBER)
+
+
+def eave_band(c):
+    """Round 2, dusk: a warm band under the keep's second eave (rubric 9: "a warm under-eave band on the keep plus the
+    crown core") - lanterns on short chains from its underside every other cell along the camera sides (x 10, z 11)."""
+    for (x, z) in [(10, z) for z in range(5, 12, 2)] + [(x, 11) for x in range(12, 17, 2)]:
+        c.chain(x, 10, z)
+        c.lantern(x, 9, z, hanging=True)
 
 
 def north(c):
@@ -309,6 +346,34 @@ def south(c):
     hip(c, 3, 13, 12, 16, 5)
 
 
+def yard(c):
+    """Round 2: the WORKSHOP in the court, off the lane (both critics: "nothing in the court says vehicle lab"): a
+    half-built Rocket Battery on the north strip (x 3..7, z 3..5) - spruce wheels, a stripped-spruce axle and frame, a
+    granite-cheeked rack with fire-arrow tubes (lightning rods) aimed west - and on the south strip (z 11) barrels of
+    tubes, a rack of arrows and a spare wheel. Nothing full above y 1 (the court stays open to the sky)."""
+    for x in (4, 6):
+        for z in (3, 5):
+            c.put(x, 1, z, "spruce_trapdoor", facing="north" if z == 3 else "south", half="bottom", open="true",
+                  powered="false", **DRY)
+    for x in range(3, 8):
+        c.log(x, 1, 4, "stripped_spruce_log", axis="x")
+    for x in (4, 5, 6):
+        c.slab(x, 2, 4, "spruce_slab", "bottom")
+    for z in (3, 5):
+        c.st(5, 2, z, "west", "bottom", "granite_stairs")
+        c.st(6, 2, z, "west", "bottom", "granite_stairs")
+    for x in (5, 6):
+        c.rod(x, 3, 4, "west")
+    c.put(2, 1, 4, "spruce_fence")
+    for x in (3, 5, 8):
+        c.put(x, 1, 11, "barrel", facing="up", open="false")
+        c.rod(x, 2, 11)
+    c.put(4, 1, 11, "spruce_fence")
+    c.put(4, 2, 11, "spruce_fence")
+    c.rod(4, 3, 11, "west")
+    c.put(6, 1, 11, "spruce_trapdoor", facing="south", half="bottom", open="true", powered="false", **DRY)
+
+
 def garden(c):
     """The north-east garden: two spruces breaking the outline at the plot's edge, a low wall on z 4 (x 10..16)."""
     for x in range(10, 17):
@@ -327,6 +392,7 @@ def draw(c, level):
     gatehouse(c)
     north(c)
     south(c)
+    yard(c)
     garden(c)
 
 
