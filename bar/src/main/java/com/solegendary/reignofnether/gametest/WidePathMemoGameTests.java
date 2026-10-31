@@ -210,4 +210,81 @@ public class WidePathMemoGameTests {
     public static void melee_unit_chasing_an_unreachable_target_searches_once_a_second(GameTestHelper helper) {
         narrowChase(helper, EntityRegistrar.VINDICATOR_UNIT.get(), "vindicator");
     }
+
+    /**
+     * #468 review (non-blocking 1): the memo must never hold a unit once a way opens. A vindicator chases the foe on the
+     * plateau for 150 ticks (its failed search remembered and handed back), then a stair ramp is built up the plateau's
+     * north side (x 4..10 at z 5, one block up per column, the top beside the plateau at x 10). The unit must stand on
+     * the plateau within RAMP_TICKS: the remembered answer lasts at most 1 s (5 s for a full-range one) and is dropped
+     * by any complete path, so the ramp is found and walked (~13 blocks) well inside that. A guard, not a red: without
+     * the memo it passes too.
+     */
+    static final int RAMP_TICKS = 200;
+
+    @GameTest(template = ARENA, timeoutTicks = 700)
+    public static void a_chasing_unit_takes_a_ramp_built_while_its_failed_search_is_remembered(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        TestCleanup.BlockUndo undo = TestCleanup.blocks(helper);
+        tallPocket(helper, undo);
+        for (int x = 10; x <= 14; x++)
+            for (int z = 6; z <= 10; z++)
+                for (int y = 2; y <= PLATEAU_TOP; y++)
+                    undo.set(helper.absolutePos(new BlockPos(x, y, z)), Blocks.STONE.defaultBlockState());
+        String mine = owner(helper, "ramp"), theirs = owner(helper, "ramp_foe");
+        Runnable daylight = ArenaReady.noSunlight(mine, theirs);
+        TestCleanup.atEnd(helper, daylight);
+        BlockPos o = helper.absolutePos(BlockPos.ZERO);
+        List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
+        Mob unit = PathingBudgetGameTests.unit(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine,
+            o.getX() + 3.5, o.getY() + 2, o.getZ() + 8.5, made);
+        Mob foe = TerrainGameTests.dummy(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs,
+            o.getX() + 12.5, o.getY() + PLATEAU_TOP + 1, o.getZ() + 8.5, made);
+        if (unit == null || foe == null) {
+            TerrainGameTests.cleanUp(made);
+            helper.fail("could not create the units");
+            return;
+        }
+        WidePathMemo memo = ((WidePathMemo.Holder) unit.getNavigation()).reignofnether$wideMemo();
+        int[] ordered = { -1 }, built = { -1 };
+        int[] searchesBefore = { 0 };
+        boolean[] done = { false };
+        ArenaReady.whenTicking(helper, made, 150, tick -> {
+            ordered[0] = tick;
+            PathingBudgetGameTests.attack(level, mine, unit, foe);
+        });
+        helper.onEachTick(() -> {
+            if (ordered[0] < 0 || done[0])
+                return;
+            int now = (int) helper.getTick();
+            if (built[0] < 0) {
+                if (now - ordered[0] < 150)
+                    return;
+                built[0] = now;
+                searchesBefore[0] = memo.searches;
+                for (int x = 4; x <= 10; x++)
+                    for (int y = 2; y <= x - 2; y++)
+                        undo.set(helper.absolutePos(new BlockPos(x, y, 5)), Blocks.STONE.defaultBlockState());
+                return;
+            }
+            boolean onTop = unit.getY() >= o.getY() + PLATEAU_TOP + 1 - 0.01 && unit.getX() >= o.getX() + 9.7;
+            int waited = now - built[0];
+            if (!onTop && waited < RAMP_TICKS)
+                return;
+            done[0] = true;
+            List<String> problems = new ArrayList<>();
+            if (onTop)
+                ReignOfNether.LOGGER.info("GameTest [Ramp] the vindicator stood on the plateau {} ticks after the ramp was built", waited);
+            else
+                problems.add("the vindicator was not on the plateau " + RAMP_TICKS + " ticks after a ramp up to it was "
+                    + "built (" + (memo.searches - searchesBefore[0]) + " searches since; target "
+                    + (unit.getTarget() == foe ? "the dummy" : String.valueOf(unit.getTarget())) + "; "
+                    + ArenaReady.around(unit, foe) + ")");
+            try {
+                TerrainGameTests.finish(helper, problems);
+            } finally {
+                TerrainGameTests.cleanUp(made);
+            }
+        });
+    }
 }
