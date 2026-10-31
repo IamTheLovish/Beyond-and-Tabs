@@ -20,7 +20,9 @@
   "eyes 41168313494 (build 39266a8), ashborn_l3_round2 (Ashborn round-2 lab)",
   "eyes 41168313494 (build 39266a8), ashborn massing a",
   "eyes 41168313494 (build 39266a8), ashborn massing b",
-  "eyes 41168313494 (build 39266a8), ashborn massing c"
+  "eyes 41168313494 (build 39266a8), ashborn massing c",
+  "eyes 41171365873 (build 39266a8), ashborn_l3 detail round 1 (767b7aad)",
+  "eyes 41171365873 (build 39266a8), ashborn_l1 detail round 1 (767b7aad)"
  ],
  "blocks": {
   "andesite": {
@@ -93,6 +95,41 @@
     ]
    }
   },
+  "andesite_wall": {
+   "up": {
+    "hue": 40.0,
+    "sat": 0.034,
+    "val": 0.529,
+    "n": 8179,
+    "rgb": [
+     0.5113,
+     0.5065,
+     0.4959
+    ]
+   },
+   "west": {
+    "hue": 0.0,
+    "sat": 0.022,
+    "val": 0.376,
+    "n": 6645,
+    "rgb": [
+     0.398,
+     0.3967,
+     0.3924
+    ]
+   },
+   "south": {
+    "hue": 36.8,
+    "sat": 0.019,
+    "val": 0.416,
+    "n": 6714,
+    "rgb": [
+     0.406,
+     0.4046,
+     0.4001
+    ]
+   }
+  },
   "basalt": {
    "up": {
     "hue": 205.7,
@@ -125,6 +162,19 @@
      0.164,
      0.1707,
      0.1757
+    ]
+   }
+  },
+  "black_wool": {
+   "south": {
+    "hue": 240.0,
+    "sat": 0.174,
+    "val": 0.075,
+    "n": 363,
+    "rgb": [
+     0.0638,
+     0.0658,
+     0.0774
     ]
    }
   },
@@ -1430,6 +1480,30 @@
      0.4525,
      0.4273,
      0.4396
+    ]
+   }
+  },
+  "magma_block": {
+   "west": {
+    "hue": 12.0,
+    "sat": 0.66,
+    "val": 0.255,
+    "n": 1181,
+    "rgb": [
+     0.3049,
+     0.1481,
+     0.082
+    ]
+   },
+   "up": {
+    "hue": 0.0,
+    "sat": 0.644,
+    "val": 0.353,
+    "n": 1265,
+    "rgb": [
+     0.4839,
+     0.2259,
+     0.1224
     ]
    }
   },
