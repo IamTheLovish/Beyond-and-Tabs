@@ -1054,6 +1054,39 @@ public class VoodooShamanGameTests {
     }
 
     /**
+     * lovish (Oct 31, "Count as support"): the shaman marches with a bot's army, but it does not count toward the army a
+     * bot must field before Tier 2 (BotTuning.t2MinArmy), like every other healer and caster - none of them is an
+     * AttackerUnit, so the army list never held them. A shaman did count, and the Horde bot gated Tier 2 at its earliest
+     * minute almost every game (bots_reach_tier_2: the hard bot then fell more than a minute behind it).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
+    public static void voodoo_shaman_counts_as_support_not_army_toward_a_bots_tier_2_minimum(GameTestHelper helper) {
+        List<Entity> made = new ArrayList<>();
+        String a = owner(helper, "bota");
+        Mob shaman = still(helper, EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), a, 3, 3, made);
+        Mob brute = still(helper, EntityRegistrar.BRUTE_UNIT.get(), a, 6, 3, made);
+        if (made.size() < 2) {
+            spawnFailed(helper, made, "the shaman and the brute");
+            return;
+        }
+        helper.runAfterDelay(2, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                int fighters = BotPlayer.t2Fighters(List.of(shaman, brute));
+                if (fighters != 1)
+                    problems.add("a shaman and a brute count as " + fighters + " fighters toward the Tier 2 minimum, wanted 1 (the brute)");
+                if (BotPlayer.t2Fighters(List.of(brute, brute)) != 2)
+                    problems.add("two brutes do not count as 2 fighters toward the Tier 2 minimum");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                cleanUp(helper, made, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
      * A selected unit whose owner changes (a puppet taken, a puppet given back) drops out of the selection on the client:
      * the rule UnitClientEvents runs every tick for each selected unit.
      */

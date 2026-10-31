@@ -289,6 +289,11 @@ public class BotPlayer {
      * BOT_MIN_ENERGY_INCOME. {@link BotTuning#T2_PATIENCE_MINUTES} after the earliest minute it goes anyway with a lab
      * and half the army, so a map with few patches cannot stop it for ever.
      */
+    /** The fighters of the army list that count toward {@code t2MinArmy}. */
+    public static int t2Fighters(List<? extends LivingEntity> army) {
+        return army.size();
+    }
+
     boolean t2Ready(long minutes, int fighters, float energyIncome, List<BuildingPlacement> buildings) {
         boolean labBuilt = false;
         for (BuildingPlacement bp : buildings)
@@ -749,7 +754,7 @@ public class BotPlayer {
         // ready to tech: the capitol stops training workers so its queue empties and the research can start (a hard bot's
         // worker target keeps growing, so its queue was never empty and it only teched after twelve minutes)
         techPending = !tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
-            && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
+            && t2Ready(minutes, t2Fighters(army), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
         if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (techDiagOn)
