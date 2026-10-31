@@ -1055,9 +1055,10 @@ public class VoodooShamanGameTests {
 
     /**
      * lovish (Oct 31, "Count as support"): the shaman marches with a bot's army, but it does not count toward the army a
-     * bot must field before Tier 2 (BotTuning.t2MinArmy), like every other healer and caster - none of them is an
-     * AttackerUnit, so the army list never held them. Both gates that read the army are pinned: the research gate
-     * (t2Ready, through t2ArmyOut, its patience path included) and the easy bot's T1 pause for the T2 lab (wantsT2Save).
+     * bot must field before Tier 2 (BotTuning.t2MinArmy), like every other healer and caster. The Gravebound Tombcaller
+     * (a WraithUnit, #366) is the other caster that is also an AttackerUnit, so the Monsters bot's count leaves it out
+     * too. Both gates that read the army are pinned: the research gate (t2Ready, through t2ArmyOut, its patience path
+     * included) and the easy bot's T1 pause for the T2 lab (wantsT2Save).
      */
     @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
     public static void voodoo_shaman_counts_as_support_not_army_toward_a_bots_tier_2_minimum(GameTestHelper helper) {
@@ -1065,8 +1066,9 @@ public class VoodooShamanGameTests {
         String a = owner(helper, "bota");
         Mob shaman = still(helper, EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), a, 3, 3, made);
         Mob brute = still(helper, EntityRegistrar.BRUTE_UNIT.get(), a, 6, 3, made);
-        if (made.size() < 2) {
-            spawnFailed(helper, made, "the shaman and the brute");
+        Mob tombcaller = still(helper, EntityRegistrar.TOMBCALLER_UNIT.get(), a, 9, 3, made);
+        if (made.size() < 3) {
+            spawnFailed(helper, made, "the shaman, the brute and the tombcaller");
             return;
         }
         helper.runAfterDelay(2, () -> {
@@ -1077,6 +1079,10 @@ public class VoodooShamanGameTests {
                     problems.add("a shaman and a brute count as " + fighters + " fighters toward the Tier 2 minimum, wanted 1 (the brute)");
                 if (BotPlayer.t2Fighters(List.of(brute, brute)) != 2)
                     problems.add("two brutes do not count as 2 fighters toward the Tier 2 minimum");
+                if (BotPlayer.t2Fighters(List.of(tombcaller, brute)) != 1)
+                    problems.add("a tombcaller (an attacking caster too) counts toward the Tier 2 minimum");
+                if (BotPlayer.wantsT2Save(true, true, false, false, List.of(tombcaller, brute), 2))
+                    problems.add("an easy Monsters bot with a tombcaller and one fighter stops queuing T1 for its T2 lab with t2MinArmy 2");
                 // t2MinArmy 2, earliest minute 5: minute 7 wants 2 fighters, minute 11 (patience) wants 1
                 if (BotPlayer.t2ArmyOut(7, List.of(shaman, brute), 5, 2))
                     problems.add("the Tier 2 research gate opens for a shaman and a brute with t2MinArmy 2");

@@ -288,8 +288,9 @@ public class BotPlayer {
 
     /**
      * The fighters of the army list that count toward {@code t2MinArmy}: an essence caster is support, not army (lovish,
-     * Oct 31: "Count as support") - the Voodoo Shaman is the one caster that is also an AttackerUnit, so it marches in
-     * the army list, but like every other healer and caster it does not make the army a bot fields before Tier 2.
+     * Oct 31: "Count as support") - the Voodoo Shaman and the Gravebound Tombcaller are casters that are also
+     * AttackerUnits, so they march in the army list, but like every other healer and caster they do not make the army a
+     * bot fields before Tier 2.
      */
     public static int t2Fighters(List<? extends LivingEntity> army) {
         int n = 0;
