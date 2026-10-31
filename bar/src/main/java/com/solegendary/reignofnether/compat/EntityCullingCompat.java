@@ -59,6 +59,11 @@ public final class EntityCullingCompat {
         }
     }
 
+    /** Keeps an entity type's client ticks from Entity Culling's tick culling. Red step: not wired yet. */
+    static boolean keepClientTicks(Object type) {
+        return false;
+    }
+
     private static Field toggle() {
         if (looked)
             return toggle;
