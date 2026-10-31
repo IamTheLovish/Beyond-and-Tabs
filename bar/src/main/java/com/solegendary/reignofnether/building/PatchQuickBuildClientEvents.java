@@ -44,7 +44,7 @@ import java.util.List;
  *       hint in the HUD while hovered.</li>
  *   <li>Area mex (BAR's areamex): with the extractor ghost out, hold the left button and drag a circle - the press
  *       point is the centre, the distance dragged the radius, and the circle is drawn while you drag. On release an
- *       extractor is queued on every free patch inside, nearest first from the builders' average position. Shift adds
+ *       extractor is queued on every free patch inside, as one nearest-neighbour chain from the builders. Shift adds
  *       to the builders' queue instead of replacing it. A plain click (no drag) places one extractor as always.</li>
  * </ul>
  * The pure part (which patches, in what order) is AreaMexCircle.
@@ -238,26 +238,14 @@ public class PatchQuickBuildClientEvents {
             BuildingClientEvents.setBuildingToPlace(null);
     }
 
-    /** The free patches inside the dragged circle, nearest first from the builders' average position. */
+    /**
+     * The free patches inside the dragged circle in build order (AreaMexCircle.order): one nearest-neighbour chain the
+     * whole selection shares, from the builders' average start (with Shift, where their queues end).
+     */
     static List<BlockPos> patchesInDrag(BlockPos centre, BlockPos cursor) {
         List<BlockPos> inside = AreaMexCircle.patchesIn(MetalPatchesClient.getPatches(),
             BuildingClientEvents::isPatchTaken, centre, AreaMexCircle.radius(centre, cursor));
-        double sx = 0, sz = 0;
-        int n = 0;
-        for (LivingEntity entity : UnitClientEvents.getSelectedUnits())
-            if (entity instanceof WorkerUnit) {
-                sx += entity.getX();
-                sz += entity.getZ();
-                n++;
-            }
-        if (n == 0) {
-            sx = centre.getX();
-            sz = centre.getZ();
-        } else {
-            sx /= n;
-            sz /= n;
-        }
-        return AreaMexCircle.nearestFirst(inside, sx, sz);
+        return AreaMexCircle.order(inside, AreaMexClientEvents.selectedBuilders(Keybindings.shiftMod.isDown()), centre);
     }
 
     /** The button came up where it went down: give the press to everyone else, as if we had never held it back. */
