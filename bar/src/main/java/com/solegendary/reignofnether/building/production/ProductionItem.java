@@ -128,6 +128,10 @@ public abstract class ProductionItem {
     // the metal/energy matching the progress it wants to make (production build power * cheat speed); progress is
     // slowed down by the owner's stall when they are short of resources.
     public boolean tick(ProductionPlacement placement, ActiveProduction active) {
+        // "Pause unit production": a paused owner's units wait - no progress, no metal or energy asked for. Research
+        // and upgrades are not IUnitProductionItem and run on
+        if (UnitProductionPause.blocks(this, placement))
+            return false;
         boolean isClientSide = placement.getLevel().isClientSide();
         boolean hasCheat = (isClientSide && ResearchClient.hasCheat("warpten")) ||
                 (!isClientSide && ResearchServerEvents.playerHasCheat(placement.ownerName, "warpten"));

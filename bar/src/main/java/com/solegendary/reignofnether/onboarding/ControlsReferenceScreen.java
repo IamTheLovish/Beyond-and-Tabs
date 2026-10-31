@@ -88,6 +88,7 @@ public class ControlsReferenceScreen extends Screen {
         mouse("possess_hop", k(Keybindings.tab) + " " + t("while_possessing"));
         bind("stats", Keybindings.statsTable);
         bind("clean", Keybindings.cleanView);
+        bind("pause_units", Keybindings.pauseUnits);
         bind("hide_hud", Keybindings.getFnum(1));
         bind("last_alert", Keybindings.lastAlert);
         bind("overview", Keybindings.overview);
