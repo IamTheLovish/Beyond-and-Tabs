@@ -323,6 +323,27 @@ public class MoveToTargetBlockGoal extends Goal {
         return true;
     }
 
+    // The last path this goal asked for: for which target, and the path that request put in the navigation.
+    @Nullable private BlockPos requestedTarget = null;
+    @Nullable private Path pathInHand = null;
+
+    /**
+     * The plain move goal's own request for this very target is in flight, or the path it got is being walked. The goal
+     * selector starts the goal on its next full tick (a mob runs those every other tick) after setMoveTarget has
+     * already started it for a new order, and that second start() stopped the unit and asked for the same path again,
+     * throwing the first away: on the RTS pathfinder an idle unit took its first step 4 ticks after a move order
+     * (OrderLatencyGameTests; lovish Oct 22 20:23, "sometimes a delay in actions"). The isRunning note above already
+     * said a unit must not path twice for one order. Subclasses (build, gather, garrison...) restart as before.
+     */
+    private boolean alreadyOnItsWay() {
+        if (getClass() != MoveToTargetBlockGoal.class || moveTarget == null || !moveTarget.equals(requestedTarget))
+            return false;
+        if (pathPending)
+            return true;
+        Path p = this.mob.getNavigation().getPath();
+        return p != null && p == pathInHand && !p.isDone();
+    }
+
     // A repath whose new path is judged against the old one (repathVerdict): no progress or no path grows the
     // backoff and counts toward the give-up. The vanilla path is judged here; the async RTS one in onPathReady.
     private void judgedRepath(boolean forced) {
@@ -332,6 +353,7 @@ public class MoveToTargetBlockGoal extends Goal {
         if (oldFinalNode == null && givesUpWhenUnreachable())
             oldFinalNode = lastPathEnd;
         markRepathFrom();
+        requestedTarget = null;   // a repath from here even though a path to the target is in hand (alreadyOnItsWay)
         this.start();
         // start() is expensive and repeats every tick on a stuck mob (eg. targeting over water). Only the
         // synchronous vanilla path has a final node ready to compare for the backoff; the async RTS path
@@ -359,6 +381,10 @@ public class MoveToTargetBlockGoal extends Goal {
 
     public void start() {
         isRunning = true;
+        if (alreadyOnItsWay())
+            return;
+        requestedTarget = moveTarget;
+        pathInHand = null;
         lastRequestTime = this.mob.level().getGameTime();
         // Cleared on every start(); canContinueToUse re-sets it after this call when it fires an async repath,
         // so a fresh order (started directly here) never inherits a previous repath's deferred backoff.
@@ -414,6 +440,7 @@ public class MoveToTargetBlockGoal extends Goal {
         float speedMod = u.getSpeedModifier();
         if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
         this.mob.getNavigation().moveTo(path, speedMod);
+        pathInHand = this.mob.getNavigation().getPath();
         lastPathEnd = getFinalNodePos();
         // Broadcast the path so clients can render it briefly. Server-only — clients
         // that received the packet decide whether to render based on ownership/FOW.
@@ -478,6 +505,7 @@ public class MoveToTargetBlockGoal extends Goal {
         float speedMod = u.getSpeedModifier();
         if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
         this.mob.getNavigation().moveTo(path, speedMod);
+        pathInHand = this.mob.getNavigation().getPath();
         lastPathEnd = getFinalNodePos();
         // The RTS pathfinder is async: node 0 is the unit's position when the request was SUBMITTED, a few
         // ticks ago. By delivery the unit has often drifted off it (crowd/formation separation, momentum),

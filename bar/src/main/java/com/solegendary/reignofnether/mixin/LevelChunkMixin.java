@@ -35,10 +35,13 @@ public abstract class LevelChunkMixin {
     @Inject(method = "setBlockState", at = @At("TAIL"))
     private void reignofnether$invalidateWalkability(BlockPos pos, BlockState state, boolean isMoving,
                                                      CallbackInfoReturnable<BlockState> cir) {
-        // Only feed the walkability cache when the rtsPathfinding gamerule is on; with it off the
-        // grid is unused so there's nothing to invalidate. The resource index is independent and always runs.
+        // With the rtsPathfinding gamerule on, mark the chunk for the deferred rebuild. With it off nothing drains the
+        // dirty set, so a cached chunk is dropped instead (no grid for the level = no-op): otherwise it would be served
+        // stale when the flag comes back on. The resource index is independent and always runs.
         if (UnitServerEvents.rtsPathfinding)
             WalkabilityGrid.markChunkDirtyIfPresent(getLevel(), pos);
+        else
+            WalkabilityGrid.forgetChunkIfPresent(getLevel(), pos);
         ResourceIndex.onBlockChange(getLevel(), pos, state);
         // the chase goals' per-tick cell memo (Terrain.classify) must not answer from before this change
         com.solegendary.reignofnether.unit.Terrain.onBlockChanged();
