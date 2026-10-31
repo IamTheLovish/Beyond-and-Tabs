@@ -214,12 +214,14 @@ public class WidePathMemoGameTests {
     /**
      * #468 review (non-blocking 1): the memo must never hold a unit once a way opens. A vindicator chases the foe on the
      * plateau for 150 ticks (its failed search remembered and handed back), then a stair ramp is built up the plateau's
-     * north side (x 4..10 at z 5, one block up per column, the top beside the plateau at x 10). The unit must stand on
-     * the plateau within RAMP_TICKS: the remembered answer lasts at most 1 s (5 s for a full-range one) and is dropped
-     * by any complete path, so the ramp is found and walked (~13 blocks) well inside that. A guard, not a red: without
-     * the memo it passes too.
+     * north side (x 4..10, z 3..5, one block up per column, the top beside the plateau at x 10). The unit must stand on
+     * the plateau within RAMP_TICKS: the remembered answer lasts at most 1 s (5 s for a failed full-range one) and is
+     * dropped by any complete path, so the ramp is found and walked (~13 blocks, ~60 ticks) inside that. A guard, not a
+     * red: without the memo it passes too. r1 (one block wide, 200 ticks): 188 ticks in CI 41245919785, then 8 of 8
+     * stress samples failed at 200 (41249606309) with the unit searching every 20-30 ticks (the memo not holding it) but
+     * standing at a drop beside a one-wide stair; three wide, 300 ticks, and the failure says where it stands.
      */
-    static final int RAMP_TICKS = 200;
+    static final int RAMP_TICKS = 300;
 
     @GameTest(template = ARENA, timeoutTicks = 700)
     public static void a_chasing_unit_takes_a_ramp_built_while_its_failed_search_is_remembered(GameTestHelper helper) {
@@ -263,8 +265,9 @@ public class WidePathMemoGameTests {
                 built[0] = now;
                 searchesBefore[0] = memo.searches;
                 for (int x = 4; x <= 10; x++)
-                    for (int y = 2; y <= x - 2; y++)
-                        undo.set(helper.absolutePos(new BlockPos(x, y, 5)), Blocks.STONE.defaultBlockState());
+                    for (int z = 3; z <= 5; z++)
+                        for (int y = 2; y <= x - 2; y++)
+                            undo.set(helper.absolutePos(new BlockPos(x, y, z)), Blocks.STONE.defaultBlockState());
                 return;
             }
             boolean onTop = unit.getY() >= o.getY() + PLATEAU_TOP + 1 - 0.01 && unit.getX() >= o.getX() + 9.7;
@@ -278,7 +281,9 @@ public class WidePathMemoGameTests {
             else
                 problems.add("the vindicator was not on the plateau " + RAMP_TICKS + " ticks after a ramp up to it was "
                     + "built (" + (memo.searches - searchesBefore[0]) + " searches since; target "
-                    + (unit.getTarget() == foe ? "the dummy" : String.valueOf(unit.getTarget())) + "; "
+                    + (unit.getTarget() == foe ? "the dummy" : String.valueOf(unit.getTarget())) + "; at "
+                    + String.format(java.util.Locale.ROOT, "%.1f %.1f %.1f", unit.getX() - o.getX(), unit.getY() - o.getY(),
+                        unit.getZ() - o.getZ()) + " in the template; path " + pathState(unit) + "; "
                     + ArenaReady.around(unit, foe) + ")");
             try {
                 TerrainGameTests.finish(helper, problems);
@@ -286,5 +291,16 @@ public class WidePathMemoGameTests {
                 TerrainGameTests.cleanUp(made);
             }
         });
+    }
+
+    /** The unit's current path for a failure message: nodes, the next one, its end, whether it reaches. */
+    static String pathState(Mob unit) {
+        net.minecraft.world.level.pathfinder.Path p = unit.getNavigation().getPath();
+        if (p == null)
+            return "none";
+        net.minecraft.world.level.pathfinder.Node end = p.getEndNode();
+        return p.getNodeCount() + " nodes, next " + p.getNextNodeIndex() + ", end "
+            + (end == null ? "-" : end.x + " " + end.y + " " + end.z) + (p.canReach() ? ", reaches" : ", partial")
+            + (p.isDone() ? ", done" : "");
     }
 }
