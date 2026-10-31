@@ -1,4 +1,4 @@
-# Animation foundation audit (Lane A, Oct 21 2026)
+# Animation foundation audit (Lane A, Oct 21 2026; re-audited Oct 29)
 
 The engine side of lovish's north star - "a living army: every soldier breathes, shifts its weight and fights with
 real technique... watching a single unit should feel like The Isle" - audited from the code on `main`
@@ -45,54 +45,60 @@ Tools: `tools/anim_lab.py` (keys as data -> `gen/*Anim.java`), `tools/pose_previ
 ## 2. Behaviour by behaviour, against the bar
 
 Reference technique = how The Isle (Evrima) and the best creature games do it; our score is 1-10 on what a player
-sees today, counting #76/#79 as "landing", not landed.
+sees today. **Re-audited Oct 29 2026 against `main` b04b9d20**, after the living army's round 1 (#277-#283), the
+Bone Dragon rework (#145, #300) and the Halberdier's keyed thrust (#342). Each score reads "Oct 21 -> Oct 29". The
+Oct 21 wording of this table is in git history; section 6 lists what landed.
 
-| Behaviour | What exists | What is missing (engine side in bold) | Reference technique | Score |
+| Behaviour | What exists (Oct 29) | What is missing (engine side in bold) | Reference technique | Score |
 |---|---|---|---|---|
-| **Breathing** | `Life.breath` (quick in, long out, phase per entity) on the Bone Dragon; a plain sine on the five Sunforged bodies; `Quadruped` adds exertion (pants after a run, settles over 10 s) | 60+ vanilla-based units do not breathe at all. Breath moves only the body: no shoulder rise, neck lift, nostril/jaw on creatures. **No shared exertion state** (each rig computes its own) | Additive breath layer on top of every locomotion state, amplitude and rate driven by exertion; the whole upper chain moves (spine, clavicles, neck) - The Isle's rest/pant breathing is a full-body additive | **3** |
-| **Weight shift / idle variation** | `Quadruped`: a slow weight shift the legs compensate, graze, head shake, ear flick, tail swish, all phase-offset per entity | Humans: nothing beyond breath + tassel - a block of Halberdiers stands like statues. No idle fidgets, no look-around, no stance change over time, no settle after a stop. **No per-entity random/seeded idle scheduler, no "time since stopped"** | Idle = a base pose + a bank of short additive fidgets picked by a seeded timer, blended with inertialization; weight shift is a hip translation the IK legs absorb | **2** |
-| **Look-at** | Vanilla: `LookControl` yaw/pitch into the head only, clamped per rig; `Quadruped.neckLook` splits a share into the neck | No eyes, no torso share, no lag/overshoot, no "notice" moment (snap then settle); ranged units do not track their target with the body. **No shared look solver** (per-bone weights, lag, limits) | Per-bone look-at chain (eyes 100%, head 60%, neck 30%, chest 10%) with a spring on the target so the head arrives late and settles; target chosen by the AI's attention, not only `LookControl` | **4** |
-| **Lean into turns / acceleration** | `Dragon` banks on yaw rate (`yBodyRot - yBodyRotO`); `SquireRunner` has an aim turn blend | Nothing on ground units: no lean into a turn, no forward lean on acceleration, no brake pose on a stop, no slope pitch. **Yaw rate, speed and acceleration are not computed anywhere shared** - each rig derives them from raw entity fields | A motion snapshot per tick (velocity, acceleration, yaw rate, ground normal) feeding additive lean on the spine/pelvis; turn-in-place and stop/start transitions as short clips or inertialized blends | **1** |
-| **Foot planting / IK** | `Gait` (#76): four-beat lateral walk to trot, planted feet sweep back at the body's speed and stay flat - a kinematic stride match. Humans: stride on vanilla `limbSwing` (speed x 4), knee leads, toe-up | Feet slide whenever the clip's stride and the entity's speed disagree (no stride warping); nothing on slopes, stairs or uneven ground; no foot-lock. **No ground sampling, no 2-bone IK helper, no stride-length knowledge per rig** | Stride warping (scale the stride to the velocity), foot-lock during stance, 2-bone IK to the sampled ground height, pelvis dropped to the lowest foot; cheap when sampled per tick, not per frame | **3** |
-| **Hit reactions / stagger / poise** | Vanilla red flash. `Quadruped`/`Dragon`: a flinch on `hurtTime` (head jerks, crouch, ears back) | Direction-blind (the rigs read `hurtTime`, not `hurtDir`), size-blind (the client does not know the damage), no stagger on heavy hits, no poise/stun pose, humans have no flinch at all. **No hit event stamp on the client (direction, magnitude class, source), no additive-reaction helper** | Additive hit-reaction clips blended by hit direction (4-8 directions) and size (flinch / stagger / knockdown), layered over locomotion without stopping it; poise as a gameplay stat drives which one | **2** |
-| **Death** | Vanilla: a 20-tick 90-degree flip then the body vanishes. `Quadruped`/`Dragon`: a 14-tick fall (legs buckle, neck drops) then the renderer rolls it | Humans flip like vanilla zombies; nothing is flung by the blow; bodies vanish at 20 ticks; no settle, no corpse. **No death-pose contract (rigs cannot opt out of vanilla's flip), no fling from the last hit, no client-side corpse hold** | Death = blend to ragdoll (or a physics-lite spring chain) seeded with the hit impulse, then a settled pose held as a corpse for a while; The Isle holds bodies | **2** |
-| **Combat technique (anticipation / follow-through)** | Halberdier thrust: 4 keys (draw back, drive, hit at 55%, return), keyed as data; `Quadruped` horn toss and `Dragon` bite with anticipation/drive/recovery; guard stance blends in with a target (#83) | Vanilla-based units: the humanoid arm bump. No follow-through into the next action, no hit-stop, no recoil from contact, the body does not step into the blow. **The clip is tied to `attackTime` (6 ticks for everyone) - no per-unit clip length or server-timed windup hook beyond `getAttackWindupTicks`; no contact event on the client** | Attack = anticipation (weight back) -> drive (step in) -> contact (hit-stop frames, recoil) -> recovery, authored per weapon; contact drives the target's reaction; blending with locomotion by bone masks | **3** |
-| **Spine / neck wave (dragons, chains)** | `Life.chain` (lagged sine down a chain); Bone Dragon on the phantom skeleton (2 tail links); `Dragon` (#79): neck/tail chains, wings in 3 parts | The wave is a sine with a fixed lag - it does not respond to motion (a turn should whip the tail, a stop should settle it). **No spring/verlet chain helper with inertia from the motion snapshot** | Secondary motion as damped springs per link driven by the parent's acceleration (tails, necks, cloth, banners); one critically-damped spring function covers all of it | **3** |
-| **Cloth / secondary motion** (tassel, tabard, banners, hair) | Sines on the tassel and tabard; `BackBannerLayer` static | Nothing reacts to motion or wind. **Same missing spring helper as above; `resources/Wind` is server-side only** | Spring chains with gravity + wind, clamped by cloth limits | **2** |
+| **Breathing** | `MotionPass` breathes every vanilla-bodied unit (humanoid, illager, villager, golem, witch and spider families) and the 9 keyframe units. The chest pitches, the shoulders rise and the neck follows a beat later, with a quick in-breath and a long out-breath. The phase is state (`BREATH_PHASE`); the rate comes from the shared `EXERTION` (60 ticks at rest, 25 when blown). The generated human rigs and the Bison breathe by themselves (the Bison on the shared exertion). Each unit has its own tempo and amplitude (`Desync`) | The generated human rigs' own breath is a fixed sine that ignores `EXERTION`. Vanilla bodies have no clavicle or neck bone (round 2's jointed bodies). The 11 Alex's Mobs models have nothing | Additive full-body breath, amplitude and rate from exertion (The Isle's rest and pant) | 3 -> **6** |
+| **Weight shift / idle variation** | `Idle` is a seeded scheduler per unit. It shifts the weight every 6-14 s (the hips go over, the legs counter-rotate so the feet stay), and adds a grip adjust, a shoulder roll, and glances at real things (the nearest enemy, an ally just hit, its own hero). It stays quiet for 1.5 s after a stop, and the start/stop rock (`SP_PITCH`) settles a stop. The generated rigs get the HumanBase idle clip (READY plus drift) and the pass's hip shift | Feet are not locked, so a big shift on a generated rig slides them (needs foot IK). No stance change over a long hold. The fidget bank has 2 fidgets plus the glance, with nothing per weapon class | A base pose plus seeded additive fidgets, inertialized; the hip shift absorbed by IK legs | 2 -> **5** |
+| **Look-at** | Glances spring the head (`SP_HEAD_YAW` / `SP_HEAD_PITCH`, omega 0.35, zeta 0.7: it arrives late and settles) to a real target, for standing units only. Vanilla bodies still use `LookControl` head yaw and pitch. The Crossbow Levy raises and levels its crossbow over 5 ticks and turns its head 0.6 x netHeadYaw (clamped to 40 degrees). `Quadruped.neckLook` splits a share into the neck | The glance moves the head alone. **There is no shared look solver**: no per-bone shares (head, neck, chest), no limits per rig, no spring on a *combat* target. A ranged unit's upper body never turns to its target; the whole body yaws (`yBodyRot`) or the head turns alone | A per-bone look chain (eyes 100%, head 60%, neck 30%, chest 10%) with a spring on the target | 4 -> **5** |
+| **Lean into turns / acceleration** | `Kinematics` runs per client tick, shared (0.10 us a unit): speed, acceleration, yaw rate, time since stop and start. Springs lean into a turn (speed x yaw rate, max 12 degrees) and pitch on a start or a brake with an overshoot rock. The arms lag a start and swing on a stop, and the head holds level. This covers every mapped family and, through the whole-body root, the generated rigs | No turn-in-place step and no slope pitch. A generated rig leans as one block: its `body` part is its pelvis, so only the root rolls | A per-tick motion snapshot feeding additive spine and pelvis lean; start and stop transitions | 1 -> **6** |
+| **Foot planting / IK** | Unchanged. `Gait` (Bison) and HumanBase's planted-feet walk are played by the stride; anim_lab measures the keyed clips for snaps, joint range and planted feet at the keyed stride | Feet slide when the stride and the speed disagree, and nothing adapts to slopes or stairs. **No ground sampling, no 2-bone IK helper** | Stride warping, foot-lock, 2-bone IK to the sampled ground, the pelvis dropped to the lowest foot | **3** |
+| **Hit reactions / stagger / poise** | Directional flinch for every mapped family. `LivingEntityDamageMotionMixin` stamps the blow's direction from the client's damage event (the source's position; vanilla's `hurtDir` is stale on mobs). The torso bends away (a continuous direction, not 8 sectors), the head snaps and the arms jerk. A drop of 12% of max health within 3 ticks turns the flinch into a stagger: the whole body rocks back about the feet. It is additive over the walk and the attack. Keyframe units get the flinch and the stagger on top of their own clips | **No contact event**: the attacker does not recoil when its blow lands, and there is no hit-stop. Generated human rigs flinch with the head and stagger with the whole body only, because their torso cannot bend alone. `Quadruped` and `Dragon` still flinch on `hurtTime`, blind to direction | Additive reactions by direction and size, layered over locomotion; contact drives the target's reaction | 2 -> **5** |
+| **Death** | Unchanged. Every humanoid, illager and villager-bodied unit does vanilla's 20-tick 90-degree flip and vanishes; `MotionPass` skips a dying unit. `Quadruped` and `Dragon` fall for 14 ticks, then the renderer rolls them | **No death-pose contract** (nothing can opt out of the flip), the killing blow is not read, and **there is no client-side corpse hold** | A fall seeded by the last hit, then a settled pose held as a corpse | **2** |
+| **Combat technique (anticipation / follow-through)** | The Halberdier's thrust is an 18-tick keyed clip played at its own length (`KeyedSwing` sets the swing duration on both sides). The damage is held to the hit key (`HeldBlow`, tick 5), so the target is struck when the blade arrives. `Quadruped` has a horn toss, `Dragon` a bite, and both take a guard stance on a target | Every other unit still plays vanilla's 6-tick arm bump. **The client has no contact moment**: the attacker cannot recoil, and the target's flinch matches the blade only through HeldBlow's timing. No hit-stop | Anticipation -> drive -> contact (hit-stop, recoil) -> recovery, per weapon | 3 -> **4** |
+| **Spine / neck wave (dragons, chains)** | `Life.springChain` (an inertial chain on slab slots) exists. The Bone Dragon (#145, merged) and `Dragon` still use `Life.chain` (a lagged sine) and their own bank | **Nothing calls `springChain`**, so tails and necks do not answer a turn or a stop. `BoneMaps` still leaves the Bone Dragon out of `MotionPass` with a stale "#145 owns it" line | Damped springs per link, driven by the parent's acceleration | **3** |
+| **Cloth / secondary motion** (tassel, tabard, banners, hair) | Sines on tassels and tabards; `BackBannerLayer` is static; vanilla bodies get the arms' spring lag | Nothing reacts to motion: **`springChain` is unused here too**, and the client has no wind | Spring chains with gravity and wind, clamped | **2** |
 
-Overall today: a solid *pattern* (procedural rigs over generated bodies, keys as data) on two creature rigs and five
-human bodies, and vanilla motion on ~85% of the roster. The bar is far; the foundation is right.
+Overall, Oct 29: the shared layer the Oct 21 audit asked for exists and is cheap. Every vanilla-bodied unit now
+breathes, shifts its weight, fidgets, glances, leans and flinches by direction, each out of step with its neighbours.
+What still reads as vanilla: **death** (the flip, then gone), **contact** (no recoil, no hit-stop), the **look** (the
+head alone) and anything that should swing (tails, cloth). Those are the next gains, in that order.
 
 ## 3. Engine work, in order of visible gain for Lane B
 
+The Oct 29 status follows each item in bold.
+
 1. **A shared per-entity `AnimState` + `Motion` snapshot (client tick, one place).** Once per client tick for every
    unit the camera can see: ground speed, acceleration, yaw rate, vertical speed, airborne, time since stopped /
-   started, exertion, last hit (age, direction from `hurtDir`, magnitude class), attack phase. Stored in a pooled
-   float slab keyed by entity id (no `WeakHashMap` per model, no per-pass recompute under a shader's shadow pass).
-   Rigs read it; nothing else changes. This is what lean-into-turns, stop/start anticipation, directional flinch
-   and pant-after-run all need, and it gives them to the 60+ vanilla-based units through one additive pass in
-   `LivingEntityRendererMixin` (spine lean, breath, flinch on `HumanoidModel` parts) without Lane B touching each
-   model. Biggest gain per line: it makes the whole army move like one living thing.
-2. **`Life.Spring` and `Life.Chain`: critically-damped springs and inertial chains, allocation-free.** One
-   `spring(state, target, stiffness, damping, dt)` on `AnimState` slots, and a chain that feeds each link the
-   parent's acceleration. Covers tails, necks, tassels, banners, cloth, ears, the look-at lag and the settle after
-   any motion - the "overshoot and settle" that separates The Isle from a sine. Pure math, Lane B drops it into
-   `Quadruped`/`Dragon` and the five human rigs.
-3. **Hit, contact and death contracts.** (a) A client stamp of every hit (mixin on `LivingEntity.animateHurt`, which
-   has the yaw) into `AnimState`; a server one-shot for heavy hits (stagger) only if gameplay wants a poise stat.
-   (b) A contact event when a swing lands (client, from the existing damage path) so the attacker recoils and the
-   target flinches on the same frame. (c) A death-pose contract: a rig that opts in gets `deathTime` 0..20 to play
-   its fall seeded by the last hit direction, `LivingEntityRendererMixin` skips vanilla's flip for it, and the
-   client holds the body a few seconds longer (render only; the entity is already gone server-side).
-4. **A look solver** (`Life.look`): per-bone shares, limits, a spring on the target - replaces the per-rig clamps.
-5. **Cheap foot IK**: ground height under each foot sampled per tick into `AnimState`, a 2-bone IK helper, stride
-   warping from the snapshot's speed. Gated by `wantsDetail` (close zoom only - it is invisible at the RTS zoom).
-6. **A far body per unit (geometry LOD), not animation LOD.** The measurements below put the cost in the draw of
-   300-500-cube bodies, not in posing them. The hook Lane B asked for: `dsl_to_game.py` emits a second, far root
-   (~40-80 cubes) and the renderer swaps models past `DETAIL_ZOOM`; the rig poses whichever is drawn (same bone
-   names). Animation decimation (every Nth frame far away) is **not** needed and would show (a block of units
-   stuttering at 10 Hz is worse than static).
-7. **Keep what works**: keys as data (#66) for every clip, `motion_check.py` in CI, `[Anim]` in every eyes log.
+   started, exertion, last hit (age, direction, magnitude class), attack phase, in a pooled float slab keyed by entity
+   id. **Landed (#279, #281, #283): `motion/AnimState`, `AnimStates`, `Kinematics`, `Motion`, `MotionPass`,
+   `BoneMaps`. 0.10 us a unit a tick and 0.26 us a unit a frame, 0 bytes allocated. The hit direction comes from the
+   damage event, not `hurtDir`. Airborne and attack phase are not in the slab yet.**
+2. **`Life.Spring` and `Life.Chain`: critically-damped springs and inertial chains, allocation-free.** **Landed
+   (#278): `Life.spring` (implicit Euler, stable at any step), `Life.springAt` (the same pose in every pass) and
+   `Life.springChain`. Springs drive the lean, pitch, arms, flinch, stagger, glance and weight. The chain has no user.**
+3. **Hit, contact and death contracts.** (a) A client stamp of every hit into `AnimState`. **Landed
+   (`LivingEntityDamageMotionMixin`; the size from the synced health drop).** (b) A contact event when a swing lands,
+   so the attacker recoils and the target flinches on the same frame. **Missing. Next after (c); for the Halberdier
+   it ties to `HeldBlow`'s hit key.** (c) A death-pose contract: a rig that opts in gets `deathTime` 0..20 to play its
+   fall seeded by the last hit's direction, `LivingEntityRendererMixin` skips vanilla's flip for it, and the client
+   holds the body a few seconds longer (render only). **Missing. First, because it is the biggest vanilla tell left
+   and it shows on every humanoid death.**
+4. **A look solver** (`Life.look`): per-bone shares, limits, a spring on the target; it replaces the per-rig clamps.
+   **Missing (the glance springs the head alone).**
+5. **Spring secondary on rigs** (moved up; Oct 21 counted it under item 2): tassels, tabards, banners and tails on
+   `springChain`, fed by the snapshot's acceleration and yaw rate. **Missing.**
+6. **Cheap foot IK**: ground height under each foot sampled per tick into `AnimState`, a 2-bone IK helper, stride
+   warping from the snapshot's speed. Gated by `wantsDetail` (close zoom only). **Missing.**
+7. **A far body per unit (geometry LOD), not animation LOD.** The reasoning in section 4 is unchanged. **Not
+   started.**
+8. **Keep what works**: keys as data (#66) for every clip, `[Anim]` in every eyes log. `motion_check.py` is still not a
+   separate tool: anim_lab's measurements (snaps, joint range, planted feet) cover the keyed clips, and the JUnit tests
+   in `unit/modelling/motion/` cover the procedural layers. In-game captures come from PR #176 (the cloud animation
+   viewer, `eyes.yml` input `anim`).
 
 ## 4. Perf proof (PR #84)
 
@@ -155,3 +161,23 @@ unit's cost, or the per-unit posing past 40 us, gets looked at.
 
 Which engine piece first: the `AnimState`/`Motion` snapshot (1), the springs (2), or the hit/death contracts (3)?
 And the cube budget for a far body (6) once lovish's PC gives an `[Anim]` line at 300+ units.
+
+## 6. Re-audit, Oct 29 2026: what landed since Oct 21
+
+| Oct 21 item | Landed as | Where |
+|---|---|---|
+| Shared `AnimState` + motion snapshot | A slab of 64 floats a unit, stepped per client tick | #279; `motion/AnimState`, `AnimStates`, `Kinematics` |
+| Springs and inertial chains | `Life.spring`, `springAt`, `springChain` | #278; `animations/Life.java` |
+| Additive pass for vanilla bodies | `Motion` (pure: snapshot -> 8 bones x 6 channels), `MotionPass` (the `ModelPart` adapter after `setupAnim`, restored on return), `BoneMaps` per family | #281, #283 |
+| Idle variation | `Idle` scheduler: weight shift, grip, shoulder, real-target glances | #282 |
+| Hit stamp | `LivingEntityDamageMotionMixin` -> `AnimStates.onDamage` (the direction from the damage source, the size from the health drop) | #279, #281 |
+| Per-unit variety | `Desync` (tempo +-8%, amplitude +-15%), `ZoomGain` per behaviour, 7 sliders and a master switch in the client config | #278 |
+| A review stage | `/parade` (`ParadeGround`), A/B on Numpad 0 or `/livingarmy` | #280 |
+| Keyed attack length and hit timing | `KeyedSwing` (the swing lasts the clip), `HeldBlow` (the damage at the hit key): the Halberdier | #342 |
+| Creature rigs | `Quadruped` (Bison), `Dragon` (Bone Dragon r13, Dive) | #76, #145, #300 |
+
+Perf (the `[AnimBench]` living-army rows on CI): the tick costs 0.10 us a unit and the motion pass 0.26 us a unit,
+with 0 bytes allocated per round (budgets 1 and 3 us). In game on lovish's PC, ~150 units with shaders ran at 63-64 fps
+with the living army on against 64-66 off. The gate for the next pieces stays the same: posing under 40 us a unit,
+the animation share under ~10% of a unit's frame, no allocation per frame or tick, and work only for units being
+drawn.
