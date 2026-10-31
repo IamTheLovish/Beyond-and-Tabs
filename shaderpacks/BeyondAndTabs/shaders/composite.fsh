@@ -291,6 +291,8 @@ vec2 seamSource(vec2 uv) {
     return src;
 }
 
+float gContactProbe = 0.0;
+
 void main() {
     vec2 uv = texcoord;
     float depth = texture2D(depthtex0, uv).r;
@@ -311,7 +313,11 @@ void main() {
             occ = mix(occ, max(occ, AO_SHADOW_FLOOR), smoothstep(0.70, 0.85, skyShare));
             lin *= 1.0 - (skyShare + CONTACT_SUN_SHARE * (1.0 - skyShare)) * (1.0 - occ);
             // and the short contact term at full resolution, on all the light (light pass 9)
-            lin *= contactOcclusion(uv, texture2D(depthtex1, uv).r);
+            float crease = contactOcclusion(uv, texture2D(depthtex1, uv).r);
+            lin *= crease;
+#if CONTACT_PROBE == 1
+            gContactProbe = (1.0 - crease) / (1.0 - CONTACT_FLOOR);
+#endif
         }
     }
 #endif
@@ -354,6 +360,11 @@ void main() {
     gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
 #endif
     vec3 c = toDisplay(toneMap(lin));
+#if CONTACT_PROBE == 1
+    gl_FragData[0] = vec4(mix(vec3(dot(c, LUMA)), vec3(1.0, 0.0, 0.0), clamp(gContactProbe, 0.0, 1.0)), 1.0);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+#endif
 #if SEAM_PROBE == 1
     // light pass 20: what the seam fill drew - magenta from a top-facing neighbour, cyan from a side
     if (gSeamFilled > 0.5) {

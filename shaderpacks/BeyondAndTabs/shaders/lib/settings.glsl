@@ -161,18 +161,24 @@ const float AO_SHADOW_FLOOR = 0.93;
 const float VERTEX_AO_SHADOW_FLOOR = 0.95;
 // light pass 19: the biome-tinted ground's light under the low sun (lit.fsh, by lowSunFull: 1 at t11800, 0 at 5000).
 // lawn L1 measured t11800's lawn 0.334 (LP17 0.300, Complementary 0.275); (0.30 / 0.334)^2.2 = 0.79
-const float LOW_SUN_GRASS = 0.80;
+// light pass 21: 0.80 -> 0.70 (lp20's t11800 lawn 0.307-0.314, target ~0.29: (0.29 / 0.31)^2.2 = 0.86)
+const float LOW_SUN_GRASS = 0.70;
 const float CONTACT_SUN_SHARE = 0.0;
 // light pass 10: a softer crease (critic: "a little hard"): 0.12 -> 0.16 block, taps at three radii, gain 1.2 -> 1.0
 // light pass 14 (critic on pass 12: a 1-2 px hard band at the pillars' feet; target a 3-5 px gradient): 0.16 -> 0.26
 // block (~5 -> ~9 px at the default zoom's ~33 px a block) over four rings, the inner ones weighed more, so the crease
 // is darkest at the foot and fades over its width
-const float CONTACT_RADIUS = 0.26;            // ~9 px at the default RTS zoom
+// light pass 21: 0.26 -> 0.40 (~13 px), with CONTACT_GAIN 1.8 -> 2.5 and CONTACT_FLOOR 0.75 -> 0.80. A model of the
+// 12 taps against a wall rising from the ground (scratchpad lp19/crease.py) puts pass 20's crease at 0.75 / 0.82 / 0.89
+// / 0.97 / 1.00 at 0 / 2 / 3 / 5 / 7 px: all of it inside ~4 px, so a 3-9 px measurement (lp20 near-foot 0.71 = far)
+// cannot see it, and its gain changed nothing there (lp19 -> lp20). Taps that reach the wall must start further out.
+// Model now: 0.80 at 0-3 px, 0.87 at 5, 0.94 at 7, 0.98 at 9 - on the far shadow's 0.73 a seat of ~0.59-0.61 at the foot
+const float CONTACT_RADIUS = 0.40;            // ~13 px at the default RTS zoom
 // light pass 20: 1.0 -> 1.8 - with VERTEX_AO_SHADOW_FLOOR (pass 19) the pad's near-foot shadow (3-9 px) read 0.72, as
 // flat as the far shadow: the seating had been the vertex AO's. The crease now reaches its floor further out from the
 // foot and fades over the radius (~9 px): ~0.60 of lit at the foot, ~0.73 by 6-8 px
-const float CONTACT_GAIN = 1.8;
-const float CONTACT_FLOOR = 0.75;
+const float CONTACT_GAIN = 2.5;
+const float CONTACT_FLOOR = 0.80;
 // the display's S-curve (final.fsh, light pass 2), on luma as a ratio, after the grade. The lit lawn is its pivot and
 // stays where it is (lovish: the lawn mid-toned on the palette band, ~0.42; buildings own the lights). Below the
 // pivot a toe takes the darks down in proportion to how far below the lawn they sit - x (1 - SLOPE u - TOE u^2),
@@ -422,7 +428,9 @@ const float SIDE_SUN = 0.95;
 // lp19 measured the white cubes' south faces (N.L ~0.48) 0.79 / 0.77 / 0.74 against tops 0.95 (Complementary nearly as
 // bright as its tops: the cubes read as solid white, ours as grey slabs); lp16 at 1.20 gave 0.82-0.86, so ~0.29 of
 // luma per unit: 1.40 -> ~0.87-0.89. The east faces (N.L ~0.26, under SIDE_SUN_FULL_LO) keep 0.95
-const float SIDE_SUN_SQUARE = 1.40;
+// light pass 21: 1.40 -> 1.80 - lp20 measured the south faces 0.81-0.86 (median 0.82; lp19 0.77 at an effective 0.95):
+// ~0.12 of luma per unit this close to the shoulder, so +0.4 for the 0.87 target
+const float SIDE_SUN_SQUARE = 1.80;
 const float SIDE_SUN_FULL_LO = 0.30;
 const float SIDE_SUN_FULL_HI = 0.45;
 // the low sun's full share by the sine of its height: 1 at or below LOW_SUN_FULL_LO (t11800 is 0.232), 0 from
@@ -517,9 +525,16 @@ const float MEADOW_CELL = 17.3;
 // Light pass 9 (critic: 0.70 read as broad diagonal bands; target: irregular blobs >= 8 blocks at <= 0.03, the
 // lawn's sigma-12 blur within 0.04 over any 400 px): 0.20 (macro std ~0.02 on screen) and hue 0.08 / 0.11, the
 // lattice turned off the block axes (lib/meadow.glsl)
-const float MEADOW_VALUE = 0.20;
-const float MEADOW_HUE_RED = 0.08;
-const float MEADOW_HUE_BLUE = 0.11;
+// light pass 21: 0.20 -> 0.14. lp20's low-frequency lawn blotches and the warm near-cube halo are time-invariant
+// within a build (the 5000 and dawn stills' low-passed lawn correlate 0.94, runs 1 and 2 0.97) and change with the
+// world between builds (lp19 vs lp20 0.21; the tufts' own positions moved too): world-keyed, as this field is (or the
+// world's texture variants). The albedo-probe stills (alb1 / alb2) show sun shadows and shaded sides, which the probe
+// cannot draw: they were not probe output, so no verdict from them. By design this field adds ~0.02 of macro std; the
+// measured low-pass std is 0.029. A third less of it either way
+const float MEADOW_VALUE = 0.14;
+// light pass 21: value 0.20 -> 0.14, hue 0.08 / 0.11 -> 0.05 / 0.07 (see MEADOW_VALUE)
+const float MEADOW_HUE_RED = 0.05;
+const float MEADOW_HUE_BLUE = 0.07;
 // near-white faces turned from the up direction lose the light's colour (light pass 3: white wool and white blocks'
 // sides read cream, H 40, S 0.07, under the warm sun while their tops stayed neutral): the light on a face of albedo
 // luma past ~0.7 and saturation under ~0.12 is pulled toward its own grey by WHITE_WALL_NEUTRAL x (1 - up). The ground
@@ -550,6 +565,9 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 // loader hands it (the biome tint), 2 after the shader's own albedo work (meadow, plant caps); no AO, haze, glow or grade.
 // A near/far hue gap still in this image is the texture's or the world's, not the light's
 #define ALBEDO_PROBE 0 // [0 1 2]
+// CONTACT_PROBE 1 (light pass 21, composite.fsh): the contact crease's strength in red (1 - its factor, x 1 / (1 -
+// CONTACT_FLOOR), so the floor reads full red) over the frame's grey: no red at a cube's foot means it never ran
+#define CONTACT_PROBE 0 // [0 1]
 // light pass 17: and the LIGHT on such a side goes the same share to WHITE_SHADE_COOL at its own luma. lp16 kept b-r
 // +6..+9 on 4 of 5 white sides, +16 on one: the albedo neutral had nothing to take (gen_blocks paints quartz at sat
 // 0.03-0.04); the cast is the light's - the sky's part (the cool) scales with the vertex and material AO, the warm
@@ -563,7 +581,8 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 // glow estimate, the measured +9. Model with this cool: +16..+20 over glow 0.3-0.5
 // light pass 20: (0.90, 1.0025, 1.27) -> (0.88, 0.9976, 1.38): lp19 measured +12 median (lp18 +9 at blue 1.19): ~+3.7
 // on screen per 0.08 of blue, so +0.11 for ~+16
-const vec3 WHITE_SHADE_COOL = vec3(0.88, 0.9976, 1.38);
+// light pass 21: (0.88, 0.9976, 1.38) -> (0.89, 0.9998, 1.33): lp20 east faces b-r median +22, two at +26 / +33
+const vec3 WHITE_SHADE_COOL = vec3(0.89, 0.9998, 1.33);
 // and under a low sun every near-white face, tops too, by this much (light pass 7: t11800's whites read 235/221/213, a
 // 22 spread; target <= 12 while the lawn keeps the warm light)
 const float WHITE_LOW_NEUTRAL = 0.55;
