@@ -262,12 +262,30 @@ public class H13GameTests {
             return;
         }
         Mob shaman = found;
+        // where any XP came from (main 6436eb6f..181a840e: "experience 1250, not 800" every run): the XP at spawn and
+        // at each tick it changed, with every unit dying within the kill-XP range at that tick
+        StringBuilder trail = new StringBuilder("t0:" + fh.getExperience() + " at " + shaman.blockPosition().toShortString());
+        int[] lastXp = {fh.getExperience()};
+        helper.onEachTick(() -> {
+            if (fh.getExperience() == lastXp[0])
+                return;
+            lastXp[0] = fh.getExperience();
+            trail.append(" t").append(helper.getTick()).append(':').append(lastXp[0]).append(" [");
+            for (LivingEntity le : level.getEntitiesOfClass(LivingEntity.class, shaman.getBoundingBox().inflate(30)))
+                if (le != shaman && (le.isDeadOrDying() || !le.isAlive()))
+                    trail.append(net.minecraft.world.entity.EntityType.getKey(le.getType()).getPath())
+                        .append(" owner=").append(le instanceof Unit u ? u.getOwnerName() : "-")
+                        .append(" pop=").append(le instanceof Unit pu && pu.getCost() != null ? pu.getCost().population : -1)
+                        .append(" d=").append(String.format(java.util.Locale.ROOT, "%.1f", le.distanceTo(shaman))).append("; ");
+            trail.append(']');
+        });
         helper.runAfterDelay(5, () -> {   // past the first tick, when the level's stats are applied
             List<String> problems = new ArrayList<>();
             if (fh.getHeroLevel() != 3)
                 problems.add("level " + fh.getHeroLevel() + ", not 3");
             if (fh.getExperience() != HeroProgression.xpForLevel(3))
-                problems.add("experience " + fh.getExperience() + ", not " + HeroProgression.xpForLevel(3));
+                problems.add("experience " + fh.getExperience() + ", not " + HeroProgression.xpForLevel(3)
+                    + " (XP trail: " + trail + ")");
             if (fh.getSkillPoints() != 3)
                 problems.add(fh.getSkillPoints() + " ability points, not exactly 3");
             float wantHp = HeroKits.ASH_SHAMAN.health * HeroProgression.statMultiplier(3);
