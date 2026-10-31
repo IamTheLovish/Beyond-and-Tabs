@@ -811,6 +811,10 @@ public final class BarFxClient {
      * beam lives slightly longer than that so consecutive beams overlap into a steady, faintly flickering stream.
      */
     static void nano(int tint, int lifeTicks, float x, float y, float z, float x2, float y2, float z2, boolean busy) {
+        // a White Angel site draws its own construction work (ConstructionFx: tools, beams from the build front); the
+        // builders' fan of beams onto it is dropped (round 13 critic: 7-9 hard warm lines converging below the ground);
+        // the worker's hands (x, y, z) are kept instead, so the site's tools are held by the builders at work (round 14)
+        if (ConstructionFx.absorbsNano(x, y, z, x2, y2, z2)) return;
         int c = switch (tint) {
             case BarFx.N_GRAVEBOUND -> 0x5FE6F0;   // soul-cyan
             case BarFx.N_HORDE -> 0xFF8A2E;        // ember-orange
@@ -1110,6 +1114,12 @@ public final class BarFxClient {
         // barriers (DomeFx) are drawn first: the light below sits on top of them
         if (!DomeFx.isEmpty())
             DomeFx.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
+        // each faction's way of building (the White Angel cloud ring first) - a site can rise with no other effect alive
+        try {
+            ConstructionFx.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, dt);
+        } catch (RuntimeException e) {   // a construction effect must never stop the battle effects
+            ConstructionFx.threw(e);     // ... but it says so once (round 17 critic: prove the code runs)
+        }
         if (live.isEmpty() && decals.isEmpty()) return;
 
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
@@ -1177,6 +1187,22 @@ public final class BarFxClient {
 
     static VertexConsumer vc;
     static Matrix4f mat;
+
+    /** The construction effect's last once-a-second diagnostic (ConstructionFx; the eyes tour logs it with 06b / 06c). */
+    public static String constructionDiag() {
+        return ConstructionFx.lastDiag();
+    }
+
+    /** The block flashing on site {@code p} as {x, y, z} into {@code out}; false when none (the eyes tour stands a
+     *  builder beside it). */
+    public static boolean constructionNext(com.solegendary.reignofnether.building.BuildingPlacement p, int[] out) {
+        return ConstructionFx.nextOf(p, out);
+    }
+
+    /** How many of site {@code p}'s builders hold a tool now (ConstructionCrew; -1: the site is not drawn). */
+    public static int constructionTools(com.solegendary.reignofnether.building.BuildingPlacement p) {
+        return ConstructionFx.toolsOf(p, clock);
+    }
 
     static void begin(MultiBufferSource.BufferSource buffers, RenderType type, Matrix4f m) {
         vc = buffers.getBuffer(type);

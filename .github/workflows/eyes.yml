@@ -605,6 +605,18 @@ jobs:
             git commit -q -m "Eyes: screenshots for ${BUILD_SHA::7}"
             git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$EYES_BRANCH"
           fi
+      - name: The construction scene's lines as notices (06b / 06c; readable from the check run's annotations)
+        if: always()
+        run: |
+          # a step shows at most 10 notices and the publish step's 8 are the tour's first [Eyes] lines, so the construction
+          # scene's own (EyesDirector 06b/06c; ConstructionFx's once-a-second "[Eyes] construction fx") get a step of theirs
+          f=out/eyes-lines.txt
+          [ -f "$f" ] || exit 0
+          { grep -hE "\[Eyes\] 06b_construction: (NO BUILDER|the crew is (on|round)|[0-9]+ workers on this site, nearest [^;]*\()|\[Eyes\] 06[bc]_construction: builders at|\[Eyes\] 06[bc]_construction_[a-z]+ fx:" "$f" || true; } \
+            | head -7 | sed 's/^.*\[Eyes\]/[Eyes]/; s/^/::notice::/'
+          # the once-a-second lines just before the first still (the shot's own fx line is above)
+          { grep -hE "\[Eyes\] (construction fx:|06b_construction_rts fx:)" "$f" || true; } \
+            | { grep -B3 -m1 "06b_construction_rts fx:" || true; } | grep -v "_rts fx:" | sed 's/^.*\[Eyes\]/[Eyes]/; s/^/::notice::/' || true
       - name: Keep an overlays run's stills and full log as an artifact too
         if: always() && env.OVERLAYS == '1'
         uses: actions/upload-artifact@v4
