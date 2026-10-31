@@ -77,6 +77,10 @@ KNOWN = 0.90                    # the share of pixels whose block / face the cam
 ROOF_CLEAN = 0.90               # >= 90 % of the built roof-top pixels are roof / stone / moss (round 1: "roof clutter")
 DEBRIS = ("fence", "chain", "potted_", "hopper", "_button", "lantern", "candle", "_rod", "barrel", "bars", "_wall",
           "birch")
+GLOW_SEEN = 20                  # round 2: the heart-glow's sampled pixels (step 2) in rts_close and in 34
+CRESCENT_CELLS, CRESCENT_SEEN = 8, 40   # round 2: built cells with >= 2 air over them under a limb; their pixels
+TOP_ONE_TONE = 0.97             # round 2: the commonest leaf's share of the canopy's top pixels (rts)
+BAND_FLIPS = 2                  # round 2: a seen wood column flips tone at most once in 5 cells
 LIGHT_NAMES = S.LIGHTS + ("jack_o_lantern", "redstone_lamp", "campfire", "magma_block", "beacon")
 
 
@@ -365,6 +369,52 @@ class RootingHollow(unittest.TestCase):
             debris = [h for h in hits if any(k in h[1] for k in DEBRIS)]
             self.assertGreaterEqual(1 - len(debris) / max(1, len(hits)), ROOF_CLEAN,
                                     (st, Counter(h[1] for h in debris).most_common(5)))
+
+    # ------------------------------------------------------------------------------------------------ round 2
+    def test_r2_heart_glow_seen(self):
+        """Round 1's two critics (runs 20261030-214616 / -214621): "no heart glow is visible" - it faced the light
+        well, which no camera sees. The heart-glow is seen: >= 20 sampled pixels of light source in rts_close and in
+        34 (the one-glow test keeps it to one cluster)."""
+        for st in ("rts_close", "34"):
+            seen = sum(1 for h in self.hits[st].values() if is_light(h[1]))
+            self.assertGreaterEqual(seen, GLOW_SEEN, (st, seen))
+
+    def test_r2_sky_under_the_limb(self):
+        """Round 1's critics: "the tree does not wrap the hall", "no sky between limb and hall, no crescent of
+        negative space" (ref06's signature). >= 8 built cells have >= 2 cells of air over them and a limb (log /
+        wood) above that, and the cameras see them: >= 40 sampled pixels in rts_close and in 34."""
+        cres = set()
+        for (x, y, z), v in self.n.items():
+            if is_tree(v) or y < 1 or (x, y + 1, z) in self.n or (x, y + 2, z) in self.n:
+                continue
+            if any(self.n.get((x, yy, z), "").endswith(("_log", "_wood")) for yy in range(y + 3, self.size[1])):
+                cres.add((x, y, z))
+        self.assertGreaterEqual(len(cres), CRESCENT_CELLS, sorted(cres))
+        for st in ("rts_close", "34"):
+            seen = sum(1 for h in self.hits[st].values() if h[0] in cres)
+            self.assertGreaterEqual(seen, CRESCENT_SEEN, (st, seen))
+
+    def test_r2_canopy_top_one_tone(self):
+        """Round 1's critics: the dark spruce cells scattered in the cherry tops "read as spots", "a chequer" - the
+        canopy's top pixels (rts) are >= 97 % one leaf; the dark belly shows only under the tiers' rims."""
+        cnt = Counter(h[1] for h in self.canopy_top_hits("rts"))
+        self.assertGreaterEqual(cnt.most_common(1)[0][1] / sum(cnt.values()), TOP_ONE_TONE, cnt.most_common(3))
+
+    def test_r2_no_banded_roots(self):
+        """Round 1's critics: the root posts on the gallery "read as candy-striped poles" (pale bark with dark bands
+        every third cell). No seen wood column (log / wood cells the rts_close and 34 stills see on a west or south
+        face) changes block 2 or more times within 5 consecutive cells."""
+        bad = []
+        for st in ("rts_close", "34"):
+            cells = {h[0]: h[1] for h in self.hits[st].values() if h[2] in ("west", "south")
+                     and h[1].endswith(("_log", "_wood"))}
+            for (x, y, z) in cells:
+                run = [self.n.get((x, y + i, z)) for i in range(5)]
+                if not all(r and r.endswith(("_log", "_wood")) for r in run):
+                    continue
+                if sum(run[i] != run[i + 1] for i in range(4)) >= BAND_FLIPS:
+                    bad.append((st, (x, y, z)))
+        self.assertEqual(sorted(bad)[:10], [], len(bad))
 
 
 if __name__ == "__main__":
