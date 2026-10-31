@@ -22,7 +22,9 @@
   "eyes 41155033682 gravebound_b (build e7b4e94)",
   "eyes 41155033682 gravebound_c (build e7b4e94)",
   "eyes 41157506389 gravebound_l3 round 1 (build e7b4e94)",
-  "eyes 41157506389 gravebound_l1 round 1 (build e7b4e94)"
+  "eyes 41157506389 gravebound_l1 round 1 (build e7b4e94)",
+  "eyes 41159362651 gravebound_l3 round 2 (build e7b4e94)",
+  "eyes 41159362651 gravebound_l1 round 2 (build e7b4e94)"
  ],
  "blocks": {
   "andesite": {
@@ -479,6 +481,41 @@
     ]
    }
   },
+  "cobbled_deepslate": {
+   "south": {
+    "hue": 210.0,
+    "sat": 0.046,
+    "val": 0.208,
+    "n": 2382,
+    "rgb": [
+     0.1966,
+     0.202,
+     0.2051
+    ]
+   },
+   "west": {
+    "hue": 210.0,
+    "sat": 0.044,
+    "val": 0.153,
+    "n": 1145,
+    "rgb": [
+     0.1486,
+     0.1504,
+     0.154
+    ]
+   },
+   "up": {
+    "hue": 210.0,
+    "sat": 0.037,
+    "val": 0.243,
+    "n": 228,
+    "rgb": [
+     0.2367,
+     0.241,
+     0.2453
+    ]
+   }
+  },
   "cobbled_deepslate_slab": {
    "up": {
     "hue": 210.0,
@@ -535,6 +572,17 @@
      0.2223,
      0.2261,
      0.2284
+    ]
+   },
+   "south": {
+    "hue": 201.6,
+    "sat": 0.038,
+    "val": 0.212,
+    "n": 2039,
+    "rgb": [
+     0.2064,
+     0.2126,
+     0.2132
     ]
    }
   },
@@ -2192,6 +2240,30 @@
      0.4508,
      0.4522,
      0.4439
+    ]
+   }
+  },
+  "polished_blackstone": {
+   "up": {
+    "hue": 270.0,
+    "sat": 0.105,
+    "val": 0.208,
+    "n": 8160,
+    "rgb": [
+     0.1955,
+     0.1853,
+     0.2069
+    ]
+   },
+   "west": {
+    "hue": 270.0,
+    "sat": 0.1,
+    "val": 0.11,
+    "n": 1340,
+    "rgb": [
+     0.1046,
+     0.0989,
+     0.1089
     ]
    }
   },
