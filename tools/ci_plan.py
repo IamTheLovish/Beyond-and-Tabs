@@ -6,6 +6,15 @@
   code    "true" when anything outside the docs changed, so the GameTests must run; "false" when every changed file
           is documentation (below), and jobs bar / bar-tests are skipped - skipped counts as passing for
           tools/ci_wait.py, and a docs-only main push has nothing new to publish. The fast `build` checks always run.
+          "compile" on a pull request whose head commit's subject line carries [compile-only] (below): job bar builds the jar
+          and runs the JUnit suite, the GameTests (bar's shard 1, bar-tests) are skipped, and job compile-only fails on
+          purpose, so such a head can never look green to ci_wait, merge_pr or the Command Center merger.
+
+[compile-only] (Oct 30, runner budget): a tests-only head exists to prove the new tests compile and then fail in a
+flake-stress red run - the full suite on it costs ~70 runner-minutes of the 20 shared runners and proves nothing the red
+does not. The tag is read from the head commit's subject line only, so the next push (the fix, a main merge) gets the
+full suite again, and prose that mentions the tag in a body does not trigger it. Pull requests only (a squash message on
+main may quote the tag); a failed or hung lookup means the full suite.
 
 What was changed is read from the compare API (no history needed):
   pull_request       the PR's changes since its merge base (base.sha...head.sha);
@@ -55,6 +64,33 @@ def last_good_main_sha(repo):
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
+COMPILE_ONLY_TAG = "[compile-only]"
+
+
+def compile_only(event, message):
+    """True when this run builds and unit-tests only: a pull request whose head commit's subject line has the tag."""
+    return event == "pull_request" and COMPILE_ONLY_TAG in (message or "").split(chr(10), 1)[0]
+
+
+def plan_code(code, event, message):
+    """The `code` output: "compile" (tagged PR head with code changes), "true" or "false" (docs only stays false)."""
+    if code and compile_only(event, message):
+        return "compile"
+    return "true" if code else "false"
+
+
+def head_message(repo, sha):
+    """The commit message of sha, or "" when it cannot be read in 60 s (then the full suite runs)."""
+    if not repo or not sha:
+        return ""
+    try:
+        r = subprocess.run(["gh", "api", f"repos/{repo}/commits/{sha}", "--jq", ".commit.message"], capture_output=True,
+                           text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return r.stdout if r.returncode == 0 else ""
+
+
 def decide(env):
     """(code?, reason)"""
     repo, event = env.get("GITHUB_REPOSITORY", ""), env.get("GITHUB_EVENT_NAME", "")
@@ -81,13 +117,20 @@ def decide(env):
 def main():
     shards = sorted(int(m.group(1)) for k in os.environ if (m := re.fullmatch(r"SHARD_(\d+)", k)) and os.environ[k].strip())
     code, why = decide(os.environ)
-    print(f"[ci_plan] code={code}: {why}; shards 2..{shards[-1] if shards else '?'} = {shards}")
-    out = {"code": "true" if code else "false", "matrix": json.dumps(shards), "shards": str(len(shards) + 1)}
+    event = os.environ.get("GITHUB_EVENT_NAME", "")
+    msg = head_message(os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("PR_HEAD", "")) if code and event == "pull_request" else ""
+    planned = plan_code(code, event, msg)
+    slim = planned == "compile"
+    print(f"[ci_plan] code={code}{' (compile only)' if slim else ''}: {why}; shards 2..{shards[-1] if shards else '?'} = {shards}")
+    out = {"code": planned, "matrix": json.dumps(shards), "shards": str(len(shards) + 1)}
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a") as f:
             for k, v in out.items():
                 f.write(f"{k}={v}\n")
-    print("::notice::[Changes] " + ("tests run - " + why if code else "docs only, the GameTests are skipped - " + why))
+    if slim:
+        print(f"::notice::[Changes] {COMPILE_ONLY_TAG} head: the jar and JUnit only, no GameTests, not mergeable - {why}")
+    else:
+        print("::notice::[Changes] " + ("tests run - " + why if code else "docs only, the GameTests are skipped - " + why))
     return 0
 
 
