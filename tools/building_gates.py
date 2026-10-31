@@ -357,6 +357,216 @@ def camera(b, view):
     return best
 
 
+# ---- the eyes stills (EyesDirector scene 15, bar/.../matchstart/EyesDirector.java sceneStructures) --------------
+# r10 (the r9 critic, realism 5 / detail 6: every gate green, every picture failed - "more parts, not more building"):
+# the gates measured the generator's cells, not the picture. STILLS rebuilds the four structure stills so a test can
+# ask what each one shows: the structure stamped with its origin at the pad (structure y 0 on the pad's top), the RTS
+# camera orthographic (OrthoviewClientEvents.getOrthographicProjection: the view `zoom` blocks tall at the 1600 x 900
+# aspect), its yaw CAMROTX_DEFAULT 135 (looking +x -z, from the south-west), its pitch the zoom's tilt (basePitchDeg:
+# 55 deg at zoom 10 to 75 at 135, linear in log zoom), centred on the footprint's middle at 0.3 of the height
+# (centreCameraOnPosInstant(structureMiddle(0.3))); rts at zoom 30, rts_close at min(26, max(12, 1.25 (big + 0.6 h)));
+# 34 and dusk (the same view at day time 13000) first-person from the south-west, 30 deg up, 1.5 x the largest size
+# (>= 12) from the middle at 0.4 of the height, the client's 70 deg vertical field of view x 1.1 in
+# creative flight, 77 (standThreeQuarter).
+STILLS = ("rts", "rts_close", "34", "dusk")
+SCREEN = (1600, 900)
+# the 3/4 still's vertical field of view: the client's 70 times the creative-flight FOV modifier (1.1) - r12 (Oct 30): at
+# 70 the model drew the building ~1.2x too big on run 03:35Z's r11 34 / dusk stills (the copper mask landed up-left of
+# the roof, the glass mask above the windows); 77 puts the outline and the windows on the pixels
+# (tools/engine_shed_measure.py's overlays, five landmarks and the dusk window fit agree)
+FOV = 77.0
+FACE_NAMES = {(0, -1): "west", (0, 1): "east", (1, -1): "down", (1, 1): "up", (2, -1): "north", (2, 1): "south"}
+
+
+def rts_pitch(zoom):
+    """OrthoviewClientEvents.basePitchDeg with the default config (camera_pitch_close_v2 55, far_v2 75, ZOOM_MIN 10,
+    ZOOM_TILT_FAR 135)."""
+    import math
+    t = (math.log(max(zoom, 10)) - math.log(10)) / (math.log(135) - math.log(10))
+    return 55 + 20 * min(max(t, 0.0), 1.0)
+
+
+def still_camera(size, still):
+    """(kind, eye or centre, forward, right, up, half-width, half-height) of one still for a structure of `size`
+    (x, y, z) - in structure blocks, y 0 the structure's bottom layer."""
+    import numpy as np
+    sx, sy, sz = size
+    big = max(sx, sz)
+    if still in ("rts", "rts_close"):
+        zoom = 30.0 if still == "rts" else min(26.0, max(12.0, 1.25 * (big + 0.6 * sy)))
+        p = np.radians(rts_pitch(zoom))
+        f = np.array([np.cos(p) / np.sqrt(2), -np.sin(p), -np.cos(p) / np.sqrt(2)])
+        c = np.array([sx / 2.0, 0.3 * sy, sz / 2.0])
+        half_h = zoom / 2
+        kind = "ortho"
+    else:
+        d = max(12.0, 1.5 * max(sx, sy, sz))
+        aim = np.array([sx / 2.0, 0.4 * sy, sz / 2.0])
+        h, up = d * np.cos(np.radians(30)), d * np.sin(np.radians(30))
+        c = np.array([aim[0] - h / np.sqrt(2), max(aim[1] + up, 2.5), aim[2] + h / np.sqrt(2)])
+        f = (aim - c) / np.linalg.norm(aim - c)
+        half_h = np.tan(np.radians(FOV / 2))
+        kind = "persp"
+    r = np.cross(f, [0.0, 1.0, 0.0])
+    r /= np.linalg.norm(r)
+    u = np.cross(r, f)
+    return kind, c, f, r, u, half_h * SCREEN[0] / SCREEN[1], half_h
+
+
+def box(name, props, open_x=True):
+    """The block's shape as one box in its cell, (lo, hi) in sixteenths: full cubes and stairs whole; a bottom / top
+    slab its half; a lantern, candle, chain, button, rail, carpet or campfire its small box; a wall, fence or post its
+    8-wide stem; a glass pane or iron bars a 2-thick plane facing its open side (along x when open_x); a glass block
+    a clear cube."""
+    n = name
+    if n.endswith("_slab"):
+        t = props.get("type", "bottom")
+        return ((0, 0, 0), (16, 8, 16)) if t == "bottom" else ((0, 8, 0), (16, 16, 16)) if t == "top" else \
+            ((0, 0, 0), (16, 16, 16))
+    if "lantern" in n:
+        return ((5, 0, 5), (11, 9, 11)) if props.get("hanging") != "true" else ((5, 7, 5), (11, 16, 11))
+    if n.endswith("candle"):
+        return (6, 0, 6), (10, 6, 10)
+    if n == "chain":
+        return (6, 0, 6), (10, 16, 10)
+    if n.endswith(("_button",)):
+        return (5, 0, 5), (11, 2, 11)
+    if n.endswith("rail") or n.endswith("_carpet"):
+        return (0, 0, 0), (16, 1, 16)
+    if "campfire" in n:
+        return (0, 0, 0), (16, 7, 16)
+    if n.endswith(("_wall", "_fence")) or n == "lightning_rod" or n.endswith("_rod"):
+        return (4, 0, 4), (12, 16, 12)
+    if S.glyph(n) == "g" and not n.endswith("_pane"):
+        return (0, 0, 0), (16, 16, 16)          # a glass block: a clear cube
+    if S.glyph(n) == "g" or n == "iron_bars":
+        return ((7, 0, 0), (9, 16, 16)) if open_x else ((0, 0, 7), (16, 16, 9))
+    return (0, 0, 0), (16, 16, 16)
+
+
+def _march(grid, see_through, o, d, lo, hi):
+    """A voxel DDA per ray (o, d: n x 3) through grid (block ids, 0 air), each cell's block the box lo..hi (per cell,
+    in blocks): (id, cell, entry axis, entry sign) of the first box the ray passes through, id 0 where it leaves the
+    grid. Ids flagged see_through are passed through."""
+    import numpy as np
+    size = np.array(grid.shape)
+    n = len(o)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        inv = 1.0 / d
+        t0, t1 = (0 - o) * inv, (size - o) * inv
+        tlo = np.where(np.isnan(np.minimum(t0, t1)), -np.inf, np.minimum(t0, t1))
+        thi = np.where(np.isnan(np.maximum(t0, t1)), np.inf, np.maximum(t0, t1))
+    tn = np.maximum(tlo.max(axis=1), 0)
+    alive = thi.min(axis=1) > tn
+    vox = np.clip(np.floor(o + d * (tn[:, None] + 1e-7)).astype(int), 0, size - 1)
+    stp = np.where(d > 0, 1, -1)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        tmax = np.where(d != 0, (vox + (stp > 0) - o) / d, np.inf)
+        tdel = np.where(d != 0, np.abs(1.0 / d), np.inf)
+    hit = np.zeros(n, dtype=np.int32)
+    axis = np.zeros(n, dtype=int)
+    sign = np.zeros(n, dtype=int)
+    for _ in range(int(size.sum()) + 4):
+        idx = np.nonzero(alive)[0]
+        if not len(idx):
+            break
+        v = vox[idx]
+        bid = grid[v[:, 0], v[:, 1], v[:, 2]]
+        cand = np.nonzero((bid > 0) & ~see_through[bid])[0]
+        stop = np.zeros(len(idx), dtype=bool)
+        if len(cand):
+            rows = idx[cand]
+            vc = v[cand]
+            b0 = vc + lo[vc[:, 0], vc[:, 1], vc[:, 2]]
+            b1 = vc + hi[vc[:, 0], vc[:, 1], vc[:, 2]]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                ta, tb = (b0 - o[rows]) / d[rows], (b1 - o[rows]) / d[rows]
+                ta = np.where(np.isnan(ta), -np.inf, ta)
+                tb = np.where(np.isnan(tb), np.inf, tb)
+            near, far = np.minimum(ta, tb), np.maximum(ta, tb)
+            enter, leave = near.max(axis=1), far.min(axis=1)
+            ok = (enter <= leave) & (leave >= 0)
+            stop[cand[ok]] = True
+            ax = np.argmax(near, axis=1)
+            axis[rows[ok]] = ax[ok]
+            sign[rows[ok]] = -stp[rows[ok], ax[ok]]
+        hit[idx[stop]] = bid[stop]
+        alive[idx[stop]] = False
+        idx = idx[~stop]
+        ax = np.argmin(tmax[idx], axis=1)
+        vox[idx, ax] += stp[idx, ax]
+        tmax[idx, ax] += tdel[idx, ax]
+        gone = ((vox[idx] < 0) | (vox[idx] >= size)).any(axis=1)
+        alive[idx[gone]] = False
+    return hit, vox, axis, sign
+
+
+def shoot(b, still, step=4):
+    """Every `step`-th pixel of a still, cast into `b` (a voxel DDA, each block its box(): slabs half, lanterns,
+    posts, chains and rails small, panes and bars thin planes): {(px, py): hit} with hit = (cell, name, face, behind),
+    face the side of the block's box the ray entered by (FACE_NAMES), behind (cell, name) of the first non-glass
+    block past a glass hit, else None - glass is seen AND seen through. Pixels that miss the structure are left out."""
+    import numpy as np
+    cells = {q: v for q, v in b.blocks.items() if v[0] not in S.AIR}
+    if not cells:
+        return {}
+    size = tuple(max(q[i] for q in cells) + 1 for i in range(3))
+    ids, names = {}, [None]
+    grid = np.zeros(size, dtype=np.int32)
+    lo = np.zeros(size + (3,))
+    hi = np.ones(size + (3,))
+    for q, (n, pr) in cells.items():
+        if n not in ids:
+            ids[n] = len(names)
+            names.append(n)
+        grid[q] = ids[n]
+        runs_x = pr.get("east") == "true" or pr.get("west") == "true"       # a pane's plane runs the way it
+        runs_z = pr.get("north") == "true" or pr.get("south") == "true"     # connects; else it faces its open side
+        if runs_x != runs_z:
+            open_x = runs_z
+        else:
+            open_x = any(not (0 <= q[0] + e < size[0]) or (q[0] + e, q[1], q[2]) not in cells for e in (-1, 1))
+        a, c = box(n, pr, open_x)
+        lo[q], hi[q] = np.array(a) / 16, np.array(c) / 16
+    glass = np.array([False] + [S.glyph(n) == "g" for n in names[1:]])
+    kind, c, f, r, u, hw, hh = still_camera(size, still)
+    W, H = SCREEN
+    px, py = np.meshgrid(np.arange(0, W, step), np.arange(0, H, step))
+    px, py = px.ravel(), py.ravel()
+    a = ((px + 0.5) / W * 2 - 1)[:, None]
+    v = (1 - (py + 0.5) / H * 2)[:, None]
+    if kind == "ortho":
+        o = c + a * hw * r + v * hh * u - 200 * f
+        d = np.tile(f, (len(px), 1))
+    else:
+        d = f + a * hw * r + v * hh * u
+        d /= np.linalg.norm(d, axis=1)[:, None]
+        o = np.tile(c, (len(px), 1))
+    hit, vox, axis, sign = _march(grid, np.zeros(len(names), dtype=bool), o, d, lo, hi)
+    got = np.nonzero(hit)[0]
+    gl = got[glass[hit[got]]]
+    behind = {}
+    if len(gl):
+        h2, v2, _, _ = _march(grid, glass, o[gl], d[gl], lo, hi)
+        for i, h, w in zip(gl, h2, v2):
+            if h:
+                behind[i] = (tuple(int(x) for x in w), names[h])
+    out = {}
+    for i in got:
+        q = tuple(int(x) for x in vox[i])
+        out[(int(px[i]), int(py[i]))] = (q, names[hit[i]], FACE_NAMES[(int(axis[i]), int(sign[i]))], behind.get(i))
+    return out
+
+
+def seen(b, stills=STILLS, step=4):
+    """{still: {cell: pixels}} - how many sampled pixels of each still show each cell."""
+    out = {}
+    for st in stills:
+        cnt = Counter(h[0] for h in shoot(b, st, step).values())
+        out[st] = dict(cnt)
+    return out
+
+
 def tone(name):
     """A block's luminance class from its id: pale, dark, glass, light or mid."""
     if S.glyph(name) == "g":
