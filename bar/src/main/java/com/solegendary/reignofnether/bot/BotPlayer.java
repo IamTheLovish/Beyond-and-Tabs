@@ -302,7 +302,7 @@ public class BotPlayer {
      */
     public static boolean t2ArmyOut(long minutes, List<? extends LivingEntity> army, int t2Minute, int minArmy) {
         int need = minutes >= t2Minute + BotTuning.T2_PATIENCE_MINUTES ? minArmy / 2 : minArmy;
-        return army.size() >= need;
+        return t2Fighters(army) >= need;
     }
 
     /**
@@ -330,7 +330,7 @@ public class BotPlayer {
      */
     public static boolean wantsT2Save(boolean t2LabMissing, boolean tier2, boolean researchStarved, boolean floating,
                                       List<? extends LivingEntity> army, int minArmy) {
-        return t2LabMissing && (tier2 || researchStarved) && !floating && army.size() >= minArmy;
+        return t2LabMissing && (tier2 || researchStarved) && !floating && t2Fighters(army) >= minArmy;
     }
 
     /**
