@@ -100,6 +100,9 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_SEEN_TIPS;
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_WORLD;
 
+    // [Spike] lines in latest.log for every frame of 50 ms or more (perf/FrameSpikes, design/perf-measurement.md)
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_FRAME_SPIKES;
+
     static {
         BUILDER.push("Configuration File");
         BUILDER.pop();
@@ -245,6 +248,8 @@ public class ReignOfNetherClientConfigs {
         GROUND_SCARS = BUILDER.define("ground_scars", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
+        BUILDER.comment("Log a [Spike] line (at most one a second) for every frame of 50 ms or more: which of our handlers ran long, units, zoom, and whether a GC pause shared the second. Costs nothing on a normal frame. On by default in the test pack so a playtester's latest.log says why the game felt choppy (tools/lag_report.py reads it)");
+        LOG_FRAME_SPIKES = BUILDER.define("log_frame_spikes", true);
         BUILDER.comment("Living army (design/living_army.md): units breathe, shift their weight, fidget, lean into turns, rock on starts and stops and flinch from where a blow came from - realistic up close, a little larger from the RTS camera. false = the old motion. Client only.");
         LIVING_ARMY = BUILDER.define("living_army", true);
         BUILDER.comment("Living army: how strong each behaviour plays, in percent (100 = as designed, 0 = off, 200 = double)");

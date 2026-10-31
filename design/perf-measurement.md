@@ -16,8 +16,30 @@ eyes tour log and the CI game-test log; nothing here changes what the game does.
 | `[FrameAuto]` | client | p95 frame >= 25 ms with 100+ units, at most every 5 min | a 10 s client metrics-recorder run (F3+L's); the heaviest sections read back out of its zip |
 | `[GC]` | both | every stop-the-world pause >= 50 ms; a summary when 10 s held >= 100 ms of GC | a hitch is a GC stall when a `[GC]` line shares its second |
 | `[Anim]` | client | every 10 s | animation and unit render cost per unit (unchanged) |
+| `[Spike]` | client | every frame of 50 ms or more, at most 1 line/s | see below |
+| `[Gfx]` | client | once per world join | see below |
+
+See also `design/diagnostics.md`: `[Screen]`, the Xmx / shader lines in `[Gfx]`, `/rts-report` and `tools/diagnose_log.py`.
 
 `/rts-perf <seconds>` (op) still records every tick to `logs/perf-*.json`, and forces `[Sys]` on for its length.
+
+## `[Spike]`, `[Gfx]` and `tools/lag_report.py` (Oct 22: "why is it choppy?")
+
+`[Frame]` only gives p50 / p95 / max per 10 s, so a hitch had no cause on record. Now:
+
+- `[Spike] 183 ms frame; 412 units known, zoom 60, RTS view; our handlers: unitShadow 12.1 ms, hud 3.2 ms; GC pause 140 ms in the same second; 3 more spikes skipped since the last line`.
+  One line for every frame of 50 ms or more, at most one a second (the skipped ones are counted into the next line). "our
+  handlers" are the three biggest `[FrameParts]` sections of that frame, only those over 0.5 ms; none listed means the time
+  went elsewhere (terrain, chunk meshing, GPU wait, vanilla). The GC part comes from `GcLog`'s last pause. A normal frame
+  costs one clock read and a compare; no allocation. Client config `log_frame_spikes` (default true; the test pack keeps it on).
+  Code: `perf/FrameSpikes` (the threshold and rate limit are `FrameSpikes.Limiter`, tested in `FrameSpikeGameTests`).
+- `[Gfx] renderer "...", vendor "...", window WxH, render distance N; shader pack ACTIVE | none selected (Oculus/Iris installed) | none`.
+  Once when the player joins a world (`perf/GfxLog`). `(looks like an integrated GPU)` is added for Intel, Radeon(TM) 6/7/8xx
+  and the like (`GfxLog.looksIntegrated`; `tools/lag_report.py` keeps the same list).
+- `python3 tools/lag_report.py <latest.log>` prints: GPU (flagged if integrated), fps median and trend, spikes per minute and
+  how many shared a second with a GC pause, the top `[FrameParts]` handlers, server `[Tick]` p95 and the top `[Sys]` systems,
+  GC totals, and one VERDICT line: GC / server-bound / render-bound / chunk loading / nothing found. The thresholds are named
+  constants at the top of the script. Self-check: `python3 tools/test_lag_report.py` (sample log `tools/lag_report_sample.log`).
 
 ## Reading `[Sys]`
 
