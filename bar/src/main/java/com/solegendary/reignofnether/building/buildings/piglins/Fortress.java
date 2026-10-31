@@ -20,7 +20,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.block.Blocks;
 
@@ -89,7 +89,7 @@ public class Fortress extends ProductionBuilding implements GarrisonableBuilding
     }
 
     @Override
-    public BlockPos getIndoorSpawnPoint(ServerLevel level, BuildingPlacement placement) {
+    public BlockPos getIndoorSpawnPoint(Level level, BuildingPlacement placement) {
         return getExitPosition(placement);
     }
 

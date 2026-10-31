@@ -235,7 +235,7 @@ public class ProductionPlacement extends BuildingPlacement {
         return !this.productionQueue.isEmpty();
     }
     // start with the centre pos then go down and look at adjacent blocks until we reach a non-solid block
-    public BlockPos getIndoorSpawnPoint(ServerLevel level) {
+    public BlockPos getIndoorSpawnPoint(Level level) {
         ProductionBuilding building = (ProductionBuilding) getBuilding();
         return building.getIndoorSpawnPoint(level, this);
     }
@@ -251,6 +251,14 @@ public class ProductionPlacement extends BuildingPlacement {
     }
 
     public Entity produceUnit(ServerLevel level, EntityType<? extends Unit> entityType, String ownerName, boolean spawnIndoors, Vec3i spawnOffset) {
+        ExitProbe probe = EXIT_PROBE.get();
+        if (probe != null) {   // exitSpec's dry run: note how this item spawns, place nothing
+            probe.found = true;
+            probe.indoors = spawnIndoors;
+            probe.offset = spawnOffset;
+            probe.type = entityType;
+            return null;
+        }
         ProductionBuilding building = (ProductionBuilding) getBuilding();
         BlockPos spawnPoint;
         if (spawnIndoors) {
@@ -264,21 +272,10 @@ public class ProductionPlacement extends BuildingPlacement {
             spawnPoint = getDefaultOutdoorSpawnPoint();
 
         spawnPoint = spawnPoint.offset(spawnOffset);
-        BlockPos safe = safeSpawnPoint(level, spawnPoint, entityType);
-        if (safe == null) {
-            // a wide body (the War Mammoth is 3.3 across) that fits nowhere near the corner or the rally side: the
-            // middle of each side of the footprint, nearest to where it was wanted first
-            for (BlockPos side : sideSpawnPoints(entityType, spawnPoint)) {
-                safe = safeSpawnPoint(level, side, entityType);
-                if (safe != null)
-                    break;
-            }
-        }
+        BlockPos safe = fittingSpawnCell(level, spawnPoint, entityType);
         boolean roof = safe == null;
         if (roof) {
-            // nothing within reach fits it at all: put it on top of the building, where it is at least alive and
-            // visible, flagged for UnitUnstick to bring down to the nearest fitting ground cell at its first check
-            safe = new BlockPos(centrePos.getX(), maxCorner.getY() + 1, centrePos.getZ());
+            safe = roofSpawnCell();
             com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("No spawn cell fits a {} within 10 blocks of {} at {}; spawning it on the roof",
                     EntityType.getKey(entityType), getBuilding().name, originPos.toShortString());
         }
@@ -318,6 +315,33 @@ public class ProductionPlacement extends BuildingPlacement {
     }
 
     /**
+     * The cell produceUnit puts a body of this type in for a wanted spawn point (the exit arrow asks the same): the
+     * spawn safety net's cell; for a wide body (the War Mammoth is 3.3 across) that fits nowhere near the corner or the
+     * rally side, the middle of each side of the footprint, nearest to where it was wanted first. Null when nothing
+     * within reach fits it at all (produceUnit then uses {@link #roofSpawnCell()}).
+     */
+    @Nullable
+    public BlockPos fittingSpawnCell(ServerLevel level, BlockPos spawnPoint, EntityType<?> entityType) {
+        BlockPos safe = safeSpawnPoint(level, spawnPoint, entityType);
+        if (safe == null) {
+            for (BlockPos side : sideSpawnPoints(entityType, spawnPoint)) {
+                safe = safeSpawnPoint(level, side, entityType);
+                if (safe != null)
+                    break;
+            }
+        }
+        return safe;
+    }
+
+    /**
+     * Last resort: on top of the building, where a unit is at least alive and visible, flagged for UnitUnstick to bring
+     * down to the nearest fitting ground cell at its first check.
+     */
+    public BlockPos roofSpawnCell() {
+        return new BlockPos(centrePos.getX(), maxCorner.getY() + 1, centrePos.getZ());
+    }
+
+    /**
      * Fallback spawn cells for a wide body: the middle of each of the footprint's four sides, far enough out that the
      * body clears the wall, at the building's standing level, nearest to {@code wanted} first. The corner the default
      * spawn point names is the worst cell for a wide body (both walls of the corner are inside it).
@@ -332,6 +356,86 @@ public class ProductionPlacement extends BuildingPlacement {
         sides.add(new BlockPos(centrePos.getX(), y, maxCorner.getZ() + out));
         sides.sort(java.util.Comparator.comparingDouble(p -> p.distSqr(wanted)));
         return sides;
+    }
+
+    // ------------------------------------------------------------------ the exit arrow
+    // Tester request (2026-10-26): "all structures should have an arrow that shows where the units they produce comes
+    // out of". The arrow's spot is computed by the same calls produceUnit makes (getIndoorSpawnPoint or
+    // getDefaultOutdoorSpawnPoint, the item's spawn offset, safeSpawnPoint for its body), for the building's primary
+    // item - its first unit item - with no rally set (the rally moves outdoor spawns; the arrow marks the exit).
+
+    /** How a building's primary unit item spawns: indoors or at the outdoor spawn point, offset, which body. */
+    public record ExitSpec(boolean indoors, Vec3i offset, EntityType<? extends Unit> type, ProductionItem item) { }
+
+    private static final class ExitProbe {
+        boolean found;
+        boolean indoors;
+        Vec3i offset;
+        EntityType<? extends Unit> type;
+    }
+
+    private static final ThreadLocal<ExitProbe> EXIT_PROBE = new ThreadLocal<>();
+    /** Per building type (the spec depends only on its production items); empty = it produces no units. */
+    private static final java.util.Map<Building, java.util.Optional<ExitSpec>> EXIT_SPECS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The spawn rule of this building's primary unit item, found by a dry run of the item's real onComplete: produceUnit
+     * records its arguments and returns at once (nothing is spawned, paid or counted). Null if the building produces no
+     * units through produceUnit (research-only labs, hero-only items, custom buildings).
+     */
+    @Nullable
+    public ExitSpec exitSpec(ServerLevel serverLevel) {
+        if (!(getBuilding() instanceof ProductionBuilding pb))
+            return null;
+        java.util.Optional<ExitSpec> cached = EXIT_SPECS.get(pb);
+        if (cached != null)
+            return cached.orElse(null);
+        ExitSpec spec = null;
+        ExitProbe probe = new ExitProbe();
+        EXIT_PROBE.set(probe);
+        try {
+            for (ProductionItem item : pb.productions.get()) {
+                if (!(item instanceof IUnitProductionItem) || item.onComplete == null)
+                    continue;
+                probe.found = false;
+                item.onComplete.accept(serverLevel, this);
+                if (probe.found) {
+                    spec = new ExitSpec(probe.indoors, probe.offset, probe.type, item);
+                    break;
+                }
+            }
+        } finally {
+            EXIT_PROBE.remove();
+        }
+        EXIT_SPECS.put(pb, java.util.Optional.ofNullable(spec));
+        return spec;
+    }
+
+    /**
+     * The nominal exit cell for a spawn rule: the building's own rotation-aware spawn point plus the item's offset,
+     * before the safety net. Needs only a Level, so a client works out a ghost's cell from the spec the server sent.
+     */
+    public BlockPos exitNominalPos(Level level, boolean indoors, Vec3i offset) {
+        return (indoors ? getIndoorSpawnPoint(level) : getDefaultOutdoorSpawnPoint()).offset(offset);
+    }
+
+    /**
+     * Where produceUnit would put this building's primary unit with no rally set: the nominal cell and, when
+     * {@code safe}, the spawn safety net's cell for the item's body against the world as it is now - produceUnit's own
+     * fittingSpawnCell, then the roof - for a placed building (a ghost's blocks are not in the world yet).
+     */
+    public BlockPos exitArrowPos(ServerLevel serverLevel, ExitSpec spec, boolean safe) {
+        BlockPos p = exitNominalPos(serverLevel, spec.indoors(), spec.offset());
+        if (!safe)
+            return p;
+        BlockPos cell = fittingSpawnCell(serverLevel, p, spec.type());
+        return cell != null ? cell : roofSpawnCell();
+    }
+
+    /** The safe exit cell, only for {@code senderName}'s own building (a network request is untrusted); else null. */
+    @Nullable
+    public BlockPos exitArrowCellFor(ServerLevel serverLevel, String senderName, ExitSpec spec) {
+        return senderName != null && senderName.equals(ownerName) ? exitArrowPos(serverLevel, spec, true) : null;
     }
 
     // ------------------------------------------------------------------ the spawn safety net
