@@ -55,7 +55,8 @@ SPAWN = (8, 8)
 LEAD = (5, 10)                  # the tree's top over every built mass: clear, not a pole on a box
 GATE_W, GATE_H = 5, 8
 GATE_SEEN = 200                 # 34-still pixels (step 2) landing >= 3 deep inside the gate: the dark mouth is seen
-CANOPY_VAL = (0.42, 0.60)       # the canopy's top (leaf column tops seen from above): lit, above the lawn's 0.26
+CANOPY_VAL = (0.60, 0.82)       # the canopy's top (leaf column tops seen from above): lit, well above the lawn's 0.26,
+#                                 under near-white. RE-SET Oct 31 (was 0.42-0.60): see test_canopy_separates_from_the_lawn
 CANOPY_LAWN_HUE = (41, 161)     # the lawn's hue 101 +/- 60: the canopy's mean hue lies outside it
 CANOPY_SAT = (0.20, 0.45)       # muted (team colour is the loud thing), not grey
 CANOPY_SHARE = (0.30, 0.50)     # of the building's pixels in the rts still
@@ -221,8 +222,20 @@ class RootingHollow(unittest.TestCase):
 
     def test_canopy_separates_from_the_lawn(self):
         """The brief: a green canopy over mossy stone vanishes into the green terrain. The canopy's top (leaf columns
-        seen from above, rts and rts_close) averages value 0.42-0.60, saturation 0.20-0.45, and its mean hue lies
-        outside the lawn's 41-161 (grass top: hue 101, value 0.26)."""
+        seen from above, rts and rts_close) averages value 0.60-0.82, saturation 0.20-0.45, and its mean hue lies
+        outside the lawn's 41-161 (grass top: hue 101, value 0.26). Two-sided on every axis: lime (azalea, hue 91,
+        sat 0.62) fails on hue and saturation, a near-white overshoot fails on value (and the snow screen), grey fails
+        the saturation floor; the saturation cap 0.45 keeps the highest chroma for team colours (Art method).
+
+        THRESHOLD RE-SET (Oct 31, before detail round 1 relies on it; API Commander's overnight decision under
+        lovish's "decide the best option"): the first value band, 0.42-0.60, was the designer's estimate written
+        before cherry leaves were measured (run 20261030-204240-verdant-design: "cherry unmeasured, sample first").
+        Measured in eyes 41152348776: cherry leaves, the only vanilla leaf off the lawn's hue, read value 0.85 on
+        their top (mean RGB 0.80, sat 0.26, hue 336); darkening them with spruce leaves (0.26) greys the mix under
+        sat 0.20 (60/40: 0.15); darkening them with azalea makes it lime-loud (azalea sat 0.62). No vanilla leaf mix
+        meets 0.42-0.60 with the saturation floor, so the band is set from the measurement: 0.60-0.82 (cherry tops
+        with a few dark gaps), both edges kept. The fixed rubric's 9 for separation is "the tree is the brightest,
+        clearest shape in the frame"."""
         for st in ("rts", "rts_close"):
             hits = self.canopy_top_hits(st)
             self.assertGreater(len(hits), 200, st)
