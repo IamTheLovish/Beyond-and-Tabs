@@ -73,3 +73,14 @@ camera only by value, and both ends overshoot (granite 0.55 "salmon", slate 0.18
 "in the ground mids") - its place on the gate-rose axis and its footprint are massing, not material; re-measuring a
 camera-table entry another lab's tests rely on moves their numbers (copper blotch 0.050 -> 0.052): measure with
 camera_colour.py --add-only.
+
+## Ember Pens r1 (Ashborn T1 vehicle lab, the r12 method; PR #462) - ref29, 17 x 17 x 26, one fixed rubric
+Designer pass: itachi2-api/runs/20261031-001548-ashborn-design (ref29 primary; ref25 gate crest; rubric = r12's 7
+axes; value bands per stone role). Eyes: build 39266a8 (build_run 41124019976), branch pack, plain lane, keep_only,
+times 6000; two fresh API critics per round, a / b. Expected and measured numbers: design/vehicle_labs/ashborn_expected.md.
+
+| Round | Eyes run | RTS | Close | Landmark | Gate | Roofs / tops | Materials | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| round 2 lab (control, Oct 28) | 41168313494 | 3 / 3 overall (rounds 1-2 critics) | | | | | | | "a dark rubble heap with a copper hat and three fires" (blind massing critics) | the basalt-column wall, the pens |
+| massing A / B / C + control (blind) | 41168313494 | A 7 / 7, B 6 / 6, control 5 / 4, C 4 / 4 | - | A 6 / 7, B 5 / 6, control 5 / 5, C 4 / 4 | A 6 / 5, control 4 / 4 | A 7 / 7, B 8 / 8, control 3 / 4 | - | - | both: A > B > control > C (C's giant "a standing human statue"); A: the keep at the back corner reads as a chimney, only two steps, the gate not the darkest opening (the crest a stair) | A, with the keep moved onto the gate's axis, a third tier, a pointed crest (A2) |
+| detail r1 (767b7aad) | 41171365873 (control stills from 41168313494: dark-noon fault) | 6 / 5 (control 3 / 3) | 6 / 6 | 7 / 6 | 4 / 5 | 5 / 4 | 6 / 6 | 5 / 6 | 5 / 5.5 overall vs 3 / 3: "a grey stone castle with a black pyramid-roofed keep and a small orange patch"; the gate mouth unseen from RTS, the magma heart "a flat honeycomb patch", an L / boot in 3/4; light stone-brick paving matches the light caps (tiers merge), dark single squares in it; flat tile walls; 3/4 reads as a church (both: lovish's call) | the keep, its cone and needle; the stepped tiers; L1 reads as the first stage (both) |
