@@ -68,8 +68,13 @@ public class H13GameTests {
         return m;
     }
 
-    /** A Shaman owned by {@code owner} with every ability at rank 1, ready to cast. */
+    /**
+     * A Shaman owned by {@code owner} with every ability at rank 1, ready to cast - by the test alone: its owner's Hero
+     * AI is switched off, since with PR 418 the AI casts the Shaman's spells at the dummies by itself and a test that
+     * checks who its own cast hurt must be the only caster.
+     */
     static FactionHero readyShaman(GameTestHelper helper, String owner, int x, int z) {
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(owner, false);
         Mob m = HeroGameTests.spawnHero(helper, HeroKits.ASH_SHAMAN, owner, x, z);
         if (!(m instanceof FactionHero fh))
             return null;
@@ -98,6 +103,7 @@ public class H13GameTests {
         if (type == null || ProductionItems.getProductionItem(type) != ProductionItems.ASH_SHAMAN)
             problems.add("the Shaman type does not resolve to its production item");
         String me = owner(helper, "offer");
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(me, false);   // no Shaman AI casting at a neighbouring pad (PR 418; see readyShaman)
         ProductionPlacement pp = sanctuary(helper, me);
         if (pp == null) {
             helper.fail("no Flame Sanctuary placement");
@@ -158,6 +164,7 @@ public class H13GameTests {
     public static void h13_shaman_skips_the_castle_clamp_but_counts_against_the_cap(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         String me = owner(helper, "cap");
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(me, false);   // no Shaman AI casting at a neighbouring pad (PR 418; see readyShaman)
         ProductionPlacement pp = sanctuary(helper, me);
         if (pp == null) {
             helper.fail("no Flame Sanctuary placement");
@@ -205,6 +212,7 @@ public class H13GameTests {
     public static void h13_shaman_first_then_t1_hero_without_castle(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         String me = owner(helper, "order");
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(me, false);   // no Shaman AI casting at a neighbouring pad (PR 418; see readyShaman)
         ProductionPlacement pp = sanctuary(helper, me);
         if (pp == null) {
             helper.fail("no Flame Sanctuary placement");
@@ -243,6 +251,7 @@ public class H13GameTests {
     public static void h13_shaman_spawns_at_level_three_with_three_points(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "level");
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(me, false);   // no Shaman AI casting at a neighbouring pad (PR 418; see readyShaman)
         ProductionPlacement pp = sanctuary(helper, me);
         if (pp == null) {
             helper.fail("no Flame Sanctuary placement");

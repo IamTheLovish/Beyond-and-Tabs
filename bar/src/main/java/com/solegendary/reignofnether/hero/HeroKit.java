@@ -88,6 +88,18 @@ public final class HeroKit {
             return this;
         }
 
+        /**
+         * A mover with no fight use of its own: the hero's way out (HeroBot.isEscape). Said outright - the AI used to
+         * take every ground-aimed Ai.NONE ability for one, so the Ash Shaman threw its Firewall away from the enemy.
+         */
+        public boolean escape = false;
+
+        /** Marks the ability as an escape ({@link #escape}); returns it, for the kit table. */
+        public AbilitySpec escape() {
+            this.escape = true;
+            return this;
+        }
+
         public AbilitySpec(String id, String icon, Target target, Ai ai, int[] cooldownSeconds, float[] range, float radius,
                            int manaCost, int channelTicks, float[] a, float[] b, Effect effect) {
             this.id = id;
