@@ -4,7 +4,8 @@ The pack is loaded by Oculus in the game, which we never run on lovish's PC; thi
 in seconds instead of in a ten-minute eyes run. Each program is expanded the way the loader expands it (``#include
 "/lib/x.glsl"`` from the pack's ``shaders/`` folder, nested), then compiled by Khronos's reference compiler, glslang,
 as the loader's legacy GLSL 1.20 profile. Programs that read a loader macro (MC_RENDER_STAGE_STARS) compile both with
-and without it.
+and without it, and every option a program reads (lib/settings.glsl) is compiled at the other ends of its range too, so
+an option turned off on the pack's screen never hides a compile error.
 
     python3 tools/shader_pack_check.py [--glslang PATH]
 
@@ -121,6 +122,23 @@ def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 
 
+# an option the player sets on the pack's screen: `#define NAME default // [a b c]` (lib/settings.glsl)
+OPTION = re.compile(r"^#define\s+(\w+)\s+(\S+)\s*//\s*\[([^\]]*)\]", re.M)
+
+
+def option_variants(source):
+    """[(label, source)] for each option the program reads past its own #define, set to the other ends of its range
+    (a toggle both on and off, a slider at its lowest and highest), the way the loader rewrites the #define line."""
+    out = []
+    for m in OPTION.finditer(source):
+        name, default, values = m.group(1), m.group(2), m.group(3).split()
+        if len(re.findall(r"\b%s\b" % name, source)) < 2:
+            continue                    # declared but not read by this program
+        for v in sorted({values[0], values[-1]} - {default}):
+            out.append(("%s=%s" % (name, v), source[:m.start(2)] + v + source[m.end(2):]))
+    return out
+
+
 def check(glslang):
     """All problems found, as printable lines."""
     problems = header_problems()
@@ -130,6 +148,7 @@ def check(glslang):
         used = {m: v for m, v in LOADER_MACROS.items() if m in source}
         if used:
             variants.append((used, with_macros(source, used)))
+        variants += [({label: ""}, src) for label, src in option_variants(source)]
         for macros, src in variants:
             err = compile_errors(glslang, name, src)
             if err:
