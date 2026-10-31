@@ -3,6 +3,11 @@ package com.solegendary.reignofnether.postfx;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.LightLayer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * {@link CanopyShade} read from the level a grass colour call is given (mixin/fogofwar/BiomeColorsMixin): on a meshing
@@ -13,7 +18,8 @@ import net.minecraft.world.level.LightLayer;
  * neighbours' blocks only within 2 of the section (and reuses the arrays between tasks), but holds the light of the
  * section and all its neighbours, so the taps (2 round), Embeddium's per-corner samples (1 more) and the cell over the
  * ground (1 up) are always inside it. A light read is a byte-array read: no palette. A read that throws leaves the
- * sample unshaded: plain grass, never a crash.
+ * sample unshaded: plain grass, never a crash - and is logged once a session (meshing runs per colour sample: a
+ * warning per failure would flood the log), so a next report shows it happened.
  */
 public final class CanopyRegion {
     private CanopyRegion() { }
@@ -24,7 +30,9 @@ public final class CanopyRegion {
         int at(int x, int y, int z);
     }
 
-    private static int warnings;
+    private static final Logger LOG = LogManager.getLogger("reignofnether/canopy");
+    private static final AtomicBoolean WARNED = new AtomicBoolean();
+    private static final AtomicInteger LOGGED = new AtomicInteger();
 
     /** rgb darkened by what stands over the ground round pos, read from {@code level} only. */
     public static int shade(BlockAndTintGetter level, BlockPos pos, int rgb) {
@@ -38,12 +46,18 @@ public final class CanopyRegion {
         try {
             return CanopyShade.apply(rgb, (cx, cy, cz) -> CanopyShade.covered(sky.at(cx, cy + 1, cz)), x, y, z);
         } catch (RuntimeException e) {
+            // several meshing workers can fail at once: only the first says it
+            if (WARNED.compareAndSet(false, true)) {
+                LOGGED.incrementAndGet();
+                LOG.warn("Canopy shade: a sky-light read failed on {} ({}); that grass is left unshaded. Said once a session.",
+                        Thread.currentThread().getName(), e.toString());
+            }
             return rgb;
         }
     }
 
     /** How many times a failed read has been logged (it is said once a session). */
     static int warnings() {
-        return warnings;
+        return LOGGED.get();
     }
 }

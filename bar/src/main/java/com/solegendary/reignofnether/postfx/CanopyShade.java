@@ -8,7 +8,7 @@ package com.solegendary.reignofnether.postfx;
  *
  * <p>Coverage is a Gaussian-weighted disc of 21 taps (every block within ~2 of this one), each tap 1 where something
  * stands over that column ({@link #covered}: the cell over the ground has less than full sky light - leaves take one
- * level off, anything solid more). Full cover darkens by {@link #DARK}; the edge of a crown
+ * level off, anything solid more - but some: a cell with none is inside a wall or a step). Full cover darkens by {@link #DARK}; the edge of a crown
  * fades out over the 2-block ring. Only without a shader pack - a pack draws real shadows there, and both would be
  * twice as dark (critic r40: the shader lane's contact shadows already sell the canopy).
  *
@@ -87,9 +87,13 @@ public final class CanopyShade {
         return (r << 16) | (g << 8) | b;
     }
 
-    /** The canopy test from the cell over the ground: anything over the column takes sky light off it. */
+    /**
+     * The canopy test from the cell over the ground: anything over the column takes sky light off it (leaves one
+     * level). 0 is that cell inside a block - a wall or a step beside the grass, not something over it (#466 follow-up:
+     * counting it drew a dark band at the foot of every wall and step on a lawn).
+     */
     public static boolean covered(int skyLightOverGround) {
-        return skyLightOverGround < 15;
+        return skyLightOverGround > 0 && skyLightOverGround < 15;
     }
 
     /**
