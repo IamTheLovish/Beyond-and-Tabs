@@ -618,7 +618,8 @@ public class CursorClientEvents {
                         java.util.Set<Integer> have = new java.util.HashSet<>();
                         for (LivingEntity unit : UnitClientEvents.getSelectedUnits())
                             have.add(unit.getId());
-                        UnitClientEvents.removeSelectedUnits(e -> !keep.contains(e.getId()));
+                        // an inspected enemy never joins a Shift-boxed group of own units (InspectRules)
+                        UnitClientEvents.removeSelectedUnits(e -> !keep.contains(e.getId()) || !isControllable(e));
                         for (LivingEntity unit : result)
                             if (!have.contains(unit.getId()))
                                 UnitClientEvents.addSelectedUnit(unit);
