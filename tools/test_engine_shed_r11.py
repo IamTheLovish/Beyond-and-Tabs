@@ -157,7 +157,7 @@ class EngineShedR11(unittest.TestCase):
 
     def test_every_roof_in_the_slate_band(self):
         """Every roof the rts and rts_close cameras show (each connected roof of >= 30 seen pixels) averages pack luma
-        0.28-0.36 (ROOF_BAND, both edges - r8b's 0.22 read as a hole, r9's 0.45 as concrete), >= 90 % of its pixels
+        0.34-0.42 (ROOF_BAND, re-set from 0.28-0.36 for #430's deepslate lift; both edges - r8b's 0.22 read as a hole, r9's 0.45 as concrete), >= 90 % of its pixels
         measured by the pack, slate family only (the copper is the tower's)."""
         bad = []
         for still in ("rts", "rts_close"):
