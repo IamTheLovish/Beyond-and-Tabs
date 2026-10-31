@@ -229,7 +229,9 @@ def keep(g, l3):
         return
     for (x, z) in outer(10, 16, 5, 11):
         seen_side = x == 10 or z == 11          # the west and south sides: the camera's
-        if (x + z) % 2 or not seen_side:
+        if not seen_side:
+            g.set(x, 18, z, PAVE)               # the far sides' band: a walk, read from above as the terraces are
+        elif (x + z) % 2:
             g.set(x, 18, z, WALL)
         # else: a machicolation - a gap under the parapet between the band's blocks (relief by depth, no thin block)
         if seen_side and (x, z) not in ((10, 5), (16, 11)):
@@ -256,16 +258,15 @@ def gatehouse(g, l3):
             for y in range(1, 9):
                 g.set(1, y, z, PLINTH)
                 g.set(0, y, z, PLINTH)
-        if z not in proud:
-            g.slab(1, top + 1, z)               # capped where it shows between the proud columns
+        g.slab(1, top + 1, z)                   # every column of the crest ends in a light cap
         if z in (7, 8, 9):
             g.set(0, 9, z, GLOW)                # the heart's glowing floor = the gate's head: light pours out
         elif z in LANE_Z:
             g.stair(0, 9, z, "east", "top", CORBEL)
-        elif z in proud:
-            g.set(0, 9, z, PLINTH)
         else:
             g.set(0, 9, z, PLINTH)
+            if z not in proud:
+                g.slab(0, 10, z)                # the recessed jamb columns end in a light cap too
     for z, h in proud.items():
         top = min(h, lim)
         for y in range(10, top + 1):
@@ -318,7 +319,8 @@ def heart(g):
     for z in (7, 8, 9):
         for y in (10, 11, 12, 13):
             g.clear(0, y, z)
-            g.set(1, y, z, GLOW)
+            g.set(1, y, z, PLINTH)          # round 3: a dark back - the glow only on the niche's floor (the gate's
+            #                                 head), so it reads as one compact lit ledge, not round 2's "L / boot"
 
 
 def forge(g):
@@ -355,6 +357,19 @@ def grooves(g):
                 break
 
 
+def string_courses(g):
+    """Round 3 (both round-2 critics: "flat deepslate-tile wall bays"): a string course - a top-half deepslate-tile
+    slab, a ledge with a shadow line under it - across every seen face of the deepslate tiers at y 9 (the ring) and
+    y 16 (the keep's shaft above its terrace)."""
+    occ = dict(g.b)
+    for (x, y, z), (n, _) in sorted(occ.items()):
+        if n != WALL or y not in (9, 16):
+            continue
+        if any(not (0 <= x + dx < SX and 0 <= z + dz < SZ) or (x + dx, y, z + dz) not in occ
+               for dx, dz in ((-1, 0), (0, 1))):
+            g.slab(x, y, z, "deepslate_tile_slab", "top")
+
+
 def clear_lane_and_spawn(g):
     for x in LANE_X:
         for z in LANE_Z:
@@ -380,6 +395,7 @@ def draw(level):
     heart(g)
     clear_lane_and_spawn(g)
     grooves(g)
+    string_courses(g)
     return g
 
 

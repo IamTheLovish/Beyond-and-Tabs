@@ -38,3 +38,16 @@ west / south edges smooth stone (a light band under the parapet).
 Model numbers (rts_close / 34): plinth 0.251 / 0.254, walls 0.183 / 0.183 (gap 0.068), roofs 0.224, paving 0.325 /
 0.331, caps 0.502 / 0.507; lights 4.0 % + the heart's up face (~0.6 % if >= 0.50) -> ~4.6 %; thin blocks up 0.40 /
 0.45 (34: on the edge), west 0.35 / 0.36, south 0.34 / 0.38; lead 8; gate seen 316.
+
+### Round 2 measured (eyes 41173208608, all three structures clean)
+- shroomlight up 0.863 / sat 0.76 / hue 26 (expected 0.65-0.85: slightly over); glow 0.59 % (up face), lights 4.6 %
+  (expected ~4.6 %); smooth stone west 0.34 / south 0.43; 18/18 locally
+- critics 20261031-015356 (a) / -015404 (b): 6 / 6 vs round 1 5 / 5 - GAIN (tuff paving and the posts better, both;
+  the heart brighter but still an L; the smooth-stone band not visible to either)
+
+## Detail round 3 (the last detail round), expected (before eyes; control = round 2, ashborn_l3_r2.nbt)
+One change per element (round 2's critics, both): (1) the heart's back wall dark basalt, the glow only on the niche's
+floor (one compact lit ledge over the mouth, not an L) - glow 0.59 % (the floor's up face, unchanged); (2) a string
+course (top-half deepslate-tile slab) across every seen deepslate face at y 9 (ring) and y 16 (keep) - walls 0.185
+(from 0.183), thin blocks west 0.40 / south 0.40-0.43 (from 0.35-0.38); (3) the crest's every column and the recessed
+jamb columns end in a light cap, the keep band's far sides are tuff (the paving: 0.334 from 0.325). Lights 5.0 %.
