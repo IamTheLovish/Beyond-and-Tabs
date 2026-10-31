@@ -61,6 +61,36 @@ public class H13GameTests {
         return null;
     }
 
+    /** Ticks a test waits for its Shaman's first ticks before it gives up (see whenTicked). */
+    static final int TICK_WAIT = 40;
+
+    /**
+     * Runs {@code then} once {@code mob} has ticked twice: a hero's level stats are applied on its first tick and its
+     * spells' damage runs on its own timers (HeroCore.tickServer, from the entity's tick), so a test that casts or
+     * measures before the hero ticks reads nothing (#418's greens: "the enemy on the line took no damage", "max health
+     * 180.0, not the level-3 208.8" on slow runners). Fails clearly if it has not ticked in TICK_WAIT ticks.
+     */
+    static void whenTicked(GameTestHelper helper, Mob mob, String what, Runnable then) {
+        int start = mob.tickCount;
+        boolean[] ran = { false };
+        for (int t = 1; t <= TICK_WAIT; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (ran[0])
+                    return;
+                if (mob.tickCount >= start + 2) {
+                    ran[0] = true;
+                    then.run();
+                } else if (tick == TICK_WAIT) {
+                    ran[0] = true;
+                    mob.discard();
+                    helper.fail(what + " never ticked in " + TICK_WAIT + " ticks (tickCount " + mob.tickCount
+                        + "): its arena was not ticking entities");
+                }
+            });
+        }
+    }
+
     static Mob dummy(GameTestHelper helper, String owner, int x, int z) {
         Mob m = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, x, z);
         if (m != null)
@@ -247,7 +277,7 @@ public class H13GameTests {
     }
 
     /** AC-3: a Shaman trained the real way (item completion) spawns at level 3 holding exactly 3 ability points. */
-    @GameTest(template = ARENA, timeoutTicks = 80)
+    @GameTest(template = ARENA, timeoutTicks = 120)
     public static void h13_shaman_spawns_at_level_three_with_three_points(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "level");
@@ -271,7 +301,7 @@ public class H13GameTests {
             return;
         }
         Mob shaman = found;
-        helper.runAfterDelay(5, () -> {   // past the first tick, when the level's stats are applied
+        whenTicked(helper, shaman, "the trained Shaman", () -> {   // past its first tick, when the level's stats are applied
             List<String> problems = new ArrayList<>();
             if (fh.getHeroLevel() != 3)
                 problems.add("level " + fh.getHeroLevel() + ", not 3");
@@ -294,7 +324,7 @@ public class H13GameTests {
     }
 
     /** AC-4a: Firewall burns the enemy standing on its line and not the one beside it. */
-    @GameTest(template = ARENA, timeoutTicks = 120)
+    @GameTest(template = ARENA, timeoutTicks = 160)
     public static void h13_firewall_damages_only_its_line(GameTestHelper helper) {
         String me = owner(helper, "fw"), them = owner(helper, "fw_enemy");
         FactionHero shaman = readyShaman(helper, me, 3, 10);
@@ -303,7 +333,7 @@ public class H13GameTests {
             helper.fail("could not spawn the test units");
             return;
         }
-        helper.runAfterDelay(3, () -> {
+        whenTicked(helper, (Mob) shaman, "the Shaman", () -> {
             Mob hero = (Mob) shaman;
             Vec3Aim aim = new Vec3Aim(hero, 10, 10, helper);
             if (!HeroKits.ability(shaman, 0).castNow(shaman, null, aim.at))
@@ -326,7 +356,7 @@ public class H13GameTests {
     }
 
     /** AC-4b: Lava Geyser deals nothing before its telegraph ends, then hurts inside its radius only. */
-    @GameTest(template = ARENA, timeoutTicks = 160)
+    @GameTest(template = ARENA, timeoutTicks = 200)
     public static void h13_lava_geyser_waits_for_its_telegraph(GameTestHelper helper) {
         String me = owner(helper, "geyser"), them = owner(helper, "geyser_enemy");
         FactionHero shaman = readyShaman(helper, me, 3, 10);
@@ -335,7 +365,7 @@ public class H13GameTests {
             helper.fail("could not spawn the test units");
             return;
         }
-        helper.runAfterDelay(3, () -> {
+        whenTicked(helper, (Mob) shaman, "the Shaman", () -> {
             Mob hero = (Mob) shaman;
             Vec3Aim aim = new Vec3Aim(hero, 12, 10, helper);
             if (!HeroKits.ability(shaman, 1).castNow(shaman, null, aim.at)) {
@@ -366,7 +396,7 @@ public class H13GameTests {
     }
 
     /** AC-4c: Ember Totem burns an enemy in range and not one outside it. */
-    @GameTest(template = ARENA, timeoutTicks = 120)
+    @GameTest(template = ARENA, timeoutTicks = 160)
     public static void h13_ember_totem_burns_only_in_range(GameTestHelper helper) {
         String me = owner(helper, "totem"), them = owner(helper, "totem_enemy");
         FactionHero shaman = readyShaman(helper, me, 3, 10);
@@ -375,7 +405,7 @@ public class H13GameTests {
             helper.fail("could not spawn the test units");
             return;
         }
-        helper.runAfterDelay(3, () -> {
+        whenTicked(helper, (Mob) shaman, "the Shaman", () -> {
             Mob hero = (Mob) shaman;
             Vec3Aim aim = new Vec3Aim(hero, 10, 10, helper);
             if (!HeroKits.ability(shaman, 2).castNow(shaman, null, aim.at)) {
