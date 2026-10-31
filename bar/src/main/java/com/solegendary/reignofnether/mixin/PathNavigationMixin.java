@@ -68,6 +68,7 @@ public abstract class PathNavigationMixin implements WidePathMemo.Holder {
         Path lately = reignofnether$wideMemo.repeatOf(from, targets, now);
         if (lately != null) {
             VanillaPathBudget.repeats++;
+            reignofnether$rejudgeLine(lately);
             cir.setReturnValue(lately);
             return;
         }
@@ -202,6 +203,24 @@ public abstract class PathNavigationMixin implements WidePathMemo.Holder {
     @Unique private int reignofnether$linedTo = -1;
     @Unique private boolean reignofnether$linedFound = false;
     @Unique private long reignofnether$linedAt = 0;
+
+    // #468 review r1 (non-blocking 2): a repeat (WidePathMemo.repeatOf) hands back the Path object this unit already
+    // walked, its next node perhaps moved ahead by walkTheLine. Installed again after the navigation stopped (stuck
+    // detection, a goal's stop), it would look like the same path and keep that aim for up to REAIM_TICKS, though the
+    // unit may stand up to 3 blocks elsewhere now (a crowd, a nudge).
+    // Judge the line to that node again on the next followThePath, from where the unit is - as for a unit pushed off
+    // its line: from the path's first node, so a lost line walks back to the nearest node it skipped.
+    @Unique
+    private void reignofnether$rejudgeLine(Path p) {
+        // not the path walkTheLine last judged: judged as a new one anyway. Still the path being walked (a ranged
+        // unit asks every tick while out of reach): moveTo keeps it as it is, and so does the line's aim
+        if (p != reignofnether$linedPath || this.path == p)
+            return;
+        reignofnether$linedFrom = 0;
+        reignofnether$linedTo = p.getNextNodeIndex();
+        reignofnether$linedFound = true;
+        reignofnether$linedAt = mob.level().getGameTime() - LineOfWalk.REAIM_TICKS;
+    }
 
     @Inject(method = "followThePath", at = @At("TAIL"))
     private void reignofnether$walkTheLine(CallbackInfo ci) {
