@@ -61,6 +61,31 @@ public class BlockClientEvents {
 
     private static com.mojang.blaze3d.vertex.VertexConsumer frameBuffer = null;
 
+    // each range building's circle, as a mesh rebuilt every RangeCircleMesh.REFRESH_TICKS ticks or when its highlight
+    // set changes (lovish's Oct 29 game: drawing every face the old way was 1.9-2.1 ms of each late-game frame)
+    private static final java.util.Map<BuildingPlacement, RangeCircleMesh> CIRCLE_MESHES = new java.util.HashMap<>();
+    // the meshes' clock: client ticks counted here, not the level's game time - on the client that follows the day
+    // clock (a third of the speed at Slow, standing still with the cycle off or before a match: the #450 review)
+    private static long clientTicks = 0, circlesPrunedAt = 0;
+
+    private static RangeCircleMesh circleMesh(BuildingPlacement building, Set<BlockPos> bps, long now) {
+        RangeCircleMesh mesh = CIRCLE_MESHES.get(building);
+        if (mesh == null || !mesh.fresh(bps, bps.size(), now)) {
+            mesh = new RangeCircleMesh(bps, bp -> BlockUtils.getSnowLayers(building.level.getBlockState(bp.above())), bps, now);
+            CIRCLE_MESHES.put(building, mesh);
+        }
+        return mesh;
+    }
+
+    /** The view pose moved by minus the camera entity's eye, as MyRenderer.drawSolidBox does per box; pop it after. */
+    private static com.mojang.blaze3d.vertex.PoseStack cameraPose(com.mojang.blaze3d.vertex.PoseStack ps) {
+        net.minecraft.world.entity.Entity cam = MC.getCameraEntity();
+        ps.pushPose();
+        if (cam != null)
+            ps.translate(-cam.getX(), -(cam.getY() + cam.getEyeHeight()), -cam.getZ());
+        return ps;
+    }
+
     /**
      * The translucent buffer, fetched when the first highlight is drawn. Fetching it every frame whether or not
      * anything drew made the buffer source end (flush) whatever batch was open and begin an empty one: most of this
@@ -103,20 +128,33 @@ public class BlockClientEvents {
             } finally {
                 com.solegendary.reignofnether.perf.FrameParts.end(fr);
             }
-            // draw range indicators for buildings with abilities and monster night sources
+            // draw range indicators for buildings with abilities and monster night sources: each circle from its
+            // cached mesh (RangeCircleMesh), only when it is in view, all through one pose
+            long now = clientTicks;
+            com.mojang.blaze3d.vertex.PoseStack ps = null;
             for (BuildingPlacement building : rangeBuildings) {
                 RangeIndicatorAddon ria = building.getBuilding().getActiveAddon(RangeIndicatorAddon.class);
-                if (ria != null && FogOfWarClientEvents.isBuildingInBrightChunk(building)) {
-                    for (BlockPos bp : ria.getHighlightBps(building)) {
-                        int snowLayers = BlockUtils.getSnowLayers(building.level.getBlockState(bp.above()));
-                        float yOffset = snowLayers * 0.125f;
-                        if (BuildingClientEvents.getSelectedBuildings().contains(building)) {
-                            MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
-                        } else if (!ria.showOnlyWhenSelected(building)) {
-                            MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0f, 0f, 0.6f);
-                        }
-                    }
-                }
+                if (ria == null)
+                    continue;
+                boolean selected = BuildingClientEvents.getSelectedBuildings().contains(building);
+                if (!selected && ria.showOnlyWhenSelected(building))
+                    continue;
+                RangeCircleMesh mesh = circleMesh(building, ria.getHighlightBps(building), now);
+                if (mesh.faces == 0 || !evt.getFrustum().isVisible(mesh.bounds)
+                        || !FogOfWarClientEvents.isBuildingInBrightChunk(building))
+                    continue;
+                if (ps == null)
+                    ps = cameraPose(evt.getPoseStack());
+                if (selected)
+                    mesh.emit(ps.last().pose(), ps.last().normal(), vc(), 0f, 0.8f, 0f, 0.3f);
+                else
+                    mesh.emit(ps.last().pose(), ps.last().normal(), vc(), 0f, 0f, 0f, 0.6f);
+            }
+            if (ps != null)
+                ps.popPose();
+            if (now - circlesPrunedAt >= 200) {
+                circlesPrunedAt = now;
+                CIRCLE_MESHES.keySet().retainAll(rangeBuildings);
             }
 
             if (tempMouseCircleOrigin != null && MC.level != null) {
@@ -188,6 +226,7 @@ public class BlockClientEvents {
         if (evt.phase != TickEvent.Phase.END)
             return;
 
+        clientTicks++;
         nightSourcesUpdateTicks -= 1;
 
         NightSourceAddon nsa0 = null;
