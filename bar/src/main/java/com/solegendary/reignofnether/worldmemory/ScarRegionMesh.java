@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
+import com.solegendary.reignofnether.time.TimeClientEvents;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -78,7 +79,7 @@ final class ScarRegionMesh {
         this.oz = rz << 6;
         this.scorchBuf = scorchBuf;
         this.craterBuf = craterBuf;
-        long now = level.getGameTime();
+        long now = TimeClientEvents.getClientTime();   // the server stamps decay in its game time
         int c0x = (ox - PAD) >> 4, c1x = (ox + SIZE) >> 4, c0z = (oz - PAD) >> 4, c1z = (oz + SIZE) >> 4;
         for (int cx = c0x; cx <= c1x; cx++)
             for (int cz = c0z; cz <= c1z; cz++) {

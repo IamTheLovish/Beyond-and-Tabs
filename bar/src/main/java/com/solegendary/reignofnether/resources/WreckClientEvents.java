@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.unit.AreaCommandClientEvents;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -88,7 +89,7 @@ public class WreckClientEvents {
             clear();
             return;
         }
-        if (MC.level.getGameTime() % 20 != 0)
+        if (ClientTicks.now() % 20 != 0)
             return;
         stale.clear();
         for (Int2IntMap.Entry e : metal.int2IntEntrySet()) {

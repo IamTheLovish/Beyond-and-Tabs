@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.time.TimeClientEvents;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.client.Camera;
@@ -246,7 +247,7 @@ public final class GroundMemoryClient {
         }
         if (!enabled() || CHUNKS.isEmpty())
             return;
-        long now = level.getGameTime();
+        long now = TimeClientEvents.getClientTime();   // the server stamps decay in its game time
         long q = Math.floorDiv(now, DecayParams.QUANTUM);
         if (q != lastQuantum) {
             if (lastQuantum != Long.MIN_VALUE)
