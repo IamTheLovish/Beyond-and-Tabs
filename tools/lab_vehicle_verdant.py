@@ -416,6 +416,18 @@ def seal_pockets(c, h, out):
     os.remove(tmp)
 
 
+def build(level=3):
+    """The rig of one level (1 or 3), sealed and sized - what main() writes (the camera tests build from this)."""
+    import tempfile
+    l3 = level == 3
+    c, h = draw(l3), (H3 if l3 else H1)
+    with tempfile.TemporaryDirectory() as tmp:
+        seal_pockets(c, h, tmp)
+    r = rig_of(c, h)
+    r.size = (SX, max(y for (_, y, _) in r.b) + 1, SZ)
+    return r
+
+
 def main():
     out = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else OUT)
     os.makedirs(out, exist_ok=True)
