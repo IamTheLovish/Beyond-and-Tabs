@@ -1,0 +1,90 @@
+[23:01:48] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[23:01:49] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[23:01:49] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/render/chunk/compile/pipeline/FluidRenderer (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer)
+[23:01:49] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[23:01:49] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/model/color/ColorProviderRegistry (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.model.color.ColorProviderRegistry)
+[23:01:49] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/model/quad/blender/BlendedColorProvider (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.model.quad.blender.BlendedColorProvider)
+[23:01:49] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/render/chunk/RenderSectionManager (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager)
+[23:01:55] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[23:02:02] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[23:02:10] [Worker-ResourceReload-1/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[23:02:10] [Worker-ResourceReload-1/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[23:02:16] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[23:02:18] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[23:02:47] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[23:03:17] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[23:03:47] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[23:03:47] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793487827758
+[23:03:47] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[23:03:51] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793487831860
+[23:03:51] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[23:03:52] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[23:03:53] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[23:04:22] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 117 s left (client tick 293, camera at [-219, 91, 3]); our slot -210, -5; a bot's start 230, -5; markers: 2 boxes, 8 frames drawn; team 0 (mine) fill built (35191 columns, 1921 quads), 380 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[23:04:24] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 115 s left, zoom 36.0, camera at [-218, 91, 3]; markers: 2 boxes, 29 frames drawn; team 0 (mine) fill built (36712 columns, 1993 quads), 429 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[23:04:24] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793487864656
+[23:04:25] [IO-Worker-5/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[23:04:26] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 113 s left, zoom 60.0, camera at [-216, 91, 1]; markers: 2 boxes, 41 frames drawn; team 0 (mine) fill built (36712 columns, 1993 quads), 439 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[23:04:26] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793487866630
+[23:04:26] [IO-Worker-9/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[23:04:28] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 111 s left, zoom 100.0, camera at [-215, 91, 0]; markers: 2 boxes, 56 frames drawn; team 0 (mine) fill built (36712 columns, 1993 quads), 446 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[23:04:28] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793487868726
+[23:04:29] [IO-Worker-6/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[23:04:33] [Render thread/INFO]: [Eyes] step 1 screen none level true
+[23:04:33] [Render thread/INFO]: [Eyes] 01f: eye at [230, 70, 15] y 71 looking at the start 230, -5 (20 blocks away; ground there 71); 106 s left; markers: 2 boxes, 112 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (36192 columns, 2177 quads), 404 perimeter heights known
+[23:04:33] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793487873381
+[23:04:33] [IO-Worker-9/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[23:04:35] [Render thread/INFO]: [Eyes] 01e: start placed at -210, -5 with 104 s left; the phase ends 3 s later
+[23:04:37] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 102 s left, zoom 36.0, camera at [-218, 91, 3]; markers: 2 boxes, 143 frames drawn; team 0 (mine) fill built (36510 columns, 1982 quads), 433 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[23:04:37] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793487877147
+[23:04:37] [IO-Worker-4/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[23:05:03] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[23:05:07] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793487907373
+[23:05:07] [Server thread/INFO]: [Eyes] ground 0:30 round [-218, 2]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:coal_ore=6, minecraft:diorite_wall=3, minecraft:grass_block=2159, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=14, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=43, minecraft:stone_brick_stairs=8}
+[23:05:07] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793487907637
+[23:05:07] [IO-Worker-4/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[23:05:07] [Render thread/INFO]: [Eyes] 16 scars: pad at -253, 70, 40 (capitol -209, 79, -4), fog of war on the client: true
+[23:05:08] [IO-Worker-2/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[23:05:16] [Render thread/INFO]: [Eyes] clip-mark 16_scars_before_rts 1793487916923
+[23:05:17] [IO-Worker-6/INFO]: [Eyes] 16_scars_before_rts: Saved screenshot as bat_eyes_16_scars_before_rts.png
+[23:05:24] [Render thread/INFO]: [Eyes] 16 scars: 0 chunks marked on the server; client: 0 chunk copies (0 marked), 12 regions (0 drawn, 0 quads), rebuilds 0, last build 0.00 ms, draw 0.00 ms
+[23:05:24] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts 1793487924942
+[23:05:24] [Render thread/INFO]: [Eyes] 16 probe client dirt path: (-259,46) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[23:05:24] [Render thread/INFO]: [Eyes] 16 probe client snow 1: (-247,47) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[23:05:24] [Render thread/INFO]: [Eyes] 16 probe client snow 2: (-246,47) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[23:05:24] [Render thread/INFO]: [Eyes] 16 probe client snow 4: (-244,47) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[23:05:24] [Render thread/INFO]: [Eyes] 16 probe client top slab: (-246,43) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[23:05:24] [Render thread/INFO]: [Eyes] 16 probe client bottom slab: (-245,43) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[23:05:24] [Render thread/INFO]: [Eyes] 16 probe client stairs: (-246,38) MOTION_BLOCKING 68 NO_LEAVES 47 top 68 = block.minecraft.grass_block, surface 69.000, one below block.minecraft.dirt
+[23:05:24] [Render thread/INFO]: [Eyes] 16 probe client flat grass: (-253,40) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[23:05:24] [Render thread/INFO]: [Eyes] 16 probe client game ender centre: (-257,51) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[23:05:24] [Server thread/INFO]: [Eyes] 16 probe server dirt path: (-259,46) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.dirt_path, surface 69.938, one below block.minecraft.dirt, scorch 0 crater 0
+[23:05:24] [Server thread/INFO]: [Eyes] 16 probe server snow 1: (-247,47) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.125, one below block.minecraft.grass_block, scorch 0 crater 0
+[23:05:24] [Server thread/INFO]: [Eyes] 16 probe server snow 2: (-246,47) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.250, one below block.minecraft.grass_block, scorch 0 crater 0
+[23:05:24] [Server thread/INFO]: [Eyes] 16 probe server snow 4: (-244,47) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.500, one below block.minecraft.grass_block, scorch 0 crater 0
+[23:05:24] [Server thread/INFO]: [Eyes] 16 probe server top slab: (-246,43) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 71.000, one below block.minecraft.grass_block, scorch 0 crater 0
+[23:05:24] [Server thread/INFO]: [Eyes] 16 probe server bottom slab: (-245,43) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 70.500, one below block.minecraft.grass_block, scorch 0 crater 0
+[23:05:24] [Server thread/INFO]: [Eyes] 16 probe server stairs: (-246,38) MOTION_BLOCKING 71 NO_LEAVES 71 top 71 = block.minecraft.grass_block, surface 72.000, one below block.minecraft.dirt, scorch 0 crater 0
+[23:05:24] [Server thread/INFO]: [Eyes] 16 probe server flat grass: (-253,40) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt, scorch 0 crater 0
+[23:05:24] [Server thread/INFO]: [Eyes] 16 probe server game ender centre: (-257,51) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt, scorch 0 crater 0
+[23:05:25] [IO-Worker-2/INFO]: [Eyes] 16_scars_rts: Saved screenshot as bat_eyes_16_scars_rts.png
+[23:05:28] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_close 1793487928962
+[23:05:29] [IO-Worker-6/INFO]: [Eyes] 16_scars_rts_close: Saved screenshot as bat_eyes_16_scars_rts_close.png
+[23:05:32] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_crater 1793487932965
+[23:05:33] [IO-Worker-6/INFO]: [Eyes] 16_scars_rts_crater: Saved screenshot as bat_eyes_16_scars_rts_crater.png
+[23:05:33] [Render thread/INFO]: [Eyes] step 21 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[23:05:37] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_far 1793487937976
+[23:05:38] [IO-Worker-10/INFO]: [Eyes] 16_scars_rts_far: Saved screenshot as bat_eyes_16_scars_rts_far.png
+[23:05:43] [Render thread/INFO]: [Eyes] clip-mark 16_scars_fp_crater 1793487943024
+[23:05:43] [IO-Worker-4/INFO]: [Eyes] 16_scars_fp_crater: Saved screenshot as bat_eyes_16_scars_fp_crater.png
+[23:05:48] [Render thread/INFO]: [Eyes] clip-mark 16_scars_fp_steps 1793487948140
+[23:05:48] [Render thread/INFO]: [Eyes] 16 scars: done, client: 0 chunk copies (0 marked), 12 regions (0 drawn, 0 quads), rebuilds 0, last build 0.00 ms, draw 0.00 ms
+[23:05:48] [IO-Worker-5/INFO]: [Eyes] 16_scars_fp_steps: Saved screenshot as bat_eyes_16_scars_fp_steps.png
+[23:05:50] [Render thread/INFO]: [Eyes] unit textures with mips: 0 of 33 registered (up to 3 levels)
+[23:05:50] [Render thread/WARN]: [Eyes] no generated unit texture was uploaded with mips - SimpleTextureMixin did not apply?
+[23:05:50] [Render thread/INFO]: [Eyes] tour complete
