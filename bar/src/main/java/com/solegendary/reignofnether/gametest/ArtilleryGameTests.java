@@ -838,12 +838,13 @@ public class ArtilleryGameTests {
 
     /**
      * The cap never corrects an honest client (round 1 of #307's review): a knocked-back crew whose client lags 3 ticks
-     * each way, hit from the east and two ticks later from the south, flies where its prediction carries it - first
-     * west, then north from wherever the first push had got it - with no correction.
+     * each way, hit from the east and five ticks later from the south, flies where its prediction carries it - first
+     * west, then north from wherever the first push had got it - with no correction. Five ticks: a unit takes one light
+     * shove per 5 ticks (KnockbackGate), so a second hit sooner would not push it at all.
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
     public static void a_lagging_client_knocked_back_twice_is_never_corrected(GameTestHelper helper) {
-        honestKnockTest(helper, "knock2", 3, -1, new double[][] { { 0, 1, 0 }, { 2, 0, 1 } });
+        honestKnockTest(helper, "knock2", 3, -1, new double[][] { { 0, 1, 0 }, { 5, 0, 1 } });
     }
 
     /**
