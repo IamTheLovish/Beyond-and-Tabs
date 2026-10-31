@@ -2,17 +2,13 @@ package com.solegendary.reignofnether.mixin.fogofwar;
 
 import com.solegendary.reignofnether.fogofwar.FogExploration;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
-import com.solegendary.reignofnether.postfx.CanopyShade;
+import com.solegendary.reignofnether.postfx.CanopyRegion;
 import com.solegendary.reignofnether.postfx.GrassTint;
 import com.solegendary.reignofnether.postfx.ShaderPacks;
 import com.solegendary.reignofnether.worldborder.WorldBorderClientEvents;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.core.BlockPos;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.BlockAndTintGetter;
-import net.minecraft.world.level.levelgen.Heightmap;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -27,7 +23,7 @@ public abstract class BiomeColorsMixin {
     @Inject(method = "getAverageGrassColor", at = @At("RETURN"), cancellable = true)
     private static void ron_fogTintGrass(BlockAndTintGetter level, BlockPos pos, CallbackInfoReturnable<Integer> cir) {
         vary(pos, cir, GrassTint.GRASS);
-        shade(pos, cir);
+        shade(level, pos, cir);
         applyTint(level, pos, cir);
     }
 
@@ -48,17 +44,11 @@ public abstract class BiomeColorsMixin {
     }
 
     // canopy shade (critic r40: "plain lane: trees float"): the lawn under and round a crown darker, plain lane only -
-    // a shader pack draws real shadows there. The client level, not the meshing region: a crown's top can sit above
-    // the region's vertical reach; reads only, the region's own copy is no safer for heightmaps
-    private static void shade(BlockPos pos, CallbackInfoReturnable<Integer> cir) {
-        if (pos == null || ShaderPacks.inUse()) return;
-        ClientLevel cl = Minecraft.getInstance().level;
-        if (cl == null) return;
-        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
-        cir.setReturnValue(CanopyShade.apply(cir.getReturnValueI(), (x, y, z) -> {
-            int top = cl.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
-            return CanopyShade.leavesOver(top, top - 1 > y && cl.getBlockState(m.set(x, top - 1, z)).is(BlockTags.LEAVES), y);
-        }, pos.getX(), pos.getY(), pos.getZ()));
+    // a shader pack draws real shadows there. Read from the level this colour call is given - on a meshing thread the
+    // region's own copy (postfx/CanopyRegion; lovish's crash of Oct 31 03:07 was the client level read from here)
+    private static void shade(BlockAndTintGetter level, BlockPos pos, CallbackInfoReturnable<Integer> cir) {
+        if (level == null || pos == null || ShaderPacks.inUse()) return;
+        cir.setReturnValue(CanopyRegion.shade(level, pos, cir.getReturnValueI()));
     }
 
     private static void applyTint(BlockAndTintGetter level, BlockPos pos, CallbackInfoReturnable<Integer> cir) {
