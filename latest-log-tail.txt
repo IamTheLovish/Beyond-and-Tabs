@@ -1,0 +1,200 @@
+[02:01:31] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_team.png (1024x1024) uploaded with 3 mip levels
+[02:01:31] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_glow.png (1024x1024) uploaded with 3 mip levels
+[02:01:31] [IO-Worker-2/INFO]: [Eyes] 15_verdant_l3_34_t6000: Saved screenshot as bat_eyes_15_verdant_l3_34_t6000.png
+[02:01:32] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 17.8 ms): per-system timing off
+[02:01:34] [Render thread/INFO]: [Frame] p50 87.5 ms (11 fps), p95 159.6 ms, max 459.4 ms over 240 frames; RTS view, zoom 30, 13 units known
+[02:01:34] [Render thread/INFO]: [Anim] 7 units/frame (max 8): animation p50 0.3 ms, p95 0.6 ms; unit render p50 11.5 ms, p95 38.4 ms; per unit 58.1 us anim, 3039.0 us render (anim 2%); RTS view, zoom 30, detail on, over 32 frames
+[02:01:34] [Render thread/INFO]: [FrameParts] 79 frames, mean 126.3 ms/frame; ours 10.0 ms (8%): unitBodies 8.41 (max 239.4, 2.4/f) | markersRange 1.03 (max 6.7, 1.0/f) | markersMapWorld 0.25 (max 2.5, 0.6/f) | unitOverlays 0.10 (max 0.9, 11/f) | markersChunks 0.08 (max 6.0, 1.0/f) | buildingDecor 0.03 (max 0.7, 4.0/f) (+17 smaller); elsewhere 116.3 ms; 0 section re-mesh requests/s
+[02:01:34] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 2.1, 4.9/t)
+[02:01:35] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_rts_army 1793412095928
+[02:01:35] [Server thread/INFO]: [Offline: Killed 8 entities]
+[02:01:36] [Server thread/INFO]: [Eyes] 15_verdant_l3_round1: pad x -180..-148, z 32..64 keeps 79.8 blocks from the arena wall's ring (centre 11, 4, radius 280)
+[02:01:36] [Render thread/INFO]: [System] [CHAT] 
+[02:01:36] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[02:01:36] [Render thread/INFO]: [System] [CHAT] 
+[02:01:36] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/verdant_l3_round1.nbt' 17x26x17 placed at -172, 71, 40 (pad centre -164, 71, 48)
+[02:01:36] [IO-Worker-2/INFO]: [Eyes] 15_verdant_l3_rts_army: Saved screenshot as bat_eyes_15_verdant_l3_rts_army.png
+[02:01:38] [Server thread/INFO]: [Tick] p50 7.2 ms, p95 13.8 ms, max 32.6 ms over the last 100 ticks; 9 units, 7 buildings, 1 players
+[02:01:38] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:01:38] [Server thread/INFO]: [Sys] 80 ticks, mean 9.8 ms/tick; ours 1.9 ms (20%): pathfinder 0.88 (max 64.7, 2.0/t) | bots 0.21 (max 12.3, 0.1/t) | unit 0.19 (max 6.5, 12/t) | buildings 0.11 (max 4.3, 1.0/t) | unstick 0.07 (max 3.7, 12/t) | pushScan 0.07 (max 4.1, 12/t) | stuckNudge 0.06 (max 3.0, 12/t) | attacker 0.05 (max 0.9, 12/t) | targetGrid 0.05 (max 3.6, 0.2/t) | unitSync 0.05 (max 3.1, 0.1/t) | economy 0.03 (max 0.2, 1.0/t) | autoCaster 0.03 (max 1.4, 1.0/t) | attacker/buildingScan 0.03 (max 1.9, 0.6/t) | separation 0.02 (max 0.1, 12/t) (+10 smaller); vanilla 6.6 ms (68%): chunks 3.89 (max 11.4, 3.0/t) | travel 0.71 (max 4.6, 29/t) | unitTick 0.56 (max 7.3, 12/t) | aiGoals 0.51 (max 10.4, 26/t) | baseTick 0.41 (max 5.2, 50/t) | otherEntities 0.35 (max 3.3, 42/t) | levelRest 0.21 (max 3.8, 3.0/t); elsewhere 1.2 ms; gc 0 ms
+[02:01:39] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:01:41] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1_rts: aimed at -164, 79, 49 - the camera at -171, 101, 56 looks at -164, 49 (52 frames, 5.0 s in the phase)
+[02:01:41] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1_rts: the structure's box holds 1837 non-air blocks on the client
+[02:01:41] [Server thread/INFO]: [Eyes] 15_verdant_l3_round1_rts: ... and 1837 on the server
+[02:01:41] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_round1_rts 1793412101189
+[02:01:41] [IO-Worker-9/INFO]: [Eyes] 15_verdant_l3_round1_rts: Saved screenshot as bat_eyes_15_verdant_l3_round1_rts.png
+[02:01:43] [Render thread/INFO]: [Frame] p50 90.2 ms (11 fps), p95 159.6 ms, max 459.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[02:01:43] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.2 ms, p95 0.5 ms; unit render p50 16.8 ms, p95 36.2 ms; per unit 36.3 us anim, 2481.6 us render (anim 1%); RTS view, zoom 30, detail on, over 45 frames
+[02:01:43] [Render thread/INFO]: [FrameParts] 102 frames, mean 97.8 ms/frame; ours 11.4 ms (12%): unitBodies 8.59 (max 81.4, 3.5/f) | markersRange 1.01 (max 11.1, 1.0/f) | worldFx 0.81 (max 41.2, 11/f) | markersWreck 0.44 (max 3.6, 1.0/f) | markersMapWorld 0.29 (max 3.5, 1.0/f) | unitOverlays 0.09 (max 0.3, 11/f) | bars 0.04 (max 1.4, 22/f) | buildingBoxes 0.03 (max 0.1, 1.0/f) (+15 smaller); elsewhere 86.5 ms; 0 section re-mesh requests/s
+[02:01:43] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.1, 7.3/t)
+[02:01:48] [Server thread/INFO]: [Tick] p50 5.6 ms, p95 14.1 ms, max 19.5 ms over the last 100 ticks; 10 units, 7 buildings, 1 players
+[02:01:48] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:01:48] [Render thread/INFO]: [ShaderBench] 15_verdant_l3_round1_rts: 60 frames, p50 82.71 ms, p95 109.26 ms, mean 87.97 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[02:01:52] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1_rts_close: aimed at -164, 79, 49 - the camera at -172, 101, 57 looks at -164, 49 (47 frames, 4.1 s in the phase)
+[02:01:52] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1_rts_close: the structure's box holds 1837 non-air blocks on the client
+[02:01:52] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_round1_rts_close 1793412112653
+[02:01:52] [Server thread/INFO]: [Eyes] 15_verdant_l3_round1_rts_close: ... and 1837 on the server
+[02:01:52] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:01:53] [IO-Worker-9/INFO]: [Eyes] 15_verdant_l3_round1_rts_close: Saved screenshot as bat_eyes_15_verdant_l3_round1_rts_close.png
+[02:01:53] [Render thread/INFO]: [Frame] p50 88.7 ms (11 fps), p95 134.4 ms, max 459.4 ms over 240 frames; first-person view, zoom 26, 5 units known
+[02:01:53] [Render thread/INFO]: [FrameParts] 110 frames, mean 90.7 ms/frame; ours 2.3 ms (3%): markersRange 1.05 (max 7.8, 1.0/f) | markersWreck 0.49 (max 6.8, 1.0/f) | markersMapWorld 0.45 (max 3.5, 0.9/f) | unitOverlays 0.12 (max 3.1, 11/f) | worldFx 0.04 (max 3.0, 11/f) | markersMetal 0.03 (max 3.0, 2.0/f) | buildingBoxes 0.03 (max 0.1, 0.9/f) | buildingDecor 0.02 (max 0.1, 4.0/f) (+14 smaller); elsewhere 88.4 ms; 0 section re-mesh requests/s
+[02:01:53] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:01:57] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_round1_34 1793412117745
+[02:01:57] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1_close: standing at -167.0, 83.6, 52.0 (direction -1, 1 from the middle), eye 11.62 over the aim, pitch 67 down
+[02:01:58] [Server thread/INFO]: [Tick] p50 6.3 ms, p95 12.9 ms, max 16.5 ms over the last 100 ticks; 10 units, 7 buildings, 1 players
+[02:01:58] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:01:58] [IO-Worker-9/INFO]: [Eyes] 15_verdant_l3_round1_34: Saved screenshot as bat_eyes_15_verdant_l3_round1_34.png
+[02:02:02] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1_close: aimed at -164, 72, 49 - the camera at -167, 84, 52 looks at -163, 48 (60 frames, 5.1 s in the phase)
+[02:02:02] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1_close: the structure's box holds 1837 non-air blocks on the client
+[02:02:02] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_round1_close 1793412122826
+[02:02:02] [Server thread/INFO]: [Eyes] 15_verdant_l3_round1_close: ... and 1837 on the server
+[02:02:02] [Render thread/INFO]: [System] [CHAT] 
+[02:02:02] [Render thread/INFO]: [System] [CHAT] Night falls...
+[02:02:02] [Render thread/INFO]: [System] [CHAT] 
+[02:02:03] [IO-Worker-9/INFO]: [Eyes] 15_verdant_l3_round1_close: Saved screenshot as bat_eyes_15_verdant_l3_round1_close.png
+[02:02:04] [Render thread/INFO]: [Frame] p50 85.3 ms (12 fps), p95 134.9 ms, max 163.8 ms over 240 frames; first-person view, zoom 26, 5 units known
+[02:02:04] [Render thread/INFO]: [FrameParts] 99 frames, mean 101.4 ms/frame; ours 1.3 ms (1%): markersRange 1.20 (max 9.6, 1.0/f) | bars 0.04 (max 3.0, 22/f) | markersGrid 0.03 (max 3.0, 1.0/f) | unitOverlays 0.03 (max 0.0, 11/f) (+15 smaller); elsewhere 100.0 ms; 0 section re-mesh requests/s
+[02:02:06] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_round1_dusk 1793412126590
+[02:02:06] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:02:07] [IO-Worker-11/INFO]: [Eyes] 15_verdant_l3_round1_dusk: Saved screenshot as bat_eyes_15_verdant_l3_round1_dusk.png
+[02:02:08] [Server thread/INFO]: [Tick] p50 6.0 ms, p95 13.0 ms, max 21.1 ms over the last 100 ticks; 10 units, 9 buildings, 1 players
+[02:02:08] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:02:09] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:02:11] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1_golden_rts: aimed at -164, 79, 49 - the camera at -171, 101, 56 looks at -164, 49 (58 frames, 5.0 s in the phase)
+[02:02:11] [Render thread/INFO]: [Eyes] 15_verdant_l3_round1_golden_rts: the structure's box holds 1837 non-air blocks on the client
+[02:02:11] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_round1_golden_rts 1793412131636
+[02:02:11] [Server thread/INFO]: [Eyes] 15_verdant_l3_round1_golden_rts: ... and 1837 on the server
+[02:02:12] [IO-Worker-11/INFO]: [Eyes] 15_verdant_l3_round1_golden_rts: Saved screenshot as bat_eyes_15_verdant_l3_round1_golden_rts.png
+[02:02:14] [Render thread/INFO]: [Frame] p50 86.1 ms (12 fps), p95 135.0 ms, max 181.5 ms over 240 frames; RTS view, zoom 30, 5 units known
+[02:02:14] [Render thread/INFO]: [FrameParts] 109 frames, mean 92.2 ms/frame; ours 2.0 ms (2%): markersRange 1.04 (max 6.4, 1.0/f) | markersWreck 0.38 (max 3.5, 1.0/f) | markersMapWorld 0.34 (max 3.8, 0.8/f) | unitOverlays 0.07 (max 3.1, 11/f) | buildingDecor 0.05 (max 2.4, 4.0/f) | markersMetal 0.03 (max 3.0, 2.0/f) | buildingBoxes 0.03 (max 0.1, 0.8/f) (+15 smaller); elsewhere 90.2 ms; 0 section re-mesh requests/s
+[02:02:14] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:02:15] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_round1_rts_t6000 1793412135722
+[02:02:15] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:02:16] [IO-Worker-4/INFO]: [Eyes] 15_verdant_l3_round1_rts_t6000: Saved screenshot as bat_eyes_15_verdant_l3_round1_rts_t6000.png
+[02:02:18] [Server thread/INFO]: [Tick] p50 6.3 ms, p95 13.7 ms, max 22.8 ms over the last 100 ticks; 12 units, 9 buildings, 1 players
+[02:02:18] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:02:20] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_round1_34_t6000 1793412140847
+[02:02:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 37)]
+[02:02:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-163, 71, 37)]
+[02:02:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 59)]
+[02:02:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-163, 71, 59)]
+[02:02:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-175, 71, 47)]
+[02:02:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-175, 71, 49)]
+[02:02:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-153, 71, 47)]
+[02:02:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-153, 71, 49)]
+[02:02:20] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:02:21] [IO-Worker-10/INFO]: [Eyes] 15_verdant_l3_round1_34_t6000: Saved screenshot as bat_eyes_15_verdant_l3_round1_34_t6000.png
+[02:02:24] [Render thread/INFO]: [Frame] p50 93.3 ms (11 fps), p95 137.5 ms, max 213.0 ms over 240 frames; RTS view, zoom 30, 13 units known
+[02:02:24] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.3 ms; unit render p50 14.7 ms, p95 32.3 ms; per unit 42.5 us anim, 2164.8 us render (anim 2%); RTS view, zoom 30, detail on, over 30 frames
+[02:02:24] [Render thread/INFO]: [FrameParts] 93 frames, mean 107.5 ms/frame; ours 7.5 ms (7%): unitBodies 5.80 (max 39.3, 2.7/f) | markersRange 0.89 (max 6.7, 1.0/f) | markersWreck 0.28 (max 3.4, 1.0/f) | markersMapWorld 0.21 (max 2.5, 0.5/f) | unitOverlays 0.14 (max 4.4, 11/f) | buildingBoxes 0.05 (max 3.1, 0.5/f) | markersChunks 0.04 (max 3.0, 1.0/f) | markersMetal 0.04 (max 3.2, 2.0/f) (+15 smaller); elsewhere 100.0 ms; 0 section re-mesh requests/s
+[02:02:24] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:02:25] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l3_round1_rts_army 1793412145888
+[02:02:25] [Server thread/INFO]: [Offline: Killed 8 entities]
+[02:02:26] [Server thread/INFO]: [Eyes] 15_verdant_l1: pad x -180..-148, z 32..64 keeps 79.8 blocks from the arena wall's ring (centre 11, 4, radius 280)
+[02:02:26] [Render thread/INFO]: [System] [CHAT] 
+[02:02:26] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[02:02:26] [Render thread/INFO]: [System] [CHAT] 
+[02:02:26] [Render thread/INFO]: [Eyes] 15_verdant_l1: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/verdant_l1.nbt' 17x16x17 placed at -172, 71, 40 (pad centre -164, 71, 48)
+[02:02:26] [IO-Worker-12/INFO]: [Eyes] 15_verdant_l3_round1_rts_army: Saved screenshot as bat_eyes_15_verdant_l3_round1_rts_army.png
+[02:02:28] [Server thread/INFO]: [Tick] p50 6.9 ms, p95 15.0 ms, max 61.0 ms over the last 100 ticks; 12 units, 10 buildings, 1 players
+[02:02:28] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:02:31] [Render thread/INFO]: [Eyes] 15_verdant_l1_rts: aimed at -164, 76, 49 - the camera at -172, 101, 57 looks at -164, 49 (58 frames, 5.0 s in the phase)
+[02:02:31] [Render thread/INFO]: [Eyes] 15_verdant_l1_rts: the structure's box holds 1415 non-air blocks on the client
+[02:02:31] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l1_rts 1793412151197
+[02:02:31] [Server thread/INFO]: [Eyes] 15_verdant_l1_rts: ... and 1415 on the server
+[02:02:31] [IO-Worker-12/INFO]: [Eyes] 15_verdant_l1_rts: Saved screenshot as bat_eyes_15_verdant_l1_rts.png
+[02:02:33] [Render thread/INFO]: [Frame] p50 88.9 ms (11 fps), p95 130.9 ms, max 213.0 ms over 240 frames; RTS view, zoom 30, 5 units known
+[02:02:34] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 3.1 ms; unit render p50 16.2 ms, p95 29.2 ms; per unit 38.4 us anim, 2209.7 us render (anim 2%); RTS view, zoom 30, detail on, over 50 frames
+[02:02:34] [Render thread/INFO]: [FrameParts] 113 frames, mean 88.4 ms/frame; ours 10.0 ms (11%): unitBodies 7.65 (max 39.3, 3.5/f) | markersWreck 0.75 (max 6.8, 1.0/f) | markersRange 0.73 (max 6.6, 1.0/f) | worldFx 0.41 (max 4.0, 11/f) | markersMapWorld 0.22 (max 0.5, 1.0/f) | unitOverlays 0.08 (max 0.3, 11/f) | buildingBoxes 0.06 (max 3.1, 1.0/f) | buildingDecor 0.05 (max 3.0, 4.0/f) | bars 0.03 (max 0.4, 22/f) | markersStartPos 0.03 (max 3.0, 1.0/f) (+13 smaller); elsewhere 78.4 ms; 0 section re-mesh requests/s
+[02:02:34] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.1, 7.3/t)
+[02:02:38] [Render thread/INFO]: [ShaderBench] 15_verdant_l1_rts: 60 frames, p50 77.82 ms, p95 98.59 ms, mean 79.18 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[02:02:38] [Server thread/INFO]: [Tick] p50 6.2 ms, p95 12.1 ms, max 19.7 ms over the last 100 ticks; 14 units, 12 buildings, 1 players
+[02:02:38] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:02:39] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:02:42] [Render thread/INFO]: [Eyes] 15_verdant_l1_rts_close: aimed at -164, 76, 49 - the camera at -173, 101, 58 looks at -164, 49 (49 frames, 4.0 s in the phase)
+[02:02:42] [Render thread/INFO]: [Eyes] 15_verdant_l1_rts_close: the structure's box holds 1415 non-air blocks on the client
+[02:02:42] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l1_rts_close 1793412162119
+[02:02:42] [Server thread/INFO]: [Eyes] 15_verdant_l1_rts_close: ... and 1415 on the server
+[02:02:42] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:02:42] [IO-Worker-12/INFO]: [Eyes] 15_verdant_l1_rts_close: Saved screenshot as bat_eyes_15_verdant_l1_rts_close.png
+[02:02:44] [Render thread/INFO]: [Frame] p50 82.3 ms (12 fps), p95 115.4 ms, max 179.4 ms over 240 frames; first-person view, zoom 26, 5 units known
+[02:02:44] [Render thread/INFO]: [FrameParts] 116 frames, mean 86.0 ms/frame; ours 2.4 ms (3%): markersRange 0.92 (max 6.7, 1.0/f) | markersWreck 0.74 (max 6.8, 1.0/f) | markersMapWorld 0.45 (max 6.5, 0.9/f) | worldFx 0.07 (max 6.0, 11/f) | buildingBoxes 0.06 (max 3.1, 0.9/f) | unitOverlays 0.04 (max 0.1, 11/f) | worldMarkers 0.03 (max 3.0, 11/f) (+15 smaller); elsewhere 83.6 ms; 0 section re-mesh requests/s
+[02:02:44] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:02:47] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l1_34 1793412167130
+[02:02:47] [Render thread/INFO]: [Eyes] 15_verdant_l1_close: standing at -167.0, 83.6, 52.0 (direction -1, 1 from the middle), eye 11.62 over the aim, pitch 67 down
+[02:02:47] [IO-Worker-12/INFO]: [Eyes] 15_verdant_l1_34: Saved screenshot as bat_eyes_15_verdant_l1_34.png
+[02:02:48] [Server thread/INFO]: [Tick] p50 7.9 ms, p95 16.4 ms, max 24.1 ms over the last 100 ticks; 14 units, 12 buildings, 1 players
+[02:02:48] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:02:50] [Server thread/INFO]: [Sys] the server is slow (tick p95 55.6 ms): per-system timing on
+[02:02:52] [Render thread/INFO]: [Eyes] 15_verdant_l1_close: aimed at -164, 72, 49 - the camera at -167, 84, 52 looks at -163, 48 (59 frames, 5.1 s in the phase)
+[02:02:52] [Render thread/INFO]: [Eyes] 15_verdant_l1_close: the structure's box holds 1415 non-air blocks on the client
+[02:02:52] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l1_close 1793412172200
+[02:02:52] [Server thread/INFO]: [Eyes] 15_verdant_l1_close: ... and 1415 on the server
+[02:02:52] [Render thread/INFO]: [System] [CHAT] 
+[02:02:52] [Render thread/INFO]: [System] [CHAT] Night falls...
+[02:02:52] [Render thread/INFO]: [System] [CHAT] 
+[02:02:52] [IO-Worker-11/INFO]: [Eyes] 15_verdant_l1_close: Saved screenshot as bat_eyes_15_verdant_l1_close.png
+[02:02:54] [Render thread/INFO]: [Frame] p50 83.6 ms (12 fps), p95 119.6 ms, max 177.7 ms over 240 frames; first-person view, zoom 26, 5 units known
+[02:02:54] [Render thread/INFO]: [FrameParts] 102 frames, mean 97.9 ms/frame; ours 1.3 ms (1%): markersRange 1.11 (max 9.6, 1.0/f) | bars 0.05 (max 4.0, 22/f) | worldFx 0.04 (max 3.0, 11/f) | markersChunks 0.03 (max 2.6, 1.0/f) | unitOverlays 0.03 (max 0.1, 11/f) (+14 smaller); elsewhere 96.6 ms; 0 section re-mesh requests/s
+[02:02:55] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 16.9 ms): per-system timing off
+[02:02:56] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l1_dusk 1793412176500
+[02:02:56] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:02:56] [IO-Worker-11/INFO]: [Eyes] 15_verdant_l1_dusk: Saved screenshot as bat_eyes_15_verdant_l1_dusk.png
+[02:02:58] [Server thread/INFO]: [Tick] p50 7.5 ms, p95 15.1 ms, max 19.7 ms over the last 100 ticks; 16 units, 13 buildings, 1 players
+[02:02:58] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:02:58] [Server thread/INFO]: [Sys] 100 ticks, mean 9.0 ms/tick; ours 1.6 ms (17%): buildings 0.42 (max 5.7, 1.0/t) | bots 0.30 (max 27.9, 0.1/t) | unit 0.28 (max 7.4, 15/t) | economy 0.14 (max 6.1, 1.0/t) | unitSync 0.10 (max 4.7, 0.1/t) | pathfinder 0.09 (max 1.4, 2.0/t) | pushScan 0.07 (max 4.7, 15/t) | attacker 0.03 (max 0.1, 15/t) | unstick 0.03 (max 0.2, 15/t) | chunkLoader 0.02 (max 1.8, 0.1/t) (+14 smaller); vanilla 7.3 ms (82%): chunks 4.71 (max 14.4, 3.0/t) | travel 0.59 (max 6.9, 37/t) | baseTick 0.57 (max 8.4, 58/t) | aiGoals 0.49 (max 8.6, 37/t) | unitTick 0.49 (max 10.9, 15/t) | otherEntities 0.39 (max 3.4, 71/t) | levelRest 0.10 (max 0.3, 3.0/t); elsewhere 0.1 ms; gc 0 ms
+[02:03:01] [Render thread/INFO]: [Eyes] 15_verdant_l1_golden_rts: aimed at -164, 76, 49 - the camera at -169, 90, 54 looks at -164, 49 (61 frames, 5.1 s in the phase)
+[02:03:01] [Render thread/INFO]: [Eyes] 15_verdant_l1_golden_rts: the structure's box holds 1415 non-air blocks on the client
+[02:03:01] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l1_golden_rts 1793412181568
+[02:03:01] [Server thread/INFO]: [Eyes] 15_verdant_l1_golden_rts: ... and 1415 on the server
+[02:03:02] [IO-Worker-11/INFO]: [Eyes] 15_verdant_l1_golden_rts: Saved screenshot as bat_eyes_15_verdant_l1_golden_rts.png
+[02:03:04] [Render thread/INFO]: [Frame] p50 93.0 ms (11 fps), p95 127.6 ms, max 177.7 ms over 240 frames; RTS view, zoom 30, 5 units known
+[02:03:04] [Render thread/INFO]: [FrameParts] 111 frames, mean 90.5 ms/frame; ours 2.4 ms (3%): markersRange 0.84 (max 3.7, 1.0/f) | markersWreck 0.83 (max 9.9, 1.0/f) | markersMapWorld 0.55 (max 7.4, 0.8/f) | unitOverlays 0.07 (max 3.1, 11/f) | worldFx 0.04 (max 3.0, 11/f) | markersRangeRefresh 0.03 (max 3.0, 1.0/f) | buildingBoxes 0.03 (max 0.1, 0.8/f) (+15 smaller); elsewhere 88.0 ms; 0 section re-mesh requests/s
+[02:03:04] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:03:05] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l1_rts_t6000 1793412185598
+[02:03:05] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:03:06] [IO-Worker-4/INFO]: [Eyes] 15_verdant_l1_rts_t6000: Saved screenshot as bat_eyes_15_verdant_l1_rts_t6000.png
+[02:03:08] [Server thread/INFO]: [Tick] p50 6.7 ms, p95 13.5 ms, max 23.2 ms over the last 100 ticks; 16 units, 14 buildings, 1 players
+[02:03:08] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:03:09] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[02:03:10] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l1_34_t6000 1793412190689
+[02:03:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 37)]
+[02:03:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-163, 71, 37)]
+[02:03:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 71, 59)]
+[02:03:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-163, 71, 59)]
+[02:03:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-175, 71, 47)]
+[02:03:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-175, 71, 49)]
+[02:03:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-153, 71, 47)]
+[02:03:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-153, 71, 49)]
+[02:03:10] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:03:11] [IO-Worker-4/INFO]: [Eyes] 15_verdant_l1_34_t6000: Saved screenshot as bat_eyes_15_verdant_l1_34_t6000.png
+[02:03:14] [Render thread/INFO]: [Frame] p50 90.1 ms (11 fps), p95 124.4 ms, max 159.6 ms over 240 frames; RTS view, zoom 30, 13 units known
+[02:03:14] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.2 ms; unit render p50 10.6 ms, p95 26.4 ms; per unit 16.3 us anim, 1891.9 us render (anim 1%); RTS view, zoom 30, detail on, over 35 frames
+[02:03:14] [Render thread/INFO]: [FrameParts] 103 frames, mean 97.2 ms/frame; ours 6.9 ms (7%): unitBodies 5.25 (max 33.5, 2.8/f) | markersRange 0.84 (max 9.2, 1.0/f) | markersWreck 0.39 (max 3.6, 1.0/f) | markersMapWorld 0.22 (max 2.8, 0.6/f) | unitOverlays 0.09 (max 0.4, 11/f) (+18 smaller); elsewhere 90.3 ms; 0 section re-mesh requests/s
+[02:03:14] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:03:15] [Render thread/INFO]: [Eyes] clip-mark 15_verdant_l1_rts_army 1793412195766
+[02:03:15] [Server thread/INFO]: [Offline: Killed 8 entities]
+[02:03:16] [IO-Worker-11/INFO]: [Eyes] 15_verdant_l1_rts_army: Saved screenshot as bat_eyes_15_verdant_l1_rts_army.png
+[02:03:17] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[02:03:17] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[02:03:17] [Render thread/INFO]: [Eyes] tour complete
+[02:03:17] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[02:03:18] [Render thread/INFO]: Stopping!
+[02:03:18] [Server thread/INFO]: Offline lost connection: Disconnected
+[02:03:18] [Server thread/INFO]: Offline left the game
+[02:03:18] [Server thread/INFO]: Player logged out: Offline, id: 2
+[02:03:18] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[02:03:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[02:03:18] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1279|0
+[02:03:18] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|2522|506|0
+[02:03:18] [Server thread/INFO]: Stopping server
+[02:03:18] [Server thread/INFO]: Saving players
+[02:03:18] [Server thread/INFO]: Saving worlds
+[02:03:18] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[02:03:18] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[02:03:18] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[02:03:18] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[02:03:18] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[02:03:18] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[02:03:18] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[02:03:18] [Render thread/INFO]: Stopping worker threads
