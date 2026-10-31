@@ -137,4 +137,77 @@ public class WidePathMemoGameTests {
             }
         });
     }
+
+    // Oct 31, lovish's game 03:14 (42 headhunters 18% of the server tick, ~5 ms vanilla searches, ticks to 184 ms):
+    // the memo is every unit's, not only the wide ones'. A ranged unit (moveTo(target) every tick out of range or out
+    // of sight) and a melee unit chase the same foe on the plateau; each may search at most MAX_SEARCHES times in
+    // WINDOW ticks (once a second, WidePathMemo.REPEAT_TICKS, plus StuckNudge's sidesteps) and the whole range at most
+    // MAX_FULL times. Before, the headhunter searched on every tick: ~300 searches, nearly all with the fallback.
+    static final int MAX_SEARCHES = 30;
+
+    static void narrowChase(GameTestHelper helper, net.minecraft.world.entity.EntityType<? extends Mob> type, String tag) {
+        ServerLevel level = helper.getLevel();
+        TestCleanup.BlockUndo undo = TestCleanup.blocks(helper);
+        tallPocket(helper, undo);
+        for (int x = 10; x <= 14; x++)
+            for (int z = 6; z <= 10; z++)
+                for (int y = 2; y <= PLATEAU_TOP; y++)
+                    undo.set(helper.absolutePos(new BlockPos(x, y, z)), Blocks.STONE.defaultBlockState());
+        String mine = owner(helper, tag), theirs = owner(helper, tag + "_foe");
+        Runnable daylight = ArenaReady.noSunlight(mine, theirs);
+        TestCleanup.atEnd(helper, daylight);
+        BlockPos o = helper.absolutePos(BlockPos.ZERO);
+        List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
+        Mob unit = PathingBudgetGameTests.unit(level, type, mine, o.getX() + 3.5, o.getY() + 2, o.getZ() + 8.5, made);
+        Mob foe = TerrainGameTests.dummy(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs,
+            o.getX() + 12.5, o.getY() + PLATEAU_TOP + 1, o.getZ() + 8.5, made);
+        if (unit == null || foe == null) {
+            TerrainGameTests.cleanUp(made);
+            helper.fail("could not create the units");
+            return;
+        }
+        WidePathMemo memo = ((WidePathMemo.Holder) unit.getNavigation()).reignofnether$wideMemo();
+        int[] ordered = { -1 };
+        int[] before = { 0, 0 };
+        boolean[] done = { false };
+        ArenaReady.whenTicking(helper, made, 150, tick -> {
+            ordered[0] = tick;
+            before[0] = memo.searches;
+            before[1] = memo.fullSearches;
+            PathingBudgetGameTests.attack(level, mine, unit, foe);
+        });
+        helper.onEachTick(() -> {
+            if (ordered[0] < 0 || done[0] || helper.getTick() - ordered[0] < WINDOW)
+                return;
+            done[0] = true;
+            int searches = memo.searches - before[0], full = memo.fullSearches - before[1];
+            List<String> problems = new ArrayList<>();
+            if (searches < 1)
+                problems.add("the " + tag + " never searched for its unreachable target, so this proves nothing (target "
+                    + (unit.getTarget() == foe ? "the dummy" : String.valueOf(unit.getTarget())) + ", nav done "
+                    + unit.getNavigation().isDone() + "; " + ArenaReady.describe(level, made) + ")");
+            if (searches > MAX_SEARCHES)
+                problems.add("the " + tag + " searched " + searches + " times in " + WINDOW + " ticks of chasing a target "
+                    + "it cannot reach (at most " + MAX_SEARCHES + ")");
+            if (full > MAX_FULL)
+                problems.add("the " + tag + " ran the full-range search " + full + " times in " + WINDOW + " ticks (at most "
+                    + MAX_FULL + "); " + ArenaReady.around(unit, foe));
+            try {
+                TerrainGameTests.finish(helper, problems);
+            } finally {
+                TerrainGameTests.cleanUp(made);
+            }
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void ranged_unit_chasing_an_unreachable_target_searches_once_a_second(GameTestHelper helper) {
+        narrowChase(helper, EntityRegistrar.HEADHUNTER_UNIT.get(), "headhunter");
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void melee_unit_chasing_an_unreachable_target_searches_once_a_second(GameTestHelper helper) {
+        narrowChase(helper, EntityRegistrar.VINDICATOR_UNIT.get(), "vindicator");
+    }
 }
