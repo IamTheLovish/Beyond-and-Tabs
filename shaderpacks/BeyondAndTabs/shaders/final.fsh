@@ -300,7 +300,7 @@ void main() {
     vec2 px = 1.0 / vec2(viewWidth, viewHeight);
     float aspect = viewWidth / viewHeight;
     vec3 c = colourAt(texcoord);
-#if ALBEDO_PROBE > 0
+#if UNLIT_PROBE == 1
     // light pass 20: the albedo probe shows the unlit terrain as composite wrote it (no glow, grade or shoulder)
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
     return;

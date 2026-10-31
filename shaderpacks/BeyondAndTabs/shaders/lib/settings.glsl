@@ -158,11 +158,13 @@ const float AO_SHADOW_FLOOR = 0.93;
 // light pass 19: AO_SHADOW_FLOOR measured as a no-op (lp18 pad shadows 0.30 in both builds): the darkening is the
 // VERTEX AO (separateAo, glcolor.a), which takes the fill and so all of a shadow's light - the pad's grass between the
 // 2-high cube columns sits in their corner AO. On a top no sun reaches it stops here (lit.fsh)
-const float VERTEX_AO_SHADOW_FLOOR = 0.95;
+// light pass 22: 0.95 -> 0.90 - lp21's far pad shadow 0.755-0.766 of lit (target ~0.72)
+const float VERTEX_AO_SHADOW_FLOOR = 0.90;
 // light pass 19: the biome-tinted ground's light under the low sun (lit.fsh, by lowSunFull: 1 at t11800, 0 at 5000).
 // lawn L1 measured t11800's lawn 0.334 (LP17 0.300, Complementary 0.275); (0.30 / 0.334)^2.2 = 0.79
 // light pass 21: 0.80 -> 0.70 (lp20's t11800 lawn 0.307-0.314, target ~0.29: (0.29 / 0.31)^2.2 = 0.86)
-const float LOW_SUN_GRASS = 0.70;
+// light pass 22: 0.70 -> 0.75 (lp21's t11800 lawn 0.263-0.273, target ~0.29)
+const float LOW_SUN_GRASS = 0.75;
 const float CONTACT_SUN_SHARE = 0.0;
 // light pass 10: a softer crease (critic: "a little hard"): 0.12 -> 0.16 block, taps at three radii, gain 1.2 -> 1.0
 // light pass 14 (critic on pass 12: a 1-2 px hard band at the pillars' feet; target a 3-5 px gradient): 0.16 -> 0.26
@@ -173,12 +175,18 @@ const float CONTACT_SUN_SHARE = 0.0;
 // / 0.97 / 1.00 at 0 / 2 / 3 / 5 / 7 px: all of it inside ~4 px, so a 3-9 px measurement (lp20 near-foot 0.71 = far)
 // cannot see it, and its gain changed nothing there (lp19 -> lp20). Taps that reach the wall must start further out.
 // Model now: 0.80 at 0-3 px, 0.87 at 5, 0.94 at 7, 0.98 at 9 - on the far shadow's 0.73 a seat of ~0.59-0.61 at the foot
-const float CONTACT_RADIUS = 0.40;            // ~13 px at the default RTS zoom
+// light pass 22: 0.40 -> 0.20 (~7 px), gain 2.5, floor 0.80 -> 0.78. The CONTACT_PROBE still (pcontact) shows the
+// crease does reach the cube feet: k 0.46-0.56 (factor ~0.89-0.91, averaged round the whole silhouette) over 0-6 px,
+// 0.16 at 8-10, 0.07 past 10. lp21's seat profile (0.61 at 1 px, 0.65-0.70 out to 12 px) is mostly the shadow of the
+// next cube south: the 2-high columns' shadows (~1.15 blocks at 5000) cover the 1-block gaps in front of them, so the
+// "seat" pixels sit in shadow, with pass 21's wide crease on top. Model now: 0.78 at 0-1 px, 0.81 at 2, 0.91 at 3,
+// 0.97 at 4, 1.00 from 5 - a crisp line at the foot on the shadow's ~0.72
+const float CONTACT_RADIUS = 0.20;            // ~7 px at the default RTS zoom
 // light pass 20: 1.0 -> 1.8 - with VERTEX_AO_SHADOW_FLOOR (pass 19) the pad's near-foot shadow (3-9 px) read 0.72, as
 // flat as the far shadow: the seating had been the vertex AO's. The crease now reaches its floor further out from the
 // foot and fades over the radius (~9 px): ~0.60 of lit at the foot, ~0.73 by 6-8 px
 const float CONTACT_GAIN = 2.5;
-const float CONTACT_FLOOR = 0.80;
+const float CONTACT_FLOOR = 0.78;
 // the display's S-curve (final.fsh, light pass 2), on luma as a ratio, after the grade. The lit lawn is its pivot and
 // stays where it is (lovish: the lawn mid-toned on the palette band, ~0.42; buildings own the lights). Below the
 // pivot a toe takes the darks down in proportion to how far below the lawn they sit - x (1 - SLOPE u - TOE u^2),
@@ -423,14 +431,16 @@ const float WALL_FILL = 0.31;
 // 0.80 at 1.20, ~0.73-0.76 on screen with lp15's shortfall; tops, shaded sides and t11800 (lowSunFull) untouched
 // light pass 17: 1.20 -> 0.95 - lp16 measured the white sides 0.82-0.86 (model 0.80 at 1.20: lp15's shortfall was not
 // the pack's). Model 0.75 at 0.95, ~0.78-0.79 on screen with lp16's +0.04
-const float SIDE_SUN = 0.95;
+// light pass 22: 0.95 -> 1.05 (lp21's east faces 0.518, target 0.53; grazed walls only - SIDE_SUN_SQUARE takes the rest)
+const float SIDE_SUN = 1.05;
 // light pass 20: and SIDE_SUN_SQUARE for a wall the sun meets past SIDE_SUN_FULL_HI of N.L (lib/light.glsl sideKey).
 // lp19 measured the white cubes' south faces (N.L ~0.48) 0.79 / 0.77 / 0.74 against tops 0.95 (Complementary nearly as
 // bright as its tops: the cubes read as solid white, ours as grey slabs); lp16 at 1.20 gave 0.82-0.86, so ~0.29 of
 // luma per unit: 1.40 -> ~0.87-0.89. The east faces (N.L ~0.26, under SIDE_SUN_FULL_LO) keep 0.95
 // light pass 21: 1.40 -> 1.80 - lp20 measured the south faces 0.81-0.86 (median 0.82; lp19 0.77 at an effective 0.95):
 // ~0.12 of luma per unit this close to the shoulder, so +0.4 for the 0.87 target
-const float SIDE_SUN_SQUARE = 1.80;
+// light pass 22: 1.80 -> 2.00 (lp21's south faces 0.845-0.880, median 0.855; lp20 -> lp21 gave ~0.09 per unit)
+const float SIDE_SUN_SQUARE = 2.00;
 const float SIDE_SUN_FULL_LO = 0.30;
 const float SIDE_SUN_FULL_HI = 0.45;
 // the low sun's full share by the sine of its height: 1 at or below LOW_SUN_FULL_LO (t11800 is 0.232), 0 from
@@ -531,10 +541,15 @@ const float MEADOW_CELL = 17.3;
 // world's texture variants). The albedo-probe stills (alb1 / alb2) show sun shadows and shaded sides, which the probe
 // cannot draw: they were not probe output, so no verdict from them. By design this field adds ~0.02 of macro std; the
 // measured low-pass std is 0.029. A third less of it either way
-const float MEADOW_VALUE = 0.14;
+// light pass 22: 0.14 -> 0.05. The genuine probes (lp21 build, sampler 1, 5000; the critic's 48-px block measure):
+// ALBEDO_PROBE 1 (texture x tint) cv 0.058, p10/p50 0.900; ALBEDO_PROBE 2 (+ this field) cv 0.073, 0.896; the lit still
+// cv 0.086, 0.833. Each probe ran a separate world, so the parts add only roughly: this field ~0.044 of cv, the light
+// ~0.045 (and most of the dark tail: p10/p50 0.90 -> 0.83). Hue: ALBEDO1 low-pass sd 2.0 degrees, ALBEDO2 4.4
+const float MEADOW_VALUE = 0.05;
 // light pass 21: value 0.20 -> 0.14, hue 0.08 / 0.11 -> 0.05 / 0.07 (see MEADOW_VALUE)
-const float MEADOW_HUE_RED = 0.05;
-const float MEADOW_HUE_BLUE = 0.07;
+// light pass 22: 0.05 / 0.07 -> 0.03 / 0.04 (see MEADOW_VALUE)
+const float MEADOW_HUE_RED = 0.03;
+const float MEADOW_HUE_BLUE = 0.04;
 // near-white faces turned from the up direction lose the light's colour (light pass 3: white wool and white blocks'
 // sides read cream, H 40, S 0.07, under the warm sun while their tops stayed neutral): the light on a face of albedo
 // luma past ~0.7 and saturation under ~0.12 is pulled toward its own grey by WHITE_WALL_NEUTRAL x (1 - up). The ground
@@ -565,6 +580,16 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 // loader hands it (the biome tint), 2 after the shader's own albedo work (meadow, plant caps); no AO, haze, glow or grade.
 // A near/far hue gap still in this image is the texture's or the world's, not the light's
 #define ALBEDO_PROBE 0 // [0 1 2]
+// LIGHTMAP_PROBE 1 (light pass 21): terrain drawn as its raw lightmap, red the block light, green the sky light (0..1
+// before SKY_LIGHT_FULL), unlit like the albedo probe. The warm near-cube halo is in neither albedo probe (lp21: ALBEDO1
+// hue 82.7 near / 83.2 far, ALBEDO2 81.2 / 80.9; the lit still 77.9 / 82.9 at matched luma), so it is light: a red
+// glow round the site is block light, a green dip stale sky light
+#define LIGHTMAP_PROBE 0 // [0 1]
+#if ALBEDO_PROBE > 0 || LIGHTMAP_PROBE == 1
+#define UNLIT_PROBE 1
+#else
+#define UNLIT_PROBE 0
+#endif
 // CONTACT_PROBE 1 (light pass 21, composite.fsh): the contact crease's strength in red (1 - its factor, x 1 / (1 -
 // CONTACT_FLOOR), so the floor reads full red) over the frame's grey: no red at a cube's foot means it never ran
 #define CONTACT_PROBE 0 // [0 1]

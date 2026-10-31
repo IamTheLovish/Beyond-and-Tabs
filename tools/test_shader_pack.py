@@ -646,7 +646,9 @@ class ShaderPack(unittest.TestCase):
         # on a lattice turned off the axes
         # Retired pin (light pass 21): "MEADOW_VALUE 0.15-0.30" - lp20's critic read low-frequency dark blotches that
         # compete with real shadows; the field's swing a third smaller
-        self.assertTrue(0.10 <= _const("MEADOW_VALUE") <= 0.30)
+        # Retired pin (light pass 22): "MEADOW_VALUE 0.10-0.30" - the genuine albedo probes put this field at ~0.044 of
+        # the lawn's 48-px cv (target block sd <= 0.032): a trace of it now
+        self.assertTrue(0.0 <= _const("MEADOW_VALUE") <= 0.30)
         self.assertIn("TURN_A * xz / MEADOW_CELL", _read("lib", "meadow.glsl"))
         meadow = _read("lib", "meadow.glsl")
         self.assertIn("- 0.5 * (MEADOW_VALUE * 0.45) * (MEADOW_VALUE * 0.45)", meadow)

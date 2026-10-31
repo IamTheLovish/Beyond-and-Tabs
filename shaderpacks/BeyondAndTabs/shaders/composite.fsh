@@ -389,7 +389,7 @@ void main() {
             if (texture2D(colortex1, uv).g < 0.5)
                 c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(uv, 1.0))))), skyOwn());
 #endif
-    } else if (isEyeInWater == 0 && ALBEDO_PROBE == 0) {
+    } else if (isEyeInWater == 0 && UNLIT_PROBE == 0) {
         vec3 pos = viewPosAt(uv, depth);
         float dist = ortho ? -pos.z : length(pos);
         // a perspective view (first person, the 3/4 camera) gets aerial perspective: sky-tinted air from

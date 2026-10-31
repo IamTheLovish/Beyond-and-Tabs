@@ -101,6 +101,14 @@ void main() {
 #endif
     vec4 tex = texture2D(texture, texcoord, lodBias);
     vec3 albedo = tex.rgb * glcolor.rgb;
+#if LIGHTMAP_PROBE == 1 && defined LIT_TERRAIN
+    if (tex.a < 0.1)
+        discard;
+    vec2 lmRaw = clamp((lmcoord - 1.0 / 32.0) * (16.0 / 15.0), 0.0, 1.0);
+    gl_FragData[0] = vec4(toLinear(vec3(lmRaw, 0.0)), 1.0);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+#endif
 #if ALBEDO_PROBE == 1 && defined LIT_TERRAIN
     if (tex.a < 0.1)
         discard;

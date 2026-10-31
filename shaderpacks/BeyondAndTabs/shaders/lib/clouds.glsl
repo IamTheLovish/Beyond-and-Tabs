@@ -16,7 +16,9 @@
 
 // the sun's share left under the thickest part of a cloud. Light pass 11: 0.70 -> 0.85 - the patches are 15-60 blocks,
 // so a cloud can cover a whole RTS frame, and the eyes' lawn measurement swung by ~0.04 with the clouds
-const float CLOUD_DARKEST = 0.85;
+// light pass 22: 0.85 -> 0.92 - the light adds ~0.045 of the lawn's 48-px cv over its albedo (lp21 probes); a cloud
+// took up to ~0.012 of a 0.48 lawn at 5000, a soft blotch the critic counted with the rest. Half of it now
+const float CLOUD_DARKEST = 0.92;
 // blocks per noise cell. Measured on a 900-block square of this noise (numpy): patches past half cover have a median
 // diameter of 31 blocks, the middle half 14-60; a quarter of the ground is under one, and the edge ramp is >= 2.5 blocks
 const float CLOUD_CELL = 34.0;
