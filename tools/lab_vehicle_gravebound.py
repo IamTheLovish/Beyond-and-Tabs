@@ -612,6 +612,22 @@ def check(p, rig, path, sy, tag):
            "out west" % (tag, sy, top, len(n), 100.0 * fine / len(n), len(roof)), n
 
 
+def build_level(level):
+    """The sealed rig of one level, written nowhere (tools/test_gravebound_lab.py builds the lab through this)."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        p1 = draw(1)
+        rig1, _, _ = seal_pockets(p1, SY1, os.path.join(tmp, "l1.nbt"), "gravebound_l1")
+        if level == 1:
+            return rig1
+        p3 = draw(3)
+        for k in p1.b:
+            if p1.b[k][0] not in ("air", "cave_air") and p3.b.get(k, ("air",))[0] in ("air", "cave_air"):
+                p3.b[k] = p1.b[k]
+        rig3, _, _ = seal_pockets(p3, SY3, os.path.join(tmp, "l3.nbt"), "gravebound_l3")
+        return rig3
+
+
 def build():
     os.makedirs(os.path.dirname(OUT1), exist_ok=True)
     p1 = draw(1)
