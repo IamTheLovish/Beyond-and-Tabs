@@ -74,3 +74,8 @@ dark); ground (lawn under the tree, paving only where feet go - "a model on a pl
 | Trunk value (rts_close / 34) | 0.32-0.45 | 0.36 / 0.38 |
 | Walls / roofs | 0.30-0.42 / 0.34-0.46 | 0.31 / 0.38 |
 | Sky under the limb, glow seen, one tone, no bands | as round 2 | pass |
+
+### Measured, round 3 (eyes 41159373535; table --add-only)
+Camera-model numbers on the table: as expected (canopy 0.80 / 0.25 / 336, canopy share 0.37, trunk 0.20 / 0.16,
+trunk value 0.36 / 0.38, walls 0.31, roofs 0.38). All 21 camera tests green. What no test caught: the crown's centre
+over the light well opened a hole from above (spruce bellies seen through it) - the critics' "donut" and "lattice".
