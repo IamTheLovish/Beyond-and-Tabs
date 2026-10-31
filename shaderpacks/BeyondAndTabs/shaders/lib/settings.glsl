@@ -584,7 +584,7 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 // before SKY_LIGHT_FULL), unlit like the albedo probe. The warm near-cube halo is in neither albedo probe (lp21: ALBEDO1
 // hue 82.7 near / 83.2 far, ALBEDO2 81.2 / 80.9; the lit still 77.9 / 82.9 at matched luma), so it is light: a red
 // glow round the site is block light, a green dip stale sky light
-#define LIGHTMAP_PROBE 0 // [0 1]
+#define LIGHTMAP_PROBE 1 // [0 1]
 #if ALBEDO_PROBE > 0 || LIGHTMAP_PROBE == 1
 #define UNLIT_PROBE 1
 #else
