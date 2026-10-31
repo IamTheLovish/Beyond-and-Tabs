@@ -1,0 +1,200 @@
+[02:25:14] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:25:15] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit.png (1024x1024) uploaded with 3 mip levels
+[02:25:15] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 16.9 ms): per-system timing off
+[02:25:15] [IO-Worker-4/INFO]: [Eyes] 15_gravebound_l3_34_t6000: Saved screenshot as bat_eyes_15_gravebound_l3_34_t6000.png
+[02:25:15] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_team.png (1024x1024) uploaded with 3 mip levels
+[02:25:15] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_glow.png (1024x1024) uploaded with 3 mip levels
+[02:25:18] [Render thread/INFO]: [Frame] p50 104.0 ms (10 fps), p95 153.8 ms, max 616.0 ms over 240 frames; RTS view, zoom 30, 13 units known
+[02:25:18] [Render thread/INFO]: [Anim] 7 units/frame (max 8): animation p50 0.4 ms, p95 5.5 ms; unit render p50 24.2 ms, p95 49.2 ms; per unit 147.9 us anim, 4921.8 us render (anim 3%); RTS view, zoom 30, detail on, over 27 frames
+[02:25:18] [Render thread/INFO]: [FrameParts] 78 frames, mean 129.3 ms/frame; ours 12.8 ms (10%): unitBodies 11.25 (max 344.7, 1.9/f) | markersRange 0.98 (max 7.3, 1.0/f) | markersMapWorld 0.32 (max 3.5, 0.5/f) | unitOverlays 0.08 (max 0.4, 11/f) | buildingDecor 0.08 (max 4.0, 4.0/f) | buildingBoxes 0.06 (max 3.1, 0.5/f) (+17 smaller); elsewhere 116.5 ms; 0 section re-mesh requests/s
+[02:25:18] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:25:19] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_rts_army 1793413519761
+[02:25:19] [Server thread/INFO]: [Offline: Killed 8 entities]
+[02:25:19] [Server thread/WARN]: [Eyes] 15_gravebound_l3_d1: names unregistered blocks [minecraft:tuff_stairs, minecraft:tuff_slab] - they load as air
+[02:25:19] [Server thread/INFO]: [Eyes] 15_gravebound_l3_d1: pad x -192..-160, z 30..62 keeps 79.8 blocks from the arena wall's ring (centre -2, 2, radius 280)
+[02:25:19] [Render thread/INFO]: [System] [CHAT] 
+[02:25:19] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[02:25:19] [Render thread/INFO]: [System] [CHAT] 
+[02:25:20] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/gravebound_l3_d1.nbt' 17x26x17 placed at -184, 72, 38 (pad centre -176, 72, 46)
+[02:25:20] [IO-Worker-8/INFO]: [Eyes] 15_gravebound_l3_rts_army: Saved screenshot as bat_eyes_15_gravebound_l3_rts_army.png
+[02:25:22] [Server thread/INFO]: [Tick] p50 7.1 ms, p95 15.4 ms, max 36.8 ms over the last 100 ticks; 9 units, 7 buildings, 1 players
+[02:25:22] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:25:22] [Server thread/INFO]: [Sys] 60 ticks, mean 8.8 ms/tick; ours 0.9 ms (10%): buildings 0.23 (max 4.6, 1.0/t) | reactions 0.14 (max 8.0, 10/t) | unit 0.13 (max 2.1, 10/t) | pathfinder 0.07 (max 0.3, 2.0/t) | separation 0.05 (max 1.6, 10/t) | attacker 0.04 (max 0.4, 10/t) | economy 0.03 (max 0.2, 1.0/t) | unstick 0.03 (max 0.2, 10/t) | bots 0.02 (max 0.5, 0.1/t) (+15 smaller); vanilla 7.0 ms (79%): chunks 3.66 (max 9.8, 3.0/t) | otherEntities 0.86 (max 6.6, 62/t) | travel 0.77 (max 6.4, 29/t) | aiGoals 0.64 (max 8.7, 28/t) | baseTick 0.49 (max 5.3, 68/t) | unitTick 0.39 (max 3.8, 10/t) | levelRest 0.15 (max 0.4, 3.0/t); elsewhere 1.0 ms; gc 21 ms
+[02:25:23] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:25:25] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1_rts: aimed at -176, 80, 47 - the camera at -183, 101, 54 looks at -176, 47 (50 frames, 5.1 s in the phase)
+[02:25:25] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1_rts: the structure's box holds 3346 non-air blocks on the client
+[02:25:25] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_d1_rts 1793413525073
+[02:25:25] [Server thread/INFO]: [Eyes] 15_gravebound_l3_d1_rts: ... and 3346 on the server
+[02:25:25] [IO-Worker-4/INFO]: [Eyes] 15_gravebound_l3_d1_rts: Saved screenshot as bat_eyes_15_gravebound_l3_d1_rts.png
+[02:25:28] [Render thread/INFO]: [Frame] p50 101.0 ms (10 fps), p95 153.9 ms, max 616.0 ms over 240 frames; RTS view, zoom 30, 5 units known
+[02:25:28] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.2 ms, p95 0.3 ms; unit render p50 22.9 ms, p95 38.4 ms; per unit 43.2 us anim, 2791.0 us render (anim 2%); RTS view, zoom 30, detail on, over 42 frames
+[02:25:28] [Render thread/INFO]: [FrameParts] 100 frames, mean 100.8 ms/frame; ours 12.3 ms (12%): unitBodies 9.27 (max 50.7, 3.3/f) | markersRange 1.02 (max 6.0, 1.0/f) | worldFx 0.83 (max 30.8, 11/f) | markersWreck 0.68 (max 9.6, 1.0/f) | markersMapWorld 0.30 (max 3.5, 1.0/f) | unitOverlays 0.08 (max 0.3, 11/f) | bars 0.07 (max 4.5, 22/f) | buildingBoxes 0.04 (max 0.1, 1.0/f) (+15 smaller); elsewhere 88.5 ms; 0 section re-mesh requests/s
+[02:25:28] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.1, 7.0/t)
+[02:25:32] [Server thread/INFO]: [Tick] p50 5.3 ms, p95 9.1 ms, max 10.2 ms over the last 100 ticks; 10 units, 7 buildings, 1 players
+[02:25:32] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:25:32] [Render thread/INFO]: [ShaderBench] 15_gravebound_l3_d1_rts: 60 frames, p50 85.61 ms, p95 109.65 ms, mean 88.97 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[02:25:36] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1_rts_close: aimed at -176, 80, 47 - the camera at -183, 101, 54 looks at -176, 47 (47 frames, 4.0 s in the phase)
+[02:25:36] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1_rts_close: the structure's box holds 3346 non-air blocks on the client
+[02:25:36] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_d1_rts_close 1793413536604
+[02:25:36] [Server thread/INFO]: [Eyes] 15_gravebound_l3_d1_rts_close: ... and 3346 on the server
+[02:25:36] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:25:37] [IO-Worker-4/INFO]: [Eyes] 15_gravebound_l3_d1_rts_close: Saved screenshot as bat_eyes_15_gravebound_l3_d1_rts_close.png
+[02:25:38] [Render thread/INFO]: [Frame] p50 91.3 ms (11 fps), p95 163.8 ms, max 616.0 ms over 240 frames; first-person view, zoom 26, 5 units known
+[02:25:38] [Render thread/INFO]: [FrameParts] 107 frames, mean 93.2 ms/frame; ours 2.4 ms (3%): markersRange 1.08 (max 10.1, 1.0/f) | markersMapWorld 0.60 (max 3.4, 0.9/f) | markersWreck 0.54 (max 9.1, 1.0/f) | buildingDecor 0.06 (max 3.0, 4.0/f) | unitOverlays 0.04 (max 0.1, 11/f) | buildingBoxes 0.03 (max 0.1, 0.9/f) | markersStartPos 0.03 (max 3.0, 1.0/f) (+15 smaller); elsewhere 90.7 ms; 0 section re-mesh requests/s
+[02:25:38] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:25:41] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_d1_34 1793413541628
+[02:25:41] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1_close: standing at -179.0, 88.6, 50.0 (direction -1, 1 from the middle), eye 15.62 over the aim, pitch 72 down
+[02:25:42] [IO-Worker-8/INFO]: [Eyes] 15_gravebound_l3_d1_34: Saved screenshot as bat_eyes_15_gravebound_l3_d1_34.png
+[02:25:42] [Server thread/INFO]: [Tick] p50 7.0 ms, p95 15.1 ms, max 23.6 ms over the last 100 ticks; 10 units, 7 buildings, 1 players
+[02:25:42] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:25:46] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1_close: aimed at -176, 73, 47 - the camera at -179, 89, 50 looks at -176, 47 (55 frames, 5.0 s in the phase)
+[02:25:46] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1_close: the structure's box holds 3346 non-air blocks on the client
+[02:25:46] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_d1_close 1793413546657
+[02:25:46] [Server thread/INFO]: [Eyes] 15_gravebound_l3_d1_close: ... and 3346 on the server
+[02:25:46] [Render thread/INFO]: [System] [CHAT] 
+[02:25:46] [Render thread/INFO]: [System] [CHAT] Night falls...
+[02:25:46] [Render thread/INFO]: [System] [CHAT] 
+[02:25:47] [IO-Worker-4/INFO]: [Eyes] 15_gravebound_l3_d1_close: Saved screenshot as bat_eyes_15_gravebound_l3_d1_close.png
+[02:25:48] [Render thread/INFO]: [Frame] p50 88.8 ms (11 fps), p95 146.1 ms, max 194.0 ms over 240 frames; first-person view, zoom 26, 5 units known
+[02:25:48] [Render thread/INFO]: [FrameParts] 93 frames, mean 107.3 ms/frame; ours 1.2 ms (1%): markersRange 1.15 (max 6.6, 1.0/f) | unitOverlays 0.03 (max 0.1, 11/f) (+17 smaller); elsewhere 106.0 ms; 0 section re-mesh requests/s
+[02:25:50] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_d1_dusk 1793413550517
+[02:25:50] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:25:50] [IO-Worker-7/INFO]: [Eyes] 15_gravebound_l3_d1_dusk: Saved screenshot as bat_eyes_15_gravebound_l3_d1_dusk.png
+[02:25:52] [Server thread/INFO]: [Tick] p50 6.8 ms, p95 13.3 ms, max 17.9 ms over the last 100 ticks; 10 units, 9 buildings, 1 players
+[02:25:52] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:25:53] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:25:55] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1_golden_rts: aimed at -176, 80, 47 - the camera at -183, 101, 54 looks at -176, 47 (56 frames, 5.0 s in the phase)
+[02:25:55] [Render thread/INFO]: [Eyes] 15_gravebound_l3_d1_golden_rts: the structure's box holds 3346 non-air blocks on the client
+[02:25:55] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_d1_golden_rts 1793413555529
+[02:25:55] [Server thread/INFO]: [Eyes] 15_gravebound_l3_d1_golden_rts: ... and 3346 on the server
+[02:25:55] [IO-Worker-8/INFO]: [Eyes] 15_gravebound_l3_d1_golden_rts: Saved screenshot as bat_eyes_15_gravebound_l3_d1_golden_rts.png
+[02:25:58] [Render thread/INFO]: [Frame] p50 89.0 ms (11 fps), p95 149.8 ms, max 194.0 ms over 240 frames; RTS view, zoom 30, 5 units known
+[02:25:58] [Render thread/INFO]: [FrameParts] 104 frames, mean 96.2 ms/frame; ours 2.4 ms (3%): markersMapWorld 0.98 (max 6.4, 0.8/f) | markersRange 0.84 (max 6.7, 1.0/f) | markersWreck 0.43 (max 3.5, 1.0/f) | buildingBoxes 0.06 (max 3.1, 0.8/f) | unitOverlays 0.04 (max 0.1, 11/f) | worldFx 0.04 (max 3.0, 11/f) (+16 smaller); elsewhere 93.8 ms; 0 section re-mesh requests/s
+[02:25:58] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:25:59] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_d1_rts_t6000 1793413559578
+[02:25:59] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:26:00] [IO-Worker-8/INFO]: [Eyes] 15_gravebound_l3_d1_rts_t6000: Saved screenshot as bat_eyes_15_gravebound_l3_d1_rts_t6000.png
+[02:26:02] [Server thread/INFO]: [Tick] p50 5.6 ms, p95 10.1 ms, max 18.3 ms over the last 100 ticks; 12 units, 9 buildings, 1 players
+[02:26:02] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:26:04] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_d1_34_t6000 1793413564616
+[02:26:04] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, 35)]
+[02:26:04] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-175, 72, 35)]
+[02:26:04] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, 57)]
+[02:26:04] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-175, 72, 57)]
+[02:26:04] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 72, 45)]
+[02:26:04] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 72, 47)]
+[02:26:04] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, 45)]
+[02:26:04] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, 47)]
+[02:26:04] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:26:05] [IO-Worker-8/INFO]: [Eyes] 15_gravebound_l3_d1_34_t6000: Saved screenshot as bat_eyes_15_gravebound_l3_d1_34_t6000.png
+[02:26:08] [Render thread/INFO]: [Frame] p50 94.3 ms (11 fps), p95 142.9 ms, max 212.5 ms over 240 frames; RTS view, zoom 30, 13 units known
+[02:26:08] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 3.1 ms; unit render p50 10.9 ms, p95 24.9 ms; per unit 40.1 us anim, 1845.6 us render (anim 2%); RTS view, zoom 30, detail on, over 31 frames
+[02:26:08] [Render thread/INFO]: [FrameParts] 91 frames, mean 110.3 ms/frame; ours 6.9 ms (6%): unitBodies 5.21 (max 26.7, 2.8/f) | markersRange 0.96 (max 6.4, 1.0/f) | markersWreck 0.26 (max 3.4, 1.0/f) | markersMapWorld 0.23 (max 3.5, 0.6/f) | unitOverlays 0.09 (max 0.3, 11/f) | buildingBoxes 0.05 (max 2.9, 0.6/f) (+17 smaller); elsewhere 103.4 ms; 0 section re-mesh requests/s
+[02:26:08] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:26:09] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l3_d1_rts_army 1793413569637
+[02:26:09] [Server thread/INFO]: [Offline: Killed 8 entities]
+[02:26:09] [Server thread/INFO]: [Eyes] 15_gravebound_l1: pad x -192..-160, z 30..62 keeps 79.8 blocks from the arena wall's ring (centre -2, 2, radius 280)
+[02:26:09] [Render thread/INFO]: [System] [CHAT] 
+[02:26:09] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[02:26:09] [Render thread/INFO]: [System] [CHAT] 
+[02:26:10] [Render thread/INFO]: [Eyes] 15_gravebound_l1: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/gravebound_l1.nbt' 17x16x17 placed at -184, 72, 38 (pad centre -176, 72, 46)
+[02:26:10] [IO-Worker-7/INFO]: [Eyes] 15_gravebound_l3_d1_rts_army: Saved screenshot as bat_eyes_15_gravebound_l3_d1_rts_army.png
+[02:26:12] [Server thread/INFO]: [Tick] p50 6.1 ms, p95 12.2 ms, max 37.3 ms over the last 100 ticks; 12 units, 10 buildings, 1 players
+[02:26:12] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:26:15] [Render thread/INFO]: [Eyes] 15_gravebound_l1_rts: aimed at -176, 77, 47 - the camera at -184, 101, 55 looks at -176, 47 (54 frames, 5.1 s in the phase)
+[02:26:15] [Render thread/INFO]: [Eyes] 15_gravebound_l1_rts: the structure's box holds 2258 non-air blocks on the client
+[02:26:15] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l1_rts 1793413575103
+[02:26:15] [Server thread/INFO]: [Eyes] 15_gravebound_l1_rts: ... and 2258 on the server
+[02:26:15] [IO-Worker-8/INFO]: [Eyes] 15_gravebound_l1_rts: Saved screenshot as bat_eyes_15_gravebound_l1_rts.png
+[02:26:18] [Render thread/INFO]: [Frame] p50 89.7 ms (11 fps), p95 137.1 ms, max 216.0 ms over 240 frames; RTS view, zoom 30, 5 units known
+[02:26:18] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.2 ms; unit render p50 19.0 ms, p95 37.9 ms; per unit 38.4 us anim, 2496.5 us render (anim 2%); RTS view, zoom 30, detail on, over 43 frames
+[02:26:18] [Render thread/INFO]: [FrameParts] 106 frames, mean 94.0 ms/frame; ours 11.0 ms (12%): unitBodies 7.94 (max 48.8, 3.2/f) | markersRange 1.14 (max 4.7, 1.0/f) | markersWreck 0.91 (max 9.5, 1.0/f) | worldFx 0.46 (max 4.4, 11/f) | markersMapWorld 0.36 (max 5.5, 1.0/f) | unitOverlays 0.07 (max 0.3, 11/f) | buildingBoxes 0.06 (max 2.4, 1.0/f) | bars 0.03 (max 0.4, 22/f) (+15 smaller); elsewhere 83.0 ms; 0 section re-mesh requests/s
+[02:26:18] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.1, 6.9/t)
+[02:26:22] [Server thread/INFO]: [Tick] p50 6.6 ms, p95 11.1 ms, max 17.0 ms over the last 100 ticks; 14 units, 11 buildings, 1 players
+[02:26:22] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:26:22] [Render thread/INFO]: [ShaderBench] 15_gravebound_l1_rts: 60 frames, p50 81.56 ms, p95 105.73 ms, mean 85.02 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[02:26:23] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:26:26] [Render thread/INFO]: [Eyes] 15_gravebound_l1_rts_close: aimed at -176, 77, 47 - the camera at -184, 101, 55 looks at -176, 47 (49 frames, 4.0 s in the phase)
+[02:26:26] [Render thread/INFO]: [Eyes] 15_gravebound_l1_rts_close: the structure's box holds 2258 non-air blocks on the client
+[02:26:26] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l1_rts_close 1793413586411
+[02:26:26] [Server thread/INFO]: [Eyes] 15_gravebound_l1_rts_close: ... and 2258 on the server
+[02:26:26] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:26:26] [IO-Worker-8/INFO]: [Eyes] 15_gravebound_l1_rts_close: Saved screenshot as bat_eyes_15_gravebound_l1_rts_close.png
+[02:26:28] [Render thread/INFO]: [Frame] p50 84.6 ms (12 fps), p95 137.1 ms, max 216.0 ms over 240 frames; first-person view, zoom 26, 5 units known
+[02:26:28] [Render thread/INFO]: [FrameParts] 111 frames, mean 89.7 ms/frame; ours 2.4 ms (3%): markersRange 0.99 (max 3.8, 1.0/f) | markersWreck 0.83 (max 6.8, 1.0/f) | markersMapWorld 0.43 (max 3.5, 0.9/f) | unitOverlays 0.04 (max 0.1, 11/f) | markersChunks 0.03 (max 3.0, 1.0/f) | buildingBoxes 0.03 (max 0.1, 0.9/f) (+16 smaller); elsewhere 87.3 ms; 0 section re-mesh requests/s
+[02:26:28] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:26:31] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l1_34 1793413591462
+[02:26:31] [Render thread/INFO]: [Eyes] 15_gravebound_l1_close: standing at -179.0, 83.6, 50.0 (direction -1, 1 from the middle), eye 10.62 over the aim, pitch 65 down
+[02:26:31] [IO-Worker-10/INFO]: [Eyes] 15_gravebound_l1_34: Saved screenshot as bat_eyes_15_gravebound_l1_34.png
+[02:26:32] [Server thread/INFO]: [Tick] p50 7.0 ms, p95 11.8 ms, max 18.9 ms over the last 100 ticks; 14 units, 12 buildings, 1 players
+[02:26:32] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:26:36] [Render thread/INFO]: [Eyes] 15_gravebound_l1_close: aimed at -176, 73, 47 - the camera at -179, 84, 50 looks at -175, 46 (62 frames, 5.0 s in the phase)
+[02:26:36] [Render thread/INFO]: [Eyes] 15_gravebound_l1_close: the structure's box holds 2258 non-air blocks on the client
+[02:26:36] [Server thread/INFO]: [Eyes] 15_gravebound_l1_close: ... and 2258 on the server
+[02:26:36] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l1_close 1793413596515
+[02:26:36] [Render thread/INFO]: [System] [CHAT] 
+[02:26:36] [Render thread/INFO]: [System] [CHAT] Night falls...
+[02:26:36] [Render thread/INFO]: [System] [CHAT] 
+[02:26:36] [IO-Worker-10/INFO]: [Eyes] 15_gravebound_l1_close: Saved screenshot as bat_eyes_15_gravebound_l1_close.png
+[02:26:38] [Render thread/INFO]: [Frame] p50 82.3 ms (12 fps), p95 142.2 ms, max 166.1 ms over 240 frames; first-person view, zoom 26, 5 units known
+[02:26:38] [Render thread/INFO]: [FrameParts] 101 frames, mean 99.2 ms/frame; ours 0.9 ms (1%): markersRange 0.79 (max 6.7, 1.0/f) | unitOverlays 0.03 (max 0.0, 11/f) (+17 smaller); elsewhere 98.3 ms; 0 section re-mesh requests/s
+[02:26:40] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l1_dusk 1793413600559
+[02:26:40] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:26:40] [IO-Worker-8/INFO]: [Eyes] 15_gravebound_l1_dusk: Saved screenshot as bat_eyes_15_gravebound_l1_dusk.png
+[02:26:42] [Server thread/INFO]: [Tick] p50 6.3 ms, p95 11.2 ms, max 50.1 ms over the last 100 ticks; 16 units, 12 buildings, 1 players
+[02:26:42] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:26:45] [Render thread/INFO]: [Eyes] 15_gravebound_l1_golden_rts: aimed at -176, 77, 47 - the camera at -181, 91, 52 looks at -176, 47 (60 frames, 5.0 s in the phase)
+[02:26:45] [Render thread/INFO]: [Eyes] 15_gravebound_l1_golden_rts: the structure's box holds 2258 non-air blocks on the client
+[02:26:45] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l1_golden_rts 1793413605565
+[02:26:45] [Server thread/INFO]: [Eyes] 15_gravebound_l1_golden_rts: ... and 2258 on the server
+[02:26:45] [IO-Worker-7/INFO]: [Eyes] 15_gravebound_l1_golden_rts: Saved screenshot as bat_eyes_15_gravebound_l1_golden_rts.png
+[02:26:48] [Render thread/INFO]: [Frame] p50 83.0 ms (12 fps), p95 142.2 ms, max 166.1 ms over 240 frames; RTS view, zoom 30, 5 units known
+[02:26:48] [Render thread/INFO]: [FrameParts] 111 frames, mean 90.3 ms/frame; ours 2.2 ms (2%): markersRange 1.17 (max 7.6, 1.0/f) | markersWreck 0.57 (max 3.7, 1.0/f) | markersMapWorld 0.37 (max 3.4, 0.8/f) | unitOverlays 0.04 (max 0.1, 11/f) | buildingBoxes 0.04 (max 0.9, 0.8/f) (+17 smaller); elsewhere 88.0 ms; 0 section re-mesh requests/s
+[02:26:48] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:26:49] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l1_rts_t6000 1793413609592
+[02:26:49] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:26:50] [IO-Worker-7/INFO]: [Eyes] 15_gravebound_l1_rts_t6000: Saved screenshot as bat_eyes_15_gravebound_l1_rts_t6000.png
+[02:26:52] [Server thread/INFO]: [Tick] p50 6.0 ms, p95 10.5 ms, max 20.4 ms over the last 100 ticks; 16 units, 13 buildings, 1 players
+[02:26:52] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[02:26:53] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[02:26:54] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l1_34_t6000 1793413614692
+[02:26:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, 35)]
+[02:26:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-175, 72, 35)]
+[02:26:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, 57)]
+[02:26:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-175, 72, 57)]
+[02:26:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 72, 45)]
+[02:26:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 72, 47)]
+[02:26:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, 45)]
+[02:26:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, 47)]
+[02:26:54] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[02:26:55] [IO-Worker-10/INFO]: [Eyes] 15_gravebound_l1_34_t6000: Saved screenshot as bat_eyes_15_gravebound_l1_34_t6000.png
+[02:26:58] [Render thread/INFO]: [Frame] p50 85.7 ms (12 fps), p95 145.0 ms, max 168.4 ms over 240 frames; RTS view, zoom 30, 13 units known
+[02:26:58] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 10.1 ms, p95 22.5 ms; per unit 12.3 us anim, 1762.2 us render (anim 1%); RTS view, zoom 30, detail on, over 34 frames
+[02:26:58] [Render thread/INFO]: [FrameParts] 95 frames, mean 105.4 ms/frame; ours 6.9 ms (7%): unitBodies 5.17 (max 41.2, 2.9/f) | markersRange 0.83 (max 6.6, 1.0/f) | markersWreck 0.47 (max 5.0, 1.0/f) | markersMapWorld 0.20 (max 0.6, 0.6/f) | unitOverlays 0.09 (max 0.2, 11/f) | worldFx 0.05 (max 4.0, 11/f) | buildingBoxes 0.02 (max 0.1, 0.6/f) (+16 smaller); elsewhere 98.5 ms; 0 section re-mesh requests/s
+[02:26:58] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[02:26:59] [Render thread/INFO]: [Eyes] clip-mark 15_gravebound_l1_rts_army 1793413619768
+[02:26:59] [Server thread/INFO]: [Offline: Killed 8 entities]
+[02:27:00] [IO-Worker-8/INFO]: [Eyes] 15_gravebound_l1_rts_army: Saved screenshot as bat_eyes_15_gravebound_l1_rts_army.png
+[02:27:01] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[02:27:01] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[02:27:01] [Render thread/INFO]: [Eyes] tour complete
+[02:27:01] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[02:27:02] [Render thread/INFO]: Stopping!
+[02:27:02] [Server thread/INFO]: Offline lost connection: Disconnected
+[02:27:02] [Server thread/INFO]: Offline left the game
+[02:27:02] [Server thread/INFO]: Player logged out: Offline, id: 2
+[02:27:02] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[02:27:02] [Server thread/INFO]: RTSPlayerSaveData.load
+[02:27:02] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1279|0
+[02:27:02] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1548|561|0
+[02:27:02] [Server thread/INFO]: Stopping server
+[02:27:02] [Server thread/INFO]: Saving players
+[02:27:02] [Server thread/INFO]: Saving worlds
+[02:27:02] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[02:27:02] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[02:27:02] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[02:27:02] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[02:27:02] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[02:27:02] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[02:27:02] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[02:27:02] [Render thread/INFO]: Stopping worker threads
