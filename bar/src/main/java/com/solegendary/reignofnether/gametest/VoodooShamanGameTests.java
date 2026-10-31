@@ -1056,8 +1056,8 @@ public class VoodooShamanGameTests {
     /**
      * lovish (Oct 31, "Count as support"): the shaman marches with a bot's army, but it does not count toward the army a
      * bot must field before Tier 2 (BotTuning.t2MinArmy), like every other healer and caster - none of them is an
-     * AttackerUnit, so the army list never held them. A shaman did count, and the Horde bot gated Tier 2 at its earliest
-     * minute almost every game (bots_reach_tier_2: the hard bot then fell more than a minute behind it).
+     * AttackerUnit, so the army list never held them. Both gates that read the army are pinned: the research gate
+     * (t2Ready, through t2ArmyOut, its patience path included) and the easy bot's T1 pause for the T2 lab (wantsT2Save).
      */
     @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
     public static void voodoo_shaman_counts_as_support_not_army_toward_a_bots_tier_2_minimum(GameTestHelper helper) {
@@ -1077,6 +1077,19 @@ public class VoodooShamanGameTests {
                     problems.add("a shaman and a brute count as " + fighters + " fighters toward the Tier 2 minimum, wanted 1 (the brute)");
                 if (BotPlayer.t2Fighters(List.of(brute, brute)) != 2)
                     problems.add("two brutes do not count as 2 fighters toward the Tier 2 minimum");
+                // t2MinArmy 2, earliest minute 5: minute 7 wants 2 fighters, minute 11 (patience) wants 1
+                if (BotPlayer.t2ArmyOut(7, List.of(shaman, brute), 5, 2))
+                    problems.add("the Tier 2 research gate opens for a shaman and a brute with t2MinArmy 2");
+                if (!BotPlayer.t2ArmyOut(7, List.of(brute, brute), 5, 2))
+                    problems.add("the Tier 2 research gate stays shut for two brutes with t2MinArmy 2");
+                if (BotPlayer.t2ArmyOut(11, List.of(shaman), 5, 2))
+                    problems.add("the Tier 2 research gate's patience path opens for a lone shaman (half of t2MinArmy 2)");
+                if (!BotPlayer.t2ArmyOut(11, List.of(brute), 5, 2))
+                    problems.add("the Tier 2 research gate's patience path stays shut for a lone brute (half of t2MinArmy 2)");
+                if (BotPlayer.wantsT2Save(true, true, false, false, List.of(shaman, brute), 2))
+                    problems.add("an easy bot with a shaman and a brute stops queuing T1 for its T2 lab with t2MinArmy 2");
+                if (!BotPlayer.wantsT2Save(true, true, false, false, List.of(brute, brute), 2))
+                    problems.add("an easy bot with two brutes does not hold its T1 queues for its T2 lab with t2MinArmy 2");
             } catch (RuntimeException ex) {
                 problems.add("threw " + ex);
             } finally {
