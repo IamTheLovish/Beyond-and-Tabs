@@ -486,7 +486,7 @@ public class HeroAiV2RolloutGameTests {
         }
         var nav = h.getNavigation();
         com.solegendary.reignofnether.ReignOfNether.LOGGER.info(
-            "[HoldCast] {} t{} moved {} to ({}, {}) delta ({}, {}) | {} | nav done {} path {} | unit moveTarget {}",
+            "[HoldCast] GameTest {} t{} moved {} to ({}, {}) delta ({}, {}) | {} | nav done {} path {} | unit moveTarget {}",
             tag, tick, String.format("%.3f", moved), String.format("%.3f", h.getX()), String.format("%.3f", h.getZ()),
             String.format("%.3f", h.getDeltaMovement().x), String.format("%.3f", h.getDeltaMovement().z), goal,
             nav.isDone(), nav.getPath() == null ? "null" : nav.getPath().getTarget(),
