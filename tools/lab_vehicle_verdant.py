@@ -274,15 +274,15 @@ def line(c, p0, p1, name=BARK, fill_down=False):
         prev = q
 
 
-def canopy(c, cx, cz, y0, y1, r, seed=0, keep=lambda x, y, z: True, valleys=True):
+def canopy(c, cx, cz, y0, y1, r, seed=0, keep=lambda x, y, z: True, valleys=True, shaft=False):
     """One canopy tier: a broad irregular disc, the belly (y0) spruce, the top all cherry (round 1's scattered spruce
     gaps read as "spots", "a chequer"), clumps with one-deep valleys between them on 3-thick tiers (shadow, not a
     lid), drips of spruce under the rim; the top steps in by a block (a rounded edge)."""
     rr = int(r) + 2
     for x in range(int(cx) - rr, int(cx) + rr + 1):
         for z in range(int(cz) - rr, int(cz) + rr + 1):
-            if (x, z) in WELL:
-                continue
+            if (x, z) in WELL and not (shaft and (x, z) != SPAWN):
+                continue                                      # shaft: only the 1 x 1 spawn column stays open
             d = math.hypot(x - cx, z - cz)
             wob = 0.7 * math.sin(math.atan2(z - cz, x - cx) * 3 + seed) + (hsh(x, z, seed) % 3 - 1) * 0.3
             for y in range(y0, y1 + 1):
@@ -291,7 +291,7 @@ def canopy(c, cx, cz, y0, y1, r, seed=0, keep=lambda x, y, z: True, valleys=True
                     continue
                 if valleys and y == y1 and y1 - y0 >= 2 and hsh(x // 2, z // 2, seed + 13) % 3 == 0:
                     continue                                  # a valley between clumps (shadow), cherry below it
-                under = y == y0 and y1 > y0 and d <= r + wob - 1.0      # covered by the top: the dark belly
+                under = y == y0 and y1 > y0 and d <= r + wob - 2.0      # deep under the top: the dark belly
                 nm = BELLY if under else TOP
                 c.put(x, y, z, nm, **LEAF)
             if r + wob - 1.0 < d <= r + wob and hsh(x, z, seed + 3) % 3 == 0 and keep(x, y0 - 1, z):
@@ -362,8 +362,8 @@ def great_tree(c, l3):
     line(c, (11, 19, 6), (14, 21, 8))                        # the east bough under tier 2
     sky = lambda x, y, z: not (x <= 7 and y < 21)            # noqa: E731  - leave the air over the hall open
     canopy(c, 12.5, 6.5, 17, 18, 6.2, seed=2, keep=sky)
-    canopy(c, 9.5, 7.5, 21, 23, 5.8, seed=3)                 # over the hall and the limb: canopy and roof interlock
-    canopy(c, 10.0, 6.5, 24, 25, 3.0, seed=4)
+    canopy(c, 9.5, 7.5, 21, 23, 5.8, seed=3, shaft=True)     # over the hall and the limb: canopy and roof interlock;
+    canopy(c, 10.0, 6.5, 24, 25, 3.0, seed=4, shaft=True)    # the crown closed over the well but the spawn shaft
     for (x, z) in ((11, 5), (12, 5), (11, 6)):
         c.put(x, 25, z, TOP, **LEAF)
 

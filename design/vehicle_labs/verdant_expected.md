@@ -79,3 +79,8 @@ dark); ground (lawn under the tree, paving only where feet go - "a model on a pl
 Camera-model numbers on the table: as expected (canopy 0.80 / 0.25 / 336, canopy share 0.37, trunk 0.20 / 0.16,
 trunk value 0.36 / 0.38, walls 0.31, roofs 0.38). All 21 camera tests green. What no test caught: the crown's centre
 over the light well opened a hole from above (spruce bellies seen through it) - the critics' "donut" and "lattice".
+
+## Detail round 4 (one element: the crown)
+Written Oct 31 ~03:00Z, before eyes. The upper tiers close over the light well (only the 1 x 1 spawn shaft stays open);
+the spruce belly only deep under the top (d <= r - 2). Expected (camera model): 0 open crown columns; belly 0 % of the
+seen leaf pixels; canopy 0.80 / 0.25 / 336; canopy share ~0.38; the rest unchanged. 22/22 tests green locally.
