@@ -18,15 +18,32 @@ import net.minecraft.world.level.LightLayer;
 public final class CanopyRegion {
     private CanopyRegion() { }
 
+    /** The sky light of a cell, read from the meshing region. */
+    @FunctionalInterface
+    interface SkyLight {
+        int at(int x, int y, int z);
+    }
+
+    private static int warnings;
+
     /** rgb darkened by what stands over the ground round pos, read from {@code level} only. */
     public static int shade(BlockAndTintGetter level, BlockPos pos, int rgb) {
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        return shade((x, y, z) -> level.getBrightness(LightLayer.SKY, m.set(x, y, z)),
+                pos.getX(), pos.getY(), pos.getZ(), rgb);
+    }
+
+    /** rgb darkened by what stands over the ground at (x, y, z): a column counts by the sky light of its cell at y + 1. */
+    static int shade(SkyLight sky, int x, int y, int z, int rgb) {
         try {
-            return CanopyShade.apply(rgb,
-                    (x, y, z) -> CanopyShade.covered(level.getBrightness(LightLayer.SKY, m.set(x, y + 1, z))),
-                    pos.getX(), pos.getY(), pos.getZ());
+            return CanopyShade.apply(rgb, (cx, cy, cz) -> CanopyShade.covered(sky.at(cx, cy + 1, cz)), x, y, z);
         } catch (RuntimeException e) {
             return rgb;
         }
+    }
+
+    /** How many times a failed read has been logged (it is said once a session). */
+    static int warnings() {
+        return warnings;
     }
 }
