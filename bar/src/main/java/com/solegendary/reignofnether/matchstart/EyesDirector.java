@@ -200,6 +200,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (HEROES_ONLY) {     // a heroes run (eyes.yml input `heroes`): only scene 19, then the end
+                        step = STEP_HEROES;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -264,6 +269,19 @@ public final class EyesDirector {
                     done = EyesOverlaysScene.tick(mc);
                 } catch (Exception e) {
                     ReignOfNether.LOGGER.error("[Eyes] 18_overlays failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
+            case STEP_HEROES -> {
+                boolean done;
+                try {
+                    done = EyesHeroesScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 19_heroes failed at tick {}, ending the tour", ticks, e);
                     done = true;
                 }
                 if (done) {
@@ -577,6 +595,8 @@ public final class EyesDirector {
     static final boolean FOG_ONLY = Boolean.getBoolean("bat.eyes.fog");   // eyes.yml input `fog`: 02, then 17 only
     static final int STEP_OVERLAYS = 23;          // 18_overlays, EyesOverlaysScene: its own run only (input `overlays`)
     static final boolean OVERLAYS_ONLY = Boolean.getBoolean("bat.eyes.overlays");
+    static final int STEP_HEROES = 24;            // 19_heroes, EyesHeroesScene: its own run only (input `heroes`)
+    static final boolean HEROES_ONLY = Boolean.getBoolean("bat.eyes.heroes");
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
     private static int scarsPhase = 0;
     private static long scarsNanos = 0;

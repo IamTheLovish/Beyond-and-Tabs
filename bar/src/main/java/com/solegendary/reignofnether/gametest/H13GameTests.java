@@ -83,7 +83,7 @@ public class H13GameTests {
 
     /**
      * AC-1: the Flame Sanctuary offers the Shaman and its revive (slot 9); the server refuses a second Shaman while one
-     * is alive or fallen, and then the revive is what the lab accepts.
+     * is fallen or alive; the revive is what the lab accepts for a fallen one, and it is refused while one is alive.
      */
     @GameTest(template = ARENA, timeoutTicks = 60)
     public static void h13_flame_sanctuary_offers_the_shaman(GameTestHelper helper) {
@@ -117,12 +117,9 @@ public class H13GameTests {
             if (ProductionItems.ASH_SHAMAN_REVIVE.getProduceErrorMsg(pp) == null)
                 problems.add("a revive was offered with no fallen Shaman");
 
-            shaman = HeroGameTests.spawnHero(helper, HeroKits.ASH_SHAMAN, me, 6, 6);
-            if (ProductionItems.ASH_SHAMAN.getProduceErrorMsg(pp) == null)
-                problems.add("a second Shaman was accepted while one is alive");
-            shaman.discard();
-            shaman = null;
-
+            // fallen first, alive last: no check runs after a discard. The server's unit list drops an entity on its
+            // leave event, and a Shaman discarded the tick it was spawned was sometimes still listed in the same tick,
+            // so the revive read "duplicate" (main e7b4e941: 1 runner of 8; PR 418's old base: 3 of 8)
             String heroName = type.getDescriptionId();
             fallen = new HeroUnitSave("00000000-0000-0000-0000-000000000013", heroName, me,
                 HeroProgression.xpForLevel(3), 1, 0, 1, 0, 0, 0, null);
@@ -131,6 +128,14 @@ public class H13GameTests {
                 problems.add("a second Shaman was accepted while one is fallen");
             if (ProductionItems.ASH_SHAMAN_REVIVE.getProduceErrorMsg(pp) != null)
                 problems.add("the revive is refused for a fallen Shaman: " + ProductionItems.ASH_SHAMAN_REVIVE.getProduceErrorMsg(pp));
+            HeroServerEvents.fallenHeroes.remove(fallen);
+            fallen = null;
+
+            shaman = HeroGameTests.spawnHero(helper, HeroKits.ASH_SHAMAN, me, 6, 6);
+            if (ProductionItems.ASH_SHAMAN.getProduceErrorMsg(pp) == null)
+                problems.add("a second Shaman was accepted while one is alive");
+            if (ProductionItems.ASH_SHAMAN_REVIVE.getProduceErrorMsg(pp) == null)
+                problems.add("a revive was offered while the Shaman is alive");
         } finally {
             if (fallen != null)
                 HeroServerEvents.fallenHeroes.remove(fallen);

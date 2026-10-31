@@ -146,6 +146,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(CameraFadeClientEvents.class);
         vanillaEventBus.register(ItemClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hero.HeroMarkerClientEvents.class);   // the hero ring and crest
         // the world look: haze + grade + vignette after the world, before the hand and HUD (postfx/WorldLookPass)
         vanillaEventBus.register(com.solegendary.reignofnether.postfx.WorldLookClientEvents.class);
         // frame times over a fixed number of frames: the shader pack's cost (eyes, /rts-shaderbench)
