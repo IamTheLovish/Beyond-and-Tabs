@@ -64,11 +64,11 @@ RIB_POST = "polished_blackstone_brick_wall"
 NEEDLE = "polished_blackstone_wall"
 BONE = "bone_block"
 ROOF = "mcwroofs:deepslate"
-CRAG = "tuff"
-CRAG_ST = "tuff_stairs"
-CRAG_SL = "tuff_slab"
-PAVE = "polished_deepslate"
-LANE_FLOOR = "deepslate_tiles"
+CRAG = "cobbled_deepslate"             # round 2: the feet darker than the walls (both round-1 critics: the tuff and
+CRAG_ST = "cobbled_deepslate_stairs"   # the paving made the base the lightest band, "a model on a display board")
+CRAG_SL = "cobbled_deepslate_slab"
+PAVE = "deepslate_tiles"
+LANE_FLOOR = "polished_blackstone"     # the gate throat the darkest floor (round 1: deepslate tiles read mid-grey)
 GLASS = "lime_stained_glass"
 LANCET_GLASS = "gray_stained_glass"     # the lancets: smoke glass lit from behind (green only in the heart: the one accent)
 GLOW = "verdant_froglight"
@@ -195,38 +195,41 @@ def ribbed_face(g, face, plane, u0, u1, y_top, ribs, lancets=(), y_lancet=(5, 8)
 
 
 def rib(g, z, x0, x1, y_foot, apex):
-    """A bone rib across x0..x1 at z: an arc of bone columns, every column capped with a dark slab (bone tops read as
-    snow on camera: up 0.839); each column reaches down to its lower neighbour's cap, so they touch face to face through
-    the slab (nothing floats) and no course runs 4 full bone blocks along the rib."""
+    """A bone rib across x0..x1 at z: one continuous arc of bone columns, each reaching down to its lower neighbour's
+    top (nothing floats). Round 2: round 1 capped every column with a dark slab against snow tops (bone up 0.839), and
+    both critics read the alternation as chevrons / piano keys / teeth; an odd span (apex one column) keeps every
+    course of the arc to <= 3 bone blocks."""
     xc, half = (x0 + x1) / 2.0, (x1 - x0) / 2.0
     ys = [int(round(y_foot + (apex - y_foot) * (1 - ((x - xc) / half) ** 2))) for x in range(x0, x1 + 1)]
     for i, x in enumerate(range(x0, x1 + 1)):
         lo = ys[i]
         for j in (i - 1, i + 1):
             if 0 <= j < len(ys) and ys[j] < ys[i]:
-                lo = min(lo, ys[j] + 1)          # down to the lower neighbour's cap: they touch through its slab
+                lo = min(lo, ys[j])              # down to the lower neighbour's top: face to face, one bone arc
         for yy in range(lo, ys[i] + 1):
             g.set(x, yy, z, BONE, axis="y")
-        g.slab(x, ys[i] + 1, z)
 
 
 # ============================================================================================ the masses
 def ground(g):
     for x in range(SX):
         for z in range(SZ):
-            g.set(x, 0, z, LANE_FLOOR if (z in LANE_Z and x <= 8) or (x in (7, 8) and 5 <= z <= 11) else PAVE)
+            g.set(x, 0, z, LANE_FLOOR if (5 <= z <= 11 and x <= 8) else PAVE)
 
 
 def tower(g, z0, l3):
     """A flanking tower x 0..4, z0..z0+4: ribbed west face (and south face for the south tower), a lit lancet, the
-    slate cornice, a staged steep cap and a needle."""
+    slate cornice, a blackstone parapet round a 3 x 3 steep cap and a needle."""
     top = 12 if l3 else 8
     g.box(0, 4, 1, top, z0, z0 + 4, WALL)
     ribbed_face(g, "west", 0, z0, z0 + 4, top, ribs=(z0 + 1, z0 + 3), lancets=(z0 + 2,),
                 y_lancet=(6, 9) if l3 else (4, 6))
     if z0 == 12:
         ribbed_face(g, "south", 16, 0, 4, top, ribs=(1, 3), lancets=(2,), y_lancet=(6, 9) if l3 else (4, 6))
-    cone(g, 0, 4, z0, z0 + 4, top + 1, needle_to=top + 5)
+    for (x, z) in [(x, z) for x in range(5) for z in range(z0, z0 + 5) if x in (0, 4) or z in (z0, z0 + 4)]:
+        g.set(x, top + 1, z, RIB_POST, **POST)              # round 2: a parapet, the cap only 3 x 3 (critics: three
+    cone(g, 1, 3, z0 + 1, z0 + 3, top + 1, needle_to=top + 4)    # equal hipped caps from above; the spire's is 5 x 5)
+    # the needle stops at 16: a needle within 8 of the spire's 25 outside its zone fails test_no_equal_spikes
 
 
 def front(g, l3):
@@ -260,9 +263,11 @@ def front(g, l3):
 
 
 def heart(g, l3):
-    """The heart over the gate at x 0: a bone rose ring (7 x 7 at L3, y 11..17; 5 x 5 at L1, y 11..15), lime glass in
-    it, verdant froglights behind (x 1) - the one glowing core; rounded corners in stairs; blackstone rib posts at
-    z 5 / 11 on the L1 heart wall; the coping."""
+    """The heart over the gate at x 0: a rose ring of polished blackstone (7 x 7 at L3, y 11..17; 5 x 5 at L1,
+    y 11..15), lime glass in it, verdant froglights behind (x 1) - the one glowing core; rounded corners in stairs;
+    blackstone rib posts at z 5 / 11 on the L1 heart wall; the coping. Round 2: the ring was bone and its inner corners
+    bone, so the lime sat "inside a larger cream panel" (out-valued, critic b) and read as a plus / cross (both critics,
+    a church sign); now a dark ring round a full disc of glass (L3: 5 x 5 rounded by dark stairs; L1: 3 x 3)."""
     r = 3 if l3 else 2
     yc = 11 + r
     for dz in range(-r, r + 1):
@@ -272,8 +277,10 @@ def heart(g, l3):
                 g.stair(0, y, z, "north" if dz < 0 else "south", "top" if dy < 0 else "bottom")
             elif dz == 0 and abs(dy) == r:
                 g.stair(0, y, z, "east", "top" if dy < 0 else "bottom")     # the ring's keystones
-            elif abs(dz) == r or abs(dy) == r or (abs(dz) == r - 1 and abs(dy) == r - 1):
-                g.set(0, y, z, BONE, axis="y")
+            elif abs(dz) == r or abs(dy) == r:
+                g.set(0, y, z, DRESS)
+            elif abs(dz) == r - 1 and abs(dy) == r - 1 and l3:
+                g.stair(0, y, z, "north" if dz < 0 else "south", "top" if dy < 0 else "bottom")
             else:
                 g.set(0, y, z, GLASS)
                 g.set(1, y, z, GLOW)
@@ -392,7 +399,7 @@ def hall(g, l3):
     for z in range(4, 14):
         g.set(9, top, z, CORNICE, facing="west", shape="straight")
     for z in ((5, 8, 11) if l3 else (5, 11)):
-        rib(g, z, 9, 16, top + 1, 19 if l3 else 14)
+        rib(g, z, 9, 15, top + 1, 19 if l3 else 14)
 
 
 def crag(g):

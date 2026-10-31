@@ -20,3 +20,12 @@ Bands are from the designer pass (itachi2-api run 20261030-211330-gravebound-r1-
 | Dusk | heart the single source | the heart and lancets glow green-white; no cyan | see the critics |
 
 Tests: 19 / 19 green locally on the camera table with this run's blocks added (--add-only).
+
+## Detail round 2 (control: detail round 1 = gravebound_l3_d1.nbt, in the same eyes run)
+Critics 20261030-221323 (a) / -221335 (b): 5.5 / 5 vs the control's 4 / 4. One change per element:
+| Element | Change | Expected | Measured |
+|---|---|---|---|
+| Heart | bone ring + bone inner corners -> polished blackstone ring, full glass disc (L1 3 x 3) | no plus / cross; the lime (0.53) the brightest point of the front; green 2.0 % rts / 3.4 % 34 | |
+| Ribs | dark slab caps removed, one continuous arc, odd span (x 9..15) | read as three arcs, not chevrons; snow 3.4 % rts (bone tops 0.839), under 5 % | |
+| Base | tuff feet -> cobbled deepslate, paving polished deepslate -> deepslate tiles, lane -> polished blackstone | feet 0.19-0.26 (at or under the walls), lane up ~0.21, the throat the darkest floor | |
+| Flank caps | 5 x 5 hipped caps -> a blackstone parapet round a 3 x 3 cap, needle 16 | from above only the spire's cap is a big pyramid; lead 6 (rib apex 19) | |
