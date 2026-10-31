@@ -25,6 +25,7 @@ class MeshingColourThreadTest {
             "mixin/fogofwar/EmbeddiumFogOnlyQuadsMixin.java",
             "fogofwar/FogTintingBlockColor.java",
             "postfx/CanopyShade.java",
+            "postfx/CanopyRegion.java",
             "postfx/GrassTint.java",
     };
 
