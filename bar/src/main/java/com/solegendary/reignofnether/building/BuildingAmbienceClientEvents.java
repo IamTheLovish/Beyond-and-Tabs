@@ -5,19 +5,26 @@ import com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant;
 import com.solegendary.reignofnether.building.buildings.shared.WindGenerator;
 import com.solegendary.reignofnether.config.DisplaySettings;
 import com.solegendary.reignofnether.faction.FactionTraits;
+import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.WeakHashMap;
 
 /**
@@ -36,15 +43,27 @@ import java.util.WeakHashMap;
  * rotated with the placement, worked out once); capitols and labs from their roofline. Off while a building is under
  * construction, rate-limited (a pass every IDLE_PERIOD ticks, at most IDLE_BUDGET emitters a pass), and the whole
  * class follows the client option "Building ambience" (Display settings).
+ *
+ * Building animations, slice 1 (lovish, Oct 30: "smoke = working", medium; rules in {@link BuildingWork}): a lab
+ * no longer breathes idle life, so smoke over a lab always means it is producing. A working lab smokes from its real
+ * stacks - its open campfires - 2 puffs a stack a pass in a ~5-block column drifting with the pennants' wind (south-
+ * east), with a 4-puff chuff when a unit leaves; a lab without a stack keeps its faction's roof-centre idiom. Only
+ * while built, in sight and queued, within WORK_DIST of the render camera, at most WORK_BUDGET labs a pass. The
+ * vanilla smoke of a lab's stack campfires is silenced ({@link #isQuietStack}, CampfireBlockEntityMixin): idle, a
+ * lab is quiet.
  */
 public class BuildingAmbienceClientEvents {
 
     static final Minecraft MC = Minecraft.getInstance();
     static final Random random = new Random();
-    private static final double MAX_DIST_SQR = 180 * 180;
+    // particles past 64 blocks of the render camera are never made in the RTS view (LevelRendererMixin): don't spend
+    // the budget on them
+    private static final double WORK_DIST_SQR = 64 * 64;
+    // the pennants' wind (PartRenderClientEvents.WIND_YAW): smoke leans south-east, broadside to the default camera
+    private static final double DRIFT = 0.008;
 
-    /** placement -> {centre, roof height}; recomputed if the building changes shape. */
-    private record Shape(int blockCount, BlockPos centre, int height) { }
+    /** placement -> {centre, roof height, a lab's stacks}; recomputed if the building changes shape. */
+    private record Shape(int blockCount, BlockPos centre, int height, List<BlockPos> stacks) { }
     private static final Map<BuildingPlacement, Shape> shapes = new WeakHashMap<>();
 
     private static Shape shapeOf(BuildingPlacement placement) {
@@ -53,11 +72,49 @@ public class BuildingAmbienceClientEvents {
         if (s != null && s.blockCount() == count)
             return s;
         int max = 0;
-        for (BuildingBlock bb : placement.getBlocks())
+        boolean lab = isLab(placement);
+        Set<BlockPos> solid = new HashSet<>();
+        List<BlockPos> fires = new ArrayList<>();
+        for (BuildingBlock bb : placement.getBlocks()) {
             max = Math.max(max, bb.getBlockPos().getY() - placement.originPos.getY());
-        s = new Shape(count, BuildingUtils.getCentrePos(placement.getBlocks()), max);
+            if (lab && !bb.getBlockState().isAir()) {
+                solid.add(bb.getBlockPos());
+                if (bb.getBlockState().getBlock() instanceof CampfireBlock)
+                    fires.add(bb.getBlockPos());
+            }
+        }
+        s = new Shape(count, BuildingUtils.getCentrePos(placement.getBlocks()), max,
+            List.copyOf(BuildingWork.stackTops(fires, solid)));
         shapes.put(placement, s);
         return s;
+    }
+
+    private static boolean isLab(BuildingPlacement p) {
+        return BuildingWork.isLab(p.isCapitol, p.getBuilding().maxLevel);
+    }
+
+    // ------------------------------------------------------------------ lab stacks: quiet unless working
+
+    /** Every lab's stack cells (BlockPos.asLong): their vanilla campfire smoke is off. Client thread only. */
+    private static final LongOpenHashSet quietStacks = new LongOpenHashSet();
+    private static final int QUIET_REFRESH = 20;
+    // client ticks: the working passes count these, not the level's game time, which this mod's client holds equal to the
+    // day time (ClientLevelMixin.tickTime) - frozen while the day time is, or stepping in 20s (eyes run 41123019484)
+    private static long ticks = 0;
+
+    /** CampfireBlockEntityMixin: true when this campfire is a lab's stack, whose smoke is ours (working only). */
+    public static boolean isQuietStack(BlockPos pos) {
+        return !quietStacks.isEmpty() && quietStacks.contains(pos.asLong());
+    }
+
+    private static void refreshQuietStacks() {
+        quietStacks.clear();
+        for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
+            if (placement.originPos == null || !isLab(placement))
+                continue;
+            for (BlockPos stack : shapeOf(placement).stacks())
+                quietStacks.add(stack.asLong());
+        }
     }
 
     private static boolean isSmithy(BuildingPlacement placement) {
@@ -68,55 +125,59 @@ public class BuildingAmbienceClientEvents {
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || MC.level == null || MC.player == null || MC.isPaused())
+        if (evt.phase != TickEvent.Phase.END)
             return;
+        if (MC.level == null) {
+            quietStacks.clear();
+            return;
+        }
+        if (MC.player == null || MC.isPaused())
+            return;
+        ticks++;
+        if (ticks % QUIET_REFRESH == 1)
+            refreshQuietStacks();
         // particles are invisible at strategic zoom; don't pay for them (zoom-out performance)
         if (StrategicViewClientEvents.isStrategicView() || !DisplaySettings.buildingAmbience())
             return;
         if (MC.level.getGameTime() % IDLE_PERIOD == 0)
             idleLife();
-        if (MC.level.getGameTime() % 8 != 0)
+        if (ticks % BuildingWork.SMOKE_PERIOD != 0)
             return;
 
+        // the RENDER camera: in the RTS view the player entity is elsewhere
+        Vec3 cam = MC.gameRenderer.getMainCamera().getPosition();
+        int budget = BuildingWork.WORK_BUDGET;
         for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
-            if (!placement.isBuilt || !placement.isExploredClientside)
+            if (!(placement instanceof ProductionPlacement pp) || placement.originPos == null)
                 continue;
-            if (!(placement instanceof ProductionPlacement pp) || pp.productionQueue.isEmpty())
+            // taken every pass, drawn or not, so a release never chuffs late
+            int chuffs = BuildingWork.takeReleases(placement);
+            if (budget <= 0 || !placement.isBuilt || !placement.isExploredClientside)
+                continue;
+            boolean queued = !pp.productionQueue.isEmpty();
+            if (!queued && chuffs == 0)
                 continue;
             Shape shape = shapeOf(placement);
             BlockPos centre = shape.centre();
-            if (MC.player.distanceToSqr(centre.getX(), centre.getY(), centre.getZ()) > MAX_DIST_SQR)
+            if (cam.distanceToSqr(centre.getX() + 0.5, centre.getY() + 0.5, centre.getZ() + 0.5) > WORK_DIST_SQR)
                 continue;
+            // a remembered building's queue is stale: nothing from the fog (the last unit's chuff counts, in sight)
+            boolean inSight = FogOfWarClientEvents.isInBrightChunk(centre);
+            if (!BuildingWork.isWorking(true, inSight, queued || chuffs > 0))
+                continue;
+            budget--;
+            FactionTraits.Ambience idiom = FactionTraits.of(placement.getBuilding().getFaction()).ambience;
 
-            double x = centre.getX() + 0.5 + (random.nextDouble() - 0.5) * 1.5;
-            double z = centre.getZ() + 0.5 + (random.nextDouble() - 0.5) * 1.5;
-            double y = placement.originPos.getY() + shape.height() + 0.4;
-
-            switch (FactionTraits.of(placement.getBuilding().getFaction()).ambience) {
-                case SOUL_FLAMES -> {
-                    // soul flames flicker around the eaves, a little lower than chimney height
-                    MC.level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, x, y - 0.6, z, 0, 0.02, 0);
-                    if (random.nextInt(3) == 0)
-                        MC.level.addParticle(ParticleTypes.SOUL, x, y, z, 0, 0.03, 0);
-                }
-                case FORGE_FIRE -> {
-                    MC.level.addParticle(ParticleTypes.FLAME, x, y - 0.4, z, 0, 0.02, 0);
-                    if (random.nextInt(2) == 0)
-                        MC.level.addParticle(ParticleTypes.LAVA, x, y, z, 0, 0, 0);
-                }
-                case CHIMNEY_SMOKE -> MC.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y, z,
-                    0, 0.06 + random.nextDouble() * 0.03, 0);
-                // Verdant: spores drifting off the living roof, the odd green glint
-                case SPORES -> {
-                    MC.level.addParticle(ParticleTypes.SPORE_BLOSSOM_AIR, x, y, z, 0, 0.01, 0);
-                    if (random.nextInt(3) == 0)
-                        MC.level.addParticle(ParticleTypes.HAPPY_VILLAGER, x, y - 0.3, z, 0, 0.02, 0);
-                }
-                default -> { }   // no faction entry: no faction-flavoured ambience
+            if (!shape.stacks().isEmpty()) {
+                int puffs = (queued ? BuildingWork.PUFFS_PER_STACK : 0) + (chuffs > 0 ? BuildingWork.CHUFF_PUFFS : 0);
+                for (BlockPos stack : shape.stacks())
+                    stackSmoke(stack, puffs, idiom);
+            } else if (queued) {
+                roofIdiom(placement, shape, idiom);
             }
 
             // working smithies throw sparks out of the doorway level
-            if (isSmithy(placement) && random.nextInt(2) == 0) {
+            if (queued && isSmithy(placement) && random.nextInt(2) == 0) {
                 ParticleOptions spark = random.nextBoolean() ? ParticleTypes.CRIT : ParticleTypes.SMALL_FLAME;
                 double sx = centre.getX() + 0.5 + (random.nextDouble() - 0.5) * 2.5;
                 double sz = centre.getZ() + 0.5 + (random.nextDouble() - 0.5) * 2.5;
@@ -127,6 +188,52 @@ public class BuildingAmbienceClientEvents {
                         (random.nextDouble() - 0.5) * 0.2);
             }
         }
+    }
+
+    /** A working lab without a stack: its faction's idiom along the roof centre, as before. */
+    private static void roofIdiom(BuildingPlacement placement, Shape shape, FactionTraits.Ambience idiom) {
+        BlockPos centre = shape.centre();
+        double x = centre.getX() + 0.5 + (random.nextDouble() - 0.5) * 1.5;
+        double z = centre.getZ() + 0.5 + (random.nextDouble() - 0.5) * 1.5;
+        double y = placement.originPos.getY() + shape.height() + 0.4;
+        switch (idiom) {
+            case SOUL_FLAMES -> {
+                // soul flames flicker around the eaves, a little lower than chimney height
+                MC.level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, x, y - 0.6, z, 0, 0.02, 0);
+                if (random.nextInt(3) == 0)
+                    MC.level.addParticle(ParticleTypes.SOUL, x, y, z, 0, 0.03, 0);
+            }
+            case FORGE_FIRE -> {
+                MC.level.addParticle(ParticleTypes.FLAME, x, y - 0.4, z, 0, 0.02, 0);
+                if (random.nextInt(2) == 0)
+                    MC.level.addParticle(ParticleTypes.LAVA, x, y, z, 0, 0, 0);
+            }
+            case CHIMNEY_SMOKE -> MC.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y, z,
+                0, 0.06 + random.nextDouble() * 0.03, 0);
+            // Verdant: spores drifting off the living roof, the odd green glint
+            case SPORES -> {
+                MC.level.addParticle(ParticleTypes.SPORE_BLOSSOM_AIR, x, y, z, 0, 0.01, 0);
+                if (random.nextInt(3) == 0)
+                    MC.level.addParticle(ParticleTypes.HAPPY_VILLAGER, x, y - 0.3, z, 0, 0.02, 0);
+            }
+            default -> { }   // no faction entry: no faction-flavoured ambience
+        }
+    }
+
+    /**
+     * A working stack: a dense smoke column leaning with the wind (cosy campfire smoke: short-lived, so it clears within
+     * ~6 s of the queue emptying); a fire faction's stack flares now and then.
+     */
+    private static void stackSmoke(BlockPos stack, int puffs, FactionTraits.Ambience idiom) {
+        double x = stack.getX() + 0.5, y = stack.getY() + 0.7, z = stack.getZ() + 0.5;
+        for (int i = 0; i < puffs; i++)
+            MC.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                x + (random.nextDouble() - 0.5) * 0.3, y + random.nextDouble() * 0.3, z + (random.nextDouble() - 0.5) * 0.3,
+                DRIFT, BuildingWork.PUFF_RISE + random.nextDouble() * 0.006, DRIFT);
+        if (idiom == FactionTraits.Ambience.FORGE_FIRE && random.nextInt(4) == 0)
+            MC.level.addParticle(ParticleTypes.FLAME, x, y - 0.2, z, 0, 0.02, 0);
+        else if (idiom == FactionTraits.Ambience.SOUL_FLAMES && random.nextInt(4) == 0)
+            MC.level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, x, y - 0.2, z, 0, 0.02, 0);
     }
 
     // ------------------------------------------------------------------ idle life
@@ -221,10 +328,10 @@ public class BuildingAmbienceClientEvents {
         return w;
     }
 
-    /** Capitols, energy buildings and army labs (levelled) breathe; everything else stays quiet. */
+    /** Capitols and energy buildings breathe; labs don't (smoke on a lab is work: BuildingWork); the rest stay quiet. */
     private static boolean isLively(BuildingPlacement p) {
         Building b = p.getBuilding();
-        return p.isCapitol || b instanceof WindGenerator || b instanceof GeothermalPlant || b.maxLevel > 1;
+        return BuildingWork.breathesIdle(p.isCapitol, b instanceof WindGenerator || b instanceof GeothermalPlant, b.maxLevel);
     }
 
     private static void idleLife() {
@@ -249,7 +356,7 @@ public class BuildingAmbienceClientEvents {
                 emit(def.fx()[k], spots[k * 3], spots[k * 3 + 1], spots[k * 3 + 2]);
                 continue;
             }
-            // a capitol or a lab: somewhere along its roofline, in its faction's idiom, half as often (they're bigger)
+            // a capitol: somewhere along its roofline, in its faction's idiom, half as often (they're bigger)
             Fx fx = roofFx(FactionTraits.of(placement.getBuilding().getFaction()));
             if (fx == null || random.nextInt(2) != 0)
                 continue;
