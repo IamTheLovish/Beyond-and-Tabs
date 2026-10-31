@@ -84,3 +84,7 @@ over the light well opened a hole from above (spruce bellies seen through it) - 
 Written Oct 31 ~03:00Z, before eyes. The upper tiers close over the light well (only the 1 x 1 spawn shaft stays open);
 the spruce belly only deep under the top (d <= r - 2). Expected (camera model): 0 open crown columns; belly 0 % of the
 seen leaf pixels; canopy 0.80 / 0.25 / 336; canopy share ~0.38; the rest unchanged. 22/22 tests green locally.
+Round 4's first eyes run (41161071265) photographed verdant_l3 with a harness fault: the lobby overlay ("Ready 0/1,
+Force start") over the still, a green tint, and its noon stills dark (mean grey 0.16 vs the control's 0.36 in the same
+run). Not judged, not measured. Those stills did show the clump valleys in the crown reading as a lattice again, so
+the crown tier (tier 2) also loses its valleys (same element). Re-shot in a new run.

@@ -362,7 +362,8 @@ def great_tree(c, l3):
     line(c, (11, 19, 6), (14, 21, 8))                        # the east bough under tier 2
     sky = lambda x, y, z: not (x <= 7 and y < 21)            # noqa: E731  - leave the air over the hall open
     canopy(c, 12.5, 6.5, 17, 18, 6.2, seed=2, keep=sky)
-    canopy(c, 9.5, 7.5, 21, 23, 5.8, seed=3, shaft=True)     # over the hall and the limb: canopy and roof interlock;
+    canopy(c, 9.5, 7.5, 21, 23, 5.8, seed=3, shaft=True, valleys=False)  # over the hall and the limb: canopy and roof
+    #                                                        interlock; no valleys in the crown (they read as a lattice);
     canopy(c, 10.0, 6.5, 24, 25, 3.0, seed=4, shaft=True)    # the crown closed over the well but the spawn shaft
     for (x, z) in ((11, 5), (12, 5), (11, 6)):
         c.put(x, 25, z, TOP, **LEAF)
