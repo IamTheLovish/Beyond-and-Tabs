@@ -187,6 +187,15 @@ const float CONTACT_RADIUS = 0.20;            // ~7 px at the default RTS zoom
 // foot and fades over the radius (~9 px): ~0.60 of lit at the foot, ~0.73 by 6-8 px
 const float CONTACT_GAIN = 2.5;
 const float CONTACT_FLOOR = 0.78;
+// light pass 23: the foot line (composite.fsh footLine): an upward face whose neighbour FOOT_LINE_PX or fewer pixels away
+// rises above its plane (more than FOOT_LINE_MIN_H) within FOOT_LINE_REACH blocks across - a wall standing on it - is
+// darkened by FOOT_LINE_STRENGTH at 1 px, fading to nothing past FOOT_LINE_PX. Three passes of CONTACT_* tuning gave a
+// soft ramp (lp22 1-12 px: 0.61 0.65 0.65 0.67 0.70 ...; Complementary 0.56 at 1 px): a separate, very short term.
+// Expected x0.88 / 0.92 / 0.96 at 1 / 2 / 3 px on today's profile: ~0.54 at 1 px, the 0-3 band ~0.58-0.60
+const float FOOT_LINE_STRENGTH = 0.12;
+const float FOOT_LINE_PX = 3.0;
+const float FOOT_LINE_MIN_H = 0.02;
+const float FOOT_LINE_REACH = 0.12;
 // the display's S-curve (final.fsh, light pass 2), on luma as a ratio, after the grade. The lit lawn is its pivot and
 // stays where it is (lovish: the lawn mid-toned on the palette band, ~0.42; buildings own the lights). Below the
 // pivot a toe takes the darks down in proportion to how far below the lawn they sit - x (1 - SLOPE u - TOE u^2),
@@ -417,7 +426,8 @@ const float FILL_DIRECTION = 0.10;
 // light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): 0.42 -> 0.31 with the fill share x1.82: quartz's
 // shaded side 0.452 -> ~0.52 (x1.36 of its light), the target; its cool from SHADE_TINT_WALL now reaches white walls too
 // (lit.fsh: WHITE_WALL_NEUTRAL takes only the sun's part)
-const float WALL_FILL = 0.31;
+// light pass 23: 0.31 -> 0.33 - lp22's east faces 0.512 (one at 0.473), target 0.53: a little more of the fill on walls
+const float WALL_FILL = 0.33;
 // the sun's term on a face looking sideways under a high sun (lib/light.glsl sideKey, light pass 13): the critic on
 // pass 11 - quartz's sun-lit side 0.953 fused with its top 0.955 in the shoulder, its shaded side 0.79 (target 0.95 /
 // 0.80 / 0.52, top / shade >= 1.5; Complementary 0.94 / 0.77 / 0.65). A white side under the sun at plain N.L (0.49 at
@@ -508,6 +518,12 @@ const float PLANT_SHADOW_ALPHA = 0.5;      // shadow.fsh: plants' texels below t
 // light pass 11: 0.6 / 0.75 -> 0.75 / 0.9 (the tufts' shadows dropped the lawn only 0.03-0.06)
 // light pass 13: 0.75 -> 0.80 (the tufts' shadows dropped the lawn only 0.07; target >= 0.10)
 const float PLANT_SHADOW_SHRINK = 0.80;
+// light pass 23: a shadow whose caster is a plant (shadowcolor0's mark, lib/shadow.glsl plantCasterShare, over
+// PLANT_MARK_REACH blocks) takes no shade tint, and keeps PLANT_SHADOW_SUN of the sun. The tint is what drew the warm
+// "halo": the lawn between dense tufts sat in their soft partial shade, cooled (lp22 R/G 0.765 vs 0.819 where sparse);
+// the cleared pad round the site has no tufts. The level is kept nearly whole (the critic: a tuft's own drop >= 0.10)
+const float PLANT_MARK_REACH = 0.12;
+const float PLANT_SHADOW_SUN = 0.10;
 const float PLANT_SHADOW_HEIGHT = 0.9;
 // a probe (light pass 11): 1 paints red every lit pixel whose sun shadow comes from a plant (shadow.fsh writes plants
 // red in shadowcolor0), to prove the tufts reach the shadow map. Off for play
@@ -590,7 +606,7 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 #else
 #define UNLIT_PROBE 0
 #endif
-// CONTACT_PROBE 1 (light pass 21, composite.fsh): the contact crease's strength in red (1 - its factor, x 1 / (1 -
+// CONTACT_PROBE 1 (light pass 21, composite.fsh; light pass 23: the foot line in green): the contact crease's strength in red (1 - its factor, x 1 / (1 -
 // CONTACT_FLOOR), so the floor reads full red) over the frame's grey: no red at a cube's foot means it never ran
 #define CONTACT_PROBE 0 // [0 1]
 // light pass 17: and the LIGHT on such a side goes the same share to WHITE_SHADE_COOL at its own luma. lp16 kept b-r

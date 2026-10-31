@@ -292,6 +292,43 @@ vec2 seamSource(vec2 uv) {
 }
 
 float gContactProbe = 0.0;
+float gFootProbe = 0.0;
+
+// light pass 23: the foot line - 0..1, how strongly a wall stands on this upward face within FOOT_LINE_PX pixels
+float footLine(vec2 uv, float depth) {
+    if (depth >= 1.0 || texture2D(colortex1, uv).b > 0.5)
+        return 0.0;
+    vec2 px = 1.0 / vec2(viewWidth, viewHeight);
+    vec3 p = viewPosAt(uv, depth);
+    vec3 pr = viewPosAt(uv + vec2(px.x, 0.0), texture2D(depthtex1, uv + vec2(px.x, 0.0)).r) - p;
+    vec3 pl = p - viewPosAt(uv - vec2(px.x, 0.0), texture2D(depthtex1, uv - vec2(px.x, 0.0)).r);
+    vec3 pu = viewPosAt(uv + vec2(0.0, px.y), texture2D(depthtex1, uv + vec2(0.0, px.y)).r) - p;
+    vec3 pd = p - viewPosAt(uv - vec2(0.0, px.y), texture2D(depthtex1, uv - vec2(0.0, px.y)).r);
+    vec3 n = normalize(cross(abs(pr.z) < abs(pl.z) ? pr : pl, abs(pu.z) < abs(pd.z) ? pu : pd));
+    vec3 up = normalize(upPosition);
+    if (dot(n, up) < 0.0)
+        n = -n;
+    if (dot(n, up) < 0.7)
+        return 0.0;                    // only an upward face carries a foot line
+    float best = 0.0;
+    for (int d = 1; d <= int(FOOT_LINE_PX); d++) {
+        float fall = 1.0 - (float(d) - 1.0) / FOOT_LINE_PX;
+        if (fall <= best)
+            break;
+        for (int k = 0; k < 8; k++) {
+            float a = float(k) * 0.78539816;
+            vec2 suv = uv + vec2(cos(a), sin(a)) * (float(d) * px);
+            float sd = texture2D(depthtex1, suv).r;
+            if (sd >= 1.0 || texture2D(colortex1, suv).b > 0.5)
+                continue;
+            vec3 v = viewPosAt(suv, sd) - p;
+            float h = dot(v, n);
+            if (h > FOOT_LINE_MIN_H && length(v - n * h) < FOOT_LINE_REACH)
+                best = max(best, fall);
+        }
+    }
+    return best;
+}
 
 void main() {
     vec2 uv = texcoord;
@@ -315,8 +352,12 @@ void main() {
             // and the short contact term at full resolution, on all the light (light pass 9)
             float crease = contactOcclusion(uv, texture2D(depthtex1, uv).r);
             lin *= crease;
+            // light pass 23: and the foot line, on all the light
+            float foot = footLine(uv, texture2D(depthtex1, uv).r);
+            lin *= 1.0 - FOOT_LINE_STRENGTH * foot;
 #if CONTACT_PROBE == 1
             gContactProbe = (1.0 - crease) / (1.0 - CONTACT_FLOOR);
+            gFootProbe = foot;
 #endif
         }
     }
@@ -361,7 +402,8 @@ void main() {
 #endif
     vec3 c = toDisplay(toneMap(lin));
 #if CONTACT_PROBE == 1
-    gl_FragData[0] = vec4(mix(vec3(dot(c, LUMA)), vec3(1.0, 0.0, 0.0), clamp(gContactProbe, 0.0, 1.0)), 1.0);
+    vec3 probe = mix(vec3(dot(c, LUMA)), vec3(1.0, 0.0, 0.0), clamp(gContactProbe, 0.0, 1.0));
+    gl_FragData[0] = vec4(mix(probe, vec3(0.0, 1.0, 0.0), gFootProbe), 1.0);   // green: the foot line (light pass 23)
     gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
     return;
 #endif

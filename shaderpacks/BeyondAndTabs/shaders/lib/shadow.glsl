@@ -139,10 +139,30 @@ float sunShadow(vec3 playerPos, vec3 worldNormal, vec3 fit) {
     return mix(lit, 1.0, smoothstep(0.94, 1.0, edge));
 }
 
-#if SHADOW_PROBE == 1
-// light pass 11's probe: 1 where the caster nearest the light over this point is a plant (shadow.fsh writes plants red
-// in shadowcolor0)
+// shadow.fsh writes plants red (green 0) in shadowcolor0, everything else white
 uniform sampler2D shadowcolor0;
+
+// light pass 23: the share of five taps round this point (PLANT_MARK_REACH blocks) whose caster nearest the light is a
+// plant: lit.fsh lightens a tuft's shadow and takes the shade tint off it (lp22: lawn among dense tufts R/G 0.765
+// against 0.819 where tufts are sparse, corr -0.34 - flat in the albedo probe and in Complementary)
+float plantCasterShare(vec3 playerPos, vec3 fit) {
+    float texelBlocks = (2.0 / float(shadowMapResolution)) / (abs(shadowProjection[0][0]) * fit.z);
+    vec4 clip = shadowProjection * (shadowModelView * vec4(playerPos, 1.0));
+    clip.xy = shadowRemap(clip.xy, fit);
+    if (max(abs(clip.x), abs(clip.y)) >= 1.0)
+        return 0.0;
+    vec2 uv = clip.xy * 0.5 + 0.5;
+    float r = PLANT_MARK_REACH / (texelBlocks * float(shadowMapResolution));
+    float n = 0.0;
+    for (int i = 0; i < 5; i++) {
+        vec2 o = i == 0 ? vec2(0.0) : vec2(i == 1 ? r : (i == 2 ? -r : 0.0), i == 3 ? r : (i == 4 ? -r : 0.0));
+        n += texture2D(shadowcolor0, uv + o).g < 0.5 ? 1.0 : 0.0;
+    }
+    return n / 5.0;
+}
+
+#if SHADOW_PROBE == 1
+// light pass 11's probe: 1 where the caster nearest the light over this point is a plant
 
 float plantShadowProbe(vec3 playerPos, vec3 fit) {
     vec4 clip = shadowProjection * (shadowModelView * vec4(playerPos, 1.0));
