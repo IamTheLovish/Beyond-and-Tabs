@@ -1,15 +1,22 @@
 package com.solegendary.reignofnether.mixin.fogofwar;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.perf.FrameParts;
+import com.solegendary.reignofnether.perf.ShadowCells;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -60,6 +67,41 @@ public abstract class EntityShadowMixin {
             return;
         }
         reignofnether$shadowStart = start;
+    }
+
+    @Shadow
+    private static void renderBlockShadow(PoseStack.Pose pPose, VertexConsumer pVertexConsumer, ChunkAccess pChunk, LevelReader pLevel, BlockPos pPos, double pX, double pY, double pZ, float pSize, float pWeight) {
+        throw new AssertionError();
+    }
+
+    /**
+     * renderShadow's call per cell of the entity's block box: a cell that cannot take a shadow (the same tests as
+     * renderBlockShadow and Embeddium's replacement: the block below invisible, the light at the cell 3 or less, the
+     * block below not a full block or its shape empty) is remembered for the frame (perf/ShadowCells) and skipped for
+     * every later entity over it. Any other cell is drawn by renderBlockShadow as before - the same quads.
+     */
+    @Redirect(
+            method = "renderShadow",
+            at = @At(value = "INVOKE",
+                     target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;renderBlockShadow(Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/level/chunk/ChunkAccess;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;DDDFF)V")
+    )
+    private static void reignofnether$skipBareCells(PoseStack.Pose pPose, VertexConsumer pVertexConsumer, ChunkAccess pChunk, LevelReader pLevel, BlockPos pPos, double pX, double pY, double pZ, float pSize, float pWeight) {
+        long key = pPos.asLong();
+        int known = ShadowCells.CLIENT.get(key);
+        if (known == ShadowCells.BARE)
+            return;
+        if (known == ShadowCells.UNKNOWN) {
+            BlockPos below = pPos.below();
+            BlockState state = pChunk.getBlockState(below);
+            boolean bare = state.getRenderShape() == RenderShape.INVISIBLE
+                    || pLevel.getMaxLocalRawBrightness(pPos) <= 3
+                    || !state.isCollisionShapeFullBlock(pChunk, below)
+                    || state.getShape(pChunk, below).isEmpty();
+            ShadowCells.CLIENT.put(key, bare);
+            if (bare)
+                return;
+        }
+        renderBlockShadow(pPose, pVertexConsumer, pChunk, pLevel, pPos, pX, pY, pZ, pSize, pWeight);
     }
 
     /** The shadow's block box walked and its quads emitted: its time goes to the [FrameParts] entityShadows section. */
