@@ -226,6 +226,32 @@ public class EssenceServerEvents {
         }
     }
 
+    /**
+     * A race's wider reach for one carrier and wisp, in blocks (0: none of its own). The largest answer, or
+     * {@link #GATHER_RANGE}, is the carrier's reach for that wisp: the Tombcaller pulls the wisps on its grave creep
+     * from 12 blocks (TombcallerServerEvents).
+     */
+    public interface Reach {
+        double of(LivingEntity carrier, Entity wisp);
+    }
+
+    private static final List<Reach> reaches = new ArrayList<>();
+    /** The largest reach any hook can answer: a carrier farther than this from a wisp never asks the hooks. */
+    private static double maxHookReach = 0;
+
+    /** Adds a race's reach; {@code maxBlocks} is the most it ever answers (the scan skips it beyond that). */
+    public static void addReach(Reach reach, double maxBlocks) {
+        reaches.add(reach);
+        maxHookReach = Math.max(maxHookReach, maxBlocks);
+    }
+
+    static double reachOf(LivingEntity carrier, Entity wisp) {
+        double r = GATHER_RANGE;
+        for (Reach reach : reaches)
+            r = Math.max(r, reach.of(carrier, wisp));
+        return r;
+    }
+
     /** Free wisps within reach of a carrier with room start flying to the nearest one. */
     private static void findCarriers() {
         carriers.clear();
@@ -236,7 +262,6 @@ public class EssenceServerEvents {
             pulls.clear();
             return;
         }
-        double r2 = GATHER_RANGE * GATHER_RANGE;
         for (Entity w : wisps) {
             if (w.isRemoved())
                 continue;
@@ -244,12 +269,15 @@ public class EssenceServerEvents {
             if (cur != null && cur.isAlive() && Essence.room(cur) > 0)
                 continue;
             LivingEntity best = null;
-            double bestD = r2;
+            double bestD = Double.MAX_VALUE;
             for (LivingEntity c : carriers) {
                 if (c.level() != w.level())
                     continue;
                 double d = w.distanceToSqr(c.getX(), c.getY() + c.getBbHeight() * 0.5, c.getZ());
-                if (d <= bestD) {
+                if (d > GATHER_RANGE * GATHER_RANGE && d > maxHookReach * maxHookReach)
+                    continue;   // past every reach: no hook to ask (PR 366 review: the scan runs every 5 ticks)
+                double reach = d <= GATHER_RANGE * GATHER_RANGE ? GATHER_RANGE : reachOf(c, w);
+                if (d <= reach * reach && d <= bestD) {
                     bestD = d;
                     best = c;
                 }
