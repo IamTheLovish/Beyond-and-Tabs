@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.registrars.SoundRegistrar;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -49,21 +50,13 @@ public final class SfxClient {
     private static final Sfx[] ALL = Sfx.values();
     private static final Sfx.Category[] CATS = Sfx.Category.values();
 
-    // per-sound: game tick of the last play
-    private static final long[] lastPlay = new long[ALL.length];
-    // per-category: sounds played this tick, sounds asked for this tick, and a smoothed "asked per tick"
-    private static final int[] playedThisTick = new int[CATS.length];
-    private static final int[] askedThisTick = new int[CATS.length];
-    private static final float[] busy = new float[CATS.length];
-    private static long tick = Long.MIN_VALUE;
-
     /** Most new sounds a category may start in one tick (UNITS, BUILDINGS, ABILITIES, ANNOUNCER, UI). */
     private static final int[] BUDGET = { 3, 2, 3, 4, 4 };
+    // the gaps, per-tick budgets and busy rates (SfxBudget), counted in SfxBudget.clock's tick
+    private static final SfxBudget BUDGETS = new SfxBudget(ALL.length, BUDGET);
     /** Reach (blocks from the ear) at RTS zoom 0 / first person; the RTS zoom adds to it. */
     private static final float[] REACH = { 36, 48, 56, 72, 72 };
     private static final float NEAR = 10;
-    /** Above this smoothed request rate a category plays each sound quieter (1/sqrt of the excess). */
-    private static final float CALM_RATE = 1.5f;
     // how far from the camera the stand-in point sits (well inside Minecraft's 16-block attenuation)
     private static final float PROXY_DIST = 3f;
 
@@ -219,44 +212,55 @@ public final class SfxClient {
         };
     }
 
-    /** Rolls the per-tick counters over when the game tick changed; decays the busy rate per tick elapsed. */
+    /** This tick (SfxBudget.clock, real time), with the budgets rolled over to it. */
     private static long rollTick() {
-        long now = MC.level != null ? MC.level.getGameTime() : 0;
-        if (now != tick) {
-            long steps = tick == Long.MIN_VALUE ? 1 : Math.max(1, Math.min(40, now - tick));
-            for (int c = 0; c < CATS.length; c++) {
-                float b = busy[c] * 0.9f + askedThisTick[c] * 0.1f;
-                for (long i = 1; i < steps; i++)
-                    b *= 0.9f;
-                busy[c] = b;
-                askedThisTick[c] = 0;
-                playedThisTick[c] = 0;
-            }
-            tick = now;
-        }
+        long now = SfxBudget.clock(MC.level != null ? MC.level.getGameTime() : 0, Util.getMillis());
+        if (EYES)
+            eyesWindow(now);
+        BUDGETS.roll(now);
         return now;
     }
 
-    /** Gap and budget; true if the sound may play now (and books it). */
+    /** Gap and budget; true if the sound may play now (and books it). Busy: the far half of the reach waits. */
     private static boolean admit(Sfx s, long now, float dist) {
         int c = s.category.ordinal();
-        askedThisTick[c]++;
-        long last = lastPlay[s.ordinal()];
-        if (last != 0 && now >= last && now - last < s.minGapTicks)
+        windowAsked[c]++;
+        if (!BUDGETS.admit(s.ordinal(), c, s.minGapTicks, now, dist > NEAR * 2.5f))
             return false;
-        if (playedThisTick[c] >= BUDGET[c])
-            return false;
-        // busy: the far half of the reach only gets a turn when the category is calm
-        if (busy[c] > CALM_RATE * 2 && dist > NEAR * 2.5f)
-            return false;
-        playedThisTick[c]++;
-        lastPlay[s.ordinal()] = now == 0 ? 1 : now;
+        windowPlayed[c]++;
         return true;
     }
 
+    // the eyes run's [Sfx] line: what each category asked to play and played over about 10 s, and how many different
+    // values the level's game time showed meanwhile (the clock these throttles counted in before SoundTicks)
+    private static final boolean EYES = Boolean.getBoolean("bat.eyes");
+    private static final int[] windowAsked = new int[CATS.length], windowPlayed = new int[CATS.length];
+    private static long windowStart = 0, lastGameTime = Long.MIN_VALUE;
+    private static int gameTimeValues = 0;
+
+    private static void eyesWindow(long now) {
+        long gt = MC.level != null ? MC.level.getGameTime() : 0;
+        if (gt != lastGameTime) {
+            gameTimeValues++;
+            lastGameTime = gt;
+        }
+        if (windowStart == 0)
+            windowStart = now;
+        if (now - windowStart < 200)
+            return;
+        StringBuilder sb = new StringBuilder("[Sfx] ").append(now - windowStart).append(" ticks, played/asked:");
+        for (int c = 0; c < CATS.length; c++) {
+            sb.append(' ').append(CATS[c].name().toLowerCase()).append(' ').append(windowPlayed[c]).append('/')
+                .append(windowAsked[c]);
+            windowPlayed[c] = windowAsked[c] = 0;
+        }
+        com.solegendary.reignofnether.ReignOfNether.LOGGER.info("{} | game time values {}", sb, gameTimeValues);
+        gameTimeValues = 0;
+        windowStart = now;
+    }
+
     private static float crowdScale(Sfx s) {
-        float b = busy[s.category.ordinal()];
-        return b <= CALM_RATE ? 1f : (float) Math.sqrt(CALM_RATE / b);
+        return BUDGETS.crowdScale(s.category.ordinal());
     }
 
     /** Plays a sound at a world position, if it is in earshot and not hidden by fog. */
@@ -303,11 +307,8 @@ public final class SfxClient {
         float catVol = categoryVolume(s.category);
         if (catVol <= 0)
             return;
-        long now = rollTick();
-        long last = lastPlay[s.ordinal()];
-        if (last != 0 && now >= last && now - last < s.minGapTicks)
+        if (!BUDGETS.admitGapOnly(s.ordinal(), s.minGapTicks, rollTick()))
             return;
-        lastPlay[s.ordinal()] = now == 0 ? 1 : now;
         SoundEvent ev = SoundRegistrar.sfx(s);
         if (ev == null)
             return;
@@ -320,10 +321,13 @@ public final class SfxClient {
         return pitch * (0.96f + RANDOM.nextFloat() * 0.08f);
     }
 
-    /** Logout / new world: forget gaps and busy rates (game time restarts). */
+    /** Logout / new world: forget gaps, budgets and busy rates, and start a new eyes window. */
     public static void reset() {
-        java.util.Arrays.fill(lastPlay, 0);
-        java.util.Arrays.fill(busy, 0);
-        tick = Long.MIN_VALUE;
+        BUDGETS.reset();
+        java.util.Arrays.fill(windowAsked, 0);
+        java.util.Arrays.fill(windowPlayed, 0);
+        windowStart = 0;
+        lastGameTime = Long.MIN_VALUE;
+        gameTimeValues = 0;
     }
 }
