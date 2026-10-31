@@ -18,7 +18,7 @@ import sys
 
 P = dict(beatTicks=52.0, down=0.34, hold=0.06, flapUp=38.0, flapDown=-42.0, glideArm=6.0,
          burstBeats=3.0, glideBeats=2.0,
-         hoverRate=0.85, takeoffRate=0.8,
+         hoverRate=0.85, takeoffRate=0.8, climbBeat=0.32,
          breathTicks=90.0, neckLag=2.5, tailLag=5.0, neckSway=12.0, tailWave=6.5,
          riseP=3.3, dropPx=2.0, pitchUp=9.0, pitchDown=6.0,
          billow=13.0,
@@ -177,7 +177,8 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
         m[1] += y
         m[2] += z
 
-    T = P["beatTicks"] * (1 + (P["hoverRate"] - 1) * idle) * (1 + (P["takeoffRate"] - 1) * takeoff)
+    T = P["beatTicks"] * (1 + (P["hoverRate"] - 1) * idle) * (1 + (P["takeoffRate"] - 1) * takeoff) \
+        * (1 - P["climbBeat"] * max(0.0, climb))
     lag = lambda ticks: ph - ticks / T                         # the beat phase `ticks` ago
     # the glide weight: the cruise rhythm (only cruising - a hover, a climb, a take-off and a flare beat on), and the
     # speed's own glide with a corrective beat every ~8 s

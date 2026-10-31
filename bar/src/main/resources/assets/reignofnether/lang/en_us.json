@@ -4246,5 +4246,15 @@
   "block.reignofnether.sill_slate": "Slate Window Sill",
   "block.reignofnether.lintel_slate": "Slate Lintel",
   "block.reignofnether.arch_ring_stone": "Stone Arch Ring",
-  "block.reignofnether.arch_ring_brick": "Brick Arch Ring"
+  "block.reignofnether.arch_ring_brick": "Brick Arch Ring",
+  "block.reignofnether.pilaster_stone": "Stone Pilaster",
+  "block.reignofnether.pilaster_brick": "Brick Pilaster",
+  "block.reignofnether.pilaster_slate": "Slate Pilaster",
+  "block.reignofnether.quoin_stone": "Stone Quoin",
+  "block.reignofnether.corbel_stone": "Stone Corbel",
+  "block.reignofnether.corbel_brick": "Brick Corbel",
+  "block.reignofnether.corbel_copper": "Weathered Copper Corbel",
+  "block.reignofnether.corbel_course_brick": "Brick Corbel Course",
+  "block.reignofnether.corbel_course_stone": "Stone Corbel Course",
+  "block.reignofnether.corbel_course_slate": "Slate Corbel Course"
 }
