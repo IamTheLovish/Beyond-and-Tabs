@@ -70,7 +70,6 @@ CRAG_SL = "cobbled_deepslate_slab"
 PAVE = "deepslate_tiles"
 LANE_FLOOR = "polished_blackstone"     # the gate throat the darkest floor (round 1: deepslate tiles read mid-grey)
 GLASS = "lime_stained_glass"
-LANCET_GLASS = "gray_stained_glass"     # the lancets: smoke glass lit from behind (green only in the heart: the one accent)
 GLOW = "verdant_froglight"
 CORNICE = "reignofnether:cornice_slate"
 DRY = dict(waterlogged="false")
@@ -161,13 +160,14 @@ def cone(g, x0, x1, z0, z1, y, needle_to=None):
 
 
 def lancet(g, face, plane, u, y0, y1):
-    """A 1-wide lit lancet: smoke glass y0..y1 in the face (full blocks: past a pane's thin plane the camera saw the lamp), verdant froglights one cell behind (the room's light - the
-    3/4 camera never sees a lamp more than one block behind a pane), dark slab head and sill. Smoke glass: lime in the
-    lancets too put the green over the designer's 4 % (5.3 % rts on the pane's camera colour) - green is the heart's."""
+    """A 1-wide dark slit y0..y1 in the face: a polished blackstone wall post (0.12 / 0.17) under a slab head on a slab
+    sill. Round 3: round 2's smoke-glass lancets lit from behind glowed "pale cyan-white" at dusk (both critics) - a
+    second glow beside the one green heart; round 1's lime lancets had put green over 4 %. The faces keep the slit
+    rhythm; the light belongs to the heart and the spire's lantern."""
     for y in range(y0, y1 + 1):
         q = face_cell(face, plane, u, y)
-        g.set(*q, LANCET_GLASS)
-        g.set(*behind(face, q), GLOW)
+        g.set(*q, NEEDLE, **POST)
+        g.set(*behind(face, q), WALL)
     g.slab(*face_cell(face, plane, u, y1 + 1), DRESS_SL, "top")
     g.slab(*face_cell(face, plane, u, y0 - 1), DRESS_SL, "top")
 
@@ -277,8 +277,10 @@ def heart(g, l3):
                 g.stair(0, y, z, "north" if dz < 0 else "south", "top" if dy < 0 else "bottom")
             elif dz == 0 and abs(dy) == r:
                 g.stair(0, y, z, "east", "top" if dy < 0 else "bottom")     # the ring's keystones
-            elif abs(dz) == r or abs(dy) == r:
-                g.set(0, y, z, DRESS)
+            elif abs(dz) == r:
+                g.set(0, y, z, BONE, axis="y")                 # round 3: the ring's sides in bone carry the gate posts'
+            elif abs(dy) == r:                                   # frame up round the heart (critic b: "two separate
+                g.set(0, y, z, DRESS)                            # white sticks", "one continuous frame")
             elif abs(dz) == r - 1 and abs(dy) == r - 1 and l3:
                 g.stair(0, y, z, "north" if dz < 0 else "south", "top" if dy < 0 else "bottom")
             else:
@@ -308,17 +310,34 @@ def spire(g, l3):
                 g.set(x, y, z, BONE, axis="y")
     if l3:
         for x in (3, 5):                                         # south face ribs between the arrises
-            for y in range(13, top + 1):
+            for y in range(13, top):
                 g.set(x, y, 10, RIB_POST, **POST)
                 g.set(x, y, 9, WALL)
         lancet(g, "south", 10, 4, 14, 16)
+        for x in range(2, 7):                                    # the moulded crown course at 18
+            g.set(x, top, 10, CORNICE, facing="south", shape="straight")
+            g.set(x, top, 6, CORNICE, facing="north", shape="straight")
+        for z in range(6, 11):
+            g.set(2, top, z, CORNICE, facing="west", shape="straight")
+            g.set(6, top, z, CORNICE, facing="east", shape="straight")
+        # round 3: the LANTERN at 19 under the cap - lime glass in each face's middle cell between blackstone mullions, round a core of
+        # verdant froglights, blackstone at the corners. Both round-2 critics: from the RTS camera the spire was "one
+        # pyramid among three" (its lead only in elevation) and the heart, on the most foreshortened face, lost to the
+        # bone; the camera looks down steeply, so a glowing band just under the cap reads in plan and puts the green
+        # on the gate-heart-spire axis.
         for x in range(2, 7):
             for z in range(6, 11):
-                g.set(x, 19, z, CORE)
-        for x in range(2, 7):
-            g.set(x, 19, 10, CORNICE, facing="south", shape="straight")
-        for z in range(6, 11):
-            g.set(2, 19, z, CORNICE, facing="west", shape="straight")
+                edge_ = x in (2, 6) or z in (6, 10)
+                corner = x in (2, 6) and z in (6, 10)
+                mid = (x, z) in ((6, 8), (4, 6), (4, 10))          # west: behind the heart coping, mostly hidden
+                if corner:
+                    g.set(x, 19, z, DRESS)
+                elif mid:
+                    g.set(x, 19, z, GLASS)
+                elif edge_:
+                    g.set(x, 19, z, RIB_POST, **POST)            # mullions: three lit cells a face put green at 4.7 %
+                else:
+                    g.set(x, 19, z, GLOW)
         cone(g, 2, 6, 6, 10, 20, needle_to=25)
     else:
         for x in range(2, 7):

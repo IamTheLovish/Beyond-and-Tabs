@@ -31,3 +31,12 @@ Critics 20261030-221323 (a) / -221335 (b): 5.5 / 5 vs the control's 4 / 4. One c
 | Flank caps | 5 x 5 hipped caps -> a blackstone parapet round a 3 x 3 cap, needle 16 | from above only the spire's cap is a big pyramid; lead 6 (rib apex 19) | lead 6 |
 
 Round 2 (eyes 41159362651): 19 / 19 tests green locally; gate seen 313, roofs 0.212, light share 13 % rts.
+
+## Detail round 3 (the last; control: detail round 2 = gravebound_l3_d2.nbt, in the same eyes run)
+Critics 20261030-223653 (a) / -223652 (b): 5.5 / 5.5 vs round 1's 5 / 5. One change per element:
+| Element | Change | Expected | Measured |
+|---|---|---|---|
+| Spire | a lantern course at 19 under the cap: lime glass in the middle of the south / north / east faces between blackstone mullions, froglights inside; the crown cornice moves to 18 | the spire differs from the flank caps in plan by a lit band; green 2.1 % rts / 3.7 % 34 (<= 4 %) | |
+| Lancets (dusk) | smoke glass lit from behind -> dark blackstone slits | one glow story at dusk: the heart and the lantern on one axis; no pale lancets | |
+| Portal frame | the heart ring's sides in bone (the posts' frame carried up) | the posts and the heart read as one frame | |
+| Ribs | no change (the bone budget vs the heart is lovish's call, critic b) | still the largest pale area | |
