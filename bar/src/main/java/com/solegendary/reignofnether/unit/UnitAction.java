@@ -239,5 +239,9 @@ public enum UnitAction {
     // Gravebound Tombcaller (essence caster, design/essence_casters.md "Gravebound Gravecaller" + Revision 1), after
     // main's constants so their ordinals (saved autocast state) stay put
     RAISE_TOMBSTONE,        // 10 essence: a tombstone that spreads grave creep and raises a skeleton every 20 s
-    GRAVE_TIDE              // 5 essence: Gravebound friends near it or on its creep run 30% faster and regenerate
+    GRAVE_TIDE,             // 5 essence: Gravebound friends near it or on its creep run 30% faster and regenerate
+    // the Horde's Voodoo Shaman (unit/units/piglins/VoodooShamanUnit)
+    HEX,                    // 5 essence: an enemy T1-T2 unit can neither attack nor cast for 4 s
+    BLOOD_TOTEM,            // 10 essence: a 15 s totem, allies within 8 attack 25% faster, enemies move 15% slower
+    SPIRIT_PUPPET           // 20 essence: an enemy T1 unit is the caster's owner's for 15 s
 }

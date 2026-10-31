@@ -134,6 +134,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.FIELD_MASON.define(BUILDER);
         UnitCosts.BONESETTER.define(BUILDER);
         UnitCosts.WRECKER.define(BUILDER);
+        UnitCosts.VOODOO_SHAMAN.define(BUILDER);
         UnitCosts.ROOTWARDEN.define(BUILDER);
         UnitCosts.SALVAGER.define(BUILDER);
         UnitCosts.JADE_MENDER.define(BUILDER);
@@ -566,6 +567,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry FIELD_MASON = ResourceCostConfigEntry.Unit(150,60,37,32,2, ResourceCosts.FIELD_MASON, "Field Mason Config");
         public static final ResourceCostConfigEntry BONESETTER = ResourceCostConfigEntry.Unit(150,54,24,28,2, ResourceCosts.BONESETTER, "Bonesetter Config");
         public static final ResourceCostConfigEntry WRECKER = ResourceCostConfigEntry.Unit(150,66,40,32,2, ResourceCosts.WRECKER, "Wrecker Config");
+        // the Horde's essence caster: the Bloom Priestess's price (175 metal / 220 energy, 3 pop, 35 s), a T2 support caster
+        public static final ResourceCostConfigEntry VOODOO_SHAMAN = ResourceCostConfigEntry.Unit(100,90,90,35,3, ResourceCosts.VOODOO_SHAMAN, "Voodoo Shaman Config");
         public static final ResourceCostConfigEntry ROOTWARDEN = ResourceCostConfigEntry.Unit(150,60,32,30,2, ResourceCosts.ROOTWARDEN, "Rootwarden Config");
         public static final ResourceCostConfigEntry SALVAGER = ResourceCostConfigEntry.Unit(150,60,32,30,2, ResourceCosts.SALVAGER, "Salvager Config");
         public static final ResourceCostConfigEntry JADE_MENDER = ResourceCostConfigEntry.Unit(150,73,23,30,2, ResourceCosts.JADE_MENDER, "Jade Mender Config");
