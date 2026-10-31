@@ -474,6 +474,8 @@ def draw(level):
     well(g)
     if level < 3:
         to_l1(g)
+    else:
+        cap_light_tops(g, H3)
     return g
 
 
@@ -489,6 +491,21 @@ def to_l1(g):
         merlons(g, edge(x0, x0 + w - 1, z0, z0 + w - 1), top + 1)
     for q in [q for q in g.b if q[1] >= H1]:
         del g.b[q]
+    cap_light_tops(g, H1)
+
+
+def cap_light_tops(g, h):
+    """No diorite top open to the sky: its up face reads as snow from the RTS camera (0.769 / sat 0.044). Round 3: L1's
+    cut tower shafts, the bay top and the spire's pad showed 12 % snow in the rts still - each gets a stone-brick slab."""
+    top = {}
+    for (x, y, z) in g.b:
+        top[(x, z)] = max(top.get((x, z), -1), y)
+    for (x, z), y in top.items():
+        if g.b[(x, y, z)][0] == WALL:
+            if y + 1 < h:
+                g.slab(x, y + 1, z, DRESS_SL)
+            else:                                   # at the level's height cap: the top course itself stone brick
+                g.set(x, y, z, DRESS)
 
 
 # ============================================================================================ build + checks
