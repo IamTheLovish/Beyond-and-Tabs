@@ -81,6 +81,8 @@ GLOW_SEEN = 20                  # round 2: the heart-glow's sampled pixels (step
 CRESCENT_CELLS, CRESCENT_SEEN = 8, 40   # round 2: built cells with >= 2 air over them under a limb; their pixels
 TOP_ONE_TONE = 0.97             # round 2: the commonest leaf's share of the canopy's top pixels (rts)
 BAND_FLIPS = 2                  # round 2: a seen wood column flips tone at most once in 5 cells
+CROWN_HOLES = 1                 # round 4: open columns inside the crown (y >= 20), the spawn shaft aside
+BELLY_SEEN = 0.015              # round 4: the dark belly leaf's share of the leaf pixels seen from the RTS cameras
 LIGHT_NAMES = S.LIGHTS + ("jack_o_lantern", "redstone_lamp", "campfire", "magma_block", "beacon")
 
 
@@ -415,6 +417,24 @@ class RootingHollow(unittest.TestCase):
                 if sum(run[i] != run[i + 1] for i in range(4)) >= BAND_FLIPS:
                     bad.append((st, (x, y, z)))
         self.assertEqual(sorted(bad)[:10], [], len(bad))
+
+    # ------------------------------------------------------------------------------------------------ round 4
+    def test_r4_crown_closed_from_above(self):
+        """Round 3's two critics (runs 20261030-223623 / -223631, 5 / 5, no gain): the upper tiers moved over the
+        light well left its 3 x 3 open through the crown - "a pink donut", "a dark lattice" seen through it (the top
+        is the model's face from the RTS camera). At the crown (y >= 20) at most 1 open column lies inside the leaves
+        (leafy columns on both sides along x and along z), the 1 x 1 spawn shaft aside; and the dark belly leaf is
+        <= 1.5 % of the leaf pixels the rts and rts_close stills see."""
+        lc = {(q[0], q[2]) for q, v in self.n.items() if is_leaf(v) and q[1] >= 20}
+        holes = [(x, z) for x in range(SX) for z in range(SZ) if (x, z) not in lc and (x, z) != SPAWN
+                 and any((a, z) in lc for a in range(x)) and any((a, z) in lc for a in range(x + 1, SX))
+                 and any((x, c) in lc for c in range(z)) and any((x, c) in lc for c in range(z + 1, SZ))]
+        self.assertLessEqual(len(holes), CROWN_HOLES, holes)
+        for st in ("rts", "rts_close"):
+            leaves = [h for h in self.hits[st].values() if is_leaf(h[1])]
+            cnt = Counter(h[1] for h in leaves)
+            belly = 1 - cnt.most_common(1)[0][1] / len(leaves)
+            self.assertLessEqual(belly, BELLY_SEEN, (st, cnt.most_common(3)))
 
 
 if __name__ == "__main__":
