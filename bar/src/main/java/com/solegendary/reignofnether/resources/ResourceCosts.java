@@ -319,6 +319,7 @@ public class ResourceCosts {
     public static final ResourceCost FIELD_MASON = new ResourceCost(ID, "FIELD_MASON");
     public static final ResourceCost BONESETTER = new ResourceCost(ID, "BONESETTER");
     public static final ResourceCost WRECKER = new ResourceCost(ID, "WRECKER");
+    public static final ResourceCost VOODOO_SHAMAN = new ResourceCost(ID, "VOODOO_SHAMAN");
     public static final ResourceCost ROOTWARDEN = new ResourceCost(ID, "ROOTWARDEN");
     public static final ResourceCost SALVAGER = new ResourceCost(ID, "SALVAGER");
     public static final ResourceCost JADE_MENDER = new ResourceCost(ID, "JADE_MENDER");
@@ -651,6 +652,7 @@ public class ResourceCosts {
         FIELD_MASON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FIELD_MASON);
         BONESETTER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONESETTER);
         WRECKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WRECKER);
+        VOODOO_SHAMAN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.VOODOO_SHAMAN);
         ROOTWARDEN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROOTWARDEN);
         SALVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SALVAGER);
         JADE_MENDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.JADE_MENDER);

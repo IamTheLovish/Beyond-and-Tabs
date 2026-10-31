@@ -310,6 +310,8 @@ public class ClientModEvents {
         evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.BONESETTER_UNIT.get(),
             ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "bonesetter_unit"));
         evt.registerEntityRenderer(EntityRegistrar.WRECKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WreckerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.VoodooShamanRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BLOOD_TOTEM_UNIT.get(), TotemOfCastingRenderer::new);   // placeholder look: the bought casting totem
         evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.ROOTWARDEN_UNIT.get(),
             ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "rootwarden_unit"));
         evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.SALVAGER_UNIT.get(),

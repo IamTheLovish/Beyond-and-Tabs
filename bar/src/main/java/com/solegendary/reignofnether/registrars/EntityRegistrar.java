@@ -1180,6 +1180,19 @@ public class EntityRegistrar {
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pioneer_unit").toString()));
+    // the Horde's essence caster and its Blood Totem (design/essence_casters.md), appended last
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.VoodooShamanUnit>> VOODOO_SHAMAN_UNIT = ENTITIES.register("voodoo_shaman_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.VoodooShamanUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PIGLIN_BRUTE.getWidth(), EntityType.PIGLIN_BRUTE.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "voodoo_shaman_unit").toString()));
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit>> BLOOD_TOTEM_UNIT = ENTITIES.register("blood_totem",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit::new, MobCategory.MISC)
+                    .fireImmune()
+                    .sized(0.75f, 1.25f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .updateInterval(10)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "blood_totem").toString()));
 
     public static void init(FMLJavaModLoadingContext context) {
         ENTITIES.register(context.getModEventBus());
@@ -1331,6 +1344,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.engineers.FieldMasonProd.itemName -> EntityRegistrar.FIELD_MASON_UNIT.get();
             case com.solegendary.reignofnether.unit.units.engineers.BonesetterProd.itemName -> EntityRegistrar.BONESETTER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.engineers.WreckerProd.itemName -> EntityRegistrar.WRECKER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.piglins.VoodooShamanProd.itemName -> EntityRegistrar.VOODOO_SHAMAN_UNIT.get();   // essence caster
             case com.solegendary.reignofnether.unit.units.engineers.RootwardenProd.itemName -> EntityRegistrar.ROOTWARDEN_UNIT.get();
             case com.solegendary.reignofnether.unit.units.engineers.SalvagerProd.itemName -> EntityRegistrar.SALVAGER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.engineers.JadeMenderProd.itemName -> EntityRegistrar.JADE_MENDER_UNIT.get();

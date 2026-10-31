@@ -71,7 +71,8 @@ public class BotPlayer {
         if (faction.equals(Factions.PIGLINS))
             return new Kit(Buildings.CENTRAL_PORTAL, null, null,   // no house (no supply: lovish, Oct 29) or farm
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
-                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
+                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER,
+                            ProductionItems.VOODOO_SHAMAN),   // T1 essence caster: autocasts Hex and Blood Totem; Spirit Puppet and Empower stay manual
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
                     List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST,
                             ProductionItems.GOREHORN_RHINO),   // big-units T2 beast
@@ -286,23 +287,54 @@ public class BotPlayer {
     // ---- the tier gate (resources/TierGate): a bot techs when it is ready, not just when the clock says so ----
 
     /**
+     * The fighters of the army list that count toward {@code t2MinArmy}: an essence caster is support, not army (lovish,
+     * Oct 31: "Count as support") - the Voodoo Shaman and the Gravebound Tombcaller are casters that are also
+     * AttackerUnits, so they march in the army list, but like every other healer and caster they do not make the army a
+     * bot fields before Tier 2.
+     */
+    public static int t2Fighters(List<? extends LivingEntity> army) {
+        int n = 0;
+        for (LivingEntity le : army)
+            if (!(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))
+                n++;
+        return n;
+    }
+
+    /**
+     * The army half of the Tier 2 gate: {@code minArmy} fighters, or half of them from
+     * {@link BotTuning#T2_PATIENCE_MINUTES} after the earliest minute {@code t2Minute}.
+     */
+    public static boolean t2ArmyOut(long minutes, List<? extends LivingEntity> army, int t2Minute, int minArmy) {
+        int need = minutes >= t2Minute + BotTuning.T2_PATIENCE_MINUTES ? minArmy / 2 : minArmy;
+        return t2Fighters(army) >= need;
+    }
+
+    /**
      * Whether the bot may start Tier 2: it has a finished army lab, has fielded {@code t2MinArmy} fighters (the army comes
      * first - the tier gate's whole point) and its income can pay the research: TierGate.BOT_MIN_METAL_INCOME and
      * BOT_MIN_ENERGY_INCOME. {@link BotTuning#T2_PATIENCE_MINUTES} after the earliest minute it goes anyway with a lab
      * and half the army, so a map with few patches cannot stop it for ever.
      */
-    boolean t2Ready(long minutes, int fighters, float energyIncome, List<BuildingPlacement> buildings) {
+    boolean t2Ready(long minutes, List<? extends LivingEntity> army, float energyIncome, List<BuildingPlacement> buildings) {
         boolean labBuilt = false;
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && isLab(bp))
                 labBuilt = true;
-        if (!labBuilt)
+        if (!labBuilt || !t2ArmyOut(minutes, army, tuning.t2Minute(), tuning.t2MinArmy()))
             return false;
         if (minutes >= tuning.t2Minute() + BotTuning.T2_PATIENCE_MINUTES)
-            return fighters >= tuning.t2MinArmy() / 2;
-        return fighters >= tuning.t2MinArmy()
-            && metalIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_METAL_INCOME
+            return true;
+        return metalIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_METAL_INCOME
             && energyIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_ENERGY_INCOME;
+    }
+
+    /**
+     * Whether an easy bot holds its T1 repeat queues for the T2 lab (step 5 of think): the lab is missing, Tier 2 is in
+     * or its research is starved, the bot is not floating and the tier gate's {@code minArmy} fighters are out.
+     */
+    public static boolean wantsT2Save(boolean t2LabMissing, boolean tier2, boolean researchStarved, boolean floating,
+                                      List<? extends LivingEntity> army, int minArmy) {
+        return t2LabMissing && (tier2 || researchStarved) && !floating && t2Fighters(army) >= minArmy;
     }
 
     /**
@@ -751,7 +783,7 @@ public class BotPlayer {
         // ready to tech: the capitol stops training workers so its queue empties and the research can start (a hard bot's
         // worker target keeps growing, so its queue was never empty and it only teched after twelve minutes)
         techPending = !tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
-            && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
+            && t2Ready(minutes, army, averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
         if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (techDiagOn)
@@ -809,7 +841,7 @@ public class BotPlayer {
         if (!t2LabMissing)
             t2SaveSince = -1;
         boolean researchStarved = !tier2 && researching && metalFill < 0.1f;
-        boolean wantsT2Save = t2LabMissing && (tier2 || researchStarved) && !floating() && army.size() >= tuning.t2MinArmy();
+        boolean wantsT2Save = wantsT2Save(t2LabMissing, tier2, researchStarved, floating(), army, tuning.t2MinArmy());
         if (wantsT2Save && t2SaveSince < 0)
             t2SaveSince = gameTime;
         boolean savingForT2Lab = wantsT2Save && gameTime - t2SaveSince < T2_SAVE_MAX_TICKS;
