@@ -15,15 +15,15 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * The faction heroes (hero slice 2, design/hero_mode.md): each is drawn with its body's renderer in its own skin
- * (tools/gen_hero_skins.py, deterministic) and a tenth bigger than the unit it is built on, so a hero reads as a hero
- * in a crowd from the RTS camera. The Dawn Paladin has its own body since Oct 21 (DawnPaladinRenderer, on the human
+ * (tools/gen_hero_skins.py, deterministic) and a quarter bigger than the unit it is built on (HeroLook.SCALE), with a
+ * player-colour ring and crest in the RTS view (HeroMarkerClientEvents), so a hero reads as a hero in a crowd. The Dawn Paladin has its own body since Oct 21 (DawnPaladinRenderer, on the human
  * body - lovish 21:20: every human unit off the villager body), at the same HERO_SCALE.
  */
 @OnlyIn(Dist.CLIENT)
 public final class HeroRenderers {
     private HeroRenderers() { }
 
-    public static final float HERO_SCALE = 1.1f;
+    public static final float HERO_SCALE = com.solegendary.reignofnether.hero.HeroLook.SCALE;   // 1.25 (was 1.1): lovish, Oct 30
 
     static ResourceLocation tex(String id) {
         return ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/" + id + "_unit.png");
