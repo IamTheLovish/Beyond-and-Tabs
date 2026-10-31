@@ -22,7 +22,9 @@
   "eyes 41168313494 (build 39266a8), ashborn massing b",
   "eyes 41168313494 (build 39266a8), ashborn massing c",
   "eyes 41171365873 (build 39266a8), ashborn_l3 detail round 1 (767b7aad)",
-  "eyes 41171365873 (build 39266a8), ashborn_l1 detail round 1 (767b7aad)"
+  "eyes 41171365873 (build 39266a8), ashborn_l1 detail round 1 (767b7aad)",
+  "eyes 41173208608 (build 39266a8), ashborn_l3 detail round 2 (1f1905a0)",
+  "eyes 41173208608 (build 39266a8), ashborn_l1 detail round 2 (1f1905a0)"
  ],
  "blocks": {
   "andesite": {
@@ -2817,6 +2819,17 @@
     "sat": 0.061,
     "val": 0.282,
     "n": 47
+   },
+   "up": {
+    "hue": 26.1,
+    "sat": 0.756,
+    "val": 0.863,
+    "n": 1265,
+    "rgb": [
+     0.7901,
+     0.4941,
+     0.258
+    ]
    }
   },
   "smooth_basalt": {
