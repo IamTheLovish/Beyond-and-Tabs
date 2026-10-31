@@ -4196,6 +4196,8 @@
   "hud.reignofnether.merged.toggle.click": "Click to switch it for every selected building of this kind.",
   "hud.reignofnether.merged.toggle.now_on": "Merging on: grids of these grow into one complex",
   "hud.reignofnether.merged.toggle.now_off": "Merging off: these stay separate buildings",
+  "multiplayer.reignofnether.version_mismatch": "You have Beyond and Tabs %s; this server needs %s. Update with the installer or the test pack link.",
+  "multiplayer.reignofnether.version_mismatch_unknown": "You have Beyond and Tabs %s; this server runs a different build. Update with the installer or the test pack link.",
   "lobby.reignofnether.colour.pick": "Pick a colour",
   "lobby.reignofnether.colour.auto_hint": "Right-click: automatic colour",
   "lobby.reignofnether.colour.taken": "%s - taken",
