@@ -28,7 +28,7 @@ Round r1 (Oct 31 2026), the r12 method (#411 Engine Shed, #456 Sunforged):
 ANCHORS (structure-local: x 0..16 west -> east, y up, z 0..16 north -> south):
   spawn       (8, 1, 8): the light well x 8..9, z 7..9 between hall and trunk, air to the sky at every level
   exit lane   x 0..8, z 6..10, y 1..8: through the hall's west gable (the gate) and out of the well
-  heart-glow  (10, 1..2, 11): two shroomlights in the trunk's foot facing the well - the one light
+  heart-glow  (13..14, 1..2, 15): four shroomlights in the trunk's south foot (round 2; round 1's faced the well)
 
 Usage: python3 tools/lab_vehicle_verdant.py [OUT_DIR]   (writes verdant_l1.nbt and verdant_l3.nbt, checks both)
 """
@@ -112,10 +112,11 @@ class Canvas:
 
 # ================================================================================================= ground
 def ground(c):
-    """y 0: mossy stone paving (one material: a calm ground), the lane's floor dark from the gate to the well."""
+    """y 0: mossy stone paving (one material: a calm ground), the passage floor dark under its ceiling (round 1's
+    dark apron outside the gate read as "a floor grate" from the RTS camera)."""
     for x in range(SX):
         for z in range(SZ):
-            c.b[(x, 0, z)] = (LANE_FLOOR if 1 <= x <= 9 and 6 <= z <= 10 else PAVE, {})
+            c.b[(x, 0, z)] = (LANE_FLOOR if 2 <= x <= 7 and 6 <= z <= 10 else PAVE, {})
 
 
 # ================================================================================================= the hall
@@ -156,8 +157,10 @@ def hall(c, l3):
     c.stair(x0, EAVE - 1, 11, "south", "top", "deepslate_brick_stairs")
     for z in range(5, 12):
         c.set(x0, EAVE, z, "chiseled_stone_bricks" if z == 8 else STONE)
-    for z in (z0, z1):                                        # the jetty's brackets
-        c.stair(0, EAVE - 1, z, "east", "top", "spruce_stairs")
+    for z in (z0, z1):                                        # the jetty's brackets, held up by mangrove roots
+        c.stair(0, EAVE - 1, z, "east", "top", "spruce_stairs")  # that frame the gate (round 1: "no roots frame it")
+        for y in range(1, EAVE - 1):
+            c.set(0, y, z, "mangrove_roots")
     return gable_roof(c, 0, x1, z0, z1, EAVE, cap=None if l3 else H1 - 1)
 
 
@@ -214,21 +217,33 @@ def gallery(c):
 
 
 # ================================================================================================= the great tree
-TRUNK_PATH = ([(y, 13.0, 12.0, 3.2) for y in (1, 2)] + [(y, 13.0, 11.5, 2.7) for y in (3, 4)] +
-              [(y, 12.7, 10.5, 2.3) for y in (5, 6, 7)] + [(y, 12.3, 9.3, 2.0) for y in (8, 9, 10)] +
-              [(y, 12.0, 8.2, 2.0) for y in (11, 12)])
-TRUNK_L3 = ([(y, 12.0, 8.2, 2.0) for y in (13,)] + [(y, 11.8, 7.2, 1.8) for y in (14, 15, 16)] +
-            [(y, 11.6, 6.5, 1.6) for y in (17, 18, 19)] + [(y, 11.5, 6.0, 1.4) for y in (20, 21, 22)])
+def _path(keys, ys):
+    """The trunk's centre and radius per row, interpolated between key rows (a smooth taper and lean: round 1's
+    stepped radii read as "a staircase or a crate pile")."""
+    out = []
+    for y in ys:
+        for (ya, xa, za, ra), (yb, xb, zb, rb) in zip(keys, keys[1:]):
+            if ya <= y <= yb:
+                t = (y - ya) / (yb - ya)
+                out.append((y, xa + (xb - xa) * t, za + (zb - za) * t, ra + (rb - ra) * t))
+                break
+    return out
 
 
-def trunk(c, path, twist=0.9):
+TRUNK_KEYS = [(1, 13.0, 12.2, 3.1), (4, 13.0, 11.3, 2.6), (8, 12.4, 9.6, 2.1), (13, 12.0, 8.0, 1.9),
+              (17, 11.7, 6.8, 1.7), (22, 11.5, 6.0, 1.4)]
+TRUNK_PATH = _path(TRUNK_KEYS, range(1, 13))
+TRUNK_L3 = _path(TRUNK_KEYS, range(13, 23))
+
+
+def trunk(c, path, twist=0.28):
     """The trunk: solid, light bark (stripped birch) with dark oak in two spiral grooves turning with height."""
     for (y, cx, cz, r) in path:
         for x in range(int(cx - r - 1), int(cx + r + 2)):
             for z in range(int(cz - r - 1), int(cz + r + 2)):
                 if math.hypot(x - cx, z - cz) <= r:
                     a = math.atan2(z - cz, x - cx) / (2 * math.pi) * 2 + y * twist / (2 * math.pi)
-                    c.set(x, y, z, GROOVE if (a % 1.0) < 0.18 else BARK)
+                    c.set(x, y, z, GROOVE if (a % 1.0) < 0.22 else BARK)
 
 
 def line(c, p0, p1, name=BARK, fill_down=False):
@@ -249,7 +264,7 @@ def line(c, p0, p1, name=BARK, fill_down=False):
                     a[i] = q[i]
                     steps.append(tuple(a))
         for s in steps:
-            c.set(*s, GROOVE if k % 4 == 3 else name)
+            c.set(*s, name)
             if fill_down and t > 0.5:
                 for yy in range(1, s[1]):
                     c.put(s[0], yy, s[2], GRIP if yy == 1 else name)
@@ -257,8 +272,9 @@ def line(c, p0, p1, name=BARK, fill_down=False):
 
 
 def canopy(c, cx, cz, y0, y1, r, seed=0, keep=lambda x, y, z: True):
-    """One canopy tier: a broad irregular disc, the belly (y0) spruce, the top cherry with a few spruce gaps, drips
-    of spruce under the rim; the top steps in by a block (a rounded edge)."""
+    """One canopy tier: a broad irregular disc, the belly (y0) spruce, the top all cherry (round 1's scattered spruce
+    gaps read as "spots", "a chequer"), clumps with one-deep valleys between them on 3-thick tiers (shadow, not a
+    lid), drips of spruce under the rim; the top steps in by a block (a rounded edge)."""
     rr = int(r) + 2
     for x in range(int(cx) - rr, int(cx) + rr + 1):
         for z in range(int(cz) - rr, int(cz) + rr + 1):
@@ -270,11 +286,34 @@ def canopy(c, cx, cz, y0, y1, r, seed=0, keep=lambda x, y, z: True):
                 rim = r + wob - (1.0 if y == y1 and y1 > y0 else 0)
                 if d > rim or not keep(x, y, z):
                     continue
+                if y == y1 and y1 - y0 >= 2 and hsh(x // 2, z // 2, seed + 13) % 3 == 0:
+                    continue                                  # a valley between clumps (shadow), cherry below it
                 under = y == y0 and y1 > y0 and d <= r + wob - 1.0      # covered by the top: the dark belly
-                nm = BELLY if under else (BELLY if hsh(x, z, seed + 7) % 9 == 0 else TOP)
+                nm = BELLY if under else TOP
                 c.put(x, y, z, nm, **LEAF)
             if r + wob - 1.0 < d <= r + wob and hsh(x, z, seed + 3) % 3 == 0 and keep(x, y0 - 1, z):
                 c.put(x, y0 - 1, z, BELLY, **LEAF)
+
+
+def smooth_grooves(c):
+    """Each column of bark keeps a tone for >= 4 rows (a groove or a bark run shorter than that takes the tone
+    below it): the spiral reads as long seams, never as bands (round 1: "candy-striped poles")."""
+    cols = {}
+    for (x, y, z), (n, _) in c.b.items():
+        if n in (BARK, GROOVE):
+            cols.setdefault((x, z), []).append(y)
+    for (x, z), ys in cols.items():
+        ys.sort()
+        prev, run = None, []
+        for y in ys:
+            n = c.b[(x, y, z)][0]
+            if prev is not None and y == run[-1] + 1 and n != prev and len(run) < 4:
+                c.b[(x, y, z)] = (prev, {})
+                n = prev
+            if n != prev or (run and y != run[-1] + 1):
+                run = []
+            run.append(y)
+            prev = n
 
 
 def bark_tops(c):
@@ -287,32 +326,38 @@ def bark_tops(c):
 
 def great_tree(c, l3):
     trunk(c, TRUNK_PATH)
-    c.set(10, 1, 11, GLOW)                                   # the heart-glow in the trunk's foot, facing the well
-    c.set(10, 2, 11, GLOW)
-    # roots: two pour toward the camera over the gallery roof and down its south face, one flares south, one east,
-    # one west to the well's edge, one north
-    line(c, (11, 6, 13), (6, 8, 15))
-    for y in range(1, 8):
-        c.set(6, y, 16, GRIP if y == 1 else (GROOVE if y % 3 == 0 else BARK))
-    line(c, (6, 8, 15), (3, 8, 15))
-    for y in range(1, 8):
-        c.set(3, y, 16, GRIP if y == 1 else (GROOVE if y % 3 == 1 else BARK))
+    # roots: one pours toward the camera over the gallery roof and down its south face (round 2: one, not three -
+    # the trunk and the great limb's aerial roots carry the read), one flares south, one east, one west to the
+    # well's edge, one north
     line(c, (12, 6, 14), (10, 8, 16))
     for y in range(1, 8):
         c.set(10, y, 16, GRIP if y == 1 else BARK)
     for p0, p1 in (((14, 5, 14), (15, 1, 16)), ((15, 5, 11), (16, 1, 8)), ((10, 4, 11), (9, 1, 12)),
-                   ((12, 6, 8), (12, 1, 4)), ((13, 6, 14), (12, 1, 16)), ((15, 4, 13), (16, 1, 15))):
+                   ((12, 6, 8), (12, 1, 4)), ((15, 4, 13), (16, 1, 15))):
         line(c, p0, p1, fill_down=True)
+    for x in (13, 14):                                       # the heart-glow in the trunk's south foot, where the
+        for y in (1, 2):                                     # cameras look (round 1's faced the well: never seen)
+            c.set(x, y, 15, GLOW)
+            c.clear(x, y, 16)
     canopy(c, 12.0, 8.0, 13, 15, 3.6, seed=1)                # the L1 tier (L3 keeps it as its lowest)
     if not l3:
         return
     trunk(c, TRUNK_L3)
-    # the west limb arching over the well onto the hall's north slope (ref06's crescent: sky under it)
-    line(c, (11, 13, 6), (9, 15, 6))
-    line(c, (9, 15, 6), (5, 16, 5))
+    # the great limb (ref06's wrap and crescent): out of the trunk, arching over the well and onto the hall's ridge
+    # with two cells of sky between it and the roof, its tip curling down onto the west end of the ridge (round 1:
+    # "the tree does not wrap the hall", "no sky between limb and hall")
+    line(c, (11, 15, 7), (9, 18, 7))
+    line(c, (11, 16, 8), (9, 19, 7))
+    line(c, (9, 19, 7), (8, 20, 7))
+    for z in (7, 8):
+        line(c, (7, 20, z), (4, 20, z))
+    line(c, (7, 21, 7), (5, 21, 7))
+    line(c, (4, 20, 8), (3, 19, 8))
+    c.set(2, 18, 8, BARK)
     line(c, (11, 19, 6), (14, 21, 8))                        # the east bough under tier 2
-    canopy(c, 10.0, 6.0, 17, 18, 6.0, seed=2)
-    canopy(c, 13.0, 7.5, 20, 21, 4.5, seed=3)
+    sky = lambda x, y, z: not (x <= 7 and y < 21)            # noqa: E731  - leave the air over the hall open
+    canopy(c, 12.5, 6.5, 17, 18, 6.2, seed=2, keep=sky)
+    canopy(c, 12.0, 7.5, 20, 22, 5.3, seed=3)
     canopy(c, 11.5, 5.5, 23, 24, 2.6, seed=4)
     for (x, z) in ((11, 5), (12, 5), (11, 6)):
         c.put(x, 25, z, TOP, **LEAF)
@@ -343,6 +388,7 @@ def draw(l3=False):
     hall(c, l3)
     gallery(c)
     great_tree(c, l3)
+    smooth_grooves(c)
     bark_tops(c)
     relieve(c)
     prune(c)

@@ -34,3 +34,21 @@ Written Oct 31 ~01:35Z, before eyes.
 | Loud (rts) | ~0 % | 0 % | |
 | Lights | 1 cluster, 2 | 1 cluster, 2 | |
 All 17 camera tests green.
+
+## Detail round 2 (round 1's critics: both 5/10; one change per element)
+Written Oct 31 ~02:25Z, before eyes. Elements: limb (an arch over the well onto the ridge, 2 cells of sky under it;
+the old west limb gone), gate (mangrove roots under the jetty brackets frame it; the dark apron outside removed),
+canopy (all-cherry tops, clumps with valleys; tier 1 kept off the air over the hall), trunk (smooth taper, a gentle
+spiral, grooves in runs >= 4 rows; one root pour instead of three, single tone), glow (moved to the trunk's south
+foot, where the cameras look).
+
+| Item | Band (test) | Expected | Why |
+|---|---|---|---|
+| Canopy top value / sat / hue (rts) | 0.60-0.82 / 0.20-0.45 | 0.80 / 0.25 / 336 | pure cherry tops (table); in game the clumps' shade may lower it |
+| Canopy top one tone | >= 0.97 | 1.00 | |
+| Canopy share (rts) | 0.30-0.50 | 0.33 | valleys and the kept-open air over the hall |
+| Trunk + roots share (rts_close / 34) | 0.15-0.28 | 0.24 / 0.20 | |
+| Trunk value (rts_close / 34) | 0.32-0.45 | 0.33 / 0.34 | |
+| Sky under the limb: cells / px (rts_close, 34) | >= 8 / >= 40 | >= 8 / > 40 | |
+| Heart-glow px (rts_close, 34) | >= 20 | > 20 | four shroomlights on the trunk's south foot |
+| Walls / roofs | 0.30-0.42 / 0.34-0.46 | 0.31 / 0.38 | unchanged |
