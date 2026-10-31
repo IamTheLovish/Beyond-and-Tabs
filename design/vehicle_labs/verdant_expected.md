@@ -52,3 +52,9 @@ foot, where the cameras look).
 | Sky under the limb: cells / px (rts_close, 34) | >= 8 / >= 40 | >= 8 / > 40 | |
 | Heart-glow px (rts_close, 34) | >= 20 | > 20 | four shroomlights on the trunk's south foot |
 | Walls / roofs | 0.30-0.42 / 0.34-0.46 | 0.31 / 0.38 | unchanged |
+
+### Measured, round 2 (eyes 41157566607; table --add-only: shroomlight up 0.96 / sat 0.71 added - its older south /
+west entries, 0.26 / 0.28 hue 225, came from another run and look like a covered light; left as they are, add-only)
+Camera-model numbers on the round-2 table: canopy 0.800 / 0.247 / 336 (expected 0.80), one tone 1.00, canopy share
+0.334, trunk share 0.236 / 0.198, trunk value 0.328 / 0.337, walls 0.311, roofs 0.382; the glow is in the stills
+(orange on the trunk's south foot in rts and 34). All 21 camera tests green.

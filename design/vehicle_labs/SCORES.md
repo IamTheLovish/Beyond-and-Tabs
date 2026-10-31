@@ -73,3 +73,13 @@ camera only by value, and both ends overshoot (granite 0.55 "salmon", slate 0.18
 "in the ground mids") - its place on the gate-rose axis and its footprint are massing, not material; re-measuring a
 camera-table entry another lab's tests rely on moves their numbers (copper blotch 0.050 -> 0.052): measure with
 camera_colour.py --add-only.
+
+## Rooting Hollow r1 (Verdant T1 vehicle lab, the r12 method; PR #457) - ref06, 17 x 17 x 26, one fixed rubric
+Two fresh API critics per round (a / b), the 7-axis rubric from the designer pass (itachi2-api/runs/
+20261030-204240-verdant-design); the massing rubric adds "separation from the ground" and resemblance.
+
+| Round | Eyes run | RTS | Close | Landmark | Gate | Roofs | Materials | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| round 2 (control, Oct 28) | - | 3 overall (round 1 critic) | | | | | | | "a mossy stone box with a toy tree on the lid": no real tree, flat canopy slab, unreadable gate, scattered lime lights, stone faces without order, roof clutter | - |
+| massing A / B / C + control | 41152348776 | A 7 / 7, B 6 / 6, C 5 / 5, control 3 / 3 | - | A 6 / 6, B 6 / 6, control 3 / 3 | A 5 / 6, B 6 / 6, control 4 / 5 | A 7 / 7, B 7 / 7, control 3 / 3 | (separation A 7 / 8, B 8 / 8, control 4 / 3) | - | both A > B > C > control (A vs B close); A: the trunk hidden behind hall and turret in 3/4, no sky between limb and hall, a stepped-cone canopy leaving the RTS frame, a pale lit gate, the turret cap reads as a chimney | A + those faults -> detail r1 |
+| detail r1 (ab959149) | 41155254248 | 6 / 6 (A 6 / 6, control 3 / 3) | 5 / 5 | 5 / 5 | 4 / 5 | 6 / 6 | 5 / 5 | 3 / 4 | overall 5 / 5 (A 5 / 4.5, control 3 / 3): the trunk reads as a staircase / scaffold (stepped pale blocks, dark bands), the tree beside the hall, not wrapping it; no crescent; the canopy a uniform bright pink lid with spruce spots (chequer, V-chevrons); the gate a dark floor "grate" from RTS, no roots frame it; the glow never seen (it faced the well); banded root posts; L1 canopy a plus sign | no turret, the canopy inside the RTS frame, dark bellies, the trunk seen in 3/4; L1 reads as the first stage |

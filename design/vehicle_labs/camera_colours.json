@@ -18,7 +18,8 @@
   "eyes 41145225614 sunforged_l3 round 2 (build e7b4e94)",
   "eyes 41147427956 sunforged_l3 round 3 (build e7b4e94)",
   "eyes 41152348776 (build e7b4e94)",
-  "eyes 41155254248 verdant round 1 (build e7b4e94)"
+  "eyes 41155254248 verdant round 1 (build e7b4e94)",
+  "eyes 41157566607 verdant round 2 (build e7b4e94)"
  ],
  "blocks": {
   "andesite": {
@@ -3130,6 +3131,17 @@
     "sat": 0.061,
     "val": 0.282,
     "n": 47
+   },
+   "up": {
+    "hue": 26.0,
+    "sat": 0.71,
+    "val": 0.961,
+    "n": 481,
+    "rgb": [
+     0.8978,
+     0.5808,
+     0.3263
+    ]
    }
   },
   "smooth_quartz": {
