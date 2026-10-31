@@ -191,9 +191,12 @@ public final class HeroBot {
             spendPoints(hero);
         else if (!isAiEnabled(owner))
             return;
-        if (HeroBrain.drives(hero))
+        if (HeroBrain.drives(hero)) {
+            int seq = hero.heroCore().castSeq;
             think(mob, hero);
-        else
+            if (hero.heroCore().castSeq != seq)
+                hero.heroCore().brain().aiCastSeq = hero.heroCore().castSeq;
+        } else
             useAbilities(mob, hero);
     }
 
@@ -301,7 +304,7 @@ public final class HeroBot {
         for (FactionHeroAbility a : ready) {
             if (isEscape(a) || (reserve > 0 && hero.getMana() - a.manaCost < reserve))
                 continue;
-            if (fight(f, a))
+            if (fight(f, a, false))
                 return;
         }
     }
@@ -359,18 +362,23 @@ public final class HeroBot {
                     return true;
                 continue;
             }
-            LivingEntity best = null;
+            BlockPos best = null;
             int bestN = 0;
             for (LivingEntity fr : f.friends) {
                 if (fraction(fr) >= HURT_HP || fr.distanceTo(f.mob) > a.range + slack)
                     continue;
+                // v2 never walks to cast: aimed where the cast goal reaches and the heal still takes in that friend
+                // (review r2/r3 on PR 416: the friend's own block can be out of the goal's reach)
+                BlockPos aim = slack < 0 ? reachableAim(f, a, fr) : fr.getOnPos();
+                if (aim == null)
+                    continue;
                 int n = f.hurtFriendsWithin(fr.position(), Math.max(3, a.spec.radius));
                 if (n > bestN) {
-                    best = fr;
+                    best = aim;
                     bestN = n;
                 }
             }
-            if (best != null && use(f, a, best.getOnPos()))
+            if (best != null && use(f, a, best))
                 return true;
         }
         return false;
@@ -381,8 +389,106 @@ public final class HeroBot {
         return true;
     }
 
-    /** One fighting ability against what is round the hero now; false to look at the next one. */
-    static boolean fight(Fight f, FactionHeroAbility a) {
+    /**
+     * Does the hero's cast goal reach {@code bp} from where the hero stands now? Measured exactly as
+     * GenericTargetedSpellGoal.isInRange measures it - flat, from the hero to the block's lowest corner - against the
+     * range HeroCore.startCast gives it (at least 1.5). A cast aimed at a block it doesn't reach walks the hero there, so
+     * v2 (which never walks to cast; review r1/r2 on PR 416, lovish: "Hold truly holds") only aims at blocks it reaches.
+     * An entity cast follows the target's {@code getOnPos()}.
+     */
+    static boolean castReaches(Mob mob, BlockPos bp, FactionHeroAbility a) {
+        return com.solegendary.reignofnether.util.MyMath.distance(mob.getX(), mob.getZ(), bp.getX(), bp.getZ())
+            <= Math.max(1.5f, a.range);
+    }
+
+    /** The enemies the hero's cast goal reaches with {@code a} from where it stands (castReaches on their getOnPos()). */
+    static Fight reachableBy(Fight f, FactionHeroAbility a) {
+        List<LivingEntity> in = new ArrayList<>(f.enemies().size());
+        for (LivingEntity e : f.enemies())
+            if (castReaches(f.mob(), e.getOnPos(), a))
+                in.add(e);
+        return new Fight(f.level(), f.mob(), f.hero(), in, f.friends(), f.hp(), f.melee());
+    }
+
+    /**
+     * Where to aim a ground cast {@code a} at {@code t} without a step (review r3 on PR 416): {@code t}'s own block if the
+     * cast goal reaches it, else the furthest spot toward {@code t} on the line from the hero that it reaches and from
+     * which the effect still takes {@code t} in - within the radius (less 0.75 for the block's rounding), or for a line
+     * (radius 0: Bone Spear) a spot the line through {@code t} passes. On solid ground near {@code t}'s height. Null if
+     * none does.
+     */
+    @Nullable
+    static BlockPos reachableAim(Fight f, FactionHeroAbility a, LivingEntity t) {
+        Mob mob = f.mob;
+        BlockPos own = t.getOnPos();
+        if (castReaches(mob, own, a))
+            return own;
+        double dx = t.getX() - mob.getX(), dz = t.getZ() - mob.getZ(), d = Math.sqrt(dx * dx + dz * dz);
+        if (d < 1e-3)
+            return null;
+        dx /= d;
+        dz /= d;
+        boolean line = a.spec.radius <= 0;
+        double within = a.spec.radius - 0.75;
+        for (double reach = Math.min(d, Math.max(1.5f, a.range)); reach > 0.5; reach -= 0.25) {
+            int bx = (int) Math.floor(mob.getX() + dx * reach), bz = (int) Math.floor(mob.getZ() + dz * reach);
+            BlockPos ground = groundNear(f.level, bx, bz, own.getY());
+            BlockPos aim = ground != null ? ground : new BlockPos(bx, own.getY(), bz);
+            if (!castReaches(mob, aim, a))
+                continue;
+            double cx = bx + 0.5 - mob.getX(), cz = bz + 0.5 - mob.getZ();
+            if (line) {
+                // the line runs from the hero through the spot's centre, its full range long: t must lie on it
+                double len = Math.sqrt(cx * cx + cz * cz);
+                if (len < 1e-3)
+                    continue;
+                double along = ((t.getX() - mob.getX()) * cx + (t.getZ() - mob.getZ()) * cz) / len;
+                double off = Math.abs((t.getX() - mob.getX()) * cz - (t.getZ() - mob.getZ()) * cx) / len;
+                if (along <= a.range && off <= 0.4)
+                    return aim;
+            } else if (Math.hypot(bx + 0.5 - t.getX(), bz + 0.5 - t.getZ()) <= within)
+                return aim;
+        }
+        return null;
+    }
+
+    /**
+     * The solid, dry ground block nearest height {@code y} (within 3) at column ({@code x}, {@code z}): its top is
+     * sturdy, and the space above it is free of water, lava and anything solid. Not the heightmap's top, which can be a
+     * roof, an overhang or the surface of water (review r3 on PR 416). Null if there is none.
+     */
+    @Nullable
+    static BlockPos groundNear(net.minecraft.world.level.Level level, int x, int z, int y) {
+        for (int i = 0; i <= 6; i++) {
+            int dy = (i % 2 == 0 ? 1 : -1) * ((i + 1) / 2);   // 0, -1, 1, -2, 2, -3, 3
+            BlockPos bp = new BlockPos(x, y + dy, z), up = bp.above();
+            if (level.getBlockState(bp).isFaceSturdy(level, bp, net.minecraft.core.Direction.UP)
+                    && level.getFluidState(bp).isEmpty() && level.getFluidState(up).isEmpty()
+                    && !level.getBlockState(up).blocksMotion())
+                return bp;
+        }
+        return null;
+    }
+
+    /**
+     * Is the block the cast goal is aimed at still in its reach from where the hero stands? An entity cast re-aims at
+     * its target's block every tick (GenericTargetedSpellGoal.tick), so a target that walks off takes the aim with it.
+     */
+    static boolean castStillReaches(Mob mob, HeroCore core) {
+        com.solegendary.reignofnether.unit.goals.GenericTargetedSpellGoal g = core.castGoal;
+        if (g == null || core.castGoalAbility == null)
+            return true;
+        LivingEntity te = g.getTargetEntity();
+        BlockPos aim = te != null ? te.getOnPos() : g.getMoveTarget() != null ? g.getMoveTarget() : g.getCastTarget();
+        return aim == null || castReaches(mob, aim, core.castGoalAbility);
+    }
+
+    /**
+     * One fighting ability against what is round the hero now; false to look at the next one. {@code stay}: the hero
+     * must cast from where it stands (v2, behind the player's order) - a forward ground cast is then aimed well inside
+     * its range, toward the target, instead of at a target the hero would have to walk to.
+     */
+    static boolean fight(Fight f, FactionHeroAbility a, boolean stay) {
         Mob mob = f.mob;
         if (isHeal(a))
             return false;   // heal() decided already
@@ -440,6 +546,24 @@ public final class HeroBot {
                 double d = t.distanceTo(mob);
                 // summons and turrets go toward the enemy, cover and pools at the hero's own feet
                 boolean forward = a.spec.id.equals("raise_the_fallen") || a.spec.id.equals("deploy_turret");
+                if (forward && stay) {
+                    if (d <= a.range && castReaches(mob, t.getOnPos(), a))
+                        return use(f, a, t.getOnPos());
+                    // toward the target, as far as the cast goal reaches without a step, on solid dry ground there near
+                    // the hero's height (a slope must not leave the spot in the air or under the turf; nor on water, lava
+                    // or a roof - review r3)
+                    Vec3 dir = t.position().subtract(mob.position()).multiply(1, 0, 1);
+                    if (dir.lengthSqr() < 1e-4)
+                        return use(f, a, mob.getOnPos());
+                    dir = dir.normalize();
+                    for (double reach = Math.min(d, a.range) - 0.75; reach > 0.5; reach -= 0.5) {
+                        Vec3 to = mob.position().add(dir.scale(reach));
+                        BlockPos ground = groundNear(f.level, (int) Math.floor(to.x), (int) Math.floor(to.z), mob.getOnPos().getY());
+                        if (ground != null && castReaches(mob, ground, a))
+                            return use(f, a, ground);
+                    }
+                    return use(f, a, mob.getOnPos());
+                }
                 return use(f, a, forward && d <= a.range ? t.getOnPos() : mob.getOnPos());
             }
             default -> {
@@ -574,7 +698,21 @@ public final class HeroBot {
                 move.forceRepath();
         }
         b.wasCasting = casting;
+        // Hold truly holds (review r3 on PR 416, lovish): a cast the brain started under an order that keeps the hero
+        // where it is is let go the moment its aim leaves the cast goal's reach - the goal would walk after a target
+        // that walks off. Nothing is paid before the effect lands. Not a gap closer or an escape (they are the moving),
+        // not in a flight, and never a cast the player gave.
+        HeroCore core = hero.heroCore();
+        if (casting && !b.lock.mode().mayMove && !b.fleeing() && core.castSeq == b.aiCastSeq && core.castGoalAbility != null
+                && core.castGoalAbility.spec.ai != HeroKit.Ai.ENGAGE && !isEscape(core.castGoalAbility)
+                && !castStillReaches(mob, core)) {
+            core.stopCast();
+            b.wasCasting = false;
+        }
+        int seq = core.castSeq;
         continueCombo(mob, hero, b, now);
+        if (core.castSeq != seq)
+            b.aiCastSeq = core.castSeq;
     }
 
     /** Once a second: look, read the fight, then the most urgent of flee, rest, obey and fight. */
@@ -701,14 +839,22 @@ public final class HeroBot {
             case STRIKE -> {
                 int rank = a.getRank(f.hero);
                 float dmg = a.spec.a[Math.max(0, Math.min(rank, a.spec.a.length) - 1)];
-                // in reach from where it stands: the cast goal measures to the target's block, so half a block of room
-                LivingEntity t = bestTarget(f, a.range - 0.5, dmg, a.spec.radius, true, focus);
+                // only what the cast goal reaches from where the hero stands: it measures to the aimed block's corner,
+                // up to 1.4 blocks further than the centre (review r2 on PR 416: a held hero stepped ~0.6 to strike). An
+                // enemy-target strike follows its target's block; a ground strike may aim short of it (reachableAim,
+                // review r3) as long as its area or line still takes the target in
+                boolean enemyTarget = a.spec.target == HeroKit.Target.ENEMY;
+                LivingEntity t = bestTarget(enemyTarget ? reachableBy(f, a) : f, a.range - 0.5, dmg, a.spec.radius, true, focus);
                 if (t == null)
                     return false;
-                if (a.spec.target == HeroKit.Target.ENEMY)
+                if (enemyTarget)
                     a.use(f.level, f.hero, t);
-                else
-                    a.use(f.level, f.hero, t.getOnPos());
+                else {
+                    BlockPos aim = reachableAim(f, a, t);
+                    if (aim == null)
+                        return false;
+                    a.use(f.level, f.hero, aim);
+                }
                 b.record(now, Why.CAST, a.slot, t.getId());
                 return true;
             }
@@ -743,7 +889,7 @@ public final class HeroBot {
             default -> {
                 // area bursts round the hero and ground casts at its own feet or at a target in reach: v1's rules,
                 // none of which walks the hero anywhere
-                if (!fight(f, a))
+                if (!fight(f, a, true))
                     return false;
                 b.record(now, Why.CAST, a.slot, -1);
                 return true;
@@ -797,13 +943,20 @@ public final class HeroBot {
         double reach = self ? Math.max(3, next.spec.radius) : next.range - 0.5;
         if (t.distanceTo(mob) > reach)
             return;   // not in reach yet: the window may still bring it
+        BlockPos aim = null;
+        if (!self && next.spec.target != HeroKit.Target.ENEMY) {
+            aim = reachableAim(new Fight(sl, mob, hero, List.of(t), List.of(), 1, isMelee(hero)), next, t);
+            if (aim == null)
+                return;   // the goal would walk to it: the window may still bring it
+        } else if (!self && !castReaches(mob, t.getOnPos(), next))
+            return;
         b.clearCombo();
         if (self)
             next.castNow(hero, null, mob.position());
         else if (next.spec.target == HeroKit.Target.ENEMY)
             next.use(sl, hero, t);
         else
-            next.use(sl, hero, t.getOnPos());
+            next.use(sl, hero, aim);
         b.record(now, Why.COMBO, next.slot, t.getId());
     }
 
