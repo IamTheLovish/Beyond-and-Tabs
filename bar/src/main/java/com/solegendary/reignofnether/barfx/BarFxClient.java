@@ -1107,7 +1107,9 @@ public final class BarFxClient {
         // each faction's way of building (the White Angel cloud ring first) - a site can rise with no other effect alive
         try {
             ConstructionFx.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, dt);
-        } catch (RuntimeException ignored) { }   // a construction effect must never stop the battle effects
+        } catch (RuntimeException e) {   // a construction effect must never stop the battle effects
+            ConstructionFx.threw(e);     // ... but it says so once (round 17 critic: prove the code runs)
+        }
         if (live.isEmpty() && decals.isEmpty()) return;
 
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
@@ -1175,6 +1177,11 @@ public final class BarFxClient {
 
     static VertexConsumer vc;
     static Matrix4f mat;
+
+    /** The construction effect's last once-a-second diagnostic (ConstructionFx; the eyes tour logs it with 06b / 06c). */
+    public static String constructionDiag() {
+        return ConstructionFx.lastDiag();
+    }
 
     static void begin(MultiBufferSource.BufferSource buffers, RenderType type, Matrix4f m) {
         vc = buffers.getBuffer(type);
