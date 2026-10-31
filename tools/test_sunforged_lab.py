@@ -285,6 +285,18 @@ class SunwainCourt(unittest.TestCase):
                     bad.append((st, (x, y, z)))
         self.assertEqual(sorted(bad)[:10], [], len(bad))
 
+    def test_l1_no_snow_tops(self):
+        """Round 3's L1 measured 11.8 % snow in its rts still (value >= 0.70, sat <= 0.12): the cut diorite tower shafts,
+        the bay top and the spire pad open to the sky (diorite up 0.769). L1 too: <= 5 % of its rts pixels read as
+        snow on the camera table."""
+        tmp = os.path.join(self.tmp.name, "sunforged_l1.nbt")
+        LV.build(1).structure().write(tmp)
+        hits = [h for h in G.shoot(S.load(tmp), "rts", 2).values() if h[0][1] >= 1]
+        px = self.hsv_px(hits)
+        self.assertGreaterEqual(len(px) / len(hits), KNOWN)
+        snow = sum(1 for _, v in px if v[2] >= SNOW[0] and v[1] <= SNOW[1]) / len(px)
+        self.assertLessEqual(snow, SNOW_MAX, round(snow, 3))
+
     def test_palette_by_look_no_snow_no_loud_colour(self):
         """By how the blocks LOOK on camera: <= 5 % of the building's pixels read as snow (value >= 0.70, sat <=
         0.12) and <= 3 % as a loud colour (sat >= 0.45 - team-colour territory; gold, glass and lights aside)."""

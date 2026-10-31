@@ -73,3 +73,13 @@ lancets grey glass, wing / keep parapets plain coping.
   sat 0.25-0.33, hue 25-35 (a weathered timber brown) - inside SPIRE_VAL 0.30-0.45 / SPIRE_SAT 0.10-0.35.
 - halo: 12 stone-brick slabs (up 0.467) in the terrace (0.549): a quiet ring, delta about 0.08.
 - critics: materials 5+, roofs 5+, landmark holds 6.
+
+## Detail round 3 measured (eyes run 41147427956, round 3 and round 2 in one run)
+- spire (Macaw's spruce planks steep roof): hue 31, sat 0.30, value 0.39 - expected 25-35 / 0.25-0.33 / 0.33-0.40: met.
+- camera tests 18 / 18 (the two round-3 tests red on round 2, green on round 3).
+- snow share of the real pixels (rts / 34): round 3 0.014 / 0.009, round 2 0.008 / 0.003. L1 0.118 / 0.038 - its cut
+  diorite tops (test_l1_no_snow_tops, red at 0.133 in the camera model) -> capped with stone brick (L1 only; the L3
+  .nbt is unchanged), camera model 0.000 after the cap; L1's cap is not photographed yet.
+- critics 5.5 / 5.5 (round 2 5 / 5): materials and roofs 5 (expected 5+: met), landmark 5 (expected to hold 6: missed).
+- both 34 / dusk stills of this run (both builds) show a black wedge on the ground west of the gate - a harness / pad
+  artefact, not the building (it is in the control too).

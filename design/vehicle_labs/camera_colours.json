@@ -15,7 +15,8 @@
   "eyes 41124572036 sunforged_l3 (build e7b4e94)",
   "eyes 41138964754 sunforged_l3 round 1 (build e7b4e94)",
   "eyes 41138964754 sunforged_l1 round 1 (build e7b4e94)",
-  "eyes 41145225614 sunforged_l3 round 2 (build e7b4e94)"
+  "eyes 41145225614 sunforged_l3 round 2 (build e7b4e94)",
+  "eyes 41147427956 sunforged_l3 round 3 (build e7b4e94)"
  ],
  "blocks": {
   "andesite": {
@@ -1467,6 +1468,65 @@
     ]
    }
   },
+  "mcwroofs:spruce_planks_steep_roof": {
+   "west": {
+    "hue": 30.9,
+    "sat": 0.299,
+    "val": 0.388,
+    "n": 2341,
+    "rgb": [
+     0.3836,
+     0.3288,
+     0.2701
+    ]
+   },
+   "south": {
+    "hue": 30.9,
+    "sat": 0.301,
+    "val": 0.396,
+    "n": 2282,
+    "rgb": [
+     0.3888,
+     0.333,
+     0.2722
+    ]
+   }
+  },
+  "mcwroofs:spruce_planks_upper_steep_roof": {
+   "up": {
+    "hue": 31.5,
+    "sat": 0.304,
+    "val": 0.392,
+    "n": 7936,
+    "rgb": [
+     0.3799,
+     0.3477,
+     0.2802
+    ]
+   },
+   "west": {
+    "hue": 31.1,
+    "sat": 0.294,
+    "val": 0.392,
+    "n": 2373,
+    "rgb": [
+     0.3855,
+     0.3408,
+     0.2875
+    ]
+   },
+   "south": {
+    "hue": 31.1,
+    "sat": 0.303,
+    "val": 0.392,
+    "n": 2293,
+    "rgb": [
+     0.3913,
+     0.3493,
+     0.2863
+    ]
+   }
+  },
   "mcwroofs:stone_bricks_roof": {
    "up": {
     "hue": 80.9,
@@ -2345,6 +2405,19 @@
      0.175,
      0.1448,
      0.1179
+    ]
+   }
+  },
+  "spruce_planks": {
+   "up": {
+    "hue": 31.0,
+    "sat": 0.302,
+    "val": 0.396,
+    "n": 231,
+    "rgb": [
+     0.3861,
+     0.3295,
+     0.2693
     ]
    }
   },
