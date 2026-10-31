@@ -16,8 +16,10 @@ import com.solegendary.reignofnether.resources.MetalPatches;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import com.solegendary.reignofnether.unit.support.SupportState;
 import com.solegendary.reignofnether.util.MiscUtil;
 
 import net.minecraft.core.BlockPos;
@@ -77,7 +79,10 @@ public class BotPlayer {
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, null, null,   // no house or farm any more (Factions)
                     Buildings.METAL_EXTRACTOR_MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Buildings.GRAVEYARD,
-                    Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON),
+                    // the Tombcaller (essence caster, tier 1: lovish Oct 29; "bots build and use all 7 casters") casts by
+                    // its own autocast: tombstones on a crowd, Grave Tide in a fight, its Grave Adept when it has none
+                    Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER,
+                    List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON, ProductionItems.TOMBCALLER),
                     Buildings.DUNGEON, ProductionItems.EMBALMER,
                     List.of(ProductionItems.CREEPER, ProductionItems.WRAITH, ProductionItems.WARDEN, ProductionItems.OSSUARY_BEHEMOTH),
                     Buildings.STRONGHOLD, ProductionItems.BONE_DRAGON, Buildings.ENERGY_CONVERTER_MONSTERS);
@@ -97,7 +102,8 @@ public class BotPlayer {
                 Buildings.METAL_EXTRACTOR_VERDANT, Buildings.WIND_GENERATOR_VERDANT, Buildings.GROVE,
                 null, ProductionItems.SEEDSHAPER,
                 List.of(ProductionItems.LEAFBLADE, ProductionItems.THORNBOW, ProductionItems.SENTINEL_TREANT,
-                        ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER),
+                        ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER,
+                        ProductionItems.THORNWEAVER),   // the essence caster, Tier 1 (lovish, Oct 29: bots build and use all seven)
                 Buildings.CIRCLE_OF_ELDERS, ProductionItems.ELDER_DRUID,
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT,
                         ProductionItems.BLOOM_PRIESTESS, ProductionItems.MOSSBACK_BISON),   // the Wisp Choir is queued only against flyers (queueAntiAir)
@@ -778,6 +784,7 @@ public class BotPlayer {
         // 4c) the commander's signature ability when a fight is on near it (same rules as a player: cooldown)
         useCommanderAbility(level, mine);
         useFactionPowers(level, mine);
+        useEmpower(level, mine);
         useTitanAbilities(level, mine);
 
         // 4d) level the labs up instead of building a third (design/building_upgrades.md)
@@ -1105,6 +1112,7 @@ public class BotPlayer {
      */
     public void castFightAbilities(ServerLevel level, List<LivingEntity> mine) {
         useFactionPowers(level, mine);
+        useEmpower(level, mine);
         useTitanAbilities(level, mine);
         tideKrakens(level, mine);
         tideLeviathans(level, mine);
@@ -1384,26 +1392,29 @@ public class BotPlayer {
             BlockPos centre = null;
             List<LivingEntity> lagging = new ArrayList<>();
             for (LivingEntity le : mine) {
-                // Moonwell Bearers and Bloom Priestesses: healers, not fighters (neither is an AttackerUnit, so the
-                // army list never holds them and they would otherwise idle at the lab)
-                if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit)    // the Fortress shields it
-                        && !(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))   // essence casters follow the army too
+                if (!followsArmy(le))
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
                     centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
                 BlockPos mt = mb.getMoveGoal() == null ? null : mb.getMoveGoal().getMoveTarget();
+                // a support unit already on its Fight to (near) here holds its standoff on the way, off that spot
+                SupportState ss = le instanceof SupportUnit su ? su.getSupportState() : null;
+                BlockPos fight = ss != null && ss.mode() == SupportState.Mode.SUPPORT_MOVE ? ss.destination() : null;
                 if (le.distanceToSqr(centre.getX() + 0.5, le.getY(), centre.getZ() + 0.5) > 10 * 10
-                        && (mt == null || mt.distSqr(centre) > 8 * 8))
+                        && (mt == null || mt.distSqr(centre) > 8 * 8)
+                        && (fight == null || fight.distSqr(centre) > 12 * 12))
                     lagging.add(le);
             }
-            if (centre != null)
-                order(lagging, UnitAction.MOVE, centre);
+            if (centre != null) {
+                // support units get a Fight, not a Move (lovish, Oct 30: "stay behind units"): a Move ends their support
+                // order, so they walked into the middle of a fighting army; a Fight holds them behind its front
+                List<LivingEntity> supports = new ArrayList<>(), others = new ArrayList<>();
+                for (LivingEntity le : lagging)
+                    (le instanceof SupportUnit ? supports : others).add(le);
+                order(supports, UnitAction.ATTACK_MOVE, centre);
+                order(others, UnitAction.MOVE, centre);
+            }
         }
         if (minutes < 2 || home == null)
             return;
@@ -2233,12 +2244,66 @@ public class BotPlayer {
         chokeAcrossZ = az;
     }
 
+    /**
+     * The bot's units that are not fighters but walk with its army (none is an AttackerUnit, so the army list never
+     * holds them and they would otherwise idle at the lab): every support unit - the healers, the Field Medic too
+     * (the old hand-written list left a villager bot's medics at the lab), the Ink Scribe that seals from the line -
+     * the Seer that watches from it, the Lantern Fortress that shields it, and the essence casters.
+     */
+    public static boolean followsArmy(LivingEntity le) {
+        return le instanceof SupportUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit
+            || le instanceof com.solegendary.reignofnether.essence.EssenceCarrier;
+    }
+
     /** The top solid block of a column from the heightmap (a single read, unlike a scan down from build height). */
     static BlockPos ground(ServerLevel level, int x, int z) {
         return new BlockPos(x, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z);
     }
 
     /** A sealed unit (Stormcallers Seal) can't use abilities: the bot doesn't try, exactly as a player's order is refused. */
+    /** A carrier empowers only when it holds this much: within 5 of full, where more wisps would go to waste. */
+    static final int EMPOWER_SPARE = com.solegendary.reignofnether.essence.Essence.CAPACITY - 5;
+
+    /**
+     * Empower for the essence casters (design/essence_casters.md; lovish, Oct 29: bots build and use all seven). Their
+     * spells are autocast (AutoCaster, each gated on the caster's essence), but Empower is manual: a player picks who
+     * earns a rank. A bot empowers only with essence to spare ({@link #EMPOWER_SPARE}), so its big spell is never
+     * starved, and picks the dearest friendly unit in reach first. Every attempt is Empower's own quiet rule, so a
+     * target it refuses (top rank, a summon, a hero, a recent rank) costs nothing and the next one is tried. Shared by
+     * every caster that carries Empower.
+     */
+    void useEmpower(ServerLevel level, List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof Unit u) || !le.isAlive() || u.getAbilities() == null || sealed(le)
+                    || com.solegendary.reignofnether.essence.Essence.get(le) < EMPOWER_SPARE)
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.Empower) || !a.isOffCooldown(u))
+                    continue;
+                double r = com.solegendary.reignofnether.ability.abilities.Empower.RANGE;
+                List<LivingEntity> friends = new ArrayList<>();
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), r, scan))
+                    if (other != le && other.isAlive() && other instanceof Unit ou && other.distanceToSqr(le) <= r * r
+                            && AlliancesServerEvents.isAlliedOrOwned(name, ou.getOwnerName()))
+                        friends.add(other);
+                friends.sort((x, y) -> Integer.compare(metalOf(y), metalOf(x)));
+                for (LivingEntity f : friends)
+                    if (com.solegendary.reignofnether.ability.abilities.Empower.cast(level, le, name, f, true)) {
+                        a.setToMaxCooldown(u);
+                        com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), a.action, a.cooldownMax);
+                        break;
+                    }
+                break;
+            }
+        }
+    }
+
+    private static int metalOf(LivingEntity le) {
+        return le instanceof Unit u && u.getCost() != null ? u.getCost().metal() : 0;
+    }
+
     static boolean sealed(LivingEntity le) {
         return com.solegendary.reignofnether.mana.SealServerEvents.isSealed(le);
     }

@@ -1,0 +1,89 @@
+# Vehicle lab concepts - what went wrong (Oct 28, after rounds 1-2)
+
+lovish, 04:09-04:11: "disappointing we used a lot of usage for little progress", "we really need to learn from this,
+I also sent reference art". Seven labs, two rounds, scores stuck at 3-4/10. Round 2 is cleaner (Brassworks, Sunforged,
+Tidewrought now read as buildings) but none of them looks like ANY of his 26 references.
+
+## Why (most important first)
+
+1. **We blended references instead of imitating one.** The White Angel v4 capitol worked because it imitated ONE
+   picture closely (its script studies the picture region by region). The labs were told to take "principles" from
+   6-10 refs each plus a long rule list, and came out as a generic average that resembles nothing. Lesson: one primary
+   reference per building, imitated as closely as blocks allow; other refs only for specific parts.
+2. **Proportions were wrong for the references we chose.** His refs are tall and vertical (gothic fronts, towers,
+   castles on crags). A 17 x 17 base under a 20-block cap makes a squat box, and no amount of surface detail turns a
+   squat box into a cathedral. Lesson: pick a primary reference whose proportions fit the plot, or shape the plot to the
+   reference (narrow, tall main mass + an open yard), before any detailing. Several refs are lab-scale already:
+   ref11 (small mossy tower), ref12 (Victorian house), ref15 (lit spired mansion), ref17 (gallery towers), ref19 (vine
+   tower), ref21 (gothic tower with bartizans), ref27 (armillary tower).
+3. **We judged at the wrong size.** Every render was at 18 px/block; tools/structure_render.py says 24-36 is the game's
+   RTS zoom. Builders sculpted figures and critics judged gates they could barely see. Lesson: --px 32 always, plus a
+   close crop of any sculpted part, and the reference placed BESIDE the render at a similar size.
+4. **Open briefs, then a growing rule list.** "Make a landmark" produced pillars twice; the amendment grew to 36 items,
+   so builders spent their effort satisfying rules instead of matching a picture. Lesson: the art director writes a
+   concrete massing plan (tiers, masses, gate, landmark, with coordinates) from the chosen reference BEFORE building; the
+   standing rules stay short (lane, spawn column, pockets, height, footprint).
+5. **Seven in parallel before the method was proven.** Every mistake was paid for seven times. Lesson: one pilot lab
+   to 7+/10, then reuse the method.
+6. **Restarts threw work away** (model switch, stopping near-finished builders). Lesson: let a running round finish
+   and learn from it; change course between rounds, not inside them.
+7. **Flat renders vs shaded screenshots.** Our renderer has no lighting, shadows or shaders; his refs are shader
+   screenshots. Lesson: the critic scores form, proportion, silhouette and detail against the reference, not lighting.
+
+## What is kept
+- design/refs/vehicle_labs/ - the 26 references and what each teaches (README).
+- Seven faction part libraries (tools/<faction>_lab_parts.py) and round-1/2 concepts.
+- SCORES.md - every critic's score and fault list.
+- Roles: Opus builds, Fable critiques (lovish, 04:09).
+
+## Size: a scale ladder, not a fixed cap (lovish, 04:12-04:14)
+"Break the limit to fit these buildings" - "make the increase make sense across the board" - "we can always make the
+buildings more intricate as they keep leveling up, as well as bigger" - "we don't want them oversized, but adjust the
+limit accordingly". So every building reserves its top-level footprint and grows into it; each level adds height AND
+detail; the reference is imitated in full at the top level, and L1 is its first stage.
+
+04:32: "tier 1 buildings should be small and get larger and larger per tier and tech level". So the ladder steps up
+with TIER (T1 small -> T2 -> T3 -> capitol) and, within a tier, with level / tech:
+
+| Building | Reserved footprint (about) | L1 | Top level |
+|---|---|---|---|
+| T1 (labs, economy) | up to ~13 x 21 | <= 12 tall, modest | <= 22 tall, the full reference |
+| T2 | up to ~21 x 27 | <= 16 | <= 32 |
+| T3 | up to ~29 x 29 | <= 22 | <= 45 |
+| T4 | larger again (to be sized with lovish) | | |
+| Capitol (v4) | 59 x 59 | the crag and the first spire | ~100 tall at L6 |
+
+04:35: "tier 2 buildings, tier 3 buildings and tier 4 buildings - tier 1 and tier 2 can be upgraded to match so they
+fit the architecture of future tier buildings later on". So there are FOUR building tiers, and as a player techs up,
+their T1 and T2 buildings can be upgraded (refitted) into the architecture of the later tiers, so a late-game base reads
+as one cohesive city instead of early huts beside late palaces. Design every T1/T2 building with a later-tier refit in
+mind: the refit is another superset level on the same reserved footprint (only adds or replaces blocks), in the
+higher tier's style.
+
+The numbers are a starting proposal for lovish to adjust; the rule is his: small at T1, growing with every tier and
+tech level, never oversized.
+
+## The method from here (proposal)
+1. Pick ONE lab as the pilot and ONE primary reference for it whose proportions fit.
+2. Art director writes the massing plan from that reference (region by region, like capitol_white_angel_v4.py's
+   "THE PICTURE, STUDIED").
+3. Opus builds; render at --px 32 beside the reference; one Fable critic scores resemblance AND quality.
+4. Repeat until 7+, then roll the method to the other six, one or two at a time.
+
+## Pilot rounds 1-5 (Oct 28, overnight) - what the Engine Shed taught
+Greybox r1-r3 worked: imitating one picture front-on, outline checked column by column, got the massing approved.
+Five detail rounds then stalled at 3-5/10 (SCORES.md). Why:
+1. **ref18 is palace-scale, the plot is T1-scale.** Its spire is ~60 blocks of fine stepping; ours has 3 half-width cells
+   over 12 rows, so every step is a 4-row box (the frozen full-block outline: 7/5/5/5/5/3/3/3/3/1). At this size the
+   triangle can only read as a triangle through stair/cornice edges, never through the outline. Its dense red-panel
+   grid likewise has room for only a handful of panels. Lesson (LESSONS #2 again, now proven): pick a primary reference
+   whose scale fits the plot - ref18 belongs to a T2/T3 or capitol-scale building; a T1 lab needs a lab-scale ref
+   (ref11, ref12, ref15, ref17, ref19, ref21, ref27).
+2. **Fresh critics drift.** r1: "less grey"; r3: "grey-cream walls"; r5: "red-dominant, black frames, grey only as
+   trim". Builds swung between them. Lesson: the art director writes a fixed per-region rubric from the picture once;
+   every critic scores against that rubric, not its own taste.
+3. **Tolerance checks let regressions through.** "Within 1 block of r3" passed stacked boxes twice. What worked:
+   frozen tables the build must equal, asserted on every build (check_tower, check_banned, check_greybox in
+   tools/lab_vehicle_brass.py).
+4. **Measure on rendered pixels.** Blackstone renders grey, deepslate tiles mid-grey, red nether brick maroon, red
+   terracotta closest to ref18's red; there is no red concrete/wool texture in our pack.
