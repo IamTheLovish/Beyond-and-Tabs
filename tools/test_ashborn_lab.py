@@ -150,6 +150,12 @@ class EmberPens(unittest.TestCase):
         return max(abs(c[0] - lm[0]), abs(c[1] - lm[1])) <= ZONE
 
     def rgb(self, h):
+        """The block's colour on camera from the face the ray saw: that face's mean RGB, else that face's median HSV;
+        only a face the table lacks falls back to another face (camera_colour.lookup_rgb alone would take another
+        face's mean when this face was measured before r12 without one: tuff's up face read as its west, 0.19)."""
+        e = self.table["blocks"].get(h[1], {}).get(h[2])
+        if e:
+            return tuple(e["rgb"]) if e.get("rgb") else colorsys.hsv_to_rgb(e["hue"] / 360.0, e["sat"], e["val"])
         p = CC.lookup_rgb(self.table, h[1], h[2])
         if p:
             return p
@@ -209,6 +215,8 @@ class EmberPens(unittest.TestCase):
                 return "caps"
             return "paving" if y >= 5 else None
         if face in ("west", "south") and y >= 1:
+            if sub_block(n) and self.is_top(h[0]) and n.endswith(("_slab", "_stairs", "_wall")):
+                return None                     # a cap's thin edge belongs to the cap, not to the wall under it
             if y <= PLINTH_Y or (x in GATE_ZONE[0] and z in GATE_ZONE[1]):
                 return "plinth"
             return "walls"
