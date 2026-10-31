@@ -1,76 +1,85 @@
 #!/usr/bin/env python3
-"""The Sunforged (White Angel) VEHICLE LAB - THE SUNWAIN COURT - at L1 and L3 (round 2).
-Here the DAWNRIDER (a light-wielder riding a cloud, a fast raider) is made: a gothic cathedral-workshop whose west bay
-is open to the sky - the cloud is spun in a cradle hung from a dark-oak gantry, under the ribbed dome where the sun is
-kept - then lowered and ridden out of the great west portal.
+"""The Sunforged (White Angel) VEHICLE LAB - THE SUNWAIN COURT - at L1 and L3, r1 of the r12 method (Oct 30 2026).
+Here the DAWNRIDER (a light-wielder riding a small cloud, a fast raider) is made and rolled out of the west gate.
 
-Round 1 scored 4/10: "a dense grey box with ideas stuck onto it" - no landmark, a weak gate, no rhythm, a brown blob on
-the roof, mixed materials, messy ground. Round 2 is built on HIERARCHY (brief amendment, item 2): (a) ONE landmark,
-the ribbed dome with the sun on its crown (L3: the ribbed lantern spire rising from it to the sun disc), every other
-top a small pinnacle stepping up to it; (b) the EXIT GATE as the biggest, darkest opening on the west face, a deep
-three-order portal under a crocketed wimperg that breaks the cornice, between two gate towers; (c) the secondary
-masses stepping down - the gate towers, the nave with its flying buttresses, the lodge lean-to; (d) a calm paved
-forecourt. Four material zones: a DEEPSLATE plinth, warm STONE-BRICK ashlar with lighter clasping buttresses, QUARTZ
-+ GOLD crown and trim, DEEP-SLATE tile roofs, teal-blue glass; warm light only from the lancets, the gate and the sun.
-Writes design/vehicle_labs/sunforged_l1.nbt and _l3.nbt only - NOT into the game's structure trees.
+Writes design/vehicle_labs/sunforged_l1.nbt and _l3.nbt only - NOT into the game's structure trees (the game does not
+load them yet; wiring comes after lovish approves the look). Tests (written first, 6 red on round 2):
+tools/test_sunforged_lab.py. Round 2 (the CONTROL, 4/10 from round 1's critic) is kept as sunforged_l{1,3}_round2.nbt
+and in git history (this file before Oct 30).
 
-THE REFERENCE, STUDIED
-  - LOVISH'S CASTLE ON THE CRAG (design/buildings/white_angel_capitol_v4.png, tools/capitol_white_angel_v4.py): warm
-    light grey ashlar, dark slate roofs, gold finials; every wall broken into bays by buttresses ending in pinnacles;
-    a cluster that climbs to one needle; warm light in deep-set lancets.
-  - ref10 (gothic ribbed dome): pale stone, dark blue-slate roofs, a great RIBBED DOME on a lit drum, flying buttresses
-    along the nave, pinnacles on every buttress, tall lancets in every bay, dark firs around - this lab's massing:
-    nave + dome + towers.
-  - ref05 (cathedral front): pale stone with teal glass in every bay, twin towers framing a central gable with a rose,
-    pinnacles stepping down, the grand approach - this lab's west front, the porch's gable carrying the rose.
-  - ref28 (dense gothic cathedral): a pinnacle on every buttress, vertical rhythm every 2-3 cells, nothing flat.
-  - ref20 (pyramidal spires): outer masses low, climbing to the one central spire; dark base, light tops.
-  - ref01 (palace detail): every bay framed, a cornice and string course at every storey, every window with a sill, a
-    surround and a head; calm because the detail is ORDERED.
-  - ref21 (gothic tower): corbelled crown, pinnacles on the corners, a steep spire from the centre.
-  - COLOGNE'S WEST PORTAL: orders stepping in, each a jamb with colonnettes and capitals and an arch of voussoirs; a
-    crocketed gable (wimperg) with tracery over the outer order; pinnacles on the buttresses either side.
-  What gives these depth: buttresses one proud of the wall and the glass one recessed (three planes on every face),
-  portal orders stepping in three planes, a crown corbelled out, a porch proud of the towers, flyers two cells out.
+THE REFERENCE, STUDIED (ONE picture: ref21, design/refs/vehicle_labs/ref21_gothic_tower_bartizans.png; the designer
+pass, itachi2-api runs 20261030-162547-sunforged-design + -163025-sunforged-design-cont)
+  - a square gothic KEEP of warm grey ashlar, crenellated flat tops;
+  - CORNER TOWERS proud of the keep, wider than the bay, each face split by pilaster strips into narrow panels with one
+    lancet per panel; crowns CORBELLED out one course and crenellated (bartizans), the crown ~1/8 of the tower;
+  - the FRONT BAY, ~1/4 of the front, projecting furthest: a pointed door on the axis, a round ROSE over it (our sun
+    disc), a crenellated top;
+  - ONE steep SPIRE springing behind the bay at about bay-top height - clearly the tallest thing;
+  - a low WING; depth from three planes on the front (bay, towers, keep) and the shadow band under each corbelled crown.
 
-THE PLAN (17 x 17: x 0..16 west -> east, z 0..16 north -> south; the RTS camera looks north-east from the south-west,
-so it sees the roofs, the WEST face x 0 and the SOUTH face z 16; y 0 is the paving layer as in tools/lab_grove.py)
-  - the WEST FRONT: the PORCH at x 0 (one proud of the towers), its three-order pointed portal with a gold keystone,
-    the crocketed WIMPERG with the rose over it; the NORTH gate tower (x 1..5, z 0..4) and the SOUTH gate tower
-    (x 1..5, z 12..16): clasping corner buttresses, one lit lancet per face, corbelled parapets, corner pinnacles and
-    a steep slate pyramid cap; the passage x 1..5, z 6..10 vaulted dark, lit niches in its jambs, the portcullis up.
-  - the OPEN BAY (x 6..9, z 6..10): walled by the nave's two walls, open to the sky; the dark-oak GANTRY crosses it at
-    x 7 on quartz piers; the CLOUD CRADLE hangs under it (x 6..7, y 9..11); the sun mosaic on the floor; the spawn
-    column (8, *, 8) is air to the top at both levels (amendment item 34).
-  - the CHANCEL ARCH (x 10) into the DOME CHAMBER (x 11..15, z 6..10), under the RIBBED DOME (centre 13, 8): a lit
-    octagonal drum on the chamber's roof terrace, quartz ribs, slate courses, the crown with the sun (L1) / the ribbed
-    lantern spire ending in the SUN DISC (L3).
-  - the NAVE WALLS (z 4..5 north, z 11..12 south, x 6..16): buttress - lit lancet bay - buttress, a sill course, a
-    string course at the cornice, a quartz parapet; two FLYING BUTTRESSES on the south wall (x 10, 13) to piers at
-    z 15; the east wall x 16 with a lancet.
-  - the LODGE (x 6..16, z 1..3): a lean-to against the nave's north wall, a slate roof, a chimney.
-  - the FORECOURT: polished andesite setts, a deepslate kerb, the processional strip from the spawn out of the gate,
-    a dark fir at the south-east corner.
+THE MASSING (A2: the blind pick A, revised on both massing critics' shared faults; tools/sunforged_massing.py build_a2,
+eyes run 41124572036, critics 20261030-165241 / -165245)
+Plot 17 x 17 (x 0..16 west -> east, z 0..16 north -> south; the RTS camera looks north-east from the south-west and
+sees the roofs, the WEST face x 0 - the front - and the SOUTH face z 16).
+  keep         x 3..15, z 3..13, walls to 11, a smooth-stone terrace at 12
+  front towers x 1..4 at z 1..4 (NW) and z 12..15 (SW): shafts to 13, the corbel table at 14 one out on the outer
+               faces, the crown course 15 with arrow loops, merlons 16 - they frame the bay
+  back turrets x 13..15 at z 1..3 (NE) and z 13..15 (SE): 3 x 3 to 12, corbel 13, merlons 14 - smaller (hierarchy)
+  front bay    x 0..2, z 4..12, to 15, merlons 16: the two-order splayed PORTAL (outer x 0: 7 wide, 9 tall to a
+               pointed head and keystone at 12; inner x 1: the lane's 5 x 8) and the ROSE over it (centre y 14)
+  spire tower  x 11..15, z 6..10: the shaft rises 4 clear of the terrace (13..16) with belfry lancets, then the SPIRE -
+               a 5 x 5 steep foot (17, 18), the 3 x 3 steep body (19..22), a needle (23, 24), the gold finial (25)
+  wing         x 5..11, z 14..15, to 5, a pale terrace at 6
+  the well     the spawn column (8, y, 8) only, open to the sky through the terrace (round 1's gold halo ring: gone)
+  the mouth    the lane x 0..9, z 6..10, y 1..8: blackstone-brick floor, deepslate-brick passage walls and ceiling
 
-ANCHORS (structure-local block coords x, y, z; in game these become client-drawn moving parts):
-  gantry beam      (7, 13, 6..10)  the dark oak beam across the bay on the quartz piers (7, 11..13, 5) / (7, 11..13, 11)
-  gantry trolley   (7, 14, 8)      chiseled saddle riding the beam, slab hangers (7, 14, 7) / (7, 14, 9); slides z 6..10
-  hoist            (7, 9, 8)       the CLOUD CRADLE (white wool, x 6..7, z 6..10, y 9..11, bottom at y 9 - over the
-                                   lane's 8-high clearance) on chains (7, 12, 7) / (7, 12, 9); lowers to y 1
-  counterweight    (7, 11, 10)     the gold sun counterweight (7, 10..12, 10) on its chain (7, 12, 10)
-  gate leaf        (2, 10, 8)      the PORTCULLIS drawn RAISED: iron bars in order C's head (x 2: y 9 z 6..10, y 10
-                                   z 7..9, y 11 z 8); drops to y 1..8 across z 6..10
-  sun              (13, 19, 8)     L1: the ochre sun on the dome's crown; L3: the SUN DISC (x 12..14, y 25..27, z 8)
-                                   facing south at the tip of the lantern spire, rays (11, 26, 8) / (15, 26, 8); it
-                                   turns while the queue runs
-  spawn cell       (8, 1, 8)       the gold boss of the sun mosaic, beside the cradle; the column above it is air
+THE DETAIL GRAMMAR (round 1 - one grammar on every camera face):
+  - a battered first course (stone-brick stairs) round every outer wall;
+  - QUOINS at every corner, long and short (stone bricks / polished andesite; round 2: stone bricks / diorite);
+  - STOREYS of four courses: two of glass (a 2-wide lancet per panel, 1-wide on the turret), a pointed head (two
+    upside-down stairs), our STRING COURSE (#407 reignofnether:string_course_stone) at the storey line; the cornice
+    (reignofnether:cornice_stone) at the top course;
+  - lit rooms behind the glass (a standing lantern 1 behind each lancet, warm birch above it): light INSIDE the rooms,
+    never a light block in the wall face (lovish's dusk rule on the Engine Shed, Oct 30);
+  - crowns: an upside-down stair corbel table, arrow loops (iron bars) in the crown course, alternating merlons.
+  Palette (by look, camera_colours.json): polished andesite walls (west 0.29 / south 0.38), stone-brick dressings
+  (0.29-0.41), smooth-stone-slab terraces (0.47-0.54), deepslate-brick mouth (dark), a muted warm spire (Macaw's
+  granite steep roof, hue 16, sat 0.36-0.39 - lovish's call open: the enemy relation colour), gold the one accent.
 
-EXIT LANE: x 0..9, z 6..10, y 1..8 clear, the floor paved (the processional strip) - straight out west.
+ROUND 2 (one change per element; round 1's two fresh critics, runs 20261030-185320 / -185323: 5/10 each against the
+control's 4/10 - better structure, but "a plain grey castle with a yellow square on its roof"):
+  - the wall FIELD polished diorite on the vertical faces only, instead of polished andesite (0.29 / 0.38, inside the
+    ground's mid band: "the building no longer owns the lights"); the quoins alternate stone bricks / diorite; the
+    dressings (stone bricks, strings, cornices) stay, now darker than the field (zones). NOTE for lovish: his Oct 20
+    pick for the White Angel stone ("middle is fine", gothic_parts STONES["warm"]) is polished ANDESITE walls with
+    warm polished-diorite sills, lintels and drip courses - diorite walls are one step lighter than his pick, tried on
+    the critics' diagnosis; one line (WALL) reverts it. No diorite on any top the cameras see from above: its up face
+    reads as snow (polished diorite up 0.769 / sat 0.044 - Itachi 2's lesson 2, "calcite/diorite read as snow");
+  - the SPIRE dark slate (Macaw's deepslate steep roof, gothic_parts' "his tall dark needles") instead of the salmon
+    granite ("a squat hipped roof", "a second saturated accent near the enemy relation hue"): the strongest value
+    contrast at the focal point, over the pale terrace; the gold finial stays;
+  - the gold HALO ring on the terrace removed ("the first thing seen", "a square donut, not a halo"): gold is only the
+    finial and the rose's boss;
+  - the LANCETS grey-tinted glass (clear panes read as "white crosses") - dark slits as in ref21, the lit rooms behind;
+  - the wing's and the keep's PARAPETS plain smooth-stone coping (merlons on every edge read as "stacked battlements");
+    the merlons stay on the towers' crowns, the turrets and the bay - one crenel line at the tops.
 
-THE GROWTH (one 17 x 17 footprint; L3 only adds or replaces):
-  - L1 the court as above (height 20).
-  - L3 the ribbed LANTERN SPIRE grows from the dome's crown to the SUN DISC (height 28); the gate towers' caps
-    become slate needles; the pinnacles gain gold knops.
+ROUND 3 (round 2's critics, runs 20261030-195225 / -195226: 5 / 5, no gain; per element: coping kept, the diorite
+field "zebra" against its stone-brick quoins, the dark spire an overshoot, the bare well a drain): the corners in the
+field stone (one continuous pale plane, the darker trim only the horizontal lines); the spire weathered timber
+shingles (Macaw's spruce planks steep roof, a warm mid: predicted value 0.33-0.40 from the pack texture); a quiet round
+halo of stone-brick slabs in the terrace round the well. The lancet glass and everything else as round 2.
+
+ANCHORS (structure-local x, y, z; in game these become client-drawn moving parts later):
+  gate        (0..1, 1..9, 5..11) the portal; the animated gate leaf hangs in the inner order (x 1)
+  spawn cell  (8, 1, 8) the lane floor under the well; the column above it is air to the sky
+  sun         (13, 25, 8) the gold finial; (0, 14, 8) the rose (lit behind)
+
+EXIT LANE: x 0..9, z 6..10, y 1..8 clear, straight out west.
+
+THE GROWTH (one footprint; L3 only adds or replaces): L1 (16 tall) - the keep, the bay with its portal and rose, the
+towers to their shafts with plain merlons, the wing; L3 (26 tall) - the corbelled crowns, the turrets' corbels, the
+bay's merlons and the spire tower with its spire.
 
 Usage: python3 tools/lab_vehicle_sunforged.py   (writes both .nbt and checks them)
 """
@@ -78,166 +87,431 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import gen_structures as gs                    # noqa: E402
-import gothic_parts as GP                      # noqa: E402
-import gothic_towers as GT                     # noqa: E402
-import sunforged_lab_parts as SP               # noqa: E402
-from gothic_parts import Part                  # noqa: E402
+import gen_structures as gs  # noqa: E402
 
-PAL = SP.PAL
 SX = SZ = 17
 LANE_X = range(0, 10)
 LANE_Z = range(6, 11)
 LANE_H = 8
 SPAWN = (8, 1, 8)
-DOME = (13, 8)
 OUT = "design/vehicle_labs"
-H1, H3 = 20, 28
-FINE = ("_stairs", "_slab", "_wall", "_fence", "_pane", "iron_bars", "_trapdoor", "_button", "chain", "lantern",
-        "candle", "_rod", "_door", "_carpet", "_banner", "bell")
+H1, H3 = 16, 26
+DRY = dict(waterlogged="false")
+POST_UP = dict(up="true", north="none", south="none", east="none", west="none", waterlogged="false")
+
+WALL = "polished_diorite"          # round 2 (was polished andesite, 0.29 / 0.38: "in the ground's mid band")
+DRESS = "stone_bricks"
+DRESS_ST = "stone_brick_stairs"
+DRESS_SL = "stone_brick_slab"
+POST = "stone_brick_wall"
+QUOIN = ("polished_diorite", "polished_diorite")   # round 3: the corners in the field stone (round 2's stone brick /
+#     diorite long-and-short read as "zebra / ladder stripes" on every tower, both critics); round 1: stone bricks / andesite
+CROWN = "stone_bricks"         # the crown course and merlons: NOT diorite - its top reads as snow from above
+CROWN_SL = "stone_brick_slab"  # (camera table: polished diorite up 0.769 / sat 0.044; diorite wall up 0.725)
+TERRACE = "smooth_stone_slab"
+PAVE = "polished_andesite"
+MOUTH_FLOOR = "polished_blackstone_bricks"
+MOUTH_WALL = "deepslate_bricks"
+MOUTH_CEIL = "deepslate_tiles"
+STRING = "reignofnether:string_course_stone"
+CORNICE = "reignofnether:cornice_stone"
+GLASS = "gray_stained_glass_pane"   # round 2 (clear panes read as "white crosses", both critics)
+ROSE = "orange_stained_glass"
+ROOM = "birch_planks"
+SPIRE = "mcwroofs:spruce_planks"   # round 3: weathered timber shingles, a warm mid (round 2 deepslate 0.17-0.20 "overshoot
+#     into the environment darks"; round 1 granite 0.55 / sat 0.37 "salmon, a second saturated accent")
+SPIRE_CORE = "spruce_planks"
+GOLD = "gold_block"
+LOOP = "iron_bars"
+KEY = "chiseled_stone_bricks"
+
+INWARD = {"west": (1, 0), "south": (0, -1)}
 
 
-# ============================================================================================ L1
-def west_front(p):
-    """The two gate towers (x 1..5) and the porch / portal at x 0..5, z 4..12."""
-    p.place(SP.gate_tower(top=10, seed=1, lancets=("west",)), 1, 0, 0)
-    p.place(SP.gate_tower(top=10, seed=2, lancets=("west", "south")), 1, 0, 12)
-    SP.portal(p, zc=8)
-    # the towers' faces against the passage (z 4 of the north tower, z 12 of the south) are the passage's walls: solid
-    for x in range(1, 6):
-        for z in (4, 12):
-            for y in range(1, 13):
-                if p.get(x, y, z) == "air":
-                    p.set(x, y, z, "wall")
+class Grid:
+    def __init__(self):
+        self.b = {}
+
+    def set(self, x, y, z, name, **props):
+        assert 0 <= x < SX and 0 <= z < SZ and 0 <= y < H3, ((x, y, z), name)
+        self.b[(x, y, z)] = (name, props)
+
+    def clear(self, x, y, z):
+        self.b.pop((x, y, z), None)
+
+    def box(self, x0, x1, y0, y1, z0, z1, name, **props):
+        for x in range(x0, x1 + 1):
+            for y in range(y0, y1 + 1):
+                for z in range(z0, z1 + 1):
+                    self.set(x, y, z, name, **props)
+
+    def stair(self, x, y, z, facing, half, name=DRESS_ST):
+        self.set(x, y, z, name, facing=facing, half=half, shape="straight", **DRY)
+
+    def slab(self, x, y, z, name=TERRACE, kind="bottom"):
+        self.set(x, y, z, name, type=kind, **DRY)
 
 
-def nave(p):
-    """The two long walls in the bay rhythm, the chancel arch, the east wall, the flyers, the chamber's roof terrace."""
-    south = SP.nave_wall(11, top=10, buttress_at=(0, 4, 7, 10), lancet_at=(2, 5, 8), twin=(5, 8), seed=4, depth=1)
-    p.place(south, 6, 0, 11)
-    north = SP.nave_wall(11, top=10, buttress_at=(0, 3, 6, 10), lancet_at=(7,), twin=(7,), seed=6, inner=True,
-                         depth=1)
-    p.place(north, 16, 0, 5, rot=2)
-    SP.chancel_arch(p, 10, 6, 10, 9)
-    # the east wall x 16, z 5..11: the chamber's back, a lancet at z 8, the string course, the parapet
-    m = GT.Mason(p, 16, 8, plinth=3)
-    for z in range(5, 12):
-        for y in range(1, 11):
-            m.put(16, y, z, quoin=(z in (5, 11) and (y // 2) % 2 == 0))
-        p.set(16, 11, z, "trim")
-        p.set(16, 12, z, "rail") if z % 2 else p.slab(16, 12, z, "bottom", "trim_slab")
-    for y in range(3, 9):
-        p.set(16, y, 8, "glass_block")
-        p.set(15, y, 8, "light")
-    p.set(16, 9, 8, "carve")
-    for z in range(6, 11):
-        p.stair(16, 10, z, "east", "top", "band_st") if False else None
-    # the chamber's roof terrace at y 11 (x 10..16, z 5..11) and its floor
-    for x in range(10, 17):
-        for z in range(5, 12):
-            if p.get(x, 11, z) == "air":
-                p.set(x, 11, z, "roof")
-
-    for x in range(11, 16):
-        for z in range(6, 11):
-            p.set(x, 0, z, "strip" if (x + z) % 2 else "pave")
-    # flying buttresses on the south wall's chamber buttresses
-    for x in (10, 13):
-        SP.flyer(p, x, 13, 11, s=1, seed=x)
-    # pinnacles on the chamber's roof corners (the terrace's edge over the east wall)
-    SP.pinnacle(p, 16, 12, 5)
-    SP.pinnacle(p, 16, 12, 11)
+def edge(x0, x1, z0, z1):
+    return [(x, z) for x in range(x0, x1 + 1) for z in range(z0, z1 + 1) if x in (x0, x1) or z in (z0, z1)]
 
 
-def dome(p):
-    SP.ribbed_dome(p, DOME[0], DOME[1], 11, lantern_top=19)
+def merlons(g, cells, y):
+    for (x, z) in cells:
+        if (x + z) % 2 == 0:
+            g.set(x, y, z, CROWN)
+        else:
+            g.slab(x, y, z, CROWN_SL)
 
 
-def gantry(p):
-    SP.gantry(p, 7, 5, 11, 15)
+# ============================================================================================ the face grammar
+def face_cell(face_, plane, u, y):
+    """The cell of a face: west faces run along z (u = z) at x = plane; south faces along x (u = x) at z = plane."""
+    return (plane, y, u) if face_ == "west" else (u, y, plane)
 
 
-def lodge(p):
-    SP.lodge(p, 6, 16, 1, 4, 6, chimney_x=15)
+def behind(face_, q, k=1):
+    dx, dz = INWARD[face_]
+    return (q[0] + dx * k, q[1], q[2] + dz * k)
 
 
-def ground(p):
-    SP.forecourt(p, SX, SZ)
-    SP.sun_mosaic(p, 8, 8, r=2.5)
-    for x in range(0, 8):                                    # the lane floor: setts, the processional strip, kerbs
+def pane_props(face_):
+    """A glass pane running along the face's plane."""
+    if face_ == "west":
+        return dict(north="true", south="true", east="false", west="false", waterlogged="false")
+    return dict(east="true", west="true", north="false", south="false", waterlogged="false")
+
+
+def lamp_column(face_, cols):
+    """The lancet column whose room holds the lantern: the camera's rays run +x and -z, so the lamp sits at the lancet's
+    lowest z on a west face and its highest x on a south face (each pane then has the lamp within its view)."""
+    return min(cols) if face_ == "west" else max(cols)
+
+
+def lancet(g, face_, plane, cols, yg):
+    """Two glass courses in the columns `cols` at yg, yg + 1, the pointed head at yg + 2, the lit room behind."""
+    lamp = lamp_column(face_, cols)
+    for u in cols:
+        for y in (yg, yg + 1):
+            q = face_cell(face_, plane, u, y)
+            g.set(*q, GLASS, **pane_props(face_))
+            if y == yg and u == lamp:
+                g.set(*behind(face_, q), "lantern", hanging="false", **DRY)
+            else:
+                g.set(*behind(face_, q), ROOM)
+    a, b = min(cols), max(cols)
+    lo, hi = ("north", "south") if face_ == "west" else ("west", "east")
+    if a == b:
+        g.slab(*face_cell(face_, plane, a, yg + 2), DRESS_SL, "top")
+    else:
+        g.stair(*face_cell(face_, plane, a, yg + 2), lo, "top")
+        g.stair(*face_cell(face_, plane, b, yg + 2), hi, "top")
+
+
+def face(g, face_, plane, u0, u1, y0, top, lancets, storeys, batter=True):
+    """Dress one camera face (u0..u1 at the plane, courses y0..top): the batter course, long-and-short quoins at u0 and
+    u1, per storey (glass bottom yg) a lancet in each column group and a string course at yg + 3, the cornice at the
+    top course. Everything sits IN the face plane, the wall behind it."""
+    for u in range(u0, u1 + 1):
+        for y in range(y0, top + 1):
+            q = face_cell(face_, plane, u, y)
+            g.set(*q, QUOIN[(y + (u == u1)) % 2] if u in (u0, u1) else WALL)
+    if batter and y0 == 1:
+        for u in range(u0, u1 + 1):
+            g.stair(*face_cell(face_, plane, u, 1), {"west": "east", "south": "north"}[face_], "bottom")
+    for yg in storeys:
+        for cols in lancets:
+            lancet(g, face_, plane, cols, yg)
+        if yg + 3 < top:
+            for u in range(u0, u1 + 1):
+                g.set(*face_cell(face_, plane, u, yg + 3), STRING, facing=face_, shape="straight")
+    for u in range(u0, u1 + 1):
+        g.set(*face_cell(face_, plane, u, top), CORNICE, facing=face_, shape="straight")
+
+
+# ============================================================================================ the masses
+def ground(g):
+    for x in range(SX):
+        for z in range(SZ):
+            g.set(x, 0, z, PAVE)
+    for x in range(0, 10):
         for z in LANE_Z:
-            p.set(x, 0, z, "pave")
-        p.set(x, 0, 8, "strip")
-        if x < 6:
-            p.set(x, 0, 6, "base")
-            p.set(x, 0, 10, "base")
-    for x in range(SX):                                      # a kerb of slabs round the plot (not across the lane)
-        for z in (0, SZ - 1):
-            if p.get(x, 1, z) == "air":
-                p.slab(x, 1, z, "bottom", "base_slab")
-    for z in range(SZ):
-        if p.get(SX - 1, 1, z) == "air":
-            p.slab(SX - 1, 1, z, "bottom", "base_slab")
-        if p.get(0, 1, z) == "air" and z not in LANE_Z and z not in (5, 11):
-            p.slab(0, 1, z, "bottom", "base_slab")
-    for x in range(7, 16):                                   # flagstones laid over the setts in the south yard
-        for z in range(13, 16):
-            if p.get(x, 1, z) == "air" and GP.hsh(x, z, 8) % 3 == 0:
-                p.slab(x, 1, z, "bottom", "base_slab")
-    SP.conifer(p, 15, 15, h=6)
+            g.set(x, 0, z, MOUTH_FLOOR)
 
 
-def batter(p):
-    """The ground story: every outer wall's first course is a weathered batter (deepslate stairs, the step outward),
-    where a wall cell has open ground outside it - never in the lane, never under a colonnette."""
-    for (x, y, z), (n, _) in list(p.b.items()):
-        if y != 1 or not n.endswith(("_bricks", "polished_deepslate", "polished_andesite")):
-            continue
-        for f, (vx, vz) in GP.VEC.items():
-            ox, oz = x + vx, z + vz
-            if not (0 <= ox < SX and 0 <= oz < SZ) or p.get(ox, 1, oz) != "air" or p.get(ox, 2, oz) != "air":
+def keep(g):
+    g.box(3, 15, 1, 11, 3, 13, WALL)
+    for x in range(3, 16):
+        for z in range(3, 14):
+            g.slab(x, 12, z, TERRACE)
+
+
+
+def loop_props(along_z):
+    s, t = str(along_z).lower(), str(not along_z).lower()
+    return dict(north=s, south=s, east=t, west=t, waterlogged="false")
+
+
+def corner_tower(g, x0, z0, top, out_x, out_z, w=4, crown=True):
+    """A w x w shaft x0..x0+w-1, z0..z0+w-1 to `top`; the corbel table at top + 1 one out on its two outer faces
+    (upside-down stairs), on a tower the crown course at top + 2 (arrow loops mid-side), merlons above."""
+    x1, z1 = x0 + w - 1, z0 + w - 1
+    g.box(x0, x1, 1, top, z0, z1, WALL)
+    cx0, cx1 = (x0 - 1, x1) if out_x < 0 else (x0, x1 + 1)
+    cz0, cz1 = (z0 - 1, z1) if out_z < 0 else (z0, z1 + 1)
+    for x in range(cx0, cx1 + 1):
+        for z in range(cz0, cz1 + 1):
+            if x0 <= x <= x1 and z0 <= z <= z1:
+                g.set(x, top + 1, z, DRESS)
+            else:
+                f = "east" if x < x0 else "west" if x > x1 else ("south" if z < z0 else "north")
+                g.stair(x, top + 1, z, f, "top")
+            if crown:
+                g.set(x, top + 2, z, CROWN)
+    if crown:
+        mid_x, mid_z = (cx0 + cx1) // 2, (cz0 + cz1) // 2
+        for (x, z) in ((cx0, mid_z), (cx1, mid_z), (mid_x, cz0), (mid_x, cz1)):
+            g.set(x, top + 2, z, LOOP, **loop_props(x in (cx0, cx1)))
+    merlons(g, edge(cx0, cx1, cz0, cz1), top + 2 + crown)
+    return top + 2 + crown
+
+
+def towers(g):
+    corner_tower(g, 1, 1, 13, -1, -1)
+    corner_tower(g, 1, 12, 13, -1, 1)
+    corner_tower(g, 13, 1, 12, 1, -1, w=3, crown=False)
+    corner_tower(g, 13, 13, 12, 1, 1, w=3, crown=False)
+    storeys = (2, 6, 10)
+    face(g, "west", 1, 1, 3, 1, 13, [(2, 3)], storeys)                 # NW tower, its west face (z 4 is the bay)
+    face(g, "west", 1, 12, 15, 1, 13, [(13, 14)], storeys)             # SW tower, west face
+    face(g, "south", 15, 1, 4, 1, 13, [(2, 3)], storeys)               # SW tower, south face
+    face(g, "south", 15, 13, 15, 1, 12, [(14,)], (2, 6))               # SE turret, south face
+
+
+def bay(g, level):
+    g.box(0, 2, 1, 15, 4, 12, WALL)
+    for z in (4, 12):                                                   # the bay's corners: quoins
+        for y in range(1, 16):
+            g.set(0, y, z, QUOIN[y % 2])
+    for z in range(4, 13):
+        g.stair(0, 1, z, "east", "bottom")
+    for z in (5, 11):                                                   # colonnettes framing the rose
+        for y in range(11, 16):
+            g.set(0, y, z, POST, **POST_UP)
+    for z in (5, 11):                                                   # the colonnettes' imposts
+        g.set(0, 10, z, DRESS)
+    if level >= 3:
+        merlons(g, edge(0, 2, 4, 12), 16)
+        for z in range(5, 12):                                          # the bay's roof inside its merlons
+            g.slab(1, 16, z, DRESS_SL)
+
+
+def portal(g):
+    """Three orders, splayed: the outer at x 0 is 7 wide (z 5..11) and 8 tall, its pointed head springing at 9 (stairs
+    over z 6 / 10, open over z 7..9) to the apex at 10 (stairs over z 7 / 9, the keystone over z 8); the middle at x 1
+    is 7 wide too under a flat head (9); the inner at x 2 is the lane's 5 x 8, colonnettes in its jambs (z 5, 11) and
+    stair springers. Three planes stepping in (ref21's door; the 3/4 camera looks in at 45 degrees). Behind: the mouth -
+    deepslate-brick passage walls and back wall, a deepslate-tile ceiling."""
+    for z in range(5, 12):
+        for y in range(1, 9):
+            g.clear(0, y, z)
+    for z in (7, 8, 9):
+        g.clear(0, 9, z)
+    for z, f in ((6, "north"), (10, "south")):
+        g.stair(0, 9, z, f, "top")
+    for z, f in ((7, "north"), (9, "south")):
+        g.stair(0, 10, z, f, "top")
+    g.set(0, 10, 8, KEY)
+    for z in (5, 11):                                                   # the middle order: 7 wide, flat head
+        for y in range(1, 9):
+            g.clear(1, y, z)
+    for z in range(5, 12):
+        g.set(1, 9, z, DRESS)
+    for z in (5, 11):                                                   # the inner order: colonnettes, its head
+        for y in range(1, 9):
+            g.set(2, y, z, POST, **POST_UP)
+    for z, f in ((6, "north"), (10, "south")):
+        g.stair(2, 9, z, f, "top")
+    for x in range(3, 10):
+        for y in range(1, 9):
+            for z in (5, 11):
+                g.set(x, y, z, MOUTH_WALL)
+        for z in LANE_Z:
+            g.set(x, 9, z, MOUTH_CEIL)
+    for z in (7, 8, 9):
+        g.set(2, 9, z, MOUTH_CEIL)
+    for z in LANE_Z:
+        for y in range(1, LANE_H + 1):
+            g.set(10, y, z, MOUTH_WALL)
+
+
+ROSE_C = (13, 8)        # (y, z) of the rose's centre on the bay face x 0
+
+
+def rose(g):
+    """The sun disc: a round 5 x 5 rose over the portal - a gold boss, eight amber panes round it, a stone ring whose
+    curved quarters are stairs (the corners left as wall), lit behind by three shroomlights (the glow is the rose's
+    own, through its glass)."""
+    yc, zc = ROSE_C
+    for dz in range(-2, 3):
+        for dy in range(-2, 3):
+            d = dz * dz + dy * dy
+            y, z = yc + dy, zc + dz
+            if d == 0:
+                g.set(0, y, z, GOLD)
+            elif d <= 2:
+                g.set(0, y, z, ROSE)
+            elif d == 4:
+                g.set(0, y, z, DRESS)
+            elif d == 5:
+                g.stair(0, y, z, "north" if dz < 0 else "south", "bottom" if dy < 0 else "top")
+    for y in (yc - 1, yc, yc + 1):
+        g.set(1, y, zc - 1, "shroomlight")
+
+
+def wing(g):
+    g.box(5, 11, 1, 5, 14, 15, WALL)
+    for x in range(5, 12):
+        for z in (14, 15):
+            g.slab(x, 6, z, TERRACE)
+    face(g, "south", 15, 5, 11, 1, 5, [(6, 7), (9, 10)], (2,))
+    face(g, "south", 13, 5, 12, 6, 11, [(6, 7), (10, 11)], (7,), batter=False)     # the keep's south face over it
+    for x in range(5, 13):                                              # its base: a string course on the wing roof
+        g.set(x, 6, 13, STRING, facing="south", shape="straight")
+
+
+def spire_tower(g):
+    g.box(11, 15, 12, 16, 6, 10, WALL)
+    for (u0, f, plane) in ((6, "west", 11), (11, "south", 10)):
+        u1, mid = u0 + 4, u0 + 2
+        for u in range(u0, u1 + 1):
+            g.stair(*face_cell(f, plane, u, 12), {"west": "east", "south": "north"}[f], "bottom")   # its plinth
+            g.set(*face_cell(f, plane, u, 13), STRING, facing=f, shape="straight")
+            g.set(*face_cell(f, plane, u, 16), CORNICE, facing=f, shape="straight")
+            for y in (14, 15):
+                q = face_cell(f, plane, u, y)
+                if u in (u0, u1):
+                    g.set(*q, QUOIN[y % 2])
+                elif u == mid:
+                    g.set(*q, POST, **POST_UP)
+        for cols in ((u0 + 1,), (u1 - 1,)):
+            lancet(g, f, plane, cols, 14)
+            g.set(*face_cell(f, plane, cols[0], 16), CORNICE, facing=f, shape="straight")
+    spire(g, 13, 8, 17)
+
+
+def ring_cells(x0, x1, z0, z1):
+    """The edge cells of a rectangle with (facing of the high side, stair shape) for a roof rising inward."""
+    out = []
+    for x in range(x0, x1 + 1):
+        for z in range(z0, z1 + 1):
+            if x0 < x < x1 and z0 < z < z1:
                 continue
-            if oz in LANE_Z and ox <= 9:
-                continue
-            if p.get(x, 2, z) == "air":
-                continue
-            p.stair(x, 1, z, GP.OPP[f], "bottom", "base_st")
-            break
+            if x in (x0, x1) and z in (z0, z1):
+                f = "east" if x == x0 else "west"
+                toward = "south" if z == z0 else "north"
+                right = {"east": "south", "west": "north"}[f]
+                out.append(((x, z), f, "outer_right" if right == toward else "outer_left"))
+            elif x in (x0, x1):
+                out.append(((x, z), "east" if x == x0 else "west", "straight"))
+            else:
+                out.append(((x, z), "south" if z == z0 else "north", "straight"))
+    return out
 
 
-def draw_l1(p):
-    ground(p)
-    lodge(p)
-    nave(p)
-    west_front(p)
-    dome(p)
-    gantry(p)
-    batter(p)
+def steep_ring(g, x0, x1, z0, z1, y, pairs=1):
+    """Macaw's steep-roof pieces round a rectangle (lower + upper half: 2 rise per run), `pairs` stacked, bed filled."""
+    for k in range(pairs):
+        yy = y + 2 * k
+        for (x, z), f, sh in ring_cells(x0, x1, z0, z1):
+            g.set(x, yy, z, SPIRE + "_steep_roof", facing=f, half="bottom", shape=sh)
+            g.set(x, yy + 1, z, SPIRE + "_upper_steep_roof", facing=f, half="bottom", shape=sh)
+        for x in range(x0 + 1, x1):
+            for z in range(z0 + 1, z1):
+                g.set(x, yy, z, SPIRE_CORE)
+                g.set(x, yy + 1, z, SPIRE_CORE)
 
 
-# ============================================================================================ L3
-def draw_l3(p):
-    """The ribbed lantern spire from the dome's crown to the sun disc; the gate towers' caps become slate needles."""
-    cx, cz = DOME
-    p.clear(cx, 19, cz)
-    p.clear(cx, 18, cz)
-    for (x, z) in GP.ring(1, cx, cz):
-        p.clear(x, 19, z)
-    SP.lantern_spire(p, cx, cz, 18)
-    for (tx, tz) in ((3, 2), (3, 14)):                       # the towers' caps grow into needles
-        for y in range(16, 19):
-            p.set(tx, y, tz, "roof_wall")
-        p.set(tx, 19, tz, "gold")
-        p.set(tx, 20, tz, "spike", facing="up")
+def spire(g, cx, cz, y_foot):
+    steep_ring(g, cx - 2, cx + 2, cz - 2, cz + 2, y_foot, 1)
+    steep_ring(g, cx - 1, cx + 1, cz - 1, cz + 1, y_foot + 2, 2)
+    for y in (y_foot + 6, y_foot + 7):
+        g.set(cx, y, cz, "deepslate_tile_wall", **POST_UP)
+    g.set(cx, y_foot + 8, cz, GOLD)
+
+
+def well(g):
+    """The spawn column open to the sky; round 3: a quiet HALO - a round ring of stone-brick slabs laid in the terrace
+    (radius 2, 12 cells; value 0.47 against the terrace's 0.55) round it. Round 1's gold ring "led at RTS, a square
+    donut"; round 2's bare hole "a drain, no circle" (critics)."""
+    for y in range(1, H3):
+        g.clear(SPAWN[0], y, SPAWN[2])
+    for dx in range(-2, 3):
+        for dz in range(-2, 3):
+            if dx * dx + dz * dz in (4, 5):
+                g.slab(SPAWN[0] + dx, 12, SPAWN[2] + dz, DRESS_SL)
+
+
+def lane(g):
+    for x in LANE_X:
+        for z in LANE_Z:
+            for y in range(1, LANE_H + 1):
+                g.clear(x, y, z)
+
+
+# ============================================================================================ L1 / L3
+def draw(level):
+    g = Grid()
+    ground(g)
+    keep(g)
+    towers(g)
+    wing(g)
+    bay(g, level)
+    portal(g)
+    rose(g)
+    spire_tower(g)
+    lane(g)
+    well(g)
+    if level < 3:
+        to_l1(g)
+    else:
+        cap_light_tops(g, H3)
+    return g
+
+
+def to_l1(g):
+    """L1: the towers and turrets stop at their shafts with plain merlons, the spire tower is not built yet, the bay has
+    no merlons (L3 adds or replaces only)."""
+    for q in [q for q in g.b if q[1] >= 13 and 11 <= q[0] <= 15 and 6 <= q[2] <= 10]:
+        del g.b[q]
+    for (x0, z0, w, top) in ((1, 1, 4, 13), (1, 12, 4, 13), (13, 1, 3, 12), (13, 13, 3, 12)):
+        for q in [q for q in g.b if q[1] > top and x0 - 1 <= q[0] <= x0 + w and z0 - 1 <= q[2] <= z0 + w
+                  and not (q[0] <= 2 and 4 <= q[2] <= 12)]:
+            del g.b[q]
+        merlons(g, edge(x0, x0 + w - 1, z0, z0 + w - 1), top + 1)
+    for q in [q for q in g.b if q[1] >= H1]:
+        del g.b[q]
+    cap_light_tops(g, H1)
+
+
+def cap_light_tops(g, h):
+    """No diorite top open to the sky: its up face reads as snow from the RTS camera (0.769 / sat 0.044). Round 3: L1's
+    cut tower shafts, the bay top and the spire's pad showed 12 % snow in the rts still - each gets a stone-brick slab."""
+    top = {}
+    for (x, y, z) in g.b:
+        top[(x, z)] = max(top.get((x, z), -1), y)
+    for (x, z), y in top.items():
+        if g.b[(x, y, z)][0] == WALL:
+            if y + 1 < h:
+                g.slab(x, y + 1, z, DRESS_SL)
+            else:                                   # at the level's height cap: the top course itself stone brick
+                g.set(x, y, z, DRESS)
 
 
 # ============================================================================================ build + checks
-def to_rig(p, sy, label):
+def to_rig(g, sy, label):
     rig = gs._SunRig(SX, sy, SZ)
-    for (x, y, z), (n, props) in p.b.items():
-        if n in ("air", "cave_air"):
-            continue
-        assert 0 <= x < SX and 0 <= z < SZ and 0 <= y < sy, ((x, y, z), n, label)
+    for (x, y, z), (n, props) in g.b.items():
         rig.set(x, y, z, n, **props)
     rig.bury_grass()
     rig.settle()
@@ -246,27 +520,8 @@ def to_rig(p, sy, label):
 
 
 def build(level):
-    p = Part(PAL)
-    draw_l1(p)
-    if level >= 3:
-        draw_l3(p)
-    ys = [y for (x, y, z), v in p.b.items() if v[0] not in ("air", "cave_air")]
-    return to_rig(p, max(ys) + 1, "sunwain L%d" % level)
-
-
-def is_fine(n):
-    return n.endswith(FINE) or n in FINE
-
-
-def stats(rig):
-    """(blocks, fine %, visible blocks, fine % of the visible): visible = a face the RTS camera sees (up, south, west)
-    is open or looks through a fine block."""
-    b = rig.b
-    vis = [q for q in b if any((q[0] + dx, q[1] + dy, q[2] + dz) not in b or is_fine(b.get(
-        (q[0] + dx, q[1] + dy, q[2] + dz), ("air",))[0]) for dx, dy, dz in ((0, 1, 0), (0, 0, 1), (-1, 0, 0)))]
-    fine = [q for q in b if is_fine(b[q][0])]
-    vfine = [q for q in vis if is_fine(b[q][0])]
-    return len(b), 100.0 * len(fine) / len(b), len(vis), 100.0 * len(vfine) / max(1, len(vis))
+    g = draw(level)
+    return to_rig(g, max(y for (_, y, _) in g.b) + 1, "sunwain L%d" % level)
 
 
 def floating(b):
@@ -285,7 +540,7 @@ def check(rig, path, label):
     assert not floating(n), "floating: %s" % floating(n)[:8]
     bad = sorted({v for v in n.values() if any(f in v for f in (
         "water", "lava", "sand", "gravel", "_concrete_powder", "fire", "redstone", "tuff_brick", "polished_tuff",
-        "sapling", "torch", "cobweb", "scaffolding", "pink", "purple", "magenta"))
+        "sapling", "torch", "cobweb", "scaffolding", "pink", "purple", "magenta", "calcite", "quartz"))
         or ("copper" in v and not v.startswith("waxed_"))})
     assert not bad, "forbidden: %s" % bad
     one_way, ground_, roof, rooms, note = ap.audit(label, path)
@@ -302,9 +557,8 @@ def check(rig, path, label):
                 seen.add(nb)
                 stack.append(nb)
     assert out_west, "the spawn does not walk out of the west face"
-    blocks, fine, vis, vfine = stats(rig)
-    return "%s %s, %d blocks, %.0f%% fine (%.0f%% of %d visible): lane clear, spawn column clear, no pockets (%d " \
-           "roof-only cells)%s" % (label, "x".join(map(str, rig.size)), blocks, fine, vfine, vis, len(roof), note)
+    return "%s %s, %d blocks: lane clear, spawn column clear, no pockets (%d roof-only cells)%s" % (
+        label, "x".join(map(str, rig.size)), len(n), len(roof), note)
 
 
 if __name__ == "__main__":
