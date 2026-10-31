@@ -564,7 +564,7 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 // ALBEDO_PROBE (light pass 20, lit.fsh / composite / final): terrain drawn unlit - 1 the texture x vertex colour as the
 // loader hands it (the biome tint), 2 after the shader's own albedo work (meadow, plant caps); no AO, haze, glow or grade.
 // A near/far hue gap still in this image is the texture's or the world's, not the light's
-#define ALBEDO_PROBE 0 // [0 1 2]
+#define ALBEDO_PROBE 2 // [0 1 2]
 // CONTACT_PROBE 1 (light pass 21, composite.fsh): the contact crease's strength in red (1 - its factor, x 1 / (1 -
 // CONTACT_FLOOR), so the floor reads full red) over the frame's grey: no red at a cube's foot means it never ran
 #define CONTACT_PROBE 0 // [0 1]
