@@ -65,6 +65,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.ELDER_TREANT.define(BUILDER);
         UnitCosts.WISP_CHOIR.define(BUILDER);
         UnitCosts.BLOOM_PRIESTESS.define(BUILDER);
+        UnitCosts.THORNWEAVER.define(BUILDER);
         UnitCosts.SUN_COLOSSUS.define(BUILDER);
         UnitCosts.WORLD_TREE_WALKER.define(BUILDER);
         UnitCosts.SEEDSHAPER.define(BUILDER);
@@ -499,6 +500,9 @@ public class ReignOfNetherCommonConfigs {
         // Priestess a little above the Witch (a whole-army healer that also cleanses)
         public static final ResourceCostConfigEntry WISP_CHOIR = ResourceCostConfigEntry.Unit(110,60,70,32,3, ResourceCosts.WISP_CHOIR, "Wisp Choir Config");
         public static final ResourceCostConfigEntry BLOOM_PRIESTESS = ResourceCostConfigEntry.Unit(120,80,80,40,3, ResourceCosts.BLOOM_PRIESTESS, "Bloom Priestess Config");
+        // the essence caster (design/essence_casters.md) between the Priestess (175 metal) and the Shade Ranger (215):
+        // a support like her, whose essence spells can also hold and out-number a fight
+        public static final ResourceCostConfigEntry THORNWEAVER = ResourceCostConfigEntry.Unit(120,80,100,40,3, ResourceCosts.THORNWEAVER, "Thornweaver Config");
         public static final ResourceCostConfigEntry EMBALMER = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.EMBALMER, "Embalmer Config");
         public static final ResourceCostConfigEntry BONEWRIGHT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.BONEWRIGHT, "Bonewright Config");
         public static final ResourceCostConfigEntry WAR_MAMMOTH = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.WAR_MAMMOTH, "War Mammoth Config");
