@@ -85,7 +85,7 @@ FLOWERS = ("allium", "azure_bluet", "oxeye_daisy", "lily_of_the_valley", "cornfl
 STARTING_TYPES = {"moss_block", "mossy_stone_bricks"}       # HeartwoodHall.startingBlockTypes
 # BuildingAmbienceClientEvents.CAPITOL_SPOTS["heartwood_hall"], Fx.PETAL (structure coordinates, block x spans x..x+1):
 # under the crown's four low lobes (LOBES), and over its top
-PETAL_SPOTS = ((10.5, 11.5, 4.5), (4.5, 10.5, 4.5), (10.5, 10.5, 10.5), (5.5, 13.5, 9.5), (7.5, 21.5, 7.5))
+PETAL_SPOTS = ((10.5, 11.5, 4.5), (4.5, 10.5, 4.5), (10.5, 10.5, 10.5), (3.5, 14.5, 7.5), (7.5, 21.5, 7.5))
 
 
 def leaf(c, dx, y, dz, name="azalea_leaves"):
@@ -300,8 +300,8 @@ def in_face_zone(dx, y, dz):
 # temple; the winners were a temple you can see under an uneven blossom crown. The crown leans north-east, away from
 # the RTS camera (it looks north-east from the south-west), so the temple's south and west faces show under it; the
 # trunk shows in the gap between the parapet (y7-8) and the lobes' undersides (y11+).
-LOBES = ((3, 14, -3, 3.8, 2.2, 3.8), (-3, 13, -3, 3.1, 2.0, 3.1), (3, 13, 3, 3.1, 2.0, 3.1),
-         (-2, 15, 2, 2.6, 1.8, 2.6), (1, 17, -1, 4.0, 2.6, 4.0), (0, 20, 0, 2.2, 1.4, 2.2))
+LOBES = ((3, 14, -3, 3.8, 2.2, 3.8), (-3, 14, -3, 3.1, 2.0, 3.1), (3, 14, 3, 3.1, 2.0, 3.1),
+         (-4, 16, 0, 2.6, 1.8, 2.6), (1, 17, -1, 4.0, 2.6, 4.0), (0, 20, 0, 2.2, 1.4, 2.2))
 
 
 def canopy(c):
@@ -325,8 +325,8 @@ def canopy(c):
                     c.set(dx, y, dz, ("ochre_froglight", "shroomlight", "verdant_froglight")[h % 3],
                           **({} if h % 3 == 1 else {"axis": "y"}))   # glowing fruit in the underside
                     continue
-                leaf(c, dx, y, dz, "flowering_azalea_leaves" if h % 6 == 0 else "cherry_leaves")
-    c.set(0, 21, 0, "shroomlight")                               # the crown's heart
+                belly = y < ly - 0.5 * ry                         # the lobe's shaded underside: the green, grouped
+                leaf(c, dx, y, dz, ("flowering_azalea_leaves" if h % 2 else "azalea_leaves") if belly else "cherry_leaves")
 
 
 def roots(c):
@@ -339,7 +339,10 @@ def roots(c):
            (7, 7, 2), (7, 7, 1))
     for (sx, sz) in CORNERS:
         for (k, j, y) in ARC:
-            c.set(sx * k, y, sz * j, WOOD, axis="y")
+            if y <= 4 and (k, j) != (7, 7):                    # the arc frays into a root mat as it lands: a solid
+                c.set(sx * k, y, sz * j, "mangrove_roots", **DRY)   # column read as "a zipper / spine" (critics, r3)
+            else:
+                c.set(sx * k, y, sz * j, WOOD, axis="y")
         c.set(sx * 7, 0, sz * 7, "rooted_dirt")
         # bark stairs on the arc's back so its top line slopes rather than steps
         c.stair(sx * 5, 8, sz * 5, "east" if sx < 0 else "west", name="oak_stairs")
