@@ -51,3 +51,25 @@ Lessons (r12): the 3/4 camera model was 1.2x too big (FOV 70, the game draws 77 
 table's hue median was wrong - fix the camera before judging; dusk light differs between eyes runs (compare dusk only
 inside one run); a second material on a small roof reads as a pattern at RTS whichever way it is placed (clusters ->
 arrow, fine grain -> V); the 3/4 camera looks down so steeply that a lamp more than 1 block behind a pane is never seen.
+
+## Sunwain Court r1 (Sunforged T1 vehicle lab, the r12 method; PR #456) - ref21, 17 x 17 x 26, one fixed rubric
+Designer pass: itachi2-api runs 20261030-162547-sunforged-design + -163025-sunforged-design-cont (rubric = r12's 7 axes).
+Each round photographed with its control in ONE eyes run (build e7b4e94 = build_run 41096418230, branch pack, plain
+lane, keep_only, times 6000); two fresh API critics per round, a / b. Expected and measured numbers:
+design/vehicle_labs/sunforged_expected.md.
+
+| Round | Eyes run | RTS | Close | Landmark | Gate | Roofs | Materials | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| round 2 (control, Oct 28) | - | 4 overall (round 1 critic) | | | | | | | no single landmark, weak gate, no bay rhythm, roof blob, mixed materials, messy ground, dead windows | - |
+| massing A / B / C + control | 41124572036 | A 6 / 7, C 5 / 5, control 5 / 5 | - | A 5 / 6, C 7 / 7, control 4 / 4 | A 5 / 5, control 3 / 3 | A 6 / 6, control 4 / 3 | - | - | both pick A (ref21 keep); spire flattens to a salmon square at RTS; four equal towers; gate not the darkest opening | A -> A2 (spire shaft, tower hierarchy, pale wing, splayed portal) |
+| detail r1 (aeb4ae58) | 41138964754 | 5 / 5 (control 4 / 4) | 5 / 5 | 6 / 5 | 5 / 5 | 5 / 6 | 5 / 5 | 5 / 3 | grey andesite walls (0.29 / 0.38) in the ground's mid band - "a plain grey castle with a yellow square on its roof"; the gold halo ring leads at RTS; the spire a squat hipped roof from above; windows read as white crosses; stacked battlement stripes | overall 5 / 5 vs control 4 / 4: one peak in 3/4, a real gate, a lit rose, zones, no chequer; L1 reads as the first stage |
+| detail r2 (da4b623b) | 41145225614 | 5 / 5 (r1 5 / 5) | 5 / 5 | 6 / 6 | 5 / 5 | 4 / 5 | 4 / 4 | 4 / 4 | no gain: the diorite field against stone-brick quoins reads as "zebra / ladder stripes"; the deepslate spire leads but "overshoots into the environment darks" (0.17-0.20); the bare well "a drain, no circle"; grey glass: crosses gone, windows dead at dusk | the plain coping (both); halo removal (b) |
+| detail r3 (final) | 41147427956 | 5 / 5 (r2 5 / 5) | 5 / 6 | 5 / 5 | 5 / 5 | 5 / 5 | 5 / 5 | 4 / 4 | 5.5 / 5.5 overall vs r2 5 / 5: zebra gone, a terrace centre; the timber spire (0.39) sits in the ground mids and leads less than the slate; the spire is off the gate-rose axis and tangent to the north tower crown; the flat pale terrace is the largest face from above; the rose an orange smear, the halo ring square; both: detail has plateaued - next is massing (spire on axis, a stepped roof face) for lovish | corners in the field stone, the halo ring (both), timber over slate (b; a: a band question for lovish) |
+
+Lessons (Sunwain Court r1): a light stone's TOP can read as snow while its sides do not (polished diorite: up 0.769,
+south 0.592, west 0.435) - put it only on vertical faces and test the level's own rts snow share (L1's cut tops showed
+12 %); long-and-short quoins in two values read as "zebra / ladder stripes" at RTS; a steep spire reads from the RTS
+camera only by value, and both ends overshoot (granite 0.55 "salmon", slate 0.18 "environment darks", timber 0.39
+"in the ground mids") - its place on the gate-rose axis and its footprint are massing, not material; re-measuring a
+camera-table entry another lab's tests rely on moves their numbers (copper blotch 0.050 -> 0.052): measure with
+camera_colour.py --add-only.
