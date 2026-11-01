@@ -266,7 +266,7 @@ public class BuildingAmbienceClientEvents {
      *  crown (tools/capitol_mausoleum.py, Oct 19), the Central Portal's four braziers (tools/gen_capitol_details.py), the
      *  Grand Foundry's pressure dome and four south / west blast furnaces (tools/capitol_foundry_hall.py), the Admiral's
      *  Beacon's lighthouse vane and dock (tools/capitol_wreck_harbour.py), the Pagoda of a Thousand Storms' crown rod
-     *  and corner crystals (tools/capitol_jade_pagoda.py), the World-Tree Court's falling petals
+     *  and corner rods (tools/capitol_jade_pagoda.py), the World-Tree Court's falling petals
      *  (tools/capitol_heartwood_hall.py, Oct 19). Others breathe from their roofline. */
     private static final Map<String, Spots> CAPITOL_SPOTS = Map.of(
         "town_centre", new Spots(new double[] { 7.5, 20.1, 7.5, 7.5, 14.5, 14.1, 0.9, 14.5, 7.5 },
