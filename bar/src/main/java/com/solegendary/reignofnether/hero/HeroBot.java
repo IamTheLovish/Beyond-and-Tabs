@@ -306,9 +306,9 @@ public final class HeroBot {
         }
     }
 
-    /** Ground-aimed movers with no fight use of their own: the hero's way out. */
+    /** Movers with no fight use of their own, marked so in the kit (AbilitySpec.escape): the hero's way out. */
     static boolean isEscape(FactionHeroAbility a) {
-        return a.spec.ai == HeroKit.Ai.NONE && a.spec.target == HeroKit.Target.GROUND;
+        return a.spec.escape;
     }
 
     static boolean isHeal(FactionHeroAbility a) {
