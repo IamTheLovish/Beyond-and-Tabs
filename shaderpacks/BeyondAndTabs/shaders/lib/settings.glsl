@@ -27,6 +27,9 @@ const float ambientOcclusionLevel = 1.0;
 #define GRADE 1 // [0 1]
 // edge smoothing on geometry edges (as the mod's world look does without a pack)
 #define EDGE_AA 1 // [0 1]
+// our blocks' and units' material maps (slice 2, lib/pbr.glsl): relief from _n, highlights, sky sheen on metals and
+// gems, emission from _s. Off: the slice 1 look, for an A/B
+#define MATERIALS 1 // [0 1]
 
 // block ids from block.properties
 #define ID_FOLIAGE 10001.0
