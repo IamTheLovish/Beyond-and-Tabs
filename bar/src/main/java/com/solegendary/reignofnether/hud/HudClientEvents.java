@@ -127,8 +127,8 @@ public class HudClientEvents {
     // the control-group buttons among renderedButtons: mouse only, their number keys act on the press (ControlGroup)
     private static final Set<Button> controlGroupButtons = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
     // the selected unit's / building's own card (orders, abilities, build menu, production): its hotkeys win over
-    // any HUD-wide button on the same key (the minimap toggle on M, the idle-worker cycler on ".", the last-alert
-    // jump on Space) - BAR's bound-key rule, generalised from the idle-worker case
+    // any HUD-wide button on the same key (the minimap toggle on M, the idle-worker cycler, the last-alert
+    // jump on F5) - BAR's bound-key rule, generalised from the idle-worker case
     private static final ArrayList<Button> cardButtons = new ArrayList<>();
     // every build button on the card this frame, all tabs (BAR's Z / X / C / V build-category keys pick from it)
     private static final ArrayList<Button> allBuildButtons = new ArrayList<>();
@@ -371,12 +371,34 @@ public class HudClientEvents {
             controlGroup.entityIds.removeIf(id -> id == entityId);
     }
 
+    // BAR's Tab (select commander) as a plain press only: latched on the press, run on the release (onKeyRelease). Two
+    // sources, because each misses some keys: the raw press (onInput, the event the overview's Shift+Tab and the Ctrl+Tab
+    // cycle read) never comes for a key the RTS screen cancels (E / L, TopdownGuiClientEvents.onKeyPress - Codex round
+    // 2 of BAC-007b, select commander rebound there), and the screen's own press skips some bound vanilla keys (above
+    // onKeyRelease). PressLatch takes the same press twice.
+    private static final com.solegendary.reignofnether.keybinds.PressLatch selectCommanderPress =
+        new com.solegendary.reignofnether.keybinds.PressLatch();
+
+    private static boolean plain(int modifiers) {
+        return (modifiers & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SHIFT | GLFW.GLFW_MOD_ALT)) == 0;
+    }
+
+    // first and even when cancelled: TopdownGuiClientEvents cancels E / L to keep the inventory and advancements shut
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST, receiveCanceled = true)
+    public static void onScreenKeyPressForTab(ScreenEvent.KeyPressed.Pre evt) {
+        if (OrthoviewClientEvents.isEnabled() && evt.getScreen() instanceof TopdownGui
+                && Keybindings.selectCommander.matches(evt.getKeyCode()))
+            selectCommanderPress.press(plain(evt.getModifiers()));
+    }
+
     @SubscribeEvent
     // can't use ScreenEvent.KeyboardKeyPressedEvent as that only happens when a screen is up
     public static void onInput(InputEvent.Key evt) {
         if (OrthoviewClientEvents.isEnabled() && evt.getAction() == GLFW.GLFW_PRESS) {
             if (evt.getKey() == Keybindings.getFnum(1).getKey())
                 HudPanels.onF1();   // RoN's F1 and vanilla's hideGui are one switch (HudPanels.hidden)
+            if (Keybindings.selectCommander.matches(evt.getKey()))
+                selectCommanderPress.press(plain(evt.getModifiers()));
         }
     }
 
@@ -2315,32 +2337,35 @@ public class HudClientEvents {
     @SubscribeEvent
     public static void onKeyRelease(ScreenEvent.KeyReleased.KeyReleased.Post evt) {
         ControlGroup.onKeyReleased(evt.getKeyCode());
+        // every release of the select-commander key ends its latch, before anything below can return: a Ctrl+Tab idle-builder
+        // chord used to leave it held and disarmed, so the next plain Tab did nothing (Codex review of BAC-007b 2a)
+        boolean commanderTap = Keybindings.selectCommander.matches(evt.getKeyCode()) && selectCommanderPress.release();
         if (TextInputClientEvents.isAnyInputFocused())
             return;
         if (MC.screen == null || !MC.screen.getTitle().getString().contains("topdowngui_container"))
             return;
         if (evt.getKeyCode() == GLFW.GLFW_KEY_F3)
             showPreselectedBlockInfo = !showPreselectedBlockInfo;
-        // the idle-worker key ("." by default) is also a build-menu slot on some factions (hotkey8, the storage
-        // vault): with a worker selected the card's button wins and the cycler stays quiet, as BAR's does for a
-        // bound key; F10 is the alias that always cycles (HelperButtons.cycleIdleWorker)
         int key = evt.getKeyCode();
         // Z / Space held over a drag box were its Smart Select filters (same type / idle only), not the ability
-        // slot, the shop or "jump to the last alert" they also are (CursorClientEvents)
+        // slot or the shop they also are (CursorClientEvents)
         if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
             return;
-        // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W army, Ctrl+C commander, Ctrl+B / Ctrl+Shift+B idle builders,
-        // Ctrl+A all units, Ctrl+Z same type) win over every button on the letter. Before the tap/hold rule: with Ctrl
-        // held the camera never pans (OrthoviewClientEvents), so a slow Ctrl+A is still the chord
+        // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W same type, Ctrl+C commander, Ctrl+Tab / Ctrl+Shift+Tab idle builders,
+        // Ctrl+E all units) win over every button on the letter
         if (OrthoviewClientEvents.isEnabled() && com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
                 com.solegendary.reignofnether.keybinds.ChordKeys.of(key, Keybindings.ctrlMod.isDown(),
                     net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())))
             return;
-        // S is WASD panning as well as Stop (and so is any order a player puts on W/A/S/D): a press
-        // the camera panned for, or one held past a tap once frame lag is allowed for, was a pan, not an order
-        // (keybinds/KeyTapTracker)
-        if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.isHold(key))
+        // BAR's Tab: select the commander and centre on it, even while the commander button is hidden. Plain press only:
+        // Ctrl+Tab is the idle builder and Shift+Tab the camera overview (OrthoviewClientEvents). Decided at the press
+        // (onInput latches it): a modifier let go before Tab must not turn the release into a plain Tab
+        if (Keybindings.selectCommander.matches(key) && OrthoviewClientEvents.isEnabled()) {
+            if (commanderTap)
+                com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
+                    com.solegendary.reignofnether.keybinds.ChordKeys.Chord.SELECT_COMMANDER);
             return;
+        }
         // BAR queue edits: N / Ctrl+N skip / cancel-last, and a Space that inserted an order (QueueEditKeys)
         if (com.solegendary.reignofnether.unit.QueueEditClientEvents.onKeyRelease(key))
             return;
@@ -2372,7 +2397,7 @@ public class HudClientEvents {
                 button.checkPressed(key);
         if (key == Keybindings.getFnum(10).getKey() && OrthoviewClientEvents.isEnabled())
             HelperButtons.cycleIdleWorker(false);
-        // BAR: Space looks at the last "under attack" alert, unless the card uses the key (the item shop's Space)
+        // BAR: F5 looks at the last "under attack" alert, unless the card uses the key
         if (!cardKey && Keybindings.lastAlert.matches(key) && OrthoviewClientEvents.isEnabled())
             com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents.jumpToLastAlert();
     }
@@ -2499,11 +2524,6 @@ public class HudClientEvents {
         return false;
     }
 
-    private static boolean isPanKey(int key) {
-        return key == Keybindings.panUp.getKey() || key == Keybindings.panLeft.getKey()
-            || key == Keybindings.panDown.getKey() || key == Keybindings.panRight.getKey();
-    }
-
     // BAR's gui_unit_group_number: the group's digit beside every grouped unit drawn this frame
     @SubscribeEvent
     public static void onRenderLevelGroupNumbers(net.minecraftforge.client.event.RenderLevelStageEvent evt) {
@@ -2615,15 +2635,15 @@ public class HudClientEvents {
             evt.setCanceled(true);
         }
 
-        // Cycle through selected units: Ctrl+Tab (Ctrl+Shift+Tab backwards) - plain Tab is BAR's camera overview
-        if (evt.getKeyCode() == Keybindings.tab.getKey()
-                && (evt.getKeyCode() != Keybindings.overview.getKey() || Keybindings.ctrlMod.isDown())) {
-            cycleUnitSubgroups();
-            cycleBuildingSubgroups();
+        // BAR's cycleselected: "." cycles the selected unit types forward, "," backward
+        boolean next = Keybindings.tab.matches(evt.getKeyCode());
+        if (next || Keybindings.cyclePrev.matches(evt.getKeyCode())) {
+            cycleUnitSubgroups(!next);
+            cycleBuildingSubgroups(!next);
         }
     }
 
-    private static void cycleUnitSubgroups() {
+    private static void cycleUnitSubgroups(boolean reversed) {
         List<LivingEntity> selUnits = UnitClientEvents.getSortedSelectedUnits();
         var unitNameSet = new LinkedHashSet<String>();
         Set<String> uniqueValues = new HashSet<>();
@@ -2638,7 +2658,6 @@ public class HudClientEvents {
         if (unitNames.size() <= 1 || hudSelectedEntity == null)
             return;
 
-        boolean reversed = Keybindings.shiftMod.isDown();
         String selUnitName = getModifiedEntityName(hudSelectedEntity);
         if (reversed)
             Collections.reverse(unitNames);
@@ -2671,7 +2690,7 @@ public class HudClientEvents {
         }
     }
 
-    private static void cycleBuildingSubgroups() {
+    private static void cycleBuildingSubgroups(boolean reversed) {
         List<BuildingPlacement> selBuildings = BuildingClientEvents.getSelectedBuildings();
         List<String> buildingNames = selBuildings
                 .stream().map(b -> {
@@ -2686,7 +2705,6 @@ public class HudClientEvents {
         if (buildingNames.size() <= 1 || hudSelectedPlacement == null)
             return;
 
-        boolean reversed = Keybindings.shiftMod.isDown();
         String selBuildingName = ReignOfNetherRegistries.BUILDING.getKey(hudSelectedPlacement.getBuilding()).toString();
 
         if (reversed)

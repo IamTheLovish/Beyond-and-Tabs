@@ -33,7 +33,7 @@ public class AttackWarningClientEvents {
     private static final int WARN_DURATION_MAX = 600;
     private static int warnDuration = 0;
 
-    // BAR: Space jumps the camera to the last alert (base / units / commander under attack, an ally's commander).
+    // BAR: F5 jumps the camera to the last alert (base / units / commander under attack, an ally's commander).
     // Kept apart from lastAttackPos, which the warning button clears when used or ignored.
     private static final long LAST_ALERT_MAX_AGE_MS = 60_000;
     private static BlockPos lastAlertPos = null;
@@ -49,7 +49,7 @@ public class AttackWarningClientEvents {
         return true;
     }
 
-    /** True while Space has somewhere to go: alert lines add "Space to look" only then. */
+    /** True while the last-alert key has somewhere to go: alert lines add "to look" only then. */
     public static boolean hasRecentAlert() {
         return lastAlertPos != null && System.currentTimeMillis() - lastAlertMs <= LAST_ALERT_MAX_AGE_MS;
     }
@@ -59,7 +59,7 @@ public class AttackWarningClientEvents {
         lastAlertMs = System.currentTimeMillis();
     }
 
-    /** " - Space to look" (the key's current name), for alert lines that have a place to look at. */
+    /** " - F5 to look" (the key's current name), for alert lines that have a place to look at. */
     public static String lookHint() {
         String key = com.solegendary.reignofnether.keybinds.Keybindings.lastAlert.getDisplayName();
         return I18n.get("hud.reignofnether.alert_look", key);

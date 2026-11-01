@@ -3,7 +3,8 @@
 
 1. Camera keys stay camera keys. lovish (Oct 20): "fight command is on a instead of f which is blocking the wasd
    camera" - Attack defaulted to A, which is also pan-left (fixed in #39). A default binding outside the camera
-   category on W/A/S/D or an arrow key fails here, unless it is listed in ALLOWED_ON_CAMERA_KEYS with the reason.
+   category on an arrow key fails here, unless it is listed in ALLOWED_ON_CAMERA_KEYS with the reason. WASD pan is
+   gone (BAC-007b, the user 2026-10-29: copy BAR's Grid keys, where A S D W are orders), so the arrows are the pan keys.
 
 2. No new GameTests in the shared hot file. Two PRs that both added tests at the same spot in SkirmishGameTests.java
    conflicted (#44 / #45, Oct 21). New tests go in their own class (gametest/<Topic>GameTests.java), as Lane C does.
@@ -22,15 +23,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KEYBINDINGS = "bar/src/main/java/com/solegendary/reignofnether/keybinds/Keybindings.java"
 HOT_TESTS = "bar/src/main/java/com/solegendary/reignofnether/gametest/SkirmishGameTests.java"
 
-CAMERA_KEYS = {"W", "A", "S", "D", "LEFT", "RIGHT", "UP", "DOWN"}
-# key id -> why it may share a camera key (a tap fires the order, a hold pans: keybinds/KeyTaps)
-ALLOWED_ON_CAMERA_KEYS = {
-    "key.reignofnether.stop": "BAR's Stop on S; tap = order, hold = pan (KeyTaps). Kept until lovish says otherwise.",
-    "key.reignofnether.build_grid_2": "BAR grid build menu W: live only while a build tab is open; a hold still pans (KeyTaps). Tester OK 2026-10-26.",
-    "key.reignofnether.build_grid_5": "BAR grid build menu A: live only while a build tab is open; a hold still pans (KeyTaps). Tester OK 2026-10-26.",
-    "key.reignofnether.build_grid_6": "BAR grid build menu S: live only while a build tab is open; a hold still pans (KeyTaps). Tester OK 2026-10-26.",
-    "key.reignofnether.build_grid_7": "BAR grid build menu D: live only while a build tab is open; a hold still pans (KeyTaps). Tester OK 2026-10-26.",
-}
+CAMERA_KEYS = {"LEFT", "RIGHT", "UP", "DOWN"}
+# key id -> why it may share a camera key (none since WASD pan and its tap/hold rule went, BAC-007b)
+ALLOWED_ON_CAMERA_KEYS = {}
 
 BINDING = re.compile(
     r'new\s+Keybinding\(\s*"(?P<id>key\.[^"]+)"\s*,\s*GLFW\.GLFW_KEY_(?P<key>[A-Z0-9_]+)\s*,\s*(?P<cat>CATEGORY_[A-Z_]+)'
@@ -50,7 +45,7 @@ def check_camera_keys(problems):
         clash = [k for k in keys if k in CAMERA_KEYS]
         if clash and m.group("id") not in ALLOWED_ON_CAMERA_KEYS:
             problems.append(f"{m.group('id')} defaults to {'/'.join(clash)}, a camera pan key "
-                            f"(lovish Oct 20: the order on A blocked the WASD camera). Pick another key, or add it "
+                            f"(lovish Oct 20: an order on a pan key blocked the camera). Pick another key, or add it "
                             f"to ALLOWED_ON_CAMERA_KEYS in tools/check_guards.py with his OK and the reason.")
     if found < 10:
         problems.append(f"only {found} keybindings parsed from {KEYBINDINGS} - the pattern no longer matches the file")

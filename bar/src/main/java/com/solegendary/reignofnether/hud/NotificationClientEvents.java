@@ -430,7 +430,7 @@ public class NotificationClientEvents {
             playSound(alert);
     }
 
-    // alerts with a place behind them: Space (AttackWarningClientEvents.jumpToLastAlert) looks at it
+    // alerts with a place behind them: F5 (AttackWarningClientEvents.jumpToLastAlert) looks at it
     private static boolean hasPlace(Alert alert) {
         return (alert == Alert.COMMANDER_ATTACKED || alert == Alert.BASE_ATTACKED || alert == Alert.UNITS_ATTACKED
             || alert == Alert.ALLY_NEEDS_HELP)

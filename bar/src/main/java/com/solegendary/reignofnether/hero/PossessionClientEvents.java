@@ -351,7 +351,7 @@ public class PossessionClientEvents {
     }
 
     /**
-     * The hop key (Tab, Keybindings.tab) was pressed (OrthoviewClientEvents.onInput, the same hook as the toggle
+     * The hop key (Tab, Keybindings.possessHop) was pressed (OrthoviewClientEvents.onInput, the same hook as the toggle
      * key - a Keybinding has no click queue of its own). True when possessing, so the RTS view's Tab never runs.
      */
     public static boolean onHopKey() {
@@ -733,7 +733,7 @@ public class PossessionClientEvents {
         String name = MiscUtil.getSimpleEntityName(mob).replace("_", " ").toUpperCase();
         String feed = "UNIT FEED: " + name;
         String hint = "[" + Keybindings.toggleCamera.getDisplayName() + "] RETURN TO COMMAND";
-        String hint2 = "[" + Keybindings.tab.getDisplayName() + "] NEXT UNIT";
+        String hint2 = "[" + Keybindings.possessHop.getDisplayName() + "] NEXT UNIT";
         int fw = Math.max(font.width(feed), Math.max(font.width(hint), font.width(hint2)));
         gg.fill(w - fw - 14, 4, w - 4, 41, PANEL);
         gg.drawString(font, feed, w - font.width(feed) - 9, 8, GOLD, false);

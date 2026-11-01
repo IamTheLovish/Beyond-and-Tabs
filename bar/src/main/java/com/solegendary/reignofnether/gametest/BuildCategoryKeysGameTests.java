@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.BuildGroup;
 import com.solegendary.reignofnether.keybinds.BuildCategoryKeys;
 import com.solegendary.reignofnether.keybinds.BuildCategoryKeys.Action;
 import com.solegendary.reignofnether.keybinds.BuildCategoryKeys.Press;
@@ -112,6 +113,31 @@ public class BuildCategoryKeysGameTests {
         verdict(helper, problems);
     }
 
+    /** BAR's grid row 1 is the bottom row Z X C V (gui_gridmenu.lua:869-872): the first buildings fill it, then A S D F, then Q W E R. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void build_grid_fills_the_bottom_row_first(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        int[] fill = { GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_C, GLFW.GLFW_KEY_V,
+            GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_F,
+            GLFW.GLFW_KEY_Q, GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_E, GLFW.GLFW_KEY_R };
+        for (int slot = 0; slot < fill.length; slot++)
+            if (BuildGroup.slotKey(slot).getDefaultKey() != fill[slot])
+                problems.add("slot " + slot + " defaults to " + BuildGroup.slotKey(slot).buttonLabel);
+        if (BuildGroup.slotKey(12) != null) problems.add("slot 12 must be click only");
+        verdict(helper, problems);
+    }
+
+    /** The grid is drawn anchored at the bottom: slot 0 on the last row, the 13th slot on the row above the top key row. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void build_grid_is_drawn_from_the_bottom_row_up(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        if (BuildGroup.gridRow(0, 1) != 0 || BuildGroup.gridRow(3, 1) != 0) problems.add("one row: cells 0-3 on row 0");
+        if (BuildGroup.gridRow(0, 2) != 1 || BuildGroup.gridRow(4, 2) != 0) problems.add("two rows: slot 0 bottom, slot 4 above");
+        if (BuildGroup.gridRow(0, 3) != 2 || BuildGroup.gridRow(8, 3) != 0) problems.add("three rows: slot 0 bottom, slot 8 top");
+        if (BuildGroup.gridRow(5, 4) != 2 || BuildGroup.gridRow(12, 4) != 0) problems.add("four rows: slot 5 on row 2, slot 12 on top");
+        verdict(helper, problems);
+    }
+
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
     public static void build_key_migration_leaves_the_new_bindings_alone(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
@@ -127,17 +153,22 @@ public class BuildCategoryKeysGameTests {
         verdict(helper, problems);
     }
 
-    /** BAR's Ctrl+W selects the army: "-" stays its card key, and W (pan up) is the only binding Ctrl+W could touch. */
+    /**
+     * BAR's Ctrl+W selects every unit of the selected types: "-" stays the select-army button's key, and nothing but the
+     * second grid cell is on a plain W (the chord wins over it while Ctrl is held, ChordKeys).
+     */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
-    public static void ctrl_w_select_army_does_not_clash_with_pan_or_build_keys(GameTestHelper helper) {
+    public static void ctrl_w_same_type_does_not_clash_with_build_keys(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         if (Keybindings.selectArmy.getDefaultKey() != GLFW.GLFW_KEY_MINUS)
             problems.add("select army keeps '-' as its own key");
-        if (Keybindings.panUp.getDefaultKey() != GLFW.GLFW_KEY_W)
-            problems.add("W is pan up (a held W pans; only Ctrl+W selects the army)");
-        for (Keybinding kb : List.of(Keybindings.buildTabEconomy, Keybindings.buildTabMilitary, Keybindings.buildTabDefence, Keybindings.buildTabTech))
-            if (kb.getDefaultKey() == GLFW.GLFW_KEY_W)
-                problems.add(kb.getTranslationKey() + " must not sit on W");
+        if (com.solegendary.reignofnether.keybinds.ChordKeys.of(GLFW.GLFW_KEY_W, true, false, false)
+                != com.solegendary.reignofnether.keybinds.ChordKeys.Chord.SELECT_SAME_TYPE)
+            problems.add("Ctrl+W selects the same types");
+        for (Keybinding kb : Keybindings.all())
+            if (kb.getTranslationKey() != null && kb.getDefaultKey() == GLFW.GLFW_KEY_W
+                    && !kb.getTranslationKey().equals("key.reignofnether.build_grid_2"))
+                problems.add(kb.getTranslationKey() + " must not sit on W (only grid cell 2 and the Ctrl+W chord do)");
         verdict(helper, problems);
     }
 

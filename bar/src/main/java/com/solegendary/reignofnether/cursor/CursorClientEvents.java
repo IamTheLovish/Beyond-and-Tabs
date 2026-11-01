@@ -95,7 +95,7 @@ public class CursorClientEvents {
     private static boolean boxArmed = false;
     // the modifiers the box was last evaluated with: the release selects exactly what the highlight showed
     private static SmartSelect.Mods lastBoxMods = SmartSelect.Mods.NONE;
-    // Z and Space held during a box are its filters, not the ability slot / "jump to last alert" / shop keys they
+    // Z and Space held during a box are its filters, not the ability slot and shop keys they
     // also are: their next release is swallowed (consumeBoxModifierRelease, from HudClientEvents.onKeyRelease)
     private static final java.util.Set<Integer> boxModifierKeys = new java.util.HashSet<>();
 
@@ -150,7 +150,7 @@ public class CursorClientEvents {
 
     /**
      * True (once) when this key was held as a box filter during the current or last drag: the HUD's key handling
-     * then skips it, so Space over a box never jumps to the last alert and Z never fires an ability slot.
+     * then skips it, so Space over a box never opens the shop and Z never fires an ability slot.
      */
     public static boolean consumeBoxModifierRelease(int key) {
         return boxModifierKeys.remove(key);

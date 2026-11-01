@@ -54,20 +54,6 @@ public class HelperButtons {
     public static Button buildingCancelButton;
     public static Button armyButton;
 
-    /** True while BAR's Ctrl+W runs the army button: Ctrl then means "chord", not the idle-army modifier. */
-    private static boolean wholeArmyChord = false;
-
-    /** BAR's Ctrl+W: select the whole army (every own non-worker unit), whatever Ctrl does to the button itself. */
-    public static void selectWholeArmy() {
-        if (armyButton == null || armyButton.onLeftClick == null)
-            return;
-        wholeArmyChord = true;
-        try {
-            armyButton.onLeftClick.run();
-        } finally {
-            wholeArmyChord = false;
-        }
-    }
     public static Button menuButton;
 
     /**
@@ -163,12 +149,12 @@ public class HelperButtons {
         HudClientEvents.setLowestCdHudEntity();
     }
 
-    /** BAR's Ctrl+A: select every own unit on the map (no buildings). */
+    /** BAR's Ctrl+E: select every own unit on the map (no buildings). */
     public static void selectAllUnits() {
         replaceSelection(ownFreeUnits());
     }
 
-    /** BAR's Ctrl+Z: select every own unit on the map of the selected units' type(s); nothing selected, nothing. */
+    /** BAR's Ctrl+W: select every own unit on the map of the selected units' type(s); nothing selected, nothing. */
     public static void selectSameTypeOnMap() {
         replaceSelection(com.solegendary.reignofnether.keybinds.ChordKeys.sameTypes(
             ownFreeUnits(), new ArrayList<>(UnitClientEvents.getSelectedUnits()), LivingEntity::getType));
@@ -177,7 +163,6 @@ public class HelperButtons {
     /** Runs a Ctrl chord (keybinds/ChordKeys); false for NONE so the key goes on to its other meanings. */
     public static boolean runChord(com.solegendary.reignofnether.keybinds.ChordKeys.Chord chord) {
         switch (chord) {
-            case SELECT_ARMY -> selectWholeArmy();
             case SELECT_COMMANDER -> selectCommanderAndFocus();
             case IDLE_BUILDER -> cycleIdleWorker(false);
             case IDLE_T2_BUILDER -> cycleIdleT2Builder(false);
@@ -348,7 +333,7 @@ public class HelperButtons {
                 () -> {
                     List<LivingEntity> militaryUnits = new ArrayList<>();
 
-                    if (Keybindings.ctrlMod.isDown() && !wholeArmyChord) {   // only the army standing idle (hud/IdleArmy), e.g. to send it out
+                    if (Keybindings.ctrlMod.isDown()) {   // only the army standing idle (hud/IdleArmy), e.g. to send it out
                         militaryUnits.addAll(com.solegendary.reignofnether.hud.IdleArmy.get());
                     } else if (Keybindings.shiftMod.isDown()) {
                         militaryUnits.addAll(UnitClientEvents.getMilitaryUnitsOnScreen());

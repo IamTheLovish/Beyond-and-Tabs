@@ -379,23 +379,6 @@ public class PlayerClientEvents {
         }
     }
 
-    // allow tab player list menu on the orthoview screen
-    @SubscribeEvent
-    public static void onScreenRender(ScreenEvent.Render evt) {
-        // Tab is the camera overview in the RTS view; the vanilla player list stays on Ctrl+Tab there
-        boolean listKey = Keybindings.tab.isDown()
-            && (Keybindings.tab.getKey() != Keybindings.overview.getKey() || Keybindings.ctrlMod.isDown());
-        if (OrthoviewClientEvents.isEnabled() && listKey && MC.level != null) {
-            if (!MC.isLocalServer()) {
-                MC.gui.getTabList().setVisible(true);
-                MC.gui.getTabList()
-                    .render(evt.getGuiGraphics(), MC.getWindow().getGuiScaledWidth(), MC.level.getScoreboard(), null);
-            } else {
-                MC.gui.getTabList().setVisible(false);
-            }
-        }
-    }
-
     public static void syncRtsGameTime(Long gameTicks) {
         rtsGameTicks = gameTicks;
     }

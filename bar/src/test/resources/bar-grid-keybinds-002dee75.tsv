@@ -1,0 +1,377 @@
+# BAR default hotkeys: profile "Grid" (profiles[0]) of common/configs/keybind_defaults.json
+# Source: https://github.com/beyond-all-reason/Beyond-All-Reason/blob/002dee7549c4413a5e70028abfec7bc17894c36c/common/configs/keybind_defaults.json (fetched 2026-10-29, 120137 bytes)
+# Default = first profile: luaui/Include/keybind_profiles.lua:931. sc_x = scancode (physical key). File order kept (BAR: array order decides on the same keyset).
+# Regenerate: (Get-Content -Raw keybind_defaults.json | ConvertFrom-Json).profiles[0].binds | %{ $_.keyset + "`t" + $_.action }
+# Used by notes/plan-bac-007-bar-hotkeys.md (BAC-007).
+keyset	action
+esc	select AllMap++_ClearSelection_SelectNum_0+
+esc	quitmessage
+Shift+esc	quitmenu
+Ctrl+Shift+esc	quitforce
+Alt+Shift+esc	reloadforce
+Any+escape	edit_escape
+Any+pause	pause
+esc	teamstatus_close
+esc	customgameinfo_close
+esc	buildmenu_pregame_deselect
+Any+sc_z	selectbox_same
+Any+space	selectbox_idle
+Any+shift	selectbox_append
+Any+shift	selectbox_any
+Any+ctrl	selectbox_deselect
+Any+alt	selectbox_mobile
+Any+space	selectloop
+Any+ctrl	selectloop_invert
+Any+shift	selectloop_add
+Any+space	buildsplit
+Any+space	commandinsert prepend_between
+alt+sc_.	attack_range_inc
+alt+sc_comma	attack_range_dec
+Any+enter	chat
+Alt+ctrl+sc_a	chatswitchally
+Alt+ctrl+sc_s	chatswitchspec
+Any+tab	edit_complete
+Any+backspace	edit_backspace
+Any+delete	edit_delete
+Any+home	edit_home
+Alt+left	edit_home
+Any+end	edit_end
+Alt+right	edit_end
+Any+up	edit_prev_line
+Any+down	edit_next_line
+Any+left	edit_prev_char
+Any+right	edit_next_char
+Ctrl+left	edit_prev_word
+Ctrl+right	edit_next_word
+Any+enter	edit_return
+Ctrl+v	pastetext
+Any+up	moveforward
+Any+down	moveback
+Any+right	moveright
+Any+left	moveleft
+Any+pageup	moveup
+Any+pagedown	movedown
+Any+alt	movereset
+Any+alt	moverotate
+Any+ctrl	movetilt
+ctrl+sc_o	fov_dec 5
+ctrl+sc_p	fov_inc 5
+sc_numpad1	fov_dec 5
+sc_numpad7	fov_inc 5
+Meta+ctrl+tab	pip1_copy
+Meta+tab	pip1_switch
+Alt+sc_t	pip1_track
+Any+alt	toggle_allied_upgrade
+sc_z	gridmenu_category 1
+sc_x	gridmenu_category 2
+sc_c	gridmenu_category 3
+sc_v	gridmenu_category 4
+Shift+sc_z	gridmenu_category 1
+Shift+sc_x	gridmenu_category 2
+Shift+sc_c	gridmenu_category 3
+Shift+sc_v	gridmenu_category 4
+Any+sc_z	gridmenu_key 1 1
+Any+sc_x	gridmenu_key 1 2
+Any+sc_c	gridmenu_key 1 3
+Any+sc_v	gridmenu_key 1 4
+Any+sc_a	gridmenu_key 2 1
+Any+sc_s	gridmenu_key 2 2
+Any+sc_d	gridmenu_key 2 3
+Any+sc_f	gridmenu_key 2 4
+Any+sc_q	gridmenu_key 3 1
+Any+sc_w	gridmenu_key 3 2
+Any+sc_e	gridmenu_key 3 3
+Any+sc_r	gridmenu_key 3 4
+sc_b	gridmenu_next_page
+sc_.	gridmenu_cycle_builder
+sc_.	cycleselected next
+sc_comma	cycleselected prev
+1	specteam 0
+2	specteam 1
+3	specteam 2
+4	specteam 3
+5	specteam 4
+6	specteam 5
+7	specteam 6
+8	specteam 7
+9	specteam 8
+Alt+0	add_to_autogroup 0
+Alt+1	add_to_autogroup 1
+Alt+2	add_to_autogroup 2
+Alt+3	add_to_autogroup 3
+Alt+4	add_to_autogroup 4
+Alt+5	add_to_autogroup 5
+Alt+6	add_to_autogroup 6
+Alt+7	add_to_autogroup 7
+Alt+8	add_to_autogroup 8
+Alt+9	add_to_autogroup 9
+Shift+Alt+0	load_autogroup_preset 0
+Shift+Alt+1	load_autogroup_preset 1
+Shift+Alt+2	load_autogroup_preset 2
+Shift+Alt+3	load_autogroup_preset 3
+Shift+Alt+4	load_autogroup_preset 4
+Shift+Alt+5	load_autogroup_preset 5
+Shift+Alt+6	load_autogroup_preset 6
+Shift+Alt+7	load_autogroup_preset 7
+Shift+Alt+8	load_autogroup_preset 8
+Shift+Alt+9	load_autogroup_preset 9
+0,0	group focus 0
+1,1	group focus 1
+2,2	group focus 2
+3,3	group focus 3
+4,4	group focus 4
+5,5	group focus 5
+6,6	group focus 6
+7,7	group focus 7
+8,8	group focus 8
+9,9	group focus 9
+0	group select 0
+1	group select 1
+2	group select 2
+3	group select 3
+4	group select 4
+5	group select 5
+6	group select 6
+7	group select 7
+8	group select 8
+9	group select 9
+Ctrl+0	group set 0
+Ctrl+1	group set 1
+Ctrl+2	group set 2
+Ctrl+3	group set 3
+Ctrl+4	group set 4
+Ctrl+5	group set 5
+Ctrl+6	group set 6
+Ctrl+7	group set 7
+Ctrl+8	group set 8
+Ctrl+9	group set 9
+Shift+0	group selectadd 0
+Shift+1	group selectadd 1
+Shift+2	group selectadd 2
+Shift+3	group selectadd 3
+Shift+4	group selectadd 4
+Shift+5	group selectadd 5
+Shift+6	group selectadd 6
+Shift+7	group selectadd 7
+Shift+8	group selectadd 8
+Shift+9	group selectadd 9
+Ctrl+Shift+0	group add 0
+Ctrl+Shift+1	group add 1
+Ctrl+Shift+2	group add 2
+Ctrl+Shift+3	group add 3
+Ctrl+Shift+4	group add 4
+Ctrl+Shift+5	group add 5
+Ctrl+Shift+6	group add 6
+Ctrl+Shift+7	group add 7
+Ctrl+Shift+8	group add 8
+Ctrl+Shift+9	group add 9
+Ctrl+Alt+0	group selecttoggle 0
+Ctrl+Alt+1	group selecttoggle 1
+Ctrl+Alt+2	group selecttoggle 2
+Ctrl+Alt+3	group selecttoggle 3
+Ctrl+Alt+4	group selecttoggle 4
+Ctrl+Alt+5	group selecttoggle 5
+Ctrl+Alt+6	group selecttoggle 6
+Ctrl+Alt+7	group selecttoggle 7
+Ctrl+Alt+8	group selecttoggle 8
+Ctrl+Alt+9	group selecttoggle 9
+meta+alt+0	factory_preset save 0
+meta+alt+1	factory_preset save 1
+meta+alt+2	factory_preset save 2
+meta+alt+3	factory_preset save 3
+meta+alt+4	factory_preset save 4
+meta+alt+5	factory_preset save 5
+meta+alt+6	factory_preset save 6
+meta+alt+7	factory_preset save 7
+meta+alt+8	factory_preset save 8
+meta+alt+9	factory_preset save 9
+meta+0	factory_preset load 0
+meta+1	factory_preset load 1
+meta+2	factory_preset load 2
+meta+3	factory_preset load 3
+meta+4	factory_preset load 4
+meta+5	factory_preset load 5
+meta+6	factory_preset load 6
+meta+7	factory_preset load 7
+meta+8	factory_preset load 8
+meta+9	factory_preset load 9
+any+sc_space	factory_preset_toggle
+Alt+sc_=	increasespeed
+Alt+sc_-	decreasespeed
+Alt+numpad+	increasespeed
+Alt+numpad-	decreasespeed
+sc_[	buildfacing inc
+Shift+sc_[	buildfacing inc
+sc_]	buildfacing dec
+Shift+sc_]	buildfacing dec
+Alt+sc_z	buildspacing inc
+Shift+Alt+sc_z	buildspacing inc
+Alt+sc_x	buildspacing dec
+Shift+Alt+sc_x	buildspacing dec
+sc_a	attack
+Shift+sc_a	attack
+Ctrl+sc_a	areaattack
+Ctrl+Shift+sc_a	areaattack
+Ctrl+sc_b	selfd
+Ctrl+Shift+sc_b	selfd queued
+sc_d	manualfire
+Shift+sc_d	manualfire
+sc_d	manuallaunch
+Shift+sc_d	manuallaunch
+sc_e	reclaim
+Shift+sc_e	reclaim
+sc_f	fight
+Shift+sc_f	fight
+Alt+sc_f	chain force forcestart | say !cv forcestart
+sc_g	stopproduction
+Shift+sc_g	stopproduction
+sc_g	stop
+Shift+sc_g	stop
+sc_h	patrol
+Shift+sc_h	patrol
+sc_i	unit_stats
+Ctrl+sc_i	customgameinfo
+sc_j	loadunits
+Shift+sc_j	loadunits
+sc_k	cloak
+Shift+sc_k	cloak
+sc_k	wantcloak
+Any+sc_k	wantcloak
+sc_m	restore
+Shift+sc_m	restore
+sc_n	command_skip_current
+Ctrl+sc_n	command_cancel_last
+sc_o	guard
+Shift+sc_o	guard
+sc_p	gatherwait
+Shift+sc_p	gatherwait
+sc_r	repair
+Shift+sc_r	repair
+sc_s	settarget
+Shift+sc_s	settarget
+Alt+sc_s	settargetnoground
+Shift+Alt+sc_s	settargetnoground
+Ctrl+sc_s	canceltarget
+sc_u	unloadunits
+Shift+sc_u	unloadunits
+sc_w	resurrect
+Shift+sc_w	resurrect
+sc_w	capture
+Shift+sc_w	capture
+sc_y	wait
+Shift+sc_y	wait queued
+sc_b,sc_b	onoff 0
+sc_b	onoff 1
+Shift+sc_b,Shift+sc_b	onoff 0
+Shift+sc_b	onoff 1
+sc_b,sc_b,sc_b	trajectory_toggle 1
+sc_b,sc_b	trajectory_toggle 0
+sc_b	trajectory_toggle 2
+Shift+sc_b,Shift+sc_b,Shift+sc_b	trajectory_toggle 1
+Shift+sc_b,Shift+sc_b	trajectory_toggle 0
+Shift+sc_b	trajectory_toggle 2
+sc_l,sc_l,sc_l	firestate 1
+sc_l,sc_l	firestate 0
+sc_l	firestate 2
+Shift+sc_l,Shift+sc_l,Shift+sc_l	firestate 1
+Shift+sc_l,Shift+sc_l	firestate 0
+Shift+sc_l	firestate 2
+sc_;,sc_;,sc_;	movestate 1
+sc_;,sc_;	movestate 0
+sc_;	movestate 2
+Shift+sc_;,Shift+sc_;,Shift+sc_;	movestate 1
+Shift+sc_;,Shift+sc_;	movestate 0
+Shift+sc_;	movestate 2
+sc_t,sc_t	repeat 0
+sc_t	repeat 1
+Shift+sc_t,Shift+sc_t	repeat 0
+Shift+sc_t	repeat 1
+Ctrl+sc_g,Ctrl+sc_g	factoryguard 0
+Ctrl+sc_g	factoryguard 1
+Alt+sc_o	cameraflip
+Ctrl+f7	hideinterface
+Any+f5	lastmsgpos
+Any+f6	showpathtraversability
+Any+f7	showmetalmap
+Any+f8	showelevation
+f10	options
+f11	luaui selector
+Any+f12	screenshot png
+Ctrl+sc_`	group unset
+Alt+sc_`	remove_from_autogroup
+sc_`,sc_`	drawlabel
+sc_`	drawinmap
+Ctrl+sc_e	select AllMap++_ClearSelection_SelectAll+
+Ctrl+tab	select AllMap+_Builder_Idle+_ClearSelection_SelectOne+
+Shift+tab	selectcomm append
+tab	selectcomm focus
+sc_q	select Visible+_InPrevSel+_ClearSelection_SelectAll+
+Ctrl+sc_q	select PrevSelection++_ClearSelection_SelectPart_50+
+Ctrl+sc_w	select AllMap+_InPrevSel+_ClearSelection_SelectAll+
+Ctrl+sc_r	select AllMap+_Transport_Idle+_ClearSelection_SelectAll+
+Ctrl+sc_y	select Visible+_Waiting+_ClearSelection_SelectAll+
+Alt+sc_q	select PrevSelection+_Not_Building_Not_RelativeHealth_60+_ClearSelection_SelectAll+
+numpad2	moveback
+numpad6	moveright
+numpad4	moveleft
+numpad8	moveforward
+numpad9	moveup
+numpad3	movedown
+numpad1	movefast
+backspace	mutesound
+numpad+	snd_volume_increase
+sc_=	snd_volume_increase
+sc_-	snd_volume_decrease
+numpad-	snd_volume_decrease
+Ctrl+F1	set_camera_anchor 1
+Ctrl+F2	set_camera_anchor 2
+Ctrl+F3	set_camera_anchor 3
+Ctrl+F4	set_camera_anchor 4
+F1	focus_camera_anchor 1
+F2	focus_camera_anchor 2
+F3	focus_camera_anchor 3
+F4	focus_camera_anchor 4
+Alt+sc_b	blueprint_place
+Alt+sc_t	blueprint_create
+Alt+sc_y	blueprint_delete
+Alt+sc_[	blueprint_prev
+Alt+sc_]	blueprint_next
+Alt+sc_g	factoryqueuemode
+Shift+sc_0x064	squad_select append_domain
+sc_0x064	squad_select
+Alt+Shift+sc_0x064	squad_select_filtered append distance_850
+Alt+sc_0x064	squad_select_filtered retarget
+Ctrl+Shift+sc_0x064	squad_select_portion 0.5 append_domain
+Ctrl+sc_0x064	squad_select_portion 0.5
+Ctrl+Alt+Shift+sc_0x064	squad_select_portion_filtered 0.5 append_domain
+Ctrl+Alt+sc_0x064	squad_select_portion_filtered 0.5
+Shift+sc_mouse5	squad_select_portion 0 append_domain
+sc_mouse5	squad_select_portion 0
+Alt+Shift+sc_mouse5	squad_select_portion_filtered 0 append
+Alt+sc_mouse5	squad_select_portion_filtered 0
+Meta+sc_a	squad_limit_flip
+Meta+Shift+sc_a	squad_expand
+Meta+sc_s	squad_cycle_recent
+Meta+sc_d	squad_cycle_idle
+Meta+sc_v	squad_lock
+Meta+Shift+sc_v	squad_select append locked
+Shift+meta+0	squad_select_group append_domain 0
+Shift+meta+1	squad_select_group append_domain 1
+Shift+meta+2	squad_select_group append_domain 2
+Shift+meta+3	squad_select_group append_domain 3
+Shift+meta+4	squad_select_group append_domain 4
+Shift+meta+5	squad_select_group append_domain 5
+Shift+meta+6	squad_select_group append_domain 6
+Shift+meta+7	squad_select_group append_domain 7
+Shift+meta+8	squad_select_group append_domain 8
+Shift+meta+9	squad_select_group append_domain 9
+meta+0	squad_select_group 0
+meta+1	squad_select_group 1
+meta+2	squad_select_group 2
+meta+3	squad_select_group 3
+meta+4	squad_select_group 4
+meta+5	squad_select_group 5
+meta+6	squad_select_group 6
+meta+7	squad_select_group 7
+meta+8	squad_select_group 8
+meta+9	squad_select_group 9

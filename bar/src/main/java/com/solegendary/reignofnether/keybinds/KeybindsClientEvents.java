@@ -99,7 +99,7 @@ public class KeybindsClientEvents {
     private static void logPanOverlaps() {
         Map<String, KeyMapping> mappings = mappings();
         for (KeyConflicts.Overlap o : KeyConflicts.panOverlaps(name -> keyOf(mappings.get(name))))
-            LOGGER.warn("[Keys] {} is on {}, which is also {}: a quick tap gives the order, holding pans (Controls marks it red)",
+            LOGGER.warn("[Keys] {} is on {}, which is also {}: the camera pans and the order fires on the same key (Controls marks it red)",
                 o.binding(), keyName(o.key()), o.pan());
     }
 }
