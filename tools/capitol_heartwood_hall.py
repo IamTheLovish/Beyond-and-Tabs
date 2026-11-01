@@ -108,7 +108,7 @@ def garden(c):
             if ring <= 1:
                 name = CHB if (dx, dz) == (0, 0) else MSB
         elif ring == 6:
-            name = (MSB, CSB, MSB, "stone_bricks", MSB, "moss_block")[h % 6]   # a stone kerb: the plot's edge reads
+            name = (MSB, CSB, MSB, CSB, MSB, "moss_block")[h % 6]   # a stone kerb: the plot's edge reads
         else:
             name = ("moss_block", "grass_block", "moss_block", "rooted_dirt", "podzol", "grass_block", MC)[h % 7]
         props = {"snowy": "false"} if name in ("grass_block", "podzol") else {}
