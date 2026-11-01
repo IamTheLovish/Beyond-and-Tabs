@@ -14,6 +14,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import building_gates as G  # noqa: E402
+import gen_blocks as GB  # noqa: E402
 import capitol_jade_pagoda as P  # noqa: E402
 import schem_study as S  # noqa: E402
 
@@ -27,6 +28,17 @@ C = 7
 JADE_FAMILY = ("waxed_oxidized_cut_copper",)
 WALLS = ("stripped_mangrove_log", "red_stained_glass", "dark_oak_planks", "dark_oak_log")
 COOL = ("amethyst", "purple", "magenta", "blue", "cyan", "light_blue")   # team-like cool hues (BAT - Readable at any zoom)
+
+
+def _pack_luma(n):
+    """The texture pack's luma of a block by its full-block family (stairs / slabs / waxed read as their block)."""
+    n = n.replace("waxed_", "")
+    for s in ("_stairs", "_slab"):
+        if n.endswith(s):
+            n = n[:-len(s)]
+    if n.startswith("dark_oak"):
+        n = "dark_oak_planks"
+    return GB.TARGETS.get(n, {}).get("luma")
 
 
 def _ring(q):
@@ -80,6 +92,26 @@ class JadePagodaTest(unittest.TestCase):
         (the shipped halo of violet glass and amethyst, flagged by both baseline and massing critics)."""
         bad = sorted({n for n in self.solid.values() if any(k in n for k in COOL)})
         self.assertEqual(bad, [])
+
+    def test_roofs_read_as_light_lips_over_dark_gaps(self):
+        """Two-edged value band on the roofs' RTS pixels (rings <= 6, y >= 6): the lips light (pack luma >= 0.50) on
+        at least 45 % and the gaps between the tiers dark (<= 0.36) on at least 25 %. Round 1 (eyes 41279165687):
+        all-jade roofs, 91 % light / 6 % dark on this model - "tiers still nest from above, no dark gap ring", value 5 / 5
+        (fresh critics a / b). Both edges: an all-dark roof would pass a dark-only test and lose the lips."""
+        roof = [h for h in self.rts.values() if h[0][1] >= 6 and _ring(h[0]) <= 6]
+        lum = [_pack_luma(h[1]) for h in roof]
+        light = sum(1 for v in lum if v is not None and v >= 0.50) / max(1, len(roof))
+        dark = sum(1 for v in lum if v is not None and v <= 0.36) / max(1, len(roof))
+        self.assertGreaterEqual(light, 0.45, (light, dark))
+        self.assertGreaterEqual(dark, 0.25, (light, dark))
+
+    def test_crown_is_one_gold_leader(self):
+        """One gold leader a size class over everything near it: a 3 x 3 gold cap or more over the centre and no gold
+        on the top roof's corners (round 1's five equal gold squares read as "dice-five", critics a / b)."""
+        top = max(q[1] for q in self.solid)
+        gold = [q for q, n in self.solid.items() if n == "gold_block" and q[1] >= top - 5]
+        self.assertGreaterEqual(sum(1 for q in gold if _ring(q) <= 1), 9, gold)
+        self.assertEqual([q for q in gold if _ring(q) > 1], [])
 
     def test_shipped_structure_is_the_generator_build(self):
         with tempfile.TemporaryDirectory() as d:
