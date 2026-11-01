@@ -112,8 +112,11 @@ public class MoveToTargetBlockGoal extends Goal {
             forcedHeldShort = false;
         if (v == RepathProgress.Verdict.STUCK)
             onStuckRepath(forced);
-        else if (v == RepathProgress.Verdict.PROGRESS)
+        else if (v == RepathProgress.Verdict.PROGRESS) {
+            statProgress++;
             resetRecalcBackoff();
+        } else
+            statHold++;
     }
 
     private static double horizontalDist(double x, double z, BlockPos b) {
@@ -133,6 +136,7 @@ public class MoveToTargetBlockGoal extends Goal {
     // STRIKES x CHECK_INTERVAL = 80 ticks) rescues again before the goal's own repath, and a unit held short at every
     // rescue stood at count 2 with its order forever (review of #341, round 2).
     private void onStuckRepath(boolean forced) {
+        statStuck++;
         backoffRecalcCooldown();
         stuckRepaths++;
         if (!forced)
@@ -144,6 +148,7 @@ public class MoveToTargetBlockGoal extends Goal {
         if (stuckRepaths >= GIVE_UP_AFTER_STUCK_REPATHS && givesUpWhenUnreachable() && moveTarget != null
                 && !this.mob.level().isClientSide() && !(this.mob instanceof Unit u && u.getHoldPosition())) {
             lastUnreachableTarget = moveTarget;
+            statGaveUp++;
             stuckRepaths = 0;
             moveTarget = null;
             this.mob.getNavigation().stop();
@@ -211,6 +216,18 @@ public class MoveToTargetBlockGoal extends Goal {
     /** Diagnostics for tests: an async path request is in flight / the goal is active. */
     public boolean isPathPending() { return pathPending; }
     public boolean isGoalRunning() { return isRunning; }
+
+    // What this goal's RTS path requests came to, for tests that find a unit standing with its order (the graveyard walk-out
+    // stall: GraveyardExitGameTests): requests sent, answers busy / no path / a path that reaches the target / a partial
+    // one, and the repath verdicts (RepathProgress) that followed.
+    private int statRequests, statBusy, statNull, statFull, statPartial, statStuck, statHold, statProgress, statGaveUp;
+    private int statLastNodes = -1;
+
+    public String pathStats() {
+        return String.format(java.util.Locale.ROOT, "requests %d (busy %d, no path %d, full %d, partial %d, last %d nodes), repaths stuck %d / hold %d / progress %d, gave up %d, stuck count %d, cooldown %d of %d",
+            statRequests, statBusy, statNull, statFull, statPartial, statLastNodes, statStuck, statHold, statProgress, statGaveUp,
+            stuckRepaths, recalcCooldown, currentRecalcCooldown);
+    }
 
     /** The game time of this goal's last path request (tests: did an order re-path the unit?). */
     public long getLastRequestTime() { return lastRequestTime; }
@@ -406,6 +423,7 @@ public class MoveToTargetBlockGoal extends Goal {
             this.mob.getNavigation().stop();
             MobilityClass mobility = MobilityClass.of(u);
             pathPending = true;
+            statRequests++;
             final int seq = ++pathRequestSeq;
             // Validity check run on the main thread before this request warms its chunks: drop it if the
             // mob died or a newer order bumped pathRequestSeq past this seq, so superseded requests don't
@@ -460,6 +478,7 @@ public class MoveToTargetBlockGoal extends Goal {
         // and retry after a short cooldown - do NOT stop() or back off. Stopping here is exactly what made
         // units shuffle back and forth: they'd stop, re-submit next tick, get dropped again, repeat.
         if (busy) {
+            statBusy++;
             if (pendingRepath) {
                 repathFromX = repathPrevFromX;
                 repathFromZ = repathPrevFromZ;
@@ -481,6 +500,13 @@ public class MoveToTargetBlockGoal extends Goal {
             return;
         }
         busyStreak = 0;
+        statLastNodes = path == null ? -1 : path.getNodeCount();
+        if (path == null)
+            statNull++;
+        else if (path.canReach())
+            statFull++;
+        else
+            statPartial++;
         // The deferred half of the repath throttle (see canContinueToUse): now that the async path is in we
         // can compare its final node to the pre-repath one. No progress (repathVerdict) or no path at all = still
         // stuck, grow the backoff; progress = reset it. Then arm the cooldown gate so the next repath is throttled.
