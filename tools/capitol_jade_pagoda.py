@@ -24,8 +24,8 @@ rule set: odd tiers, each roof a ring narrower, red posts under deep eaves):
   - FIVE ROOFS stepping in (13, 11, 9, 7, 5 wide) over five storeys, each a ring narrower, so every roof shows its own
     eave and a strip of red lacquer and lit paper wall above it. Each roof is CURVED: the lip sags in the middle (a
     stair) and sweeps up at the ends (a raised block and slab), the gold corner carries an upturned jade tip, and a
-    second stair course (dark oak since Nov 2026: the shadow ring that parts the tiers from above) pitches it again
-    onto the band, and a CHIME (chain + end-rod striker) hangs from every corner;
+    second stair course pitches it again onto the band (a blackstone gap ring at the next storey's foot parts the
+    tiers from above, Nov 2026), and a CHIME (chain + end-rod striker) hangs from every corner;
   - the GROUND STOREY: a hall of red-lacquer posts, dark oak and red paper screens with a door on every side (players
     build in every direction) in a verandah of red columns on chiseled bases under gold capitals; the hall is an
     atrium up to a coffered ceiling with a pearlescent light - the spawn cell is its centre and walks out of any door;
@@ -238,6 +238,12 @@ def storey(c, k, y0, y1):
 
 
 CHIMES = []
+# The roof treatment, picked blind (round 3, eyes 41281536246, critics a / b both rank it first, 6 / 6, over the
+# dark-oak round 2 4.5 / 4.5, jade-only 5.5 / 5 and horns-without-sweep 5 / 5.5): value "jade" = jade roofs with one
+# thin blackstone gap ring at each storey's foot ("r2" = the dark oak band + course); horn = cells of the rising
+# diagonal arm past each corner; sweep = the eave rises one block over its last two cells to each corner (two at it)
+STYLE = dict(value="jade", horn=2, sweep=True)
+GAP, GAP_ST = "polished_blackstone", "polished_blackstone_stairs"
 
 
 def roof(c, L, y, course=True, gold=True, flare=False):
@@ -245,38 +251,57 @@ def roof(c, L, y, course=True, gold=True, flare=False):
     - the CURVE: the lip is a jade stair (low edge out) along the middle of each side, but the two cells next to each
       corner lift a block (a jade block under a slab) and the corner itself is a gold block under an upturned jade
       slab tip - so the eave sags in the middle and sweeps up to its corners;
-    - ring L-1 is the flat band (dark oak on the wide roofs, sitting on the storey's beam below), and with `course` a
-      second stair course of DARK OAK climbs onto ring L-1 one up, against the next storey's wall: from the RTS camera
-      each roof is a light jade lip round a dark gap ring, so the tiers part (round 2: the all-jade round 1 nested
-      into one green pyramid from above, critics a / b 5 / 5);
+    - ring L-1 is the flat band (jade, sitting on the storey's beam below) and with `course` a second jade stair
+      course climbs onto ring L-1 one up; the ring inside it, at the next storey's foot, is a BLACKSTONE GAP: from the
+      RTS camera each roof is a jade roof round a dark ring, so the tiers part (round 1, all jade, nested into one
+      green pyramid; round 2's dark oak read as brown fields - critics a / b);
+    - with STYLE sweep the eave rises one block over its last two cells and two at the corner;
     - `gold`: the corner under the tip is gold (not on the top roof: five gold squares there read as dice-five);
-      `flare`: a jade slab tip one cell out on the diagonal, past the square outline;
+      `flare`: the corner tip rises on past the square outline as a diagonal arm (STYLE horn cells);
     - dark-oak rafter ends under the lip, and a chime under each corner (placed last, see chimes())."""
+    jade = STYLE["value"] == "jade"
+    sw = STYLE["sweep"] and L >= 3
     for o in O4.values():
         for t in range(-L + 1, L):
             if L >= 3 and abs(t) == L - 1:
                 c.put(o, L, t, y, JADE)
-                c.put(o, L, t, y + 1, JADE_SLAB, type="bottom", **DRY)
+                if sw:
+                    c.put(o, L, t, y + 1, JADE)
+                c.put(o, L, t, y + 1 + sw, JADE_SLAB, type="bottom", **DRY)
+            elif sw and abs(t) == L - 2:
+                c.put(o, L, t, y, JADE)
+                c.st(o, L, t, y + 1, inward(o), name=JADE_ST)
             else:
                 c.st(o, L, t, y, inward(o), name=JADE_ST)
             if L >= 3 and abs(t) % 2 == 0 and abs(t) < L - 1:
                 c.st(o, L, t, y - 1, inward(o), "top", OAK_ST)         # rafter ends, every other cell
     if L >= 2:
-        c.disc(L - 1, y, OAK if L >= 3 else JADE, k0=max(L - 2, 0))   # the band: dark where the camera sees it
+        if jade:
+            c.disc(L - 1, y, JADE, k0=max(L - 2, 0))
+            if L >= 3 and L - 2 >= 1 and L - 2 < L - 1:
+                c.disc(L - 2, y, GAP, k0=L - 2)                        # the gap ring at the storey's foot
+        else:
+            c.disc(L - 1, y, OAK if L >= 3 else JADE, k0=max(L - 2, 0))   # the band: dark where the camera sees it
+    lift = 1 if (STYLE["sweep"]) else 0
     for (sx, sz) in CORNERS:
         x, z = sx * L, sz * L
         c.set(x, y, z, GOLD if gold else JADE)
-        c.set(x, y + 1, z, JADE_SLAB, type="bottom", **DRY)
+        if lift:
+            c.set(x, y + 1, z, JADE)
+        c.set(x, y + 1 + lift, z, JADE_SLAB, type="bottom", **DRY)
         if flare:
-            c.set(sx * (L + 1), y + 1, sz * (L + 1), JADE_SLAB, type="bottom", **DRY)   # the flared tip
+            for d in range(1, STYLE["horn"] + 1):                     # the flared tip: a rising diagonal arm
+                hx, hz = sx * (L + d), sz * (L + d)
+                if max(abs(hx), abs(hz)) <= R and c.get(hx, y + lift + d, hz)[0] == "air":
+                    c.set(hx, y + lift + d, hz, JADE_SLAB, type="bottom", **DRY)
         CHIMES.append((x, y - 1, z))
     if course and L >= 3:
-        # the second course: dark oak stairs climbing onto the band, so the roof pitches twice (the curve read from
-        # the side) and reads as the shadow under the lip above; its corners stay open for the chimes of the roof
-        # above (the axis lanterns are gone: two lantern dots and the red storey's V read as a face, round 1)
+        # the second course: stairs climbing onto the band, so the roof pitches twice (the curve read from the side);
+        # its corners stay open for the chimes of the roof above (the axis lanterns are gone: two lantern dots and
+        # the red storey's V read as a face, round 1)
         for o in O4.values():
             for t in range(-L + 2, L - 1):
-                c.st(o, L - 1, t, y + 1, inward(o), name=OAK_ST)
+                c.st(o, L - 1, t, y + 1, inward(o), name=JADE_ST if jade else OAK_ST)
 
 
 def chimes(c):
@@ -304,13 +329,14 @@ def pagoda(c):
     The centre column stays open from the hall floor (y3) to y9: getIndoorSpawnPoint walks down from the box's
     mid-height (y10) and must land on the floor, so the hall is an atrium up into storey 2."""
     ground_storey(c)
-    roof(c, 6, 6)                                              # lip 6 @ y6, band rings 4-5, course ring 5 @ y7
+    roof(c, 6, 6, flare=STYLE["horn"] >= 2)                   # lip 6 @ y6, band rings 4-5, course ring 5 @ y7
     storey(c, 3, 7, 11)                                        # storey 2 on the hall's walls, shows y7-11
     c.disc(2, 10, OAK)                                         # the atrium's ceiling
     c.set(0, 10, 0, "pearlescent_froglight", axis="y")         # the hall's light, over the spawn
     roof(c, 4, 12, flare=True)                                 # lip 4 @ y12, band ring 3, course ring 3 @ y13
-    c.disc(2, 12, OAK, k0=2)
-    c.ring_stairs(2, 13, name=OAK_ST)                          # course 2: ring 2 @ y13, against storey 3
+    jade = STYLE["value"] == "jade"
+    c.disc(2, 12, GAP if jade else OAK, k0=2)
+    c.ring_stairs(2, 13, name=GAP_ST if jade else OAK_ST)      # course 2: ring 2 @ y13, against storey 3
     storey(c, 1, 12, 16)
     for y in (14, 15, 16):
         c.set(0, y, 0, "pearlescent_froglight", axis="y")      # glows through the paper of storey 3
