@@ -48,6 +48,7 @@ public final class EconomyBarRenderer {
     static final int COMPACT_H = 22;   // the stall row under it must still clear the control-group row (22 px)
     static final int PANEL_W_MAX = 210, PANEL_W_MIN = 130;
     static final int OVERCHARGE_GOLD = 0xFFFFD24A;
+    private static final String ECO = "hud.reignofnether.economy.";   // lang keys of this bar (en_us / es_es)
 
     public record Layout(int left, int right, int bottom) { }
 
@@ -153,7 +154,7 @@ public final class EconomyBarRenderer {
         String popStr = String.valueOf(UnitClientEvents.getUnitCount(owner));   // just the count, like BAR
         gg.drawString(font, popStr, px + 19, top + 3, 0xFFFFFF);
         int workers = workerCount(owner);
-        String wStr = workers + " workers";
+        String wStr = I18n.get(ECO + "workers", workers);
         if (!compact)
             gg.drawString(font, wStr, px + POP_W / 2 - font.width(wStr) / 2, top + 16, 0xA8B0B8);
 
@@ -168,8 +169,10 @@ public final class EconomyBarRenderer {
         if (stalled) {
             EconomyWarning.Pool short_ = EconomyWarning.stallPool(
                 resources.ore / Math.max(1f, eco.metalStorage), resources.wood / Math.max(1f, eco.energyStorage));
-            String stallStr = "Build speed " + Math.round(eco.stall * 100) + "%"
-                + (short_ == EconomyWarning.Pool.UNNAMED ? "" : "  -  short on " + (short_ == EconomyWarning.Pool.METAL ? "metal" : "energy"));
+            int stallPct = Math.round(eco.stall * 100);
+            String stallStr = short_ == EconomyWarning.Pool.UNNAMED ? I18n.get(ECO + "stall", stallPct)
+                : I18n.get(ECO + "stall_short", stallPct,
+                    I18n.get(ECO + (short_ == EconomyWarning.Pool.METAL ? "pool.metal" : "pool.energy")));
             int w = font.width(stallStr) + 10;
             int sx = screenWidth / 2 - w / 2;
             stallRowY = bottom;
@@ -253,7 +256,7 @@ public final class EconomyBarRenderer {
         if (manaOwner && mc.player != null && owner.equals(mc.player.getName().getString())
                 && ManaClientEvents.localIsMana()) {
             String key = Keybindings.overcharge.getCurrentLabel();
-            String s = (eco.overcharge ? "OVERCHARGE ON" : "Overcharge") + (key.isEmpty() ? "" : "  [" + key + "]");
+            String s = I18n.get(ECO + (eco.overcharge ? "overcharge.chip_on" : "overcharge.chip_off")) + (key.isEmpty() ? "" : "  [" + key + "]");
             int w = font.width(s) + 10;
             int cx = left + totalW - 4 - w;
             boolean hover = mouseX >= cx && mouseX < cx + w && mouseY >= bottom && mouseY < bottom + 12;
@@ -265,12 +268,11 @@ public final class EconomyBarRenderer {
             ManaClientEvents.overchargeChip = chip;
             if (hover)
                 HudClientEvents.deferTooltip(List.of(
-                    line(eco.overcharge ? "Overcharge is ON - click to switch off" : "Overcharge - click to switch on"),
-                    line("Spells cost x" + fmtMult(ManaServerEvents.OVERCHARGE_COST) + " for x"
-                        + fmtMult(ManaServerEvents.OVERCHARGE_POWER) + " power."),
-                    line("Build speed is capped at " + Math.round(ManaServerEvents.OVERCHARGE_BUILD_CAP * 100)
-                        + "% and converters pause."),
-                    line("Switches itself off when energy runs out.")), mouseX + 6, mouseY + 12);
+                    line(I18n.get(ECO + (eco.overcharge ? "overcharge.tip_on" : "overcharge.tip_off"))),
+                    line(I18n.get(ECO + "overcharge.tip_cost", fmtMult(ManaServerEvents.OVERCHARGE_COST),
+                        fmtMult(ManaServerEvents.OVERCHARGE_POWER))),
+                    line(I18n.get(ECO + "overcharge.tip_cap", Math.round(ManaServerEvents.OVERCHARGE_BUILD_CAP * 100))),
+                    line(I18n.get(ECO + "overcharge.tip_auto"))), mouseX + 6, mouseY + 12);
             bottom += 12;
         }
 
@@ -278,47 +280,47 @@ public final class EconomyBarRenderer {
         if (mouseY >= top && mouseY < top + panelH) {
             List<FormattedCharSequence> tip = null;
             if (mouseX >= left && mouseX < left + panelW)
-                tip = List.of(line("Metal  " + resources.ore + " / " + Math.round(eco.metalStorage)),
-                    line("+" + fmt(eco.metalIncome) + "/s from extractors, -" + fmt(eco.metalExpense) + "/s on builds"),
-                    line("Build more extractors on metal patches to grow income."),
-                    line(eco.shareLevel >= 0.999f ? "Share: only the overflow at full storage goes to allies."
-                        : "Share: metal above " + Math.round(eco.shareLevel * 100) + "% goes to allies."),
-                    line("Drag the marker to change it, right-click to reset."));
+                tip = List.of(line(I18n.get(ECO + "metal.title", resources.ore, Math.round(eco.metalStorage))),
+                    line(I18n.get(ECO + "metal.flow", fmt(eco.metalIncome), fmt(eco.metalExpense))),
+                    line(I18n.get(ECO + "metal.grow")),
+                    line(eco.shareLevel >= 0.999f ? I18n.get(ECO + "metal.share_full")
+                        : I18n.get(ECO + "metal.share", Math.round(eco.shareLevel * 100))),
+                    line(I18n.get(ECO + "metal.drag")));
             else if (mouseX >= left + panelW + POP_W && mouseX < left + totalW) {
                 // energyExpense includes the converters' and the spells' drain; split them out so a bar pinned at the
                 // conversion threshold, or falling while nothing is being built, makes sense
                 float onBuilds = Math.max(0, eco.energyExpense - eco.energyConverted - eco.manaDrain);
                 float threshold = eco.converterLevel;   // the player's slider (the faction's default until moved)
                 List<FormattedCharSequence> lines = new ArrayList<>(8);
-                lines.add(line("Energy  " + resources.wood + " / " + Math.round(eco.energyStorage)
-                    + (eco.overcharge ? "   OVERCHARGED" : "")));
-                lines.add(line("+" + fmt(eco.energyIncome) + "/s from generators, -" + fmt(onBuilds) + "/s on builds"));
-                lines.add(line("Wind " + Math.round(com.solegendary.reignofnether.resources.Wind.strength()) + " ("
-                    + Math.round(com.solegendary.reignofnether.resources.Wind.MIN) + "-" + Math.round(com.solegendary.reignofnether.resources.Wind.MAX)
-                    + "): wind generators at " + Math.round(com.solegendary.reignofnether.resources.Wind.multiplier() * 100) + "%"));
+                lines.add(line(I18n.get(ECO + (eco.overcharge ? "energy.title_overcharged" : "energy.title"),
+                    resources.wood, Math.round(eco.energyStorage))));
+                lines.add(line(I18n.get(ECO + "energy.flow", fmt(eco.energyIncome), fmt(onBuilds))));
+                lines.add(line(I18n.get(ECO + "energy.wind", Math.round(com.solegendary.reignofnether.resources.Wind.strength()),
+                    Math.round(com.solegendary.reignofnether.resources.Wind.MIN), Math.round(com.solegendary.reignofnether.resources.Wind.MAX),
+                    Math.round(com.solegendary.reignofnether.resources.Wind.multiplier() * 100))));
                 if (manaOwner || eco.manaDrain > 0.05f)
-                    lines.add(line("-" + fmt(eco.manaDrain) + "/s mana drain (spells)"
-                        + (eco.overcharge ? " - x" + fmtMult(ManaServerEvents.OVERCHARGE_COST) + " cost, x"
-                        + fmtMult(ManaServerEvents.OVERCHARGE_POWER) + " power" : "")));
+                    lines.add(line(eco.overcharge
+                        ? I18n.get(ECO + "energy.mana_overcharged", fmt(eco.manaDrain),
+                            fmtMult(ManaServerEvents.OVERCHARGE_COST), fmtMult(ManaServerEvents.OVERCHARGE_POWER))
+                        : I18n.get(ECO + "energy.mana", fmt(eco.manaDrain))));
                 if (eco.overcharge)
-                    lines.add(line("Overcharge: build speed max "
-                        + Math.round(ManaServerEvents.OVERCHARGE_BUILD_CAP * 100) + "%, converters paused."));
+                    lines.add(line(I18n.get(ECO + "energy.overcharge", Math.round(ManaServerEvents.OVERCHARGE_BUILD_CAP * 100))));
                 if (eco.conversionCapacity > 0) {
-                    lines.add(line("-" + fmt(eco.energyConverted) + "/s into converters (max " + fmt(eco.conversionCapacity)
-                        + "/s) -> +" + fmt(eco.metalConverted) + " metal/s"));
-                    lines.add(line("Converters only use energy above " + Math.round(threshold * 100) + "% storage ("
-                        + Math.round(eco.energyStorage * threshold) + "),"));
-                    lines.add(line("so energy sitting there means they're running, not that you're short."));
-                    lines.add(line("Drag the marker on the bar to change it, right-click to reset."));
+                    lines.add(line(I18n.get(ECO + "energy.conv1", fmt(eco.energyConverted), fmt(eco.conversionCapacity),
+                        fmt(eco.metalConverted))));
+                    lines.add(line(I18n.get(ECO + "energy.conv2", Math.round(threshold * 100),
+                        Math.round(eco.energyStorage * threshold))));
+                    lines.add(line(I18n.get(ECO + "energy.conv3")));
+                    lines.add(line(I18n.get(ECO + "energy.conv4")));
                 } else if (manaOwner) {
-                    lines.add(line("Energy is mana: every spell is paid from this bar."));
+                    lines.add(line(I18n.get(ECO + "energy.mana_pool")));
                 } else {
-                    lines.add(line("Wind generators are cheap; keep them behind the base."));
+                    lines.add(line(I18n.get(ECO + "energy.wind_cheap")));
                 }
                 tip = lines;
             }
             else if (mouseX >= px && mouseX < px + POP_W)
-                tip = List.of(line("Units: " + popStr + "  (" + workers + " workers)"));
+                tip = List.of(line(I18n.get(ECO + "units_tip", popStr, workers)));
             // deferred: HudClientEvents draws exactly one HUD tooltip per frame, and a hovered button wins
             if (tip != null)
                 HudClientEvents.deferTooltip(tip, mouseX + 6, mouseY + 12);
@@ -461,7 +463,7 @@ public final class EconomyBarRenderer {
     // anchored at the bar's left edge for metal and right edge for energy, under the bar/stall warning
     private static void renderWasteLabel(GuiGraphics gg, Font font, List<RectZone> zones, int anchorX, int y,
                                          boolean metal, float rate) {
-        String s = "WASTING +" + fmt(rate) + "/s";
+        String s = I18n.get(ECO + "waste", fmt(rate));
         int w = font.width(s) + 8;
         int x = metal ? anchorX : anchorX - w;
         double phase = (System.currentTimeMillis() % 1200L) / 1200.0 * Math.PI * 2;
@@ -477,7 +479,7 @@ public final class EconomyBarRenderer {
     // Small and steady (no pulse) - it's information, not a warning
     private static void renderShareLabel(GuiGraphics gg, Font font, List<RectZone> zones, int anchorX, int y,
                                          boolean metal, float rate) {
-        String s = "sharing +" + fmt(rate) + "/s";
+        String s = I18n.get(ECO + "sharing", fmt(rate));
         int w = font.width(s) + 8;
         int x = metal ? anchorX : anchorX - w;
         gg.fill(x, y, x + w, y + 12, 0xA0101216);
@@ -499,7 +501,7 @@ public final class EconomyBarRenderer {
         gg.fill(x1 - 1, by + bh, x2 + 1, by + bh + 1, col);
         gg.fill(x1 - 1, by, x1, by + bh, col);
         gg.fill(x2, by, x2 + 1, by + bh, col);
-        String s = "OVERCHARGE";
+        String s = I18n.get(ECO + "overcharge.word");
         float scale = 0.75f;
         // a solid gold plate under the word, so it reads on both the filled and the empty part of the bar
         int plateW = Math.round(font.width(s) * scale) + 4, plateX = (x1 + x2) / 2 - plateW / 2;
