@@ -154,7 +154,7 @@ public final class EconomyBarRenderer {
         String popStr = String.valueOf(UnitClientEvents.getUnitCount(owner));   // just the count, like BAR
         gg.drawString(font, popStr, px + 19, top + 3, 0xFFFFFF);
         int workers = workerCount(owner);
-        String wStr = I18n.get(ECO + "workers", workers);
+        String wStr = workerLabel(I18n.get(ECO + "workers", workers), font::width);
         if (!compact)
             gg.drawString(font, wStr, px + POP_W / 2 - font.width(wStr) / 2, top + 16, 0xA8B0B8);
 
@@ -326,6 +326,15 @@ public final class EconomyBarRenderer {
                 HudClientEvents.deferTooltip(tip, mouseX + 6, mouseY + 12);
         }
         return new Layout(left, left + totalW, bottom);
+    }
+
+    /**
+     * The worker count drawn under the unit count, fitted to its slot (Codex review of BAC-008:
+     * es_es "10 trabajadores" is 86 px in the 58 px slot and ran over the metal expense figure). The units tooltip
+     * keeps the full text.
+     */
+    static String workerLabel(String text, java.util.function.ToIntFunction<String> width) {
+        return NameFit.fit(text, POP_W, width);   // the full slot: "10 workers" (57 px) already fit and stays as it was
     }
 
     private static void renderResource(GuiGraphics gg, Font font, int x, int y, int w, boolean metal,
