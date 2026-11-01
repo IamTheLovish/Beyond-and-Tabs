@@ -1,0 +1,15 @@
+[
+  {"name": "R2-3 arcade+lintel N", "face": "west",  "box": [0, 2, 1, 6, 0, 7]},
+  {"name": "R2-3 arcade+lintel S", "face": "west",  "box": [0, 2, 1, 6, 17, 24]},
+  {"name": "R4 hall roof N",       "face": "up",    "box": [1, 9, 7, 10, 3, 7]},
+  {"name": "R4 hall roof S",       "face": "up",    "box": [1, 9, 7, 10, 17, 21]},
+  {"name": "R5 wing roof N",       "face": "up",    "box": [0, 8, 8, 14, 0, 2]},
+  {"name": "R5 wing roof S",       "face": "up",    "box": [0, 8, 8, 14, 22, 24]},
+  {"name": "R5 wing gable N",      "face": "north", "box": [0, 8, 1, 14, 0, 4]},
+  {"name": "R5 wing gable S",      "face": "south", "box": [0, 8, 1, 14, 20, 24]},
+  {"name": "R6 door+tower base",   "face": "west",  "box": [0, 9, 1, 12, 7, 17]},
+  {"name": "R7 tower mid",         "face": "west",  "box": [0, 8, 7, 18, 8, 16]},
+  {"name": "R8 tower upper",       "face": "west",  "box": [0, 8, 19, 25, 9, 15]},
+  {"name": "R9 shed roof",         "face": "up",    "box": [10, 16, 1, 13, 0, 24]},
+  {"name": "R9 shed south end",    "face": "south", "box": [9, 16, 1, 13, 17, 24]}
+]

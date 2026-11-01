@@ -469,7 +469,7 @@ public final class HeroKits {
         for (LivingEntity e : HeroFx.enemies(c.level, c.hero, pos, c.b())) {
             HeroFx.damage(c.hero, e, c.a(), false);
             HeroFx.knockback(pos, e, 1.4);
-            HeroFx.slow(e, 40, 1);
+            HeroFx.slow(e, 30 + 10 * c.rank, 1);   // 2 / 2.5 / 3 s by rank (was a flat 2 s)
             e.clearFire();
         }
         HeroFx.ring(c.level, ParticleTypes.SPLASH, pos, c.b());
@@ -533,7 +533,7 @@ public final class HeroKits {
         Vec3 pos = c.hero.position();
         for (LivingEntity e : HeroFx.enemies(c.level, c.hero, pos, c.b())) {
             HeroFx.damage(c.hero, e, c.a(), true);
-            HeroFx.slow(e, 60, 2);
+            HeroFx.slow(e, 50 + 10 * c.rank, 2);   // 3 / 3.5 / 4 s by rank (was a flat 3 s)
         }
         HeroFx.ring(c.level, ParticleTypes.SNOWFLAKE, pos, c.b());
         HeroFx.ring(c.level, ParticleTypes.SNOWFLAKE, pos, c.b() * 0.5);
@@ -606,15 +606,25 @@ public final class HeroKits {
         return true;
     }
 
-    /** Sets down the Guildmaster's auto-turret at the spot (two at rank 3), free - the hero carries the parts. */
+    /**
+     * Sets down the Guildmaster's auto-turret at the spot (two at rank 3, either side of it across the line the hero
+     * aimed along), facing the way the hero aimed - free, the hero carries the parts.
+     */
     static boolean deployTurret(Cast c) {
         int n = Math.round(c.a());
+        Vec3 dir = new Vec3(c.at.x - c.hero.getX(), 0, c.at.z - c.hero.getZ());
+        if (dir.lengthSqr() < 1e-4)
+            dir = Vec3.directionFromRotation(0, c.hero.getYRot());
+        dir = dir.normalize();
+        Vec3 across = new Vec3(-dir.z, 0, dir.x);
+        float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));   // Minecraft's yaw: 0 faces +z
         int placed = 0;
         for (int i = 0; i < n; i++) {
-            BlockPos at = BlockPos.containing(c.at.x + i * 2, c.at.y, c.at.z).below();
+            double side = n == 1 ? 0 : (i - (n - 1) / 2.0) * 3;   // a pair: 1.5 blocks either side of the aim
+            BlockPos at = BlockPos.containing(c.at.x + across.x * side, c.at.y, c.at.z + across.z * side).below();
             Entity e = UnitServerEvents.spawnMob(EntityRegistrar.DEPLOYED_TURRET_UNIT.get(), c.level, at, c.owner());
             if (e != null) {
-                e.setYRot(c.hero.getYRot());
+                e.setYRot(yaw);
                 placed++;
             }
         }
@@ -625,9 +635,18 @@ public final class HeroKits {
         return placed > 0;
     }
 
-    /** Utility: patches up every friendly machine nearby (and the crews a little), plating the machines for a moment. */
+    /**
+     * Utility: patches up every friendly machine nearby (and the crews a little), plating the machines for a moment.
+     * With no machine in reach and nobody hurt it does not go off (no cooldown, no mana for nothing).
+     */
     static boolean fieldRepair(Cast c) {
-        for (LivingEntity e : HeroFx.friends(c.level, c.hero, c.hero.position(), c.spec.radius)) {
+        List<LivingEntity> friends = HeroFx.friends(c.level, c.hero, c.hero.position(), c.spec.radius);
+        boolean worth = false;
+        for (LivingEntity e : friends)
+            worth |= MachineRepair.isMachine(e) || e.getHealth() < e.getMaxHealth();
+        if (!worth)
+            return false;
+        for (LivingEntity e : friends) {
             if (MachineRepair.isMachine(e)) {
                 e.heal(c.a());
                 HeroFx.buff(e, MobEffects.DAMAGE_RESISTANCE, 100, 0);

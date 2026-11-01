@@ -52,6 +52,11 @@ if grep -q "\[SysSample\]" gametest.log; then
 fi
 # the 8v8 stress benchmark's per-system timings, as notices readable through the GitHub API
 grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
+# the straight-line walks (gametest/WalkLineGameTests): each walk's rocking, swing, contact and cost and the start of its
+# yaw trace, passed or not, folded into ONE notice (the margins against the bounds), only in a shard that ran walks
+if grep -q "\[Walk\]" gametest.log; then
+  grep -oE "\[Walk\].*" gametest.log | head -9 | cut -c1-420 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Walk]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
 # the melee diagnostics (gametest/DuelGameTests): one line per fight, folded into ONE notice (%0A = newline)
 # because a step only keeps the first 10 notices
 grep -oE "\[Melee\].*" gametest.log | head -40 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Melee diagnostics]"} {printf "%%0A%s", $0} END{print ""}' || true

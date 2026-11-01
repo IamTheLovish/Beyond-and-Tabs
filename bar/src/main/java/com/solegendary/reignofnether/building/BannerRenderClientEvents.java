@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.perf.FrameBudget;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.world.phys.AABB;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -106,7 +107,7 @@ public class BannerRenderClientEvents {
             // by a camera-dependent amount while they used the entity)
             net.minecraft.world.phys.Vec3 cam = evt.getCamera().getPosition();
             BlockRenderDispatcher renderer = MC.getBlockRenderer();
-            float time = MC.level.getGameTime() + evt.getPartialTick();
+            float time = ClientTicks.at(evt.getPartialTick());
             BlockState pole = Blocks.DARK_OAK_PLANKS.defaultBlockState();
             boolean renderedAny = false;
             Frustum frustum = evt.getFrustum();

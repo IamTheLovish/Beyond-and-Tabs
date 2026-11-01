@@ -385,7 +385,9 @@ public interface Unit {
                 // an enemy that went under cover can't be tailed: stop where we were heading (last seen position)
                 if (com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(unit.getFollowTarget(), unit.getOwnerName()))
                     unit.setFollowTarget(null);
-                else
+                // a support unit holding its standoff behind a fight stays there (SupportBrain.idleBehind): the walk to
+                // its leader's block took it into the fight
+                else if (!(unit instanceof SupportUnit su && su.getSupportState().holdsBehind(unitMob.level().getGameTime())))
                     unit.setMoveTarget(unit.getFollowTarget().blockPosition());
             }
         }
@@ -1109,6 +1111,21 @@ public interface Unit {
 
     default float getBonusMeleeRangeForAttackers() {
         return 0.4f;
+    }
+
+    /**
+     * A flyer that hovers this many blocks over the ground, low enough to be fought from it: melee units target it,
+     * retaliate on it and take it like a walker (MiscUtil, AttackerUnit), chase it to the ground under it (Engage.melee)
+     * and reach up to it (the flyer adds the height to getBonusMeleeRangeForAttackers). 0 - every other unit - for
+     * none. lovish (Oct 29): the Seraph Archer "flies low (3 blocks up) so melee and ground towers can hit it".
+     */
+    default float meleeReachableHeight() {
+        return 0;
+    }
+
+    /** In the air and out of melee's reach: a flying unit that is not a low flyer ({@link #meleeReachableHeight}). */
+    default boolean isFlyingOutOfMelee() {
+        return isFlyingUnit() && meleeReachableHeight() <= 0;
     }
 
     default boolean hasAnyEnchants() {

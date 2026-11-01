@@ -133,6 +133,8 @@ public final class BoneMaps {
             m.fallsJointed(fall).looks(m.parts[Motion.BODY] != null ? Motion.LOOK_TWIST : Motion.LOOK_NONE);
             for (String weapon : GRIP_WEAPONS)
                 m.drops(gripWeapon(hm, weapon));
+            for (String grip : BRACED_GRIPS)
+                m.lowers(bracedGrip(hm, grip));
             return m;
         }
         return NONE;
@@ -180,6 +182,15 @@ public final class BoneMaps {
         return hm.root().getAllParts()
             .filter(p -> p.hasChild(name) && (p.hasChild("right_arm") || p.hasChild("left_arm")))
             .findFirst().map(p -> p.getChild(name)).orElse(null);
+    }
+
+    /** Grips that hold a weapon in both hands, out in front at rest (tools/gen_levy.py's crossbow). */
+    private static final String[] BRACED_GRIPS = {"xbow_arms"};
+
+    /** A grip carrying both arms (a weapon held in both hands), or null. */
+    static ModelPart bracedGrip(HierarchicalModel<?> hm, String name) {
+        ModelPart g = descendant(hm, name);
+        return g != null && g.hasChild("right_arm") && g.hasChild("left_arm") ? g : null;
     }
 
     /** Every leg, thigh and foot name our rigs and keyframe models use (bone names are not readable from a part). */

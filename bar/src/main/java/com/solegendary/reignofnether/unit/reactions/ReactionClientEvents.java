@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 
 import java.util.HashMap;
 import java.util.Map;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 /**
  * Client side of the reactions: which units are braced right now (by entity id, until a client game time), read by
@@ -19,9 +20,9 @@ public final class ReactionClientEvents {
         if (mc.level == null)
             return;
         if (kind == ReactionClientboundPacket.Kind.BRACE)
-            BRACED_UNTIL.put(entityId, mc.level.getGameTime() + ticks);
+            BRACED_UNTIL.put(entityId, ClientTicks.now() + ticks);
         if (BRACED_UNTIL.size() > 256)   // a long match: drop what has expired
-            BRACED_UNTIL.values().removeIf(t -> t < mc.level.getGameTime());
+            BRACED_UNTIL.values().removeIf(t -> t < ClientTicks.now());
     }
 
     public static boolean isBraced(int entityId) {
@@ -29,7 +30,7 @@ public final class ReactionClientEvents {
         if (mc.level == null)
             return false;
         Long until = BRACED_UNTIL.get(entityId);
-        return until != null && mc.level.getGameTime() < until;
+        return until != null && ClientTicks.now() < until;
     }
 
     public static void clear() {

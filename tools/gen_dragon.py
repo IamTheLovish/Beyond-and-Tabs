@@ -105,23 +105,38 @@ def barrel(bone, cy, z0, z1, w, h, color, k=3, cx=0.0, **kw):
         bone.cube([cx - hw, cy - hh, z0], [2 * hw, 2 * hh, z1 - z0], color, **kw)
 
 
-def bar(bone, p0, p1, w, color, plane="xy", ext=0.0, **kw):
+def bar(bone, p0, p1, w, color, plane="xy", ext=0.0, rounded=True, **kw):
     """A straight bone between two points as one rotated box: in the x-y plane (a rib, rotated about z), the y-z
-    plane (a leg link seen from the side, about x) or the x-z plane (a wing finger, about y)."""
+    plane (a leg link seen from the side, about x) or the x-z plane (a wing finger, about y). Rounded (lovish, Oct 30:
+    "the model is really blocky"): a twin box rolled 45 degrees about the bone's own axis, a hair thinner, so the
+    bone's section is an octagon, not a square beam - from any camera angle the bone reads round."""
     x0, y0, z0 = p0
     x1, y1, z1 = p1
     c = [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2]
+    dx, dy, dz = x1 - x0, y1 - y0, z1 - z0
     if plane == "xy":
-        L = math.hypot(x1 - x0, y1 - y0) + ext
-        a = math.degrees(math.atan2(y1 - y0, x1 - x0))
-        return bone.box_at(c, [L, w, w], color, rotation=[0, 0, a], pivot=list(c), **kw)
-    if plane == "yz":
-        L = math.hypot(y1 - y0, z1 - z0) + ext
-        a = math.degrees(math.atan2(z1 - z0, y1 - y0))          # 0 = straight up; x > 0 swings a hanging part forward
-        return bone.box_at(c, [w, L, w], color, rotation=[-a, 0, 0], pivot=list(c), **kw)
-    L = math.hypot(x1 - x0, z1 - z0) + ext
-    a = math.degrees(math.atan2(-(z1 - z0), x1 - x0))           # about y: + turns a +x part toward -z
-    return bone.box_at(c, [L, w, w], color, rotation=[0, a, 0], pivot=list(c), **kw)
+        L = math.hypot(dx, dy) + ext
+        a = math.degrees(math.atan2(dy, dx))
+        box = bone.box_at(c, [L, w, w], color, rotation=[0, 0, a], pivot=list(c), **kw)
+        n = math.hypot(dx, dy) or 1.0
+        perp, other = (-dy / n, dx / n, 0.0), (0.0, 0.0, 1.0)
+    elif plane == "yz":
+        L = math.hypot(dy, dz) + ext
+        a = math.degrees(math.atan2(dz, dy))          # 0 = straight up; x > 0 swings a hanging part forward
+        box = bone.box_at(c, [w, L, w], color, rotation=[-a, 0, 0], pivot=list(c), **kw)
+        n = math.hypot(dy, dz) or 1.0
+        perp, other = (0.0, -dz / n, dy / n), (1.0, 0.0, 0.0)
+    else:
+        L = math.hypot(dx, dz) + ext
+        a = math.degrees(math.atan2(-dz, dx))           # about y: + turns a +x part toward -z
+        box = bone.box_at(c, [L, w, w], color, rotation=[0, a, 0], pivot=list(c), **kw)
+        n = math.hypot(dx, dz) or 1.0
+        perp, other = (-dz / n, 0.0, dx / n), (0.0, 1.0, 0.0)
+    if rounded and w >= 1.0:
+        along = {"xy": (dx, dy, 0.0), "yz": (0.0, dy, dz)}.get(plane, (dx, 0.0, dz))
+        across = tuple(p + o for p, o in zip(perp, other))
+        slab(bone, c, along, across, [w * 0.9, w * 0.9, L - 0.2], color, **kw)
+    return box
 
 
 def thread(bone, c, L, color="soul_thread", tilt=0.0):
@@ -136,7 +151,11 @@ def thread(bone, c, L, color="soul_thread", tilt=0.0):
 
 
 def knob(bone, c, r, color, **kw):
+    """A joint's ball: a cube with its corners cut by a twin turned 45 degrees about y and one about x (an octagon from
+    above and from the side, not a die - lovish, Oct 30: "really blocky"), and the long knuckle through it."""
     bone.box_at(list(c), [r, r, r], color, **kw)
+    bone.box_at(list(c), [r * 0.88, r * 0.82, r * 0.88], color, rotation=[0, 45, 0], pivot=list(c), **kw)
+    bone.box_at(list(c), [r * 0.82, r * 0.88, r * 0.88], color, rotation=[45, 0, 0], pivot=list(c), **kw)
     bone.box_at(list(c), [r * 0.7, r * 1.3, r * 0.7], color, **kw)
 
 
@@ -271,7 +290,7 @@ def wing(m, P, s):
     mem1 = m.bone("mem_%s_1" % side, [rx, ry - 1.0, rz + 0.8], parent="wing_%s_arm" % side, rotation=[SAG * 0.7, 0, 0])
     mem1b = m.bone("mem_%s_1b" % side, [rx, ry - 1.0, rz + 0.8 + 9.0], parent="mem_%s_1" % side, rotation=[SAG * 0.6, 0, 0])
     mem1c = m.bone("mem_%s_1c" % side, [rx, ry - 1.0, rz + 0.8 + 18.0], parent="mem_%s_1b" % side, rotation=[SAG * 0.5, 0, 0])
-    membrane_panel(mem1, rx, -1.5, A + 7.0, rz + 0.8, 29.0, 24.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=2, outer=[mem1b, mem1c])
+    membrane_panel(mem1, rx, -1.5, A + 7.0, rz + 0.8, 29.0, 24.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=4, outer=[mem1b, mem1c])
     # the elbow: the fore bone's pivot
     ex = rx + s * A
     fore = m.bone("wing_%s_fore" % side, [ex, ry, rz], parent="wing_%s_arm" % side, rotation=mir(P["fore_rest"]))
@@ -282,7 +301,7 @@ def wing(m, P, s):
     mem2 = m.bone("mem_%s_2" % side, [ex, ry - 1.1, rz + 0.8], parent="wing_%s_fore" % side, rotation=[SAG * 0.7, 0, 0])
     mem2b = m.bone("mem_%s_2b" % side, [ex, ry - 1.1, rz + 0.8 + 8.0], parent="mem_%s_2" % side, rotation=[SAG * 0.6, 0, 0])
     mem2c = m.bone("mem_%s_2c" % side, [ex, ry - 1.1, rz + 0.8 + 16.0], parent="mem_%s_2b" % side, rotation=[SAG * 0.5, 0, 0])
-    membrane_panel(mem2, ex, -12.0, F + 1.0, rz + 0.8, 23.0, 21.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=3, hole=1, outer=[mem2b, mem2c])
+    membrane_panel(mem2, ex, -12.0, F + 1.0, rz + 0.8, 23.0, 21.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=5, hole=1, outer=[mem2b, mem2c])
     # tattered rags of the owner's colour at the elbow
     fore.box_at([ex + s * 2.0, ry - 2.6, rz + 0.4], [1.4, 4.4, 0.5], "tabard", rotation=[12, 0, s * 15], pivot=[ex + s * 2.0, ry - 0.4, rz + 0.4])
     fore.box_at([ex + s * 3.6, ry - 2.0, rz + 0.6], [1.0, 3.2, 0.5], "tabard_dark", rotation=[18, 0, s * -10], pivot=[ex + s * 3.6, ry - 0.4, rz + 0.6])
@@ -307,7 +326,7 @@ def wing(m, P, s):
             tip = (hx + s * L * math.cos(a), ry, rz + L * math.sin(a))
             bar(b, (hx, ry, rz), tip, th, "bone" if k < 3 else "bone_old", plane="xz", ext=0.6)
             # a knuckle a third of the way out, a dark hooked tip
-            b.box_at([hx + s * L * 0.38 * math.cos(a), ry, rz + L * 0.38 * math.sin(a)], [th * 1.5, th * 1.5, th * 1.5], "bone_old")
+            knob(b, (hx + s * L * 0.38 * math.cos(a), ry, rz + L * 0.38 * math.sin(a)), th * 1.5, "bone_old")
             b.box_at([tip[0] + s * 0.4 * math.cos(a), ry - 0.6, tip[2] + 0.4 * math.sin(a)], [th * 0.9, 1.6, th * 0.9], "claw")
         if k == 0:
             continue
@@ -503,7 +522,7 @@ def bone_skull(m, P, head, z):
         # the brow shelf over the socket, overhanging it
         head.box_at([s * (hw / 2 - 1.0), top - 0.9, sz + 0.2], [2.2, 1.0, 3.6], "bone", rotation=[0, 0, s * -10], pivot=[s * (hw / 2 - 1.8), top - 0.6, sz])
         # the cheek: a bone bar under the socket back to the jaw hinge (the zygomatic arch)
-        head.box_at([s * (hw / 2 - 0.3), cy - 1.3, hz - hl * 0.14], [1.2, 1.4, hl * 0.4], "bone_old")
+        bar(head, (s * (hw / 2 - 0.3), cy - 1.3, hz - hl * 0.34), (s * (hw / 2 - 0.3), cy - 1.3, hz + hl * 0.06), 1.3, "bone_old", plane="yz")
         # the horn: BONE (ivory, a dark worn tip only), out of a boss at the skull's back corner, ONE long sweep
         # back and out (two slabs, nearly collinear) rising only a little - a clear line in plan from above
         hb = m.bone("horn_%s" % ("left" if s > 0 else "right"), [s * (hw / 2 - 0.6), top - 0.8, hz - 0.5], parent="head")

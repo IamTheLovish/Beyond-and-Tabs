@@ -55,7 +55,7 @@ public class ResearchOverflowingGraveyard extends ProductionItem {
                 ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 FormattedCharSequence.forward(I18n.get("research.reignofnether.research_overflowing_graveyard.tooltip1", Graveyard.OVERFLOW_AMOUNT), Style.EMPTY),
-                FormattedCharSequence.forward(I18n.get("research.reignofnether.research_overflowing_graveyard.tooltip2"), Style.EMPTY),
+                FormattedCharSequence.forward(I18n.get("research.reignofnether.research_overflowing_graveyard.tooltip_no_pop"), Style.EMPTY),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 FormattedCharSequence.forward(I18n.get("research.reignofnether.research_overflowing_graveyard.tooltip3"), Style.EMPTY)
             ),

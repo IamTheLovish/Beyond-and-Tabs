@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.support;
 
+import com.solegendary.reignofnether.ability.AutoCaster;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.hero.PossessionServer;
@@ -51,10 +52,15 @@ import static com.solegendary.reignofnether.unit.support.SupportField.*;
  *   <li>steps out of danger: a melee enemy within {@link #DANGER_RADIUS} blocks, or an enemy within
  *       {@link #AIMED_RADIUS} that has it as its target, sends it {@link #KITE_STEP} blocks away from them and toward
  *       its own army (at most once per {@link #KITE_COOLDOWN} ticks; never on hold position, garrisoned, riding, or
- *       off a plain move the player gave - a player's move is the player's);</li>
+ *       off a plain move the player gave - a player's move is the player's), after one autocast look (a caster
+ *       spends its spell before it walks off);</li>
  *   <li>carries out its support order (SupportOrders gave it): behind the fighter it escorts, at cast range from the
  *       unit it was told to attack, behind the front of a Fight, or outside an attacked building's guns - remembering
- *       the spot, so after a cast pulled it forward it goes back;</li>
+ *       the spot, so after a cast pulled it forward it goes back. On the way it never leads (lovish, Oct 30: "stay
+ *       behind units"): a Fight or an escort keeps its standoff behind the order's own fighter nearest a seen enemy,
+ *       and a Fight's march no further on than the order's furthest fighter still on the move, less the standoff.
+ *       Idle, it holds the standoff behind our front whenever that front fights within its look; on Follow, behind
+ *       its leader's own fight (never off a player's move, hold position or a garrison);</li>
  *   <li>picks its next support cast on the same look - an attack order's harm when no friend is near the target, else
  *       an area heal on a cluster, a single heal, a cleanse, and an area harm only where no friend is - and asks the
  *       unit to deliver it (SupportUnit.castSupport; the Field Medic throws a potion today, PotionDelivery).</li>
@@ -108,8 +114,12 @@ public final class SupportBrain {
     static final double MAX_DY = 8;
     /** An idle unit that walked further than this for a cast walks back to its post. */
     static final double HOME_DRIFT = 2.0;
-    /** A friend must miss at least this much health for a heal (not a scratch: a potion's cooldown is shared). */
-    public static final float HEAL_MIN_MISSING = 3f;
+    /**
+     * A friend must miss more than nothing and at least this much health for a heal. lovish, Oct 30 (review r1, "Only
+     * full health"): anyone below full is a target, a full one never - so 0. It was 3 (a scratch not worth a throw,
+     * a potion's cooldown being shared); setting it back to 3 brings that floor back.
+     */
+    public static final float HEAL_MIN_MISSING = 0f;
     /** How far past a cast's range a unit may walk for a heal or cleanse: idle, and under a support order. */
     public static final double IDLE_WALK = 4.0, ORDER_WALK = 2.0;
 
@@ -151,6 +161,8 @@ public final class SupportBrain {
                     steer(level, mob, unit, s, now, reach);
                 else if (s.homing)
                     home(level, mob, unit, s, now);
+                else if (mayStepBehind(mob, unit, s))
+                    idleBehind(level, mob, unit, s, now, reach);
             }
             cast(level, mob, unit, s, now);
         } finally {
@@ -316,6 +328,8 @@ public final class SupportBrain {
             SupportMath.behind(ax, az, ex, ez, standoff(reach), mob.getX(), mob.getZ(), P);
             return stand(mob, s);
         }
+        if (dontLead(mob, reach, s.escortIds))
+            return true;
         double dx = mob.getX() - ax, dz = mob.getZ() - az, d = Math.sqrt(dx * dx + dz * dz);
         if (d <= TRAIL + ARRIVE)
             return false;
@@ -341,7 +355,12 @@ public final class SupportBrain {
         return true;
     }
 
-    /** Behind our front while it fights; else on to the rear-rank spot - where the Fight order ends. */
+    /**
+     * Behind our front while it fights; else never ahead of the order's fighters - behind the one nearest a seen enemy
+     * ({@link #dontLead}), and on the march no further on than the furthest still on the move, less the standoff (the
+     * old march walked straight to the rear-rank spot by the click, ahead of a slower army and into the enemy); else on
+     * to the rear-rank spot - where the Fight order ends. A Fight with no fighter of its own just walks to its spot.
+     */
     static boolean fightSpot(Mob mob, SupportState s, double reach) {
         if (behindFront(mob, s, reach))
             return stand(mob, s);
@@ -350,15 +369,85 @@ public final class SupportBrain {
             s.endOrder();
             return false;
         }
-        double dx = d.getX() + 0.5 - mob.getX(), dz = d.getZ() + 0.5 - mob.getZ();
-        if (dx * dx + dz * dz <= (ARRIVE + 1) * (ARRIVE + 1)) {
+        if (dontLead(mob, reach, s.escortIds))
+            return stand(mob, s);
+        double dx = d.getX() + 0.5 - mob.getX(), dz = d.getZ() + 0.5 - mob.getZ(), dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist <= ARRIVE + 1) {
             s.endOrder();   // arrived with no fight round it: the order is done, the unit is idle again
             return false;
+        }
+        double ux = dx / dist, uz = dz / dist;
+        // the march's head: the order's own fighter furthest along the way and still on the move; the unit waits (it
+        // never walks back) until the head is its standoff further on. Only the order's fighters: friends standing
+        // about (workers at a field, an idle army) are no march to wait for - review r1, a lone medic stopped for good
+        // behind one
+        double go = dist, head = marchHead(mob, s.escortIds, ux, uz);
+        if (!Double.isNaN(head))
+            go = Math.min(go, head - standoff(reach));
+        if (go < dist) {
+            if (go <= ARRIVE)
+                return false;
+            P[0] = mob.getX() + ux * go;
+            P[1] = mob.getZ() + uz * go;
+            P[2] = mob.getY();
+            return true;
         }
         P[0] = d.getX() + 0.5;
         P[1] = d.getZ() + 0.5;
         P[2] = d.getY();
         return true;
+    }
+
+    /**
+     * Never ahead of the order's fighters (lovish, Oct 30: "stay behind units"): the nearest enemy the look sees and the
+     * order's fighter nearest it - the front. A unit not its standoff further from that enemy than the front gets the
+     * spot that far behind the front (SupportMath.behind) in P: true. False with no enemy in the look, no fighter of
+     * the order alive, or when it is behind already.
+     */
+    static boolean dontLead(Mob mob, double reach, int[] fighters) {
+        if (fighters.length == 0)
+            return false;
+        double sx = mob.getX(), sz = mob.getZ();
+        if (SupportMath.nearest(FIELD, F_ENEMY | F_ATTACKER, 0, sx, sz, 1e4, SupportMath.ANY) == 0)
+            return false;
+        int e = FIELD.cand[0];
+        double ex = FIELD.x[e], ez = FIELD.z[e];
+        LivingEntity fr = null;
+        double dFront = Double.MAX_VALUE;
+        for (int id : fighters)
+            if (mob.level().getEntity(id) instanceof LivingEntity le && le.isAlive() && !le.isRemoved()) {
+                double d = Math.hypot(le.getX() - ex, le.getZ() - ez);
+                if (d < dFront) {
+                    dFront = d;
+                    fr = le;
+                }
+            }
+        if (fr == null)
+            return false;
+        double want = standoff(reach), dMe = Math.hypot(sx - ex, sz - ez);
+        if (dMe >= dFront + want - ARRIVE)
+            return false;
+        SupportMath.behind(fr.getX(), fr.getZ(), ex, ez, want, sx, sz, P);
+        P[2] = fr.getY();
+        return true;
+    }
+
+    /**
+     * How far along (ux, uz) from the unit the order's furthest fighter still on its attack-move stands (behind is
+     * negative); NaN when none is - arrived, given another order (a worker sent back to gather, one put on Follow:
+     * resetBehaviours clears the attack-move), dead or gone. Not Unit.isIdle: a worker at work or a unit on Follow is
+     * never idle, and the unit waited behind it for good (review r2).
+     */
+    static double marchHead(Mob mob, int[] fighters, double ux, double uz) {
+        double best = Double.NaN;
+        for (int id : fighters)
+            if (mob.level().getEntity(id) instanceof LivingEntity le && le.isAlive() && !le.isRemoved()
+                    && le instanceof AttackerUnit au && au.getAttackMoveTarget() != null) {
+                double a = (le.getX() - mob.getX()) * ux + (le.getZ() - mob.getZ()) * uz;
+                if (Double.isNaN(best) || a > best)
+                    best = a;
+            }
+        return best;
     }
 
     /** Outside the attacked building's guns: behind the front if there is a fight, else on the keep-out circle. */
@@ -377,9 +466,13 @@ public final class SupportBrain {
         return true;
     }
 
-    /** The standoff behind our front (SupportMath.front) into P; false when nobody near is in a fight. */
+    /** The standoff behind our front (SupportMath.front round the unit) into P; false when nobody near is in a fight. */
     static boolean behindFront(Mob mob, SupportState s, double reach) {
-        int fr = SupportMath.front(FIELD, mob.getX(), mob.getZ(), reach + SCAN_EXTRA);
+        return behindOf(mob, SupportMath.front(FIELD, mob.getX(), mob.getZ(), reach + SCAN_EXTRA), reach);
+    }
+
+    /** The standoff behind the front at FIELD index {@code fr}, away from the enemies round it, into P; false for -1. */
+    static boolean behindOf(Mob mob, int fr, double reach) {
         if (fr < 0)
             return false;
         SupportMath.centroid(FIELD, F_ENEMY, 0, FIELD.x[fr], FIELD.z[fr], SupportMath.ENGAGE_RADIUS, Q);
@@ -426,6 +519,52 @@ public final class SupportBrain {
         s.lastIssueTick = now;
     }
 
+    /**
+     * May an idle unit, or one on Follow, take its standoff behind a fight by itself? Not on hold position, garrisoned,
+     * riding, patrolling or guarding, nor while it walks a player's move (a player's move is the player's, to the
+     * clicked spot: Unit.isIdle is false until it ends) - only its own last step, which it may re-aim. On Follow it may
+     * (lovish, Oct 30, review r1: "Add Follow"): the follow walked it to its leader's block, into the fight.
+     */
+    static boolean mayStepBehind(Mob mob, SupportUnit unit, SupportState s) {
+        if (unit.getHoldPosition() || unit.isGarrisoned() || mob.isPassenger())
+            return false;
+        if (PatrolServerEvents.isPatrolling(mob.getId()) || GuardServerEvents.isGuarding(mob.getId()))
+            return false;
+        if (unit.getFollowTarget() != null)
+            return true;
+        MoveToTargetBlockGoal goal = unit.getMoveGoal();
+        if (goal == null)
+            return false;
+        BlockPos current = goal.getMoveTarget();
+        return current != null ? current.equals(s.lastIssued) : unit.isIdle();
+    }
+
+    /**
+     * An idle unit whose front fights within its look holds the standoff behind it, clear of enemy melee. On Follow
+     * only its leader's fight counts: the front round the leader (SupportMath.front within the engage radius plus the
+     * standoff of it - the leader fighting, or just behind a fight), not the biggest fight near the unit; then the
+     * follow's walk to the leader waits (Unit, SupportState.holdsBehind) and goes on a look or two after. A leader that
+     * walks off, or past someone else's fight, is followed as before (review r2: the first hold kept a medic behind
+     * any friendly fight in her look while her hero walked away).
+     */
+    static void idleBehind(ServerLevel level, Mob mob, SupportUnit unit, SupportState s, long now, double reach) {
+        LivingEntity leader = unit.getFollowTarget();
+        if (leader == null) {
+            if (!behindFront(mob, s, reach))
+                return;
+        } else {
+            if (!leader.isAlive() || leader.isRemoved() || !behindOf(mob, SupportMath.front(FIELD, leader.getX(), leader.getZ(),
+                    SupportMath.ENGAGE_RADIUS + standoff(reach)), reach))
+                return;
+            s.heldBehindUntil = now + 2L * THINK_TICKS;
+        }
+        double dx = P[0] - mob.getX(), dz = P[1] - mob.getZ();
+        if (dx * dx + dz * dz <= ARRIVE * ARRIVE)
+            return;
+        SupportMath.keepClear(FIELD, CLEAR_OF_MELEE, P);
+        goTo(level, mob, unit, s, now, P[0], P[2], P[1]);
+    }
+
     /** The walk back to its post after a throw pulled an idle medic away (standoff memory for an idle unit). */
     static void home(ServerLevel level, Mob mob, SupportUnit unit, SupportState s, long now) {
         double dx = s.homeX - mob.getX(), dz = s.homeZ - mob.getZ();
@@ -444,9 +583,11 @@ public final class SupportBrain {
             return false;
         if (unit.getHoldPosition() || mob.isPassenger() || unit.isGarrisoned())
             return false;
-        // the player's own move order (no support order, not following, patrolling or guarding) is left alone
+        // the player's own move order (no support order, not following, patrolling or guarding) is left alone; the
+        // brain's own idle step (its last issued move) is not one
         if (s.mode == Mode.NONE && !s.homing && unit.getFollowTarget() == null && unit.getMoveGoal() != null
                 && unit.getMoveGoal().getMoveTarget() != null
+                && !unit.getMoveGoal().getMoveTarget().equals(s.lastIssued)
                 && !PatrolServerEvents.isPatrolling(mob.getId()) && !GuardServerEvents.isGuarding(mob.getId()))
             return false;
         if (!SupportMath.fleeDirection(FIELD, mob.getX(), mob.getZ(), DANGER_RADIUS, AIMED_RADIUS, Q))
@@ -456,6 +597,11 @@ public final class SupportBrain {
             s.lastKite = now - KITE_COOLDOWN + CORNERED_RETRY;   // cornered: stand, look again shortly
             return false;
         }
+        // lovish, Oct 29 ("Cast before kiting"): one autocast look before the step - the step is a move order, and the
+        // AutoCaster leaves a unit on a move order alone until it ends. A cast ends this think; the next one steps from
+        // wherever the cast left it (a blink moves it). A unit with nothing to autocast finds nothing here.
+        if (AutoCaster.look(level, mob, unit))
+            return false;
         unit.cancelSupportCast();
         unit.getMoveGoal().setMoveTarget(cell);
         s.lastIssued = cell;
@@ -541,8 +687,8 @@ public final class SupportBrain {
      * The unit's next support cast on this look, delivery-agnostic (SupportKind): an attack order's area harm at its
      * target whenever no friend it would hurt is near it; otherwise, when it may cast by itself (canAutocastNow), the
      * first of SupportKind.PRIORITY it can cast that finds a target - an area heal on 2+ hurt friends, a single heal on
-     * the friend with the most missing health x value, a cleanse on an afflicted friend, an area harm only where no
-     * friend is. Nothing found: the unit's own last job (supportIdleCast).
+     * the friend lowest on health as a fraction of its own (its value only breaks a near-tie), a cleanse on an afflicted
+     * friend, an area harm only where no friend is. Nothing found: the unit's own last job (supportIdleCast).
      */
     static void cast(ServerLevel level, Mob mob, SupportUnit unit, SupportState s, long now) {
         if (unit.isSupportCasting() || now < s.kiteUntil || SealServerEvents.isSealed(mob))
