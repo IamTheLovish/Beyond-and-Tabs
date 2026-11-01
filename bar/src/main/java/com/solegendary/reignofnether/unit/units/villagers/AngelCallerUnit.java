@@ -134,7 +134,7 @@ public class AngelCallerUnit extends PathfinderMob implements Unit, EssenceCarri
 
     // endregion
 
-    // a T2 caster like the Witch (40 HP) and the Dome Cleric (40): a little sturdier, it stands behind its angels
+    // a tier-1 caster built like the Witch (40 HP) and the Dome Cleric (40): a little sturdier, it stands behind its angels
     final static public float maxHealth = 45.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.25f;
