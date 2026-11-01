@@ -172,7 +172,8 @@ def greybox_c():
 # ---- the building (round 1) ----
 # Values by how the blocks LOOK on camera (design/vehicle_labs/camera_colours.json, gen_blocks TARGETS):
 PLINTH = "polished_blackstone_bricks"          # on screen 0.13-0.17: the dark foot
-PIER = "polished_basalt"                         # pack 0.36-0.38: the ordered basalt columns of the tiers
+PIER = "polished_deepslate"                      # tier walls, mid band (camera 0.18-0.30, no grain): round 3's
+                                                 # polished_basalt read "light striped limestone" (r3 critics a/b)
 BAY = "deepslate_tiles"                          # recessed bays: mid, not dark - round 2's dark bays competed
                                                  # with the gate as equal openings (r3 critics a/b)
 BATTER = "deepslate_tile_stairs"                 # the sloped foot under each tier (0.21-0.26 on screen)
@@ -186,7 +187,8 @@ GLOW = "shroomlight"                             # ONE glow: the crater
 GATE = "obsidian"
 FRAME = "smooth_stone"                           # the gate's light surround
 AXIS_ST = "polished_blackstone_brick_stairs"     # the processional stair on the gate axis
-RAIL = "polished_andesite"                       # light rails either side of the stair (0.45 up)
+RAIL = "tuff"                                    # mid rails either side of the stair (0.34 up): round 3's
+                                                 # polished andesite made a "pale pad" over the gate (r3 critic b)
 
 INWARD = {(-1, 0): "east", (1, 0): "west", (0, -1): "south", (0, 1): "north"}
 OUTWARD = {(-1, 0): "west", (1, 0): "east", (0, -1): "north", (0, 1): "south"}
@@ -265,7 +267,8 @@ def _gate(c):
         c.set(x, 7, z, "blackstone_wall", **POST)
     for t in (-2, -1, 0, 1, 2):
         x, z = _at(WEST, 7, t)
-        c.set(x, 4, z, FRAME)                    # the lintel
+        c.set(x, 4, z, PLINTH)                   # the lintel dark: from the RTS camera round 3's light lintel
+                                                 # read as "a pale slab, not a dark mouth" (r3 critics a/b)
         for y in (1, 2, 3):
             c.set(x, y, z, "air")
         x, z = _at(WEST, 6, t)
@@ -318,11 +321,12 @@ def build():
             c.set(C + sx, 17, C + sz, "blackstone")
     for dx in range(-1, 2):
         for dz in range(-1, 2):
-            c.set(C + dx, 16, C + dz, GLOW)
-    c.set(7, 17, 7, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
-    for o in (WEST, (0, 1)):                       # notches in the lip: the glow seen from the south-west
-        x, z = _at(o, 2, 0)
-        c.set(x, 17, z, "air")
+            c.set(C + dx, 16, C + dz, CROWN)
+            c.set(C + dx, 17, C + dz, GLOW if dx * dz == 0 else "blackstone")  # round 4: the glow level with the lip, so it reads in 3/4 and at
+                                                 # dusk - round 3's sunk pool was "a dot" below ~60 deg (r3 a/b)
+    c.set(7, 18, 7, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
+    # round 4: no notches - the glow sits level with the lip, so the lip no longer hides it (round 3's notches were
+    # the only way to see a pool sunk below it)
     _gate(c)
     # the processional stair on the axis: two 1:1 flights cut into the west faces of T2 and T3 (a groove, light rails
     # either side), ending at a dark shrine door in the crown under the crater - gate, flights, door, crater on one line
