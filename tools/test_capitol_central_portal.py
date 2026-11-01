@@ -53,7 +53,7 @@ class CentralPortalTest(unittest.TestCase):
         cls.b = _load()
         cls.solid = _solid(cls.b)
         cls.size = _size()
-        cls.rts = G.shoot(cls.b, "rts", step=4)
+        cls.rts = G.shoot(cls.b, "rts", step=4, declared=cls.size)
         cls.table = CC.load()
 
     def test_capitol_size_like_the_other_six(self):

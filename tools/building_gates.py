@@ -501,16 +501,22 @@ def _march(grid, see_through, o, d, lo, hi):
     return hit, vox, axis, sign
 
 
-def shoot(b, still, step=4):
+def shoot(b, still, step=4, declared=None):
     """Every `step`-th pixel of a still, cast into `b` (a voxel DDA, each block its box(): slabs half, lanterns,
     posts, chains and rails small, panes and bars thin planes): {(px, py): hit} with hit = (cell, name, face, behind),
     face the side of the block's box the ray entered by (FACE_NAMES), behind (cell, name) of the first non-glass
-    block past a glass hit, else None - glass is seen AND seen through. Pixels that miss the structure are left out."""
+    block past a glass hit, else None - glass is seen AND seen through. Pixels that miss the structure are left out.
+    `declared`: the structure's declared size (its .nbt header) when it carries air above its top block - the eyes camera
+    aims at the declared box, so without it the model sits low on screen (Central Portal round 2, Nov 2026: 6 air
+    rows on a 22-tall box shifted the model 24 px against eyes 41269815391; with the box, 0). Default: the solid
+    extent, as before."""
     import numpy as np
     cells = {q: v for q, v in b.blocks.items() if v[0] not in S.AIR}
     if not cells:
         return {}
     size = tuple(max(q[i] for q in cells) + 1 for i in range(3))
+    if declared is not None:
+        size = tuple(max(a, int(c)) for a, c in zip(size, declared))
     ids, names = {}, [None]
     grid = np.zeros(size, dtype=np.int32)
     lo = np.zeros(size + (3,))
