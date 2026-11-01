@@ -173,7 +173,8 @@ def greybox_c():
 # Values by how the blocks LOOK on camera (design/vehicle_labs/camera_colours.json, gen_blocks TARGETS):
 PLINTH = "polished_blackstone_bricks"          # on screen 0.13-0.17: the dark foot
 PIER = "polished_basalt"                         # pack 0.36-0.38: the ordered basalt columns of the tiers
-BAY = "polished_blackstone"                      # recessed bays between piers: dark slots
+BAY = "deepslate_tiles"                          # recessed bays: mid, not dark - round 2's dark bays competed
+                                                 # with the gate as equal openings (r3 critics a/b)
 BATTER = "deepslate_tile_stairs"                 # the sloped foot under each tier (0.21-0.26 on screen)
 CAP = "smooth_stone_slab"                        # tier rims: round 1's stone_slab read 0.428 (grass 0.411, eyes
                                                  # 41268686770); greybox A's smooth stone slabs gave p90 0.643
@@ -183,6 +184,7 @@ CROWN = "smooth_basalt"                          # no vertical grain (round 1: "
 RIM = "blackstone_stairs"
 GLOW = "shroomlight"                             # ONE glow: the crater
 GATE = "obsidian"
+FRAME = "smooth_stone"                           # the gate's light surround
 AXIS_ST = "polished_blackstone_brick_stairs"     # the processional stair on the gate axis
 RAIL = "polished_andesite"                       # light rails either side of the stair (0.45 up)
 
@@ -253,16 +255,23 @@ def _paving(c, k, y):
 
 
 def _gate(c):
-    # the gate (west, on the axis z 7): an obsidian mouth 3 wide x 3 tall, 3 deep, between two pylons to y 7
-    for t in (-2, 2):
+    # the gate (west, on the axis z 7): an obsidian mouth 5 wide x 3 tall framed in light smooth stone (pylons to
+    # y 7, a lintel), so it breaks from the dark foot - round 2's 3-wide slot was "a slot, not a mouth" (r3 critics)
+    for t in (-3, 3):
         x, z = _at(WEST, 7, t)
         for y in range(1, 6):
-            c.set(x, y, z, GATE)
+            c.set(x, y, z, FRAME)
         c.set(x, 6, z, "polished_basalt", axis="y")
         c.set(x, 7, z, "blackstone_wall", **POST)
-    for t in (-1, 0, 1):
+    for t in (-2, -1, 0, 1, 2):
         x, z = _at(WEST, 7, t)
-        c.set(x, 4, z, GATE)                     # the lintel
+        c.set(x, 4, z, FRAME)                    # the lintel
+        for y in (1, 2, 3):
+            c.set(x, y, z, "air")
+        x, z = _at(WEST, 6, t)
+        for y in (1, 2, 3):
+            c.set(x, y, z, GATE)                 # the mouth's jambs and reveal: obsidian
+    for t in (-1, 0, 1):
         for a in (5, 6, 7):
             x, z = _at(WEST, a, t)
             for y in (1, 2):
@@ -293,24 +302,27 @@ def build():
     # stairs (y 15) round a 3 x 3 crater sunk one block, its floor the ONE glow (y 14) under a smoking fire; the lip
     # notched on the west and south so the glow shows from the camera side. Round 1's 3 x 3 keep with corner posts
     # read as a rook / a face and its one-block glow as a speck (critics a/b, round 1).
-    for y in (13, 14):
+    # Round 3: the crater stands 2 higher (body y 13-16) on a sloped skirt of stairs (y 14), so the profile climbs
+    # to it - in 3/4 round 2's crown was "a short dark box", the silhouette "stops like a table" (r3 critics a/b).
+    for y in (13, 14, 15, 16):
         for dx in range(-2, 3):
             for dz in range(-2, 3):
                 c.set(C + dx, y, C + dz, CROWN)
+    _batter(c, 3, 14, name="blackstone_stairs", corner=CROWN)
     for o in SIDES:
         for t in range(-1, 2):
             x, z = _at(o, 2, t)
-            _stair(c, x, 15, z, RIM, OUTWARD[o])
+            _stair(c, x, 17, z, RIM, OUTWARD[o])
     for sx in (-2, 2):
         for sz in (-2, 2):
-            c.set(C + sx, 15, C + sz, "blackstone")
+            c.set(C + sx, 17, C + sz, "blackstone")
     for dx in range(-1, 2):
         for dz in range(-1, 2):
-            c.set(C + dx, 14, C + dz, GLOW)
-    c.set(7, 15, 7, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
+            c.set(C + dx, 16, C + dz, GLOW)
+    c.set(7, 17, 7, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
     for o in (WEST, (0, 1)):                       # notches in the lip: the glow seen from the south-west
         x, z = _at(o, 2, 0)
-        c.set(x, 15, z, "air")
+        c.set(x, 17, z, "air")
     _gate(c)
     # the processional stair on the axis: two 1:1 flights cut into the west faces of T2 and T3 (a groove, light rails
     # either side), ending at a dark shrine door in the crown under the crater - gate, flights, door, crater on one line
