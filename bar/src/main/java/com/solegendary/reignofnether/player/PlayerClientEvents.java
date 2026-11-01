@@ -357,6 +357,8 @@ public class PlayerClientEvents {
             // the server keeps no player settings between sessions: tell it whether our hero may fight by itself
             com.solegendary.reignofnether.hero.HeroServerboundPacket.sendHeroAi(
                 com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.HERO_AI.get());
+            com.solegendary.reignofnether.hero.HeroServerboundPacket.sendAutoLearn(
+                com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.HERO_AUTO_LEARN.get());
         }
     }
 
