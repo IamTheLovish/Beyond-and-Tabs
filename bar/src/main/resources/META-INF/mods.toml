@@ -174,3 +174,10 @@ A fork of Reign of Nether by SoLegendary (GPL v3).
     versionRange="[0,)"
     ordering="AFTER"
     side="BOTH"
+# Macaw's Trapdoors (Oct 30 2026; MIT): shutters, hatches and panels in every wood
+[[dependencies.reignofnether]]
+    modId="mcwtrpdoors"
+    mandatory=true
+    versionRange="[1.1,)"
+    ordering="AFTER"
+    side="BOTH"

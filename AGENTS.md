@@ -194,6 +194,9 @@ NOTES.md                  older session log; README.md is out of date (this file
   application/vnd.github.raw'`). Since Oct 29 also **FramedBlocks** (LGPL-3) and **Domum Ornamentum** (GPL-3,
   CurseForge-only, a 1.20.1 snapshot build): their look is block-entity data in the structure's per-block `nbt` -
   FramedBlocks `{"id": "framedblocks:framed_tile", "camo": {"type": "framedblocks:block", "state": {"Name": ...}}}`,
+  Since Oct 30 also **Macaw's Trapdoors** 1.1.5 (MIT; `mcwtrpdoors:*`, in the dump via the `mcw` prefix). Brick & Mortar was
+  rejected: code MIT but its README says "Asset license (ARR)". `tools/test_block_mods_required.py` keeps each required block mod
+  wired everywhere (gradle, mods.toml, instance_mods.json, REQUIRED_FILES, GameTest lists).
   Domum `{"id": "domum_ornamentum:materially_retexturable", "textureData": {"<component>": "<block id>"}}` (shingle
   components `minecraft:block/clay` = roof, `minecraft:block/oak_planks` = support; timber frame `minecraft:block/oak_planks`
   = frame, `minecraft:block/dark_oak_planks` = infill); BuildingPlacement.restoreBlockEntity puts it down. **Never** copy, extract, recolour or commit their textures, models or
