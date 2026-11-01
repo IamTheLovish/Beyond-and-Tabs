@@ -25,6 +25,14 @@ THE STORMCALLERS STYLE KIT (the capitol's and the extractor's, so a Stormcaller 
   pads) on the court's south-west corner, the corner the camera meets first; a lotus mosaic in the floor where the
   trained units appear; at L3 a gilded LOTUS CROWN on top of the pagoda, its rod the tallest point.
 
+NOV 1 2026 REDRAW (blind massing, eyes 41292980809, two fresh critics 6 / 6 for the two-eave hall vs 4 / 4 shipped;
+tests tools/test_lab_lotus_academy.py): the L1 hall is double-eaved (the old L2 hall), the LOTUS is its crown on the
+upper ridge (not a sculpture in the yard), the court is ONE quiet stone (no mosaic, blossom tree, target, petals)
+under the hall's frame - a two-wide roofed gallery with spear racks down each side - and every roof corner is jade
+(gold corners read as studs / dots; gold is the lotus's alone). L2 adds the gate roof, the guardians and the third
+roof (the lotus opens on it); L3 the fourth roof and the crown. No amethyst and no banners (team-like hues). Where the
+text below disagrees, this paragraph wins.
+
 THE PLAN (9 x 9, the shipped footprint). The RTS camera looks from the south-west: it sees the roofs, the west face
 (x = 0) and the south face (z = 8). So the hall stands across the north (z 0..3) and faces south over the court
 (z 4..8) toward the camera; the gate is on the south edge on the axis, the lotus on the south-west corner.
@@ -192,8 +200,8 @@ def curved_roof(r, x1, x2, z1, z2, y, chimes, flush_north=True):
             if not (edge_x or edge_z):
                 r.set(x, y, z, JADE)          # the band
                 continue
-            if (x, z) in corners:
-                r.set(x, y, z, GOLD)
+            if (x, z) in corners:              # jade, not gold: gold corners read as "studs" / "dots" (Nov 1)
+                r.set(x, y, z, JADE)
                 r.slab(x, y + 1, z)
                 continue
             near = (edge_z and x in (x1 + 1, x2 - 1)) or (edge_x and z in (z1 + 1, z2 - 1))
@@ -246,75 +254,51 @@ COLS = (1, 3, 5, 7)
 
 
 def court_l1(r):
-    """Layer 0 and the court's dressing."""
+    """Layer 0 and the court: ONE quiet stone (critics a / b on the blind massing, eyes 41292980809: the shipped mosaic,
+    blossom tree, lotus sculpture and target read as "a chequer", "a literal bullseye", "four accents in the yard"),
+    under the hall's frame: a roofed gallery down each side, the torii on the axis."""
     for x in range(SX):
         for z in range(SZ):
             edge = x in (0, SX - 1) or z in (0, SZ - 1)
             r.set(x, 0, z, "stone_bricks" if edge else "polished_andesite")
-    # the jade path from the gate to the lotus mosaic under the spawn cell
-    for z in (5, 6, 7):
-        r.set(C, 0, z, JADE)
-    r.set(C, 0, 4, GOLD)
-    for (dx, dz) in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-        r.set(C + dx, 0, 4 + dz, "cherry_planks")
-    for (dx, dz) in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
-        r.set(C + dx, 0, 4 + dz, JADE)
-    # moss under the blossom tree in the south-east, petals round its trunk
-    for (x, z) in ((6, 6), (7, 6), (6, 7), (7, 7), (7, 5)):
-        r.set(x, 0, z, "moss_block")
-    tree(r, 7, 6)
-    for (x, z, n) in ((6, 6, 3), (6, 7, 2), (7, 5, 2)):
-        r.set(x, 1, z, "pink_petals", facing="north", flower_amount=str(n))
-    lotus_l1(r)
     # the gate: a red torii on the axis, a three-wide way out
     for x in (2, 6):
         for y in (1, 2, 3):
             r.red(x, y, 8)
-    for x in (3, 5):
+    for x in (3, C, 5):
         r.slab(x, 3, 8, "mangrove_slab", "top")
-    r.set(C, 3, 8, GOLD)                                   # the name tablet
     for x in range(2, 7):
         r.slab(x, 4, 8, OAK_SLAB, "top")
     r.st(1, 4, 8, "west", name=OAK_ST)                     # the kasagi's swept-up ends
     r.st(7, 4, 8, "east", name=OAK_ST)
-    # stone lanterns on the south corners and on the west edge (lights units don't path over)
     stone_lantern(r, 0, 8)
     stone_lantern(r, 8, 8)
-    stone_lantern(r, 0, 4)
-    # archery targets on posts, east of the muster square
-    for z in (4,):
-        r.set(6, 1, z, OAK_FENCE)
-        r.set(6, 2, z, "target", power="0")
+    galleries(r)
 
 
-def tree(r, x, z):
-    """A blossom tree (the capitol's garden): a dark oak trunk three high, a cherry canopy one cell out at y 3 (units
-    walk under it) and a crown cell on top."""
-    for y in (1, 2, 3):
-        r.set(x, y, z, OAK_LOG, axis="y")
-    for dx in (-1, 0, 1):
-        for dz in (-1, 0, 1):
-            if (dx, dz) != (0, 0) and 0 <= x + dx < SX and 0 <= z + dz < SZ:
-                r.set(x + dx, 3, z + dz, "cherry_leaves")
-    r.set(x, 4, z, "cherry_leaves")
-    r.set(x - 1, 4, z, "cherry_leaves")
+GALLERY = (4, 7)   # the side galleries' rows (z), under the hall's first roof's line
 
 
-LOTUS = (1, 6)     # the lotus sculpture's heart (x, z)
-
-
-def lotus_l1(r):
-    """THE LOTUS on the south-west corner: a chiseled stone plinth on jade lily pads (slabs), cherry petals (stairs,
-    their high back turned out, so the cup opens upward) round a glowing pearlescent heart, a gold seed-head on it."""
-    x0, z0 = LOTUS
-    r.set(x0, 1, z0, "chiseled_stone_bricks")
-    for (dx, dz) in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-        r.slab(x0 + dx, 1, z0 + dz)                       # the lily pads
-    r.set(x0, 2, z0, "pearlescent_froglight", axis="y")
-    for (dx, dz), f in (((1, 0), "east"), ((-1, 0), "west"), ((0, 1), "south"), ((0, -1), "north")):
-        r.st(x0 + dx, 2, z0 + dz, f, name=PETAL_ST)
-    for (dx, dz) in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
-        r.slab(x0 + dx, 1, z0 + dz, PETAL_SLAB)          # the outer petals, lying open
+def galleries(r):
+    """A roofed gallery down each side of the court (x 0..1 and 7..8, z 4..7): red posts on the outer edge, a spear
+    rack (lightning rods on dark oak fences) between them - the academy trains - and a jade roof at y 4 whose lip
+    runs two cells into the court, so from the camera the court sits inside the hall's frame."""
+    for x0, out in ((0, 0), (SX - 2, SX - 1)):
+        for z in GALLERY:
+            for y in (1, 2, 3):
+                r.red(out, y, z)
+        for z in range(GALLERY[0] + 1, GALLERY[1]):
+            r.set(out, 1, z, OAK_FENCE)
+            r.rod(out, 2, z)
+        for z in range(GALLERY[0], GALLERY[1] + 1):
+            r.set(out, 3, z, OAK)
+        for z in range(GALLERY[0], GALLERY[1] + 1):
+            mid, lip = (1, 2) if out == 0 else (SX - 2, SX - 3)
+            r.set(out, 4, z, JADE)
+            r.set(mid, 4, z, JADE)
+            r.st(lip, 4, z, "east" if out == 0 else "west")
+        for z in (GALLERY[0], GALLERY[1]):
+            r.slab(out, 5, z)                              # the eave's lifted ends
 
 
 def hall_l1(r):
@@ -379,15 +363,35 @@ def roof1(r, chimes):
         r.slab(x, R1 + 2, 2)
     for x in (2, 6):                       # the ridge ends: a gold "owl tail" toward the camera, a rod on it
         r.set(x, R1 + 2, 1, JADE)
-        r.set(x, R1 + 2, 2, GOLD)
+        r.set(x, R1 + 2, 2, JADE)          # jade, not gold (Nov 1: one gold leader, the lotus)
         r.rod(x, R1 + 3, 2)
 
 
 def draw_l1(r):
+    """THE LOTUS COURT (Nov 1): the hall double-eaved already at L1 (the blind massing winner), the lotus its crown."""
     court_l1(r)
     chimes = hall_l1(r)
+    hall_l2(r, chimes)
+    lotus_crown(r, R2 + 2)
     chimes += [(1, 3, 8), (7, 3, 8)]        # strikers under the torii's swept-up ends (L2's guardians replace them)
     return chimes
+
+
+def lotus_crown(r, y, x0=C, z0=1):
+    """THE LOTUS on the ridge, where the camera looks: a gold boss, cherry-stair petals opening round a pearlescent
+    heart, cherry slab petals lying open between them, a gold seed head and the storm's rod."""
+    r.set(x0, y, z0, GOLD)
+    r.set(x0, y + 1, z0, "pearlescent_froglight", axis="y")
+    for (dx, dz), f in (((1, 0), "east"), ((-1, 0), "west"), ((0, 1), "south"), ((0, -1), "north")):
+        r.st(x0 + dx, y + 1, z0 + dz, f, name=PETAL_ST)
+    for (dx, dz) in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+        r.slab(x0 + dx, y + 1, z0 + dz, PETAL_SLAB)
+    r.set(x0, y + 2, z0, GOLD)
+    r.rod(x0, y + 3, z0)
+    for dx in (-1, 0, 1):                  # a jade boss under the open petals (nothing floats)
+        for dz in (-1, 0, 1):
+            if r.get(x0 + dx, y, z0 + dz)[0] == "air":
+                r.set(x0 + dx, y, z0 + dz, JADE)
 
 
 # ======================================================================================================== L2
@@ -408,7 +412,7 @@ def hall_l2(r, chimes):
     for x in (3, 4, 5):
         r.slab(x, R1 + 2, 2)
     for x in (2, 6):
-        r.set(x, R1 + 2, 2, GOLD)
+        r.set(x, R1 + 2, 2, JADE)
         for y in range(R1 + 3, R2):
             r.red(x, y, 2)
     curved_roof(r, 1, 7, 0, 3, R2, chimes)
@@ -421,13 +425,9 @@ def hall_l2(r, chimes):
     for z in (1, 2):
         r.st(2, R2 + 1, z, "east")
         r.st(6, R2 + 1, z, "west")
-    r.slab(4, R2 + 2, 1)
-    r.slab(4, R2 + 2, 2)
     for x in (3, 5):
         r.set(x, R2 + 2, 1, JADE)
-        r.set(x, R2 + 2, 2, GOLD)
-        r.rod(x, R2 + 3, 2)
-        r.rod(x, R2 + 4, 2)
+        r.set(x, R2 + 2, 2, JADE)
     # lanterns on the first roof's band at the ends, like lamps set out on a balcony
     for x in (1, 7):
         r.lantern(x, R1 + 1, 2) if r.get(x, R1, 2)[0] == JADE else None
@@ -449,23 +449,10 @@ def gate_l2(r, chimes):
     guardian(r, 7, 8, "south")
 
 
-def court_l2(r):
-    """The lotus opens wider (amethyst grows out of its pads), red banners hang from the verandah's end columns."""
-    x0, z0 = LOTUS
-    for (dx, dz) in ((1, -1), (-1, -1)):          # the back pads: the front petals stay pink for the camera
-        r.set(x0 + dx, 1, z0 + dz, "amethyst_block")
-        r.set(x0 + dx, 2, z0 + dz, "amethyst_cluster", facing="up", **DRY)
-    r.rod(x0, 3, z0)                               # the storm's needle stands in the glowing heart
-    # red house banners on the hall's end posts, over the spear racks
-    r.set(0, 4, 1, "red_wall_banner", facing="west")
-    r.set(8, 4, 1, "red_wall_banner", facing="east")
-
-
 def draw_l2(r):
     chimes = draw_l1(r)
-    hall_l2(r, chimes)
     gate_l2(r, chimes)
-    court_l2(r)
+    storey3(r, chimes)
     return chimes
 
 
@@ -473,8 +460,9 @@ def draw_l2(r):
 R3, R4 = 14, 17
 
 
-def pagoda_l3(r, chimes):
-    """Two more storeys and roofs out of the hall's ridge, each a ring narrower, and the LOTUS CROWN."""
+def storey3(r, chimes):
+    """L2 (Nov 1: the hall is double-eaved from L1): the third storey and roof rise out of the hall's ridge through
+    the L1 lotus, which opens again on the third roof."""
     # storey 3 (x 3..5, z 0..2) off the second roof's ridge
     for y in range(R2 + 1, R3):
         for x in (3, 4, 5):
@@ -486,6 +474,13 @@ def pagoda_l3(r, chimes):
                 else:
                     r.set(x, y, z, OAK)
     curved_roof(r, 2, 6, 0, 3, R3, chimes)
+    for (x, z) in ((2, 3), (6, 3)):        # lightning rods on the third roof's front tips (the storm caught everywhere)
+        r.rod(x, R3 + 2, z)
+    lotus_crown(r, R3 + 1)                 # the lotus climbs onto the new top (L3's fourth storey grows through it)
+
+
+def pagoda_l3(r, chimes):
+    """L3: the fourth storey and roof, a ring narrower, and the LOTUS CROWN on top."""
     # storey 4: a red core (x 4, z 1..2) under the top roof
     for y in range(R3 + 1, R4):
         r.red(4, y, 1)
@@ -494,9 +489,6 @@ def pagoda_l3(r, chimes):
         r.set(5, y, 1, OAK)
         r.set(4, y, 0, OAK)
     curved_roof(r, 3, 5, 0, 2, R4, chimes, flush_north=False)
-    # lightning rods on the third roof's front tips (the storm caught everywhere)
-    for (x, z) in ((2, 3), (6, 3)):
-        r.rod(x, R3 + 2, z)
     # the LOTUS CROWN: a gold boss, cherry petals opening round a pearlescent heart, gold inner petals, the rod
     x0, z0 = 4, 1
     y = R4 + 1
