@@ -175,9 +175,11 @@ PLINTH = "polished_blackstone_bricks"          # on screen 0.13-0.17: the dark f
 PIER = "polished_basalt"                         # pack 0.36-0.38: the ordered basalt columns of the tiers
 BAY = "polished_blackstone"                      # recessed bays between piers: dark slots
 BATTER = "deepslate_tile_stairs"                 # the sloped foot under each tier (0.21-0.26 on screen)
-CAP = "stone_slab"                               # tier rims, up face 0.52 on screen: the light rings
+CAP = "smooth_stone_slab"                        # tier rims: round 1's stone_slab read 0.428 (grass 0.411, eyes
+                                                 # 41268686770); greybox A's smooth stone slabs gave p90 0.643
 TERRACE = "tuff"                                 # terrace paving, up 0.34
 CONE = "basalt"
+CROWN = "smooth_basalt"                          # no vertical grain (round 1: "barrel staves")
 RIM = "blackstone_stairs"
 GLOW = "shroomlight"                             # ONE glow: the crater
 GATE = "obsidian"
@@ -266,33 +268,28 @@ def build():
     _tier(c, 3, 9, 12, piers=(3, 0), wall=PIER, bay_rows=(10, 11))
     _batter(c, 4, 9)
     _rim(c, 3, 13)
-    # the crown: a tapered basalt cone - 5 x 5 (y 13-15), a sloped ring (y 16), 3 x 3 (y 16-18), the crater rim (y 19)
-    for y in (13, 14, 15):
+    # the crown (round 2): a low, wide crater - a 5 x 5 smooth-basalt body (y 13-14, no grain stripes), a lip of
+    # stairs (y 15) round a 3 x 3 crater sunk one block, its floor the ONE glow (y 14) under a smoking fire; the lip
+    # notched on the west and south so the glow shows from the camera side. Round 1's 3 x 3 keep with corner posts
+    # read as a rook / a face and its one-block glow as a speck (critics a/b, round 1).
+    for y in (13, 14):
         for dx in range(-2, 3):
             for dz in range(-2, 3):
-                _block(c, C + dx, y, C + dz, CONE)
-    _batter(c, 2, 16, name="blackstone_stairs", corner="polished_basalt")
-    for y in (16, 17, 18):
-        for dx in range(-1, 2):
-            for dz in range(-1, 2):
-                _block(c, C + dx, y, C + dz, CONE)
+                c.set(C + dx, y, C + dz, CROWN)
     for o in SIDES:
-        for t in (-1, 0, 1):
-            x, z = _at(o, 1, t)
-            _stair(c, x, 19, z, RIM, OUTWARD[o])
-    for sx in (-1, 1):
-        for sz in (-1, 1):
-            c.set(C + sx, 19, C + sz, "blackstone")
-    c.set(7, 18, 7, GLOW)
-    c.set(7, 19, 7, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
-    for o in (WEST, (0, 1)):                       # notches in the rim: the glow seen from the south-west
-        x, z = _at(o, 1, 0)
-        c.set(x, 19, z, "air")
-    # fire posts on the crown's sloped ring corners (y 17-18)
+        for t in range(-1, 2):
+            x, z = _at(o, 2, t)
+            _stair(c, x, 15, z, RIM, OUTWARD[o])
     for sx in (-2, 2):
         for sz in (-2, 2):
-            c.set(C + sx, 17, C + sz, "polished_basalt", axis="y")
-            c.set(C + sx, 18, C + sz, "blackstone_wall", **POST)
+            c.set(C + sx, 15, C + sz, "blackstone")
+    for dx in range(-1, 2):
+        for dz in range(-1, 2):
+            c.set(C + dx, 14, C + dz, GLOW)
+    c.set(7, 15, 7, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
+    for o in (WEST, (0, 1)):                       # notches in the lip: the glow seen from the south-west
+        x, z = _at(o, 2, 0)
+        c.set(x, 15, z, "air")
     # the gate (west, on the axis z 7): an obsidian mouth 3 wide x 3 tall, 3 deep, between two pylons to y 7
     for t in (-2, 2):
         x, z = _at(WEST, 7, t)
