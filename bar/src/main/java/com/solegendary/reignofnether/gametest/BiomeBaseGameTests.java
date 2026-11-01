@@ -644,13 +644,18 @@ public class BiomeBaseGameTests {
     // ---------------------------------------------------------------------------------------------- capitols
 
     /**
-     * The capitols' boxes, build times and foundations: RoN's box for the Central Portal; the Oct 19 centrepieces (the
-     * owner's "a lot bigger, a lot taller, a lot more detailed") for the Town Centre (Temple of the Sun), the Mausoleum
-     * (Necropolis Cathedral), the Foundry Hall (Grand Foundry), the Wreck Harbour (Admiral's Beacon) the Jade Pagoda (Pagoda of a Thousand
-     * Storms) and Heartwood Hall (World-Tree Court). Each keeps its
+     * The capitols' boxes, build times and foundations: the Oct 19 centrepieces (the owner's "a lot bigger, a lot
+     * taller, a lot more detailed") for the Town Centre (Temple of the Sun), the Mausoleum (Necropolis Cathedral), the
+     * Foundry Hall (Grand Foundry), the Wreck Harbour (Admiral's Beacon) the Jade Pagoda (Pagoda of a Thousand
+     * Storms) and Heartwood Hall (World-Tree Court), and the Nov 2026 Ashborn volcano-temple for the Central Portal
+     * (tools/capitol_central_portal.py). Each keeps its
      * build-time block count (buildTimeBlocks: RoN's block count, or the shipped hall's) whatever its art gained, more
-     * blocks than that count, and its starting types in the foundation. The Central Portal's obsidian frame with the
-     * air inside it is intact; the Mausoleum's bell hangs in an empty cell with nothing beside it to swing into.
+     * blocks than that count, and its starting types in the foundation. The Central Portal's cells where its tick
+     * lights a fire (centrePos + (-1, 0, 0) / (0, -1, 0), centre y either way) are solid, so no stray fire burns; the
+     * Mausoleum's bell hangs in an empty cell with nothing beside it to swing into.
+     * Retired here (Nov 2026): the check that the Central Portal kept RoN's obsidian portal frame with air inside it.
+     * It encoded a look lovish rejected for the Ashborn on Oct 19 ("must NOT resemble Reign of Nether's Piglins: no
+     * pigs, gold, gilded blackstone, nether brick, portals"; design/building-revamp-progress.md).
      */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void capitol_details_keep_box_build_time_and_anchors(GameTestHelper helper) {
@@ -659,7 +664,7 @@ public class BiomeBaseGameTests {
         Object[][] capitols = {
             { Buildings.TOWN_CENTRE, 305, new int[] { 14, 19, 14 } },   // the Temple of the Sun (Oct 19): 15 x 20 x 15
             { Buildings.MAUSOLEUM, 364, new int[] { 14, 21, 14 } },     // the Necropolis Cathedral (Oct 19): 15 x 22 x 15
-            { Buildings.CENTRAL_PORTAL, 314, new int[] { 10, 15, 8 } },
+            { Buildings.CENTRAL_PORTAL, 314, new int[] { 14, 21, 14 } },   // the Ashborn volcano-temple (Nov 2026)
             { Buildings.FOUNDRY_HALL, 428, new int[] { 14, 21, 14 } },     // the Grand Foundry (Oct 19)
             { Buildings.WRECK_HARBOUR, 243, new int[] { 14, 21, 14 } },    // the Admiral's Beacon (Oct 19)
             { Buildings.JADE_PAGODA, 494, new int[] { 14, 21, 14 } },      // the Pagoda of a Thousand Storms (Oct 19)
@@ -685,7 +690,7 @@ public class BiomeBaseGameTests {
                 }
             }
             if (maxX != box[0] || maxY != box[1] || maxZ != box[2])
-                problems.add(b.structureName + ": box " + maxX + "/" + maxY + "/" + maxZ + ", RoN's is " + box[0] + "/" + box[1] + "/" + box[2]);
+                problems.add(b.structureName + ": box " + maxX + "/" + maxY + "/" + maxZ + ", its box is " + box[0] + "/" + box[1] + "/" + box[2]);
             if (b.getBuildTimeBlocks() != ronBlocks)
                 problems.add(b.structureName + ": buildTimeBlocks " + b.getBuildTimeBlocks() + ", its build-time block count is " + ronBlocks);
             if (nonAir <= ronBlocks)
@@ -694,14 +699,20 @@ public class BiomeBaseGameTests {
                 if (!foundation.contains(start))
                     problems.add(b.structureName + ": no " + start + " left in its foundation layers");
             if (b == Buildings.CENTRAL_PORTAL) {
-                for (int y = 2; y <= 11; y++) {
-                    for (int x : new int[] { 3, 7 })
-                        if (!at.getOrDefault(new BlockPos(x, y, 4), Blocks.AIR.defaultBlockState()).is(Blocks.OBSIDIAN))
-                            problems.add("central_portal: the frame lost its obsidian at " + x + "/" + y + "/4");
-                    for (int x = 4; x <= 6; x++)
-                        if (!at.getOrDefault(new BlockPos(x, y, 4), Blocks.AIR.defaultBlockState()).isAir())
-                            problems.add("central_portal: the portal opening is blocked at " + x + "/" + y + "/4");
+                int cx = box[0] / 2, cz = box[2] / 2;
+                for (int cy : new int[] { box[1] / 2, (box[1] + 1) / 2 }) {
+                    BlockPos[] fire = { new BlockPos(cx - 1, cy, cz), new BlockPos(cx + 1, cy, cz),
+                        new BlockPos(cx, cy, cz - 1), new BlockPos(cx, cy, cz + 1), new BlockPos(cx, cy - 1, cz) };
+                    for (BlockPos p : fire)
+                        if (at.getOrDefault(p, Blocks.AIR.defaultBlockState()).isAir())
+                            problems.add("central_portal: its tick would light a stray fire at " + p.toShortString());
                 }
+                Set<Block> nether = new HashSet<>();
+                for (BlockState s : at.values())
+                    if (s.is(Blocks.NETHER_BRICKS) || s.is(Blocks.NETHER_PORTAL) || s.is(Blocks.NETHERRACK))
+                        nether.add(s.getBlock());
+                if (!nether.isEmpty())
+                    problems.add("central_portal: " + nether + " (the Ashborn keep no nether kit, lovish Oct 19)");
             }
         }
         WindGenerator.Motion bell = CapitolLife.MOTIONS.get(Buildings.MAUSOLEUM.structureName);
