@@ -92,6 +92,15 @@ public class DisplaySettingsScreen extends Screen {
         }));
         mist.setTooltip(Tooltip.create(Component.literal(
             "Soft ground mist that pools in hollows, along water and under cliffs: thick at dawn, gone by late morning, back at dusk, drifting with the wind. None at strategic zoom or in rain.")));
+        Button edges = addRenderableWidget(ReignOfNetherConfigScreen.button(right, y, colW, rowH, pathEdgesLabel(), b -> {
+            ReignOfNetherClientConfigs.PATH_EDGES.set(!DisplaySettings.pathEdges());
+            b.setMessage(pathEdgesLabel());
+            // the fringe is built into the terrain mesh: rebuild it so the change shows now
+            if (this.minecraft != null && this.minecraft.level != null)
+                this.minecraft.levelRenderer.allChanged();
+        }));
+        edges.setTooltip(Tooltip.create(Component.literal(
+            "A ragged grass fringe over paths, dirt, sand and gravel where they meet grass, instead of a straight tile edge. Built with the terrain: no cost per frame.")));
         y += step + 12;
 
         addRenderableOnly(new Label("World look").pos(left, y - 4).size(colW * 2 + gap, rowH));
@@ -121,6 +130,10 @@ public class DisplaySettingsScreen extends Screen {
 
     private static Component ambienceLabel() {
         return Component.literal("Building ambience: " + (DisplaySettings.buildingAmbience() ? "On" : "Off"));
+    }
+
+    private static Component pathEdgesLabel() {
+        return Component.literal("Path edges: " + (DisplaySettings.pathEdges() ? "On" : "Off"));
     }
 
     private static Component mistLabel() {

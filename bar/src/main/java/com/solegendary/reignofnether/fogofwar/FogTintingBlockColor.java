@@ -2,8 +2,10 @@ package com.solegendary.reignofnether.fogofwar;
 
 import com.solegendary.reignofnether.worldborder.WorldBorderClientEvents;
 import net.minecraft.client.color.block.BlockColor;
+import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.GrassColor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -15,6 +17,16 @@ public class FogTintingBlockColor implements BlockColor {
 
     // tint index FogTintingBakedModel assigns to originally-untinted quads: fog only, never the block's own colour
     public static final int FOG_ONLY_TINT_INDEX = 1000;
+
+    /**
+     * Tint index of the edge overlays' grass fringe (environment/edge, lovish Oct 30): the lawn's own colour at the
+     * block it lies on - BiomeColors.getAverageGrassColor, which BiomeColorsMixin gives the GrassTint patches, the
+     * canopy shade and the fog - so the fringe on a path is the green of the grass beside it. A tint index here, not a
+     * new BlockColor: registering one re-breaks Embeddium's biome blending (see BIOME_TINTED). The path / dirt / sand
+     * blocks are not blended by Embeddium, so it asks this wrapper once per quad: one colour per block, sampled at the
+     * block's own position (the lawn next to it is blended per corner from the same field, a shade apart at most).
+     */
+    public static final int EDGE_GRASS_TINT_INDEX = 1001;
 
     /**
      * The biome-tinted blocks: only their untinted quads are fogged here (BiomeColorsMixin fogs the biome colour). The
@@ -40,6 +52,8 @@ public class FogTintingBlockColor implements BlockColor {
 
     @Override
     public int getColor(BlockState state, @Nullable BlockAndTintGetter level, @Nullable BlockPos pos, int tintIndex) {
+        if (tintIndex == EDGE_GRASS_TINT_INDEX)
+            return level != null && pos != null ? BiomeColors.getAverageGrassColor(level, pos) : GrassColor.getDefaultColor();
         boolean fogOnly = tintIndex == FOG_ONLY_TINT_INDEX;
         int base = (delegate != null && !fogOnly) ? delegate.getColor(state, level, pos, tintIndex) : -1;
         if (pos == null || level == null) return base;
