@@ -188,23 +188,7 @@ public final class UnitUnstick {
             boolean riseOk = !bodyBlocked(level, p.set(x, y + 2, z));
             for (int d = 0; d < 8; d++) {
                 int nx = x + GridNeighbors.DX[d], nz = z + GridNeighbors.DZ[d];
-                boolean diag = GridNeighbors.DX[d] != 0 && GridNeighbors.DZ[d] != 0;
-                int ny = Integer.MIN_VALUE;
-                if (isWalkable(level, p.set(nx, y, nz)) && !diagonalBlocked(level, p, x, y, z, d))
-                    ny = y;
-                else if (!diag && riseOk && isWalkable(level, p.set(nx, y + 1, nz)))
-                    ny = y + 1;
-                else if (isWalkable(level, p.set(nx, y - 1, nz)) && !diagonalBlocked(level, p, x, y - 1, z, d))
-                    ny = y - 1;
-                else if (!bodyBlocked(level, p.set(nx, y, nz)) && !bodyBlocked(level, p.set(nx, y + 1, nz))
-                        && !bodyBlocked(level, p.set(nx, y - 1, nz)) && !diagonalBlocked(level, p, x, y, z, d)) {
-                    // a drop: step off the edge into a clear column and land on the first walkable cell below
-                    for (int fy = y - 2; fy >= y - PathfinderConfig.MAX_FALL_DROP; fy--) {
-                        if (bodyBlocked(level, p.set(nx, fy + 1, nz)))
-                            break;
-                        if (isWalkable(level, p.set(nx, fy, nz))) { ny = fy; break; }
-                    }
-                }
+                int ny = step(level, p, x, y, z, d, riseOk);
                 if (ny == Integer.MIN_VALUE)
                     continue;
                 int dx = nx - origin.getX(), dz = nz - origin.getZ();
@@ -220,6 +204,84 @@ public final class UnitUnstick {
             }
         }
         return true;
+    }
+
+    /**
+     * The height of the cell a ground unit standing in (x, y, z) reaches by one grid move in direction {@code d}
+     * (GridNeighbors.DX/DZ): flat, a cardinal step up ({@code riseOk}: headroom over the start), a step down, or a drop
+     * of up to MAX_FALL_DROP; {@link Integer#MIN_VALUE} when there is no such move. {@code p} is scratch.
+     */
+    private static int step(Level level, BlockPos.MutableBlockPos p, int x, int y, int z, int d, boolean riseOk) {
+        int nx = x + GridNeighbors.DX[d], nz = z + GridNeighbors.DZ[d];
+        boolean diag = GridNeighbors.DX[d] != 0 && GridNeighbors.DZ[d] != 0;
+        if (isWalkable(level, p.set(nx, y, nz)) && !diagonalBlocked(level, p, x, y, z, d))
+            return y;
+        if (!diag && riseOk && isWalkable(level, p.set(nx, y + 1, nz)))
+            return y + 1;
+        if (isWalkable(level, p.set(nx, y - 1, nz)) && !diagonalBlocked(level, p, x, y - 1, z, d))
+            return y - 1;
+        if (!bodyBlocked(level, p.set(nx, y, nz)) && !bodyBlocked(level, p.set(nx, y + 1, nz))
+                && !bodyBlocked(level, p.set(nx, y - 1, nz)) && !diagonalBlocked(level, p, x, y, z, d)) {
+            // a drop: step off the edge into a clear column and land on the first walkable cell below
+            for (int fy = y - 2; fy >= y - PathfinderConfig.MAX_FALL_DROP; fy--) {
+                if (bodyBlocked(level, p.set(nx, fy + 1, nz)))
+                    break;
+                if (isWalkable(level, p.set(nx, fy, nz)))
+                    return fy;
+            }
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    /** Blocks outside a footprint a unit must be able to reach to count as out of the building (not one alley cell). */
+    public static final int LEAVE_MARGIN = 3;
+    /** Cells a {@link #leavesFootprint} search expands before it gives the benefit of the doubt. */
+    static final int LEAVE_BUDGET = 1024;
+
+    /**
+     * Whether a 1-wide, 2-tall ground unit standing in {@code origin} can walk out of the box {@code min..max} (a
+     * building's footprint) to open ground: some cell it can reach is {@link #LEAVE_MARGIN} or more blocks outside the
+     * box. The grid's own moves, as {@link #isPocketed}; searched outermost first, so an open way out takes a few dozen
+     * cells. A closed yard (the Graveyard's, with a building or a bank against its one gate) runs out of cells: false.
+     * {@link #isPocketed} can't see that - the yard is bigger than a pocket - and this is what a building spawning a unit
+     * asks (ProductionPlacement.produceUnit). A search that spends {@link #LEAVE_BUDGET} cells answers true: a big
+     * interior is not taken for a trap.
+     */
+    public static boolean leavesFootprint(Level level, BlockPos origin, BlockPos min, BlockPos max) {
+        if (outside(origin.getX(), origin.getZ(), min, max) >= LEAVE_MARGIN)
+            return true;
+        java.util.HashSet<Long> seen = new java.util.HashSet<>();
+        // outermost first: a cell further out of the box (or nearer its edge, inside) is expanded before the others
+        java.util.PriorityQueue<long[]> open = new java.util.PriorityQueue<>((a, b) -> Long.compare(b[1], a[1]));
+        seen.add(origin.asLong());
+        open.add(new long[] { origin.asLong(), outside(origin.getX(), origin.getZ(), min, max) });
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        int expanded = 0;
+        while (!open.isEmpty()) {
+            if (++expanded > LEAVE_BUDGET)
+                return true;
+            BlockPos c = BlockPos.of(open.poll()[0]);
+            int x = c.getX(), y = c.getY(), z = c.getZ();
+            boolean riseOk = !bodyBlocked(level, p.set(x, y + 2, z));
+            for (int d = 0; d < 8; d++) {
+                int ny = step(level, p, x, y, z, d, riseOk);
+                if (ny == Integer.MIN_VALUE)
+                    continue;
+                int nx = x + GridNeighbors.DX[d], nz = z + GridNeighbors.DZ[d];
+                int out = outside(nx, nz, min, max);
+                if (out >= LEAVE_MARGIN)
+                    return true;
+                long key = BlockPos.asLong(nx, ny, nz);
+                if (seen.add(key))
+                    open.add(new long[] { key, out });
+            }
+        }
+        return false;
+    }
+
+    // How far (x, z) is outside the box horizontally: > 0 outside, <= 0 inside (minus the distance to the nearest edge).
+    private static int outside(int x, int z, BlockPos min, BlockPos max) {
+        return Math.max(Math.max(min.getX() - x, x - max.getX()), Math.max(min.getZ() - z, z - max.getZ()));
     }
 
     /** A cell a ground unit may move through: anything the pathfinder gives a finite cost (not blocked, not lava). */

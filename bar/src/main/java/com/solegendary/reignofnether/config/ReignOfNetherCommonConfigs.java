@@ -33,6 +33,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.SPIDER.define(BUILDER);
         UnitCosts.POISON_SPIDER.define(BUILDER);
         UnitCosts.WRAITH.define(BUILDER);
+        UnitCosts.TOMBCALLER.define(BUILDER);
         UnitCosts.SLIME.define(BUILDER);
         UnitCosts.WARDEN.define(BUILDER);
         UnitCosts.ZOMBIE_PIGLIN.define(BUILDER);
@@ -64,6 +65,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.ELDER_TREANT.define(BUILDER);
         UnitCosts.WISP_CHOIR.define(BUILDER);
         UnitCosts.BLOOM_PRIESTESS.define(BUILDER);
+        UnitCosts.THORNWEAVER.define(BUILDER);
         UnitCosts.SUN_COLOSSUS.define(BUILDER);
         UnitCosts.WORLD_TREE_WALKER.define(BUILDER);
         UnitCosts.SEEDSHAPER.define(BUILDER);
@@ -364,6 +366,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry SPIDER = ResourceCostConfigEntry.Unit(80,20,10,25,2, ResourceCosts.SPIDER, "Spider Config");
         public static final ResourceCostConfigEntry POISON_SPIDER = ResourceCostConfigEntry.Unit(80,20,10,25,2, ResourceCosts.POISON_SPIDER, "Poison Spider Config");
         public static final ResourceCostConfigEntry WRAITH = ResourceCostConfigEntry.Unit(70,0,70,30,2, ResourceCosts.WRAITH, "Wraith Config");
+        // Gravebound essence caster (design/essence_casters.md): a Wraith-and-a-bit, as the Witch is to the Evoker - its
+        // essence spells on a fragile body, paid for in the Wraith's own food and ore (placeholder numbers for lovish)
+        public static final ResourceCostConfigEntry TOMBCALLER = ResourceCostConfigEntry.Unit(90,0,90,35,2, ResourceCosts.TOMBCALLER, "Tombcaller Config");
         public static final ResourceCostConfigEntry SLIME = ResourceCostConfigEntry.Unit(40,40,40,25,2, ResourceCosts.SLIME, "Slime Config");
         public static final ResourceCostConfigEntry WARDEN = ResourceCostConfigEntry.Unit(275,0,125,50,5, ResourceCosts.WARDEN, "Warden Config");
         public static final ResourceCostConfigEntry NECROMANCER = ResourceCostConfigEntry.Unit(0,0,0,30, 5, ResourceCosts.NECROMANCER, "Necromancer Config");
@@ -383,8 +388,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry VINDICATOR = ResourceCostConfigEntry.Unit(160,0,0,32,3, ResourceCosts.VINDICATOR, "Vindicator Config");
         public static final ResourceCostConfigEntry WITCH = ResourceCostConfigEntry.Unit(90,90,90,35,3, ResourceCosts.WITCH, "Witch Config");
         public static final ResourceCostConfigEntry EVOKER = ResourceCostConfigEntry.Unit(140,0,120,35,3, ResourceCosts.EVOKER, "Evoker Config");
-        // Sunforged essence caster (design/essence_casters.md): the Evoker's price plus a little, its power is its essence
-        public static final ResourceCostConfigEntry ANGEL_CALLER = ResourceCostConfigEntry.Unit(140,40,120,40,3, ResourceCosts.ANGEL_CALLER, "Angel Caller Config");
+        // Sunforged essence caster (design/essence_casters.md): tier 1, priced as tier 1 (lovish, Oct 30) - 115 metal / 120
+        // energy after bakeValues, the same for every race's caster, under both tier-2 lines (BarFx 120, UnitIconTier 180)
+        public static final ResourceCostConfigEntry ANGEL_CALLER = ResourceCostConfigEntry.Unit(0,80,90,40,3, ResourceCosts.ANGEL_CALLER, "Angel Caller Config");
         // its angels are paid in essence: no metal, energy or population (lovish, Oct 29: "angels take no population")
         public static final ResourceCostConfigEntry ANGEL = ResourceCostConfigEntry.Unit(0,0,0,1,0, ResourceCosts.ANGEL, "Angel (Angel Caller summon) Config");
         public static final ResourceCostConfigEntry RAVAGER = ResourceCostConfigEntry.Unit(400,50,150,60,7, ResourceCosts.RAVAGER, "Ravager Config");
@@ -447,9 +453,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry EARTHSHAKER = ResourceCostConfigEntry.Unit(200,80,160,50,5, ResourceCosts.EARTHSHAKER, "Earthshaker Config");
         public static final ResourceCostConfigEntry GRAVITY_MONK = ResourceCostConfigEntry.Unit(120,70,100,38,3, ResourceCosts.GRAVITY_MONK, "Gravity Monk Config");
         public static final ResourceCostConfigEntry MIRROR_MAGE = ResourceCostConfigEntry.Unit(110,80,90,38,3, ResourceCosts.MIRROR_MAGE, "Mirror Mage Config");
-        // the essence caster (design/essence_casters.md) a step above the Observatory's casters - the Gravity Monk
-        // (120/70/100, 38 s) and the Mirror Mage (110/80/90, 38 s) - as its spells also deal damage; 3 population like them
-        public static final ResourceCostConfigEntry SPARK_SAGE = ResourceCostConfigEntry.Unit(120,80,100,40,3, ResourceCosts.SPARK_SAGE, "Spark Sage Config");
+        // the essence caster (design/essence_casters.md): tier 1, priced as tier 1 (lovish, Oct 30) - 115 metal / 120 energy
+        // after bakeValues, the same for every race's caster, under both tier-2 lines (BarFx 120, UnitIconTier 180)
+        public static final ResourceCostConfigEntry SPARK_SAGE = ResourceCostConfigEntry.Unit(0,80,90,40,3, ResourceCosts.SPARK_SAGE, "Spark Sage Config");
         // slice 4: the Seer is the cheapest T2 (it only looks - the Owl Watcher's rule); the Lantern Fortress sits with the
         // Earthshaker as a T2 body bought for its dome (no attack); the Phoenix a little under the Thunder Dragon (less damage,
         // but it comes back once); the Celestial Dragon is the standard experimental price (the World Tree Walker's)
@@ -495,6 +501,9 @@ public class ReignOfNetherCommonConfigs {
         // Priestess a little above the Witch (a whole-army healer that also cleanses)
         public static final ResourceCostConfigEntry WISP_CHOIR = ResourceCostConfigEntry.Unit(110,60,70,32,3, ResourceCosts.WISP_CHOIR, "Wisp Choir Config");
         public static final ResourceCostConfigEntry BLOOM_PRIESTESS = ResourceCostConfigEntry.Unit(120,80,80,40,3, ResourceCosts.BLOOM_PRIESTESS, "Bloom Priestess Config");
+        // the essence caster (design/essence_casters.md) between the Priestess (175 metal) and the Shade Ranger (215):
+        // a support like her, whose essence spells can also hold and out-number a fight
+        public static final ResourceCostConfigEntry THORNWEAVER = ResourceCostConfigEntry.Unit(120,80,100,40,3, ResourceCosts.THORNWEAVER, "Thornweaver Config");
         public static final ResourceCostConfigEntry EMBALMER = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.EMBALMER, "Embalmer Config");
         public static final ResourceCostConfigEntry BONEWRIGHT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.BONEWRIGHT, "Bonewright Config");
         public static final ResourceCostConfigEntry WAR_MAMMOTH = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.WAR_MAMMOTH, "War Mammoth Config");
@@ -539,9 +548,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry GYROCOPTER_GUNSHIP = ResourceCostConfigEntry.Unit(110,100,160,45,4, ResourceCosts.GYROCOPTER_GUNSHIP, "Gyrocopter Gunship Config");
         public static final ResourceCostConfigEntry DRILL_BURROWER = ResourceCostConfigEntry.Unit(110,60,120,40,3, ResourceCosts.DRILL_BURROWER, "Drill Burrower Config");
         public static final ResourceCostConfigEntry REPAIR_CRAWLER = ResourceCostConfigEntry.Unit(90,60,80,35,2, ResourceCosts.REPAIR_CRAWLER, "Repair Crawler Config");
-        // the essence caster (design/essence_casters.md): priced as the Verdant Thornweaver (100 metal, 80 energy, 3
-        // pop), above the Repair Crawler (80 / 60, 2 pop) whose job it shares, below the T2 fighters (120-170 metal)
-        public static final ResourceCostConfigEntry SOUL_ENGINEER = ResourceCostConfigEntry.Unit(120,80,100,40,3, ResourceCosts.SOUL_ENGINEER, "Soul Engineer Config");
+        // the essence caster (design/essence_casters.md): tier 1, priced as tier 1 (lovish, Oct 30) - 115 metal / 120 energy
+        // after bakeValues, the same for every race's caster, under both tier-2 lines (BarFx 120, UnitIconTier 180)
+        public static final ResourceCostConfigEntry SOUL_ENGINEER = ResourceCostConfigEntry.Unit(0,80,90,40,3, ResourceCosts.SOUL_ENGINEER, "Soul Engineer Config");
         public static final ResourceCostConfigEntry CLOCKWORK_SPIDER = ResourceCostConfigEntry.Unit(100,90,130,42,3, ResourceCosts.CLOCKWORK_SPIDER, "Clockwork Spider Config");
         // slice 4: the Iron Leviathan Engine is the standard experimental price (the World Tree Walker's / Celestial Dragon's)
         public static final ResourceCostConfigEntry IRON_LEVIATHAN_ENGINE = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.IRON_LEVIATHAN_ENGINE, "Iron Leviathan Engine Config");

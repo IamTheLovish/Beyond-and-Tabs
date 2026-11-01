@@ -281,6 +281,9 @@ public class UnitActionItem {
                 PatrolServerEvents.clear(((Entity) unit).getId());
             if (action != UnitAction.GUARD && !isStateCommand && !autocast)
                 GuardServerEvents.clear(((Entity) unit).getId());
+            // its first step on this order is sent to the players at once (OrderAck)
+            if (!level.isClientSide() && !isStateCommand && !autocast)
+                OrderAck.expect((Mob) unit);
             // healers and other support units read attack, Fight and attack-building orders their own way - a standoff
             // behind the front, never a chase into melee (lovish, Oct 21: they "end up killing themselves"). Server
             // side; every other order just ends their support order and runs below (unit/support/SupportOrders)

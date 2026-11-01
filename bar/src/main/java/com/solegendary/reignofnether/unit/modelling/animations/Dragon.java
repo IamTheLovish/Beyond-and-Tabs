@@ -98,6 +98,16 @@ public final class Dragon {
         public float bankHover = 0.45f, bankGround = 0.12f;
         /** The climb: the vertical speed (blocks per tick) that counts as a full climb / dive. */
         public float climbSpeed = 0.06f;
+        /** How much shorter the beat is in a full climb (a share of the beat), and the head's nod per unit of braking
+         *  (degrees per b/t^2) and its cap - lovish, Oct 30: "refining the animation for the dragon". */
+        public float climbBeat = 0.32f, brakeNodPer = 1000f, brakeNodMax = 10f;
+        /** The drivers' speed smoothing and braking smoothing (ticks), and the forward speed (b/t) of a full bank. */
+        public float speedTau = 8f, brakeTau = 6f, bankFullSpeed = 0.12f;
+        /** A brake counts once the smoothed braking has stayed over brakeOn (b/t^2) for brakeHold ticks: a stutter's
+         *  braking flips sign within a tick or two, a real brake holds (review r1 of #440); and the nod's dead band. */
+        public float brakeOn = 0.001f, brakeHold = 4f, brakeNodFrom = 0.003f;
+        /** How long (ticks of motion) a fresh state's speed seed may still come down to the slowest tick. */
+        public float seedTicks = 3f;
         /** The take-off: how many ticks after it appears a dragon is still taking off. */
         public float takeoffTicks = 60f;
     }
@@ -175,7 +185,10 @@ public final class Dragon {
      *  climb, the beat phase (beats), flare, take-off, the smoothed speed, the smoothed braking, perched]. */
     private static final Map<LivingEntity, float[]> STATE = new WeakHashMap<>();
     public static final int ST_BANK = 1, ST_HEADING = 8, ST_BANK_VEL = 9, ST_TAIL_A = 10, ST_TAIL_B = 11, ST_SEEDED = 12,
-        ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_SPEED = 17, ST_BRAKE = 18, ST_PERCH = 19, ST_LEN = 20;
+        ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_SPEED = 17, ST_BRAKE = 18, ST_PERCH = 19,
+        ST_BRAKING = 20, ST_SPEED_SEEDED = 21, ST_LEN = 22;
+    /** The glide weight and the hover weight (state slots 0 and 5). */
+    public static final int ST_GLIDE = 0, ST_HOVER = 5;
 
     /**
      * The bite's keys, in TICKS relative to the swing moment (0 = the fireball leaves / the blow lands): the wind-up
@@ -287,7 +300,81 @@ public final class Dragon {
      * the second, so the flare came after the braking it is meant to show.
      */
     public static boolean wantsFlare(float speed, float brake, float hover) {
-        return (brake > 0.002f && speed < 0.13f && speed > 0.02f) || (speed < 0.02f && hover < 0.8f);
+        return wantsFlare(speed, brake > 0.002f, hover);
+    }
+
+    /** The same rule with the brake already judged (Dragon.drivers: a brake that has HELD, review r1 of #440). */
+    public static boolean wantsFlare(float speed, boolean braking, float hover) {
+        return (braking && speed < 0.13f && speed > 0.02f) || (speed < 0.02f && hover < 0.8f);
+    }
+
+    /**
+     * The beat's length (ticks): quicker hovering and taking off, and quicker climbing - a dragon labouring up over a
+     * keep beats up to Params.climbBeat faster at a full climb (a dive does not).
+     */
+    public static float beatTicks(Params P, float idle, float takeoff, float climb) {
+        return P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff)
+            * (1f - P.climbBeat * Math.max(0f, climb));
+    }
+
+    /**
+     * The head's nod (degrees down) while the body brakes (b/t per tick, as animate smooths it): the long neck carries
+     * on a little and the head dips, up to Params.brakeNodMax; none in steady flight or speeding up.
+     */
+    public static float brakeNod(Params P, float brake) {
+        // a dead band: the braking noise of a stuttering cruise (up to ~0.003) never bobs the head
+        return Mth.clamp((brake - P.brakeNodFrom) * P.brakeNodPer, 0f, P.brakeNodMax);
+    }
+
+    /**
+     * The flight's drivers from the client's motion this frame - speed over the ground and vertical speed (b/t, the
+     * entity's own tick deltas), dt in ticks: the smoothed speed and braking, the glide and hover weights, the flare, the
+     * climb. Everything reads the SMOOTHED speed (Params.speedTau): a client's tick deltas stutter whenever position
+     * packets arrive late and then bunch (0.17, 0, 0.34 b/t), and read raw a stall was a brake - the flare threw the
+     * wings forward - and the glide swung in and out (lovish, Oct 30: "the wings looked really choppy").
+     */
+    public static void drivers(float[] st, Params P, float speed, float vy, float dt) {
+        // the first tick that moves seeds the smoothed speed (a fresh state starts at 0: no brake, no take-off from it),
+        // and for Params.seedTicks the seed only comes DOWN to the slowest moving tick: a first tick that was a bunched
+        // one (0.34 at a 0.17 cruise) would otherwise decay like a brake - a nod, the glide coming in (review r3)
+        if (st[ST_SPEED_SEEDED] < P.seedTicks && (speed > 0f || st[ST_SPEED_SEEDED] > 0f)) {
+            if (speed > 0f)          // (a stalled tick inside the window is ignored, not read as a stop)
+                st[ST_SPEED] = st[ST_SPEED_SEEDED] == 0f ? speed : Math.min(st[ST_SPEED], speed);
+            st[ST_SPEED_SEEDED] += Math.max(dt, 1e-3f);
+            st[ST_BRAKE] = 0f;
+            st[ST_BRAKING] = 0f;
+            float wantClimb = Mth.clamp(vy / P.climbSpeed, -1f, 1f);
+            st[ST_CLIMB] += (wantClimb - st[ST_CLIMB]) * Math.min(1f, dt / 10f);
+            return;
+        }
+        // the braking (blocks per tick per tick) from the smoothed speed, smoothed again
+        float lastSpeed = st[ST_SPEED];
+        st[ST_SPEED] += (speed - st[ST_SPEED]) * Math.min(1f, dt / P.speedTau);
+        if (dt > 0f)
+            st[ST_BRAKE] += ((lastSpeed - st[ST_SPEED]) / dt - st[ST_BRAKE]) * Math.min(1f, dt / P.brakeTau);
+        speed = st[ST_SPEED];
+        float wantGlide = Life.smooth((speed - P.glideFrom) / (P.glideFull - P.glideFrom));
+        st[ST_GLIDE] += (wantGlide - st[ST_GLIDE]) * Math.min(1f, dt / (wantGlide > st[ST_GLIDE] ? 12f : 25f));
+        float wantHover = speed < 0.02f ? 1f : 0f;
+        // the flare: braking into a hover - the wings are air brakes while it slows, and until the hover has come in
+        st[ST_BRAKING] = st[ST_BRAKE] > P.brakeOn ? st[ST_BRAKING] + dt : 0f;
+        boolean braking = st[ST_BRAKING] >= P.brakeHold;
+        float wantFlare = wantsFlare(speed, braking, st[ST_HOVER]) ? 1f : 0f;
+        st[ST_FLARE] += (wantFlare - st[ST_FLARE]) * Math.min(1f, dt / (wantFlare > st[ST_FLARE] ? 5f : 14f));
+        st[ST_HOVER] += (wantHover - st[ST_HOVER]) * Math.min(1f, dt / 25f);
+        // the climb / dive, -1..1 (r12): from the client's own vertical speed, smoothed
+        float wantClimb = Mth.clamp(vy / P.climbSpeed, -1f, 1f);
+        st[ST_CLIMB] += (wantClimb - st[ST_CLIMB]) * Math.min(1f, dt / 10f);
+    }
+
+    /** As above, plus the take-off weight - from the smoothed speed and climb too (a stalled tick of a dragon that
+     *  just came into view read as "standing still" and played the take-off). */
+    public static void drivers(float[] st, Params P, float speed, float vy, float dt, int tickCount) {
+        drivers(st, P, speed, vy, dt);
+        // not before the speed is known: seeded by a moving tick, or two ticks of standing still
+        boolean known = st[ST_SPEED_SEEDED] != 0f || tickCount >= 2;
+        float wantTakeoff = known && wantsTakeoff(P, tickCount, st[ST_SPEED], st[ST_CLIMB]) ? 1f : 0f;
+        st[ST_TAKEOFF] += (wantTakeoff - st[ST_TAKEOFF]) * Math.min(1f, dt / (wantTakeoff > st[ST_TAKEOFF] ? 6f : 20f));
     }
 
     /** A fresh per-entity state (see STATE). */
@@ -312,6 +399,16 @@ public final class Dragon {
      * right bank: the right wing drops into a right turn. Call with dt in ticks (0 is a no-op); yaw in degrees.
      */
     public static void bankStep(float[] st, Params P, float yaw, float dt, float scale) {
+        bankStep(st, P, yaw, dt, scale, Float.MAX_VALUE);
+    }
+
+    /**
+     * As above, the roll scaled by the forward speed (b/t): a bank is a FLIGHT turn's lean, full from
+     * Params.bankFullSpeed, none turning on the spot (lovish, Oct 30: "the model leaned to the side while attacking" -
+     * hovering, it turned to its target at 6 deg/tick and rolled ~13 deg).
+     */
+    public static void bankStep(float[] st, Params P, float yaw, float dt, float scale, float speed) {
+        scale *= Mth.clamp(speed / P.bankFullSpeed, 0f, 1f);
         if (st[ST_SEEDED] == 0f) {
             st[ST_HEADING] = yaw;
             st[ST_SEEDED] = 1f;
@@ -362,50 +459,32 @@ public final class Dragon {
         if (st == null) {
             STATE.put(e, st = newState(age));
             st[ST_PHASE] = Life.offset(id) / P.beatTicks;
-            double dx0 = e.getX() - e.xo, dz0 = e.getZ() - e.zo;
-            st[ST_SPEED] = (float) Math.sqrt(dx0 * dx0 + dz0 * dz0);
-            st[ST_TAKEOFF] = wantsTakeoff(P, e.tickCount, st[ST_SPEED], 0f) ? 1f : 0f;
+            // the smoothed speed is seeded by the first tick that moves (Dragon.drivers): this frame's tick delta is 0
+            // for a dragon that just came into tracking range (xo == x), and a seed of 0 played the take-off
         }
         float dt = Mth.clamp(age - st[2], 0f, 20f);
         st[2] = age;
         // speed over the ground from the client's own tick positions (a flier has no walk distance worth the name)
         double dx = e.getX() - e.xo, dz = e.getZ() - e.zo;
         float speed = (float) Math.sqrt(dx * dx + dz * dz);
-        float wantGlide = Life.smooth((speed - P.glideFrom) / (P.glideFull - P.glideFrom));
-        st[0] += (wantGlide - st[0]) * Math.min(1f, dt / (wantGlide > st[0] ? 12f : 25f));
-        float glide = st[0];
-        float wantHover = speed < 0.02f ? 1f : 0f;
-        // the braking (blocks per tick per tick, smoothed: the speed only changes once a tick, the frames between see none)
-        float lastSpeed = st[ST_SPEED];
-        st[ST_SPEED] += (speed - st[ST_SPEED]) * Math.min(1f, dt / 3f);
-        if (dt > 0f)
-            st[ST_BRAKE] += ((lastSpeed - st[ST_SPEED]) / dt - st[ST_BRAKE]) * Math.min(1f, dt / 4f);
-        // the flare: braking into a hover - the wings are air brakes while it slows, and until the hover has come in
-        float wantFlare = wantsFlare(speed, st[ST_BRAKE], st[5]) ? 1f : 0f;
-        st[ST_FLARE] += (wantFlare - st[ST_FLARE]) * Math.min(1f, dt / (wantFlare > st[ST_FLARE] ? 5f : 14f));
-        st[5] += (wantHover - st[5]) * Math.min(1f, dt / 25f);
-        float idle = st[5];
-        // the climb / dive, -1..1 (r12): from the client's own vertical speed, smoothed
-        float wantClimb = Mth.clamp((float) (e.getY() - e.yo) / P.climbSpeed, -1f, 1f);
-        st[ST_CLIMB] += (wantClimb - st[ST_CLIMB]) * Math.min(1f, dt / 10f);
-        float climb = st[ST_CLIMB];
+        float vy = (float) (e.getY() - e.yo);
+        drivers(st, P, speed, vy, dt, e.tickCount);
+        float glide = st[ST_GLIDE], idle = st[ST_HOVER], climb = st[ST_CLIMB];
         // the take-off: just appeared, or climbing hard from (nearly) a standstill
-        float wantTakeoff = wantsTakeoff(P, e.tickCount, speed, wantClimb) ? 1f : 0f;
-        st[ST_TAKEOFF] += (wantTakeoff - st[ST_TAKEOFF]) * Math.min(1f, dt / (wantTakeoff > st[ST_TAKEOFF] ? 6f : 20f));
         float takeoff = st[ST_TAKEOFF];
         // perched: down on the ground (the Bone Dragon's Dive) - it stands, wings folded, instead of hover-beating
         float wantPerch = e.onGround() && e.tickCount > 5 && e.deathTime == 0 ? 1f : 0f;
         st[ST_PERCH] += (wantPerch - st[ST_PERCH]) * Math.min(1f, dt / 8f);
         float perch = st[ST_PERCH];
         // the beat's phase advances at the CURRENT rate (a hover beats quicker, a take-off quicker still)
-        float T = P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff);
+        float T = beatTicks(P, idle, takeoff, st[ST_CLIMB]);
         st[ST_PHASE] += dt / T;
         if (st[ST_PHASE] > 4096f)
             st[ST_PHASE] -= 4096f - 4096f % (P.burstBeats + P.glideBeats);   // keep float precision; same rhythm
         // the bank: the body rolls into a turn (r12, lovish: "tilt sideways when turning")
         float bankScale = e.onGround() ? P.bankGround : Mth.lerp(idle, 1f, P.bankHover);
         float yawNow = Mth.rotLerp(age - (float) Math.floor(age), e.yBodyRotO, e.yBodyRot);
-        bankStep(st, P, yawNow, dt, bankScale);
+        bankStep(st, P, yawNow, dt, bankScale, st[ST_SPEED]);
         float bank = st[ST_BANK];
         if (attackTime > 0f && (st[4] <= 0f || attackTime < st[4])) {
             // the swing began this frame: start our own, slower clip - or, if a foreseen bite is already running
@@ -424,6 +503,8 @@ public final class Dragon {
 
         pose(r, P, id, st[ST_PHASE], age, glide, idle, bank, st[ST_TAIL_A], st[ST_TAIL_B], climb, st[ST_FLARE], takeoff,
             perch, age - st[3], e.hurtTime, e.deathTime, netHeadYaw, headPitch);
+        // the neck's follow-through: braking, the head carries on and dips (x < 0 drops a forward part's nose)
+        dsl(r.head, -brakeNod(P, st[ST_BRAKE]) * (1f - perch), 0f, 0f);
     }
 
     /**
@@ -436,7 +517,7 @@ public final class Dragon {
                             float tailA, float tailB, float climb, float flare, float takeoff, float perch, float attackT,
                             int hurtTime, int deathTime, float netHeadYaw, float headPitch) {
         float off = Life.offset(id);
-        float T = P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff);
+        float T = beatTicks(P, idle, takeoff, climb);
         // the glide weight: the cruise rhythm (only cruising), and the speed's own glide with a corrective beat
         float cruise = (1f - idle) * (1f - Math.max(0f, climb)) * (1f - takeoff) * (1f - flare);
         float corrective = Life.bump(age, id, 6, 160f, 44f);

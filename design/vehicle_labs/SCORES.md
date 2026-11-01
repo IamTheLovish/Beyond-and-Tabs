@@ -74,6 +74,48 @@ camera only by value, and both ends overshoot (granite 0.55 "salmon", slate 0.18
 camera-table entry another lab's tests rely on moves their numbers (copper blotch 0.050 -> 0.052): measure with
 camera_colour.py --add-only.
 
+## Rooting Hollow r1 (Verdant T1 vehicle lab, the r12 method; PR #457) - ref06, 17 x 17 x 26, one fixed rubric
+Two fresh API critics per round (a / b), the 7-axis rubric from the designer pass (itachi2-api/runs/
+20261030-204240-verdant-design); the massing rubric adds "separation from the ground" and resemblance.
+
+| Round | Eyes run | RTS | Close | Landmark | Gate | Roofs | Materials | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| round 2 (control, Oct 28) | - | 3 overall (round 1 critic) | | | | | | | "a mossy stone box with a toy tree on the lid": no real tree, flat canopy slab, unreadable gate, scattered lime lights, stone faces without order, roof clutter | - |
+| massing A / B / C + control | 41152348776 | A 7 / 7, B 6 / 6, C 5 / 5, control 3 / 3 | - | A 6 / 6, B 6 / 6, control 3 / 3 | A 5 / 6, B 6 / 6, control 4 / 5 | A 7 / 7, B 7 / 7, control 3 / 3 | (separation A 7 / 8, B 8 / 8, control 4 / 3) | - | both A > B > C > control (A vs B close); A: the trunk hidden behind hall and turret in 3/4, no sky between limb and hall, a stepped-cone canopy leaving the RTS frame, a pale lit gate, the turret cap reads as a chimney | A + those faults -> detail r1 |
+| detail r1 (ab959149) | 41155254248 | 6 / 6 (A 6 / 6, control 3 / 3) | 5 / 5 | 5 / 5 | 4 / 5 | 6 / 6 | 5 / 5 | 3 / 4 | overall 5 / 5 (A 5 / 4.5, control 3 / 3): the trunk reads as a staircase / scaffold (stepped pale blocks, dark bands), the tree beside the hall, not wrapping it; no crescent; the canopy a uniform bright pink lid with spruce spots (chequer, V-chevrons); the gate a dark floor "grate" from RTS, no roots frame it; the glow never seen (it faced the well); banded root posts; L1 canopy a plus sign | no turret, the canopy inside the RTS frame, dark bellies, the trunk seen in 3/4; L1 reads as the first stage |
+| detail r2 (a30751c5) | 41157566607 | 6 / 6 (r1 5 / 5) | 4 / 5 | 5 / 5 | 4 / 5 | 5 / 5 | 4 / 4 | 5 / 6 | overall 5 / 6 vs r1 4 / 5 (a gain): canopy tops clean, the outside grate gone, the glow seen, no banded posts; still: the tree stands beside the hall (the limb a stepped slab line, "a gallows" in 3/4), the canopy one flat value with green belly bands, the passage floor a grid, the gallery arches compete with the gate, the pad a big grey plinth; L1 canopy a ring | the arch limb, the glow on the south foot, one-tone tops |
+| detail r3 (1613cc2a) | 41159373535 | 5 / 5 (r2 5 / 5 rescored) | 5 / 5 | 4 / 4 | 5 / 5 | 6 / 6 | 5 / 5 | 6 / 5 | overall 5 / 5 vs r2 5 / 5 (no gain): the lower half better (gate the tallest opening, clean hall roof, mud floor, lawn under the tree, L1 crown closed) but the crown regressed - its tiers over the well opened "a pink donut" with a dark lattice from above and two dark holes that read as a skull in 3/4; the tree still stands beside the hall; gate and glow on opposite sides | both: keep r3's lower half, close the crown |
+| detail r4 (aed5dbc7, final) | 41162307013 (41161071265's L3 stills had a harness fault: not judged) | 6 / 6 (r3 5 / 5) | 5 / 5 | 5 / 5 | 4 / 5 | 6 / 6 | 5 / 5 | 5 / 6 | overall 6 / 6 vs r3 5 / 5 (a gain; both: ship r4 as the base, not as final): the donut, lattice and skull gone, the crown whole; still: the tree stands beside the hall on pale posts (massing, for lovish), the crown one flat bright value with no dark belly, the gate a lit grey opening while roots and glow sit at the east corner ("a kiln mouth"), L1's crown a plus / splat, the shaft a small dark dot | r4 kept; detail capped (4 rounds); next is the wrap greybox step |
+
+Lessons (Rooting Hollow r1): vanilla leaves give one off-lawn hue only (cherry, top 0.85 on camera) - a darker mix
+greys it (spruce) or goes lime (azalea sat 0.62), so the canopy reads by value and hue, not by a mid tone; a light-well
+opening through a crown reads from the RTS camera as "a donut" with a lattice - the crown stays closed but for a 1 x 1
+shaft; clump valleys on a crown top read as a lattice too; a light that faces an inner well is never seen - put the glow
+where the cameras look; tests on look encoded every critic fault, but no test caught the crown hole before the stills
+did (added in round 4); the eyes harness can photograph the first structure of a run with the lobby overlay and dark
+noon stills - check each still's mean value against the control's before judging.
+
+## Charnel Works r2 (Gravebound T1 vehicle lab, the r12 method; PR #458) - ref24, 17 x 17 x 26, one fixed rubric
+Designer pass: itachi2-api run 20261030-211330-gravebound-r1-design (rubric = r12's 7 axes; bands in
+design/vehicle_labs/gravebound_expected.md). Each round photographed with its control in ONE eyes run (build e7b4e94 =
+build_run 41096418230, branch pack, plain lane, keep_only, times 6000); two fresh API critics per round, a / b.
+
+| Round | Eyes run | RTS | Close | Landmark | Gate | Roofs | Materials | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| round 1 (control, Oct 28) | - | 4 overall (round 1 critic) | | | | | | | five equal spikes, no landmark; gate not the biggest opening; floating bone; noisy faces; cyan dots, lava; too many materials; flat messy roof | the rib-vault, the bone gate posts |
+| massing A / B / C + control | 41155033682 | A 6 / 6, B 5 / 5, C 4 / 5, control 6 / 6 | - | A 6 / 6, B 4 / 4, C 5 / 5, control 7 / 7 | A 6 / 7, control 5 / 4 | A 6 / 6, control 4 / 5 | - | - | both rank A first (2 > 3 > 4 > 1 and 2 > 3 > 1 > 4), close to the control: the centre a stub that barely leads, three similar square caps; a sheer front, not a climbing pyramid; the light focus on the vault, a flat deck, a pale gate floor, no heart glow | A (ref24's triad on the gate axis, the vault behind) |
+| detail r1 (be36aada) | 41157506389 | 5 / 5 (control 4 / 4) | 6 / 6 | 5 / 5 | 5 / 6 | 6 / 5 | 7 / 6 | 6 / 6 | 5.5 / 5 overall vs the control's 4 / 4: from above the slab-capped bone ribs read as chevrons / piano keys and lead the eye (a focal inversion); the spire's cap one of three equal hipped pyramids at RTS (it leads only in 3/4); the tuff feet and paving the lightest band ("a model on a display board"), the gate floor mid-grey; the heart a plus / cross in a cream bone panel; both: nothing says "works" (no yard, no wagon) - a massing question for lovish | materials discipline (4-5 look classes), the portal, no cyan / lava, the hall gable, L1 reads as the first stage |
+| detail r2 (6a97956d) | 41159362651 | 5 / 5 (r1 4 / 5) | 5.5 / 5.5 | 5 / 6.5 | 6 / 5 | 5 / 5 | 6 / 6 | 5 / 5 | 5.5 / 5.5 overall vs r1 5 / 5 (+0.5): heart better (plus and cream panel gone; at RTS still a slanted pane), base better (value order fixed), flank caps better in 3/4 / at RTS (b); ribs: the chevrons gone but the continuous cream arcs are now the largest bright area and lead the eye (both); the spire's lead only in elevation (a); the heart wall a flat slab splitting gate and heart, the posts two sticks (b); the smoke lancets glow pale at dusk - a second glow (both); lime close to the lawn's hue (both: lovish's call); still a chapel / mausoleum, not a works (b) | the dark heart ring, the darker base, the blackstone lane |
+| detail r3 (e3b52afd, final) | 41161129778 | 5 / 5.5 (r2 4.5 / 5) | 6 / 6 | 6 / 5.5 | 6.5 / 6.5 | 5.5 / 5.5 | 5.5 / 6 | 7 / 6 | 6 / 6 overall vs r2 5.5 / 5.5 (+0.5): dark slits gave one glow story at dusk (both), bone up the heart's sides tied gate and heart into one frame at mid zoom (both), the spire lantern on the axis but only a few pixels - too small for RTS; still: the three cream rib hoops lead the eye from above (both: the bone budget vs the heart is lovish's call), the heart shares the lawn's hue family and is out-valued by the bone, the spire's cap plan matches the flanks', the east apron lighter than the walls, nothing says "works"; critic b: a fourth detail round is unlikely to move these (value and plan, lessons 4 / 5) | round 3 kept: the lantern, the dark slits, the bone frame |
+
+Lessons (Charnel Works r2): bone_block's up face reads as snow (0.839) while its sides do not (0.51 / 0.69), and capping
+it with dark slabs turns an arc into chevrons / piano keys - a bone rib-vault seen from the RTS camera is the building's
+brightest area whatever is done to its tops, so the bone budget against a glowing accent is a design decision, not a
+detail; green_stained_glass reads dull olive (0.23-0.26) and lime glass reads lime (0.53, sat 0.36) - close to the
+lawn's hue family; a 1 x 1 lit band under a spire's cap is a few pixels at RTS zoom - from the steep RTS camera a
+landmark differs by its plan (cap size, form), not by its side faces; a scratchpad file named pr.md shared by parallel
+builders overwrote one PR's body: name every scratch file after its lab.
+
 ## Thunder Arsenal r1 (Stormcallers T1 vehicle lab, the r12 method; PR #459) - ref08, 17 x 17 x 26, one fixed rubric
 Designer pass: itachi2-api run 20261030-234157-storm-design (rubric = r12's 7 axes). Each round photographed with its
 control in ONE eyes run (build 39266a8 = build_run 41124019976, branch pack, plain lane, keep_only, times 6000); two
