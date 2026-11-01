@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Sunforged (White Angel) T1 army lab, the Barracks, redrawn at all three levels - L1 THE TRAINING HALL, L2 THE
+"""The Sunforged (White Angel) T1 army lab, the Barracks, redrawn at all three levels - L1 THE KEEP AND THE COURT, L2 THE
 KNIGHTS' CLOISTER, L3 THE CATHEDRAL OF ARMS - so it belongs to the family the Temple of the Sun (the capitol,
 tools/capitol_town_centre.py build_grand) and the Angel Fountain (the extractor, gen_structures._sun_fountain_t1) set.
 
@@ -18,36 +18,23 @@ THE SUNFORGED STYLE KIT (the capitol's and the fountain's):
   - family figure: the angel - on the bell turret (L1-L2), gilded on top of the belfry spire (L3);
   - edge: a garden (grass and flowers) at the yard's corners.
 
-THE PLAN (10 x 8, the shipped footprint). The RTS camera looks from the south-west: it sees the roofs, the west face
-(x = 0) and the south face (z = 7). So the buildings stand in a NORTH RANGE (z 0..2) and face south over the DRILL
-YARD (z 3..7) toward the camera; the bell turret is the range's west end, the corner the camera meets first.
-  L1 THE TRAINING HALL
-  - the hall (x 3..9, z 0..2): a stylobate, a south colonnade - corner piers, two quartz columns with gold capitals,
-    three open bays into the hall - a frieze of lapis triglyphs and chiseled metopes, a cornice of upside-down stairs,
-    a balustrade with candle posts, and over the middle a small tiered dome: a drum of pillars and blue glass, a ring
-    of stairs, the gold crown and a lantern;
-  - the bell turret (x 0..2, z 0..2): a quartz shaft with blue lancets, a gold-cornered band, an open belfry with the
-    Barracks' bell, a ring-of-stairs cap and on a pillar the ANGEL with spread wings holding up a lantern;
-  - the drill yard (x 0..9, z 3..7): packed sand (smooth sandstone - real sand falls) in an andesite kerb, a calcite
-    drill ring round a gold sun with a pell (an archery butt on a post), a rack of white lances (end rods), blue
-    banners at the corners, lantern posts at the hall's ends, garden beds with flowers on the two front corners.
-  L2 THE KNIGHTS' CLOISTER - the yard is enclosed:
-  - two open domed pavilions on the yard's front corners (four columns, an entablature with a lapis frieze, a drum of
-    blue glass, a ring of stairs, a gold crown and lantern, a lantern hung inside): the corner towers with tiered
-    domes, see-through for the camera and walk-through for units;
-  - arcaded cloister walls between them (a two-wide gate on the axis in the south wall, arches on the west and east
-    sides; a walk on top, lanterns on the piers) - every arch is open;
-  - the hall's dome rises on a three-course drum with a gold band, flanked by a stepped tier, and the hall's corners
-    carry the capitol's pinnacles with blue banners.
-  L3 THE CATHEDRAL OF ARMS - gothic:
-  - the hall's middle rises into a transept gable facing the camera with a ROSE WINDOW (blue glass, chiseled tracery,
-    a glowing heart) under a hood, a gold finial on its apex; the dome becomes a crossing tower with pinnacles and a
-    gold needle;
-  - clerestory walls with lancets and a steep white roof with a gold ridge over the rest of the range;
-  - FLYING BUTTRESSES on the camera's side: piers rising from the yard with pinnacles, flyers leaning onto the nave;
-  - the bell turret becomes a BELFRY SPIRE in gothic stages (square shaft, chamfered stage with corner pinnacles, the
-    bell up in a new open belfry under pointed arches, a gold knop) with a GOLD ANGEL on top - the landmark;
-  - the pavilions' crowns become gold spirelets with pinnacles.
+THE PLAN (10 x 8, the shipped footprint; redrawn Nov 2026 after blind massing rounds, PR body). The RTS camera looks
+from the south-west: it sees the roofs, the west face (x = 0) and the south face (z = 7). The Training Hall that shipped
+before (a bell turret and a hall of equal boxes over a sand yard, lapis bands, blue banners, two targets) read as "a
+white box house" (critics 5 / 5). Now a DRILL COURT UNDER A KEEP:
+  L1 THE KEEP AND THE COURT (10 x 13 x 8)
+  - the KEEP on the north-east corner (x 6..9, z 0..3), the mass that leads: quartz brick walls to y 8 between quartz
+    pillar corners, a deep gate in its south face (three high, two deep: the court's dark), and the kit's tiered crown
+    - a ring of stairs climbing in, pillar pinnacles with gold on the corners, a pillar drum, a 2 x 2 gold crown, the
+    lantern;
+  - arcaded WINGS with one pier / arch beat close the court on the north (x 0..5), the west (z 2..3) and the east
+    (z 5..6); the court opens to the south-west, the camera's side and the units' way out;
+  - the COURT in the mids (polished andesite) with a calcite drill ring round the spawn, a rack of lances (end rods),
+    lantern posts on the wings' ends. No lapis, no blue, no target.
+  L2 THE KNIGHTS' CLOISTER: the north wing gets an upper gallery, the east wing a small domed pavilion with a gold
+    crown, the keep's lantern becomes the family's ANGEL on a gold boss.
+  L3 THE CATHEDRAL OF ARMS: the north wing rises into a clerestory under a sloped roof, the west wing's corner a slim
+    tower with a gold knop, the angel is gilded on a gold needle.
 
 GAME RULES (asserted in check_levels):
   - every level keeps the 10 x 8 footprint (BuildingLevels has no larger footprint); a level may grow taller;
@@ -163,417 +150,162 @@ def angel(r, x, y, z, gold=False):
     r.lantern(x, y + 3, z)
 
 
-def dome3(r, x0, z0, y, drum=1, crown="gold_block", light=True):
-    """The kit's tiered dome on a 3 x 3 (low corner x0, z0) from y: a drum of quartz pillars on the corners and blue
-    glass on the faces (`drum` courses), a ring of stairs climbing in, the gold crown and a lantern. Returns the
-    crown's height."""
-    for yy in range(y, y + drum):
-        for dx in (0, 1, 2):
-            for dz in (0, 1, 2):
-                corner, mid = dx != 1 and dz != 1, dx == 1 and dz == 1
-                if corner:
-                    r.pillar(x0 + dx, yy, z0 + dz)
-                else:
-                    r.set(x0 + dx, yy, z0 + dz, "smooth_quartz" if mid else "blue_stained_glass")
-    ring(r, x0, x0 + 2, z0, z0 + 2, y + drum)
-    r.set(x0 + 1, y + drum, z0 + 1, "smooth_quartz")
-    r.set(x0 + 1, y + drum + 1, z0 + 1, crown)
-    if light:
-        r.lantern(x0 + 1, y + drum + 2, z0 + 1)
-    return y + drum + 1
+# ======================================================================================================== the plan
+# THE DRILL COURT UNDER THE KEEP (Nov 2026 rounds, PR body): the keep on the north-east corner (x 6..9, z 0..3) leads,
+# the court is open to the south-west (the camera's side and the units' way out), arcaded wings close it on the north,
+# west and east with a regular pier / arch beat.
+KX0, KX1, KZ0, KZ1 = 6, 9, 0, 3          # the keep
+KW = 8                                   # the keep's wall top; the crown's tiers sit on it
+GATE = (7, 8)                            # the deep gate in the keep's south face (z 2..3, y 1..3)
 
 
-# ======================================================================================================== L1
-STYLO, BASE, CAP, ENT, CORN = 1, 2, 4, 5, 6     # the order: stylobate, column foot, gold capital, frieze, cornice
-DECK = CORN                                      # the hall's roof deck
-HX0, HX1, HMID = 3, 9, 6                         # the hall's x range and its axis
-COLS, PIERS = (5, 7), (3, 9)                     # on the south colonnade (z 2)
-TB = 6                                           # the bell turret's belfry floor
-
-
-def hall_l1(r):
-    """The Training Hall (x 3..9, z 0..2), its colonnade facing the camera across the yard."""
-    r.fill(HX0, 0, 0, HX1, 0, 2, "polished_diorite")
-    r.fill(HX0, STYLO, 0, HX1, STYLO, 2, "smooth_quartz")
-    for x in PIERS:
-        for z in (0, 2):
-            r.set(x, 0, z, "chiseled_quartz_block")
-            r.set(x, STYLO, z, "chiseled_quartz_block")
-    # the south colonnade: piers of quartz brick with chiseled caps, columns of quartz pillar with gold capitals (the
-    # capitol's order), the bays between open into the hall
-    for x in COLS:
-        for y in range(BASE, CAP):
-            r.pillar(x, y, 2)
-        r.set(x, CAP, 2, "gold_block")
-    for x in PIERS:
-        for y in range(BASE, CAP):
-            r.set(x, y, 2, "quartz_bricks")
-        r.set(x, CAP, 2, "chiseled_quartz_block")
-    # the back wall (z 0) with blue windows seen through the bays, the end walls (x 3 against the turret, x 9)
-    for x in range(HX0, HX1 + 1):
-        for y in range(BASE, CAP + 1):
-            win = x in (4, 6, 8) and y == BASE + 1
-            r.set(x, y, 0, "blue_stained_glass" if win else "quartz_bricks")
-    for x in PIERS:
-        for y in range(BASE, CAP + 1):
-            r.set(x, y, 1, "quartz_bricks")
-    # the entablature: the frieze on the camera's face (lapis triglyphs over the supports, chiseled metopes between),
-    # smooth quartz elsewhere; the cornice above it all round (upside-down stairs, lip out) round the deck
-    r.fill(HX0, ENT, 0, HX1, ENT, 2, "smooth_quartz")
-    for x in range(HX0, HX1 + 1):
-        r.set(x, ENT, 2, "lapis_block" if x in COLS + PIERS else "chiseled_quartz_block")
-    r.set(HX1, ENT, 1, "chiseled_quartz_block")
-    for x in range(HX0, HX1 + 1):
-        r.st(x, CORN, 2, "north", "top")
-        r.st(x, CORN, 0, "south", "top")
-    r.st(HX1, CORN, 1, "west", "top")
-    r.fill(HX0, CORN, 1, HX1 - 1, CORN, 1, "smooth_quartz")
-    # the balustrade on the front: candle posts over the piers, slab rails between
-    for x in PIERS:
-        r.set(x, DECK + 1, 2, "diorite_wall")
-        r.candle(x, DECK + 2, 2)
-    for x in (4, 8):
-        r.slab(x, DECK + 1, 2)
-    # the small tiered dome over the hall's middle (x 5..7, the whole depth), on the axis
-    dome3(r, HMID - 1, 0, DECK + 1, drum=2)
-
-
-def turret_l1(r):
-    """The bell turret (x 0..2, z 0..2): a quartz shaft with blue lancets, an open belfry with the Barracks' bell,
-    a ring-of-stairs cap, and the angel on a pillar so its wings spread against the sky, not the roof."""
-    r.fill(0, 0, 0, 2, 0, 2, "polished_diorite")
-    r.fill(0, 1, 0, 2, 1, 2, "smooth_quartz")
-    for y in range(2, TB - 1):
-        r.fill(0, y, 0, 2, y, 2, "quartz_bricks")
-    for (x, z) in CORNERS3:
-        r.set(x, 0, z, "chiseled_quartz_block")
-        r.set(x, 1, z, "chiseled_quartz_block")
-        for y in range(2, TB - 1):
-            r.pillar(x, y, z)
-    for y in (2, 3):
-        r.set(0, y, 1, "blue_stained_glass")
-        r.set(1, y, 2, "blue_stained_glass")
-    # the belfry floor carries the hall's capital line round the turret: chiseled with gold corners
-    r.fill(0, TB - 1, 0, 2, TB - 1, 2, "chiseled_quartz_block")
-    for (x, z) in CORNERS3:
-        r.set(x, TB - 1, z, "gold_block")
-        r.pillar(x, TB, z)
-        r.pillar(x, TB + 1, z)
-    r.fill(0, TB + 2, 0, 2, TB + 2, 2, "smooth_quartz")
-    r.set(1, TB + 1, 1, "bell", attachment="ceiling", facing="south", powered="false")
-    ring(r, 0, 2, 0, 2, TB + 3, name="smooth_quartz_stairs")
-    r.set(1, TB + 3, 1, "chiseled_quartz_block")
-    r.pillar(1, TB + 4, 1)
-    angel(r, 1, TB + 5, 1)
-    r.set(1, 4, 3, "blue_wall_banner", facing="south")       # the house banner, hung toward the yard
-
-
-def yard_l1(r):
-    """The drill yard (x 0..9, z 3..7)."""
+def floor_l1(r):
+    """Layer 0: a polished andesite court (the mids) in its kerb, a calcite drill ring round the spawn, the start
+    type's steps across the south edge."""
     for x in range(SX):
-        for z in range(3, SZ):
-            r.set(x, 0, z, "smooth_sandstone")
-    # the kerb on the three open sides: andesite stairs rising toward the yard - the starting type, the instant
-    # foundation RoN lays first
-    for z in range(3, SZ):
-        r.st(0, 0, z, "east", name=START_TYPE)
-        r.st(SX - 1, 0, z, "west", name=START_TYPE)
-    for x in range(SX):
+        for z in range(SZ):
+            r.set(x, 0, z, "polished_andesite")
+    for x in range(3, 7):
+        for z in range(2, 6):
+            if x in (3, 6) or z in (2, 5):
+                r.set(x, 0, z, "calcite")
+    for x in range(1, 9):
         r.st(x, 0, SZ - 1, "north", name=START_TYPE)
-    # garden beds on the two front corners, flowers in them
-    for i, (x, z) in enumerate(((0, 7), (1, 7), (0, 6), (9, 7), (8, 7), (9, 6))):
-        r.set(x, 0, z, "grass_block", snowy="false")
-        if (x, z) not in ((0, 6), (9, 6)):
-            r.set(x, 1, z, FLOWERS[i % len(FLOWERS)])
-    # the drill ring: calcite round a gold sun, a pell in it (an archery butt on a dark oak post)
-    for (x, z) in ((1, 4), (2, 4), (3, 4), (1, 5), (3, 5), (1, 6), (2, 6), (3, 6)):
-        r.set(x, 0, z, "calcite")
-    r.set(2, 0, 5, "gold_block")
-    r.set(2, 1, 5, "dark_oak_fence")
-    r.set(2, 2, 5, "target", power="0")
-    # the lance rack on the east side: dark oak posts, three white lances standing in it, a butt beside
-    for x in (6, 7, 8):
-        r.set(x, 1, 5, "dark_oak_fence")
-        r.set(x, 2, 5, "end_rod", facing="up")
-    r.set(8, 1, 3, "target", power="0")
-    r.set(8, 0, 3, "calcite")
-    # the muster square where trained units appear (the four spawn cells): lapis, on the gate's axis
-    for (x, z) in CENTRE:
-        r.set(x, 0, z, "lapis_block")
-    # lantern posts at the hall's ends, a blue banner on a chiseled post at the yard's west corner
-    for x in (3, 9):
-        r.set(x, 1, 3, "diorite_wall")
-        r.lantern(x, 2, 3)
-    r.set(0, 1, 3, "chiseled_quartz_block")
-    r.set(0, 2, 3, "blue_banner", rotation="2")
+
+
+def keep_l1(r):
+    """The keep: quartz brick walls to y 8 between quartz pillar corners, a chiseled band at y 5 on the corners,
+    the deep gate (three high, two cells deep under a chiseled lintel: the dark), then the crown: a ring of stairs
+    climbing in at y 9 with pillar pinnacles on the corners, gold on them at y 10, a pillar drum round the middle and
+    a 2 x 2 gold crown at y 11 with the lantern on it."""
+    for x in range(KX0, KX1 + 1):
+        for z in range(KZ0, KZ1 + 1):
+            corner = x in (KX0, KX1) and z in (KZ0, KZ1)
+            for y in range(1, KW + 1):
+                if corner:
+                    r.set(x, y, z, "chiseled_quartz_block") if y == 5 else r.pillar(x, y, z)
+                else:
+                    r.set(x, y, z, "quartz_bricks" if y > 1 else "smooth_quartz")
+    for x in GATE:
+        for z in (KZ1 - 1, KZ1):
+            for y in (1, 2, 3):
+                r.b.pop((x, y, z), None)
+        r.set(x, 4, KZ1, "chiseled_quartz_block")
+    ring(r, KX0, KX1, KZ0, KZ1, KW + 1)
+    for x in (KX0, KX1):
+        for z in (KZ0, KZ1):
+            r.pillar(x, KW + 1, z)
+            r.set(x, KW + 2, z, "gold_block")
+    for x in (7, 8):
+        for z in (1, 2):
+            r.set(x, KW + 1, z, "smooth_quartz")
+            r.pillar(x, KW + 2, z)
+            r.set(x, KW + 3, z, "gold_block")
+    r.lantern(7, KW + 4, 1)
+
+
+def arcade_x(r, x0, x1, z_back, z_front, top, piers):
+    """A wing along x: the back wall at z_back, the front at z_front: pillars at `piers`, arches (air y 1..2 under an
+    upside-down stair lintel) between them, a smooth quartz deck at `top` and a slab parapet over the front."""
+    for x in range(x0, x1 + 1):
+        for y in range(1, top + 1):
+            r.set(x, y, z_back, "quartz_bricks")
+        if x in piers:
+            for y in range(1, top):
+                r.pillar(x, y, z_front)
+        else:
+            r.st(x, top - 1, z_front, "north" if z_front > z_back else "south", "top", name="quartz_stairs")
+        r.set(x, top, z_front, "smooth_quartz")
+        r.slab(x, top + 1, z_front)
+
+
+def arcade_z(r, z0, z1, x_back, x_front, top, piers):
+    """A wing along z (see arcade_x)."""
+    for z in range(z0, z1 + 1):
+        for y in range(1, top + 1):
+            r.set(x_back, y, z, "quartz_bricks")
+        if z in piers:
+            for y in range(1, top):
+                r.pillar(x_front, y, z)
+        else:
+            r.st(x_front, top - 1, z, "west" if x_front > x_back else "east", "top", name="quartz_stairs")
+        r.set(x_front, top, z, "smooth_quartz")
+        r.slab(x_front, top + 1, z)
+
+
+def wings_l1(r):
+    """North wing x 0..5 (z 0 wall, z 1 arcade, deck y 4), west wing z 2..3 (x 0 wall, x 1 arcade, deck y 4),
+    east wing z 5..6 (x 9 wall, x 8 arcade, deck y 4); lantern posts on the wings' ends; a rack of lances."""
+    arcade_x(r, 0, 5, 0, 1, 4, (0, 2, 4))
+    arcade_z(r, 2, 3, 0, 1, 4, (3,))
+    arcade_z(r, 5, 6, KX1, KX1 - 1, 4, (6,))
+    r.set(0, 5, 3, "diorite_wall")
+    r.lantern(0, 6, 3)
+    r.lantern(9, 5, 6)
+    for x in (5, 6, 7):
+        r.set(x, 1, 6, "end_rod", facing="up")
 
 
 def draw_l1(r):
-    hall_l1(r)
-    turret_l1(r)
-    yard_l1(r)
+    floor_l1(r)
+    keep_l1(r)
+    wings_l1(r)
 
 
 # ======================================================================================================== L2
-PV = 5          # the pavilions' gold capitals
-
-
-def pavilion(r, x0, z0):
-    """An open domed pavilion (a tempietto, 3 x 3 at x0, z0): four quartz columns with gold capitals on chiseled
-    feet, an entablature with a lapis frieze, a drum of blue glass, a ring of stairs, the gold crown and its lantern,
-    and a lantern hung inside over a gold sun in the floor. Open on every side: the camera sees through it, units
-    walk through it."""
-    for dx in (0, 1, 2):
-        for dz in (0, 1, 2):
-            if r.get(x0 + dx, 1, z0 + dz)[0] not in FLOWERS:     # a flower keeps the grass under it
-                r.set(x0 + dx, 0, z0 + dz, "smooth_quartz")
-    r.set(x0 + 1, 0, z0 + 1, "gold_block")
-    for (dx, dz) in CORNERS3:
-        x, z = x0 + dx, z0 + dz
-        r.set(x, 0, z, "chiseled_quartz_block")
-        r.set(x, 1, z, "chiseled_quartz_block")
-        for y in range(2, PV):
-            r.pillar(x, y, z)
-        r.set(x, PV, z, "gold_block")
-    r.fill(x0, PV + 1, z0, x0 + 2, PV + 1, z0 + 2, "smooth_quartz")
-    r.set(x0, PV + 1, z0 + 1, "lapis_block")
-    r.set(x0 + 2, PV + 1, z0 + 1, "lapis_block")
-    r.set(x0 + 1, PV + 1, z0 + 2, "lapis_block")
-    ring(r, x0, x0 + 2, z0, z0 + 2, PV + 2, name="smooth_quartz_stairs", half="top")
-    r.set(x0 + 1, PV + 2, z0 + 1, "smooth_quartz")
-    dome3(r, x0, z0, PV + 3)
-    r.lantern(x0 + 1, PV, z0 + 1, hanging=True)
-
-
-def cloister_l2(r):
-    """The cloister: two domed pavilions on the yard's front corners and arcaded walls between them and the north
-    range. Every arch is open; a walk on top, lanterns on the piers."""
-    pavilion(r, 0, 5)
-    pavilion(r, 7, 5)
-    # the south gate on the axis (x 4..5): two piers, a two-wide arch (upside-down stairs springing from the piers),
-    # a lapis lintel course and a gold parapet over it
-    for x in (3, 6):
-        r.set(x, 1, 7, "chiseled_quartz_block")
-        r.pillar(x, 2, 7)
-        r.pillar(x, 3, 7)
-        r.set(x, 4, 7, "chiseled_quartz_block")
-        r.set(x, 5, 7, "diorite_wall")
-        r.lantern(x, 6, 7)
-    r.st(4, 3, 7, "west", "top", name="smooth_quartz_stairs")
-    r.st(5, 3, 7, "east", "top", name="smooth_quartz_stairs")
-    for x in (4, 5):
-        r.set(x, 4, 7, "lapis_block")
-        r.set(x, 5, 7, "chiseled_quartz_block")
-        r.set(x, 6, 7, "blue_banner", rotation="0")          # the house colours over the gate, toward the camera
-    # the side arches (x 0 and x 9, z 3..4): springing from the north range and the pavilion, a walk over them
-    for x in (0, 9):
-        r.st(x, 3, 3, "north", "top", name="smooth_quartz_stairs")
-        r.st(x, 3, 4, "south", "top", name="smooth_quartz_stairs")
-        r.set(x, 4, 3, "smooth_quartz")
-        r.set(x, 4, 4, "smooth_quartz")
-        r.slab(x, 5, 3)
-        r.slab(x, 5, 4)
-
-
-def hall_l2(r):
-    """The cloister's hall: the dome rises on a taller drum with a gold band, a stepped tier beside it, and the
-    hall's front corners carry the capitol's pinnacles with blue banners."""
-    x0 = HMID - 1
-    for yy in range(DECK + 1, DECK + 5):        # the drum grows (the L1 ring and crown are walled into it)
-        for dx in (0, 1, 2):
-            for dz in (0, 1, 2):
-                corner, mid = dx != 1 and dz != 1, dx == 1 and dz == 1
-                if corner:
-                    r.pillar(x0 + dx, yy, dz)
-                else:
-                    r.set(x0 + dx, yy, dz, "smooth_quartz" if mid else "blue_stained_glass")
-    for dx in (0, 1, 2):
-        for dz in (0, 1, 2):
-            corner = dx != 1 and dz != 1
-            r.set(x0 + dx, DECK + 5, dz, "gold_block" if corner else "chiseled_quartz_block")
-    ring(r, x0, x0 + 2, 0, 2, DECK + 6)
-    r.set(HMID, DECK + 6, 1, "smooth_quartz")
-    r.set(HMID, DECK + 7, 1, "gold_block")
-    r.set(HMID, DECK + 8, 1, "diorite_wall")
-    r.lantern(HMID, DECK + 9, 1)
-    # the lower tier: stairs climbing to the drum on its east and west, over the deck
-    for z in (0, 1, 2):
-        r.st(x0 - 1, DECK + 1, z, "east")
-        r.st(x0 + 3, DECK + 1, z, "west")
-    # the pinnacles on the hall's four corners: a quartz pillar, a gold cap, a blue banner (the capitol's)
-    for x in PIERS:
-        for z in (2, 0):
-            r.pillar(x, DECK + 1, z)
-            r.pillar(x, DECK + 2, z)
-            r.set(x, DECK + 3, z, "gold_block")
-            r.set(x, DECK + 4, z, "blue_banner", rotation="2" if x == HX0 else "14")
-
-
 def draw_l2(r):
+    """THE KNIGHTS' CLOISTER: L1 + an upper gallery on the north wing (y 5..7, a pillar beat, a slab parapet), the
+    east wing raised into a domed pavilion (a ring of stairs, a gold crown), the keep's lantern swapped for the angel
+    on a gold boss (the family figure, wings spread east-west)."""
     draw_l1(r)
-    cloister_l2(r)
-    hall_l2(r)
+    for x in range(0, 6):
+        for y in (5, 6):
+            r.set(x, y, 0, "quartz_bricks")
+            if x % 2 == 0:
+                r.pillar(x, y, 1)
+            else:
+                r.set(x, y, 1, "chiseled_quartz_block" if y == 6 else "smooth_quartz")
+        r.set(x, 7, 0, "smooth_quartz")
+        r.set(x, 7, 1, "smooth_quartz")
+        r.slab(x, 8, 1)
+    for z in (5, 6):
+        for y in (5, 6):
+            r.set(8, y, z, "quartz_pillar", axis="y") if y == 5 else r.set(8, y, z, "smooth_quartz")
+            r.set(9, y, z, "quartz_bricks")
+    ring(r, 8, 9, 5, 6, 7)
+    r.set(9, 8, 6, "gold_block")
+    r.lantern(9, 9, 6)
+    r.set(7, KW + 4, 1, "gold_block")      # the lantern's cell gilded: the angel stands on it
+    angel(r, 7, KW + 5, 1)
 
 
 # ======================================================================================================== L3
-ROSE = (HMID, 11)          # the rose window's centre on the transept gable (x, y), z 2
-SB, SBF = 10, 14           # the belfry spire: the gold band over the square shaft, the new belfry's floor
-
-
-def lancet(r, x, z, y1, y2):
-    """A tall gothic lancet: blue glass with a chiseled head."""
-    for y in range(y1, y2):
-        r.set(x, y, z, "blue_stained_glass")
-    r.set(x, y2, z, "chiseled_quartz_block")
-
-
-def pinnacle(r, x, y, z, h=2, gold=True):
-    """A gothic pinnacle: a thin quartz-wall shaft, a gold knop, a glowing finial (an end rod)."""
-    for yy in range(y, y + h):
-        r.set(x, yy, z, "diorite_wall")
-    if gold:
-        r.set(x, y + h, z, "gold_block")
-    r.set(x, y + h + (1 if gold else 0), z, "end_rod", facing="up")
-
-
-def cathedral_l3(r):
-    """The hall becomes the cathedral: clerestory and steep roof over the range, the transept gable with the ROSE
-    WINDOW facing the camera, the dome walled into a crossing tower with pinnacles and a gold needle."""
-    top = DECK + 6                  # the clerestory's top course
-    for x in range(HX0, HX1 + 1):
-        for z in (0, 1, 2):
-            for y in range(DECK + 1, top + 1):
-                r.set(x, y, z, "quartz_bricks")
-    for x in (4, 8):
-        lancet(r, x, 2, DECK + 1, top - 1)
-    for x in PIERS:
-        for y in range(DECK + 1, top + 1):
-            r.pillar(x, y, 2)
-    # the steep roof over the side bays (x 3..4 and 8..9): stairs on the two eaves, a gold ridge
-    for x in (HX0, HX0 + 1, HX1 - 1, HX1):
-        r.st(x, top + 1, 0, "south", name="smooth_quartz_stairs")
-        r.st(x, top + 1, 2, "north", name="smooth_quartz_stairs")
-        r.set(x, top + 1, 1, "smooth_quartz")
-        r.set(x, top + 2, 1, "gold_block")
-    # the transept (x 4..8 at z 2) rises as a gable with the rose window
-    rx, ry = ROSE
-    for x in range(rx - 2, rx + 3):
-        for y in range(top + 1, ry + 3):
-            r.set(x, y, 2, "quartz_bricks")
-    for dx in range(-2, 3):
-        for dy in range(-2, 3):
-            if abs(dx) == 2 and abs(dy) == 2:
-                continue
-            spoke = abs(dx) + abs(dy) == 1
-            r.set(rx + dx, ry + dy, 2, "lapis_block" if spoke else "blue_stained_glass")
-    r.set(rx, ry, 2, "ochre_froglight", axis="z")
-    for (dx, dy) in ((-2, -2), (2, -2), (-2, 2), (2, 2)):     # the rose's frame corners
-        r.set(rx + dx, ry + dy, 2, "chiseled_quartz_block")
-    for x in range(rx - 2, rx + 3):           # the hood over the rose, its lip toward the yard
-        r.st(x, ry + 3, 3, "north", "top", name="smooth_quartz_stairs")
-    gy = ry + 3                               # the gable's raking stairs to the apex and its gold finial
-    r.st(rx - 2, gy, 2, "east", name="smooth_quartz_stairs")
-    r.st(rx + 2, gy, 2, "west", name="smooth_quartz_stairs")
-    r.fill(rx - 1, gy, 2, rx + 1, gy, 2, "quartz_bricks")
-    r.st(rx - 1, gy + 1, 2, "east", name="smooth_quartz_stairs")
-    r.st(rx + 1, gy + 1, 2, "west", name="smooth_quartz_stairs")
-    r.set(rx, gy + 1, 2, "quartz_bricks")
-    r.set(rx, gy + 2, 2, "gold_block")
-    r.set(rx, gy + 3, 2, "end_rod", facing="up")
-    # the crossing tower behind the gable (x 5..7, z 0..1): the old drum walled in, pinnacles, a gold needle
-    for x in (rx - 1, rx, rx + 1):
-        for z in (0, 1):
-            for y in range(DECK + 1, gy + 3):
-                r.set(x, y, z, "quartz_bricks")
-            r.set(x, gy + 3, z, "chiseled_quartz_block")
-    for x in (rx - 1, rx + 1):
-        r.set(x, gy + 4, 0, "gold_block")
-        pinnacle(r, x, gy + 5, 0, h=1, gold=False)
-    r.set(rx, gy + 4, 0, "quartz_bricks")
-    r.set(rx, gy + 4, 1, "quartz_bricks")
-    r.pillar(rx, gy + 5, 1)
-    r.set(rx, gy + 6, 1, "gold_block")
-    r.set(rx, gy + 7, 1, "end_rod", facing="up")
-
-
-def buttresses_l3(r):
-    """FLYING BUTTRESSES on the camera's side, one at each end of the range (x 3 and x 9, clear of the spawn columns
-    x 4..5): a pier standing out in the yard (z 4) rising to a chiseled cap and a pinnacle, and the flyer across the
-    gap (z 3) - an upside-down stair springing from the pier as the arch, a stair over it sloping up onto the
-    clerestory as the coping."""
-    for x in PIERS:
-        for y in range(1, DECK + 1):
-            r.set(x, y, 4, "quartz_bricks")
-        r.set(x, 1, 4, "chiseled_quartz_block")
-        r.set(x, DECK + 1, 4, "chiseled_quartz_block")
-        pinnacle(r, x, DECK + 2, 4, h=1)
-        r.st(x, DECK, 3, "south", "top", name="smooth_quartz_stairs")       # the arch, springing from the pier
-        r.st(x, DECK + 1, 3, "north", name="smooth_quartz_stairs")          # the coping, rising to the wall
-
-
-def spire_l3(r):
-    """The bell turret grows into the BELFRY SPIRE in gothic stages: the square shaft rises (the old belfry glazed
-    into lancets), a gold band, a chamfered stage (corners cut back, a pinnacle on each - the gothic set-back) with
-    tall lancets, an open belfry with the bell high up under pointed arches, a ring of stairs, a gold knop and the GOLD
-    ANGEL on top: the landmark an opponent spots across the map."""
-    for y in range(TB - 1, SB):
-        r.fill(0, y, 0, 2, y, 2, "quartz_bricks")
-        for (x, z) in CORNERS3:
-            r.pillar(x, y, z)
-    for (x, z) in ((0, 1), (1, 2)):
-        lancet(r, x, z, TB, SB - 1)
-    r.fill(0, SB, 0, 2, SB, 2, "chiseled_quartz_block")
-    for (x, z) in CORNERS3:
-        r.set(x, SB, z, "gold_block")
-    for y in range(SB + 1, SBF):
-        for (x, z) in ((1, 0), (0, 1), (1, 1), (2, 1), (1, 2)):
-            r.set(x, y, z, "quartz_bricks")
-    for (x, z) in ((0, 1), (1, 2)):
-        lancet(r, x, z, SB + 1, SBF - 1)
-    for (x, z) in CORNERS3:
-        pinnacle(r, x, SB + 1, z, h=1)
-    r.fill(0, SBF, 0, 2, SBF, 2, "chiseled_quartz_block")
-    for (x, z) in CORNERS3:
-        r.set(x, SBF, z, "gold_block")
-        for yy in (SBF + 1, SBF + 2, SBF + 3):
-            r.pillar(x, yy, z)
-    r.st(1, SBF + 3, 0, "south", "top", name="smooth_quartz_stairs")
-    r.st(1, SBF + 3, 2, "north", "top", name="smooth_quartz_stairs")
-    r.st(0, SBF + 3, 1, "east", "top", name="smooth_quartz_stairs")
-    r.st(2, SBF + 3, 1, "west", "top", name="smooth_quartz_stairs")
-    r.set(1, SBF + 3, 1, "bell", attachment="ceiling", facing="south", powered="false")
-    r.fill(0, SBF + 4, 0, 2, SBF + 4, 2, "smooth_quartz")
-    ring(r, 0, 2, 0, 2, SBF + 5, name="smooth_quartz_stairs")
-    r.set(1, SBF + 5, 1, "smooth_quartz")
-    r.set(1, SBF + 6, 1, "gold_block")
-    angel(r, 1, SBF + 7, 1, gold=True)
-    r.set(1, SB + 2, 3, "blue_wall_banner", facing="south")   # a banner high on the spire, over the yard
-
-
-def pavilions_l3(r):
-    """The pavilions go gothic too: pinnacles on their ring's corners, the crown drawn up into a gold spirelet."""
-    for (x0, z0) in ((0, 5), (7, 5)):
-        cy = PV + 5                    # dome3's crown course (a drum of 1 from PV + 3)
-        for (dx, dz) in CORNERS3:
-            r.set(x0 + dx, PV + 4, z0 + dz, "chiseled_quartz_block")
-            pinnacle(r, x0 + dx, PV + 5, z0 + dz, h=1, gold=False)
-        r.set(x0 + 1, cy + 1, z0 + 1, "diorite_wall")
-        r.set(x0 + 1, cy + 2, z0 + 1, "gold_block")
-        r.lantern(x0 + 1, cy + 3, z0 + 1)
-
-
 def draw_l3(r):
+    """THE CATHEDRAL OF ARMS: L2 + the north wing raised into a clerestory (y 8..10, the pillar beat carried up) under
+    a sloped roof with a slab ridge (y 12), the west wing's corner a slim tower to y 9 with a gold knop, the
+    angel gilded and set on a gold needle."""
     draw_l2(r)
-    cathedral_l3(r)
-    buttresses_l3(r)
-    spire_l3(r)
-    pavilions_l3(r)
+    for x in range(0, 6):
+        for y in (8, 9, 10):
+            r.set(x, y, 0, "quartz_bricks")
+            if x % 2 == 0:
+                r.pillar(x, y, 1)
+            else:
+                r.set(x, y, 1, "smooth_quartz")
+        r.st(x, 11, 1, "north", name="quartz_stairs")
+        r.set(x, 11, 0, "smooth_quartz")
+        r.slab(x, 12, 0)
+    for y in range(5, 9):
+        r.pillar(1, y, 2)
+    r.set(1, 9, 2, "gold_block")
+    angel(r, 7, KW + 5, 1, gold=True)
+    r.set(7, KW + 8, 1, "gold_block")
+    r.set(7, KW + 9, 1, "end_rod", facing="up")
 
 
-# ======================================================================================================== build
-L1_SY = TB + 9
-L2_SY = DECK + 10
-L3_SY = SBF + 11
+L1_SY = KW + 5                # the lantern on the crown is the top (y 12)
+L2_SY = KW + 9                # the angel's lantern (y 16)
+L3_SY = KW + 10               # the needle (y 17)
 
 
 def build(draw, sy, tier):
