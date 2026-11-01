@@ -1,0 +1,4 @@
+07:58:53 waiting for the Xvfb display
+07:59:12 display :99 (1920x1080), auth /tmp/xvfb-run.jln90y/Xauthority, 10 fps
+[x11grab @ 0x559ad7fbef80] Stream #0: not enough frames to estimate rate; consider increasing probesize
+07:59:31 moved window 4194313 to 0,0
