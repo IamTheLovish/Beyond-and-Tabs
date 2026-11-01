@@ -41,11 +41,13 @@ class JadePagodaTest(unittest.TestCase):
         cls.rts = G.shoot(cls.b, "rts", step=4)
 
     def _lips(self):
-        """(y, ring) where a roof starts: the jade's outer ring at y (rings <= 6, y >= 5: the roofs, not the garden
-        guardians or the terrace step) steps OUT from the row below."""
+        """(y, ring) where a roof starts: the jade's outer ring at y on the side axes (rings <= 6, y >= 5: the roofs,
+        not the garden guardians or the terrace step) steps OUT from the row below. Measured on the axes, the eave's
+        middle - not the corners: round 2's flared tips stand one ring past the outline on purpose (critics a / b on
+        round 1, eyes 41279165687: "flared tips past the square outline"), and a tip is not a roof."""
         rmax = {}
         for q, n in self.solid.items():
-            if q[1] >= 5 and _ring(q) <= 6 and n.startswith(JADE_FAMILY):
+            if q[1] >= 5 and _ring(q) <= 6 and C in (q[0], q[2]) and n.startswith(JADE_FAMILY):
                 rmax[q[1]] = max(rmax.get(q[1], -1), _ring(q))
         return [(y, rmax[y]) for y in sorted(rmax) if rmax[y] > rmax.get(y - 1, -1)]
 
