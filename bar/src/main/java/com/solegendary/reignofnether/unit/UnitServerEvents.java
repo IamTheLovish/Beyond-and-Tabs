@@ -217,6 +217,8 @@ public class UnitServerEvents {
         if (evt.phase != TickEvent.Phase.END)
             return;
         knockbackIgnoreIds.clear();   // marks live for their own hit's call stack only (see the field)
+        if (evt.getServer().getTickCount() % 20 == 0)
+            knockbackGate.sweep(evt.getServer().getTickCount());
         // once a second: recompute the deduplicated set of chunks units need loaded (see UnitChunkLoader)
         if (evt.getServer().getTickCount() % 20 == 0) {
             int sysChunks = Sys.begin(Sys.CHUNK_LOADER);
@@ -1273,15 +1275,14 @@ public class UnitServerEvents {
         }
     }
 
-    private static float KNOCKBACK_RESIST_PER_TICKS = 0.01f;
-
     // Entities hit by something that must not knock them back (shouldIgnoreKnockback): the knockback that follows the
     // hit in the same hurt() call is cancelled and takes the mark. A hit with no knockback after it (an arrow with no
     // shooter, or a target whose knockback an earlier branch cancels) left its id in the old list forever, and every
     // knockback paid a removeIf over the leak. A hit and its knockback are one call stack, so the set is emptied at
     // the end of every server tick (onServerTick) and a lookup is O(1).
     public static final it.unimi.dsi.fastutil.ints.IntOpenHashSet knockbackIgnoreIds = new it.unimi.dsi.fastutil.ints.IntOpenHashSet();
-    public static ArrayList<Pair<Integer, Integer>> knockbackResistIds = new ArrayList<>();
+    /** At most one light shove per unit per 5 ticks, the strongest wins, heavy shoves always land (gain 5). */
+    public static final KnockbackGate knockbackGate = new KnockbackGate();
 
     @SubscribeEvent
     public static void onLivingKnockBack(LivingKnockBackEvent evt) {
@@ -1295,6 +1296,16 @@ public class UnitServerEvents {
             evt.setCanceled(true);
         else if (knockbackIgnoreIds.remove(evt.getEntity().getId()))
             evt.setCanceled(true);
+        // focus fire: a shove another handler cancelled opens no window. The attacker is the one hurt() named this
+        // tick (set before both its shoves), so one blow's hurt shove and attack-knockback shove stay one blow
+        LivingEntity victim = evt.getEntity();
+        if (!evt.isCanceled() && victim instanceof Unit && victim.getServer() != null) {
+            LivingEntity by = victim.getLastHurtByMob();
+            int hitter = by != null && victim.getLastHurtByMobTimestamp() == victim.tickCount
+                ? by.getId() : KnockbackGate.NO_HITTER;
+            if (!knockbackGate.allow(victim.getId(), victim.getServer().getTickCount(), evt.getStrength(), hitter))
+                evt.setCanceled(true);
+        }
     }
 
     public static void debug1(BlockPos pos) {
