@@ -281,7 +281,7 @@ public class BuildingAmbienceClientEvents {
             new Fx[] { Fx.GLINT, Fx.SPLASH, Fx.SPLASH }),
         "jade_pagoda", new Spots(new double[] { 7.5, 21.9, 7.5, 4.5, 21.5, 4.5, 10.5, 21.5, 4.5, 4.5, 21.5, 10.5, 10.5, 21.5, 10.5 },
             new Fx[] { Fx.SPARK, Fx.SPARK, Fx.SPARK, Fx.SPARK, Fx.SPARK }),
-        "heartwood_hall", new Spots(new double[] { 2.5, 11.5, 4.5, 12.5, 11.5, 10.5, 4.5, 11.5, 12.5, 10.5, 11.5, 2.5, 7.5, 21.5, 7.5 },
+        "heartwood_hall", new Spots(new double[] { 10.5, 11.5, 4.5, 4.5, 10.5, 4.5, 10.5, 10.5, 10.5, 5.5, 13.5, 9.5, 7.5, 21.5, 7.5 },
             new Fx[] { Fx.PETAL, Fx.PETAL, Fx.PETAL, Fx.PETAL, Fx.PETAL }));
 
     /** placement -> its emitter spots in world space (x, y, z triples), or EMPTY when it has none. */
