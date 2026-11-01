@@ -14,6 +14,7 @@ import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Style;
@@ -90,55 +91,50 @@ public class CommanderAbility extends Ability {
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         Kind kind = kindFor(unit);
-        String title, line1, line2;
+        // texts are lang keys ability.reignofnether.commander.<key>.title / .line1 / .line2 (en_us, es_es); the numbers
+        // stay computed from the constants and are passed in as arguments
+        String key;
+        Object[] args1 = {};
         ResourceLocation icon;
         switch (kind) {
             case WAR_HORN -> {
-                title = "War Horn";
-                line1 = "Allies within 16 blocks: Speed II and Strength I for 10 s.";
-                line2 = "The Horde's charge starts here.";
+                key = "war_horn";
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/goat_horn.png");
             }
             case WILDSTRIDE -> {
-                title = "Wildstride";
-                line1 = "Allies within 14 blocks: Speed II and Jump Boost for 12 s.";
-                line2 = "The forest moves, and the Court moves with it.";
+                key = "wildstride";
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/azalea_top.png");
             }
             case RIPTIDE -> {
-                title = "Riptide";
-                line1 = "A " + (int) RIPTIDE_RANGE + "-block cone of surf: " + (int) RIPTIDE_DAMAGE
-                    + " damage and a hard shove, twice as hard on foes standing on the grid.";
-                line2 = "The sea goes where the Admiral points.";
+                key = "riptide";
+                args1 = new Object[] { (int) RIPTIDE_RANGE, (int) RIPTIDE_DAMAGE };
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/trident.png");
             }
             case BLINK -> {
-                title = "Blink";
-                line1 = "Teleport up to " + BLINK_RANGE + " blocks to a spot in sight. " + BLINK_ENERGY
-                    + " energy (x2 overcharged), " + BLINK_CD_SECONDS + " s cooldown.";
-                line2 = "Where the thunder is, the Sage was.";
+                key = "blink";
+                args1 = new Object[] { BLINK_RANGE, BLINK_ENERGY, BLINK_CD_SECONDS };
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/ender_pearl.png");
             }
             case OVERCLOCK -> {
-                title = "Overclock";
-                line1 = "Own machines within " + OVERCLOCK_RADIUS + " blocks: +" + Math.round((com.solegendary.reignofnether.brass.Heat.OVERCLOCK_RATE - 1) * 100)
-                    + "% fire rate for " + com.solegendary.reignofnether.brass.Heat.OVERCLOCK_TICKS / 20 + " s, then a surge of heat.";
-                line2 = "Red-line the boilers. Mind the gauges.";
+                key = "overclock";
+                args1 = new Object[] { OVERCLOCK_RADIUS,
+                    Math.round((com.solegendary.reignofnether.brass.Heat.OVERCLOCK_RATE - 1) * 100),
+                    com.solegendary.reignofnether.brass.Heat.OVERCLOCK_TICKS / 20 };
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/clock_00.png");
             }
             case DREAD -> {
-                title = "Dread";
-                line1 = "Enemies within 12 blocks: Weakness and Slowness for 8 s.";
-                line2 = "The dead do not fear; the living should.";
+                key = "dread";
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/echo_shard.png");
             }
             default -> {
-                title = "Rally Standard";
-                line1 = "Allies within 12 blocks: Resistance I and Speed I for 20 s.";
-                line2 = "Hold the line under the sun banner.";
+                key = "rally";
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/goat_horn.png");
             }
         }
+        String base = "ability.reignofnether.commander.";
+        String title = I18n.get(base + key + ".title");
+        String line1 = I18n.get(base + key + ".line1", args1);
+        String line2 = I18n.get(base + key + ".line2");
         // Blink is aimed: the button arms the cursor and the click sends the spot (UnitActionItem dispatches it)
         boolean aimed = kind == Kind.BLINK;
         Runnable onClick = aimed
@@ -151,8 +147,8 @@ public class CommanderAbility extends Ability {
             onClick,
             null,
             List.of(
-                FormattedCharSequence.forward(title + "  (commander, " + (aimed ? BLINK_CD_SECONDS : CD_SECONDS)
-                    + " s cooldown)", Style.EMPTY.withBold(true)),
+                FormattedCharSequence.forward(I18n.get(base + "cooldown", title, aimed ? BLINK_CD_SECONDS : CD_SECONDS),
+                    Style.EMPTY.withBold(true)),
                 FormattedCharSequence.forward(line1, Style.EMPTY),
                 FormattedCharSequence.forward(line2, Style.EMPTY.withItalic(true))
             ),
