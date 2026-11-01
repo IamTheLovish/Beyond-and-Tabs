@@ -338,18 +338,44 @@ public class BombardCrewUnit extends Pillager implements Unit, AttackerUnit, Ran
         fireShell(x, y, z);
     }
 
+    // counters for GameTest failure messages only (read by ArtilleryGameTests); nothing in play reads them
+    public int shellsFired, shellsRefusedClient, shellsRefusedNotSetUp, shellsRefusedDeadZone;
+    /** The last burst of one of this crew's shells: x, y, z and units hit (-1 x = none yet). */
+    public double lastBurstX = Double.NaN, lastBurstY, lastBurstZ;
+    public int lastBurstHit = -1;
+
+    public void recordBurst(double x, double y, double z, int hit) {
+        lastBurstX = x;
+        lastBurstY = y;
+        lastBurstZ = z;
+        lastBurstHit = hit;
+    }
+
+    /** The goals running now, for a GameTest failure message (goalSelector is protected). */
+    public String runningGoalsForTest() {
+        return this.goalSelector.getRunningGoals().map(w -> w.getGoal().getClass().getSimpleName())
+            .collect(java.util.stream.Collectors.joining("+"));
+    }
+
     /**
      * Lobs one shell at (x, y, z) unless it is inside {@link #MIN_RANGE} or still setting up (unit/SetUp). Returns
      * whether it fired. Public for the game test (fires without waiting on the attack goal).
      */
     public boolean fireShell(double x, double y, double z) {
-        if (level().isClientSide())
+        if (level().isClientSide()) {
+            shellsRefusedClient++;
             return false;
-        if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(this))
+        }
+        if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(this)) {
+            shellsRefusedNotSetUp++;
             return false;   // still setting up after moving (FieldArtillery)
+        }
         double dx = x - getX(), dz = z - getZ();
-        if (dx * dx + dz * dz < MIN_RANGE * MIN_RANGE)
+        if (dx * dx + dz * dz < MIN_RANGE * MIN_RANGE) {
+            shellsRefusedDeadZone++;
             return false;
+        }
+        shellsFired++;
         BombardShell shell = new BombardShell(level(), this, getUnitAttackDamage());
         shell.setPos(getX(), getEyeY() + 0.3, getZ());
         shell.aimAt(x, y, z);

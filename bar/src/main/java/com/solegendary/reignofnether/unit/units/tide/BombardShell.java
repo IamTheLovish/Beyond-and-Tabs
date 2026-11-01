@@ -209,6 +209,8 @@ public class BombardShell extends ThrowableItemProjectile {
         sl.sendParticles(ParticleTypes.EXPLOSION, x, y + 0.3, z, 1, 0, 0, 0, 0);
         sl.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, 6, splash * 0.4, 0.2, splash * 0.4, 0.02);
         sl.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 1.6f, 1.2f);
+        if (shooter instanceof BombardCrewUnit crew)
+            crew.recordBurst(x, y, z, hit.size());   // for GameTest failure messages only
         discard();
         return hit.size();
     }
