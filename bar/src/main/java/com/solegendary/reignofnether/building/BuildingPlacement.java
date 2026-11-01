@@ -947,15 +947,21 @@ public class BuildingPlacement {
         Collections.shuffle(placedBlocks);
         Collections.shuffle(poolBlocks);
         placedBlocks.addAll(poolBlocks);
-        for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
-            BlockPos bp = placedBlocks.get(i).getBlockPos();
-            com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
-            if (!getLevel().getBlockState(bp).getFluidState().isEmpty()) {
-                getLevel().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
-            } else {
-                getLevel().destroyBlock(bp, false);
+        // a lantern, ladder, banner or door that loses its support breaks without an item (BuildingDrops)
+        BuildingPlacement dropsWere = BuildingDrops.begin(this);
+        try {
+            for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
+                BlockPos bp = placedBlocks.get(i).getBlockPos();
+                com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
+                if (!getLevel().getBlockState(bp).getFluidState().isEmpty()) {
+                    getLevel().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
+                } else {
+                    getLevel().destroyBlock(bp, false);
+                }
+                this.onBlockBreak((ServerLevel) getLevel(), bp, false);
             }
-            this.onBlockBreak((ServerLevel) getLevel(), bp, false);
+        } finally {
+            BuildingDrops.end(dropsWere);
         }
         if (intAmount > 0) {
             // rate-limited per owner (was one packet to everyone per hit); centrePos instead of re-scanning blocks
@@ -1027,6 +1033,8 @@ public class BuildingPlacement {
                 placedCount++;
         final int blastEvery = Math.max(1, placedCount / MAX_COLLAPSE_BLASTS);
         final int[] seen = { 0 };
+        // its pieces (lanterns, ladders, banners, doors) break without items as their supports go (BuildingDrops)
+        BuildingPlacement dropsWere = BuildingDrops.begin(this);
         try {
         this.blocks.forEach((BuildingBlock block) -> {
             if ((!block.getBlockState().getFluidState().isEmpty() ||
@@ -1051,6 +1059,7 @@ public class BuildingPlacement {
         });
         } finally {
             com.solegendary.reignofnether.barfx.BarFx.muteExplosions(false);
+            BuildingDrops.end(dropsWere);
         }
 
         this.scaffoldBlocks.forEach((BuildingBlock block) -> {

@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "facing=east,part=base": {
+      "model": "reignofnether:block/pilaster_slate_base",
+      "y": 90
+    },
+    "facing=east,part=capital": {
+      "model": "reignofnether:block/pilaster_slate_capital",
+      "y": 90
+    },
+    "facing=east,part=shaft": {
+      "model": "reignofnether:block/pilaster_slate_shaft",
+      "y": 90
+    },
+    "facing=east,part=single": {
+      "model": "reignofnether:block/pilaster_slate_single",
+      "y": 90
+    },
+    "facing=north,part=base": {
+      "model": "reignofnether:block/pilaster_slate_base"
+    },
+    "facing=north,part=capital": {
+      "model": "reignofnether:block/pilaster_slate_capital"
+    },
+    "facing=north,part=shaft": {
+      "model": "reignofnether:block/pilaster_slate_shaft"
+    },
+    "facing=north,part=single": {
+      "model": "reignofnether:block/pilaster_slate_single"
+    },
+    "facing=south,part=base": {
+      "model": "reignofnether:block/pilaster_slate_base",
+      "y": 180
+    },
+    "facing=south,part=capital": {
+      "model": "reignofnether:block/pilaster_slate_capital",
+      "y": 180
+    },
+    "facing=south,part=shaft": {
+      "model": "reignofnether:block/pilaster_slate_shaft",
+      "y": 180
+    },
+    "facing=south,part=single": {
+      "model": "reignofnether:block/pilaster_slate_single",
+      "y": 180
+    },
+    "facing=west,part=base": {
+      "model": "reignofnether:block/pilaster_slate_base",
+      "y": 270
+    },
+    "facing=west,part=capital": {
+      "model": "reignofnether:block/pilaster_slate_capital",
+      "y": 270
+    },
+    "facing=west,part=shaft": {
+      "model": "reignofnether:block/pilaster_slate_shaft",
+      "y": 270
+    },
+    "facing=west,part=single": {
+      "model": "reignofnether:block/pilaster_slate_single",
+      "y": 270
+    }
+  }
+}
