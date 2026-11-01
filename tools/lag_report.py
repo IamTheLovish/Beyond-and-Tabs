@@ -144,12 +144,17 @@ def verdict(r):
         return "no perf lines in this log (no [Frame]/[Tick]/[Spike]): was the game in a world long enough?"
     if spikes and spm >= SPIKES_PER_MIN_NOTICEABLE and gc_share >= SPIKE_GC_SHARE:
         return "GC: %d%% of the spikes line up with a garbage-collection pause (give the game more heap or find the allocation)" % round(100 * gc_share)
-    if tick_max_p95 >= SLOW_TICK_P95_MS or tick_p95 >= SLOW_TICK_P95_MS * 0.7:
-        return "server-bound: the server tick p95 is %.0f ms (budget 50 ms); the top [Sys] systems below say what it spends it on" % tick_max_p95
-    if frame_p50 >= SLOW_FRAME_P50_MS:
+    client_slow = frame_p50 >= SLOW_FRAME_P50_MS
+    # one window near the budget names the server only when the client is not slow itself (vscreen run 2026-11-01:
+    # a 44 ms median frame with one 45 ms server window was called server-bound)
+    if tick_p95 >= SLOW_TICK_P95_MS * 0.7 or (tick_max_p95 >= SLOW_TICK_P95_MS and not client_slow):
+        return "server-bound: the server tick p95 is %.0f ms in the median window, %.0f ms in the worst (budget 50 ms); the top [Sys] systems below say what it spends it on" % (tick_p95, tick_max_p95)
+    if client_slow:
         g = r["gfx"]
         why = " on an integrated GPU" if g and is_integrated(g["renderer"], g["vendor"]) else ""
-        return "render-bound: the median frame is %.0f ms (%.0f fps) with a healthy server%s" % (frame_p50, 1000 / max(frame_p50, 0.1), why)
+        server = ("; the server's worst window reached p95 %.0f ms (budget 50 ms)" % tick_max_p95
+                  if tick_max_p95 >= SLOW_TICK_P95_MS else " with a healthy server")
+        return "render-bound: the median frame is %.0f ms (%.0f fps)%s%s" % (frame_p50, 1000 / max(frame_p50, 0.1), why, server)
     if spikes and spm >= SPIKES_PER_MIN_NOTICEABLE and remesh >= CHUNK_REMESH_PER_S:
         return "chunk loading: %.1f spikes a minute, no GC, and %.0f section re-mesh requests a second" % (spm, remesh)
     if spikes and spm >= SPIKES_PER_MIN_NOTICEABLE:
