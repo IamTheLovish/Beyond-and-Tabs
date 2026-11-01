@@ -18,7 +18,10 @@ class CanopyColumnTest {
     void fullSkyIsOpenAnythingOverItIsCover() {
         assertFalse(CanopyShade.covered(15), "open sky");
         assertTrue(CanopyShade.covered(14), "under leaves (one level off)");
-        assertTrue(CanopyShade.covered(0), "under a roof or a log");
+        assertTrue(CanopyShade.covered(1), "deep under a roof");
+        // #466 follow-up: 0 is the cell over the ground inside a block - a wall or a step beside the grass, not
+        // something over it; counting it drew a dark band at the foot of every wall and step on a lawn
+        assertFalse(CanopyShade.covered(0), "inside a wall or a step");
     }
 
     @Test
