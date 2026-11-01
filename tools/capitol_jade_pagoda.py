@@ -81,8 +81,7 @@ SKULL_CORNER = {(-1, 1): "2", (-1, -1): "6", (1, -1): "10", (1, 1): "14"}   # st
 
 # where the game looks (structure coordinates; the centre cell is (R, y, R))
 # BuildingAmbienceClientEvents.CAPITOL_SPOTS["jade_pagoda"]: Fx.SPARK over the crown rod and four halo crystals
-HALO_Y = 20
-SPARK_SPOTS = ((7.5, 21.9, 7.5), (4.5, 21.5, 4.5), (10.5, 21.5, 4.5), (4.5, 21.5, 10.5), (10.5, 21.5, 10.5))
+SPARK_SPOTS = ((7.5, 21.9, 7.5), (5.5, 18.5, 5.5), (9.5, 18.5, 5.5), (5.5, 18.5, 9.5), (9.5, 18.5, 9.5))
 STARTING_TYPES = {"polished_andesite", "stone_bricks"}   # JadePagoda.startingBlockTypes
 
 
@@ -291,54 +290,40 @@ def chimes(c):
 
 
 def pagoda(c):
-    """Five roofs over five storeys. A pagoda reads by its deep eaves and the strip of lit wall between them, so each
-    roof's lip stands two rings out from the storey under it (the band between rests on the storey's beam) and the
-    storeys are three high, so a red-and-paper wall shows over each roof's second course:
-      the hall (ring 3, y3-6) in its verandah (ring 4)  | roof 1 lip ring 6 @ y6
-      storey 2 ring 4 y7-9 (the hall rises through it)   | roof 2 lip ring 5 @ y10
-      storey 3 ring 3 y11-13                             | roof 3 lip ring 4 @ y14
-      storey 4 ring 2 y15-16                             | roof 4 lip ring 3 @ y17
-      storey 5 ring 1 y18                                | roof 5 lip ring 2 @ y19, the cap y20, the rod y21
-    The centre column stays open from the hall floor (y3) to the ceiling at y10: getIndoorSpawnPoint walks down from
-    the box's mid-height (y10) and must land on the floor, so the hall is a tall atrium with storey 2's paper
-    lantern-wall round its top."""
+    """THREE roofs two rings apart over tall storeys (Nov 2026; the five roofs one ring apart read from the RTS camera
+    as "one four-sided pyramid of equal-height steps", two fresh critics 4 / 4; two blind massing rounds, eyes
+    41275632354 / 41277286939, picked three deep roofs, tall storeys and a crown):
+      the hall (ring 3, y3-6) in its verandah (ring 4)   | roof 1: lip ring 6 @ y6, course 5 @ 7 (a gutter at 4)
+      storey 2 ring 3 y7-11 (shows y7-11 over roof 1)     | roof 2: lip ring 4 @ y12, courses 3 @ 13, 2 @ 13
+      storey 3 ring 1 y12-16 (shows y14-16 over roof 2)   | roof 3: lip ring 2 @ y17, the crown y18-21
+    Each storey stands one ring inside the lip above it: the steep RTS camera then sees a strip of red wall over
+    every roof (a 2-ring overhang hid them: storey walls 0.1 % of the RTS view, the shipped five roofs 0.02 %).
+    The centre column stays open from the hall floor (y3) to y9: getIndoorSpawnPoint walks down from the box's
+    mid-height (y10) and must land on the floor, so the hall is an atrium up into storey 2."""
     ground_storey(c)
-    roof(c, 6, 6)
-    storey(c, 4, 7, 9)
-    roof(c, 5, 10)
-    c.disc(3, 10, OAK)                                         # the atrium's coffered ceiling
+    roof(c, 6, 6)                                              # lip 6 @ y6, band rings 4-5, course ring 5 @ y7
+    storey(c, 3, 7, 11)                                        # storey 2 on the hall's walls, shows y7-11
+    c.disc(2, 10, OAK)                                         # the atrium's ceiling
     c.set(0, 10, 0, "pearlescent_froglight", axis="y")         # the hall's light, over the spawn
-    storey(c, 3, 11, 13)
-    roof(c, 4, 14)
-    c.disc(2, 14, OAK)
-    storey(c, 2, 15, 16)
-    c.set(0, 15, 0, "pearlescent_froglight", axis="y")         # glows through the paper of storey 4
-    c.set(0, 16, 0, "pearlescent_froglight", axis="y")
-    roof(c, 3, 17, course=False)
-    c.disc(1, 17, JADE)
-    storey(c, 1, 18, 18)
-    c.set(0, 18, 0, "pearlescent_froglight", axis="y")
-    roof(c, 2, 19, course=False)
-    # the cap: a jade hip climbing onto the gold boss
+    roof(c, 4, 12)                                             # lip 4 @ y12, band ring 3, course ring 3 @ y13
+    c.disc(2, 12, JADE, k0=2)
+    c.ring_stairs(2, 13, name=JADE_ST)                         # course 2: ring 2 @ y13, against storey 3
+    storey(c, 1, 12, 16)
+    for y in (14, 15, 16):
+        c.set(0, y, 0, "pearlescent_froglight", axis="y")      # glows through the paper of storey 3
+    roof(c, 2, 17, course=False)                               # lip 2 @ y17, the band ring 1
+    # the crown: a jade hip on a three-high gold boss, a lightning rod on it; the top roof's four upturned tips are
+    # rods too - a crown of five rods, the storm's mark (the violet-glass and amethyst halo is gone: purple is a cool
+    # team hue in a fixed palette, both baseline and massing critics)
     for o in O4.values():
-        c.st(o, 1, 0, 20, inward(o), name=JADE_ST)
+        c.st(o, 1, 0, 18, inward(o), name=JADE_ST)
     for (sx, sz) in CORNERS:
-        c.slab(sx, 20, sz, JADE_SLAB)
-    c.set(0, 20, 0, GOLD)
-    # the crown: the lightning rod on the gold boss, and round it, floating free of every roof, the
-    # STORM-CRYSTAL HALO - a thin ring of violet glass panes on ring 3 at y20 with an amethyst shard on each corner and on each
-    # axis (a block with a cluster growing up out of it): crystal the storm froze out of the air (the faction's
-    # accent, from the extractor). Panes and amethyst hold where placed: nothing in it can pop off.
+        c.slab(sx, 18, sz, JADE_SLAB)
+    for y in (18, 19, 20):
+        c.set(0, y, 0, GOLD)
     rod(c, 0, 21, 0)
     for (sx, sz) in CORNERS:
-        rod(c, sx * 2, 20, sz * 2)          # the top roof's upturned tips are lightning rods: a crown of five
-    for o in O4.values():
-        for t in range(-3, 4):
-            if abs(t) == 3:
-                c.put(o, 3, t, HALO_Y, "amethyst_block")
-                c.put(o, 3, t, HALO_Y + 1, "amethyst_cluster", facing="up", **DRY)
-            else:
-                c.put(o, 3, t, HALO_Y, "purple_stained_glass_pane")
+        rod(c, sx * 2, 18, sz * 2)
     # inside the hall: lanterns in its corners
     for (sx, sz) in CORNERS:
         c.set(sx * 2, 3, sz * 2, "lantern", **LANTERN)

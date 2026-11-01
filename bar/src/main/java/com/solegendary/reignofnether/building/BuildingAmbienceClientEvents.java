@@ -279,7 +279,7 @@ public class BuildingAmbienceClientEvents {
             new Fx[] { Fx.STEAM, Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }),
         "wreck_harbour", new Spots(new double[] { 7.5, 22.1, 2.5, 2.0, 1.15, 6.5, 2.0, 1.15, 9.5 },
             new Fx[] { Fx.GLINT, Fx.SPLASH, Fx.SPLASH }),
-        "jade_pagoda", new Spots(new double[] { 7.5, 21.9, 7.5, 4.5, 21.5, 4.5, 10.5, 21.5, 4.5, 4.5, 21.5, 10.5, 10.5, 21.5, 10.5 },
+        "jade_pagoda", new Spots(new double[] { 7.5, 21.9, 7.5, 5.5, 18.5, 5.5, 9.5, 18.5, 5.5, 5.5, 18.5, 9.5, 9.5, 18.5, 9.5 },
             new Fx[] { Fx.SPARK, Fx.SPARK, Fx.SPARK, Fx.SPARK, Fx.SPARK }),
         "heartwood_hall", new Spots(new double[] { 2.5, 11.5, 4.5, 12.5, 11.5, 10.5, 4.5, 11.5, 12.5, 10.5, 11.5, 2.5, 7.5, 21.5, 7.5 },
             new Fx[] { Fx.PETAL, Fx.PETAL, Fx.PETAL, Fx.PETAL, Fx.PETAL }));
