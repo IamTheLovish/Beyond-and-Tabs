@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.ActiveProduction;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
@@ -169,6 +170,12 @@ public class BuildProgressBarClientEvents {
             Eta prod = b.isBuilt ? PROD_ETAS.get(b) : null;
             if (build == null && prod == null)
                 continue;
+            // a White Angel site rising: nothing floats over it (construction round 15 critic: with its "ETA" text gone
+            // since round 13, the bar alone floated over the site as an unlabelled gold-and-navy pill that read as an
+            // object; ConstructionFx shows the work on the building and the panel shows progress and the ETA -
+            // PortraitRendererBuilding, constructionEta)
+            if (build != null && FactionTraits.of(b.getFaction()) == FactionTraits.SUNFORGED)
+                continue;
             boolean friendly = AlliancesClient.isAlliedOrOwned(me, b.ownerName);
             if (prod != null && !friendly)
                 continue;   // an enemy's production queue is private
@@ -233,6 +240,17 @@ public class BuildProgressBarClientEvents {
             return px * px + py * py + pz * pz < r * r;
         }
         return dx * dx + dy * dy + dz * dz < FIRST_PERSON_RANGE * FIRST_PERSON_RANGE;
+    }
+
+    /**
+     * A rising site's time to finish as "m:ss" for the building's panel, or null while no rate is known (stalled, just
+     * started, finished). Read only; the estimate is the same one the world bar shows.
+     */
+    public static String constructionEta(BuildingPlacement b) {
+        Eta e = b == null || b.isBuilt ? null : BUILD_ETAS.get(b);
+        if (e == null || !e.text.startsWith("ETA ") || e.text.endsWith("--:--"))
+            return null;
+        return e.text.substring(4);
     }
 
     /** "ETA m:ss" from the smoothed rate, "ETA --:--" while stalled or before a rate is known. */
