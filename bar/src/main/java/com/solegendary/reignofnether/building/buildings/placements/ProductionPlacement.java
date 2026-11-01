@@ -262,7 +262,7 @@ public class ProductionPlacement extends BuildingPlacement {
         BlockPos spawnPoint = spawnIndoors ? getIndoorSpawnPoint(level) : outdoorSpawnPoint();
 
         spawnPoint = spawnPoint.offset(spawnOffset);
-        BlockPos safe = spawnCell(level, spawnPoint, entityType, spawnOffset, true);
+        BlockPos safe = spawnCell(level, spawnPoint, entityType, spawnOffset, false);
         boolean roof = safe == null;
         if (roof) {
             safe = roofSpawnCell();
@@ -315,13 +315,13 @@ public class ProductionPlacement extends BuildingPlacement {
     }
 
     /**
-     * A cell outside the footprint for a unit whose cell inside has no way out: the outdoor spawn point (rally side),
+     * A cell outside the footprint for a unit whose cell inside has no way out: {@code outdoor} (produceUnit: the rally side),
      * then the middle of each side nearest it - the first the body fits in, outside the footprint, that it can walk
      * away from. Null if there is none.
      */
     @Nullable
-    private BlockPos outsideSpawnPoint(ServerLevel level, EntityType<?> type, Vec3i spawnOffset) {
-        BlockPos wanted = outdoorSpawnPoint().offset(spawnOffset);
+    private BlockPos outsideSpawnPoint(ServerLevel level, EntityType<?> type, BlockPos outdoor, Vec3i spawnOffset) {
+        BlockPos wanted = outdoor.offset(spawnOffset);
         List<BlockPos> candidates = new ArrayList<>(5);
         candidates.add(wanted);
         candidates.addAll(sideSpawnPoints(type, wanted));
@@ -361,10 +361,11 @@ public class ProductionPlacement extends BuildingPlacement {
 
     /**
      * The cell produceUnit raises a body in (the exit arrow asks the same, so the two cannot drift): fittingSpawnCell,
-     * moved outside when that cell has no way out of the building. Null when nothing fits (then the roof).
+     * moved outside when that cell has no way out of the building. Null when nothing fits (then the roof). The arrow
+     * ({@code forArrow}) shows the spawn with no rally set (exit_arrow_ac4) and logs nothing.
      */
     @Nullable
-    private BlockPos spawnCell(ServerLevel level, BlockPos spawnPoint, EntityType<?> entityType, Vec3i spawnOffset, boolean logTrapped) {
+    private BlockPos spawnCell(ServerLevel level, BlockPos spawnPoint, EntityType<?> entityType, Vec3i spawnOffset, boolean forArrow) {
         BlockPos safe = fittingSpawnCell(level, spawnPoint, entityType);
         if (safe != null && !inWater(level, safe)
                 && !com.solegendary.reignofnether.unit.UnitUnstick.leavesFootprint(level, safe, minCorner, maxCorner)) {
@@ -374,10 +375,10 @@ public class ProductionPlacement extends BuildingPlacement {
             // the pocket rule above or UnitUnstick to call it a trap, so every unit stood in it for good
             // (GraveyardExitGameTests). Interiors are allowed, trapped units are not (design/LANES.md, Oct 20): it is
             // raised outside instead, on the rally side.
-            BlockPos out = outsideSpawnPoint(level, entityType, spawnOffset);
+            BlockPos out = outsideSpawnPoint(level, entityType, forArrow ? getDefaultOutdoorSpawnPoint() : outdoorSpawnPoint(), spawnOffset);
             if (out != null)
                 safe = out;
-            else if (logTrapped)
+            else if (!forArrow)
                 com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("A {} raised in {} at {} has no way out of it, and no cell outside fits it",
                         EntityType.getKey(entityType), getBuilding().name, originPos.toShortString());
         }
@@ -479,7 +480,7 @@ public class ProductionPlacement extends BuildingPlacement {
         BlockPos p = exitNominalPos(serverLevel, spec.indoors(), spec.offset());
         if (!safe)
             return p;
-        BlockPos cell = spawnCell(serverLevel, p, spec.type(), spec.offset(), false);
+        BlockPos cell = spawnCell(serverLevel, p, spec.type(), spec.offset(), true);
         return cell != null ? cell : roofSpawnCell();
     }
 
