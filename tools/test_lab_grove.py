@@ -24,7 +24,7 @@ FILES = ("grove.nbt", "grove_l2.nbt", "grove_l3.nbt")
 NBT = [os.path.join(RES, "data", "reignofnether", "structures", f) for f in FILES]
 NBT_ASSETS = [os.path.join(RES, "assets", "reignofnether", "structures", f) for f in FILES]
 STONE = ("mossy_stone_brick", "cracked_stone_brick", "chiseled_stone_brick", "mossy_cobblestone")
-TRUNK = ("oak_log", "oak_wood", "dark_oak_log", "dark_oak_wood")
+TRUNK = ("oak_log", "oak_wood", "dark_oak_log", "dark_oak_wood", "stripped_dark_oak_log", "stripped_dark_oak_wood")
 
 
 class GroveTest(unittest.TestCase):
@@ -68,7 +68,7 @@ class GroveTest(unittest.TestCase):
         self.assertGreaterEqual(max(y for (x, y, z), n in self.solid[0].items() if n.endswith("_leaves")), 12)
 
     def test_trunk_is_seen_from_the_rts_camera(self):
-        """Bark (oak or dark oak log / wood) is at least 4 % of the L1 RTS hits above the floor: the tree has a trunk and roots
+        """Bark (oak or dark oak log / wood, stripped or not) is at least 4 % of the L1 RTS hits above the floor: the tree has a trunk and roots
         where the camera looks (critics, round 1: "no trunk or roots, the crown floats")."""
         s = self._share(0, lambda n: n in TRUNK, ymin=1)
         self.assertGreaterEqual(s, 0.04, "%.3f" % s)
