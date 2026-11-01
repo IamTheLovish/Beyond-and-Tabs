@@ -104,12 +104,16 @@ class CentralPortalTest(unittest.TestCase):
         self.assertGreaterEqual(top - max(q[1] for q in other), 5)
 
     def test_one_glow_focus_in_the_crater(self):
-        """From the RTS camera the glow is 0.1-1.5 % of the building's pixels, all of it on the crown (|d| <= 1)."""
+        """From the RTS camera the glow is 0.5-3.0 % of the building's pixels, all of it in the crater (|d| <= 1).
+        Band re-set after round 1 (on-screen evidence, eyes 41268686770): the first band, 0.1-1.5 %, was set before
+        any still; round 1 measured 0.4 % and both fresh critics read it as "a speck", "below census size", "one
+        block", "does not read at distance". Both edges move: under 0.5 % the faction mark does not read; over 3 % the
+        glow starts to outshout the team colour (BAT - Readable at any zoom, R3)."""
         sx, sy, sz = self.size
         cx, cz = (sx - 1) // 2, (sz - 1) // 2
         glow = [h for h in self.rts.values() if any(k in h[1] for k in EMISSIVE)]
         share = len(glow) / max(1, len(self.rts))
-        self.assertTrue(0.001 <= share <= 0.015, share)
+        self.assertTrue(0.005 <= share <= 0.03, share)
         off = [h[0] for h in glow if max(abs(h[0][0] - cx), abs(h[0][2] - cz)) > 1]
         self.assertEqual(off, [])
 
