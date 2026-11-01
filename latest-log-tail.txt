@@ -1,0 +1,200 @@
+[06:08:16] [Render thread/INFO]: [FrameParts] 104 frames, mean 95.9 ms/frame; ours 1.4 ms (1%): buildingDecor 0.72 (max 6.6, 4.0/f) | markersMapWorld 0.31 (max 9.2, 1.0/f) | buildingBoxes 0.16 (max 6.1, 1.0/f) | markersRange 0.07 (max 4.6, 1.0/f) | unitOverlays 0.05 (max 0.1, 11/f) | entityShadows 0.04 (max 0.1, 2.8/f) (+17 smaller); elsewhere 94.5 ms; 0 section re-mesh requests/s
+[06:08:16] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[06:08:18] [Render thread/INFO]: [ShaderBench] 15_jade_pagoda_rts: 60 frames, p50 79.71 ms, p95 110.80 ms, mean 82.39 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[06:08:21] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:08:22] [Render thread/INFO]: [Eyes] 15_jade_pagoda_rts_close: aimed at -180, 78, -53 - the camera at -185, 92, -47 looks at -180, -52 (55 frames, 4.0 s in the phase)
+[06:08:22] [Render thread/INFO]: [Eyes] 15_jade_pagoda_rts_close: the structure's box holds 1542 non-air blocks on the client
+[06:08:22] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_rts_close 1793513302480
+[06:08:22] [Server thread/INFO]: [Eyes] 15_jade_pagoda_rts_close: ... and 1542 on the server
+[06:08:22] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[06:08:23] [IO-Worker-11/INFO]: [Eyes] 15_jade_pagoda_rts_close: Saved screenshot as bat_eyes_15_jade_pagoda_rts_close.png
+[06:08:26] [Server thread/INFO]: [Tick] p50 6.3 ms, p95 13.7 ms, max 34.7 ms over the last 100 ticks; 8 units, 5 buildings, 1 players
+[06:08:26] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:08:26] [Render thread/INFO]: [Frame] p50 86.3 ms (12 fps), p95 154.4 ms, max 363.0 ms over 240 frames; first-person view, zoom 26, 5 units known
+[06:08:26] [Render thread/INFO]: [FrameParts] 112 frames, mean 89.3 ms/frame; ours 1.1 ms (1%): markersRange 0.55 (max 12.7, 1.0/f) | markersMapWorld 0.20 (max 7.3, 0.7/f) | buildingDecor 0.17 (max 2.4, 4.0/f) | buildingBoxes 0.05 (max 3.0, 0.7/f) | unitOverlays 0.03 (max 0.1, 11/f) | entityShadows 0.02 (max 0.1, 2.1/f) (+17 smaller); elsewhere 88.2 ms; 0 section re-mesh requests/s
+[06:08:26] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[06:08:27] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_34 1793513307536
+[06:08:28] [IO-Worker-11/INFO]: [Eyes] 15_jade_pagoda_34: Saved screenshot as bat_eyes_15_jade_pagoda_34.png
+[06:08:32] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_front 1793513312590
+[06:08:32] [Render thread/INFO]: [Eyes] 15_jade_pagoda_close: standing at -183.0, 94.0, -49.0 (direction -1, 1 from the middle), eye 1.00 over the aim, pitch 11 down
+[06:08:33] [IO-Worker-8/INFO]: [Eyes] 15_jade_pagoda_front: Saved screenshot as bat_eyes_15_jade_pagoda_front.png
+[06:08:33] [Notification Thread/INFO]: [GC] 14 collections took 164 ms of the last 10 s
+[06:08:33] [Render thread/INFO]: [Sfx] 370 ticks, played/asked: units 0/0 buildings 1/1 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[06:08:36] [Server thread/INFO]: [Tick] p50 7.6 ms, p95 18.3 ms, max 21.2 ms over the last 100 ticks; 8 units, 6 buildings, 1 players
+[06:08:36] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:08:36] [Render thread/INFO]: [Frame] p50 93.6 ms (11 fps), p95 151.4 ms, max 191.8 ms over 240 frames; first-person view, zoom 26, 5 units known
+[06:08:36] [Render thread/INFO]: [FrameParts] 79 frames, mean 125.9 ms/frame; ours 0.6 ms (0%): markersRange 0.50 (max 27.1, 1.0/f) | unitOverlays 0.03 (max 0.1, 11/f) | buildingDecor 0.03 (max 1.2, 4.0/f) (+16 smaller); elsewhere 125.3 ms; 0 section re-mesh requests/s
+[06:08:37] [Render thread/INFO]: [Eyes] 15_jade_pagoda_close: aimed at -180, 93, -53 - the camera at -183, 94, -49 looks at -180, -52 (40 frames, 5.1 s in the phase)
+[06:08:37] [Render thread/INFO]: [Eyes] 15_jade_pagoda_close: the structure's box holds 1542 non-air blocks on the client
+[06:08:37] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_close 1793513317680
+[06:08:37] [Server thread/INFO]: [Eyes] 15_jade_pagoda_close: ... and 1542 on the server
+[06:08:37] [Render thread/INFO]: [System] [CHAT] 
+[06:08:37] [Render thread/INFO]: [System] [CHAT] Night falls...
+[06:08:37] [Render thread/INFO]: [System] [CHAT] 
+[06:08:38] [IO-Worker-2/INFO]: [Eyes] 15_jade_pagoda_close: Saved screenshot as bat_eyes_15_jade_pagoda_close.png
+[06:08:41] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_dusk 1793513321766
+[06:08:41] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[06:08:42] [IO-Worker-10/INFO]: [Eyes] 15_jade_pagoda_dusk: Saved screenshot as bat_eyes_15_jade_pagoda_dusk.png
+[06:08:44] [Server thread/INFO]: [Sys] the server is slow (tick p95 47.0 ms): per-system timing on
+[06:08:46] [Server thread/INFO]: [Tick] p50 5.6 ms, p95 47.0 ms, max 63.4 ms over the last 100 ticks; 9 units, 6 buildings, 1 players
+[06:08:46] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:08:46] [Server thread/INFO]: [Sys] 40 ticks, mean 5.6 ms/tick; ours 1.0 ms (18%): pathfinder 0.35 (max 12.1, 2.0/t) | unstick 0.22 (max 6.2, 9.0/t) | buildings 0.18 (max 3.1, 1.0/t) | unit 0.11 (max 2.1, 9.0/t) | bots 0.03 (max 0.7, 0.1/t) | attacker 0.02 (max 0.1, 9.0/t) | economy 0.02 (max 0.1, 1.0/t) | separation 0.02 (max 0.1, 9.0/t) (+12 smaller); vanilla 4.2 ms (74%): chunks 2.06 (max 6.0, 3.0/t) | baseTick 0.65 (max 7.4, 35/t) | aiGoals 0.50 (max 4.2, 28/t) | travel 0.42 (max 5.4, 28/t) | otherEntities 0.19 (max 1.1, 30/t) | unitTick 0.18 (max 2.2, 9.0/t) | levelRest 0.15 (max 3.1, 3.0/t); elsewhere 0.4 ms; gc 64 ms
+[06:08:46] [Render thread/INFO]: [Frame] p50 112.3 ms (9 fps), p95 155.4 ms, max 210.3 ms over 240 frames; RTS view, zoom 30, 5 units known
+[06:08:46] [Render thread/INFO]: [FrameParts] 100 frames, mean 100.4 ms/frame; ours 0.5 ms (0%): markersRange 0.19 (max 6.6, 1.0/f) | markersMapWorld 0.12 (max 3.1, 0.6/f) | buildingBoxes 0.04 (max 2.2, 0.6/f) | unitOverlays 0.04 (max 0.2, 11/f) | buildingDecor 0.02 (max 0.6, 4.0/f) (+18 smaller); elsewhere 100.0 ms; 0 section re-mesh requests/s
+[06:08:46] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[06:08:46] [Render thread/INFO]: [Eyes] 15_jade_pagoda_golden_rts: aimed at -180, 78, -53 - the camera at -186, 96, -46 looks at -180, -52 (64 frames, 5.1 s in the phase)
+[06:08:46] [Render thread/INFO]: [Eyes] 15_jade_pagoda_golden_rts: the structure's box holds 1542 non-air blocks on the client
+[06:08:46] [Server thread/INFO]: [Eyes] 15_jade_pagoda_golden_rts: ... and 1542 on the server
+[06:08:46] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_golden_rts 1793513326841
+[06:08:47] [IO-Worker-10/INFO]: [Eyes] 15_jade_pagoda_golden_rts: Saved screenshot as bat_eyes_15_jade_pagoda_golden_rts.png
+[06:08:49] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 9.8 ms): per-system timing off
+[06:08:50] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_rts_t6000 1793513330853
+[06:08:50] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[06:08:51] [IO-Worker-10/INFO]: [Eyes] 15_jade_pagoda_rts_t6000: Saved screenshot as bat_eyes_15_jade_pagoda_rts_t6000.png
+[06:08:51] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[06:08:55] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_34_t6000 1793513335976
+[06:08:55] [Server thread/INFO]: [Offline: Gamerule sendCommandFeedback is now set to: false]
+[06:08:55] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-181, 71, -63)]
+[06:08:55] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-179, 71, -63)]
+[06:08:55] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-181, 71, -43)]
+[06:08:55] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-179, 71, -43)]
+[06:08:55] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-190, 71, -54)]
+[06:08:55] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-190, 71, -52)]
+[06:08:55] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-170, 71, -54)]
+[06:08:55] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-170, 71, -52)]
+[06:08:55] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[06:08:56] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit.png (1024x1024) uploaded with 3 mip levels
+[06:08:56] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_team.png (1024x1024) uploaded with 3 mip levels
+[06:08:56] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_glow.png (1024x1024) uploaded with 3 mip levels
+[06:08:56] [Server thread/INFO]: [Tick] p50 5.5 ms, p95 11.0 ms, max 18.1 ms over the last 100 ticks; 17 units, 7 buildings, 1 players
+[06:08:56] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:08:56] [Server thread/INFO]: [Sys] 60 ticks, mean 5.4 ms/tick; ours 0.6 ms (11%): buildings 0.16 (max 2.0, 1.0/t) | economy 0.13 (max 3.0, 1.0/t) | unitSync 0.08 (max 4.2, 0.1/t) | unit 0.06 (max 0.2, 9.0/t) | pathfinder 0.05 (max 0.2, 2.0/t) | bots 0.02 (max 0.5, 0.1/t) | attacker 0.02 (max 0.1, 9.0/t) (+13 smaller); vanilla 4.0 ms (75%): chunks 2.03 (max 8.1, 3.0/t) | travel 0.69 (max 6.6, 28/t) | otherEntities 0.40 (max 3.2, 30/t) | aiGoals 0.29 (max 3.4, 28/t) | baseTick 0.27 (max 3.2, 35/t) | unitTick 0.24 (max 6.4, 9.0/t) | levelRest 0.12 (max 3.1, 3.0/t); elsewhere 0.8 ms; gc 44 ms
+[06:08:56] [IO-Worker-12/INFO]: [Eyes] 15_jade_pagoda_34_t6000: Saved screenshot as bat_eyes_15_jade_pagoda_34_t6000.png
+[06:08:56] [Render thread/INFO]: [Frame] p50 110.5 ms (9 fps), p95 152.1 ms, max 397.9 ms over 240 frames; RTS view, zoom 30, 13 units known
+[06:08:56] [Render thread/INFO]: [FrameParts] 101 frames, mean 96.6 ms/frame; ours 3.3 ms (3%): unitBodies 1.91 (max 0.0, 0.1/f) | entityShadows 0.95 (max 0.1, 1.9/f) | markersRange 0.11 (max 2.1, 1.0/f) | buildingBoxes 0.11 (max 6.1, 0.6/f) | markersMapWorld 0.10 (max 3.1, 0.6/f) | bars 0.04 (max 3.0, 22/f) | unitOverlays 0.03 (max 0.1, 11/f) (+17 smaller); elsewhere 93.3 ms; 0 section re-mesh requests/s
+[06:08:56] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[06:09:01] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_rts_army 1793513341013
+[06:09:01] [Server thread/INFO]: [Offline: Killed 8 entities]
+[06:09:01] [Render thread/INFO]: [Sfx] 555 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 2
+[06:09:01] [Server thread/INFO]: [Eyes] 15_jade_pagoda_round1: pad x -195..-165, z -68..-38 keeps 81.4 blocks from the arena wall's ring (centre -6, -9, radius 280)
+[06:09:01] [Render thread/INFO]: [System] [CHAT] 
+[06:09:01] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[06:09:01] [Render thread/INFO]: [System] [CHAT] 
+[06:09:01] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/jade_pagoda_round1.nbt' 15x22x15 placed at -187, 71, -60 (pad centre -180, 71, -53)
+[06:09:01] [IO-Worker-10/INFO]: [Eyes] 15_jade_pagoda_rts_army: Saved screenshot as bat_eyes_15_jade_pagoda_rts_army.png
+[06:09:03] [Render thread/INFO]: [Clock] tick 2410: 60 frames over 5971 ms; old clock (game time) advanced 0.46 with 33 steps back, new clock advanced 119.46 with 0 steps back
+[06:09:03] [Render thread/INFO]: [Clock] frames (ms,old,new): 0,6000.540,2410.540 93,6000.380,2412.380 170,6001.000,2414.000 255,6000.520,2415.520 340,6000.320,2417.320 448,6000.500,2419.500 563,6000.740,2421.740 658,6000.700,2423.700 748,6000.480,2425.480 827,6000.060,2427.060 920,6000.980,2428.980 996,6000.440,2430.440 1070,6001.000,2432.000 1150,6000.520,2433.520 1229,6000.100,2435.100 1303,6000.640,2436.640 1398,6000.500,2438.500 1475,6000.040,2440.040 1550,6000.600,2441.600 1637,6000.280,2443.280 1710,6000.740,2444.740 1783,6000.200,2446.200 1857,6000.740,2447.740 1937,6000.260,2449.260 2034,6000.180,2451.180 2138,6000.260,2453.260 2244,6000.380,2455.380 2344,6000.420,2457.420 2468,6000.880,2459.880 2563,6000.760,2461.760 2662,6000.760,2463.760 2753,6000.600,2465.600 2833,6000.200,2467.200 2910,6000.720,2468.720 2984,6000.220,2470.220 3058,6000.760,2471.760 3134,6000.220,2473.220 3204,6000.680,2474.680 3284,6000.200,2476.200 3381,6000.100,2478.100 3479,6000.120,2480.120 3571,6001.000,2482.000 3671,6000.940,2483.940 3749,6000.520,2485.520 3835,6000.240,2487.240 3926,6000.960,2488.960 4073,6000.620,2491.620 4346,6000.240,2496.240 4567,6000.420,2501.420 4712,6000.380,2504.380 4861,6000.540,2507.540 4977,6000.800,2509.800 5104,6000.480,2512.480 5223,6000.920,2514.920 5345,6000.220,2517.220 5487,6000.100,2520.100 5623,6000.740,2522.740 5800,6000.360,2526.360 5888,6000.260,2528.260 5971,6001.000,2530.000
+[06:09:06] [Server thread/INFO]: [Tick] p50 6.7 ms, p95 14.5 ms, max 22.6 ms over the last 100 ticks; 10 units, 7 buildings, 1 players
+[06:09:06] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:09:06] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1_rts: aimed at -180, 78, -53 - the camera at -186, 96, -46 looks at -180, -52 (54 frames, 5.1 s in the phase)
+[06:09:06] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1_rts: the structure's box holds 1254 non-air blocks on the client
+[06:09:06] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_rts 1793513346460
+[06:09:06] [Server thread/INFO]: [Eyes] 15_jade_pagoda_round1_rts: ... and 1254 on the server
+[06:09:06] [Render thread/INFO]: [Frame] p50 78.4 ms (13 fps), p95 148.2 ms, max 397.9 ms over 240 frames; RTS view, zoom 30, 5 units known
+[06:09:06] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.2 ms, p95 3.2 ms; unit render p50 16.9 ms, p95 34.3 ms; per unit 82.1 us anim, 2708.9 us render (anim 3%); RTS view, zoom 30, detail on, over 75 frames
+[06:09:06] [Render thread/INFO]: [FrameParts] 106 frames, mean 96.8 ms/frame; ours 16.3 ms (17%): unitBodies 13.51 (max 82.5, 5.6/f) | entityShadows 0.97 (max 7.3, 24/f) | worldFx 0.74 (max 44.4, 11/f) | markersWreck 0.50 (max 4.7, 1.0/f) | markersMapWorld 0.19 (max 5.1, 1.0/f) | unitOverlays 0.13 (max 0.4, 11/f) | markersRange 0.10 (max 5.5, 1.0/f) | buildingDecor 0.05 (max 3.3, 4.0/f) | buildingBoxes 0.04 (max 0.2, 1.0/f) | markersMetal 0.04 (max 3.0, 2.0/f) | bars 0.04 (max 1.5, 22/f) (+13 smaller); elsewhere 80.5 ms; 0 section re-mesh requests/s
+[06:09:06] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.4, 9.4/t)
+[06:09:06] [IO-Worker-12/INFO]: [Eyes] 15_jade_pagoda_round1_rts: Saved screenshot as bat_eyes_15_jade_pagoda_round1_rts.png
+[06:09:13] [Render thread/INFO]: [ShaderBench] 15_jade_pagoda_round1_rts: 60 frames, p50 82.40 ms, p95 98.05 ms, mean 82.20 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[06:09:14] [Render thread/INFO]: [Sfx] 265 ticks, played/asked: units 1/8 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[06:09:16] [Server thread/INFO]: [Tick] p50 6.1 ms, p95 10.9 ms, max 16.8 ms over the last 100 ticks; 10 units, 8 buildings, 1 players
+[06:09:16] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:09:16] [Render thread/INFO]: [Frame] p50 83.1 ms (12 fps), p95 144.2 ms, max 397.9 ms over 240 frames; RTS view, zoom 26, 5 units known
+[06:09:16] [Render thread/INFO]: [FrameParts] 123 frames, mean 81.5 ms/frame; ours 1.1 ms (1%): markersWreck 0.69 (max 3.6, 1.0/f) | markersMapWorld 0.12 (max 1.2, 1.0/f) | entityShadows 0.10 (max 1.1, 33/f) | markersRange 0.07 (max 3.4, 1.0/f) | unitOverlays 0.07 (max 3.1, 11/f) | buildingBoxes 0.04 (max 0.1, 1.0/f) (+17 smaller); elsewhere 80.3 ms; 0 section re-mesh requests/s
+[06:09:16] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[06:09:17] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1_rts_close: aimed at -180, 78, -53 - the camera at -186, 96, -46 looks at -180, -52 (57 frames, 4.0 s in the phase)
+[06:09:17] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1_rts_close: the structure's box holds 1254 non-air blocks on the client
+[06:09:17] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_rts_close 1793513357565
+[06:09:17] [Server thread/INFO]: [Eyes] 15_jade_pagoda_round1_rts_close: ... and 1254 on the server
+[06:09:17] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[06:09:18] [IO-Worker-10/INFO]: [Eyes] 15_jade_pagoda_round1_rts_close: Saved screenshot as bat_eyes_15_jade_pagoda_round1_rts_close.png
+[06:09:21] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[06:09:22] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_34 1793513362585
+[06:09:23] [IO-Worker-4/INFO]: [Eyes] 15_jade_pagoda_round1_34: Saved screenshot as bat_eyes_15_jade_pagoda_round1_34.png
+[06:09:26] [Server thread/INFO]: [Tick] p50 6.6 ms, p95 12.3 ms, max 18.9 ms over the last 100 ticks; 10 units, 9 buildings, 1 players
+[06:09:26] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:09:26] [Render thread/INFO]: [Frame] p50 87.2 ms (11 fps), p95 146.6 ms, max 195.1 ms over 240 frames; first-person view, zoom 26, 5 units known
+[06:09:26] [Render thread/INFO]: [FrameParts] 85 frames, mean 117.2 ms/frame; ours 0.4 ms (0%): markersRange 0.14 (max 3.2, 1.0/f) | markersWreck 0.11 (max 3.6, 1.0/f) | entityShadows 0.05 (max 3.1, 6.2/f) | markersMapWorld 0.05 (max 2.7, 0.2/f) | unitOverlays 0.03 (max 0.1, 11/f) (+18 smaller); elsewhere 116.7 ms; 0 section re-mesh requests/s
+[06:09:26] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[06:09:27] [Render thread/INFO]: [Sfx] 260 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[06:09:27] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_front 1793513367599
+[06:09:27] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1_close: standing at -183.0, 94.0, -49.0 (direction -1, 1 from the middle), eye 1.00 over the aim, pitch 11 down
+[06:09:28] [IO-Worker-10/INFO]: [Eyes] 15_jade_pagoda_round1_front: Saved screenshot as bat_eyes_15_jade_pagoda_round1_front.png
+[06:09:29] [Notification Thread/INFO]: [GC] 9 collections took 118 ms of the last 10 s
+[06:09:32] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1_close: aimed at -180, 93, -53 - the camera at -183, 94, -49 looks at -180, -52 (39 frames, 5.0 s in the phase)
+[06:09:32] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1_close: the structure's box holds 1254 non-air blocks on the client
+[06:09:32] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_close 1793513372611
+[06:09:32] [Server thread/INFO]: [Eyes] 15_jade_pagoda_round1_close: ... and 1254 on the server
+[06:09:32] [Render thread/INFO]: [System] [CHAT] 
+[06:09:32] [Render thread/INFO]: [System] [CHAT] Night falls...
+[06:09:32] [Render thread/INFO]: [System] [CHAT] 
+[06:09:32] [IO-Worker-10/INFO]: [Eyes] 15_jade_pagoda_round1_close: Saved screenshot as bat_eyes_15_jade_pagoda_round1_close.png
+[06:09:36] [Server thread/INFO]: [Tick] p50 7.1 ms, p95 16.0 ms, max 20.1 ms over the last 100 ticks; 12 units, 10 buildings, 1 players
+[06:09:36] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:09:36] [Render thread/INFO]: [Frame] p50 112.1 ms (9 fps), p95 164.6 ms, max 226.5 ms over 240 frames; first-person view, zoom 26, 5 units known
+[06:09:36] [Render thread/INFO]: [FrameParts] 78 frames, mean 128.4 ms/frame; ours 0.3 ms (0%): markersRange 0.14 (max 0.6, 1.0/f) | unitOverlays 0.03 (max 0.0, 11/f) (+18 smaller); elsewhere 128.1 ms; 0 section re-mesh requests/s
+[06:09:36] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_dusk 1793513376842
+[06:09:36] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[06:09:37] [IO-Worker-10/INFO]: [Eyes] 15_jade_pagoda_round1_dusk: Saved screenshot as bat_eyes_15_jade_pagoda_round1_dusk.png
+[06:09:41] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1_golden_rts: aimed at -180, 78, -53 - the camera at -186, 96, -46 looks at -180, -52 (64 frames, 5.0 s in the phase)
+[06:09:41] [Render thread/INFO]: [Eyes] 15_jade_pagoda_round1_golden_rts: the structure's box holds 1254 non-air blocks on the client
+[06:09:41] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_golden_rts 1793513381888
+[06:09:41] [Server thread/INFO]: [Eyes] 15_jade_pagoda_round1_golden_rts: ... and 1254 on the server
+[06:09:42] [IO-Worker-10/INFO]: [Eyes] 15_jade_pagoda_round1_golden_rts: Saved screenshot as bat_eyes_15_jade_pagoda_round1_golden_rts.png
+[06:09:42] [Render thread/INFO]: [Sfx] 301 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 1
+[06:09:45] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_rts_t6000 1793513385975
+[06:09:45] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[06:09:46] [Server thread/INFO]: [Tick] p50 6.8 ms, p95 14.3 ms, max 53.0 ms over the last 100 ticks; 12 units, 10 buildings, 1 players
+[06:09:46] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:09:46] [IO-Worker-12/INFO]: [Eyes] 15_jade_pagoda_round1_rts_t6000: Saved screenshot as bat_eyes_15_jade_pagoda_round1_rts_t6000.png
+[06:09:46] [Render thread/INFO]: [Frame] p50 106.2 ms (9 fps), p95 154.4 ms, max 226.5 ms over 240 frames; first-person view, zoom 30, 5 units known
+[06:09:46] [Render thread/INFO]: [FrameParts] 124 frames, mean 80.7 ms/frame; ours 1.0 ms (1%): markersWreck 0.52 (max 7.7, 1.0/f) | entityShadows 0.14 (max 3.1, 31/f) | markersMapWorld 0.10 (max 1.2, 1.0/f) | buildingBoxes 0.10 (max 3.1, 1.0/f) | unitOverlays 0.04 (max 0.1, 11/f) | buildingDecor 0.04 (max 3.1, 4.0/f) (+17 smaller); elsewhere 79.7 ms; 0 section re-mesh requests/s
+[06:09:46] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[06:09:51] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_34_t6000 1793513391062
+[06:09:51] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-181, 71, -63)]
+[06:09:51] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-179, 71, -63)]
+[06:09:51] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-181, 71, -43)]
+[06:09:51] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-179, 71, -43)]
+[06:09:51] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-190, 71, -54)]
+[06:09:51] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-190, 71, -52)]
+[06:09:51] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-170, 71, -54)]
+[06:09:51] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-170, 71, -52)]
+[06:09:51] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[06:09:51] [IO-Worker-12/INFO]: [Eyes] 15_jade_pagoda_round1_34_t6000: Saved screenshot as bat_eyes_15_jade_pagoda_round1_34_t6000.png
+[06:09:51] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:09:52] [Server thread/INFO]: [Sys] the server is slow (tick p95 50.9 ms): per-system timing on
+[06:09:56] [Render thread/INFO]: [Eyes] clip-mark 15_jade_pagoda_round1_rts_army 1793513396133
+[06:09:56] [Server thread/INFO]: [Offline: Killed 8 entities]
+[06:09:56] [Server thread/INFO]: [Tick] p50 7.6 ms, p95 50.9 ms, max 68.5 ms over the last 100 ticks; 21 units, 12 buildings, 1 players
+[06:09:56] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 wide-body repeats skipped; chase cell memo 0/0 hits
+[06:09:56] [Server thread/INFO]: [Sys] 80 ticks, mean 7.7 ms/tick; ours 1.0 ms (12%): buildings 0.24 (max 3.2, 1.0/t) | pathfinder 0.20 (max 12.8, 2.0/t) | unit 0.19 (max 2.1, 21/t) | attacker 0.10 (max 2.6, 21/t) | unstick 0.04 (max 1.1, 21/t) | pushScan 0.03 (max 0.4, 21/t) | economy 0.03 (max 0.4, 1.0/t) | bots 0.02 (max 0.7, 0.1/t) (+16 smaller); vanilla 6.4 ms (82%): chunks 2.84 (max 10.4, 3.0/t) | otherEntities 1.00 (max 7.2, 71/t) | travel 0.84 (max 7.5, 42/t) | baseTick 0.59 (max 3.4, 79/t) | aiGoals 0.44 (max 2.9, 34/t) | unitTick 0.39 (max 2.6, 21/t) | levelRest 0.25 (max 6.3, 3.0/t); elsewhere 0.4 ms; gc 56 ms
+[06:09:56] [Render thread/INFO]: [Sfx] 278 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 1
+[06:09:56] [IO-Worker-8/INFO]: [Eyes] 15_jade_pagoda_round1_rts_army: Saved screenshot as bat_eyes_15_jade_pagoda_round1_rts_army.png
+[06:09:56] [Render thread/INFO]: [Frame] p50 83.0 ms (12 fps), p95 142.6 ms, max 238.1 ms over 240 frames; RTS view, zoom 30, 13 units known
+[06:09:56] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.2 ms; unit render p50 14.2 ms, p95 27.3 ms; per unit 27.7 us anim, 1947.3 us render (anim 1%); RTS view, zoom 30, detail on, over 57 frames
+[06:09:56] [Render thread/INFO]: [FrameParts] 95 frames, mean 105.5 ms/frame; ours 11.1 ms (11%): unitBodies 9.70 (max 35.8, 4.9/f) | entityShadows 0.65 (max 4.0, 25/f) | markersWreck 0.33 (max 3.5, 1.0/f) | unitOverlays 0.18 (max 0.4, 11/f) | markersRange 0.09 (max 3.1, 1.0/f) | markersMapWorld 0.07 (max 0.2, 0.6/f) | buildingBoxes 0.06 (max 3.1, 0.6/f) | worldFx 0.03 (max 1.5, 11/f) (+16 smaller); elsewhere 94.4 ms; 0 section re-mesh requests/s
+[06:09:56] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[06:09:57] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 12.1 ms): per-system timing off
+[06:09:58] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[06:09:58] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[06:09:58] [Render thread/INFO]: [Eyes] tour complete
+[06:09:58] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[06:09:58] [Render thread/INFO]: Stopping!
+[06:09:58] [Server thread/INFO]: Offline lost connection: Disconnected
+[06:09:58] [Server thread/INFO]: Offline left the game
+[06:09:58] [Server thread/INFO]: Player logged out: Offline, id: 2
+[06:09:58] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[06:09:58] [Server thread/INFO]: RTSPlayerSaveData.load
+[06:09:58] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1202|0
+[06:09:58] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1578|537|0
+[06:09:58] [Server thread/INFO]: Stopping server
+[06:09:58] [Server thread/INFO]: Saving players
+[06:09:58] [Server thread/INFO]: Saving worlds
+[06:09:58] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[06:09:58] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[06:09:58] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[06:09:58] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[06:09:58] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[06:09:58] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[06:09:58] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[06:09:59] [Render thread/INFO]: Stopping worker threads
