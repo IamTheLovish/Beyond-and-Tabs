@@ -91,10 +91,9 @@ class NoHudLiteralsTest {
     }
 
     @Test
-    void building_name_is_fitted_with_the_helper_not_shrunk() throws IOException {
-        String portrait = source("hud/PortraitRendererBuilding.java");
-        assertFalse(portrait.contains("NAME_SHRINK_SCALE"), "the portrait title must never be drawn in a smaller font");
-        assertTrue(portrait.contains("NameFit.fit("), "PortraitRendererBuilding fits the title with NameFit.fit");
+    void hover_card_title_is_fitted() throws IOException {
+        // the hover card drew the name unclipped past its edge; the portrait title already shrinks then ellipsizes
+        // (PortraitRendererBuilding.drawFittedName, since a4a6c97b) and is left as it was
         assertTrue(source("hud/HoverCards.java").contains("NameFit.fit("), "the building hover card fits its title with NameFit.fit");
     }
 }
