@@ -240,7 +240,7 @@ def storey(c, k, y0, y1):
 CHIMES = []
 # The roof treatment, picked blind (round 3, eyes 41281536246, critics a / b both rank it first, 6 / 6, over the
 # dark-oak round 2 4.5 / 4.5, jade-only 5.5 / 5 and horns-without-sweep 5 / 5.5): value "jade" = jade roofs with one
-# thin blackstone gap ring at each storey's foot ("r2" = the dark oak band + course); horn = cells of the rising
+# thin blackstone gap ring at each storey's foot ("r2" = the dark oak band + course); horn = (round 3 only) the rising
 # diagonal arm past each corner; sweep = the eave rises one block over its last two cells to each corner (two at it)
 STYLE = dict(value="jade", horn=2, sweep=True)
 GAP, GAP_ST = "polished_blackstone", "polished_blackstone_stairs"
@@ -257,7 +257,7 @@ def roof(c, L, y, course=True, gold=True, flare=False):
       green pyramid; round 2's dark oak read as brown fields - critics a / b);
     - with STYLE sweep the eave rises one block over its last two cells and two at the corner;
     - `gold`: the corner under the tip is gold (not on the top roof: five gold squares there read as dice-five);
-      `flare`: the corner tip rises on past the square outline as a diagonal arm (STYLE horn cells);
+      `flare`: the corner tip flares one cell past the square outline as a solid jade wedge with an upturned slab;
     - dark-oak rafter ends under the lip, and a chime under each corner (placed last, see chimes())."""
     jade = STYLE["value"] == "jade"
     sw = STYLE["sweep"] and L >= 3
@@ -290,10 +290,16 @@ def roof(c, L, y, course=True, gold=True, flare=False):
             c.set(x, y + 1, z, JADE)
         c.set(x, y + 1 + lift, z, JADE_SLAB, type="bottom", **DRY)
         if flare:
-            for d in range(1, STYLE["horn"] + 1):                     # the flared tip: a rising diagonal arm
-                hx, hz = sx * (L + d), sz * (L + d)
-                if max(abs(hx), abs(hz)) <= R and c.get(hx, y + lift + d, hz)[0] == "air":
-                    c.set(hx, y + lift + d, hz, JADE_SLAB, type="bottom", **DRY)
+            # the flared tip (round 4): a solid jade wedge one cell out, face-joined to the corner (the diagonal cell
+            # and its two side cells at the corner tip's height) with an upturned slab on its point - round 3's
+            # diagonal arm cells touched nothing and read as floating dots (both blind critics)
+            ty = y + 1 + lift
+            for hx, hz in ((L + 1, L + 1), (L + 1, L), (L, L + 1)):
+                if c.get(sx * hx, ty, sz * hz)[0] == "air":
+                    c.set(sx * hx, ty, sz * hz, JADE if (hx, hz) == (L + 1, L + 1) else JADE_SLAB,
+                          **({} if (hx, hz) == (L + 1, L + 1) else dict(type="bottom", **DRY)))
+            if c.get(sx * (L + 1), ty + 1, sz * (L + 1))[0] == "air":
+                c.set(sx * (L + 1), ty + 1, sz * (L + 1), JADE_SLAB, type="bottom", **DRY)
         CHIMES.append((x, y - 1, z))
     if course and L >= 3:
         # the second course: stairs climbing onto the band, so the roof pitches twice (the curve read from the side);
@@ -332,6 +338,9 @@ def pagoda(c):
     roof(c, 6, 6, flare=STYLE["horn"] >= 2)                   # lip 6 @ y6, band rings 4-5, course ring 5 @ y7
     storey(c, 3, 7, 11)                                        # storey 2 on the hall's walls, shows y7-11
     c.disc(2, 10, OAK)                                         # the atrium's ceiling
+    for o in O4.values():                                      # lamps right behind storey 2's paper: it glows at dusk
+        for t in (-1, 1):
+            c.put(o, 2, t, 8, "pearlescent_froglight", axis="y")
     c.set(0, 10, 0, "pearlescent_froglight", axis="y")         # the hall's light, over the spawn
     roof(c, 4, 12, flare=True)                                 # lip 4 @ y12, band ring 3, course ring 3 @ y13
     jade = STYLE["value"] == "jade"
