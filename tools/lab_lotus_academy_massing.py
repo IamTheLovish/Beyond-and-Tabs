@@ -109,10 +109,106 @@ def build(draw, name):
     return r.structure()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and len(sys.argv) == 2:
     out = sys.argv[1]
     os.makedirs(out, exist_ok=True)
     for n, f in (("a", option_a), ("b", option_b), ("c", option_c)):
         s = build(f, n)
         s.write(os.path.join(out, "massing_%s.nbt" % n))
         print(n, s.size, sum(1 for i in s.blocks.values() if s.palette[i][0] != "air"))
+
+
+# ------------------------------------------------------------------------------------------- round 3 roof options
+# Round 1 (6 / 6) and round 2 (5 / 5.5, reverted): both critics, both rounds - "stepped flat plates read as a
+# ziggurat / mini capitol; no roof reads as curved". From the steep RTS camera a curve reads in the PLAN OUTLINE: the
+# eave's corners reach out and its middle recedes. Two plans on the round-1 L1, judged blind against it:
+#   S  SWEPT WINGS: both hall roofs' front eaves recede in the middle (x 3..5) and reach out at the corners (the first
+#      roof's wings come forward over the galleries), so from above the hall's front line is a bow
+#   G  ONE GREAT ROOF: the second storey goes; one deep roof (lip y 7, swept wings) climbs in stair courses to a long
+#      jade ridge with lifted ends and the lotus on it - a hall, not a tiered pagoda
+
+
+def wings(r, y, x_out, x_in, z):
+    """Lip cells reaching forward to row z on [x_out..x_in] (one wing): the outer corner jade with a lifted slab, the
+    cell next to it lifted too, the rest a stair whose low edge faces the camera."""
+    lo, hi = min(x_out, x_in), max(x_out, x_in)
+    for x in range(lo, hi + 1):
+        if x == x_out:
+            r.set(x, y, z, JADE)
+            r.slab(x, y + 1, z)
+            r.st(x, y + 2, z, "east" if x_out == 0 else "west", "top", la.JADE_ST)   # the upturned tip
+        elif abs(x - x_out) == 1:
+            r.set(x, y, z, JADE)
+            r.slab(x, y + 1, z)
+        else:
+            r.st(x, y, z, "north")
+    for x in range(lo, hi + 1):                    # the old lip behind the wing becomes band
+        r.set(x, y, z - 1, JADE)
+        r.b.pop((x, y + 1, z - 1), None)
+
+
+def recess(r, y, x1, x2, z):
+    """The eave's middle steps back one row: lip cells at row z go, row z - 1 becomes the lip."""
+    for x in range(x1, x2 + 1):
+        r.b.pop((x, y, z), None)
+        r.b.pop((x, y + 1, z), None)
+        r.b.pop((x, y - 1, z), None)
+        r.st(x, y, z - 1, "north")
+
+
+def option_s(r):
+    chimes = la.draw_l1(r)
+    wings(r, la.R1, 0, 2, 4)
+    wings(r, la.R1, 8, 6, 4)
+    recess(r, la.R2, 3, 5, 3)
+    return chimes
+
+
+def option_g(r):
+    chimes = la.draw_l1(r)
+    for (x, y, z) in [q for q in r.b if q[2] <= 3 and q[1] >= 5]:
+        r.b.pop((x, y, z))
+    chimes[:] = [c for c in chimes if c[2] >= 4]
+    for y in (5, 6):                               # the hall's storey rises to y 6 under one roof
+        for x in range(1, 8):
+            r.set(x, y, 0, OAK)
+            if x in (1, 4, 7):
+                r.red(x, y, 1)
+            else:
+                r.set(x, y, 1, PAPER if y == 5 else OAK)
+        for x in la.COLS:
+            r.red(x, y, 2)
+    for x in (2, 4, 6):
+        r.slab(x, 6, 2, la.OAK_SLAB, "top")
+    for x in la.COLS:
+        r.set(x, 6, 2, OAK)
+    la.curved_roof(r, 0, 8, 0, 3, 7, chimes)
+    wings(r, 7, 0, 2, 4)
+    wings(r, 7, 8, 6, 4)
+    for x in range(SXR):
+        r.st(x, 6, 3, "north", "top", la.OAK_ST)    # rafters under the lip
+    la.curved_roof(r, 1, 7, 0, 2, 8, chimes)       # the courses climb
+    for x in range(2, 7):
+        r.st(x, 9, 1, "north")
+        r.set(x, 9, 0, JADE)
+    for x in range(2, 7):                          # the long ridge
+        r.set(x, 10, 0, JADE)
+    for x in (2, 6):
+        r.slab(x, 11, 0)
+    r.set(C, 10, 1, JADE)
+    la.lotus_crown(r, 11, C, 1)
+    return chimes
+
+
+SXR = la.SX
+C = la.C
+
+
+def build3(draw, name):
+    return build(draw, name)
+
+
+if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[2] == "r3":
+    for n, f in (("s", option_s), ("g", option_g)):
+        s = build(f, n)
+        s.write(os.path.join(sys.argv[1], "r3_%s.nbt" % n))
