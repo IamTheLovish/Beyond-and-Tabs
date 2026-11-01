@@ -58,6 +58,14 @@ class LagReportTest(unittest.TestCase):
         self.assertTrue(lag_report.verdict(r).startswith("server-bound"))
         self.assertEqual(r["sys"].most_common(1)[0][0], "attacker")
 
+    def test_one_server_window_near_budget_does_not_hide_a_slow_client(self):
+        # vscreen run 2026-11-01 (a9ab0aec, software GL): median frame 43.7 ms (23 fps), server tick p95 13 ms in the
+        # median window and 45.2 ms in the worst one, under the 50 ms budget; the verdict said server-bound
+        lines = [frame(10 * i, 23) for i in range(1, 7)] + [tick(10 * i, 13.3) for i in range(1, 6)] + [tick(60, 45.2)]
+        v = lag_report.verdict(lag_report.analyze(lines))
+        self.assertTrue(v.startswith("render-bound"), v)
+        self.assertIn("45 ms", v, "the near-budget server window is still named: " + v)
+
     def test_chunk_loading_verdict(self):
         lines = [frame(10 * i, 70) for i in range(1, 7)] + [tick(10 * i, 10.0) for i in range(1, 7)]
         for i in range(1, 7):
