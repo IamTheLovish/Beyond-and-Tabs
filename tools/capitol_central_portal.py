@@ -252,6 +252,27 @@ def _paving(c, k, y):
             c.set(C + dx, y, C + dz, TERRACE)
 
 
+def _gate(c):
+    # the gate (west, on the axis z 7): an obsidian mouth 3 wide x 3 tall, 3 deep, between two pylons to y 7
+    for t in (-2, 2):
+        x, z = _at(WEST, 7, t)
+        for y in range(1, 6):
+            c.set(x, y, z, GATE)
+        c.set(x, 6, z, "polished_basalt", axis="y")
+        c.set(x, 7, z, "blackstone_wall", **POST)
+    for t in (-1, 0, 1):
+        x, z = _at(WEST, 7, t)
+        c.set(x, 4, z, GATE)                     # the lintel
+        for a in (5, 6, 7):
+            x, z = _at(WEST, a, t)
+            for y in (1, 2):
+                c.set(x, y, z, "air")
+            c.set(x, 3, z, "air")
+        x, z = _at(WEST, 4, t)
+        for y in (1, 2, 3):
+            c.set(x, y, z, GATE)                 # the mouth's back wall: the darkest face on the building
+
+
 def build():
     c = Canvas()
     c.fill(0, 0, 0, 14, 0, 14, START)                                   # y 0: the pad, the starting type
@@ -290,24 +311,7 @@ def build():
     for o in (WEST, (0, 1)):                       # notches in the lip: the glow seen from the south-west
         x, z = _at(o, 2, 0)
         c.set(x, 15, z, "air")
-    # the gate (west, on the axis z 7): an obsidian mouth 3 wide x 3 tall, 3 deep, between two pylons to y 7
-    for t in (-2, 2):
-        x, z = _at(WEST, 7, t)
-        for y in range(1, 6):
-            c.set(x, y, z, GATE)
-        c.set(x, 6, z, "polished_basalt", axis="y")
-        c.set(x, 7, z, "blackstone_wall", **POST)
-    for t in (-1, 0, 1):
-        x, z = _at(WEST, 7, t)
-        c.set(x, 4, z, GATE)                     # the lintel
-        for a in (5, 6, 7):
-            x, z = _at(WEST, a, t)
-            for y in (1, 2):
-                c.set(x, y, z, "air")
-            c.set(x, 3, z, "air")
-        x, z = _at(WEST, 4, t)
-        for y in (1, 2, 3):
-            c.set(x, y, z, GATE)                 # the mouth's back wall: the darkest face on the building
+    _gate(c)
     # the processional stair on the axis: two 1:1 flights cut into the west faces of T2 and T3 (a groove, light rails
     # either side), ending at a dark shrine door in the crown under the crater - gate, flights, door, crater on one line
     flights = (((6, 5), (5, 6), (4, 7), (3, 8)), ((4, 9), (3, 10), (2, 11)))
@@ -333,6 +337,87 @@ def build():
     return c
 
 
+# ---- round 3 massing options (both round-2 critics: "the biggest gain is massing - battered flanks that narrow to
+# the crater"; built with the round-2 materials so the blind pick compares shapes, not detail) ----
+FLANK_ST = {PLINTH: "polished_blackstone_brick_stairs", PIER: "deepslate_tile_stairs", CROWN: "blackstone_stairs"}
+
+
+def option_cone():
+    """The stepped cone: one continuous slope - the half-width steps in by one every two rows (k 7 at y 1-2 ... k 2
+    at y 11-12), the upper row of every step a ring of stairs (the slope), two light ledges (y 4, y 8), a 3 x 3 crater
+    glowing at y 11 under a lip of stairs (y 12-13); the gate mouth and the dark stair groove on the west axis."""
+    c = Canvas()
+    c.fill(0, 0, 0, 14, 0, 14, START)
+    for y in range(1, 13):
+        k = 7 - (y - 1) // 2
+        mat = PLINTH if y <= 4 else (PIER if y <= 8 else CROWN)
+        for dx in range(-k, k + 1):
+            for dz in range(-k, k + 1):
+                _block(c, C + dx, y, C + dz, mat)
+        if y % 2 == 0 and k > 2:
+            if y in (4, 8):
+                _rim(c, k, y)
+                for dx in range(-k + 1, k):
+                    for dz in range(-k + 1, k):
+                        _block(c, C + dx, y, C + dz, mat)
+            else:
+                _batter(c, k, y, name=FLANK_ST[mat], corner=mat)
+    for dx in range(-1, 2):                         # the crater
+        for dz in range(-1, 2):
+            c.set(C + dx, 12, C + dz, "air")
+            c.set(C + dx, 11, C + dz, GLOW)
+    for o in SIDES:
+        for t in range(-2, 3):
+            x, z = _at(o, 2, t)
+            if abs(t) < 2:
+                _stair(c, x, 13, z, RIM, OUTWARD[o])
+            else:
+                c.set(x, 13, z, "blackstone")
+    for o in (WEST, (0, 1)):
+        x, z = _at(o, 2, 0)
+        c.set(x, 13, z, "air")
+    c.set(7, 12, 7, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
+    _gate(c)
+    for y in range(4, 13):                          # the stair groove up the west slope
+        a = 7 - (y - 1) // 2
+        for t in (-1, 0, 1):
+            x, z = _at(WEST, a, t)
+            _stair(c, x, y, z, AXIS_ST, "east")
+        for t in (-2, 2):
+            x, z = _at(WEST, a, t)
+            c.set(x, y, z, RAIL)
+    return c
+
+
+def option_peak():
+    """The temple under a peak: round 2's three tiers, the crown a tapered cone - 5 x 5 (y 13-14), a sloped ring
+    (y 15), 3 x 3 (y 15-17) - with a crater lip (y 18) round a sunk glow and a smoking fire."""
+    c = build()
+    c.clear(4, 13, 4, 10, 21, 10)
+    _rim(c, 3, 13)
+    for y in (13, 14):
+        for dx in range(-2, 3):
+            for dz in range(-2, 3):
+                c.set(C + dx, y, C + dz, CROWN)
+    _batter(c, 2, 15, name="blackstone_stairs", corner=CROWN)
+    for y in (15, 16, 17):
+        for dx in range(-1, 2):
+            for dz in range(-1, 2):
+                c.set(C + dx, y, C + dz, CROWN)
+    for o in SIDES:
+        x, z = _at(o, 1, 0)
+        _stair(c, x, 18, z, RIM, OUTWARD[o])
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            c.set(C + sx, 18, C + sz, "blackstone")
+    c.set(7, 17, 7, GLOW)
+    c.set(7, 18, 7, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
+    for (a, y) in ((2, 13), (2, 14)):               # the flight still meets the crown: a dark door
+        x, z = _at(WEST, a, 0)
+        c.set(x, y, z, GATE)
+    return c
+
+
 def check(c):
     for q in FIRE_CELLS:
         assert c.get(*q) != "air", ("fire cell is air", q)
@@ -341,7 +426,10 @@ def check(c):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 3 and sys.argv[1] == "greybox":
+    if len(sys.argv) >= 3 and sys.argv[1] == "options":
+        for tag, fn in (("cone", option_cone), ("peak", option_peak), ("round2", build)):
+            fn().structure().write(os.path.join(sys.argv[2], "central_portal_r3_%s.nbt" % tag))
+    elif len(sys.argv) >= 3 and sys.argv[1] == "greybox":
         out = sys.argv[2]
         for tag, fn in (("a", greybox_a), ("b", greybox_b), ("c", greybox_c)):
             c = fn()
