@@ -160,15 +160,14 @@ GATE = (7, 8)                            # the deep gate in the keep's south fac
 
 
 def floor_l1(r):
-    """Layer 0: a polished andesite court (the mids) in its kerb, a calcite drill ring round the spawn, the start
-    type's steps across the south edge."""
+    """Layer 0: a plain polished andesite court (the mids; round 3's calcite ring read as a square target), dark oak
+    under the gate and the arches (the shadow the RTS camera sees through them), the start type's steps across the
+    south edge."""
     for x in range(SX):
         for z in range(SZ):
             r.set(x, 0, z, "polished_andesite")
-    for x in range(3, 7):
-        for z in range(2, 6):
-            if x in (3, 6) or z in (2, 5):
-                r.set(x, 0, z, "calcite")
+    for x, z in [(x, z) for x in GATE for z in (KZ1 - 1, KZ1)] + [(1, 1), (3, 1), (5, 1), (1, 2), (8, 5)]:
+        r.set(x, 0, z, DARK)
     for x in range(1, 9):
         r.st(x, 0, SZ - 1, "north", name=START_TYPE)
 
@@ -201,8 +200,10 @@ def keep_body(r):
 
 
 def crown(r):
-    """The crown (round 3's blind pick over battlements and a gold belt): the keep's corners chamfered (stairs at y 8 instead of the pillar tops), a ring of stairs climbing
-    in on the eight face cells at y 9, a pillar drum, a 2 x 2 gold crown at y 11, the lantern."""
+    """The crown (round 3's blind pick over battlements and a gold belt): the keep's corners chamfered (stairs at y 8
+    instead of the pillar tops), the eight face cells at y 9 a crenellated tier (merlons and stairs climbing in, the
+    military edge), a pillar drum, and a raised 2 x 2 x 2 gold crown at y 11..12 (round 3's flat gold lid with a
+    lantern read as a four-pane chequer)."""
     for x in (KX0, KX1):
         for z in (KZ0, KZ1):
             r.b.pop((x, KW, z), None)
@@ -212,7 +213,10 @@ def crown(r):
             corner = x in (KX0, KX1) and z in (KZ0, KZ1)
             if corner:
                 continue
-            if x == KX0:
+            if (x == KX0 or x == KX1 or z == KZ0 or z == KZ1) and (x + z) % 2 == 1:
+                r.set(x, KW + 1, z, "smooth_quartz")         # a merlon, a slab higher than the stairs
+                r.slab(x, KW + 2, z)
+            elif x == KX0:
                 r.st(x, KW + 1, z, "east")
             elif x == KX1:
                 r.st(x, KW + 1, z, "west")
@@ -224,7 +228,7 @@ def crown(r):
                 r.set(x, KW + 1, z, "smooth_quartz")
                 r.pillar(x, KW + 2, z)
                 r.set(x, KW + 3, z, "gold_block")
-    r.lantern(7, KW + 4, 1)
+                r.set(x, KW + 4, z, "gold_block")
 
 
 def keep_l1(r):
@@ -234,7 +238,8 @@ def keep_l1(r):
 
 def arcade_x(r, x0, x1, z_back, z_front, top, piers):
     """A wing along x: the back wall at z_back, the front at z_front: pillars at `piers`, arches (air y 1..2 under an
-    upside-down stair lintel) between them, a smooth quartz deck at `top` and a slab parapet over the front."""
+    upside-down stair lintel) between them, a polished diorite deck at `top` (a step below
+    the keep's white: the keep leads in value) and a diorite slab parapet over the front."""
     for x in range(x0, x1 + 1):
         for y in range(1, top + 1):
             r.set(x, y, z_back, "quartz_bricks")
@@ -243,8 +248,9 @@ def arcade_x(r, x0, x1, z_back, z_front, top, piers):
                 r.pillar(x, y, z_front)
         else:
             r.st(x, top - 1, z_front, "north" if z_front > z_back else "south", "top", name="quartz_stairs")
-        r.set(x, top, z_front, "smooth_quartz")
-        r.slab(x, top + 1, z_front)
+        r.set(x, top, z_back, "polished_diorite")
+        r.set(x, top, z_front, "polished_diorite")
+        r.slab(x, top + 1, z_front, "polished_diorite_slab")
 
 
 def arcade_z(r, z0, z1, x_back, x_front, top, piers):
@@ -257,8 +263,9 @@ def arcade_z(r, z0, z1, x_back, x_front, top, piers):
                 r.pillar(x_front, y, z)
         else:
             r.st(x_front, top - 1, z, "west" if x_front > x_back else "east", "top", name="quartz_stairs")
-        r.set(x_front, top, z, "smooth_quartz")
-        r.slab(x_front, top + 1, z)
+        r.set(x_back, top, z, "polished_diorite")
+        r.set(x_front, top, z, "polished_diorite")
+        r.slab(x_front, top + 1, z, "polished_diorite_slab")
 
 
 def wings_l1(r):
@@ -273,8 +280,9 @@ def wings_l1(r):
     r.set(0, 5, 3, "diorite_wall")
     r.lantern(0, 6, 3)
     r.lantern(9, 5, 6)
-    for x in (5, 6, 7):
-        r.set(x, 1, 6, "end_rod", facing="up")
+    for x in (5, 6, 7):                     # a lance rack: a dark oak rail, the lances standing in it
+        r.set(x, 1, 6, "dark_oak_fence")
+        r.set(x, 2, 6, "end_rod", facing="up")
 
 
 def draw_l1(r):
