@@ -24,8 +24,8 @@ rule set: odd tiers, each roof a ring narrower, red posts under deep eaves):
   - FIVE ROOFS stepping in (13, 11, 9, 7, 5 wide) over five storeys, each a ring narrower, so every roof shows its own
     eave and a strip of red lacquer and lit paper wall above it. Each roof is CURVED: the lip sags in the middle (a
     stair) and sweeps up at the ends (a raised block and slab), the gold corner carries an upturned jade tip, and a
-    second stair course pitches it again onto the band; a paper lantern stands on each band's axis like a lamp set
-    out on a balcony, and a CHIME (chain + end-rod striker) hangs from every corner - twenty of them;
+    second stair course pitches it again onto the band (a blackstone gap ring at the next storey's foot parts the
+    tiers from above, Nov 2026), and a CHIME (chain + end-rod striker) hangs from every corner;
   - the GROUND STOREY: a hall of red-lacquer posts, dark oak and red paper screens with a door on every side (players
     build in every direction) in a verandah of red columns on chiseled bases under gold capitals; the hall is an
     atrium up to a coffered ceiling with a pearlescent light - the spawn cell is its centre and walks out of any door;
@@ -45,7 +45,7 @@ WHAT THE SIZE TOUCHES IN THE GAME (the coordinator applies these; this file edit
   - BiomeBaseGameTests.capitol_details_keep_box_build_time_and_anchors pins it like the others:
     { Buildings.JADE_PAGODA, 494, new int[] { 14, 21, 14 } };
   - BuildingAmbienceClientEvents.CAPITOL_SPOTS: "jade_pagoda" -> SPARK_SPOTS below (Fx.SPARK over the crown rod's tip
-    and the four corner crystals of the halo; same convention as the others: the block at int(y));
+    and the top roof's four corner rods; same convention as the others: the block at int(y));
   - tools/gen_structures.py writes jade_pagoda.nbt from this build() (as gen_capitol_details does for the Temple);
   - JadePagoda.startingBlockTypes (POLISHED_ANDESITE, STONE_BRICKS) stay; both sit in layer 0 and nowhere above.
 
@@ -81,8 +81,7 @@ SKULL_CORNER = {(-1, 1): "2", (-1, -1): "6", (1, -1): "10", (1, 1): "14"}   # st
 
 # where the game looks (structure coordinates; the centre cell is (R, y, R))
 # BuildingAmbienceClientEvents.CAPITOL_SPOTS["jade_pagoda"]: Fx.SPARK over the crown rod and four halo crystals
-HALO_Y = 20
-SPARK_SPOTS = ((7.5, 21.9, 7.5), (4.5, 21.5, 4.5), (10.5, 21.5, 4.5), (4.5, 21.5, 10.5), (10.5, 21.5, 10.5))
+SPARK_SPOTS = ((7.5, 21.9, 7.5), (5.5, 18.5, 5.5), (9.5, 18.5, 5.5), (5.5, 18.5, 9.5), (9.5, 18.5, 9.5))
 STARTING_TYPES = {"polished_andesite", "stone_bricks"}   # JadePagoda.startingBlockTypes
 
 
@@ -239,42 +238,76 @@ def storey(c, k, y0, y1):
 
 
 CHIMES = []
+# The roof treatment, picked blind (round 3, eyes 41281536246, critics a / b both rank it first, 6 / 6, over the
+# dark-oak round 2 4.5 / 4.5, jade-only 5.5 / 5 and horns-without-sweep 5 / 5.5): value "jade" = jade roofs with one
+# thin blackstone gap ring at each storey's foot ("r2" = the dark oak band + course); horn = (round 3 only) the rising
+# diagonal arm past each corner; sweep = the eave rises one block over its last two cells to each corner (two at it)
+STYLE = dict(value="jade", horn=2, sweep=True)
+GAP, GAP_ST = "polished_blackstone", "polished_blackstone_stairs"
 
 
-def roof(c, L, y, course=True):
+def roof(c, L, y, course=True, gold=True, flare=False):
     """One pagoda roof (the kit's motif) with its lip on ring L at y:
     - the CURVE: the lip is a jade stair (low edge out) along the middle of each side, but the two cells next to each
       corner lift a block (a jade block under a slab) and the corner itself is a gold block under an upturned jade
       slab tip - so the eave sags in the middle and sweeps up to its corners;
-    - ring L-1 is the flat band (full jade, sitting on the storey's beam below), and with `course` a second stair
-      course climbs onto ring L-1 one up, against the next storey's wall;
+    - ring L-1 is the flat band (jade, sitting on the storey's beam below) and with `course` a second jade stair
+      course climbs onto ring L-1 one up; the ring inside it, at the next storey's foot, is a BLACKSTONE GAP: from the
+      RTS camera each roof is a jade roof round a dark ring, so the tiers part (round 1, all jade, nested into one
+      green pyramid; round 2's dark oak read as brown fields - critics a / b);
+    - with STYLE sweep the eave rises one block over its last two cells and two at the corner;
+    - `gold`: the corner under the tip is gold (not on the top roof: five gold squares there read as dice-five);
+      `flare`: the corner tip flares one cell past the square outline as a solid jade wedge with an upturned slab;
     - dark-oak rafter ends under the lip, and a chime under each corner (placed last, see chimes())."""
+    jade = STYLE["value"] == "jade"
+    sw = STYLE["sweep"] and L >= 3
     for o in O4.values():
         for t in range(-L + 1, L):
             if L >= 3 and abs(t) == L - 1:
                 c.put(o, L, t, y, JADE)
-                c.put(o, L, t, y + 1, JADE_SLAB, type="bottom", **DRY)
+                if sw:
+                    c.put(o, L, t, y + 1, JADE)
+                c.put(o, L, t, y + 1 + sw, JADE_SLAB, type="bottom", **DRY)
+            elif sw and abs(t) == L - 2:
+                c.put(o, L, t, y, JADE)
+                c.st(o, L, t, y + 1, inward(o), name=JADE_ST)
             else:
                 c.st(o, L, t, y, inward(o), name=JADE_ST)
             if L >= 3 and abs(t) % 2 == 0 and abs(t) < L - 1:
                 c.st(o, L, t, y - 1, inward(o), "top", OAK_ST)         # rafter ends, every other cell
     if L >= 2:
-        c.disc(L - 1, y, JADE, k0=max(L - 2, 0))
+        if jade:
+            c.disc(L - 1, y, JADE, k0=max(L - 2, 0))
+            if L >= 3 and L - 2 >= 1 and L - 2 < L - 1:
+                c.disc(L - 2, y, GAP, k0=L - 2)                        # the gap ring at the storey's foot
+        else:
+            c.disc(L - 1, y, OAK if L >= 3 else JADE, k0=max(L - 2, 0))   # the band: dark where the camera sees it
+    lift = 1 if (STYLE["sweep"]) else 0
     for (sx, sz) in CORNERS:
         x, z = sx * L, sz * L
-        c.set(x, y, z, GOLD)
-        c.set(x, y + 1, z, JADE_SLAB, type="bottom", **DRY)
+        c.set(x, y, z, GOLD if gold else JADE)
+        if lift:
+            c.set(x, y + 1, z, JADE)
+        c.set(x, y + 1 + lift, z, JADE_SLAB, type="bottom", **DRY)
+        if flare:
+            # the flared tip (round 4): a solid jade wedge one cell out, face-joined to the corner (the diagonal cell
+            # and its two side cells at the corner tip's height) with an upturned slab on its point - round 3's
+            # diagonal arm cells touched nothing and read as floating dots (both blind critics)
+            ty = y + 1 + lift
+            for hx, hz in ((L + 1, L + 1), (L + 1, L), (L, L + 1)):
+                if c.get(sx * hx, ty, sz * hz)[0] == "air":
+                    c.set(sx * hx, ty, sz * hz, JADE if (hx, hz) == (L + 1, L + 1) else JADE_SLAB,
+                          **({} if (hx, hz) == (L + 1, L + 1) else dict(type="bottom", **DRY)))
+            if c.get(sx * (L + 1), ty + 1, sz * (L + 1))[0] == "air":
+                c.set(sx * (L + 1), ty + 1, sz * (L + 1), JADE_SLAB, type="bottom", **DRY)
         CHIMES.append((x, y - 1, z))
     if course and L >= 3:
-        # the second course: jade stairs climbing onto the band, so the roof pitches twice (the curve read from the
-        # side); its corners stay open for the chimes of the roof above, and on each axis a paper lantern stands on
-        # the band instead, like a lamp set out on a balcony
+        # the second course: stairs climbing onto the band, so the roof pitches twice (the curve read from the side);
+        # its corners stay open for the chimes of the roof above (the axis lanterns are gone: two lantern dots and
+        # the red storey's V read as a face, round 1)
         for o in O4.values():
             for t in range(-L + 2, L - 1):
-                if t == 0:
-                    c.put(o, L - 1, 0, y + 1, "lantern", **LANTERN)
-                else:
-                    c.st(o, L - 1, t, y + 1, inward(o), name=JADE_ST)
+                c.st(o, L - 1, t, y + 1, inward(o), name=JADE_ST if jade else OAK_ST)
 
 
 def chimes(c):
@@ -291,54 +324,38 @@ def chimes(c):
 
 
 def pagoda(c):
-    """Five roofs over five storeys. A pagoda reads by its deep eaves and the strip of lit wall between them, so each
-    roof's lip stands two rings out from the storey under it (the band between rests on the storey's beam) and the
-    storeys are three high, so a red-and-paper wall shows over each roof's second course:
-      the hall (ring 3, y3-6) in its verandah (ring 4)  | roof 1 lip ring 6 @ y6
-      storey 2 ring 4 y7-9 (the hall rises through it)   | roof 2 lip ring 5 @ y10
-      storey 3 ring 3 y11-13                             | roof 3 lip ring 4 @ y14
-      storey 4 ring 2 y15-16                             | roof 4 lip ring 3 @ y17
-      storey 5 ring 1 y18                                | roof 5 lip ring 2 @ y19, the cap y20, the rod y21
-    The centre column stays open from the hall floor (y3) to the ceiling at y10: getIndoorSpawnPoint walks down from
-    the box's mid-height (y10) and must land on the floor, so the hall is a tall atrium with storey 2's paper
-    lantern-wall round its top."""
+    """THREE roofs two rings apart over tall storeys (Nov 2026; the five roofs one ring apart read from the RTS camera
+    as "one four-sided pyramid of equal-height steps", two fresh critics 4 / 4; two blind massing rounds, eyes
+    41275632354 / 41277286939, picked three deep roofs, tall storeys and a crown):
+      the hall (ring 3, y3-6) in its verandah (ring 4)   | roof 1: lip ring 6 @ y6, course 5 @ 7 (a gutter at 4)
+      storey 2 ring 3 y7-11 (shows y7-11 over roof 1)     | roof 2: lip ring 4 @ y12, courses 3 @ 13, 2 @ 13
+      storey 3 ring 1 y12-16 (shows y14-16 over roof 2)   | roof 3: lip ring 2 @ y17, the crown y18-21
+    Each storey stands one ring inside the lip above it: the steep RTS camera then sees a strip of red wall over
+    every roof (a 2-ring overhang hid them: storey walls 0.1 % of the RTS view, the shipped five roofs 0.02 %).
+    The centre column stays open from the hall floor (y3) to y9: getIndoorSpawnPoint walks down from the box's
+    mid-height (y10) and must land on the floor, so the hall is an atrium up into storey 2."""
     ground_storey(c)
-    roof(c, 6, 6)
-    storey(c, 4, 7, 9)
-    roof(c, 5, 10)
-    c.disc(3, 10, OAK)                                         # the atrium's coffered ceiling
+    roof(c, 6, 6, flare=STYLE["horn"] >= 2)                   # lip 6 @ y6, band rings 4-5, course ring 5 @ y7
+    storey(c, 3, 7, 11)                                        # storey 2 on the hall's walls, shows y7-11
+    c.disc(2, 10, OAK)                                         # the atrium's ceiling
     c.set(0, 10, 0, "pearlescent_froglight", axis="y")         # the hall's light, over the spawn
-    storey(c, 3, 11, 13)
-    roof(c, 4, 14)
-    c.disc(2, 14, OAK)
-    storey(c, 2, 15, 16)
-    c.set(0, 15, 0, "pearlescent_froglight", axis="y")         # glows through the paper of storey 4
-    c.set(0, 16, 0, "pearlescent_froglight", axis="y")
-    roof(c, 3, 17, course=False)
-    c.disc(1, 17, JADE)
-    storey(c, 1, 18, 18)
-    c.set(0, 18, 0, "pearlescent_froglight", axis="y")
-    roof(c, 2, 19, course=False)
-    # the cap: a jade hip climbing onto the gold boss
-    for o in O4.values():
-        c.st(o, 1, 0, 20, inward(o), name=JADE_ST)
-    for (sx, sz) in CORNERS:
-        c.slab(sx, 20, sz, JADE_SLAB)
-    c.set(0, 20, 0, GOLD)
-    # the crown: the lightning rod on the gold boss, and round it, floating free of every roof, the
-    # STORM-CRYSTAL HALO - a thin ring of violet glass panes on ring 3 at y20 with an amethyst shard on each corner and on each
-    # axis (a block with a cluster growing up out of it): crystal the storm froze out of the air (the faction's
-    # accent, from the extractor). Panes and amethyst hold where placed: nothing in it can pop off.
+    roof(c, 4, 12, flare=True)                                 # lip 4 @ y12, band ring 3, course ring 3 @ y13
+    jade = STYLE["value"] == "jade"
+    c.disc(2, 12, GAP if jade else OAK, k0=2)
+    c.ring_stairs(2, 13, name=GAP_ST if jade else OAK_ST)      # course 2: ring 2 @ y13, against storey 3
+    storey(c, 1, 12, 16)
+    for y in (14, 15, 16):
+        c.set(0, y, 0, "pearlescent_froglight", axis="y")      # glows through the paper of storey 3
+    roof(c, 2, 17, course=False, gold=False, flare=True)      # lip 2 @ y17, the band ring 1; jade corners
+    # the crown: ONE gold leader - a 3 x 3 gold cap with a two-high gold spire and a lightning rod on it, a size class
+    # over the top roof's four jade tips, which carry small rods (the violet-glass and amethyst halo is gone: purple
+    # is a cool team hue in a fixed palette, both baseline and massing critics)
+    c.disc(1, 18, GOLD)                                        # the gold cap, 3 x 3: the one leader
+    for y in (19, 20):
+        c.set(0, y, 0, GOLD)
     rod(c, 0, 21, 0)
     for (sx, sz) in CORNERS:
-        rod(c, sx * 2, 20, sz * 2)          # the top roof's upturned tips are lightning rods: a crown of five
-    for o in O4.values():
-        for t in range(-3, 4):
-            if abs(t) == 3:
-                c.put(o, 3, t, HALO_Y, "amethyst_block")
-                c.put(o, 3, t, HALO_Y + 1, "amethyst_cluster", facing="up", **DRY)
-            else:
-                c.put(o, 3, t, HALO_Y, "purple_stained_glass_pane")
+        rod(c, sx * 2, 18, sz * 2)
     # inside the hall: lanterns in its corners
     for (sx, sz) in CORNERS:
         c.set(sx * 2, 3, sz * 2, "lantern", **LANTERN)
