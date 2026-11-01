@@ -68,6 +68,11 @@ PBB, CPB, PB = "polished_blackstone_bricks", "chiseled_polished_blackstone", "po
 PBW, DTW = "polished_blackstone_wall", "deepslate_tile_wall"
 DTS, DBS, PBS = "deepslate_tile_stairs", "deepslate_brick_stairs", "polished_blackstone_stairs"
 GLASS = "green_stained_glass"
+# the value roles (the massing/value rounds swap these; tools/capitol_mausoleum_massing.py)
+WALL = DB                          # the church's walls: arms, fronts, towers, buttress piers, crossing corners
+CROWN_WALL = DT                    # the crossing tower's walls over the roofs
+ROOF, ROOFS = DT, DTS              # roof ridges / spire caps, and the roof and spire stairs
+TOWER_TOP = 12                     # the corner towers' band (their spires rise 4 over it)
 GLOW = "verdant_froglight"
 # standing skull rotation (16ths of a turn, 0 = facing south): facing out of each side, and out of each corner
 SKULL_OUT = {"south": "0", "west": "4", "north": "8", "east": "12"}
@@ -173,18 +178,18 @@ def arms(c):
         for a in range(2, 5):
             for s in (-1, 1):
                 for y in range(3, 11):
-                    c.put(o, a, 2 * s, y, DB)
+                    c.put(o, a, 2 * s, y, WALL)
             # the roof: tile stairs climbing in from the eaves, a tile ridge, blackstone cresting
             for s in (-1, 1):
-                c.st(o, a, 2 * s, 11, along(o, -s), name=DTS)
-                c.st(o, a, 1 * s, 12, along(o, -s), name=DTS)
-            c.put(o, a, 0, 13, DT)
+                c.st(o, a, 2 * s, 11, along(o, -s), name=ROOFS)
+                c.st(o, a, 1 * s, 12, along(o, -s), name=ROOFS)
+            c.put(o, a, 0, 13, ROOF)
             c.put(o, a, 0, 14, PBW)
         # the front wall, ring 4
         for t in range(-1, 2):
             for y in range(3, 12):
-                c.put(o, 4, t, y, DB)
-        c.put(o, 4, 0, 12, DB)
+                c.put(o, 4, t, y, WALL)
+        c.put(o, 4, 0, 12, WALL)
         # the portal: 3 wide, a pointed head (upside-down stair shoulders, a chiseled keystone)
         for t in (-1, 0, 1):
             for y in (3, 4):
@@ -219,13 +224,13 @@ def towers(c):
     heart, a blackstone band, then a needle spire with a soul lantern on the inner cell and a GARGOYLE crouched on the
     outer corner, leaning out over the terrace (ref 47): a stair body, upside-down-stair wings on ring 5, a corbel
     and a wither-skull head out on the diagonal. Lower than the crossing so the skyline steps up to the middle."""
-    top = 12
+    top = TOWER_TOP
     for (sx, sz) in CORNERS:
         out_x, out_z = ("east" if sx > 0 else "west"), ("south" if sz > 0 else "north")
         for qx in (3, 4):
             for qz in (3, 4):
                 for y in range(3, top):
-                    c.set(sx * qx, y, sz * qz, DB)
+                    c.set(sx * qx, y, sz * qz, WALL)
                 c.set(sx * qx, top, sz * qz, PBB)              # the band
         for y in range(3, top):
             c.set(sx * 4, y, sz * 4, CPB if y % 4 == 0 else PBB)   # the quoin
@@ -237,9 +242,9 @@ def towers(c):
             c.stair(sx * 4, y, sz * 3, out_x, "bottom", DBS)    # sills
             c.stair(sx * 3, y, sz * 4, out_z, "bottom", DBS)
         # the spire: stairs sloping off the band, a needle of walls on the inner cell, a soul lantern
-        c.stair(sx * 4, top + 1, sz * 3, inward((sx, 0)), "bottom", DTS)
-        c.stair(sx * 3, top + 1, sz * 4, inward((0, sz)), "bottom", DTS)
-        c.set(sx * 3, top + 1, sz * 3, DT)
+        c.stair(sx * 4, top + 1, sz * 3, inward((sx, 0)), "bottom", ROOFS)
+        c.stair(sx * 3, top + 1, sz * 4, inward((0, sz)), "bottom", ROOFS)
+        c.set(sx * 3, top + 1, sz * 3, ROOF)
         for y in (top + 2, top + 3):
             c.set(sx * 3, y, sz * 3, PBW)
         c.set(sx * 3, top + 4, sz * 3, "soul_lantern", **LANTERN)
@@ -260,7 +265,7 @@ def buttresses(c):
         for s in (-1, 1):
             t = 4 * s
             for y in range(1, 9):
-                c.put(o, 6, t, y, PBB if y in (1, 5) else DB)
+                c.put(o, 6, t, y, PBB if y in (1, 5) else WALL)
             c.put(o, 6, t, 9, PBW)
             c.put(o, 6, t, 10, "soul_lantern", **LANTERN)
             c.st(o, 5, t, 8, outward(o), "top", DBS)            # the arch's underside, springing from the pier
@@ -278,7 +283,7 @@ def crossing(c):
     for o in O4.values():
         for t in range(-1, 2):
             for y in range(11, 14):
-                c.put(o, 2, t, y, DT)
+                c.put(o, 2, t, y, CROWN_WALL)
         c.put(o, 2, 0, 12, GLASS)
         c.st(o, 3, 0, 11, outward(o), "top", DBS)               # the lancet's sill over the ridge
         for t in (-1, 0, 1):
@@ -286,7 +291,7 @@ def crossing(c):
             c.put(o, 2, t, 14, PBB)
     for (sx, sz) in CORNERS:
         for y in range(3, 11):
-            c.set(sx * 2, y, sz * 2, DB)
+            c.set(sx * 2, y, sz * 2, WALL)
         for y in range(11, 15):
             c.set(sx * 2, y, sz * 2, "bone_block", axis="y")    # the bone ribs
         c.set(sx * 2, 15, sz * 2, PBW)                          # unlit needles: the tower spires beside them carry
@@ -300,8 +305,8 @@ def crossing(c):
     c.ring_stairs(1, 16, "top", DTS, out=True)                  # the belfry's eaves
     c.set(0, 16, 0, PBB)                                        # the beam the bell hangs from
     # the spire
-    c.ring_stairs(1, 17, name=DTS)
-    c.set(0, 17, 0, DT)
+    c.ring_stairs(1, 17, name=ROOFS)
+    c.set(0, 17, 0, ROOF)
     c.set(0, 18, 0, CPB)
     for y in (19, 20):
         c.set(0, y, 0, PBW)
