@@ -85,6 +85,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_TOAST_SECONDS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
     public static final ForgeConfigSpec.ConfigValue<Boolean> BUILDING_AMBIENCE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> VALLEY_MIST;
     // the moving parts drawn on buildings (building/PartRenderClientEvents, design/moving_buildings.md): -1 = not
     // chosen yet (follows BUILDING_AMBIENCE), 0 Off, 1 Low, 2 Full
     public static final ForgeConfigSpec.ConfigValue<Integer> BUILDING_ANIMATION;
@@ -95,6 +96,7 @@ public class ReignOfNetherClientConfigs {
     // onboarding (onboarding/, design/onboarding.md): first-time tips, which were seen, the First Battle world
     public static final ForgeConfigSpec.ConfigValue<Boolean> ONBOARDING_TIPS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_AI;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_AUTO_LEARN;
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_SEEN_TIPS;
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_WORLD;
 
@@ -224,6 +226,8 @@ public class ReignOfNetherClientConfigs {
         HUD_PLATE_OPACITY = BUILDER.defineInRange("hud_plate_opacity", 100, 10, 100);
         BUILDER.comment("Building ambience: chimney smoke, petals, soul flames, steam and sparks round capitols, energy buildings and labs near the camera");
         BUILDING_AMBIENCE = BUILDER.define("building_ambience", true);
+        BUILDER.comment("Valley mist: soft ground mist that pools in hollows, along water and under cliffs, thick at dawn, back at dusk, drifting with the wind; none at strategic zoom");
+        VALLEY_MIST = BUILDER.define("valley_mist", true);
         BUILDER.comment("Building animation: moving parts drawn on buildings (metal extractor rigs: sheave wheel, ore skip, owner pennant). 0 Off, 1 Low (nearest 24, simplified sooner), 2 Full; -1 = not chosen yet: follows building_ambience (false = Off, true = Full)");
         BUILDING_ANIMATION = BUILDER.defineInRange("building_animation", -1, -1, 2);
         BUILDER.comment("Branch wind: tree limbs drawn swaying in the wind. 0 Off (limbs are plain blocks, no cost), 1 Near (default: limbs within 60 blocks of the camera sway, the rest are plain blocks), 2 All (every limb in view sways)");
@@ -234,6 +238,8 @@ public class ReignOfNetherClientConfigs {
         ONBOARDING_TIPS = BUILDER.define("onboarding_tips", true);
         BUILDER.comment("Hero AI: while you are not possessing your hero it fights by itself with its abilities (HeroBot). Off = it only casts what you order.");
         HERO_AI = BUILDER.define("hero_ai", true);
+        BUILDER.comment("Auto-learn hero abilities: an ability point you leave unspent for 20 s is spent for you (never while the rank-up menu is open). Off = every point waits for you.");
+        HERO_AUTO_LEARN = BUILDER.define("hero_auto_learn", true);
         BUILDER.comment("Tips already shown (comma-separated ids); clear it to see them again");
         ONBOARDING_SEEN_TIPS = BUILDER.define("onboarding_seen_tips", "");
         BUILDER.comment("The saves folder of the last First Battle tutorial, for Resume (empty = none or finished)");

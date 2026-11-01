@@ -1,0 +1,95 @@
+# Verdant lab (Rooting Hollow): expected numbers, written before each round's stills land
+
+Numbers on camera (eyes plain lane, named noon), predicted from tools/test_verdant_lab.py's camera model and the
+camera table (design/vehicle_labs/camera_colours.json). The reading is compared with these after the stills land, so
+it can't drift to fit the hope.
+
+## Detail round 1 (massing A + the critics' shared faults + the first grammar)
+Written Oct 31 ~01:35Z, before eyes.
+
+| Item | Band (test) | Expected | Why |
+|---|---|---|---|
+| Tree lead over built | 5..10 | 8 (tree 25, hall ridge 17) | hall narrowed to z 4..12, ridge 17 |
+| Canopy top value / sat / hue (rts) | 0.42-0.60 / 0.20-0.45 / outside 41-161 | 0.73 / 0.23 / 338 | cherry tops (up 0.85) with ~11 % spruce gaps (band re-set to 0.60-0.82 in aae55756) |
+| Canopy share (rts) | 0.30-0.50 | 0.40 | |
+| Trunk + roots share (rts_close / 34) | 0.15-0.28 | 0.22 / 0.18 | roots pour over the gallery and down its south face |
+| Trunk value (rts_close / 34) | 0.32-0.45 | 0.34 / 0.35 | stripped birch bark, dark oak grooves, oak-log tops |
+| Walls (rts_close / 34) | 0.30-0.42 | 0.33 | mud bricks unmeasured: expected west ~0.36, south ~0.45 (light tan) |
+| Roofs (rts) | 0.34-0.46 | 0.38 | spruce steep roof 0.39, gallery slab 0.40 |
+| Gate seen-into (34 px) | >= 200 | ~200 | splayed outer order |
+| Loud pixels (rts) | <= 3 % | ~0 % | no azalea, no moss blocks, no dark oak planks |
+| Lights | <= 2 clusters, <= 6 | 1 cluster, 2 | the heart-glow only |
+
+### Measured, round 1 (eyes 41155254248, camera table updated --add-only from its verdant_l3 / verdant_l1 stills)
+| Item | Expected | Measured | |
+|---|---|---|---|
+| Tree lead | 8 | 8 (25 / 17) | as expected |
+| Canopy top (rts) | 0.73 / 0.23 / 338 | 0.731 / 0.228 / 338 | in the re-set band |
+| Canopy share (rts) | 0.40 | 0.398 | |
+| Trunk + roots share (rts_close / 34) | 0.22 / 0.18 | 0.221 / 0.178 | |
+| Trunk value (rts_close / 34) | 0.34 / 0.35 | 0.338 / 0.346 | |
+| Walls (rts_close / 34) | 0.33 | 0.312 / 0.309 | mud bricks darker than guessed: west 0.30, south 0.42 (sat 0.37) |
+| Roofs (rts) | 0.38 | 0.382 | |
+| Gate seen-into (34, model) | ~200 | passes (>= 200) | |
+| Loud (rts) | ~0 % | 0 % | |
+| Lights | 1 cluster, 2 | 1 cluster, 2 | |
+All 17 camera tests green.
+
+## Detail round 2 (round 1's critics: both 5/10; one change per element)
+Written Oct 31 ~02:25Z, before eyes. Elements: limb (an arch over the well onto the ridge, 2 cells of sky under it;
+the old west limb gone), gate (mangrove roots under the jetty brackets frame it; the dark apron outside removed),
+canopy (all-cherry tops, clumps with valleys; tier 1 kept off the air over the hall), trunk (smooth taper, a gentle
+spiral, grooves in runs >= 4 rows; one root pour instead of three, single tone), glow (moved to the trunk's south
+foot, where the cameras look).
+
+| Item | Band (test) | Expected | Why |
+|---|---|---|---|
+| Canopy top value / sat / hue (rts) | 0.60-0.82 / 0.20-0.45 | 0.80 / 0.25 / 336 | pure cherry tops (table); in game the clumps' shade may lower it |
+| Canopy top one tone | >= 0.97 | 1.00 | |
+| Canopy share (rts) | 0.30-0.50 | 0.33 | valleys and the kept-open air over the hall |
+| Trunk + roots share (rts_close / 34) | 0.15-0.28 | 0.24 / 0.20 | |
+| Trunk value (rts_close / 34) | 0.32-0.45 | 0.33 / 0.34 | |
+| Sky under the limb: cells / px (rts_close, 34) | >= 8 / >= 40 | >= 8 / > 40 | |
+| Heart-glow px (rts_close, 34) | >= 20 | > 20 | four shroomlights on the trunk's south foot |
+| Walls / roofs | 0.30-0.42 / 0.34-0.46 | 0.31 / 0.38 | unchanged |
+
+### Measured, round 2 (eyes 41157566607; table --add-only: shroomlight up 0.96 / sat 0.71 added - its older south /
+west entries, 0.26 / 0.28 hue 225, came from another run and look like a covered light; left as they are, add-only)
+Camera-model numbers on the round-2 table: canopy 0.800 / 0.247 / 336 (expected 0.80), one tone 1.00, canopy share
+0.334, trunk share 0.236 / 0.198, trunk value 0.328 / 0.337, walls 0.311, roofs 0.382; the glow is in the stills
+(orange on the trunk's south foot in rts and 34). All 21 camera tests green.
+
+## Detail round 3 (round 2's critics: 5 / 6 vs round 1 4 / 5 - a gain; both: next is the wrap, massing)
+Written Oct 31 ~02:45Z, before eyes. One change per element: canopy (tier 2 and 3 moved over the hall and the limb -
+"canopy and roof interlock"; cherry drips, no green bands; the L1 tier without valleys - round 2's "ring"); trunk (its
+top leans toward the hall); limb (a solid arch: a third line under the rise, no log tops on it - "a staircase");
+gate (the passage floor mud, not the tile "grate"; the gallery's bays shortened to windows so the gate is the one tall
+dark); ground (lawn under the tree, paving only where feet go - "a model on a plinth").
+
+| Item | Band (test) | Expected (camera model) |
+|---|---|---|
+| Canopy top value / sat / hue (rts) | 0.60-0.82 / 0.20-0.45 | 0.80 / 0.25 / 336 |
+| Canopy share (rts) | 0.30-0.50 | 0.37 |
+| Trunk + roots share (rts_close / 34) | 0.15-0.28 | 0.20 / 0.16 |
+| Trunk value (rts_close / 34) | 0.32-0.45 | 0.36 / 0.38 |
+| Walls / roofs | 0.30-0.42 / 0.34-0.46 | 0.31 / 0.38 |
+| Sky under the limb, glow seen, one tone, no bands | as round 2 | pass |
+
+### Measured, round 3 (eyes 41159373535; table --add-only)
+Camera-model numbers on the table: as expected (canopy 0.80 / 0.25 / 336, canopy share 0.37, trunk 0.20 / 0.16,
+trunk value 0.36 / 0.38, walls 0.31, roofs 0.38). All 21 camera tests green. What no test caught: the crown's centre
+over the light well opened a hole from above (spruce bellies seen through it) - the critics' "donut" and "lattice".
+
+## Detail round 4 (one element: the crown)
+Written Oct 31 ~03:00Z, before eyes. The upper tiers close over the light well (only the 1 x 1 spawn shaft stays open);
+the spruce belly only deep under the top (d <= r - 2). Expected (camera model): 0 open crown columns; belly 0 % of the
+seen leaf pixels; canopy 0.80 / 0.25 / 336; canopy share ~0.38; the rest unchanged. 22/22 tests green locally.
+Round 4's first eyes run (41161071265) photographed verdant_l3 with a harness fault: the lobby overlay ("Ready 0/1,
+Force start") over the still, a green tint, and its noon stills dark (mean grey 0.16 vs the control's 0.36 in the same
+run). Not judged, not measured. Those stills did show the clump valleys in the crown reading as a lattice again, so
+the crown tier (tier 2) also loses its valleys (same element). Re-shot in a new run.
+
+### Measured, round 4 (re-shoot eyes 41162307013; control first; table --add-only)
+Stills normal (mean grey rts 0.358 vs control 0.354; no lobby overlay). Camera-model numbers on the table: 0 open crown
+columns, belly 0 % of the seen leaf pixels, canopy 0.80 / 0.25 / 336, canopy share 0.386, trunk share 0.184 (rts_close),
+trunk value 0.342, walls 0.312, roofs 0.382 - as expected. All 22 camera tests green.

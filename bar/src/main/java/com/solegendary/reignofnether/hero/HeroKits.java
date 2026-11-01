@@ -78,7 +78,7 @@ public final class HeroKits {
         new AbilitySpec("bone_spear", "hero_bone_spear", Target.GROUND, Ai.STRIKE, cd(7, 6, 5), v(14), 0,
             30, 6, v(8, 12, 16), v(1, 1, 1.3f), HeroKits::boneSpear),
         new AbilitySpec("grave_step", "hero_grave_step", Target.GROUND, Ai.NONE, cd(14, 12, 9), v(8, 11, 14), 3,
-            25, 2, v(8, 11, 14), v(2, 2.5f, 3), HeroKits::graveStep),
+            25, 2, v(8, 11, 14), v(2, 2.5f, 3), HeroKits::graveStep).escape(),
         new AbilitySpec("raise_the_fallen", "hero_raise_the_fallen", Target.GROUND, Ai.FIGHT_GROUND, cd(36, 32, 27), v(10), 2,
             60, 10, v(2, 3, 4), v(20, 25, 30), HeroKits::raiseTheFallen),
         new AbilitySpec("grave_sight", "hero_grave_sight", Target.SELF, Ai.FIGHT_SELF, cd(54, 45, 36), v(0), 24,
@@ -102,7 +102,7 @@ public final class HeroKits {
         new AbilitySpec("thorn_volley", "hero_thorn_volley", Target.GROUND, Ai.STRIKE, cd(9, 8, 7), v(12), 3,
             30, 6, v(5, 8, 11), v(1, 1.25f, 1.5f), HeroKits::thornVolley).cc(),
         new AbilitySpec("root_walk", "hero_root_walk", Target.GROUND, Ai.NONE, cd(16, 14, 11), v(10, 14, 18), 3,
-            30, 4, v(10, 14, 18), v(1), HeroKits::rootWalk).cc(),
+            30, 4, v(10, 14, 18), v(1), HeroKits::rootWalk).cc().escape(),
         new AbilitySpec("rejuvenate", "hero_rejuvenate", Target.GROUND, Ai.FIGHT_GROUND, cd(18, 15, 13), v(10), 6,
             50, 6, v(8, 12, 16), v(5), HeroKits::rejuvenate),
         new AbilitySpec("grove_seed", "hero_grove_seed", Target.GROUND, Ai.FIGHT_GROUND, cd(54, 45, 36), v(10), 3,
@@ -138,7 +138,7 @@ public final class HeroKits {
         new AbilitySpec("rivet_burst", "hero_rivet_burst", Target.ENEMY, Ai.STRIKE, cd(7, 6, 5), v(10), 2,
             25, 6, v(3, 4.5f, 6), v(2, 2, 2.5f), HeroKits::rivetBurst),
         new AbilitySpec("rocket_jump", "hero_rocket_jump", Target.GROUND, Ai.NONE, cd(14, 12, 9), v(8, 11, 14), 2.5f,
-            25, 2, v(3, 5, 7), v(8, 11, 14), HeroKits::rocketJump),
+            25, 2, v(3, 5, 7), v(8, 11, 14), HeroKits::rocketJump).escape(),
         new AbilitySpec("deploy_turret", "hero_deploy_turret", Target.GROUND, Ai.FIGHT_GROUND, cd(32, 27, 23), v(8), 0,
             50, 10, v(1, 1, 2), v(20), HeroKits::deployTurret),
         new AbilitySpec("field_repair", "hero_field_repair", Target.SELF, Ai.FIGHT_SELF, cd(45, 38, 32), v(0), 10,
@@ -155,11 +155,11 @@ public final class HeroKits {
 
     public static final HeroKit ASH_SHAMAN = new HeroKit("ash_shaman", "Ash Shaman", "piglins", Role.CASTER,
         180, 7, 0, 0.27f, 150, 12, 1.4f, T2_HERO_COST,
-        new AbilitySpec("firewall", "hero_firewall", Target.GROUND, Ai.NONE, cd(16, 14, 11), v(10, 12, 14), 0,
+        new AbilitySpec("firewall", "hero_firewall", Target.GROUND, Ai.STRIKE, cd(16, 14, 11), v(10, 12, 14), 0,
             40, 6, v(4, 6, 8), v(4), HeroKits::firewall),
-        new AbilitySpec("lava_geyser", "hero_lava_geyser", Target.GROUND, Ai.NONE, cd(13, 11, 9), v(12), 3,
+        new AbilitySpec("lava_geyser", "hero_lava_geyser", Target.GROUND, Ai.STRIKE, cd(13, 11, 9), v(12), 3,
             50, 8, v(12, 18, 24), v(1.5f), HeroKits::lavaGeyser),
-        new AbilitySpec("ember_totem", "hero_ember_totem", Target.GROUND, Ai.NONE, cd(36, 32, 27), v(10), 5,
+        new AbilitySpec("ember_totem", "hero_ember_totem", Target.GROUND, Ai.STRIKE, cd(36, 32, 27), v(10), 5,
             60, 10, v(3, 4.5f, 6), v(8), HeroKits::emberTotem),
         // passive: no cast (the effect never fires); a = seconds a hit target burns, applied by AshShamanUnit.doHurtTarget
         new AbilitySpec("kindle", "hero_kindle", Target.SELF, Ai.NONE, cd(1, 1, 1), v(0), 0,
@@ -469,7 +469,7 @@ public final class HeroKits {
         for (LivingEntity e : HeroFx.enemies(c.level, c.hero, pos, c.b())) {
             HeroFx.damage(c.hero, e, c.a(), false);
             HeroFx.knockback(pos, e, 1.4);
-            HeroFx.slow(e, 40, 1);
+            HeroFx.slow(e, 30 + 10 * c.rank, 1);   // 2 / 2.5 / 3 s by rank (was a flat 2 s)
             e.clearFire();
         }
         HeroFx.ring(c.level, ParticleTypes.SPLASH, pos, c.b());
@@ -533,7 +533,7 @@ public final class HeroKits {
         Vec3 pos = c.hero.position();
         for (LivingEntity e : HeroFx.enemies(c.level, c.hero, pos, c.b())) {
             HeroFx.damage(c.hero, e, c.a(), true);
-            HeroFx.slow(e, 60, 2);
+            HeroFx.slow(e, 50 + 10 * c.rank, 2);   // 3 / 3.5 / 4 s by rank (was a flat 3 s)
         }
         HeroFx.ring(c.level, ParticleTypes.SNOWFLAKE, pos, c.b());
         HeroFx.ring(c.level, ParticleTypes.SNOWFLAKE, pos, c.b() * 0.5);
@@ -606,15 +606,25 @@ public final class HeroKits {
         return true;
     }
 
-    /** Sets down the Guildmaster's auto-turret at the spot (two at rank 3), free - the hero carries the parts. */
+    /**
+     * Sets down the Guildmaster's auto-turret at the spot (two at rank 3, either side of it across the line the hero
+     * aimed along), facing the way the hero aimed - free, the hero carries the parts.
+     */
     static boolean deployTurret(Cast c) {
         int n = Math.round(c.a());
+        Vec3 dir = new Vec3(c.at.x - c.hero.getX(), 0, c.at.z - c.hero.getZ());
+        if (dir.lengthSqr() < 1e-4)
+            dir = Vec3.directionFromRotation(0, c.hero.getYRot());
+        dir = dir.normalize();
+        Vec3 across = new Vec3(-dir.z, 0, dir.x);
+        float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));   // Minecraft's yaw: 0 faces +z
         int placed = 0;
         for (int i = 0; i < n; i++) {
-            BlockPos at = BlockPos.containing(c.at.x + i * 2, c.at.y, c.at.z).below();
+            double side = n == 1 ? 0 : (i - (n - 1) / 2.0) * 3;   // a pair: 1.5 blocks either side of the aim
+            BlockPos at = BlockPos.containing(c.at.x + across.x * side, c.at.y, c.at.z + across.z * side).below();
             Entity e = UnitServerEvents.spawnMob(EntityRegistrar.DEPLOYED_TURRET_UNIT.get(), c.level, at, c.owner());
             if (e != null) {
-                e.setYRot(c.hero.getYRot());
+                e.setYRot(yaw);
                 placed++;
             }
         }
@@ -625,9 +635,18 @@ public final class HeroKits {
         return placed > 0;
     }
 
-    /** Utility: patches up every friendly machine nearby (and the crews a little), plating the machines for a moment. */
+    /**
+     * Utility: patches up every friendly machine nearby (and the crews a little), plating the machines for a moment.
+     * With no machine in reach and nobody hurt it does not go off (no cooldown, no mana for nothing).
+     */
     static boolean fieldRepair(Cast c) {
-        for (LivingEntity e : HeroFx.friends(c.level, c.hero, c.hero.position(), c.spec.radius)) {
+        List<LivingEntity> friends = HeroFx.friends(c.level, c.hero, c.hero.position(), c.spec.radius);
+        boolean worth = false;
+        for (LivingEntity e : friends)
+            worth |= MachineRepair.isMachine(e) || e.getHealth() < e.getMaxHealth();
+        if (!worth)
+            return false;
+        for (LivingEntity e : friends) {
             if (MachineRepair.isMachine(e)) {
                 e.heal(c.a());
                 HeroFx.buff(e, MobEffects.DAMAGE_RESISTANCE, 100, 0);

@@ -13,7 +13,7 @@ import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.UnitGrid;
-import com.solegendary.reignofnether.unit.controls.FlyingUnitMoveControl;
+import com.solegendary.reignofnether.unit.controls.DragonMoveControl;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
@@ -39,7 +39,6 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.util.Mth;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -244,7 +243,8 @@ public class CelestialDragonUnit extends EntitySpectre implements Unit, Attacker
 
     public CelestialDragonUnit(EntityType<? extends EntitySpectre> entityType, Level level) {
         super(entityType, level);
-        this.moveControl = new FlyingUnitMoveControl(this);
+        // a nose, a capped turn and an eased speed (DragonFlight), not the ghast's nudges (lovish, Oct 30: "choppy")
+        this.moveControl = new DragonMoveControl(this);
         this.navigation = new FlyingPathNavigation(this, level);
         updateAbilityButtons();
     }
@@ -387,13 +387,7 @@ public class CelestialDragonUnit extends EntitySpectre implements Unit, Attacker
                 net.minecraft.network.chat.Component.translatable("entity.reignofnether.celestial_dragon_unit"));
         }
         if (isGrounded()) {
-            // down on the ground: the flying move control still pushes toward its altitude, so any climb is cancelled
-            // and gravity pulls it to the floor; it walks (half speed) where it was going
-            Vec3 dm = getDeltaMovement();
-            if (!onGround())
-                setDeltaMovement(dm.x, Math.max(-0.5, Math.min(0, dm.y) - 0.08), dm.z);
-            else if (dm.y > 0)
-                setDeltaMovement(dm.x, 0, dm.z);
+            // down on the ground: DragonMoveControl walks it (half speed) where it was going, pressed onto the floor
             if (tickCount % 5 == 0)
                 sl.sendParticles(ParticleTypes.SMOKE, getX(), getY() + 0.5, getZ(), 3, 1.0, 0.3, 1.0, 0.01);
             if (sl.getGameTime() >= groundedUntil)
@@ -406,22 +400,33 @@ public class CelestialDragonUnit extends EntitySpectre implements Unit, Attacker
         }
     }
 
-    /** Faces the target while it has one, else where it is flying, else keeps its heading (the Corsair's rule). */
+    /** The client's yaw after this tick's lerp toward the server's, before the spectre's tick re-aims it at its drift. */
+    private float lerpedYaw = Float.NaN;
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        if (level().isClientSide())
+            lerpedYaw = getYRot();
+    }
+
+    /**
+     * The spectre's tick aims the yaw at the velocity every tick, on both sides (a nose that flicked with each nudge).
+     * On the server the body faces along the flight's nose ({@link DragonMoveControl#bodyYaw}: turned at a capped
+     * rate) and, hovering, turns toward its target at DragonMoveControl.HOVER_TURN; the client keeps the yaw it lerped
+     * from the server's.
+     */
     void updateRotation(float yRotBefore) {
-        LivingEntity target = this.getTarget();
-        Vec3 dMove = this.getDeltaMovement();
-        double x = 0, z = 0;
-        if (target != null) {
-            x = target.getX() - this.getX();
-            z = target.getZ() - this.getZ();
-        } else if (dMove.horizontalDistanceSqr() > 0.0025) {
-            x = dMove.x();
-            z = dMove.z();
-        }
-        if (Math.abs(x) > 0.05f || Math.abs(z) > 0.05f)
-            this.setYRot(-((float) Mth.atan2(x, z)) * 57.295776F);
-        else
+        if (level().isClientSide()) {
+            this.setYRot(Float.isNaN(lerpedYaw) ? yRotBefore : lerpedYaw);
+        } else if (this.moveControl instanceof DragonMoveControl dc) {
+            LivingEntity target = this.getTarget();
+            double x = target == null ? 0 : target.getX() - this.getX();
+            double z = target == null ? 0 : target.getZ() - this.getZ();
+            this.setYRot(dc.bodyYaw(yRotBefore, x, z));
+        } else {
             this.setYRot(yRotBefore);
+        }
         this.yBodyRot = this.getYRot();
     }
 

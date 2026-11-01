@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.worldborder;
 
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraftforge.event.TickEvent;
@@ -40,7 +41,10 @@ public class WorldBorderClientEvents {
         lastSize = size;
     }
 
+    // asked from meshing threads (BiomeColorsMixin.applyTint): read the level once - the render thread can clear it
+    // between two reads when leaving a world
     public static boolean isOutsideWorldBorder(BlockPos bp) {
-        return MC.level != null && !MC.level.getWorldBorder().isWithinBounds(bp);
+        ClientLevel level = MC.level;
+        return level != null && !level.getWorldBorder().isWithinBounds(bp);
     }
 }

@@ -122,12 +122,54 @@ class SupportMathTest {
     }
 
     @Test
-    void healIgnoresScratchesAndFriendsOutOfReach() {
+    void healTakesTheLowestOnHealthNotTheCostliest() {
+        // lovish, Oct 30: "heal low hp units". A golem at 80% (24 of 120 missing, value 2) and a vindicator at 60% (30
+        // of 75, value 1): the old missing x value score (48 to 30) sent the heal to the golem
         SupportField f = field();
         add(f, 0, 0, ME);
-        addHurt(f, 2, 0, 19f, FRIEND);   // 1 HP missing
-        addHurt(f, 20, 0, 2f, FRIEND);   // far away
-        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 12, SPLASH, 3f, INV));
+        int golem = f.add(null, 4, 0, 0, 0, 96f, 120f, 2f, FRIEND);
+        int vindicator = f.add(null, -4, 0, 0, 0, 45f, 75f, 1f, FRIEND);
+        assertEquals(vindicator, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
+        assertNotEquals(-1, golem);
+    }
+
+    @Test
+    void healTakesAFriendJustBelowFullButNeverAFullOne() {
+        // lovish's review r1 answer "Only full health": no cut below full - a golem at 92% is healed, a full one never
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        f.add(null, -4, 0, 0, 0, 120f, 120f, 5f, FRIEND);
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV), "a full friend is never a heal target");
+        int near = f.add(null, 4, 0, 0, 0, 110f, 120f, 5f, FRIEND);   // 10 missing, 92% of its health left
+        assertEquals(near, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
+        SupportMath.Aim aim = new SupportMath.Aim();
+        f.add(null, 4, 1, 0, 0, 110f, 120f, 5f, FRIEND);
+        assertTrue(SupportMath.areaHealAim(f, 0, 0, 8, CLOUD, 3f, Undead.IMMUNE, aim), "two at 92% are worth an area heal");
+    }
+
+    @Test
+    void healValueOnlyBreaksANearTie() {
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        int cheap = f.add(null, 4, 0, 0, 0, 10f, 20f, 1f, FRIEND);      // 50%
+        int costly = f.add(null, -4, 0, 0, 0, 10.5f, 20f, 5f, FRIEND);  // 52.5%, the most valuable
+        assertEquals(costly, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV), "2.5 points apart: value decides");
+        f.health[cheap] = 9f;   // 45%: 7.5 points apart, more than the tie-break
+        assertEquals(cheap, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
+    }
+
+    @Test
+    void healTakesAFriendOneHpDownButNotOneOutOfReach() {
+        // lovish's review r1 answer "Only full health": anyone below full is a target (the game's floor, 0), a full
+        // friend never; the old 3 HP scratch floor still works when passed
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        int far = addHurt(f, 20, 0, 2f, FRIEND);   // far away
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 12, SPLASH, SupportBrain.HEAL_MIN_MISSING, INV));
+        int scratch = addHurt(f, 2, 0, 19f, FRIEND);   // 1 HP missing
+        assertEquals(scratch, SupportMath.healTarget(f, 0, 0, 12, SPLASH, SupportBrain.HEAL_MIN_MISSING, INV));
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 12, SPLASH, 3f, INV), "a 3 HP floor skips the scratch");
+        assertNotEquals(-1, far);
     }
 
     @Test
@@ -287,7 +329,7 @@ class SupportMathTest {
         add(f, 0, 0, ME);
         for (int i = 0; i < 30; i++)
             add(f, 1 + i * 0.25, 7, FOE);
-        int k = SupportMath.nearest(f, F_ENEMY, 0, 0, 0, 100, 0f);
+        int k = SupportMath.nearest(f, F_ENEMY, 0, 0, 0, 100, SupportMath.ANY);
         assertEquals(SupportMath.MAX_CANDIDATES, k);
         for (int c = 1; c < k; c++)
             assertTrue(f.candD[c - 1] <= f.candD[c], "nearest first");

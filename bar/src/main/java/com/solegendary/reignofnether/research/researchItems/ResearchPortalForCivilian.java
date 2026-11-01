@@ -54,7 +54,7 @@ public class ResearchPortalForCivilian extends ProductionItem {
                 ResourceCosts.getFormattedCost(cost),
                 ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
-                FormattedCharSequence.forward(I18n.get("research.reignofnether.civilian_portal.tooltip1"), Style.EMPTY),
+                FormattedCharSequence.forward(I18n.get("research.reignofnether.civilian_portal.tooltip_income"), Style.EMPTY),
                 FormattedCharSequence.forward(I18n.get("research.reignofnether.civilian_portal.tooltip2"), Style.EMPTY)
             ),
             prodBuilding,

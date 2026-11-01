@@ -6,7 +6,7 @@ import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.util.FormattedCharSequence;
 
 // defined here because we need to be able to access in both
-// static (for ProductionItems) and nonstatic (for getCurrentPopulation) contexts
+// static (for ProductionItems) and nonstatic (per unit) contexts
 // and we can't declare static getters in the Unit interface
 public class ResourceCosts {
     private static final String ID = ReignOfNether.MOD_ID;
@@ -23,6 +23,7 @@ public class ResourceCosts {
     public static final ResourceCost SPIDER = new ResourceCost(ID, "SPIDER");
     public static final ResourceCost POISON_SPIDER = new ResourceCost(ID, "POISON_SPIDER");
     public static final ResourceCost WRAITH = new ResourceCost(ID, "WRAITH");
+    public static final ResourceCost TOMBCALLER = new ResourceCost(ID, "TOMBCALLER");   // Gravebound essence caster (T1)
     public static final ResourceCost SLIME = new ResourceCost(ID, "SLIME");
     public static final ResourceCost WARDEN = new ResourceCost(ID, "WARDEN");
     public static final ResourceCost ZOMBIE_PIGLIN = new ResourceCost(ID, "ZOMBIE_PIGLIN");
@@ -37,6 +38,8 @@ public class ResourceCosts {
     public static final ResourceCost VINDICATOR = new ResourceCost(ID, "VINDICATOR");
     public static final ResourceCost WITCH = new ResourceCost(ID, "WITCH");
     public static final ResourceCost EVOKER = new ResourceCost(ID, "EVOKER");
+    public static final ResourceCost ANGEL_CALLER = new ResourceCost(ID, "ANGEL_CALLER");   // Sunforged essence caster
+    public static final ResourceCost ANGEL = new ResourceCost(ID, "ANGEL");   // its summons: free, no population
     public static final ResourceCost RAVAGER = new ResourceCost(ID, "RAVAGER");
     public static final ResourceCost WAR_MAMMOTH = new ResourceCost(ID, "WAR_MAMMOTH");
     public static final ResourceCost BONEWRIGHT = new ResourceCost(ID, "BONEWRIGHT");
@@ -49,6 +52,7 @@ public class ResourceCosts {
     public static final ResourceCost ELDER_TREANT = new ResourceCost(ID, "ELDER_TREANT");
     public static final ResourceCost WISP_CHOIR = new ResourceCost(ID, "WISP_CHOIR");
     public static final ResourceCost BLOOM_PRIESTESS = new ResourceCost(ID, "BLOOM_PRIESTESS");
+    public static final ResourceCost THORNWEAVER = new ResourceCost(ID, "THORNWEAVER");
     public static final ResourceCost CIRCLE_OF_ELDERS = new ResourceCost(ID, "CIRCLE_OF_ELDERS");
     public static final ResourceCost SUN_COLOSSUS = new ResourceCost(ID, "SUN_COLOSSUS");
     // Verdant Court T3: the Heart of the Wild and the World Tree Walker
@@ -344,26 +348,15 @@ public class ResourceCosts {
         str = str.trim();
         return FormattedCharSequence.forward(str, MyRenderer.iconStyle);
     }
-    public static FormattedCharSequence getFormattedPopAndTime(ResourceCost resCost) {
-        return FormattedCharSequence.forward("\uE003  " + resCost.population + "     \uE004  " + resCost.ticks/ResourceCost.TICKS_PER_SECOND + "s", MyRenderer.iconStyle);
-    }
-    public static FormattedCharSequence getFormattedPop(ResourceCost resCost) {
-        return FormattedCharSequence.forward("\uE003  " + resCost.population, MyRenderer.iconStyle);
-    }
     public static FormattedCharSequence getFormattedTime(ResourceCost resCost) {
         return FormattedCharSequence.forward("\uE004  " + resCost.ticks/ResourceCost.TICKS_PER_SECOND + "s", MyRenderer.iconStyle);
     }
 
     public static final int REPLANT_WOOD_COST = 1;
     public static final int REDUCED_REPLANT_WOOD_COST = 0;
-    // BAR-scale battles (150-200+ units per player): was 150. Note the maxPopulation gamerule only takes this
-    // default for NEW worlds; existing saves keep their stored value (/gamerule maxPopulation 400).
-    // lovish, Oct 13 2026 ("there shouldnt be a max population", after hitting 400 at 26 minutes in his playtest):
-    // no cap by default, as in BAR. A value at or above UNLIMITED_POPULATION means "no cap" everywhere (the HUD
-    // shows just the count, the gamerule button reads "unlimited"); the gamerule still lets a host set one.
-    // Performance is guarded elsewhere (pathfinder budgets, Flywheel rendering to come), not by a cap.
-    public static final int UNLIMITED_POPULATION = 100_000;
-    public static final int DEFAULT_MAX_POPULATION = UNLIMITED_POPULATION;
+    // No max population (lovish, Oct 13 "there shouldnt be a max population"; Oct 29 "there should be no population
+    // in this game", "like no max population"): a unit's population is only counted, never a limit - the
+    // maxPopulation gamerule is gone. Performance is guarded elsewhere (pathfinder budgets), not by a cap.
     /*
         Unit costs are defined here during CommonSetup
         Do not read values and initialize from config earlier, else will result in IllegalStateException !!!
@@ -384,6 +377,7 @@ public class ResourceCosts {
         SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SPIDER);
         POISON_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.POISON_SPIDER);
         WRAITH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WRAITH);
+        TOMBCALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TOMBCALLER);
         SLIME.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SLIME);
         WARDEN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WARDEN);
         NECROMANCER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.NECROMANCER);
@@ -401,6 +395,8 @@ public class ResourceCosts {
         VINDICATOR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.VINDICATOR);
         WITCH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WITCH);
         EVOKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EVOKER);
+        ANGEL_CALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ANGEL_CALLER);
+        ANGEL.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ANGEL);
         RAVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.RAVAGER);
         WAR_MAMMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WAR_MAMMOTH);
         BONEWRIGHT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONEWRIGHT);
@@ -412,6 +408,7 @@ public class ResourceCosts {
         ELDER_TREANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ELDER_TREANT);
         WISP_CHOIR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WISP_CHOIR);
         BLOOM_PRIESTESS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BLOOM_PRIESTESS);
+        THORNWEAVER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.THORNWEAVER);
         CIRCLE_OF_ELDERS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CIRCLE_OF_ELDERS);
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
         WORLD_TREE_WALKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WORLD_TREE_WALKER);

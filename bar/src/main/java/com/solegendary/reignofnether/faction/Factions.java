@@ -174,6 +174,11 @@ public class Factions {
 		registerEntity(VILLAGERS, EntityRegistrar.SUN_COLOSSUS_UNIT.get(), ProductionItems.SUN_COLOSSUS);
 		registerEntity(VILLAGERS, EntityRegistrar.WITCH_UNIT.get(), ProductionItems.WITCH);
 		registerEntity(VILLAGERS, EntityRegistrar.EVOKER_UNIT.get(), ProductionItems.EVOKER);
+		registerEntity(VILLAGERS, EntityRegistrar.ANGEL_CALLER_UNIT.get(), ProductionItems.ANGEL_CALLER);
+		// the Angel Caller's summons: never trained (CallAngel), registered so their kills and colour read as Sunforged
+		registerEntity(VILLAGERS, EntityRegistrar.MENDER_ANGEL_UNIT.get());
+		registerEntity(VILLAGERS, EntityRegistrar.SERAPH_ARCHER_UNIT.get());
+		registerEntity(VILLAGERS, EntityRegistrar.SWORD_SERAPH_UNIT.get());
 		registerEntity(VILLAGERS, EntityRegistrar.WINDCALLER_UNIT.get(), ProductionItems.WINDCALLER);
 		registerEntity(VILLAGERS, EntityRegistrar.RAVAGER_UNIT.get(), ProductionItems.RAVAGER);
 		registerEntity(VILLAGERS, EntityRegistrar.ROYAL_GUARD_UNIT.get(), ProductionItems.ROYAL_GUARD);
@@ -193,6 +198,7 @@ public class Factions {
 		registerEntity(MONSTERS, EntityRegistrar.POISON_SPIDER_UNIT.get(), ProductionItems.POISON_SPIDER);
 		registerEntity(MONSTERS, EntityRegistrar.CREEPER_UNIT.get(), ProductionItems.CREEPER);
 		registerEntity(MONSTERS, EntityRegistrar.WRAITH_UNIT.get(), ProductionItems.WRAITH);
+		registerEntity(MONSTERS, EntityRegistrar.TOMBCALLER_UNIT.get(), ProductionItems.TOMBCALLER);
 		registerEntity(MONSTERS, EntityRegistrar.SLIME_UNIT.get(), ProductionItems.SLIME);
 		registerEntity(MONSTERS, EntityRegistrar.WARDEN_UNIT.get(), ProductionItems.WARDEN);
 		registerEntity(MONSTERS, EntityRegistrar.BONE_DRAGON_UNIT.get(), ProductionItems.BONE_DRAGON);
@@ -236,6 +242,7 @@ public class Factions {
 		registerEntity(VERDANT_COURT, EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), ProductionItems.WORLD_TREE_WALKER);   // T3 (Heart of the Wild)
 		registerEntity(VERDANT_COURT, EntityRegistrar.WISP_CHOIR_UNIT.get(), ProductionItems.WISP_CHOIR);
 		registerEntity(VERDANT_COURT, EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), ProductionItems.BLOOM_PRIESTESS);
+		registerEntity(VERDANT_COURT, EntityRegistrar.THORNWEAVER_UNIT.get(), ProductionItems.THORNWEAVER);   // essence caster
 
 		// Tidewrought (slice 1: T1 only)
 		registerWorkerEntity(TIDEWROUGHT, EntityRegistrar.SHIPWRIGHT_UNIT.get(), ProductionItems.SHIPWRIGHT);
