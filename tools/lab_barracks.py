@@ -173,17 +173,21 @@ def floor_l1(r):
         r.st(x, 0, SZ - 1, "north", name=START_TYPE)
 
 
-def keep_l1(r):
-    """The keep: quartz brick walls to y 8 between quartz pillar corners, a chiseled band at y 5 on the corners,
-    the deep gate (three high, two cells deep under a chiseled lintel: the dark), then the crown: a ring of stairs
-    climbing in at y 9 with pillar pinnacles on the corners, gold on them at y 10, a pillar drum round the middle and
-    a 2 x 2 gold crown at y 11 with the lantern on it."""
+DARK = "dark_oak_planks"                 # the kit's trim that stays dark (BiomePalette keeps DARK_OAK): the shadows
+
+
+def keep_body(r):
+    """The keep's body: quartz brick walls to y 8 between quartz pillar corners, a chiseled string course at y 5, the
+    deep gate (three high, two deep under a chiseled lintel) lined with dark oak at its back and ceiling."""
     for x in range(KX0, KX1 + 1):
         for z in range(KZ0, KZ1 + 1):
             corner = x in (KX0, KX1) and z in (KZ0, KZ1)
+            edge = x in (KX0, KX1) or z in (KZ0, KZ1)
             for y in range(1, KW + 1):
-                if corner:
-                    r.set(x, y, z, "chiseled_quartz_block") if y == 5 else r.pillar(x, y, z)
+                if y == 5 and edge:
+                    r.set(x, y, z, "chiseled_quartz_block")
+                elif corner:
+                    r.pillar(x, y, z)
                 else:
                     r.set(x, y, z, "quartz_bricks" if y > 1 else "smooth_quartz")
     for x in GATE:
@@ -191,17 +195,41 @@ def keep_l1(r):
             for y in (1, 2, 3):
                 r.b.pop((x, y, z), None)
         r.set(x, 4, KZ1, "chiseled_quartz_block")
-    ring(r, KX0, KX1, KZ0, KZ1, KW + 1)
+        r.set(x, 4, KZ1 - 1, DARK)
+        for y in (1, 2, 3):
+            r.set(x, y, KZ1 - 2, DARK)
+
+
+def crown(r):
+    """The crown (round 3's blind pick over battlements and a gold belt): the keep's corners chamfered (stairs at y 8 instead of the pillar tops), a ring of stairs climbing
+    in on the eight face cells at y 9, a pillar drum, a 2 x 2 gold crown at y 11, the lantern."""
     for x in (KX0, KX1):
         for z in (KZ0, KZ1):
-            r.pillar(x, KW + 1, z)
-            r.set(x, KW + 2, z, "gold_block")
-    for x in (7, 8):
-        for z in (1, 2):
-            r.set(x, KW + 1, z, "smooth_quartz")
-            r.pillar(x, KW + 2, z)
-            r.set(x, KW + 3, z, "gold_block")
+            r.b.pop((x, KW, z), None)
+            r.st(x, KW, z, "east" if x == KX0 else "west")
+    for x in range(KX0, KX1 + 1):
+        for z in range(KZ0, KZ1 + 1):
+            corner = x in (KX0, KX1) and z in (KZ0, KZ1)
+            if corner:
+                continue
+            if x == KX0:
+                r.st(x, KW + 1, z, "east")
+            elif x == KX1:
+                r.st(x, KW + 1, z, "west")
+            elif z == KZ0:
+                r.st(x, KW + 1, z, "south")
+            elif z == KZ1:
+                r.st(x, KW + 1, z, "north")
+            else:
+                r.set(x, KW + 1, z, "smooth_quartz")
+                r.pillar(x, KW + 2, z)
+                r.set(x, KW + 3, z, "gold_block")
     r.lantern(7, KW + 4, 1)
+
+
+def keep_l1(r):
+    keep_body(r)
+    crown(r)
 
 
 def arcade_x(r, x0, x1, z_back, z_front, top, piers):
@@ -237,6 +265,9 @@ def wings_l1(r):
     """North wing x 0..5 (z 0 wall, z 1 arcade, deck y 4), west wing z 2..3 (x 0 wall, x 1 arcade, deck y 4),
     east wing z 5..6 (x 9 wall, x 8 arcade, deck y 4); lantern posts on the wings' ends; a rack of lances."""
     arcade_x(r, 0, 5, 0, 1, 4, (0, 2, 4))
+    for x in (1, 3, 5):                     # the arches' backs in dark oak: shadow the camera can see
+        for y in (1, 2):
+            r.set(x, y, 0, DARK)
     arcade_z(r, 2, 3, 0, 1, 4, (3,))
     arcade_z(r, 5, 6, KX1, KX1 - 1, 4, (6,))
     r.set(0, 5, 3, "diorite_wall")
