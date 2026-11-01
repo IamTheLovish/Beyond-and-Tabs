@@ -62,6 +62,7 @@ import com.solegendary.reignofnether.util.ArrayUtil;
 import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.MyMath;
 import com.solegendary.reignofnether.util.MyRenderer;
+import com.solegendary.reignofnether.time.ClientTicks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -293,7 +294,7 @@ public class UnitClientEvents {
 
     /** How many units {@code playerName} has as this client knows them (loaded, or seen on the minimap). */
     public static int getUnitCount(String playerName) {
-        long tick = MC.level != null ? MC.level.getGameTime() : Long.MIN_VALUE;
+        long tick = MC.level != null ? ClientTicks.now() : Long.MIN_VALUE;
         if (tick != unitCountCacheTick || allUnits.size() != unitCountCacheUnits ||
                 MinimapClientEvents.virtualUnits.size() != unitCountCacheVirtual) {
             unitCountCache.clear();

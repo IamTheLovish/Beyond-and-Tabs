@@ -66,6 +66,7 @@
     "fogofwar.WorldBorderMixin",
     "goals.MobMixin",
     "goals.RandomStrollGoalMixin",
+    "goals.GoalSelectorMixin",
     "ConfigValueReloadRaceMixin",
     "ForgeConfigSpecAccessor"
   ],
@@ -119,6 +120,7 @@
     "LoadingOverlayAccessor",
     "LoadingOverlayMixin",
     "ForgeLoadingOverlayMixin",
-    "WaitingScreenBackdropMixin"
+    "WaitingScreenBackdropMixin",
+    "fire.CampfireBlockEntityMixin"
   ]
 }
