@@ -161,9 +161,87 @@ def option_c():
     return c
 
 
+# ---- massing round 2 (blind critics on A/B/C, eyes 41275632354: split A 1st / B 1st, both beat the shipped build,
+# none reached 7 on RTS read). Shared faults: each roof "a stair of equal one-block steps" (read as terraces, not one
+# slope); no crown that reads at normal zoom; storey gaps too thin; straight eaves. Round 2 keeps A and B's outlines
+# and changes only those: half-block roof slopes (slab, stair, slab, ...), corners lifted two with the cells beside
+# them lifted half (a curve), taller storeys, and a crown sized for the far read. ----
+
+
+def slope(c, lip, y, rings, under=OAK):
+    """A roof whose plane climbs half a block per ring: ring lip a bottom slab at y, then a stair (half to full), then
+    a bottom slab one up, ... - `rings` rings in all, the inside filled jade to the top course; dark oak soffit."""
+    for i in range(rings):
+        k = lip - i
+        yy = y + i // 2
+        if i % 2 == 0:
+            c.ring(k, yy, JADE_SLAB, type="bottom", **DRY)
+        else:
+            stair_ring(c, k, yy)
+        for j in range(y, yy):
+            c.ring(k, j, JADE)
+    top = y + (rings - 1) // 2
+    c.disc(lip - rings, top, JADE)
+    for j in range(y, top):
+        c.disc(lip - rings, j, JADE)
+    if under:
+        c.ring(lip, y - 1, under)
+    # the curve: corners up two (gold, jade, a slab tip), the cell beside each corner up half
+    for (sx, sz) in CORNERS:
+        x, z = C + sx * lip, C + sz * lip
+        c.set(x, y, z, GOLD)
+        c.set(x, y + 1, z, JADE)
+        c.set(x, y + 2, z, JADE_SLAB, type="bottom", **DRY)
+        for (ax, az) in ((x - sx, z), (x, z - sz)):
+            c.set(ax, y, az, JADE)
+            c.set(ax, y + 1, az, JADE_SLAB, type="bottom", **DRY)
+    return top
+
+
+def crown(c, y):
+    """A crown for the far read: a 3 x 3 gold-trimmed jade cap, a two-high gold boss, a rod; rods on its corners."""
+    c.disc(1, y, JADE)
+    for (sx, sz) in CORNERS:
+        c.set(C + sx, y, C + sz, GOLD)
+        c.set(C + sx, y + 1, C + sz, "lightning_rod", facing="up", powered="false", **DRY)
+    c.set(C, y + 1, C, GOLD)
+    c.set(C, y + 2, C, GOLD)
+    c.set(C, y + 3, C, "lightning_rod", facing="up", powered="false", **DRY)
+
+
+def option_a2():
+    """A, round 2: three roofs (lips 7 / 5 / 3) with half-block slopes and curved corners, storeys 4 tall, a crown."""
+    c = Canvas()
+    base(c)
+    storey(c, 5, 2, 5)
+    t = slope(c, 7, 6, 4)                 # y6-7
+    storey(c, 3, t + 1, t + 4)            # y8-11
+    t = slope(c, 5, t + 5, 3)             # y12-13
+    storey(c, 2, t + 1, t + 2)            # y14-15
+    t = slope(c, 3, t + 3, 2)             # y16
+    crown(c, t + 1)                        # y17-20
+    return c
+
+
+def option_b2():
+    """B, round 2: the hall skirt (lip 7, half-block slope, a deep soffit) and a tower with two widely spaced roofs
+    (lips 4 and 3) instead of four tight ones, storeys 3-4 tall, a crown."""
+    c = Canvas()
+    base(c)
+    storey(c, 5, 2, 4)
+    t = slope(c, 7, 5, 4)                 # y5-6
+    storey(c, 2, t + 1, t + 4)            # y7-10
+    t = slope(c, 4, t + 5, 3)             # y11-12
+    storey(c, 1, t + 1, t + 3)            # y13-15
+    t = slope(c, 3, t + 4, 2)             # y16
+    crown(c, t + 1)                        # y17-20
+    return c
+
+
 if __name__ == "__main__":
     out = sys.argv[1]
-    for tag, fn in (("a", option_a), ("b", option_b), ("c", option_c)):
+    opts = (("a", option_a), ("b", option_b), ("c", option_c), ("a2", option_a2), ("b2", option_b2))
+    for tag, fn in opts:
         c = fn()
         print(tag, "blocks", sum(1 for v in c.b.values() if v[0] != "air"),
               "top", max(q[1] for q in c.b))
