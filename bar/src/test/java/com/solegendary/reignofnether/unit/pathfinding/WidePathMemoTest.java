@@ -1,13 +1,17 @@
 package com.solegendary.reignofnether.unit.pathfinding;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.pathfinder.Path;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** When a wide unit's failed full-range search answers again (WidePathMemo), and when it must not. */
@@ -59,5 +63,37 @@ class WidePathMemoTest {
         from.move(10, 0, 0);
         target.move(0, 0, 5);
         assertTrue(m.failedLately(FROM, TARGETS, 1), "the memo keeps where it was searched, not the caller's cursor");
+    }
+
+    // Oct 31 (lovish's game 03:14, headhunters): any unit's failed search answers again for REPEAT_TICKS
+
+    static Path partial() {
+        return new Path(List.of(), new BlockPos(20, 74, 10), false);
+    }
+
+    @Test
+    void aFailedSearchOfAnyRangeIsHandedBackForASecond() {
+        WidePathMemo m = new WidePathMemo();
+        Path p = partial();
+        assertNull(m.repeatOf(FROM, TARGETS, 0), "nothing searched yet");
+        m.searched(FROM, TARGETS, 100, p);
+        assertEquals(1, m.searches);
+        assertSame(p, m.repeatOf(FROM, TARGETS, 100));
+        assertSame(p, m.repeatOf(FROM.offset(1, 0, 0), Set.of(new BlockPos(21, 74, 11)), 100 + WidePathMemo.REPEAT_TICKS - 1),
+            "about the same spot and targets");
+        assertNull(m.repeatOf(FROM, TARGETS, 100 + WidePathMemo.REPEAT_TICKS), "a second later it searches again");
+        assertNull(m.repeatOf(FROM.offset(WidePathMemo.NEAR + 1, 0, 0), TARGETS, 101), "walked off");
+        assertNull(m.repeatOf(FROM, Set.of(new BlockPos(40, 74, 10)), 101), "another target");
+    }
+
+    @Test
+    void aCompletePathOrNoPathIsNeverHandedBack() {
+        WidePathMemo m = new WidePathMemo();
+        m.searched(FROM, TARGETS, 0, partial());
+        m.searched(FROM, TARGETS, 1, new Path(List.of(), new BlockPos(20, 74, 10), true));
+        assertNull(m.repeatOf(FROM, TARGETS, 2), "a way was found: search as usual");
+        m.searched(FROM, TARGETS, 3, null);
+        assertNull(m.repeatOf(FROM, TARGETS, 4), "vanilla's no-path answer is not held");
+        assertEquals(3, m.searches);
     }
 }
