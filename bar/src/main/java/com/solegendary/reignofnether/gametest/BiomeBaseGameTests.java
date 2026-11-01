@@ -690,7 +690,7 @@ public class BiomeBaseGameTests {
                 }
             }
             if (maxX != box[0] || maxY != box[1] || maxZ != box[2])
-                problems.add(b.structureName + ": box " + maxX + "/" + maxY + "/" + maxZ + ", RoN's is " + box[0] + "/" + box[1] + "/" + box[2]);
+                problems.add(b.structureName + ": box " + maxX + "/" + maxY + "/" + maxZ + ", its box is " + box[0] + "/" + box[1] + "/" + box[2]);
             if (b.getBuildTimeBlocks() != ronBlocks)
                 problems.add(b.structureName + ": buildTimeBlocks " + b.getBuildTimeBlocks() + ", its build-time block count is " + ronBlocks);
             if (nonAir <= ronBlocks)
