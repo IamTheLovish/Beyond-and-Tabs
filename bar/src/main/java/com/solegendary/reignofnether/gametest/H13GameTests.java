@@ -239,7 +239,11 @@ public class H13GameTests {
     }
 
     /** AC-3: a Shaman trained the real way (item completion) spawns at level 3 holding exactly 3 ability points. */
-    @GameTest(template = ARENA, timeoutTicks = 80)
+    // own batch: any enemy unit dying within 20-28 blocks pays a hero XP at once (#419 kill XP, the commander burst),
+    // so a neighbouring arena's deaths land on this Shaman. After #362 re-laid the default batch, WinPays'
+    // commander_kill_gives_a_nearby_enemy_hero_400_xp killed its commander 17.6 blocks away at tick 4: 400 burst +
+    // 50 kill XP = "experience 1250, not 800" on every main run from 6436eb6f (XP trail, PR 473 run 41248146752)
+    @GameTest(template = ARENA, timeoutTicks = 80, batch = "h13_shaman_level_alone")
     public static void h13_shaman_spawns_at_level_three_with_three_points(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "level");
