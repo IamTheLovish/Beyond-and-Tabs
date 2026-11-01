@@ -25,14 +25,14 @@ rounds (PR #481; baseline critics 4 / 4: "a mossy garden lost in grass", "a leaf
 curtain two cells deep on the north edge, a strip from above): ONE CHERRY CROWN on a dark trunk standing on the
 NORTH-WEST (where the camera sees its trunk, roots and face), the old shrine's stones on the EAST, the glade open to
 the west and the south - the way units leave (grove_frees_its_units sends them to the far -x / +z corner).
-  L1 THE STAG GLADE - the Mother Tree (dark oak, one value; x 1..3, z 0..2) with buttress roots flaring down the west
+  L1 THE STAG GLADE - the Mother Tree (stripped dark oak, one dark-mid value; x 1..3, z 0..2) with buttress roots flaring down the west
      fringe, toward the camera over a podzol root bed and along the north band; its crown three unequal lobes - the
-     high one over the trunk, a lower one out east over the shrine on a bough, a small one leaning to the camera - every
-     leaf open to the sky or a side is cherry (the capitol's crown), the underside a dark oak-leaf hem with ochre fruit.
-     The STAG-DRYAD looks south from the trunk: a birch snout and mask, verdant froglight eyes, dark-oak brows, birch
+     high one over the trunk, a lower one out east resting on the shrine's pier, a small one leaning to the camera -
+     every leaf open to the sky or a side is cherry (the capitol's crown), the underside a dark oak-leaf hem.
+     The STAG-DRYAD looks south from the trunk: a birch snout and mask, dark eye sockets, dark-oak brows, birch
      burrs and antlers rising into the leaning lobe. The shrine: a broken pier (chiseled foot, mossy / cracked courses,
      a jagged top with a lantern) and a wall fragment stepping down the east edge. Floor: quiet mossy flagstones in a
-     stone kerb (the plot owns its edge), verdant froglight on the two spawn cells.
+     stone kerb (the plot owns its edge), chiseled stones on the two spawn cells; one light, the pier's lantern.
   L2 THE ROOTED COURT - the trunk climbs into an upper tier over the crown (the high point 16), the pier rises into the
      shrine tower (a lancet, a jutting cornice, a lantern), the antlers climb through the leaning lobe.
   L3 THE ELDER GROVE - the trunk climbs again into a cherry crown (the high point 21), the tower's lancet glows and a
@@ -147,7 +147,8 @@ class Rig(gs._SunRig):
 
 # ======================================================================================================== L1
 TOP_L1, TOP_L2, TOP_L3 = 13, 17, 23     # each level's highest row (box heights 14, 18, 24)
-BARK, BARK_W, BARK_S = "dark_oak_log", "dark_oak_wood", "dark_oak_stairs"   # one dark value (oak bark read as a chequer)
+BARK, BARK_W, BARK_S = "stripped_dark_oak_log", "stripped_dark_oak_wood", "dark_oak_stairs"   # one dark-mid value
+# (oak bark read as a chequer, dark oak bark as a black lattice: critics, rounds 2 and 3)
 HEM = "dark_oak_leaves"                  # the crown's underside
 TRUNK = ((1, 0), (2, 0), (1, 1), (2, 1), (1, 2), (2, 2), (3, 0), (3, 1))   # the tree stands on the north-west
 ROOT_BED = ((0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (0, 4), (1, 4), (2, 3))  # podzol / moss under the west roots
@@ -166,7 +167,7 @@ def ground_l1(r):
             h = hsh(x, z)
             edge = x in (0, SX - 1) or z in (0, SZ - 1)
             if (x, z) in CENTRE:
-                r.set(x, 0, z, GLOW, axis="y")
+                r.set(x, 0, z, CHB)                          # the spawn stones (a lit tile read as a skylight)
             elif (x, z) in ROOT_BED:
                 name = ("podzol", "rooted_dirt", "podzol", "moss_block")[h % (2 if edge else 4)]
                 r.set(x, 0, z, name, **({"snowy": "false"} if name == "podzol" else {}))
@@ -221,7 +222,7 @@ def mask_l1(r, y0=4):
     for x in (1, 2):
         r.st(x, y0, 3, "north", "top", name=BIRCH_S)       # the snout, hollowed under
         r.log(x, y0 + 1, 3, name=BIRCH_W)                  # the muzzle
-        r.set(x, y0 + 2, 3, GLOW, axis="y")                # the eyes
+        r.log(x, y0 + 2, 3, name=BARK)                     # the eyes, dark sockets (lit, the mask read as a lamp)
         r.st(x, y0 + 3, 3, "north", "top", name=DOS)       # the brows
         r.log(x, y0 + 4, 3, name=BIRCH)                    # the burrs
     for (x, y) in ((0, y0 + 4), (0, y0 + 5), (3, y0 + 4), (3, y0 + 5)):   # the antlers' beams
@@ -252,7 +253,7 @@ def lobes(r, specs, y_lo, y_hi):
 def shell(r):
     """The crown's colours by exposure: a leaf open to the sky or to a side is CHERRY (the capitol's crown, the lab's
     read against the lawn); one open only below is the dark HEM (the underside in shadow, a dark line under the pink
-    in 3/4), with ochre fruit glowing in it here and there; the inside stays azalea."""
+    in 3/4); the inside stays azalea. No fruit: a lit row under the lobe read as "teeth" / "windows" (round 3)."""
     leaves = [p for p, (n, _) in r.b.items() if n.endswith("_leaves")]
 
     def air(q):
@@ -269,22 +270,21 @@ def shell(r):
         else:
             name = FLEAF if hsh(x + y, z) % 4 == 0 else LEAF
         r.set(x, y, z, name, persistent="true", distance="7", waterlogged="false")
-    for (x, y, z) in leaves:                     # fruit in the hem (never a lone light on top)
-        if r.get(x, y, z)[0] == HEM and hsh(x * 7 + y, z * 3) % 7 == 0 and r.get(x, y + 1, z)[0].endswith("_leaves"):
-            r.set(x, y, z, FRUIT, axis="y")
 
 
 def shrine_l1(r):
-    """The old shrine east of the tree, two unequal masses: a broken pier (x 7..8, z 4) with a chiseled foot, mossy and
-    cracked courses, a jagged top and a lantern on it; and a wall fragment down the east edge (x 8, z 5..7) stepping
-    down 3, 2, 1 with stair copings."""
+    """The old shrine east of the tree, two unequal masses: a broken pier (x 7..8, z 3..4) under the east lobe - the
+    crown rests on it, tree and shrine one gate over the glade - with a chiseled foot, mossy and cracked courses, a
+    jagged top and a lantern on its front corner; and a wall fragment down the east edge (x 8, z 5..7) stepping down
+    4, 3, 2 with stair copings."""
     for x in (7, 8):
-        r.set(x, 1, 4, CHB)
-        for y in range(2, 7):
-            r.set(x, y, 4, MSB if hsh(x * 5 + y, 4 + y) % 3 else CSB)
-    r.set(8, 7, 4, CSB)                                  # the jagged top
-    r.lantern(7, 7, 4)
-    for z, h in ((5, 3), (6, 2), (7, 1)):
+        for z in (3, 4):
+            r.set(x, 1, z, CHB)
+            for y in range(2, 8):
+                r.set(x, y, z, MSB if hsh(x * 5 + y, z + y) % 3 else CSB)
+    r.set(8, 8, 4, CSB)                                  # the jagged top
+    r.lantern(7, 8, 4)
+    for z, h in ((5, 4), (6, 3), (7, 2)):
         for y in range(1, h):
             r.set(8, y, z, MSB if (y + z) % 3 else CSB)
         r.st(8, h, z, "north", name=MSS)
@@ -309,7 +309,7 @@ def tower_l2(r):
     """The pier rises into a tower (x 7..8, z 4..5) to y 10: courses, a lancet slot on the south face, a jutting cornice
     of upside-down stairs and a lantern on the top."""
     for x in (7, 8):
-        for z in (4, 5):
+        for z in (3, 4, 5):
             for y in range(1, 10):
                 r.set(x, y, z, CHB if y == 1 else (MSB if hsh(x * 5 + y, z + y) % 3 else CSB))
     for y in (4, 5, 6):
