@@ -186,7 +186,7 @@ public class IllagerWaveSpawner {
                 entities.get(i).moveTo(bps.get(i).getX(), entities.get(i).getY() + 0.5f, bps.get(i).getZ());
         }
         if (remainingPop > 0) {
-            PlayerServerEvents.sendMessageToAllPlayers("Failed to spawn " + remainingPop + "/" + pop + " population worth of villager units");
+            PlayerServerEvents.sendMessageToAllPlayers("Failed to spawn " + remainingPop + "/" + pop + " of the wave's strength in villager units");
         }
         lastFaction = Factions.VILLAGERS;
     }

@@ -52,7 +52,7 @@ public class ProductionPlacement extends BuildingPlacement {
     protected ArrayList<BlockPos> rallyPoints = new ArrayList<>();
     protected LivingEntity rallyPointEntity;
     public List<Button> productionButtons;
-    // counts its changes, so the per-tick queue population (QueuePopulation) is never stale
+    // counts its changes, so a per-tick cache over the queues is never stale
     public final List<ActiveProduction> productionQueue = new ProductionQueueList<>();
     /**
      * Depth of one building's production queue (BAR factories take a long queue; RoN had no cap at all, so a held
@@ -259,20 +259,10 @@ public class ProductionPlacement extends BuildingPlacement {
             probe.type = entityType;
             return null;
         }
-        ProductionBuilding building = (ProductionBuilding) getBuilding();
-        BlockPos spawnPoint;
-        if (spawnIndoors) {
-            spawnPoint = getIndoorSpawnPoint(level);
-        }
-        else if (!rallyPoints.isEmpty())
-            spawnPoint = getClosestGroundPos(rallyPoints.get(0), (int) building.spawnRadiusOffset);
-        else if (rallyPointEntity != null)
-            spawnPoint = getClosestGroundPos(rallyPointEntity.getOnPos(), (int) building.spawnRadiusOffset);
-        else
-            spawnPoint = getDefaultOutdoorSpawnPoint();
+        BlockPos spawnPoint = spawnIndoors ? getIndoorSpawnPoint(level) : outdoorSpawnPoint();
 
         spawnPoint = spawnPoint.offset(spawnOffset);
-        BlockPos safe = fittingSpawnCell(level, spawnPoint, entityType);
+        BlockPos safe = spawnCell(level, spawnPoint, entityType, spawnOffset, true);
         boolean roof = safe == null;
         if (roof) {
             safe = roofSpawnCell();
@@ -314,6 +304,42 @@ public class ProductionPlacement extends BuildingPlacement {
         return entity;
     }
 
+    /** Where an outdoor unit is raised: beside the footprint nearest the rally point (or rally entity), else the corner. */
+    private BlockPos outdoorSpawnPoint() {
+        int offset = (int) ((ProductionBuilding) getBuilding()).spawnRadiusOffset;
+        if (!rallyPoints.isEmpty())
+            return getClosestGroundPos(rallyPoints.get(0), offset);
+        if (rallyPointEntity != null)
+            return getClosestGroundPos(rallyPointEntity.getOnPos(), offset);
+        return getDefaultOutdoorSpawnPoint();
+    }
+
+    /**
+     * A cell outside the footprint for a unit whose cell inside has no way out: the outdoor spawn point (rally side),
+     * then the middle of each side nearest it - the first the body fits in, outside the footprint, that it can walk
+     * away from. Null if there is none.
+     */
+    @Nullable
+    private BlockPos outsideSpawnPoint(ServerLevel level, EntityType<?> type, Vec3i spawnOffset) {
+        BlockPos wanted = outdoorSpawnPoint().offset(spawnOffset);
+        List<BlockPos> candidates = new ArrayList<>(5);
+        candidates.add(wanted);
+        candidates.addAll(sideSpawnPoints(type, wanted));
+        for (BlockPos c : candidates) {
+            BlockPos s = safeSpawnPoint(level, c, type);
+            if (s != null && !BuildingUtils.isPosInsideAnyBuilding(false, s)
+                    && com.solegendary.reignofnether.unit.UnitUnstick.leavesFootprint(level, s, minCorner, maxCorner))
+                return s;
+        }
+        return null;
+    }
+
+    // a harbour's ship is raised in water on purpose; the ground-move rules of leavesFootprint are not its rules
+    private static boolean inWater(ServerLevel level, BlockPos cell) {
+        return com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, cell.getX(), cell.getY(),
+            cell.getZ()) == com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER;
+    }
+
     /**
      * The cell produceUnit puts a body of this type in for a wanted spawn point (the exit arrow asks the same): the
      * spawn safety net's cell; for a wide body (the War Mammoth is 3.3 across) that fits nowhere near the corner or the
@@ -329,6 +355,31 @@ public class ProductionPlacement extends BuildingPlacement {
                 if (safe != null)
                     break;
             }
+        }
+        return safe;
+    }
+
+    /**
+     * The cell produceUnit raises a body in (the exit arrow asks the same, so the two cannot drift): fittingSpawnCell,
+     * moved outside when that cell has no way out of the building. Null when nothing fits (then the roof).
+     */
+    @Nullable
+    private BlockPos spawnCell(ServerLevel level, BlockPos spawnPoint, EntityType<?> entityType, Vec3i spawnOffset, boolean logTrapped) {
+        BlockPos safe = fittingSpawnCell(level, spawnPoint, entityType);
+        if (safe != null && !inWater(level, safe)
+                && !com.solegendary.reignofnether.unit.UnitUnstick.leavesFootprint(level, safe, minCorner, maxCorner)) {
+            // "stuck units in the graveyard" (lovish, Oct 22 20:23): a cell inside the building with no way out of it.
+            // The Graveyard raises its units in a walled yard whose one gate, two blocks wide, any building placed
+            // flush against it (buildings may touch) or a 2-block bank outside it closes off; the yard is too big for
+            // the pocket rule above or UnitUnstick to call it a trap, so every unit stood in it for good
+            // (GraveyardExitGameTests). Interiors are allowed, trapped units are not (design/LANES.md, Oct 20): it is
+            // raised outside instead, on the rally side.
+            BlockPos out = outsideSpawnPoint(level, entityType, spawnOffset);
+            if (out != null)
+                safe = out;
+            else if (logTrapped)
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("A {} raised in {} at {} has no way out of it, and no cell outside fits it",
+                        EntityType.getKey(entityType), getBuilding().name, originPos.toShortString());
         }
         return safe;
     }
@@ -428,7 +479,7 @@ public class ProductionPlacement extends BuildingPlacement {
         BlockPos p = exitNominalPos(serverLevel, spec.indoors(), spec.offset());
         if (!safe)
             return p;
-        BlockPos cell = fittingSpawnCell(serverLevel, p, spec.type());
+        BlockPos cell = spawnCell(serverLevel, p, spec.type(), spec.offset(), false);
         return cell != null ? cell : roofSpawnCell();
     }
 
@@ -762,19 +813,10 @@ public class ProductionPlacement extends BuildingPlacement {
                         ResourcesServerEvents.addSubtractResources(Resources.emeralds(ownerName, -emeraldCost));
                     success = true;
                 }
-                else {
-                    if (!prodItem.isBelowMaxPopulation(this))
-                        ResourcesClientboundPacket.warnMaxPopulation(ownerName);
-                    else if (!prodItem.canAffordPopulation(this)) {
-                        if (prodItem instanceof GraveyardUnitProductionItem && this instanceof GraveyardPlacement gy && gy.getUpgradeLevel() > 0) {
-                            ResourcesClientboundPacket.warnFullGraveyard(ownerName);
-                        } else {
-                            ResourcesClientboundPacket.warnInsufficientPopulation(ownerName);
-                        }
-                    }
-                    else if (!ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald))
-                        // only emeralds are still paid upfront; metal and energy never block queueing
-                        ResourcesClientboundPacket.warnInsufficientResources(ownerName, true, true, true, false);
+                else if (!ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald)) {
+                    // only emeralds are still paid upfront; metal and energy never block queueing, and there is no
+                    // population limit (lovish, Oct 29)
+                    ResourcesClientboundPacket.warnInsufficientResources(ownerName, true, true, true, false);
                 }
             }
         }

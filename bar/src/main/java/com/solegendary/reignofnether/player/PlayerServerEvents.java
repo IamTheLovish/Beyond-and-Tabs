@@ -149,7 +149,7 @@ public class PlayerServerEvents {
     // modifythephasevariance - ignore building requirements
     // medievalman - get all research (cannot reverse)
     // greedisgood X - gain X of each resource
-    // foodforthought - ignore soft population caps
+    // foodforthought - kept for old scripts and tests; inert (there is no population cap - lovish, Oct 29)
     // thereisnospoon - allow changing survival wave by clicking the wave indicator and using debug commands
     // slipslopslap - monster units are unaffected by sunlight
     // wouldyoukindly - allow control of non-unit mobs in RTS mode
@@ -194,7 +194,6 @@ public class PlayerServerEvents {
                     break;
                 }
             }
-            UnitServerEvents.maxPopulation = level.getGameRules().getInt(GameRuleRegistrar.MAX_POPULATION);
 
             level.getGameRules().getRule(RULE_DISABLE_ELYTRA_MOVEMENT_CHECK).set(true, evt.getServer());
         }
@@ -987,7 +986,6 @@ public class PlayerServerEvents {
                 playerName.equalsIgnoreCase("altsolegendary"))
             ) {
                 ResourcesServerEvents.addSubtractResources(new Resources(playerName, 99999, 99999, 99999));
-                UnitServerEvents.maxPopulation = 99999;
                 enableAllCheats(playerName);
                 evt.setCanceled(true);
                 sendMessageToAllPlayers("server.reignofnether.all_cheats", false, playerName);
@@ -1354,6 +1352,16 @@ public class PlayerServerEvents {
         if (!isSandboxOrScenario)
             for (BuildingPlacement building : BuildingServerEvents.getBuildings())
                 building.ownerName = "";
+
+        // nothing the match dropped outlives it: loose items and experience orbs (lovish's Oct 29 game left ~1,300
+        // items and 2,600 entities in all, 8.9 ms of every tick of the lobby after it; perf survey Oct 30)
+        if (!isSandboxOrScenario) {
+            List<net.minecraft.world.entity.Entity> loose = new ArrayList<>();
+            for (net.minecraft.world.entity.Entity e : serverLevel.getAllEntities())
+                if (e instanceof net.minecraft.world.entity.item.ItemEntity || e instanceof net.minecraft.world.entity.ExperienceOrb)
+                    loose.add(e);
+            loose.forEach(net.minecraft.world.entity.Entity::discard);
+        }
 
         ResearchServerEvents.removeAllResearch();
         ResearchServerEvents.removeAllCheats();

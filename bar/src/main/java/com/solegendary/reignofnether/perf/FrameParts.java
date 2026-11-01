@@ -65,13 +65,17 @@ public final class FrameParts {
     public static final int MARKERS_MAPWORLD = 24; // MapClient.renderWorld
     public static final int MARKERS_RANGE_REFRESH = 25;  // BlockClientEvents.refreshRangeSubsets
     public static final int MARKERS_RANGE_UNITS = 26;    // BlockClientEvents: the rangeUnits loop
-    public static final int FRAME_SECTIONS = 27;
+    // Oct 31: lovish's Oct 29 profiles had vanilla's level>entities "unspecified" at 4.2-4.4 ms a frame with 500+ units,
+    // the unit bodies only 1.2-2.3 ms of it. EntityShadowMixin draws every entity's round shadow at full strength in the
+    // RTS view (units, items, orbs): a block box walked per entity. Timed here so the next log says what it costs.
+    public static final int ENTITY_SHADOWS = 27;   // EntityRenderDispatcher.renderShadow, every entity (EntityShadowMixin)
+    public static final int FRAME_SECTIONS = 28;
     // client-tick sections, timed per client tick
-    public static final int UNIT_TICK = 27;        // Unit.tick on the client
-    public static final int SECTIONS = 28;
+    public static final int UNIT_TICK = 28;        // Unit.tick on the client
+    public static final int SECTIONS = 29;
 
     static final String[] NAMES = { "unitOverlays", "buildingBoxes", "strategicIcons", "minimap", "hud", "unitBodies",
-            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "markersLine", "markersGrid", "markersChunks", "markersMap", "markersDraw", "markersFloatText", "markersWreck", "markersStartPos", "markersGate", "markersMapWorld", "markersRangeRefresh", "markersRangeUnits", "unitTick" };
+            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "markersLine", "markersGrid", "markersChunks", "markersMap", "markersDraw", "markersFloatText", "markersWreck", "markersStartPos", "markersGate", "markersMapWorld", "markersRangeRefresh", "markersRangeUnits", "entityShadows", "unitTick" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)

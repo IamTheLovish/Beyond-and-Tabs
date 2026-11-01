@@ -47,7 +47,7 @@ public class SculkCatalyst extends Building implements NightSourceAddon, RangeIn
 
     public SculkCatalyst() {
         super(structureName, cost, false);
-        // BAR economy: population buildings double as small energy generators
+        // BAR economy: a small energy generator (it gave population once; no supply now - lovish, Oct 29)
         this.energyIncome = 5f;
         this.name = buildingName;
         this.portraitBlock = Blocks.SCULK_CATALYST;
@@ -83,13 +83,10 @@ public class SculkCatalyst extends Building implements NightSourceAddon, RangeIn
                 "modifythephasevariance"),
             List.of(Component.translatable("buildings.reignofnether.sculk_catalyst").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPop(cost),
                 FormattedCharSequence.EMPTY,
                 Component.translatable("buildings.reignofnether.sculk_catalyst.tooltip1").getVisualOrderText(),
-                Component.translatable("buildings.reignofnether.sculk_catalyst.tooltip2", MIN_NIGHT_RANGE).getVisualOrderText(),
-                FormattedCharSequence.EMPTY,
-                Component.translatable("buildings.reignofnether.sculk_catalyst.tooltip3").getVisualOrderText()
-            ),
+                Component.translatable("buildings.reignofnether.sculk_catalyst.tooltip2", MIN_NIGHT_RANGE).getVisualOrderText()
+            ),   // (no "provides 12 population supply" line: no supply - lovish, Oct 29)
             this
         );
     }

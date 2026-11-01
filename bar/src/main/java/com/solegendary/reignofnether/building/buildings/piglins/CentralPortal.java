@@ -69,7 +69,6 @@ public class CentralPortal extends ProductionBuilding implements NetherConvertin
                 List.of(
                         Component.translatable("buildings.reignofnether.central_portal").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         ResourceCosts.getFormattedCost(cost),
-                        ResourceCosts.getFormattedPop(cost),
                         FormattedCharSequence.forward("", Style.EMPTY),
                         Component.translatable("buildings.reignofnether.central_portal.tooltip1").getVisualOrderText()
                 ),

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit.goals;
 
 import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
+import com.solegendary.reignofnether.unit.HeldBlow;
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.KeyframeAnimated;
@@ -46,7 +47,11 @@ public class MeleeWindupAttackUnitGoal extends AbstractMeleeAttackUnitGoal {
                 if (windupTicksLeft <= 0) {
                     this.ticksUntilNextAttack = this.adjustedTickDelay(getAttackInterval());
                     this.mob.swing(InteractionHand.MAIN_HAND);
-                    this.mob.doHurtTarget(target);
+                    // the reach again, with HeldBlow's tolerance: once a wind-up starts it runs to its end wherever the
+                    // target goes, and a target that walked off during it must not be struck from across the field
+                    double reach = Math.sqrt(d) + HeldBlow.REACH_TOLERANCE;
+                    if (distSqr <= reach * reach)
+                        this.mob.doHurtTarget(target);
                     windupTicksLeft = kfa.getAttackWindupTicks();
                 }
             }

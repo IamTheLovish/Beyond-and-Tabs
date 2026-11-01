@@ -385,7 +385,9 @@ public interface Unit {
                 // an enemy that went under cover can't be tailed: stop where we were heading (last seen position)
                 if (com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(unit.getFollowTarget(), unit.getOwnerName()))
                     unit.setFollowTarget(null);
-                else
+                // a support unit holding its standoff behind a fight stays there (SupportBrain.idleBehind): the walk to
+                // its leader's block took it into the fight
+                else if (!(unit instanceof SupportUnit su && su.getSupportState().holdsBehind(unitMob.level().getGameTime())))
                     unit.setMoveTarget(unit.getFollowTarget().blockPosition());
             }
         }
@@ -436,6 +438,9 @@ public interface Unit {
         if (!unitMob.level().isClientSide())
             com.solegendary.reignofnether.unit.Terrain.tick(unitMob);
         if (!unitMob.level().isClientSide() && !possessed) {
+            // the first step or turn answering an order goes to the players at once, not on the tracker's 3-tick beat
+            // (before Separation below, which may push the unit: only its own movement this tick counts)
+            com.solegendary.reignofnether.unit.OrderAck.tick(unitMob);
             // each of these is a named section for the profiler and the [Sys] line (perf/Sys)
             // frees a unit trapped in a block or a basin (cheap: one check per unit every 2 s, see UnitUnstick)
             int sysUnstick = Sys.begin(Sys.UNSTICK);

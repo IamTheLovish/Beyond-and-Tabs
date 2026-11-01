@@ -155,7 +155,7 @@ public class BuildingServerEvents {
     private static final BuildingList buildings = new BuildingList();
     private static final BuildingGrid buildingGrid = new BuildingGrid(buildings);
     
-    public static Object2IntArrayMap<String> populations = new Object2IntArrayMap<>();
+    public static Object2IntArrayMap<String> unitCounts = new Object2IntArrayMap<>();   // the "resources.units" scoreboard
     public static final ArrayList<NetherZone> netherZones = new ArrayList<>();
 
     public static ArrayList<BuildingPlacement> getBuildings() {
@@ -453,26 +453,6 @@ public class BuildingServerEvents {
                     return null;
                 }
                 builderUnitIds = withRoom;
-            }
-
-            // Handle special building (Iron Golem)
-            if (newBuilding.getBuilding() instanceof IronGolemBuilding) {
-                int currentPop = UnitServerEvents.getCurrentPopulation(ownerName);
-                int popSupply = BuildingServerEvents.getTotalPopulationSupply(ownerName);
-
-                boolean canAffordPop = false;
-                for (Resources resources : ResourcesServerEvents.resourcesList) {
-                    if (resources.ownerName.equals(ownerName)
-                            && (currentPop + ResourceCosts.IRON_GOLEM.population) <= popSupply) {
-                        canAffordPop = true;
-                        break;
-                    }
-                }
-                if (!canAffordPop && !fromCommand) {
-                    ResourcesClientboundPacket.warnInsufficientPopulation(ownerName);
-                    FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
-                    return null;
-                }
             }
 
             // BAR flow economy: no upfront payment and no affordability check. The building is paid for while it
@@ -885,20 +865,6 @@ public class BuildingServerEvents {
         building.destroy((ServerLevel) building.getLevel());
     }
 
-    public static int getTotalPopulationSupply(String ownerName) {
-        // BAR has no supply buildings - just a unit cap. Everyone gets the full cap (gamerule maxPopulation).
-        if (true) {
-            return UnitServerEvents.maxPopulation;
-        }
-
-        int totalPopulationSupply = 0;
-        for (BuildingPlacement building : buildings)
-            if (building.ownerName.equals(ownerName) && building.isBuilt) {
-                totalPopulationSupply += building.getBuilding().cost.population;
-            }
-        return Math.min(UnitServerEvents.maxPopulation, totalPopulationSupply);
-    }
-
     // similar to BuildingClientEvents getPlayerToBuildingRelationship: given a Unit and Building, what is the
     // relationship between them
     public static Relationship getUnitToBuildingRelationship(Unit unit, BuildingPlacement building) {
@@ -1086,25 +1052,21 @@ public class BuildingServerEvents {
         String playerName;
         if (serverLevel.getServer().getTickCount() % 10 == 0) {
             for (Objective objective : serverLevel.getScoreboard().getObjectives()) {
-                if (objective.getCriteria().equals(ResourceObjectiveCriteria.POPULATION))
+                if (objective.getCriteria().equals(ResourceObjectiveCriteria.UNITS))
                     for (ServerPlayer player : serverLevel.players()) {
                         playerName = player.getName().getString();
-                        int currentPopulation = UnitServerEvents.getCurrentPopulation(playerName);
-                        if (serverLevel != null && currentPopulation != populations.getInt(playerName)) {
-                            populations.put(playerName, currentPopulation);
-	                        serverLevel.getScoreboard().forAllObjectives(ResourceObjectiveCriteria.POPULATION, playerName, (p_9178_) -> p_9178_.setScore(currentPopulation));
+                        int units = UnitServerEvents.getUnitCount(playerName);
+                        if (serverLevel != null && units != unitCounts.getInt(playerName)) {
+                            unitCounts.put(playerName, units);
+	                        serverLevel.getScoreboard().forAllObjectives(ResourceObjectiveCriteria.UNITS, playerName, (p_9178_) -> p_9178_.setScore(units));
                         }
                     }
             }
             
             for (BuildingPlacement bpl : getBuildings()) {
-                if (bpl instanceof GraveyardPlacement gy && gy.getUpgradeLevel() > 0 && gy.autoRelease) {
-                    playerName = gy.ownerName;
-                    int currentPop = UnitServerEvents.getCurrentPopulation(playerName);
-                    int popSupply = BuildingServerEvents.getTotalPopulationSupply(gy.ownerName);
-                    if (popSupply > currentPop)
-                        gy.releaseNextUnit();
-                }
+                // no population cap: a banked skull (only an old save has one) walks out unless the toggle holds it
+                if (bpl instanceof GraveyardPlacement gy && gy.getUpgradeLevel() > 0 && gy.autoRelease)
+                    gy.releaseNextUnit();
             }
         }
     }
@@ -1231,9 +1193,13 @@ public class BuildingServerEvents {
         }
     }
 
-    // prevent crops from becoming items when a farm is damaged
+    // prevent crops from becoming items when a farm is damaged, and a building's pieces when it loses blocks
     @SubscribeEvent
     public static void onItemDrop(EntityJoinLevelEvent evt) {
+        if (evt.getEntity() instanceof ItemEntity piece && BuildingDrops.suppress(piece)) {
+            evt.setCanceled(true);
+            return;
+        }
         if (evt.getEntity() instanceof ItemEntity ie && BuildingUtils.isPosInsideFarm(evt.getLevel().isClientSide(), ie.getOnPos())) {
             Item item = ie.getItem().getItem();
             if (List.of(Items.NETHER_WART, Items.WHEAT, Items.CARROT, Items.BEETROOT, Items.POTATO).contains(item)) {

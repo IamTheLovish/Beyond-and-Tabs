@@ -58,7 +58,8 @@ import java.util.Objects;
  * The Stormcallers essence caster, the Spark Sage (design/essence_casters.md, "Last three casters", revision-scaled;
  * lovish approved draft 2 on Oct 29: "one caster per race"). Written before the code, from the design's numbers:
  * <ul>
- *   <li>trained at the Celestial Observatory (Stormcallers T2 lab) once Tier 2 is researched, for a cost; an essence
+ *   <li>trained at the Lotus Academy (the Stormcallers T1 army lab) with no Tier 2 (lovish, Oct 29: casters are tier 1,
+ *       like rez bots), for a cost; an essence
  *       carrier (gathers the wisps within 8 blocks) with three spells and the shared Empower;</li>
  *   <li>Static Step: 5 essence, 12 s - a blink of up to 8 blocks to a visible, standable spot (the Thunder Sage's Blink
  *       rules); refused with no such spot;</li>
@@ -189,15 +190,20 @@ public class SparkSageGameTests {
     // ------------------------------------------------------------------------------------------- the unit
 
     /**
-     * The Celestial Observatory trains the Spark Sage, for a real cost (metal, energy, population), behind the Tier 2
-     * gate like the rest of the lab; the item makes a Spark Sage, a Stormcallers unit whose cost is the item's.
+     * The Lotus Academy (the Stormcallers T1 army lab) trains the Spark Sage for a real cost (metal, energy, population)
+     * with no Tier 2 - casters are tier 1, like rez bots (lovish, Oct 29) - and the Celestial Observatory (T2) no longer
+     * does; the item makes a Spark Sage, a Stormcallers unit whose cost is the item's.
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
-    public static void spark_sage_trains_at_the_celestial_observatory_for_a_cost(GameTestHelper helper) {
+    public static void spark_sage_trains_at_the_lotus_academy_for_a_cost(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
-        if (!Buildings.CELESTIAL_OBSERVATORY.productions.get().contains(ProductionItems.SPARK_SAGE))
-            problems.add("the Celestial Observatory does not offer the Spark Sage");
+        if (!Buildings.LOTUS_ACADEMY.productions.get().contains(ProductionItems.SPARK_SAGE))
+            problems.add("the Lotus Academy does not offer the Spark Sage");
+        if (Buildings.CELESTIAL_OBSERVATORY.productions.get().contains(ProductionItems.SPARK_SAGE))
+            problems.add("the Celestial Observatory (T2) still offers the Spark Sage");
+        if ((Object) ProductionItems.SPARK_SAGE instanceof com.solegendary.reignofnether.unit.units.storm.StormT2Prod)
+            problems.add("the Spark Sage's item is still a StormT2Prod (the Tier 2 gate)");
         ResourceCost cost = ResourceCosts.SPARK_SAGE;
         if (cost.metal() <= 0 || cost.energy() <= 0 || cost.population <= 0 || cost.ticks <= 0)
             problems.add("the Spark Sage costs " + cost.metal() + " metal, " + cost.energy() + " energy, " + cost.population
@@ -209,22 +215,20 @@ public class SparkSageGameTests {
 
         String me = owner(helper, "train");
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
-        BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.CELESTIAL_OBSERVATORY, level,
+        BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.LOTUS_ACADEMY, level,
             new BlockPos(corner.getX() + 2, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, me, false);
         Resources pool = new Resources(me, 0, 0, 0);
         ResourcesServerEvents.resourcesList.add(pool);
         Mob made = null;
         try {
             if (!(bp instanceof ProductionPlacement pp)) {
-                problems.add("no Celestial Observatory placement: " + bp);
+                problems.add("no Lotus Academy placement: " + bp);
             } else {
                 pp.isBuilt = true;
-                if (ProductionItems.SPARK_SAGE.getProduceErrorMsg(pp) == null)
-                    problems.add("the Spark Sage was offered without Tier 2");
-                ResearchServerEvents.addResearch(me, ProductionItems.RESEARCH_TIER_2);
+                ResearchServerEvents.removeAllResearchFor(me);   // no Tier 2
                 String err = ProductionItems.SPARK_SAGE.getProduceErrorMsg(pp);
                 if (err != null)
-                    problems.add("with Tier 2 the Spark Sage is refused: " + err);
+                    problems.add("without Tier 2 the Lotus Academy refuses the Spark Sage: " + err);
                 else if (!pp.startProductionItem(ProductionItems.SPARK_SAGE))
                     problems.add("the server refused to queue the Spark Sage");
                 pp.productionQueue.clear();
@@ -824,8 +828,8 @@ public class SparkSageGameTests {
     }
 
     /**
-     * lovish (Oct 29): the bots build and use all 7 casters. The Stormcallers bot kit trains the Spark Sage at its T2 lab
-     * (the Observatory), and a Sage as the bot gets it - autocast switches untouched - casts by itself: its three spells
+     * lovish (Oct 29): the bots build and use all 7 casters. The Stormcallers bot kit trains the Spark Sage at its T1 army
+     * lab (the Lotus Academy; casters are tier 1) and not at its T2 lab, and a Sage as the bot gets it - autocast switches untouched - casts by itself: its three spells
      * are on (Empower stays manual), and one AutoCaster look with 10 essence and an enemy 4 blocks off sparks it.
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
@@ -834,8 +838,10 @@ public class SparkSageGameTests {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         List<String> problems = new ArrayList<>();
         com.solegendary.reignofnether.bot.BotPlayer.Kit kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.STORMCALLERS);
-        if (kit == null || kit.t2Lab() != Buildings.CELESTIAL_OBSERVATORY || !kit.t2Army().contains(ProductionItems.SPARK_SAGE))
-            problems.add("the Stormcallers bot kit does not train the Spark Sage at the Celestial Observatory");
+        if (kit == null || kit.armyBuilding() != Buildings.LOTUS_ACADEMY || !kit.army().contains(ProductionItems.SPARK_SAGE))
+            problems.add("the Stormcallers bot kit does not train the Spark Sage at the Lotus Academy (its T1 army list)");
+        else if (kit.t2Army().contains(ProductionItems.SPARK_SAGE))
+            problems.add("the Stormcallers bot still queues the Spark Sage at its T2 lab");
         String me = owner(helper, "bot"), foe = owner(helper, "botfoe");
         // as trained: no AI switch-off, no autocast switch touched (HeroGameTests.spawnUnit, not still())
         Mob caster = HeroGameTests.spawnUnit(helper, EntityRegistrar.SPARK_SAGE_UNIT.get(), me, 4, 8);
@@ -880,7 +886,9 @@ public class SparkSageGameTests {
     /**
      * A bot's Spark Sage is not an attacker, so the bot's army list never holds it: the "healers follow the army" habit
      * (BotPlayer.verdantHabits, run for every faction's bot) must walk it to the army's centre, or it idles at its lab
-     * with no essence (PR 364 round 3 review). A Sage 17 blocks from the army is ordered to MOVE to the army's centre.
+     * with no essence (PR 364 round 3 review). A Sage 17 blocks from the army is ordered to the army's centre - by a
+     * Fight (ATTACK_MOVE), not a Move, since lovish's "stay behind units" (Oct 30): a Move ends a support unit's support
+     * order, a Fight keeps it behind the army's front.
      * The habit is package-private and the edit to BotPlayer is shared word for word by every caster PR, so the test
      * reaches it by reflection and reads the bot's orderListener hook.
      */
@@ -911,18 +919,21 @@ public class SparkSageGameTests {
                 List<net.minecraft.world.entity.LivingEntity> army = new ArrayList<>(List.of(fighter));
                 // minute 0, no home: only the follow-the-army part runs, not the choke picket
                 habits.invoke(bot, level, mine, army, new ArrayList<>(), new ArrayList<>(), 0L, 0L);
-                int moves = 0;
+                int fights = 0, moves = 0;
                 for (int i = 0; i < actions.size(); i++) {
-                    if (actions.get(i) != UnitAction.MOVE)
+                    if (actions.get(i) == UnitAction.MOVE)
+                        moves++;
+                    if (actions.get(i) != UnitAction.ATTACK_MOVE)
                         continue;
-                    moves++;
+                    fights++;
                     BlockPos t = targets.get(i);
                     if (Math.abs(t.getX() - fighter.getBlockX()) > 1 || Math.abs(t.getZ() - fighter.getBlockZ()) > 1)
                         problems.add("the bot sent its Sage to " + t.getX() + "," + t.getZ() + ", not to the army at "
                             + fighter.getBlockX() + "," + fighter.getBlockZ());
                 }
-                if (moves != 1)
-                    problems.add("the bot gave " + moves + " move orders for its Sage 15.6 blocks from the army, expected 1 (to the army's centre)");
+                if (fights != 1 || moves != 0)
+                    problems.add("the bot gave " + fights + " Fight and " + moves + " Move orders for its Sage 15.6 blocks"
+                        + " from the army, expected 1 Fight (to the army's centre) and no Move");
             } catch (ReflectiveOperationException | RuntimeException ex) {
                 problems.add("the bot's habits threw " + ex);
             } finally {

@@ -62,7 +62,7 @@ public class WardenProd extends ProductionItem implements IUnitProductionItem {
                 List.of(
                         Component.translatable("entity.reignofnether.warden_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         ResourceCosts.getFormattedCost(cost),
-                        ResourceCosts.getFormattedPopAndTime(cost),
+                        ResourceCosts.getFormattedTime(cost),
                         FormattedCharSequence.EMPTY,
                         Component.translatable("entity.reignofnether.warden_unit.tooltip1").getVisualOrderText()
                 ),
