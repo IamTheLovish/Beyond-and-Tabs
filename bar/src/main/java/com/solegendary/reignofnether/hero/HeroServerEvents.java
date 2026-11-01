@@ -63,7 +63,8 @@ public class HeroServerEvents {
             if (popCost > 0) {
                 for (LivingEntity unit : UnitServerEvents.getAllUnits()) {
                     boolean inRange = unit.distanceToSqr((LivingEntity) deadUnit) < HeroExperienceOrb.RANGE * HeroExperienceOrb.RANGE;
-                    if (unit instanceof HeroUnit heroUnit && inRange && heroUnit != evt.getEntity()) {
+                    // a fallen hero (its body stays in the unit list a moment) earns nothing: its record is written
+                    if (unit instanceof HeroUnit heroUnit && unit.isAlive() && inRange && heroUnit != evt.getEntity()) {
                         String heroOwner = ((Unit) heroUnit).getOwnerName();
                         String deadOwner = deadUnit.getOwnerName();
 
@@ -75,14 +76,19 @@ public class HeroServerEvents {
                             if (evt.getEntity() instanceof HeroUnit killedHero)
                                 expValue += killedHero.getHeroLevel() * 5;
 
-                            while (expValue > 0) {
-                                HeroExperienceOrb expOrb = HeroExperienceOrb.newOrb(level,
+                            // paid now, in full (design-draft-heroes-better #8): a point is 10 XP from a neutral, 5
+                            // from a player's unit - the orbs paid int(value / 2) each, so an odd last orb paid
+                            // nothing, and the XP was lost when the hero fell before its orbs reached it
+                            int xp = expValue * (deadOwner.isBlank() ? 10 : 5);
+                            heroUnit.addExperience(xp);
+                            HeroClientboundPacket.xpGained(((LivingEntity) heroUnit).getId(), heroOwner, xp);
+
+                            while (expValue > 0) {   // the orbs are the look of it now: they pay nothing
+                                HeroExperienceOrb expOrb = HeroExperienceOrb.visualOrb(level,
                                         heroUnit,
-                                        deadOwner.isBlank(),
                                         evt.getEntity().getX(),
                                         evt.getEntity().getY(),
-                                        evt.getEntity().getZ(),
-                                        expValue >= 2 ? 2 : 1
+                                        evt.getEntity().getZ()
                                 );
                                 expValue -= expValue >= 2 ? 2 : 1;
                                 evt.getEntity().level().addFreshEntity(expOrb);
@@ -128,6 +134,17 @@ public class HeroServerEvents {
                 }
             }
         }
+    }
+
+    /** A player left: the rank-up menu holds they had on their heroes end now (auto-learn goes on without them). */
+    @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent evt) {
+        if (evt.getEntity().level().isClientSide())
+            return;
+        String name = evt.getEntity().getName().getString();
+        for (LivingEntity le : UnitServerEvents.getAllUnits())
+            if (le instanceof FactionHero hero && name.equals(hero.getOwnerName()))
+                hero.heroCore().releaseRankMenu();
     }
 
     @SubscribeEvent

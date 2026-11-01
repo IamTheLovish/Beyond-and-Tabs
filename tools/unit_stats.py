@@ -78,6 +78,7 @@ ROSTER = [
     ('Verdant', 't2', 'verdant/WispChoirUnit', 'anti-air'),
     ('Verdant', 't2', 'verdant/ShadeRangerUnit', 'sniper'),
     ('Verdant', 't2', 'verdant/BloomPriestessUnit', 'support'),
+    ('Verdant', 't1', 'verdant/ThornweaverUnit', 'support'),
     ('Verdant', 't3', 'verdant/WorldTreeWalkerUnit', 'experimental'),
     # Tidewrought
     ('Tidewrought', 'worker', 'tide/ShipwrightUnit', 'builder'),

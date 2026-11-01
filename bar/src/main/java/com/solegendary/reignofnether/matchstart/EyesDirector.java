@@ -200,6 +200,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (HEROES_ONLY) {     // a heroes run (eyes.yml input `heroes`): only scene 19, then the end
+                        step = STEP_HEROES;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -264,6 +269,19 @@ public final class EyesDirector {
                     done = EyesOverlaysScene.tick(mc);
                 } catch (Exception e) {
                     ReignOfNether.LOGGER.error("[Eyes] 18_overlays failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
+            case STEP_HEROES -> {
+                boolean done;
+                try {
+                    done = EyesHeroesScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 19_heroes failed at tick {}, ending the tour", ticks, e);
                     done = true;
                 }
                 if (done) {
@@ -577,6 +595,8 @@ public final class EyesDirector {
     static final boolean FOG_ONLY = Boolean.getBoolean("bat.eyes.fog");   // eyes.yml input `fog`: 02, then 17 only
     static final int STEP_OVERLAYS = 23;          // 18_overlays, EyesOverlaysScene: its own run only (input `overlays`)
     static final boolean OVERLAYS_ONLY = Boolean.getBoolean("bat.eyes.overlays");
+    static final int STEP_HEROES = 24;            // 19_heroes, EyesHeroesScene: its own run only (input `heroes`)
+    static final boolean HEROES_ONLY = Boolean.getBoolean("bat.eyes.heroes");
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
     private static int scarsPhase = 0;
     private static long scarsNanos = 0;
@@ -884,6 +904,9 @@ public final class EyesDirector {
     //   15_<name>_rts_close the RTS camera zoomed in to the building's size
     //   15_<name>_34        a first-person 3/4 view from the south-west (the side the RTS camera sees), ~30 degrees
     //                       down, from ~1.5x the building's largest size
+    //   15_<name>_front     first person due south of it, looking north square at its south face, 8 degrees down,
+    //                       the whole width and height in frame (Oct 30 2026: slice 1's moulding blocks were judged
+    //                       only from cameras that saw the wall at 45 degrees and its roof)
     //   15_<name>_close     first person, standing 5 blocks from the footprint's middle (south-west first), eye height,
     //                       looking slightly down at the ground there, at noon: plants judged up close (round r34: the
     //                       _34 still is a far shot and its tufts are sub-pixel)
@@ -1051,6 +1074,10 @@ public final class EyesDirector {
             return;
         }
         String entry = STRUCTURES.get(structureIndex);
+        if (entry.startsWith(WORK_PREFIX)) {
+            sceneWork(mc, entry.substring(WORK_PREFIX.length()));
+            return;
+        }
         String label = "15_" + structureLabel(entry);
         if (ticks == 1 && structurePhase == 0) {
             // no birds or butterflies in the stills: round r34 had four birds in meadow_sampler_rts_close's measured
@@ -1135,8 +1162,7 @@ public final class EyesDirector {
                     ReignOfNether.LOGGER.warn("[Eyes] {}: the frame bench did not finish in 120 s", label);
                 // the view height the whole building needs under the RTS tilt: its footprint plus part of its height
                 // (run 39527167948: 1.3x the footprint cropped the 20-tall Temple of the Sun top and bottom)
-                int big = Math.max(structureSize.getX(), structureSize.getZ());
-                setZoom(Math.min(ZOOM_NORMAL - 4, Math.max(12, 1.25f * (big + 0.6f * structureSize.getY()))));
+                setZoom(closeZoom());
                 OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
                 nextPhase(3);
             }
@@ -1156,6 +1182,15 @@ public final class EyesDirector {
                 if (phaseSeconds() < 5)
                     return;
                 shot(mc, label + "_34");
+                standFront(mc);
+                nextPhase(13);
+            }
+            case 13 -> {   // 15_<name>_front, then the close still
+                if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
+                    standFront(mc);
+                if (phaseSeconds() < 5)
+                    return;
+                shot(mc, label + "_front");
                 // the close still: noon again (the day ran on through the stills before) and the camera among the plants
                 var noon = mc.getSingleplayerServer();
                 noon.execute(() -> noon.overworld().setDayTime(6000));
@@ -1355,6 +1390,238 @@ public final class EyesDirector {
             OrthoviewClientEvents.toggleEnable();
     }
 
+    /** The view height the whole structure needs under the RTS tilt: its footprint plus part of its height. */
+    private static float closeZoom() {
+        int big = Math.max(structureSize.getX(), structureSize.getZ());
+        return Math.min(ZOOM_NORMAL - 4, Math.max(12, 1.25f * (big + 0.6f * structureSize.getY())));
+    }
+
+    // ---- 15, work entries: a lab at work (building animations; eyes.yml `structure` entry "work:<building id>") ----
+    // lovish, Oct 30: stack smoke and lit windows while a lab produces. Both follow a real placement's production queue,
+    // so a `work:` entry places the real building (BuildingServerEvents.placeBuilding as a command, building itself 16
+    // blocks a tick), not stamped blocks, and photographs it from the RTS camera:
+    //   15_work_<id>_idle_rts, _idle_close   noon, nothing queued: no stack smoke, dark windows
+    //   15_work_<id>_work_close, _work_rts   noon, one unit queued (a 10-minute timer: none leaves mid-shot)
+    //   15_work_<id>_work_dusk               the close view at dusk (13000)
+    //   15_work_<id>_idle_dusk               the queue cleared, 10 s later: the smoke gone, the windows dark
+    // Each work entry gets its own pad, 40 blocks further east (a placement is never cleared from under itself). The
+    // [Parts] timing line (lit labs, window faces) and [FrameParts] BUILDING_PARTS give the frame cost.
+    static final String WORK_PREFIX = "work:";
+    static final float WORK_QUEUE_TICKS = 20 * 60 * 10;
+    private static volatile com.solegendary.reignofnether.building.BuildingPlacement workPlacement = null;
+    private static int workCount = 0;
+
+    private static void sceneWork(Minecraft mc, String id) {
+        String label = "15_work_" + id;
+        if (ticks == 1 && structurePhase == 0) {
+            if (siteCentre == null) {
+                siteCentre = structureSite(mc);
+                lightTheSite(mc);
+            }
+            structurePlaced = false;
+            structureError = null;
+            workPlacement = null;
+            workCount++;
+            // the dusk message ("Night falls...") lands over the building; the work stills are about the building
+            mc.options.chatVisibility().set(net.minecraft.world.entity.player.ChatVisiblity.HIDDEN);
+            BlockPos site = BlockPos.containing(ground(mc, siteCentre.getX() + 40 * workCount, siteCentre.getZ(), siteCentre.getY()));
+            OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(site));   // loads its chunks
+            placeWork(mc, id, site);
+            nextPhase(20);
+            return;
+        }
+        switch (structurePhase) {
+            case 20 -> {   // the server places the lab; it builds itself
+                if (structureError != null) {
+                    ReignOfNether.LOGGER.error("[Eyes] {}: {} - skipped", label, structureError);
+                    nextStructure(mc);
+                    return;
+                }
+                var client = structurePlaced ? workOnClient() : null;
+                if (client == null || !client.isBuilt) {
+                    if (phaseSeconds() > 90) {
+                        ReignOfNether.LOGGER.error("[Eyes] {}: the lab was not built after 90 s ({}) - skipped", label,
+                            client == null ? "no client placement" : "not built");
+                        nextStructure(mc);
+                    }
+                    return;
+                }
+                if (!OrthoviewClientEvents.isEnabled())
+                    OrthoviewClientEvents.toggleEnable();
+                mc.options.hideGui = true;
+                setZoom(ZOOM_NORMAL);
+                OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+                ReignOfNether.LOGGER.info("[Eyes] {}: built at {} ({}x{}x{})", label, structureOrigin.toShortString(),
+                    structureSize.getX(), structureSize.getY(), structureSize.getZ());
+                nextPhase(21);
+            }
+            case 21 -> {   // the last blocks land and the chunks re-mesh
+                if (phaseSeconds() < 8)
+                    return;
+                shot(mc, label + "_idle_rts");
+                workClose();
+                nextPhase(22);
+            }
+            case 22 -> {
+                if (phaseSeconds() < 4)
+                    return;
+                shot(mc, label + "_idle_close");
+                queueWork(mc, true);
+                nextPhase(23);
+            }
+            case 23 -> {   // the windows light within a second; the smoke column takes ~5 s to stand
+                if (phaseSeconds() < 8)
+                    return;
+                var client = workOnClient();
+                ReignOfNether.LOGGER.info("[Eyes] {}: client queue {}", label,
+                    client instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp
+                        ? pp.productionQueue.size() + " item(s)" : "unknown (no client production placement)");
+                shot(mc, label + "_work_close");
+                setZoom(ZOOM_NORMAL);
+                OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+                nextPhase(24);
+            }
+            case 24 -> {
+                if (phaseSeconds() < 4)
+                    return;
+                shot(mc, label + "_work_rts");
+                var server = mc.getSingleplayerServer();
+                server.execute(() -> server.overworld().setDayTime(13000));
+                workClose();
+                nextPhase(25);
+            }
+            case 25 -> {   // the client eases its sky toward the server's time: wait for it
+                long t = mc.level.getDayTime() % 24000;
+                boolean there = Math.abs(t - 13000) < 150;
+                if (!(there && phaseSeconds() > 3) && phaseSeconds() < 40)
+                    return;
+                if (!there)
+                    ReignOfNether.LOGGER.warn("[Eyes] {}_work_dusk: the client sky is at {} not 13000 after 40 s", label, t);
+                mc.gui.getChat().clearMessages(false);   // "Night falls..." would sit over the building (run 41123019484)
+                shot(mc, label + "_work_dusk");
+                queueWork(mc, false);
+                nextPhase(26);
+            }
+            case 26 -> {   // the queue cleared: the smoke in the air finishes, the windows go dark after their 20 ticks
+                if (phaseSeconds() < 10)
+                    return;
+                shot(mc, label + "_idle_dusk");
+                var server = mc.getSingleplayerServer();
+                server.execute(() -> server.overworld().setDayTime(6000));
+                nextStructure(mc);
+            }
+            default -> nextStructure(mc);
+        }
+    }
+
+    /**
+     * The work stills' close view: the building with room above it for its ~5-block smoke column (round 3's close view
+     * cut the Machine Shop's column off at the frame's top edge - critic round 2).
+     */
+    private static void workClose() {
+        setZoom(Math.min(ZOOM_NORMAL - 2, 1.2f * closeZoom()));
+        OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.5));
+    }
+
+    /** The work entry's placement as the client sees it (the smoke and the windows read this one). */
+    private static com.solegendary.reignofnether.building.BuildingPlacement workOnClient() {
+        var server = workPlacement;
+        if (server == null || server.originPos == null)
+            return null;
+        for (var p : com.solegendary.reignofnether.building.BuildingClientEvents.getBuildings())
+            if (server.originPos.equals(p.originPos))
+                return p;
+        return null;
+    }
+
+    /**
+     * On the server thread: the building by id, a pad for its structure's size (as placeStructure lays one) and the
+     * real placement, as a command (no cost, no workers) that builds itself fast. Sets structurePlaced or structureError.
+     */
+    private static void placeWork(Minecraft mc, String id, BlockPos site) {
+        var server = mc.getSingleplayerServer();
+        String me = mc.player.getName().getString();
+        server.execute(() -> {
+            try {
+                var building = com.solegendary.reignofnether.api.ReignOfNetherRegistries.BUILDING.get(
+                    new net.minecraft.resources.ResourceLocation(ReignOfNether.MOD_ID, id));
+                if (building == null) {
+                    structureError = "no building '" + id + "'";
+                    return;
+                }
+                if (!(building instanceof com.solegendary.reignofnether.building.production.ProductionBuilding)) {
+                    structureError = id + " is not a production building";
+                    return;
+                }
+                var level = server.overworld();
+                var found = server.getStructureManager().get(
+                    new net.minecraft.resources.ResourceLocation(ReignOfNether.MOD_ID, building.structureName));
+                if (found.isEmpty()) {
+                    structureError = "no structure " + building.structureName + " in this build";
+                    return;
+                }
+                var size = found.get().getSize();
+                BlockPos origin = new BlockPos(site.getX() - size.getX() / 2, site.getY(), site.getZ() - size.getZ() / 2);
+                int m = 8;
+                var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+                int x0 = origin.getX() - m, z0 = origin.getZ() - m;
+                int x1 = origin.getX() + size.getX() - 1 + m, z1 = origin.getZ() + size.getZ() - 1 + m;
+                fillBox(level, x0, origin.getY() - 2, z0, x1, origin.getY() - 2, z1, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+                fillBox(level, x0, origin.getY() - 1, z0, x1, origin.getY() - 1, z1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+                fillBox(level, x0, origin.getY(), z0, x1, origin.getY() + size.getY() + 12, z1, air);
+                // a placement's structure frame is its origin + (0, 1, 0): the origin goes one below the pad's top
+                var p = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(building, origin.below(),
+                    net.minecraft.world.level.block.Rotation.NONE, me, new int[0], false, false, true, true);
+                if (p == null) {
+                    structureError = "placeBuilding refused " + id;
+                    return;
+                }
+                p.selfBuilding = true;
+                p.maxBlocksPerTick = 16;
+                p.queueAllBlocks(level);
+                workPlacement = p;
+                structureSize = size;
+                structureOrigin = origin;
+                structurePlaced = true;
+            } catch (Exception e) {
+                structureError = e.toString();
+            }
+        });
+    }
+
+    /** On the server thread: one unit queued at the work entry's lab (on a long timer), or its queue cleared. */
+    private static void queueWork(Minecraft mc, boolean on) {
+        var server = mc.getSingleplayerServer();
+        var p = workPlacement;
+        server.execute(() -> {
+            if (!(p instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)
+                    || !(p.getBuilding() instanceof com.solegendary.reignofnether.building.production.ProductionBuilding pb))
+                return;
+            if (!on) {
+                pp.productionQueue.clear();
+                com.solegendary.reignofnether.building.BuildingProductionClientboundPacket.clearQueue(p.ownerName, p.originPos);
+                ReignOfNether.LOGGER.info("[Eyes] work: queue cleared at {}", p.originPos.toShortString());
+                return;
+            }
+            com.solegendary.reignofnether.building.production.ProductionItem item = null;
+            for (var it : pb.productions.get())
+                if (it instanceof com.solegendary.reignofnether.building.production.IUnitProductionItem) {
+                    item = it;
+                    break;
+                }
+            if (item == null) {
+                ReignOfNether.LOGGER.warn("[Eyes] work: {} trains no unit - nothing queued", pb.name);
+                return;
+            }
+            var active = new com.solegendary.reignofnether.building.production.ActiveProduction(item, false, p.ownerName);
+            active.ticksLeft = WORK_QUEUE_TICKS;
+            pp.productionQueue.add(active);
+            com.solegendary.reignofnether.building.BuildingProductionClientboundPacket.startProduction(p.ownerName, p.originPos,
+                item, WORK_QUEUE_TICKS);
+            ReignOfNether.LOGGER.info("[Eyes] work: queued {} at {}", item.getItemName(), p.originPos.toShortString());
+        });
+    }
+
     /** A point inside the placed structure: its footprint's centre, at a fraction of its height. */
     private static Vec3 structureMiddle(double heightFraction) {
         return new Vec3(structureOrigin.getX() + structureSize.getX() / 2.0,
@@ -1366,6 +1633,26 @@ public final class EyesDirector {
      * The 3/4 view: from the south-west (-x, +z: the faces the RTS camera sees, design/lively_buildings.md), 30 degrees
      * above the horizontal, 1.5x the building's largest size from its middle (at least 12 blocks), looking at it.
      */
+    /** The front-on still's camera (15_<name>_front): due south of the structure, looking north at its south face. */
+    private static void standFront(Minecraft mc) {
+        double vfov = Math.toRadians(mc.options.fov().get());
+        double aspect = (double) mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
+        double hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+        double halfW = structureSize.getX() * 1.1 / 2, halfH = structureSize.getY() * 1.15 / 2;
+        double fit = Math.max(halfW / Math.tan(hfov / 2), halfH / Math.tan(vfov / 2));
+        double d = Math.max(8, fit) + structureSize.getZ() / 2.0;   // from the footprint's middle: its face is nearer
+        Vec3 aim = structureMiddle(0.45);
+        double px = aim.x, pz = aim.z + d;
+        double eyeY = aim.y + d * Math.tan(Math.toRadians(8));
+        int ground = surfaceY(mc, (int) Math.floor(px), (int) Math.floor(pz));
+        if (ground != Integer.MIN_VALUE)
+            eyeY = Math.max(eyeY, ground + 2.5);
+        float pitch = (float) Math.toDegrees(Math.atan2(eyeY - aim.y, d));
+        mc.player.moveTo(px, eyeY - mc.player.getEyeHeight(), pz, 180f, pitch);
+        mc.player.setDeltaMovement(Vec3.ZERO);
+        mc.options.hideGui = true;
+    }
+
     private static void standThreeQuarter(Minecraft mc) {
         int big = Math.max(structureSize.getX(), Math.max(structureSize.getY(), structureSize.getZ()));
         double d = Math.max(12, 1.5 * big);
