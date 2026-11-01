@@ -299,15 +299,6 @@ def galleries(r):
             r.st(lip, 4, z, "east" if out == 0 else "west")
         for z in (GALLERY[0], GALLERY[1]):
             r.slab(out, 5, z)                              # the eave's lifted ends
-        lip = 2 if out == 0 else SX - 3
-        for z in range(GALLERY[0], GALLERY[1] + 1):        # the dark fascia under the gallery's lip
-            r.st(lip, 3, z, "east" if out == 0 else "west", "top", OAK_ST)
-        for z in (5, 6):                                   # paper lanterns hung in the gallery (dusk)
-            r.lantern(1 if out == 0 else SX - 2, 3, z, hanging=True)
-    # the drill yard's one training cue, in big shapes: two dark oak striking posts either side of the way out
-    for x in (C - 1, C + 1):
-        for y in (1, 2):
-            r.set(x, y, 6, OAK_LOG, axis="y")
 
 
 def hall_l1(r):
@@ -357,13 +348,9 @@ def hall_l1(r):
 
 def roof1(r, chimes):
     curved_roof(r, 0, 8, 0, 3, R1, chimes)
-    # a dark fascia under the whole front lip and the ends (round 2: "a continuous dark eave line between roof and
-    # ground", critic b; the jade sat in the lawn's value band)
-    for x in range(SX):
+    # rafter ends under the front lip, every other cell
+    for x in (2, 4, 6):
         r.st(x, R1 - 1, 3, "north", "top", OAK_ST)
-    for z in (0, 1, 2):
-        r.st(0, R1 - 1, z, "east", "top", OAK_ST)
-        r.st(SX - 1, R1 - 1, z, "west", "top", OAK_ST)
     # the second course climbing onto the band, the ridge with gold ends and rods
     for x in range(2, 7):
         r.st(x, R1 + 1, 2, "north")
@@ -395,14 +382,16 @@ def lotus_crown(r, y, x0=C, z0=1):
     heart, cherry slab petals lying open between them, a gold seed head and the storm's rod."""
     r.set(x0, y, z0, GOLD)
     r.set(x0, y + 1, z0, "pearlescent_froglight", axis="y")
-    # round 2: the petals open in a cross, no square of slabs (round 1's 3 x 3 cap read as "a square with notched
-    # corners and a gold dot", "cake topper" - critics a / b); each petal stands on the ridge or a jade boss
     for (dx, dz), f in (((1, 0), "east"), ((-1, 0), "west"), ((0, 1), "south"), ((0, -1), "north")):
-        if r.get(x0 + dx, y, z0 + dz)[0] == "air":
-            r.set(x0 + dx, y, z0 + dz, JADE)
         r.st(x0 + dx, y + 1, z0 + dz, f, name=PETAL_ST)
+    for (dx, dz) in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+        r.slab(x0 + dx, y + 1, z0 + dz, PETAL_SLAB)
     r.set(x0, y + 2, z0, GOLD)
     r.rod(x0, y + 3, z0)
+    for dx in (-1, 0, 1):                  # a jade boss under the open petals (nothing floats)
+        for dz in (-1, 0, 1):
+            if r.get(x0 + dx, y, z0 + dz)[0] == "air":
+                r.set(x0 + dx, y, z0 + dz, JADE)
 
 
 # ======================================================================================================== L2
@@ -427,8 +416,8 @@ def hall_l2(r, chimes):
         for y in range(R1 + 3, R2):
             r.red(x, y, 2)
     curved_roof(r, 1, 7, 0, 3, R2, chimes)
-    for x in range(1, 8):
-        r.st(x, R2 - 1, 3, "north", "top", OAK_ST)       # the dark fascia under the upper lip
+    for x in (3, 5):
+        r.st(x, R2 - 1, 3, "north", "top", OAK_ST)       # rafter ends
     # its course and ridge: gold "owl-tail" ends with rods, a jade ridge between
     for x in range(3, 6):
         r.st(x, R2 + 1, 2, "north")
@@ -436,14 +425,9 @@ def hall_l2(r, chimes):
     for z in (1, 2):
         r.st(2, R2 + 1, z, "east")
         r.st(6, R2 + 1, z, "west")
-    # a LONG RIDGE (round 2: "give the hall a long ridge axis so it reads as a hall from above", critic b): a dark
-    # oak ridge beam two wide along x 3..5 between jade ends that lift a slab (the upturned owl-tails)
-    for z in (1, 2):
-        for x in (3, 4, 5):
-            r.set(x, R2 + 2, z, OAK_LOG, axis="x")
-        for x in (2, 6):
-            r.set(x, R2 + 2, z, JADE)
-            r.slab(x, R2 + 3, z)
+    for x in (3, 5):
+        r.set(x, R2 + 2, 1, JADE)
+        r.set(x, R2 + 2, 2, JADE)
     # lanterns on the first roof's band at the ends, like lamps set out on a balcony
     for x in (1, 7):
         r.lantern(x, R1 + 1, 2) if r.get(x, R1, 2)[0] == JADE else None
