@@ -95,15 +95,19 @@ class JadePagodaTest(unittest.TestCase):
 
     def test_roofs_read_as_light_lips_over_dark_gaps(self):
         """Two-edged value band on the roofs' RTS pixels (rings <= 6, y >= 6): the lips light (pack luma >= 0.50) on
-        at least 45 % and the gaps between the tiers dark (<= 0.36) on at least 25 %. Round 1 (eyes 41279165687):
-        all-jade roofs, 91 % light / 6 % dark on this model - "tiers still nest from above, no dark gap ring", value 5 / 5
-        (fresh critics a / b). Both edges: an all-dark roof would pass a dark-only test and lose the lips."""
+        at least 45 % and a real dark gap ring (pack luma <= 0.25, i.e. under 0.2 on screen) on at least 6 %. Round 1
+        (eyes 41279165687): all-jade roofs, no dark gap - "tiers still nest from above", value 5 / 5 (critics a / b).
+        Re-set Nov 1 on screen (eyes 41280515001 / 41281536246): the first cut (dark <= 0.36, >= 25 %) counted dark oak,
+        which shows at 0.25-0.3 on screen - a brown field, not a gap (critics a / b on round 2: "jade-rimmed brown
+        diamonds"; the model's 41 % dark against 10 % under 0.2 on screen). The blackstone gap ring the blind pick
+        chose (option 3) shows 13 % under 0.2 on screen, round 2's oak 10 %; on this model 9 % / 0 %. Both edges: an
+        all-dark roof would pass a dark-only test and lose the lips."""
         roof = [h for h in self.rts.values() if h[0][1] >= 6 and _ring(h[0]) <= 6]
         lum = [_pack_luma(h[1]) for h in roof]
         light = sum(1 for v in lum if v is not None and v >= 0.50) / max(1, len(roof))
-        dark = sum(1 for v in lum if v is not None and v <= 0.36) / max(1, len(roof))
+        dark = sum(1 for v in lum if v is not None and v <= 0.25) / max(1, len(roof))
         self.assertGreaterEqual(light, 0.45, (light, dark))
-        self.assertGreaterEqual(dark, 0.25, (light, dark))
+        self.assertGreaterEqual(dark, 0.06, (light, dark))
 
     def test_crown_is_one_gold_leader(self):
         """One gold leader a size class over everything near it: a 3 x 3 gold cap or more over the centre and no gold
