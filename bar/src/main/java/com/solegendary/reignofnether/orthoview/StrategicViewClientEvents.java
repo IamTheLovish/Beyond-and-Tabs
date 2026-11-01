@@ -37,6 +37,7 @@ import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitIconTier;
 import com.solegendary.reignofnether.unit.interfaces.*;
 import com.solegendary.reignofnether.util.MyRenderer;
+import com.solegendary.reignofnether.time.ClientTicks;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -498,8 +499,9 @@ public class StrategicViewClientEvents {
     }
 
     private static int mexTier(BuildingPlacement building) {
-        long now = MC.level != null ? MC.level.getGameTime() : 0;
-        if (now - mexTierCacheTime >= 20 || now < mexTierCacheTime) {
+        long now = MC.level != null ? ClientTicks.now() : 0;
+        // MIN_VALUE = never filled (now - MIN_VALUE overflows negative: the cache was never cleared, an upgrade never showed)
+        if (mexTierCacheTime == Long.MIN_VALUE || now - mexTierCacheTime >= 20 || now < mexTierCacheTime) {
             mexTierCache.clear();
             mexTierCacheTime = now;
         }

@@ -1193,9 +1193,13 @@ public class BuildingServerEvents {
         }
     }
 
-    // prevent crops from becoming items when a farm is damaged
+    // prevent crops from becoming items when a farm is damaged, and a building's pieces when it loses blocks
     @SubscribeEvent
     public static void onItemDrop(EntityJoinLevelEvent evt) {
+        if (evt.getEntity() instanceof ItemEntity piece && BuildingDrops.suppress(piece)) {
+            evt.setCanceled(true);
+            return;
+        }
         if (evt.getEntity() instanceof ItemEntity ie && BuildingUtils.isPosInsideFarm(evt.getLevel().isClientSide(), ie.getOnPos())) {
             Item item = ie.getItem().getItem();
             if (List.of(Items.NETHER_WART, Items.WHEAT, Items.CARROT, Items.BEETROOT, Items.POTATO).contains(item)) {
