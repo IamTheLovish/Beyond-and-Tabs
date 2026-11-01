@@ -36,7 +36,9 @@ public class ExitArrowServerboundPacket {
 
     /** Client side: ask for {@code type}'s spawn rule (null = none) and the cells of these own buildings. */
     public static void ask(Building type, List<BlockPos> origins) {
-        String key = type == null ? "" : ReignOfNetherRegistries.BUILDING.getKey(type).toString();
+        String key = ExitArrow.askKey(type, ReignOfNetherRegistries.BUILDING::getKey);
+        if (key == null)
+            throw new IllegalArgumentException("ExitArrowServerboundPacket.ask: " + type.name + " is not in the BUILDING registry");
         PacketHandler.INSTANCE.sendToServer(new ExitArrowServerboundPacket(key, new ArrayList<>(origins)));
     }
 

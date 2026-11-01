@@ -109,4 +109,27 @@ class ExitArrowTest {
         assertTrue(Math.abs(out[1]) > Math.abs(in[1]), "wider shaft");
         assertTrue(Math.abs(out[5]) > Math.abs(in[5]), "wider head");
     }
+
+    /** askKey alone, with stand-in types (not real buildings). */
+    @Test
+    void aGhostAsksWithItsRegistryKeyAndATypeWithNoKeyAsksNothing() {
+        assertEquals("", ExitArrow.askKey(null, t -> "never"), "no type: empty key");
+        assertEquals("bar:barracks", ExitArrow.askKey("barracks", t -> "bar:" + t));
+        // a custom building is not in the BUILDING registry: getKey gives null, so no ask (and no crash)
+        assertEquals(null, ExitArrow.askKey("my custom hall", t -> null));
+    }
+
+    /**
+     * The renderer's decision for a placement ghost (Codex F1 2026-11-01). Covers ghostStep, which render() follows;
+     * render() itself is client code with no JUnit seam, so its wiring is checked by reading, not by this test.
+     */
+    @Test
+    void aCustomBuildingGhostNeverAsksAndARegisteredOneAsksThenDraws() {
+        String custom = ExitArrow.askKey("my custom hall", t -> null);
+        assertEquals(ExitArrow.GhostStep.NONE, ExitArrow.ghostStep(false, false, custom), "unregistered: no request");
+        String barracks = ExitArrow.askKey("barracks", t -> "bar:" + t);
+        assertEquals(ExitArrow.GhostStep.ASK, ExitArrow.ghostStep(false, false, barracks), "registered, rule unknown: ask");
+        assertEquals(ExitArrow.GhostStep.DRAW, ExitArrow.ghostStep(true, true, null), "rule known and spawns: draw");
+        assertEquals(ExitArrow.GhostStep.NONE, ExitArrow.ghostStep(true, false, null), "rule known, no spawn: nothing");
+    }
 }

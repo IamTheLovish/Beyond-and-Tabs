@@ -94,10 +94,14 @@ public final class ExitArrowClientEvents {
         Building toPlace = BuildingClientEvents.getBuildingToPlace();
         if (ghostShown && toPlace instanceof ProductionBuilding && ghostOriginPos != null) {
             Spec spec = SPECS.get(toPlace);
-            if (spec == null) {
+            String key = spec == null ? ExitArrow.askKey(toPlace, ReignOfNetherRegistries.BUILDING::getKey) : null;
+            ExitArrow.GhostStep step = ExitArrow.ghostStep(spec != null, spec != null && spec.has(), key);
+            if (step == ExitArrow.GhostStep.ASK) {
                 askType = toPlace;
                 somethingNew = true;
-            } else if (spec.has()) {
+            } else if (step == ExitArrow.GhostStep.NONE && spec == null) {
+                SPECS.put(toPlace, new Spec(false, false, Vec3i.ZERO));   // a custom building: no rule the server can look up
+            } else if (step == ExitArrow.GhostStep.DRAW) {
                 Rotation rot = BuildingClientEvents.getBuildingRotation();
                 if (toPlace != ghostBuilding || !ghostOriginPos.equals(ghostOrigin) || rot != ghostRotation) {
                     ghostBuilding = toPlace;

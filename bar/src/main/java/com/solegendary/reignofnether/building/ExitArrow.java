@@ -32,6 +32,31 @@ public final class ExitArrow {
     }
 
     /**
+     * The type key a ghost asks the server with, {@code key} giving the type's registry key or null: "" for no type,
+     * null for a type with no key. A custom building lives outside the BUILDING registry (Codex review 2026-11-01:
+     * {@code getKey(...).toString()} threw while rendering its ghost), so it asks nothing and shows no ghost arrow.
+     */
+    public static <T> String askKey(T type, java.util.function.Function<T, ?> key) {
+        if (type == null)
+            return "";
+        Object k = key.apply(type);
+        return k == null ? null : k.toString();
+    }
+
+    /** What the placement ghost's arrow does this frame (ExitArrowClientEvents.render). */
+    public enum GhostStep { ASK, NONE, DRAW }
+
+    /**
+     * {@code known}: the server's rule for the type is already held, {@code hasRule}: that rule spawns units,
+     * {@code askKey}: {@link #askKey} of the type (only used while not known). A type with no key never asks.
+     */
+    public static GhostStep ghostStep(boolean known, boolean hasRule, String askKey) {
+        if (!known)
+            return askKey == null ? GhostStep.NONE : GhostStep.ASK;
+        return hasRule ? GhostStep.DRAW : GhostStep.NONE;
+    }
+
+    /**
      * The way a produced unit walks out, as a unit vector into {@code out[0..1]} (x, z): from the spawn spot towards the
      * spot it walks to with no rally (the building's default rally, its outdoor spawn point). An outdoor spawn already
      * stands there, so it points away from the building's centre instead; if the spawn is the centre as well, along
