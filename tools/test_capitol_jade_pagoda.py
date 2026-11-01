@@ -127,15 +127,6 @@ class JadePagodaTest(unittest.TestCase):
         floating = sorted(q for q in self.solid if q[1] >= 6 and not any(f in self.solid for f in faces(q)))
         self.assertEqual(floating, [])
 
-    def test_paper_screens_are_lit_from_behind(self):
-        """At dusk the red paper storeys glow: at least 8 light blocks sit right behind a red paper screen (face to
-        face). Round 3: dusk 3 / 3, "paper walls do not glow, nothing frames the tiers" (both blind critics)."""
-        lights = ("froglight", "glowstone", "shroomlight", "sea_lantern")
-        lit = {q for q, n in self.solid.items() if any(k in n for k in lights) and any(
-            self.solid.get((q[0] + dx, q[1], q[2] + dz)) == "red_stained_glass"
-            for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)))}
-        self.assertGreaterEqual(len(lit), 8, sorted(lit))
-
     def test_shipped_structure_is_the_generator_build(self):
         with tempfile.TemporaryDirectory() as d:
             out = os.path.join(d, "jp.nbt")

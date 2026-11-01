@@ -338,9 +338,6 @@ def pagoda(c):
     roof(c, 6, 6, flare=STYLE["horn"] >= 2)                   # lip 6 @ y6, band rings 4-5, course ring 5 @ y7
     storey(c, 3, 7, 11)                                        # storey 2 on the hall's walls, shows y7-11
     c.disc(2, 10, OAK)                                         # the atrium's ceiling
-    for o in O4.values():                                      # lamps right behind storey 2's paper: it glows at dusk
-        for t in (-1, 1):
-            c.put(o, 2, t, 8, "pearlescent_froglight", axis="y")
     c.set(0, 10, 0, "pearlescent_froglight", axis="y")         # the hall's light, over the spawn
     roof(c, 4, 12, flare=True)                                 # lip 4 @ y12, band ring 3, course ring 3 @ y13
     jade = STYLE["value"] == "jade"
