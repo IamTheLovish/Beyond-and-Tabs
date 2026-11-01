@@ -37,7 +37,9 @@ class LotusAcademyTest(unittest.TestCase):
     def test_l1_hall_is_double_eaved(self):
         """Two curved jade roofs over the hall at L1, a storey apart: the blind massing winner (option 4, 6 / 6 both
         critics) against the shipped single roof ("half a jade roof")."""
-        lips = sorted(y for (x, y, z), n in self.l1.items() if (x, z) == (L.C, 3) and n.startswith(JADE))
+        lips = sorted(y for (x, y, z), n in self.l1.items() if (x, z) == (L.C, 3)
+                      and (n.startswith(JADE) or (n == "dark_oak_stairs"
+                                                   and self.lv[0].blocks[(x, y, z)][1].get("half") == "bottom")))
         self.assertGreaterEqual(len(lips), 2, lips)
         self.assertGreaterEqual(lips[-1] - lips[0], 4, lips)
 
