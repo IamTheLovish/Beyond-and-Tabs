@@ -19,6 +19,7 @@ import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.postfx.ShaderPacks;
+import com.solegendary.reignofnether.time.ClientTicks;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
@@ -176,7 +177,7 @@ public final class MistPass {
         long now = System.nanoTime();
         float dt = lastNanos == 0 ? 0f : Math.min((now - lastNanos) / 1e9f, 0.25f);
         lastNanos = now;
-        double seconds = MC.level.getGameTime() / 20.0 + MC.getFrameTime() / 20.0;
+        double seconds = ClientTicks.at(MC.getFrameTime()) / 20.0;
 
         // the floor: the ground the camera works from (RTS) or under the eye (first person), chased slowly
         float ground = ortho ? OrthoviewClientEvents.getGroundY() : (float) Math.floor(MC.player != null ? MC.player.getY() : cam.y);
@@ -256,7 +257,7 @@ public final class MistPass {
             : new double[] { cam.x, cam.y, cam.z };
         int half = VIS_N * VIS_STEP / 2;
         int nx = (int) Math.floor(f[0] / VIS_STEP) * VIS_STEP - half, nz = (int) Math.floor(f[2] / VIS_STEP) * VIS_STEP - half;
-        long tick = MC.level.getGameTime();
+        long tick = ClientTicks.now();
         boolean moved = Math.abs(nx - visX) > half / 2 || Math.abs(nz - visZ) > half / 2;
         // the first call always draws (review, Oct 29: tick - Long.MIN_VALUE overflowed negative, so a camera starting
         // near 0, 0 never uploaded and the shader read an undefined texture)
