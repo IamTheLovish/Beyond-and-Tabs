@@ -145,10 +145,14 @@ def verdict(r):
     if spikes and spm >= SPIKES_PER_MIN_NOTICEABLE and gc_share >= SPIKE_GC_SHARE:
         return "GC: %d%% of the spikes line up with a garbage-collection pause (give the game more heap or find the allocation)" % round(100 * gc_share)
     client_slow = frame_p50 >= SLOW_FRAME_P50_MS
-    # one window near the budget names the server only when the client is not slow itself (vscreen run 2026-11-01:
-    # a 44 ms median frame with one 45 ms server window was called server-bound)
-    if tick_p95 >= SLOW_TICK_P95_MS * 0.7 or (tick_max_p95 >= SLOW_TICK_P95_MS and not client_slow):
-        return "server-bound: the server tick p95 is %.0f ms in the median window, %.0f ms in the worst (budget 50 ms); the top [Sys] systems below say what it spends it on" % (tick_p95, tick_max_p95)
+    slow_windows = sum(1 for t in r["ticks"] if t["p95"] >= SLOW_TICK_P95_MS)
+    windows = "%d of %d server windows reached p95 %.0f ms (trigger %.0f ms, budget 50 ms)" % (
+        slow_windows, len(r["ticks"]), SLOW_TICK_P95_MS, SLOW_TICK_P95_MS)
+    # slow windows name the server only when the client is not slow itself (vscreen run 2026-11-01: a 44 ms median
+    # frame with one 45 ms server window was called server-bound), and one window is a hitch, not a limit (real-GPU
+    # run 2026-11-01: 120 fps, the one 45 ms window was the match start)
+    if tick_p95 >= SLOW_TICK_P95_MS * 0.7 or (slow_windows >= 2 and not client_slow):
+        return "server-bound: the server tick p95 is %.0f ms in the median window, %.0f ms in the worst; %s; the top [Sys] systems below say what it spends it on" % (tick_p95, tick_max_p95, windows)
     if client_slow:
         g = r["gfx"]
         why = " on an integrated GPU" if g and is_integrated(g["renderer"], g["vendor"]) else ""
@@ -159,6 +163,8 @@ def verdict(r):
         return "chunk loading: %.1f spikes a minute, no GC, and %.0f section re-mesh requests a second" % (spm, remesh)
     if spikes and spm >= SPIKES_PER_MIN_NOTICEABLE:
         return "spikes without GC, a slow server or a slow median: %.1f a minute, most likely chunk loading or a one-off (saving, pause menu); look at the [Spike] lines' handlers" % spm
+    if slow_windows:
+        return "nothing obviously wrong in this log: fps and the median server tick look healthy; %s, worst p95 %.0f ms" % (windows, tick_max_p95)
     return "nothing obviously wrong in this log: fps and server tick look healthy"
 
 
