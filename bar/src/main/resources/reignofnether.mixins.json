@@ -65,15 +65,20 @@
     "fogofwar.TrackedEntityMixin",
     "fogofwar.WorldBorderMixin",
     "goals.MobMixin",
-    "goals.RandomStrollGoalMixin"
+    "goals.RandomStrollGoalMixin",
+    "goals.GoalSelectorMixin",
+    "ConfigValueReloadRaceMixin",
+    "ForgeConfigSpecAccessor"
   ],
   "minVersion": "0.8",
   "client": [
     "AnimProfileRendererMixin",
+    "LivingEntityDamageMotionMixin",
     "UnitLodEyesLayerMixin",
     "CameraMixin",
     "ChatComponentMixin",
     "ClientLevelMixin",
+    "ClientLevelCorpseMixin",
     "ClientPacketMixin",
     "CycleButtonMixin",
     "DownloadPackSourceAccessor",
@@ -98,6 +103,8 @@
     "fogofwar.BlockColorsAccessor",
     "fogofwar.ClientChunkCacheMixin",
     "fogofwar.ClientPacketListenerLightMixin",
+    "fogofwar.EmbeddiumBlendFogWrappedMixin",
+    "fogofwar.EmbeddiumFogOnlyQuadsMixin",
     "fogofwar.CompiledChunkMixin",
     "fogofwar.EntityRenderDispatcherMixin",
     "fogofwar.EntityShadowMixin",
@@ -113,6 +120,7 @@
     "LoadingOverlayAccessor",
     "LoadingOverlayMixin",
     "ForgeLoadingOverlayMixin",
-    "WaitingScreenBackdropMixin"
+    "WaitingScreenBackdropMixin",
+    "fire.CampfireBlockEntityMixin"
   ]
 }

@@ -213,6 +213,14 @@ public class BuildingPlacement {
     public String payerName; // who pays for construction (bridges lose their ownerName after placement)
     public boolean freeBuild = false; // placed by a command: built the old way without any cost
     public float buildSpeedMult = 1f; // eg. 2 for a player's first capitol
+    /**
+     * The Soul Engineer's Soul Boiler (ability/abilities/SoulBoiler): until this game tick the building builds and
+     * produces {@link com.solegendary.reignofnether.ability.abilities.SoulBoiler#SPEED_MULT} times as fast. Server
+     * only, not saved: a 20 s thing.
+     */
+    public long boilUntilTick = 0;
+    /** The owner the boil was cast for (SoulBoiler.startBoil): it ends if the building changes hands. */
+    public String boilOwner = "";
 
     protected List<AbilityButton> abilityButtons = new ArrayList<>();
     protected List<Ability> abilities = new ArrayList<>();
@@ -261,7 +269,13 @@ public class BuildingPlacement {
                         maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
     }
 
+    /** How far the building reveals fog: its designed sight ({@link #getBaseSightRange}) times the global Vision multiplier. */
     public int getSightRange() {
+        return com.solegendary.reignofnether.fogofwar.Vision.scaled(getBaseSightRange());
+    }
+
+    /** The designed sight; placements with their own sight override this, not getSightRange. */
+    public int getBaseSightRange() {
         if (isCapitol)
             return Building.CAPITOL_SIGHT_RANGE;
         else if (getBuilding().hasActiveAddon(GarrisonableBuildingAddon.class) &&
@@ -774,6 +788,43 @@ public class BuildingPlacement {
                  .append(", built ").append(isBuilt).toString();
     }
 
+    /**
+     * The site's own multipliers on its builders' power: the first-capitol bonus ({@link #buildSpeedMult}), the Soul
+     * Boiler (SoulBoiler.speedMult) and the economy pace (EconomyPace: construction speeds up / slows down with income,
+     * so a paced match keeps the same build-time-to-income ratio; cost per building is unchanged - only how fast it
+     * flows). Public for the game test.
+     */
+    public float boostedBuildPower(float buildPower) {
+        return buildPower * buildSpeedMult * com.solegendary.reignofnether.ability.abilities.SoulBoiler.speedMult(this)
+            * com.solegendary.reignofnether.resources.EconomyPace.of(payerName);
+    }
+
+    /**
+     * Puts missing blocks straight back - no builder, no wood, lowest first, dry before wet - until the building has
+     * regained {@code hp} health (it may overshoot by under one block's share) or is whole. The Soul Engineer's Patch
+     * Kit (ability/abilities/PatchKit). Returns the health regained. Server only.
+     */
+    public int restoreHealthNow(int hp) {
+        if (level == null || level.isClientSide() || hp <= 0)
+            return 0;
+        int before = getHealth();
+        partialBlocksDestroyed = 0d;   // a dent smaller than a block is mended first, as a builder's repair does
+        ArrayList<BuildingBlock> missing = new ArrayList<>();
+        for (BuildingBlock block : blocks)
+            if (!block.getBlockState().isAir() && !block.isPlaced(level) && level.isLoaded(block.getBlockPos()))
+                missing.add(block);
+        missing.sort(Comparator.comparingInt(b -> b.getBlockPos().getY()));
+        missing = waterLast(neverPlacedFirst(missing, placedBlockPosSet));
+        for (BuildingBlock block : missing) {
+            if (getHealth() - before >= hp || getHealth() >= getMaxHealth())
+                break;
+            blockPlaceQueue.add(0, block);
+            buildNextBlock();
+            blockPlaceQueue.remove(block);   // still there only when it could not be placed
+        }
+        return getHealth() - before;
+    }
+
     public static ArrayList<BuildingBlock> neverPlacedFirst(ArrayList<BuildingBlock> unplaced, Set<BlockPos> placed) {
         if (placed.isEmpty())
             return unplaced;
@@ -879,21 +930,38 @@ public class BuildingPlacement {
             intAmount += 1;
         }
 
+        // a building's own water (a pool, a waterlogged block) goes last: the blocks next to it are never picked, but
+        // breaking the water itself left the wall beside the gap dry for the ~5 ticks the rest took to flow back, a hit
+        // in that window broke the wall, and the pool poured out onto the raiders round the building - they floated off
+        // it, and Verdant's extractor (its pool a block up on its south edge) took 15-28 s instead of 10 / 22 s
+        // (RaidGameTests.raid_hits_leave_an_extractors_pool_till_last)
         var placedBlocks = new ArrayList<BuildingBlock>();
+        var poolBlocks = new ArrayList<BuildingBlock>();
         for (BuildingBlock block : blocks) {
             if (!isDestroyedAndNotNextToLiquid(block)) continue;
-            placedBlocks.add(block);
+            if (getLevel().getBlockState(block.getBlockPos()).getFluidState().isEmpty())
+                placedBlocks.add(block);
+            else
+                poolBlocks.add(block);
         }
         Collections.shuffle(placedBlocks);
-        for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
-            BlockPos bp = placedBlocks.get(i).getBlockPos();
-            com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
-            if (!getLevel().getBlockState(bp).getFluidState().isEmpty()) {
-                getLevel().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
-            } else {
-                getLevel().destroyBlock(bp, false);
+        Collections.shuffle(poolBlocks);
+        placedBlocks.addAll(poolBlocks);
+        // a lantern, ladder, banner or door that loses its support breaks without an item (BuildingDrops)
+        BuildingPlacement dropsWere = BuildingDrops.begin(this);
+        try {
+            for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
+                BlockPos bp = placedBlocks.get(i).getBlockPos();
+                com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
+                if (!getLevel().getBlockState(bp).getFluidState().isEmpty()) {
+                    getLevel().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
+                } else {
+                    getLevel().destroyBlock(bp, false);
+                }
+                this.onBlockBreak((ServerLevel) getLevel(), bp, false);
             }
-            this.onBlockBreak((ServerLevel) getLevel(), bp, false);
+        } finally {
+            BuildingDrops.end(dropsWere);
         }
         if (intAmount > 0) {
             // rate-limited per owner (was one packet to everyone per hit); centrePos instead of re-scanning blocks
@@ -965,6 +1033,8 @@ public class BuildingPlacement {
                 placedCount++;
         final int blastEvery = Math.max(1, placedCount / MAX_COLLAPSE_BLASTS);
         final int[] seen = { 0 };
+        // its pieces (lanterns, ladders, banners, doors) break without items as their supports go (BuildingDrops)
+        BuildingPlacement dropsWere = BuildingDrops.begin(this);
         try {
         this.blocks.forEach((BuildingBlock block) -> {
             if ((!block.getBlockState().getFluidState().isEmpty() ||
@@ -980,7 +1050,8 @@ public class BuildingPlacement {
             int z = block.getBlockPos().getZ();
             boolean solid = !block.getBlockState().isAir();
             if (solid && !quietDemolition && block.isPlaced(serverLevel) && seen[0]++ % blastEvery == blastEvery / 2) {
-                serverLevel.explode(null, null, null, x, y, z, 1.0f, false, Level.ExplosionInteraction.TNT);
+                serverLevel.explode(null, null, null, x, y, z, 1.0f, false,
+                    getBuilding().keepsGroundIntact() ? Level.ExplosionInteraction.NONE : Level.ExplosionInteraction.TNT);
             }
             // removed without the per-block break crack and debris (hundreds of them per building)
             if (solid)
@@ -988,6 +1059,7 @@ public class BuildingPlacement {
         });
         } finally {
             com.solegendary.reignofnether.barfx.BarFx.muteExplosions(false);
+            BuildingDrops.end(dropsWere);
         }
 
         this.scaffoldBlocks.forEach((BuildingBlock block) -> {
@@ -1179,6 +1251,10 @@ public class BuildingPlacement {
         isBuilt = true;
         if (!this.level.isClientSide()) {
             FrozenChunkClientboundPacket.setBuildingBuiltServerside(this.originPos);
+            // a finished site leaves its builders' queues now, not on their goal's next 5-tick turn (until then the
+            // queue still listed it as a pending order)
+            for (WorkerUnit worker : getBuilders())
+                worker.getBuildRepairGoal().queuedBuildings.remove(this);
             if (isCapitol && BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) <= 1) {
                 for (int i = 0; i < 3; i++)
                     spawnHuntableAnimalsNearby(animalSpawnBlockRange / 2);
@@ -1441,10 +1517,7 @@ public class BuildingPlacement {
         // still rises, slowly
         if (assistUntilTick > serverLevel.getGameTime())
             buildPower += assistPower;
-        buildPower *= buildSpeedMult;
-        // economy pace (EconomyPace): construction speeds up / slows down with income, so a paced match keeps the
-        // same build-time-to-income ratio. Cost per building is unchanged - only how fast it flows
-        buildPower *= com.solegendary.reignofnether.resources.EconomyPace.of(payerName);
+        buildPower = boostedBuildPower(buildPower);
 
         // progress may only run a few blocks ahead of the blocks actually placed (block placement is rate limited
         // and blocks destroyed during construction must be rebuilt), so builders never pay for nothing
@@ -1502,6 +1575,34 @@ public class BuildingPlacement {
     /** At most this many blasts when a building is destroyed (it set one off on a quarter of its blocks - dozens). */
     static final int MAX_COLLAPSE_BLASTS = 4;
 
+    /**
+     * A structure block's saved block-entity data ("nbt" in the .nbt file) onto the block just placed at bp: chests'
+     * items, and the skins of framed / retexturable building blocks (FramedBlocks' "camo", Domum Ornamentum's
+     * "textureData") - without it those stand as bare frames. The GameTests in BuildingBlockModGameTests call this too.
+     */
+    public static void restoreBlockEntity(Level level, BlockPos bp, BlockState bs, CompoundTag bNbt) {
+        if (bs.getBlock() == Blocks.SCULK_CATALYST) {
+            BlockEntity be = level.getBlockEntity(bp);
+            if (be != null) {
+                CompoundTag safeTag = bNbt.copy();
+                safeTag.remove("vibration");
+                safeTag.remove("listener");
+                safeTag.remove("vibration_data");
+                safeTag.remove("VibrationSystem");
+                safeTag.remove("event_delay");
+                safeTag.remove("event_distance");
+                safeTag.remove("selector");
+                safeTag.remove("source");
+                be.load(safeTag);
+                be.setChanged();
+            }
+        } else {
+            BlockEntity be = BlockEntity.loadStatic(bp, bs, bNbt);
+            if (be != null)
+                level.setBlockEntity(be);
+        }
+    }
+
     private void buildNextBlock() {
         if (blockPlaceQueue.isEmpty())
             return;
@@ -1514,28 +1615,8 @@ public class BuildingPlacement {
             if (blockBelow == Blocks.FARMLAND || blockBelow == Blocks.DIRT_PATH)
                 level.setBlockAndUpdate(bp.below(), Blocks.DIRT.defaultBlockState());
             level.setBlockAndUpdate(bp, bs);
-            if (bNbt != null) {
-                if (bs.getBlock() == Blocks.SCULK_CATALYST) {
-                    BlockEntity be = level.getBlockEntity(bp);
-                    if (be != null) {
-                        CompoundTag safeTag = bNbt.copy();
-                        safeTag.remove("vibration");
-                        safeTag.remove("listener");
-                        safeTag.remove("vibration_data");
-                        safeTag.remove("VibrationSystem");
-                        safeTag.remove("event_delay");
-                        safeTag.remove("event_distance");
-                        safeTag.remove("selector");
-                        safeTag.remove("source");
-                        be.load(safeTag);
-                        be.setChanged();
-                    }
-                } else {
-                    BlockEntity be = BlockEntity.loadStatic(bp, bs, bNbt);
-                    if (be != null)
-                        level.setBlockEntity(be);
-                }
-            }
+            if (bNbt != null)
+                restoreBlockEntity(level, bp, bs, bNbt);
             // avoid creating a bubble column block
             if (bs.getFluidState().is(FluidTags.WATER)) {
                 if (level.getBlockState(bp.below()).getBlock() == Blocks.SOUL_SAND) {

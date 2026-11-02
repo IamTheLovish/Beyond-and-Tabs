@@ -22,7 +22,7 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 
 /**
- * Upgrades one metal extractor to Tier 2 in place (needs Tier 2 Technology): income more than triples and the
+ * Upgrades one metal extractor to Tier 2 in place (needs Tier 2 Technology): income more than doubles (2 -> 4.5) and the
  * pithead grows a copper drill tower everyone can read from across the map. The upgrade takes time and money per
  * extractor - kill it mid-upgrade and the investment dies with it, so forward mexes are a gamble to upgrade.
  */

@@ -48,7 +48,7 @@ public class SetGraveyardReleaseOff extends Ability {
             null,
             List.of(
                     FormattedCharSequence.forward(I18n.get("abilities.reignofnether.graveyard_release_on"), Style.EMPTY.withBold(true)),
-                    FormattedCharSequence.forward(I18n.get("abilities.reignofnether.graveyard_release.tooltip1"), Style.EMPTY)
+                    FormattedCharSequence.forward(I18n.get("abilities.reignofnether.graveyard_release.tooltip_no_pop"), Style.EMPTY)
             ),
             this,
             placement

@@ -48,4 +48,35 @@ public class MatchEndLayoutGameTests {
         else
             helper.succeed();
     }
+
+    // lovish 2026-10-27: "game gets closed immediately for devs they cant see the graphs to see the differences
+    // between players" - the host's Back to lobby reopened the lobby on every client, and that cleared every
+    // non-host's results and closed their graphs popup at once (LobbyClientEvents.onPacket). The rule is looked up
+    // by name so this test compiles on the code before it: there it is missing, and the popup always closed.
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20, batch = "match_end_layout")
+    public static void match_end_results_stay_up_when_the_host_goes_back_to_lobby(GameTestHelper helper) {
+        java.lang.reflect.Method rule;
+        try {
+            rule = MatchEndLayout.class.getMethod("lobbyKeepsResults", boolean.class, boolean.class);
+        } catch (NoSuchMethodException e) {
+            helper.fail("no MatchEndLayout.lobbyKeepsResults(popupOpen, popupPending): a lobby reopening over a decided"
+                + " match clears every client's results and closes the graphs popup at once");
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        try {
+            if (!(boolean) rule.invoke(null, true, false))
+                problems.add("the graphs popup on screen is closed by the host's Back to lobby");
+            if (!(boolean) rule.invoke(null, false, true))
+                problems.add("results waiting to open (title still up, or the player in a menu) are thrown away");
+            if ((boolean) rule.invoke(null, false, false))
+                problems.add("results nobody is looking at (popup closed) are kept into the next match");
+        } catch (ReflectiveOperationException e) {
+            problems.add("lobbyKeepsResults threw " + e);
+        }
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
 }

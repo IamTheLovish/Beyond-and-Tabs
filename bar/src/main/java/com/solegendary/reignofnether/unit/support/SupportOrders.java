@@ -121,7 +121,7 @@ public final class SupportOrders {
             }
         SupportMath.rearRank(gx, gz, cx, cz, SupportBrain.standoff(unit.getSupportReach()), index, count, REAR_SPACING, P);
         BlockPos dest = new BlockPos(Mth.floor(P[0]), pos.getY(), Mth.floor(P[1]));
-        unit.getSupportState().fight(dest);
+        unit.getSupportState().fight(dest, fighterIds(self, selection));
         unit.getMoveGoal().setMoveTarget(dest);   // on its way now; the brain takes over at its next look
         return true;
     }
@@ -139,8 +139,9 @@ public final class SupportOrders {
     /**
      * How far a building shoots at ground units: a defence tower's range (not the anti-air ones), the T2 faction
      * towers' (Storm Oak, Lighthouse Battery, Rail Battery), or its garrison's while someone is inside; else 0.
+     * Public for the hero AI (hero/ai/Perception): one rule for "how far does this building shoot".
      */
-    static int gunRange(BuildingPlacement b) {
+    public static int gunRange(BuildingPlacement b) {
         Building building = b.getBuilding();
         int range = 0;
         if (building instanceof DefenceTower tower && !tower.kind.airOnly)

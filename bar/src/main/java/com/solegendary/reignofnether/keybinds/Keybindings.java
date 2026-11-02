@@ -180,6 +180,11 @@ public class Keybindings {
     // alias (OrthoviewClientEvents.onInput) so nobody's muscle memory breaks.
     public static final Keybinding toggleCamera = new Keybinding("key.reignofnether.toggle_camera", GLFW.GLFW_KEY_BACKSPACE, CATEGORY_CAMERA, "BSP");
 
+    // Spectators only (match.Spectators, orthoview.SpectatorFreeFly): RTS view <-> free flight as a vanilla spectator. Caps Lock:
+    // on every 60% board, unbound by vanilla and by every hotkey (all the letters are taken; A must stay free for
+    // camera pan-left and F is Fight). Rebindable in Controls like every other key.
+    public static final Keybinding toggleFreeFly = new Keybinding("key.reignofnether.toggle_free_fly", GLFW.GLFW_KEY_CAPS_LOCK, CATEGORY_CAMERA, "Cap");
+
     public static final Keybinding item1 = new Keybinding("key.reignofnether.item1", GLFW.GLFW_KEY_T, CATEGORY_RTS, "T");
     public static final Keybinding item2 = new Keybinding("key.reignofnether.item2", GLFW.GLFW_KEY_Y, CATEGORY_RTS, "Y");
     public static final Keybinding item3 = new Keybinding("key.reignofnether.item3", GLFW.GLFW_KEY_F, CATEGORY_RTS, "F");
@@ -195,6 +200,9 @@ public class Keybindings {
     // order inserts it at the front of the queue; a plain Space tap keeps lastAlert / openShop.
     public static final Keybinding queueSkip   = new Keybinding("key.reignofnether.queue_skip",   GLFW.GLFW_KEY_N,             CATEGORY_RTS, "N");
     public static final Keybinding queueInsert = new Keybinding("key.reignofnether.queue_insert", GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "Spc");
+
+    // the living army's A/B switch for the parade ground (unit/modelling/motion/LivingArmyToggle; F8 is fog/spectator)
+    public static final Keybinding livingArmyToggle = new Keybinding("key.reignofnether.living_army_toggle", GLFW.GLFW_KEY_KP_0, CATEGORY_CAMERA, "N0");
 
     public static final Keybinding[] nums = {
         new Keybinding("key.reignofnether.control_group_0", GLFW.GLFW_KEY_0, CATEGORY_RTS, "0"),
@@ -230,7 +238,7 @@ public class Keybindings {
             zoomIn, zoomOut,
             panPlusX, panMinusX, panPlusZ, panMinusZ,
             panUp, panLeft, panDown, panRight,
-            rotCW, rotCCW, reset, toggleCamera, overview,
+            rotCW, rotCCW, reset, toggleCamera, toggleFreeFly, overview,
             cameraAnchors[0], cameraAnchors[1], cameraAnchors[2], cameraAnchors[3],
             rotateBuildingCCW, rotateBuildingCW,
             cancelBuild,
@@ -243,7 +251,7 @@ public class Keybindings {
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
             item1, item2, item3, item4, item5, item6,
             cursorDiag,
-            queueSkip, queueInsert
+            queueSkip, queueInsert, livingArmyToggle
         ));
         Collections.addAll(list, buildGrid);
         Collections.addAll(list, nums);

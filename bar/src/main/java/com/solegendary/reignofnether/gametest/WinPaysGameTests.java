@@ -326,15 +326,24 @@ public class WinPaysGameTests {
         CommanderServerEvents.makeCommander(commander);
         builder.getBuildRepairGoal().setBuildingTarget(site);
         ((Unit) walker).setMoveTarget(new BlockPos(cx + 6, y + 1, cz - 8));
+        // The rule-off half is judged now, in the tick the workers arrive: WreckServerEvents' own once-a-second pass
+        // (gameTime % 20 == 0, rule on) may run during the 3-tick wait below and send the idle pair on its own, which
+        // is right with the rule on but read as "sent with the rule off" when this check came after the wait (the
+        // shard 8 flake, main runs 40566241275 / 40566701183). Nothing else can run between these lines.
+        var rule = level.getGameRules().getRule(GameRuleRegistrar.IDLE_RECLAIM);
+        String sentWhileOff = null;
+        try {
+            rule.set(false, level.getServer());
+            WreckServerEvents.autoReclaimIdle(level);
+            if (WreckServerEvents.isReclaiming(idleA) || WreckServerEvents.isReclaiming(idleB))
+                sentWhileOff = "with the idleReclaim gamerule off an idle worker was sent to the wreck";
+        } finally {
+            rule.set(true, level.getServer());
+        }
+        final String offProblem = sentWhileOff;
         helper.runAfterDelay(3, () -> {
-            var rule = level.getGameRules().getRule(GameRuleRegistrar.IDLE_RECLAIM);
-            String problem = null;
+            String problem = offProblem;
             try {
-                rule.set(false, level.getServer());
-                WreckServerEvents.autoReclaimIdle(level);
-                if (WreckServerEvents.isReclaiming(idleA) || WreckServerEvents.isReclaiming(idleB))
-                    problem = "with the idleReclaim gamerule off an idle worker was sent to the wreck";
-                rule.set(true, level.getServer());
                 WreckServerEvents.autoReclaimIdle(level);
                 if (problem == null && (WreckServerEvents.getReclaimTarget(idleA) != wreck
                         || WreckServerEvents.getReclaimTarget(idleB) != wreck))

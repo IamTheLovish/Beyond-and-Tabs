@@ -41,6 +41,14 @@ public final class StuckNudge {
 
     public static final int STAGE_REPATH = 1, STAGE_SIDESTEP = 2, STAGE_GIVE_UP = 3;
 
+    /**
+     * Sees each "[Stuck]" event the debug line below logs (one per unit per {@link #LOG_INTERVAL}). Measurement only:
+     * the nightly bot ladder (gametest/LadderGameTests) sets it to put stuck units, with their position, into its
+     * report; nothing in the game sets it, and it changes no behaviour.
+     */
+    public interface Observer { void stuck(Mob mob, Unit unit, int stage); }
+    public static volatile Observer observer;
+
     private static final class State {
         Vec3 lastPos;
         int stage;           // the last nudge applied (0 = none yet)
@@ -108,6 +116,9 @@ public final class StuckNudge {
             s.lastLog = now;
             ReignOfNether.LOGGER.debug("[Stuck] {}#{} ({}) stage {} at {}", mob.getType().toShortString(), mob.getId(),
                 unit.getOwnerName(), stage, mob.blockPosition().toShortString());
+            Observer watching = observer;
+            if (watching != null)
+                watching.stuck(mob, unit, stage);
         }
     }
 
@@ -157,8 +168,8 @@ public final class StuckNudge {
 
     private static void repath(Mob mob, Unit unit) {
         // the chase goals repath within their next recalc (5-20 ticks) once the navigation is empty, and the move
-        // goal restarts from here on its next canContinueToUse. Not forceRepath: that resets the move goal's own
-        // stuck count, and a move order that keeps ending on the same node must still reach its give-up.
+        // goal restarts from here on its next canContinueToUse. Not forceRepath: that drops the move goal's
+        // backoff, and a move order that keeps ending on the same node must still back off on its way to the give-up.
         mob.getNavigation().stop();
     }
 

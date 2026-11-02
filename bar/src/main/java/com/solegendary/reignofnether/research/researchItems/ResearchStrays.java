@@ -42,8 +42,9 @@ public class ResearchStrays extends ProductionItem {
                 UnitServerEvents.convertAllToUnit(
                         placement.ownerName,
                     (ServerLevel) level,
+                    // not summons (a hero's or a tombstone's skeletons): they would become permanent strays
                     (LivingEntity entity) -> entity instanceof SkeletonUnit sUnit && sUnit.getOwnerName()
-                        .equals(placement.ownerName),
+                        .equals(placement.ownerName) && !com.solegendary.reignofnether.essence.Essence.isSummoned(entity),
                     EntityRegistrar.STRAY_UNIT.get()
                 );
             }

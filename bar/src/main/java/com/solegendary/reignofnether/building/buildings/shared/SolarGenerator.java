@@ -51,8 +51,8 @@ public class SolarGenerator extends Building {
 
     /** The two jobs, with every number that tunes them. */
     public enum Kind {
-        BASIC("Solar Collector", "solar_collector", ResourceCost.Building(0, 60, 150, 0), 20f, 120d, 0.1f, 90, false),
-        ADVANCED("Advanced Solar", "advanced_solar", ResourceCost.Building(0, 1500, 300, 0), 75f, 500d, 0.6f, 140, true);
+        BASIC("Solar Collector", "solar_collector", ResourceCost.Building(0, 60, 150), 20f, 120d, 0.1f, 90, false),
+        ADVANCED("Advanced Solar", "advanced_solar", ResourceCost.Building(0, 1500, 300), 75f, 500d, 0.6f, 140, true);
 
         public final String buildingName;
         public final String structureName;

@@ -2,6 +2,8 @@ package com.solegendary.reignofnether.fogofwar;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import io.netty.buffer.Unpooled;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.server.level.ServerChunkCache;
@@ -47,8 +49,8 @@ import java.util.concurrent.locks.LockSupport;
 // The capture is spread over server ticks. It used to run in one tick at the first RTS join and froze the server
 // thread 14-23 s (a synchronous chunk load, packet build, encode and file write for each of ~2,000 chunks):
 //  - server thread, at most TICK_BUDGET_NS per tick ({@link #tick}): build the packet of every border chunk that is
-//    loaded (the packet constructor copies the chunk's sections, block entities and light, so the packet IS the
-//    snapshot) once its light has settled (see below); a chunk that is not loaded gets a level-33 region ticket (FULL, not ticking - what
+//    loaded (the packet constructor copies the chunk's sections, block entities and light, and {@link #copyHeightmaps}
+//    its heightmaps, so the packet IS the snapshot) once its light has settled (see below); a chunk that is not loaded gets a level-33 region ticket (FULL, not ticking - what
 //    getChunk(x, z, true) asked for) and is built once the chunk system has loaded it on its own workers;
 //  - one background thread: encode each built packet and write its file (bytes only, no world access); a chunk
 //    joins the on-disk index once its file is written, and until then get() serves the in-memory packet;
@@ -128,6 +130,10 @@ public class FogChunkSnapshot {
     private static int capturedCount = 0;
     private static long captureStartNs = 0;
     private static long captureMaxStepNs = 0;
+    // the longest single chunk build (pending block entities + packet) and how many pending block entities the
+    // capture created: logged with the step, so a long step can be told apart from a slow build
+    private static long captureMaxBuildNs = 0;
+    private static int pendingCreatedCount = 0;
     // bumped by clear(): a write task of an older capture drops its result
     private static volatile int generation = 0;
 
@@ -192,6 +198,8 @@ public class FogChunkSnapshot {
         captureStartNs = System.nanoTime();
         lastProgressNs = captureStartNs;
         captureMaxStepNs = 0;
+        captureMaxBuildNs = 0;
+        pendingCreatedCount = 0;
         ReignOfNether.LOGGER.info("[FogChunkSnapshot] capturing {} chunks inside world border over the next ticks",
                 pending.size());
     }
@@ -348,16 +356,22 @@ public class FogChunkSnapshot {
         relightSince.clear();
         order.clear();
         ReignOfNether.LOGGER.info("[FogChunkSnapshot] captured {} chunks inside world border to {} over {} ms "
-                        + "(longest server-thread step {} ms; files are written in the background)",
+                        + "(longest server-thread step {} ms, longest chunk build {} ms, {} pending block entities "
+                        + "created; files are written in the background)",
                 capturedCount, dir, (System.nanoTime() - captureStartNs) / 1_000_000,
-                String.format(Locale.ROOT, "%.1f", captureMaxStepNs / 1e6));
+                String.format(Locale.ROOT, "%.1f", captureMaxStepNs / 1e6),
+                String.format(Locale.ROOT, "%.1f", captureMaxBuildNs / 1e6), pendingCreatedCount);
     }
 
     // build the packet now (that is the snapshot) and hand it to the writer
     private static ClientboundLevelChunkWithLightPacket captureNow(LevelChunk chunk) {
         ChunkPos pos = chunk.getPos();
+        long buildStart = System.nanoTime();
+        pendingCreatedCount += createPendingBlockEntities(chunk);
         ClientboundLevelChunkWithLightPacket packet =
                 new ClientboundLevelChunkWithLightPacket(chunk, captureLevel.getLightEngine(), null, null);
+        copyHeightmaps(packet);
+        captureMaxBuildNs = Math.max(captureMaxBuildNs, System.nanoTime() - buildStart);
         if (pending.remove(pos)) capturedCount++;
         lru.remove(pos); // a rebuild (relight) replaces an earlier build
         unwritten.put(pos, packet);
@@ -369,6 +383,40 @@ public class FogChunkSnapshot {
             unwritten.remove(pos, packet);
         });
         return packet;
+    }
+
+    /**
+     * Gives the packet its own copy of the chunk's heightmaps. The packet copies the chunk's sections, block entities
+     * and light, but its heightmap tags hold the chunk's own arrays (new LongArrayTag(heightmap.getRawData()) keeps
+     * the array it is given), so a block changed after the build reached the heightmaps of the file the writer encodes
+     * later and of the packet get() serves (CI run 40469592779: "heightmaps of [22, 52]").
+     */
+    static void copyHeightmaps(ClientboundLevelChunkWithLightPacket packet) {
+        CompoundTag heightmaps = packet.getChunkData().getHeightmaps();
+        for (String key : new ArrayList<>(heightmaps.getAllKeys()))
+            if (heightmaps.get(key) instanceof LongArrayTag tag)
+                heightmaps.put(key, new LongArrayTag(tag.getAsLongArray().clone()));
+    }
+
+    /**
+     * Creates the block entities {@code chunk} still holds only as pending tags, so its packet lists them. A chunk
+     * loaded at level 33 (FULL, not ticking: the capture's own ticket) keeps those its features placed (a DUMMY tag
+     * from WorldGenRegion) pending until the first getBlockEntity of their position: vanilla's background save
+     * (ChunkMap.processUnloads -> saveChunkIfNeeded -> getBlockEntityNbtForSaving) or postProcessGeneration when the
+     * chunk turns ticking, which runs before vanilla ever sends a chunk to a player. The packet lists only created
+     * block entities, so without this the snapshot's depended on whether the save had reached the chunk yet (main run
+     * 40456368179: "reference only" block entities). Creating them is what that save does anyway. Returns how many
+     * positions were pending.
+     */
+    static int createPendingBlockEntities(LevelChunk chunk) {
+        var created = chunk.getBlockEntities();
+        int n = 0;
+        for (var p : chunk.getBlockEntitiesPos())   // a fresh set: pending and created positions
+            if (!created.containsKey(p)) {
+                chunk.getBlockEntity(p);
+                n++;
+            }
+        return n;
     }
 
     /** LevelChunkMixin, before a block of a loaded chunk changes: a chunk still waiting is captured first. */

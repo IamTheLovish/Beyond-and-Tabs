@@ -69,6 +69,9 @@ public class PerfScanGameTests {
         var rule = level.getGameRules().getRule(GameRuleRegistrar.NEUTRAL_AGGRO);
         boolean before = rule.get();
         rule.set(true, level.getServer());
+        // back when the test ends, however it ends: its own reset sits after the assertion in succeedWhen, so a
+        // failing run (a timeout) left neutralAggro on for every later test in the world
+        TestCleanup.atEnd(helper, () -> rule.set(before, level.getServer()));
         BlockPos pad = ArenaReady.pad(helper, 135);
         VillagerUnit worker = EntityRegistrar.VILLAGER_UNIT.get().create(level);
         Husk a = EntityType.HUSK.create(level);
@@ -85,6 +88,7 @@ public class PerfScanGameTests {
         b.setPersistenceRequired();
         for (var e : new net.minecraft.world.entity.Mob[] { worker, a, b })
             level.addFreshEntity(e);
+        TestCleanup.entities(helper, java.util.List.of(worker, a, b));
         helper.succeedWhen(() -> {
             if (a.getTarget() != b && b.getTarget() != a)
                 helper.fail("neither husk took the other as a target with neutralAggro on (worker tick "

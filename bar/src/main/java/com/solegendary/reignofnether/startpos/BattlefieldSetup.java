@@ -76,6 +76,20 @@ public class BattlefieldSetup {
         settleTicksLeft = -1;
     }
 
+    /**
+     * Forget the battlefield a match was about to form: pending starts, the lobby's overrides and the pre-made map or
+     * prepared wall that were meant for the old arena. A new match on fresh ground (maps.NewMatch) must not form its
+     * battlefield from what was left for the last one.
+     */
+    public static synchronized void abandon() {
+        discardPending();
+        expectFormation = false;
+        premadeLayout = null;
+        wallStands = false;
+        richnessOverride = -1f;
+        arenaRadiusOverride = -1;
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         pending.clear();
