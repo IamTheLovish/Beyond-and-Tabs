@@ -81,6 +81,14 @@ class LagReportTest(unittest.TestCase):
         self.assertTrue(v.startswith("server-bound"), v)
         self.assertIn("2 of 4", v, v)
 
+    def test_a_slow_client_is_named_when_the_server_is_bound_too(self):
+        # 150 a side 2026-11-01 (main 43b84275): client 15 fps and server p95 61 ms; the verdict named only the server
+        lines = [frame(10 * i, 15) for i in range(1, 7)] + [tick(10 * i, 61.0) for i in range(1, 7)]
+        v = lag_report.verdict(lag_report.analyze(lines))
+        self.assertTrue(v.startswith("server-bound"), v)
+        self.assertIn("the client is slow too", v, v)
+        self.assertIn("15 fps", v, v)
+
     def test_chunk_loading_verdict(self):
         lines = [frame(10 * i, 70) for i in range(1, 7)] + [tick(10 * i, 10.0) for i in range(1, 7)]
         for i in range(1, 7):
