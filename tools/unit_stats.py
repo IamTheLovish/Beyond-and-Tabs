@@ -29,6 +29,7 @@ ROSTER = [
     ('Sunforged', 't2', 'villagers/EvokerUnit', 'caster'),
     ('Sunforged', 't2', 'villagers/WindcallerUnit', 'anti-air'),
     ('Sunforged', 't2', 'villagers/WitchUnit', 'support'),
+    ('Sunforged', 't1', 'villagers/AngelCallerUnit', 'support'),   # essence caster: its angels fight
     ('Sunforged', 't2', 'villagers/IronGolemUnit', 'tank'),
     ('Sunforged', 't2', 'villagers/RavagerUnit', 'siege'),
     ('Sunforged', 't3', 'villagers/SunColossusUnit', 'experimental'),
@@ -77,6 +78,7 @@ ROSTER = [
     ('Verdant', 't2', 'verdant/WispChoirUnit', 'anti-air'),
     ('Verdant', 't2', 'verdant/ShadeRangerUnit', 'sniper'),
     ('Verdant', 't2', 'verdant/BloomPriestessUnit', 'support'),
+    ('Verdant', 't1', 'verdant/ThornweaverUnit', 'support'),
     ('Verdant', 't3', 'verdant/WorldTreeWalkerUnit', 'experimental'),
     # Tidewrought
     ('Tidewrought', 'worker', 'tide/ShipwrightUnit', 'builder'),
@@ -110,7 +112,7 @@ ROSTER = [
     ('Stormcallers', 't2', 'storm/EarthshakerUnit', 'tank'),
     ('Stormcallers', 't2', 'storm/GravityMonkUnit', 'caster'),
     ('Stormcallers', 't2', 'storm/MirrorMageUnit', 'support'),
-    ('Stormcallers', 't2', 'storm/SparkSageUnit', 'support'),
+    ('Stormcallers', 't1', 'storm/SparkSageUnit', 'support'),   # casters are tier 1 (lovish, Oct 29)
     # slice 4: the Seer and the Lantern Fortress do not fight (the Fortress is bought for its dome); the Phoenix's
     # rebirth and the Celestial Dragon's Tempest are what the table can't see
     ('Stormcallers', 't2', 'storm/SeerUnit', 'scout'),
@@ -136,7 +138,7 @@ ROSTER = [
     ('Brassworks', 't2', 'brass/DrillBurrowerUnit', 'raider'),
     ('Brassworks', 't2', 'brass/RepairCrawlerUnit', 'support'),
     ('Brassworks', 't2', 'brass/ClockworkSpiderUnit', 'skirmisher'),
-    ('Brassworks', 't2', 'brass/SoulEngineerUnit', 'support'),
+    ('Brassworks', 't1', 'brass/SoulEngineerUnit', 'support'),   # casters are tier 1 (lovish, Oct 29)
     # slice 4: the Great Forge's experimental (Heat vents its cannon; the drones it launches are free and not listed)
     ('Brassworks', 't3', 'brass/IronLeviathanEngineUnit', 'experimental'),
     # big-units (design/big_units.md): the T2 beasts - each pays for a signature the per-target columns can't see (an

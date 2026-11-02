@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.environment.wind;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.resources.Wind;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -66,7 +67,7 @@ public class BranchWindRenderer implements BlockEntityRenderer<SwayBlockEntity> 
             double dist = Math.sqrt(cam.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
             fade = (SWAY_RANGE - dist) / (SWAY_RANGE - FULL_RANGE);
         }
-        double seconds = (level.getGameTime() + partialTicks) / 20.0;
+        double seconds = ClientTicks.at(partialTicks) / 20.0;
         WindField.offset(pos.getX(), pos.getY(), pos.getZ(), be.tier, seconds, Wind.multiplier(), fade, off);
 
         poseStack.pushPose();

@@ -46,7 +46,15 @@ public interface FactionHero extends HeroUnit {
     @Override default int getSkillPoints() { return heroCore().skillPoints; }
     @Override default void setSkillPoints(int points) { heroCore().skillPoints = points; }
     @Override default boolean isRankUpMenuOpen() { return heroCore().rankUpMenuOpen; }
-    @Override default void showRankUpMenu(boolean show) { heroCore().rankUpMenuOpen = show; }
+    @Override
+    default void showRankUpMenu(boolean show) {
+        boolean changed = heroCore().rankUpMenuOpen != show;
+        heroCore().rankUpMenuOpen = show;
+        // the server's auto-learn waits while the player has the menu open (HeroBot.autoLearn)
+        LivingEntity le = (LivingEntity) this;
+        if (changed && le.level().isClientSide())
+            HeroServerboundPacket.sendRankMenu(le.getId(), show);
+    }
     @Override default int getExperience() { return heroCore().experience; }
     @Override default Object2ObjectArrayMap<HeroAbility, Integer> getHeroAbilityRanks() { return heroCore().ranks; }
     @Override default float getMana() { return heroCore().mana; }
@@ -160,8 +168,10 @@ public interface FactionHero extends HeroUnit {
         // the v2 brain's cheap half (the player's order, a combo's follow-up) every tick; the decisions once a second
         if (com.solegendary.reignofnether.hero.ai.HeroBrain.drives(hero))
             HeroBot.everyTick(mob, hero);
-        if (mob.tickCount % 20 == 7)
+        if (mob.tickCount % 20 == 7) {
+            HeroBot.autoLearn(mob, hero);
             HeroBot.tickHero(mob, hero);
+        }
     }
 
     /** A new order: the aimed cast in flight is dropped (a scripted leap finishes - it is already in the air). */

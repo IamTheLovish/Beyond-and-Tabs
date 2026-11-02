@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.unit.modelling.motion.ZoomGain;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -318,12 +319,12 @@ public final class BarFxClient {
                 for (int i = 0; i < 4; i++) { P p = smoke(x + rnd(-.4f, .4f), y, z + rnd(-.4f, .4f), .3f, 1.2f, 0xB890D8, .4f); p.vy = .3f; p.grow = 2f; }
             }
             case BarFx.K_MELEE -> {
-                flash(x, y, z, .28f * size, .05f, tint(0xFFF4D8, faction));
+                flash(x, y, z, .28f * size * onUnit(where), .05f, tint(0xFFF4D8, faction));
                 sparks(x, y, z, where == BarFx.AT_BUILDING ? 3 : 4, 2.5f, tint(0xFFF0C0, faction), dx, dz);
                 if (where == BarFx.AT_BUILDING) dust(x, y - .4f, z, .35f, 0xB8A890);
             }
             case BarFx.K_HEAVY_MELEE -> {
-                flash(x, y, z, .55f * size, .08f, tint(0xFFF0D0, faction));
+                flash(x, y, z, .55f * size * onUnit(where), .08f, tint(0xFFF0D0, faction));
                 sparks(x, y, z, 8, 3.5f, tint(0xFFE8B0, faction), dx, dz);
                 float g = groundY(x, y, z);
                 int gc = groundColor(x, g, z);
@@ -342,11 +343,20 @@ public final class BarFxClient {
                     dust(x, y, z, .25f, 0xB8A890);
                     sparks(x, y, z, 2, 2f, sc, -dx, -dz);
                 } else {
-                    flash(x, y, z, .22f, .05f, tint(0xFFF0D0, faction));
+                    flash(x, y, z, .22f * onUnit(where), .05f, tint(0xFFF0D0, faction));
                     sparks(x, y, z, 2, 1.8f, sc, dx, dz);
                 }
             }
         }
+    }
+
+    /**
+     * How much bigger a hit's flash on a unit draws as the RTS camera pulls back (combat feel gain 3): as the flinch
+     * does (ZoomGain), so a blow still reads at zoom 30-60 where it was a few pixels. Hits on the ground or a
+     * building keep their size.
+     */
+    static float onUnit(int where) {
+        return where == BarFx.AT_UNIT && ortho ? ZoomGain.gain(zoom, ZoomGain.K_FLINCH) : 1f;
     }
 
     static void explosion(int kind, float x, float y, float z, float r) {

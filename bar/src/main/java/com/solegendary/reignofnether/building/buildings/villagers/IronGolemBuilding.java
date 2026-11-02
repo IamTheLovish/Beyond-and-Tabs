@@ -61,7 +61,7 @@ public class IronGolemBuilding extends Building {
             ),
             List.of(Component.translatable("buildings.reignofnether.iron_golem_building").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(IronGolemProd.cost),
+                ResourceCosts.getFormattedTime(IronGolemProd.cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("buildings.reignofnether.iron_golem_building.tooltip1").getVisualOrderText(),
                 FormattedCharSequence.forward("", Style.EMPTY),

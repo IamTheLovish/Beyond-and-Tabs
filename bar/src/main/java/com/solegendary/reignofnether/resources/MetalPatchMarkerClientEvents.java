@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
@@ -59,10 +60,11 @@ public class MetalPatchMarkerClientEvents {
      * and gems), became the marker's main cost.
      */
     static BuildingPlacement buildingOn(BlockPos patch) {
-        long t = MC.level == null ? 0 : MC.level.getGameTime();
+        long t = MC.level == null ? 0 : ClientTicks.now();
         java.util.List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
         java.util.List<BlockPos> patches = MetalPatchesClient.getPatches();
-        if (t - onAt >= ON_TICKS || t < onAt || buildings.size() != onBuildings || patches.size() != onPatches) {
+        if (onAt == Long.MIN_VALUE || t - onAt >= ON_TICKS || t < onAt || buildings.size() != onBuildings
+            || patches.size() != onPatches) {
             ON.clear();
             for (BlockPos p : patches)
                 for (BuildingPlacement b : buildings)
@@ -189,7 +191,7 @@ public class MetalPatchMarkerClientEvents {
             Frustum frustum = evt.getFrustum();
             BlockRenderDispatcher renderer = MC.getBlockRenderer();
             BlockState gem = Blocks.RAW_IRON_BLOCK.defaultBlockState();
-            float time = MC.level.getGameTime() + evt.getPartialTick();
+            float time = ClientTicks.at(evt.getPartialTick());
             boolean strategic = StrategicViewClientEvents.isStrategicView();
             float size = strategic ? 2.2f : 0.7f;   // 0.5 read as a speck at the default zoom (Oct 16)
             boolean renderedAny = false;

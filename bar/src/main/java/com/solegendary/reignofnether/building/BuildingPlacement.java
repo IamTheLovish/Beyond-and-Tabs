@@ -947,15 +947,21 @@ public class BuildingPlacement {
         Collections.shuffle(placedBlocks);
         Collections.shuffle(poolBlocks);
         placedBlocks.addAll(poolBlocks);
-        for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
-            BlockPos bp = placedBlocks.get(i).getBlockPos();
-            com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
-            if (!getLevel().getBlockState(bp).getFluidState().isEmpty()) {
-                getLevel().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
-            } else {
-                getLevel().destroyBlock(bp, false);
+        // a lantern, ladder, banner or door that loses its support breaks without an item (BuildingDrops)
+        BuildingPlacement dropsWere = BuildingDrops.begin(this);
+        try {
+            for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
+                BlockPos bp = placedBlocks.get(i).getBlockPos();
+                com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
+                if (!getLevel().getBlockState(bp).getFluidState().isEmpty()) {
+                    getLevel().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
+                } else {
+                    getLevel().destroyBlock(bp, false);
+                }
+                this.onBlockBreak((ServerLevel) getLevel(), bp, false);
             }
-            this.onBlockBreak((ServerLevel) getLevel(), bp, false);
+        } finally {
+            BuildingDrops.end(dropsWere);
         }
         if (intAmount > 0) {
             // rate-limited per owner (was one packet to everyone per hit); centrePos instead of re-scanning blocks
@@ -1027,6 +1033,8 @@ public class BuildingPlacement {
                 placedCount++;
         final int blastEvery = Math.max(1, placedCount / MAX_COLLAPSE_BLASTS);
         final int[] seen = { 0 };
+        // its pieces (lanterns, ladders, banners, doors) break without items as their supports go (BuildingDrops)
+        BuildingPlacement dropsWere = BuildingDrops.begin(this);
         try {
         this.blocks.forEach((BuildingBlock block) -> {
             if ((!block.getBlockState().getFluidState().isEmpty() ||
@@ -1051,6 +1059,7 @@ public class BuildingPlacement {
         });
         } finally {
             com.solegendary.reignofnether.barfx.BarFx.muteExplosions(false);
+            BuildingDrops.end(dropsWere);
         }
 
         this.scaffoldBlocks.forEach((BuildingBlock block) -> {
@@ -1566,6 +1575,34 @@ public class BuildingPlacement {
     /** At most this many blasts when a building is destroyed (it set one off on a quarter of its blocks - dozens). */
     static final int MAX_COLLAPSE_BLASTS = 4;
 
+    /**
+     * A structure block's saved block-entity data ("nbt" in the .nbt file) onto the block just placed at bp: chests'
+     * items, and the skins of framed / retexturable building blocks (FramedBlocks' "camo", Domum Ornamentum's
+     * "textureData") - without it those stand as bare frames. The GameTests in BuildingBlockModGameTests call this too.
+     */
+    public static void restoreBlockEntity(Level level, BlockPos bp, BlockState bs, CompoundTag bNbt) {
+        if (bs.getBlock() == Blocks.SCULK_CATALYST) {
+            BlockEntity be = level.getBlockEntity(bp);
+            if (be != null) {
+                CompoundTag safeTag = bNbt.copy();
+                safeTag.remove("vibration");
+                safeTag.remove("listener");
+                safeTag.remove("vibration_data");
+                safeTag.remove("VibrationSystem");
+                safeTag.remove("event_delay");
+                safeTag.remove("event_distance");
+                safeTag.remove("selector");
+                safeTag.remove("source");
+                be.load(safeTag);
+                be.setChanged();
+            }
+        } else {
+            BlockEntity be = BlockEntity.loadStatic(bp, bs, bNbt);
+            if (be != null)
+                level.setBlockEntity(be);
+        }
+    }
+
     private void buildNextBlock() {
         if (blockPlaceQueue.isEmpty())
             return;
@@ -1578,28 +1615,8 @@ public class BuildingPlacement {
             if (blockBelow == Blocks.FARMLAND || blockBelow == Blocks.DIRT_PATH)
                 level.setBlockAndUpdate(bp.below(), Blocks.DIRT.defaultBlockState());
             level.setBlockAndUpdate(bp, bs);
-            if (bNbt != null) {
-                if (bs.getBlock() == Blocks.SCULK_CATALYST) {
-                    BlockEntity be = level.getBlockEntity(bp);
-                    if (be != null) {
-                        CompoundTag safeTag = bNbt.copy();
-                        safeTag.remove("vibration");
-                        safeTag.remove("listener");
-                        safeTag.remove("vibration_data");
-                        safeTag.remove("VibrationSystem");
-                        safeTag.remove("event_delay");
-                        safeTag.remove("event_distance");
-                        safeTag.remove("selector");
-                        safeTag.remove("source");
-                        be.load(safeTag);
-                        be.setChanged();
-                    }
-                } else {
-                    BlockEntity be = BlockEntity.loadStatic(bp, bs, bNbt);
-                    if (be != null)
-                        level.setBlockEntity(be);
-                }
-            }
+            if (bNbt != null)
+                restoreBlockEntity(level, bp, bs, bNbt);
             // avoid creating a bubble column block
             if (bs.getFluidState().is(FluidTags.WATER)) {
                 if (level.getBlockState(bp.below()).getBlock() == Blocks.SOUL_SAND) {

@@ -58,7 +58,7 @@ public class WitherSkeletonProd extends ProductionItem implements IUnitProductio
         List<FormattedCharSequence> tooltipLines = new ArrayList<>(List.of(
                 Component.translatable("entity.reignofnether.wither_skeleton_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.wither_skeleton_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.wither_skeleton_unit.tooltip2").getVisualOrderText(),
