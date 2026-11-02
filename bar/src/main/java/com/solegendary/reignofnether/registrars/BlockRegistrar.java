@@ -165,9 +165,12 @@ public class BlockRegistrar {
 
     // Tidewrought tidepool (design/tidewrought_plan.md section 3): temporary shallow "water" with no fluid state, no
     // collision and no occlusion, raised and expired only by tide/TidepoolServerEvents. No block item, no loot.
-    // Replaceable, so buildings and placed blocks simply overwrite it; not view-blocking, never darkens the ground
+    // Replaceable, so buildings and placed blocks simply overwrite it; not view-blocking, never darkens the ground.
+    // Drawn as a Light Grid tile since slice 1a (design/ai_faction.md): emissive (full-bright lines at night) with no
+    // light level, so raising and drying cells never triggers light updates
     public static final RegistryObject<TidepoolBlock> TIDEPOOL = registerBlock("tidepool",
-            () -> new TidepoolBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WATER)
+            () -> new TidepoolBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
+                    .emissiveRendering(BlockRegistrar::always)
                     .replaceable()
                     .noCollission()
                     .noOcclusion()
@@ -177,7 +180,7 @@ public class BlockRegistrar {
                     .isViewBlocking((bs, bg, bp) -> false)
                     .isSuffocating((bs, bg, bp) -> false)
                     .isRedstoneConductor((bs, bg, bp) -> false)
-                    .sound(SoundType.WET_GRASS)
+                    .sound(SoundType.GLASS)
                     .pushReaction(PushReaction.DESTROY)));
 
     // Stormcallers frost sheet (design/stormcallers_plan.md 3.7): the Frost Adept's temporary skin of ice - no collision,

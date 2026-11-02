@@ -188,7 +188,7 @@ public class SoulBoiler extends Ability {
     /**
      * Whether the boil would speed anything up right now (the autocast's test; a player's hand-cast only needs
      * {@link #hasWork}): a site that someone is building (a worker on it, an annex lending power, or one that builds
-     * itself), or a built building whose first queued item is not held at the population cap.
+     * itself), or a built building with something in its queue (no queue is ever held: no population - lovish, Oct 29).
      */
     public static boolean isWorking(BuildingPlacement b) {
         if (!b.isBuilt)
@@ -196,7 +196,7 @@ public class SoulBoiler extends Ability {
                 || (b.getLevel() != null && b.assistUntilTick > b.getLevel().getGameTime());
         if (!(b instanceof ProductionPlacement pp) || pp.productionQueue.isEmpty())
             return false;
-        return pp.productionQueue.get(0).item.isBelowPopulationSupply(pp);
+        return true;
     }
 
     /**

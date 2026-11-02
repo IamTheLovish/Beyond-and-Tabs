@@ -54,7 +54,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Brassworks T2 essence caster - the <b>Soul Engineer</b> (placeholder name; design/essence_casters.md, lovish approved
+ * Brassworks essence caster, tier 1 (Machine Shop) - the <b>Soul Engineer</b> (placeholder name; design/essence_casters.md, lovish approved
  * draft 2 on Oct 29: "one caster per race"; numbers from Revision 1). A guild engineer who burns the essence the fallen
  * leave behind ({@link EssenceCarrier}: it pulls the wisps within 8 blocks in and holds up to 30) in three spells -
  * Patch Kit (5), Ghost Furnace (10) and Soul Boiler (20) - and the casters' shared Empower (15). It does not fight: the

@@ -28,6 +28,11 @@ public final class SupportMath {
     public static final double HEAL_ENEMY_NEAR = 2.0;
     /** The healer heals itself only below this fraction of its health, and then counts it this much more. */
     public static final float SELF_HEAL_FRACTION = 0.5f, SELF_HEAL_WEIGHT = 1.5f;
+    /**
+     * A heal goes to the friend lowest on health (as a fraction); what the friend is worth only breaks a near-tie: the
+     * most valuable unit (value 5) scores this much more, the cheapest nothing.
+     */
+    public static final double VALUE_TIEBREAK = 0.05;
     /** An area heal needs at least this many hurt friends under it (one is the single heal's job). */
     public static final int AREA_HEAL_MIN_HURT = 2;
     /** What an area heal is reckoned to give each friend under it at most (the score's cap). */
@@ -88,15 +93,19 @@ public final class SupportMath {
         return c;
     }
 
+    /** {@link #nearest}'s minMissing for "hurt or not": every entry matching the flags counts. */
+    static final float ANY = -1f;
+
     /**
-     * Up to {@link #MAX_CANDIDATES} entries matching the flags within {@code r} of (cx, cz) with at least
-     * {@code minMissing} health missing, nearest first, into {@code f.cand}; returns how many.
+     * Up to {@link #MAX_CANDIDATES} entries matching the flags within {@code r} of (cx, cz), nearest first, into
+     * {@code f.cand}; returns how many. A {@code minMissing} of 0 or more keeps only the {@link #hurt} ones, {@link #ANY}
+     * every one.
      */
     static int nearest(SupportField f, int all, int none, double cx, double cz, double r, float minMissing) {
         double r2 = r * r;
         int k = 0;
         for (int i = 0; i < f.n; i++) {
-            if (!has(f.flags[i], all, none) || f.missing(i) < minMissing)
+            if (!has(f.flags[i], all, none) || (minMissing >= 0 && !hurt(f, i, minMissing)))
                 continue;
             double d = d2(f.x[i], f.z[i], cx, cz);
             if (d > r2)
@@ -130,7 +139,7 @@ public final class SupportMath {
         out.reset();
         int skip = skipUndead(rule);
         double reach2 = reach * reach, r2 = radius * radius;
-        int k = nearest(f, F_ENEMY, skip, sx, sz, reach, 0f);
+        int k = nearest(f, F_ENEMY, skip, sx, sz, reach, ANY);
         for (int c = 0; c < k; c++) {
             int i = f.cand[c];
             double cx = 0, cz = 0;
@@ -180,11 +189,27 @@ public final class SupportMath {
     }
 
     /**
-     * The friend a single heal should go to, or -1: a friend the heal mends within {@code reach}, missing at least
-     * {@code minMissing} health, with the best missing health x value - the healer itself only below
-     * {@link #SELF_HEAL_FRACTION} of its health, then x {@link #SELF_HEAL_WEIGHT}; halved with an enemy within
-     * {@link #HEAL_ENEMY_NEAR}. A heal that hurts the undead (INVERTED) never goes where an undead friend stands within
-     * its {@code radius}, now or in a second.
+     * Hurt enough for a heal: missing some health, and at least {@code minMissing} - so never a friend at full health.
+     * lovish, Oct 30 ("heal low hp units not full hp units"), and his review r1 answer "Only full health": no cut below
+     * full - who is lowest decides (healTarget), not a bar.
+     */
+    static boolean hurt(SupportField f, int i, float minMissing) {
+        float m = f.missing(i);
+        return m > 0 && m >= minMissing;
+    }
+
+    /** What a friend's value adds to a heal's score: 0 for the cheapest (value 1) up to {@link #VALUE_TIEBREAK}. */
+    static double valueTiebreak(float value) {
+        return VALUE_TIEBREAK * Math.min(1.0, Math.max(0.0, (value - 1.0) / 4.0));
+    }
+
+    /**
+     * The friend a single heal should go to, or -1: a {@link #hurt} friend the heal mends within {@code reach}, the
+     * lowest on health as a fraction of its own (lovish, Oct 30: "heal low hp units"; the old score, missing health x
+     * value, sent the heal to a costly unit at 80% over a cheap one at 60%) - its value only breaks a near-tie
+     * ({@link #valueTiebreak}). The healer itself only below {@link #SELF_HEAL_FRACTION} of its health, then x
+     * {@link #SELF_HEAL_WEIGHT}; halved with an enemy within {@link #HEAL_ENEMY_NEAR}. A heal that hurts the undead
+     * (INVERTED) never goes where an undead friend stands within its {@code radius}, now or in a second.
      */
     public static int healTarget(SupportField f, double sx, double sz, double reach, double radius, float minMissing, Undead rule) {
         int skip = skipUndead(rule);
@@ -198,8 +223,7 @@ public final class SupportMath {
             int fl = f.flags[i];
             if (!has(fl, F_FRIEND, skip))
                 continue;
-            float miss = f.missing(i);
-            if (miss < minMissing)
+            if (!hurt(f, i, minMissing))
                 continue;
             boolean self = (fl & F_SELF) != 0;
             if (self && f.health[i] >= f.maxHealth[i] * SELF_HEAL_FRACTION)
@@ -208,7 +232,7 @@ public final class SupportMath {
                 continue;
             if (guardUndead && undeadFriendNear(f, f.x[i], f.z[i], undead2))
                 continue;
-            double score = miss * Math.max(0.1f, f.value[i]);
+            double score = 1.0 - f.health[i] / Math.max(1f, f.maxHealth[i]);
             if (self)
                 score *= SELF_HEAL_WEIGHT;
             for (int j = 0; j < f.n; j++)
@@ -216,6 +240,7 @@ public final class SupportMath {
                     score *= 0.5;
                     break;
                 }
+            score += valueTiebreak(f.value[i]);
             if (score > bestScore) {
                 bestScore = score;
                 best = i;
@@ -241,10 +266,12 @@ public final class SupportMath {
 
     /**
      * Where an area heal of {@code radius} covers the most hurt friends, or false: on the centre of at least
-     * {@link #AREA_HEAL_MIN_HURT} hurt friends it mends (missing at least {@code minMissing}) - where they will be in a
+     * {@link #AREA_HEAL_MIN_HURT} {@link #hurt} friends it mends - where they will be in a
      * second, since a walking group walks on - within {@code reach} of the caster; never where the enemies under it
      * outnumber the friends (it would heal both sides of a melee), nor, for one that hurts the undead, over an undead
-     * friend. Score: the health it would give, each friend's share capped at {@link #AREA_HEAL_PER_FRIEND}, x value.
+     * friend. Score: the share of each friend's health it would give back (its health given, capped at
+     * {@link #AREA_HEAL_PER_FRIEND}, over its maximum), so the lowest friends count most, plus each one's
+     * {@link #valueTiebreak}.
      */
     public static boolean areaHealAim(SupportField f, double sx, double sz, double reach, double radius, float minMissing,
                                       Undead rule, Aim out) {
@@ -260,7 +287,7 @@ public final class SupportMath {
             double cx = 0, cz = 0;
             int m = 0;
             for (int j = 0; j < f.n; j++)
-                if (has(f.flags[j], F_FRIEND, skip) && f.missing(j) >= minMissing
+                if (has(f.flags[j], F_FRIEND, skip) && hurt(f, j, minMissing)
                         && d2(f.x[j], f.z[j], f.x[i], f.z[i]) <= r2) {
                     cx += f.px[j];
                     cz += f.pz[j];
@@ -274,14 +301,15 @@ public final class SupportMath {
                 continue;
             if (guardUndead && undeadFriendNear(f, cx, cz, undead2))
                 continue;
-            int hurt = 0;
+            int mended = 0;
             double gain = 0;
             for (int j = 0; j < f.n; j++)
-                if (has(f.flags[j], F_FRIEND, skip) && f.missing(j) >= minMissing && d2(f.px[j], f.pz[j], cx, cz) <= r2) {
-                    hurt++;
-                    gain += Math.min(AREA_HEAL_PER_FRIEND, f.missing(j)) * Math.max(0.1f, f.value[j]);
+                if (has(f.flags[j], F_FRIEND, skip) && hurt(f, j, minMissing) && d2(f.px[j], f.pz[j], cx, cz) <= r2) {
+                    mended++;
+                    gain += Math.min(AREA_HEAL_PER_FRIEND, f.missing(j)) / Math.max(1f, f.maxHealth[j])
+                        + valueTiebreak(f.value[j]);
                 }
-            if (hurt < AREA_HEAL_MIN_HURT)
+            if (mended < AREA_HEAL_MIN_HURT)
                 continue;
             int friends = countWithin(f, F_FRIEND, skip, cx, cz, radius, true);
             int foes = countWithin(f, F_ENEMY, skip, cx, cz, radius, true);
@@ -323,7 +351,7 @@ public final class SupportMath {
      * nearer. -1 when none of them has an enemy that close.
      */
     public static int front(SupportField f, double sx, double sz, double r) {
-        int k = nearest(f, F_FRIEND, F_SUPPORT | F_SELF, sx, sz, r, 0f);
+        int k = nearest(f, F_FRIEND, F_SUPPORT | F_SELF, sx, sz, r, ANY);
         int best = -1, bestCount = 0;
         for (int c = 0; c < k; c++) {
             int i = f.cand[c];
