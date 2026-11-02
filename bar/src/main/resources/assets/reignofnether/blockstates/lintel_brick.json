@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=east,keystone=false": {
+      "model": "reignofnether:block/lintel_brick",
+      "y": 90
+    },
+    "facing=east,keystone=true": {
+      "model": "reignofnether:block/lintel_brick_keystone",
+      "y": 90
+    },
+    "facing=north,keystone=false": {
+      "model": "reignofnether:block/lintel_brick"
+    },
+    "facing=north,keystone=true": {
+      "model": "reignofnether:block/lintel_brick_keystone"
+    },
+    "facing=south,keystone=false": {
+      "model": "reignofnether:block/lintel_brick",
+      "y": 180
+    },
+    "facing=south,keystone=true": {
+      "model": "reignofnether:block/lintel_brick_keystone",
+      "y": 180
+    },
+    "facing=west,keystone=false": {
+      "model": "reignofnether:block/lintel_brick",
+      "y": 270
+    },
+    "facing=west,keystone=true": {
+      "model": "reignofnether:block/lintel_brick_keystone",
+      "y": 270
+    }
+  }
+}

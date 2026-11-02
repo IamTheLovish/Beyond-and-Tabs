@@ -112,6 +112,22 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wraith_unit").toString()));
 
+    // Gravebound essence caster (design/essence_casters.md): the Wraith's size, as it wears the Wraith's body for now
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit>> TOMBCALLER_UNIT = ENTITIES.register("tombcaller_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.BLAZE.getWidth(), EntityType.BLAZE.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tombcaller_unit").toString()));
+
+    // the Tombcaller's Raise Tombstone: a summoned, stationary unit sized and drawn like a totem for now
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit>> TOMBSTONE_UNIT = ENTITIES.register("tombstone_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit::new, MobCategory.MISC)
+                    .fireImmune()
+                    .sized(0.75f, 1.25f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .updateInterval(10)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tombstone_unit").toString()));
+
     public static final RegistryObject<EntityType<VillagerUnit>> VILLAGER_UNIT = ENTITIES.register("villager_unit",
             () -> EntityType.Builder.of(VillagerUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.VILLAGER.getWidth(), EntityType.VILLAGER.getHeight())
@@ -177,6 +193,32 @@ public class EntityRegistrar {
                     .sized(EntityType.EVOKER.getWidth(), EntityType.EVOKER.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "evoker_unit").toString()));
+
+    // Sunforged essence caster (design/essence_casters.md): the Angel Caller and its three temporary flying angels
+    // (vex-bodied for now, sized up so they can be clicked from the RTS camera)
+    public static final RegistryObject<EntityType<AngelCallerUnit>> ANGEL_CALLER_UNIT = ENTITIES.register("angel_caller_unit",
+            () -> EntityType.Builder.of(AngelCallerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.EVOKER.getWidth(), EntityType.EVOKER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "angel_caller_unit").toString()));
+
+    public static final RegistryObject<EntityType<MenderAngelUnit>> MENDER_ANGEL_UNIT = ENTITIES.register("mender_angel_unit",
+            () -> EntityType.Builder.of(MenderAngelUnit::new, MobCategory.CREATURE)
+                    .sized(0.7f, 1.1f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mender_angel_unit").toString()));
+
+    public static final RegistryObject<EntityType<SeraphArcherUnit>> SERAPH_ARCHER_UNIT = ENTITIES.register("seraph_archer_unit",
+            () -> EntityType.Builder.of(SeraphArcherUnit::new, MobCategory.CREATURE)
+                    .sized(0.7f, 1.1f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seraph_archer_unit").toString()));
+
+    public static final RegistryObject<EntityType<SwordSeraphUnit>> SWORD_SERAPH_UNIT = ENTITIES.register("sword_seraph_unit",
+            () -> EntityType.Builder.of(SwordSeraphUnit::new, MobCategory.CREATURE)
+                    .sized(0.8f, 1.3f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sword_seraph_unit").toString()));
 
     public static final RegistryObject<EntityType<EndermanUnit>> ENDERMAN_UNIT = ENTITIES.register("enderman_unit",
             () -> EntityType.Builder.of(EndermanUnit::new, MobCategory.CREATURE)
@@ -267,6 +309,8 @@ public class EntityRegistrar {
                     .sized(EntityType.PHANTOM.getWidth() * com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit.SCALE,
                            EntityType.PHANTOM.getHeight() * com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit.SCALE)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    // every tick: a big fast flyer lerped from every 3rd tick stutters (DragonFlightGameTests)
+                    .updateInterval(1)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bone_dragon_unit").toString()));
 
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit>> ROYAL_ARCHITECT_UNIT = ENTITIES.register("royal_architect_unit",
@@ -314,6 +358,20 @@ public class EntityRegistrar {
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bloom_priestess_unit").toString()));
+
+    // the Court's essence caster (design/essence_casters.md): the priestess's illager body
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.ThornweaverUnit>> THORNWEAVER_UNIT = ENTITIES.register("thornweaver_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.ThornweaverUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornweaver_unit").toString()));
+    // its Seed of Renewal sapling: a still, targetable unit on a totem's plumbing (Revision 1: 100 HP)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.RenewalSaplingUnit>> RENEWAL_SAPLING_UNIT = ENTITIES.register("renewal_sapling_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.RenewalSaplingUnit::new, MobCategory.MISC)
+                    .sized(0.75f, 1.0f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .updateInterval(10)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "renewal_sapling_unit").toString()));
 
     // Tidewrought (design/tidewrought_plan.md, slice 1). The Gull Spotter is Alex's Mobs' seagull body (RenderSeagull),
     // a little bigger than AM's wild gull so it can be clicked from the RTS camera
@@ -527,6 +585,8 @@ public class EntityRegistrar {
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.ThunderDragonUnit::new, MobCategory.CREATURE)
                     .sized(1.6f, 1.0f)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    // every tick: a big fast flyer lerped from every 3rd tick stutters (DragonFlightGameTests)
+                    .updateInterval(1)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thunder_dragon_unit").toString()));
 
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.EarthshakerUnit>> EARTHSHAKER_UNIT = ENTITIES.register("earthshaker_unit",
@@ -578,6 +638,8 @@ public class EntityRegistrar {
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit::new, MobCategory.CREATURE)
                     .sized(2.4f, 1.4f)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    // every tick: a big fast flyer lerped from every 3rd tick stutters (DragonFlightGameTests)
+                    .updateInterval(1)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "celestial_dragon_unit").toString()));
 
 
@@ -1150,6 +1212,7 @@ public class EntityRegistrar {
             case SpiderProd.itemName -> EntityRegistrar.SPIDER_UNIT.get();
             case PoisonSpiderProd.itemName -> EntityRegistrar.POISON_SPIDER_UNIT.get();
             case WraithProd.itemName -> EntityRegistrar.WRAITH_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.monsters.TombcallerProd.itemName -> EntityRegistrar.TOMBCALLER_UNIT.get();
             case VillagerProd.itemName -> EntityRegistrar.VILLAGER_UNIT.get();
             case ScoutDogProd.itemName -> EntityRegistrar.SCOUT_DOG_UNIT.get();
             case ScoutCatProd.itemName -> EntityRegistrar.SCOUT_CAT_UNIT.get();
@@ -1171,6 +1234,7 @@ public class EntityRegistrar {
             case SentinelTreantProd.itemName -> EntityRegistrar.SENTINEL_TREANT_UNIT.get();
             case WitchProd.itemName -> EntityRegistrar.WITCH_UNIT.get();
             case EvokerProd.itemName -> EntityRegistrar.EVOKER_UNIT.get();
+            case AngelCallerProd.itemName -> EntityRegistrar.ANGEL_CALLER_UNIT.get();
             case SlimeProd.itemName -> EntityRegistrar.SLIME_UNIT.get();
             case WardenProd.itemName -> EntityRegistrar.WARDEN_UNIT.get();
             case RavagerProd.itemName -> EntityRegistrar.RAVAGER_UNIT.get();
@@ -1183,6 +1247,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.verdant.ElderTreantProd.itemName -> EntityRegistrar.ELDER_TREANT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.WispChoirProd.itemName -> EntityRegistrar.WISP_CHOIR_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.BloomPriestessProd.itemName -> EntityRegistrar.BLOOM_PRIESTESS_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.ThornweaverProd.itemName -> EntityRegistrar.THORNWEAVER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.ShipwrightProd.itemName -> EntityRegistrar.SHIPWRIGHT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.GullSpotterProd.itemName -> EntityRegistrar.GULL_SPOTTER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.CutlassRaiderProd.itemName -> EntityRegistrar.CUTLASS_RAIDER_UNIT.get();

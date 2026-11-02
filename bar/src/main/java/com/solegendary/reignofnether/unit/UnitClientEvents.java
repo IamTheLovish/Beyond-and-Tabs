@@ -16,7 +16,6 @@ import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractFarm;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingClientEvents;
 import com.solegendary.reignofnether.building.production.ProductionItems;
-import com.solegendary.reignofnether.building.production.QueuePopulation;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
@@ -63,6 +62,7 @@ import com.solegendary.reignofnether.util.ArrayUtil;
 import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.MyMath;
 import com.solegendary.reignofnether.util.MyRenderer;
+import com.solegendary.reignofnether.time.ClientTicks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -285,44 +285,33 @@ public class UnitClientEvents {
         markSelectedUnitsChanged();
     }
 
-    // Per-owner population of tracked + virtual units, memoised per client tick (keyed also on the list sizes so a
-    // unit joining/leaving mid-tick is reflected). This was recomputed per call - with a List.contains per virtual
-    // unit, ie. O(units x virtualUnits) - and is called every frame by the HUD and per production item per tick.
-    private static final HashMap<String, Integer> unitPopulationCache = new HashMap<>();
-    private static long unitPopulationCacheTick = Long.MIN_VALUE;
-    private static int unitPopulationCacheUnits = -1;
-    private static int unitPopulationCacheVirtual = -1;
+    // how many units each owner has (the HUD's count: lovish, Oct 29 - no population is shown), memoised per client
+    // tick and recounted at once when a unit or a minimap VirtualUnit comes or goes
+    private static final HashMap<String, Integer> unitCountCache = new HashMap<>();
+    private static long unitCountCacheTick = Long.MIN_VALUE;
+    private static int unitCountCacheUnits = -1;
+    private static int unitCountCacheVirtual = -1;
 
-    private static int getUnitPopulation(String playerName) {
-        long tick = MC.level != null ? MC.level.getGameTime() : Long.MIN_VALUE;
-        if (tick != unitPopulationCacheTick || allUnits.size() != unitPopulationCacheUnits ||
-                MinimapClientEvents.virtualUnits.size() != unitPopulationCacheVirtual) {
-            unitPopulationCache.clear();
+    /** How many units {@code playerName} has as this client knows them (loaded, or seen on the minimap). */
+    public static int getUnitCount(String playerName) {
+        long tick = MC.level != null ? ClientTicks.now() : Long.MIN_VALUE;
+        if (tick != unitCountCacheTick || allUnits.size() != unitCountCacheUnits ||
+                MinimapClientEvents.virtualUnits.size() != unitCountCacheVirtual) {
+            unitCountCache.clear();
             HashSet<Integer> allUnitIds = new HashSet<>(allUnits.size() * 2);
             for (LivingEntity entity : allUnits) {
                 allUnitIds.add(entity.getId());
                 if (entity instanceof Unit unit)
-                    unitPopulationCache.merge(unit.getOwnerName(), unit.getCost().population, Integer::sum);
+                    unitCountCache.merge(unit.getOwnerName(), 1, Integer::sum);
             }
-            for (VirtualUnit virtualUnit : MinimapClientEvents.virtualUnits) {
+            for (VirtualUnit virtualUnit : MinimapClientEvents.virtualUnits)
                 if (!allUnitIds.contains(virtualUnit.id))
-                    unitPopulationCache.merge(virtualUnit.ownerName, virtualUnit.population, Integer::sum);
-            }
-            unitPopulationCacheTick = tick;
-            unitPopulationCacheUnits = allUnits.size();
-            unitPopulationCacheVirtual = MinimapClientEvents.virtualUnits.size();
+                    unitCountCache.merge(virtualUnit.ownerName, 1, Integer::sum);
+            unitCountCacheTick = tick;
+            unitCountCacheUnits = allUnits.size();
+            unitCountCacheVirtual = MinimapClientEvents.virtualUnits.size();
         }
-        return unitPopulationCache.getOrDefault(playerName, 0);
-    }
-
-    private static final QueuePopulation queuePopulation = new QueuePopulation();
-
-    public static int getCurrentPopulation(String playerName) {
-        if (MC.level == null)
-            return 0;
-        // the queue part is memoised per owner per client tick too (QueuePopulation: any queue change recounts at once)
-        return getUnitPopulation(playerName)
-            + queuePopulation.of(playerName, BuildingClientEvents.getBuildings(), true, MC.level.getGameTime(), true);
+        return unitCountCache.getOrDefault(playerName, 0);
     }
 
     public static void sendUnitCommandManual(String playerName, UnitAction action, int unitId, int[] unitIds,

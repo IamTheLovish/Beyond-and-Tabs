@@ -41,9 +41,9 @@ public class FusionReactor extends Building {
     public enum Kind {
         // name, structure (placeholder), lang id, cost (wood = energy, ore = metal), energy/s, HP, explode chance per
         // broken block, explode radius, build time in blocks, needs Tier 3 research
-        FUSION("Fusion Reactor", "advanced_solar", "fusion_reactor", ResourceCost.Building(0, 3000, 2100, 0),
+        FUSION("Fusion Reactor", "advanced_solar", "fusion_reactor", ResourceCost.Building(0, 3000, 2100),
             750f, 900d, 0.08f, 5.0f, 220, false),
-        ADVANCED("Advanced Fusion Reactor", "geothermal_plant", "advanced_fusion_reactor", ResourceCost.Building(0, 10500, 7350, 0),
+        ADVANCED("Advanced Fusion Reactor", "geothermal_plant", "advanced_fusion_reactor", ResourceCost.Building(0, 10500, 7350),
             2250f, 1600d, 0.12f, 8.0f, 320, true);
 
         public final String buildingName;

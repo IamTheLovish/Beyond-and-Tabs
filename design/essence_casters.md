@@ -28,16 +28,19 @@ Names are placeholders; numbers are tuned later.
   when it dies (it is not dropped again as a wisp).
 
 ## lovish's answers (~05:25Z)
-New caster per race (7, T2 lab); essence drops on every death (both sides); each caster has 3 distinct abilities;
+New caster per race (7; first the T2 lab, then **tier 1 at each race's T1 army lab, 115 metal / 120 energy** - lovish,
+Oct 29-30); essence drops on every death (both sides); each caster has 3 distinct abilities;
 essence can also buy veterancy XP.
 
 ## Abilities, draft 2 (cheap 5 / mid 10 / big 20 essence; cooldowns 12 / 25 / 60 s)
+Sunforged was respecified by lovish (Oct 29): "the angels casters can summon three different angels that help: one that heals, one that is a flying archer and another that is a melee engager that can fly". One angel of each kind per caster: a recast while it lives is refused (nothing spent, no cooldown). Tier 1 (lovish, Oct 29 ~22:05Z: "essence casters should be tier 1 like rez bots"): the Angel Caller trains at the Barracks.
+
 Shared by every caster: **Empower** (15 essence): an ally unit within 6 gains 1 veterancy XP (one rank, +10% HP and
 damage, max rank 3).
 
 | Race | Caster | Cheap (5) | Mid (10) | Big (20) |
 |---|---|---|---|---|
-| Sunforged | Sun Cantor | Dawn Lance: beam, 60 damage (x2 vs undead) | Radiant Tithe: allies within 6 get an 80-damage golden shield, 10 s | Solar Ascension: 8 s, allies within 8 regen 5 HP/s and +15% damage |
+| Sunforged | Angel Caller | Mender Angel: a flying healer for 20 s (5 HP every 2 s to a hurt friend within 8) | Seraph Archer: a flying archer for 25 s (6 dmg, 0.6/s, range 12) | Sword Seraph: a flying melee engager for 30 s (70 HP, 9 dmg, 0.8/s) |
 | Gravebound | Soulbinder | Wail: enemies in a cone flee for 2 s | Soul Harvest: 2 spectral skeletons for 20 s | Soul Chains: up to 4 enemies linked 10 s, 50% of damage to one is shared to the others |
 | Horde | Voodoo Shaman | Hex: one enemy (T1-T2) cannot attack or cast for 4 s | Blood Totem: 15 s, allies within 8 +25% attack speed, enemies -15% speed | Spirit Puppet: take control of one enemy T1 unit for 15 s |
 | Verdant | Thornweaver | Entangling Roots: enemies within 3 rooted 3 s | Seed of Renewal: sapling heals allies within 6 for 6 HP/s, 12 s | Sprout Guardian: a sapling treant fights for you 25 s |
@@ -48,7 +51,7 @@ damage, max rank 3).
 ## Build order
 1. **PR 1 (this one):** essence wisps (drop, float 45 s, cap 200), carriers (gather within 8, hold 30, saved with the
    unit) and Empower, test-first (`gametest/EssenceGameTests`).
-2. One PR per race caster: the unit, its T2 lab button, its 3 abilities, autocast rules and tests, built on the API
+2. One PR per race caster: the unit, its T1 army lab button, its 3 abilities, autocast rules and tests, built on the API
    below.
 
 ## Revision 1 (Oct 29 design review; base fixes in the PR stacked on PR 1, branch claude/essence-base-r1)

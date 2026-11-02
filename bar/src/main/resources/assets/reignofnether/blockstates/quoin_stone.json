@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=east,long_side=front": {
+      "model": "reignofnether:block/quoin_stone_front",
+      "y": 90
+    },
+    "facing=east,long_side=side": {
+      "model": "reignofnether:block/quoin_stone_side",
+      "y": 90
+    },
+    "facing=north,long_side=front": {
+      "model": "reignofnether:block/quoin_stone_front"
+    },
+    "facing=north,long_side=side": {
+      "model": "reignofnether:block/quoin_stone_side"
+    },
+    "facing=south,long_side=front": {
+      "model": "reignofnether:block/quoin_stone_front",
+      "y": 180
+    },
+    "facing=south,long_side=side": {
+      "model": "reignofnether:block/quoin_stone_side",
+      "y": 180
+    },
+    "facing=west,long_side=front": {
+      "model": "reignofnether:block/quoin_stone_front",
+      "y": 270
+    },
+    "facing=west,long_side=side": {
+      "model": "reignofnether:block/quoin_stone_side",
+      "y": 270
+    }
+  }
+}
