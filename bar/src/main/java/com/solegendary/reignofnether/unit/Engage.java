@@ -103,9 +103,11 @@ public final class Engage {
         radius = Math.min(radius, Math.max(0.6, reach - 0.2));
         List<Approach> candidates = new ArrayList<>(SLOTS);
         BlockPos targetCell = target.blockPosition();
+        // a low flyer (Unit.meleeReachableHeight) is fought from the ground under it
+        double standY = target.getY() - (target instanceof Unit tu ? tu.meleeReachableHeight() : 0);
         for (int i = 0; i < SLOTS; i++) {
             double angle = i * (Math.PI * 2 / SLOTS);
-            Vec3 p = new Vec3(target.getX() + Math.cos(angle) * radius, target.getY(), target.getZ() + Math.sin(angle) * radius);
+            Vec3 p = new Vec3(target.getX() + Math.cos(angle) * radius, standY, target.getZ() + Math.sin(angle) * radius);
             BlockPos cell = standCell(level, BlockPos.containing(p.x, p.y + 0.01, p.z), mobility);
             if (cell == null || cell.equals(targetCell) || contains(candidates, cell))
                 continue;
@@ -120,7 +122,7 @@ public final class Engage {
                 int n = SLOTS * (ring + 1);
                 for (int i = 0; i < n; i++) {
                     double angle = (i + 0.5 * ring) * (Math.PI * 2 / n);
-                    Vec3 p = new Vec3(target.getX() + Math.cos(angle) * r, target.getY(), target.getZ() + Math.sin(angle) * r);
+                    Vec3 p = new Vec3(target.getX() + Math.cos(angle) * r, standY, target.getZ() + Math.sin(angle) * r);
                     BlockPos cell = standCell(level, BlockPos.containing(p.x, p.y + 0.01, p.z), mobility);
                     if (cell == null || cell.equals(targetCell) || contains(candidates, cell))
                         continue;

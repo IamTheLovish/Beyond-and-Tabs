@@ -13,6 +13,7 @@ import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -43,16 +44,34 @@ public class FogSnapshotGameTests {
     static final long STEP_LIMIT_NS = FogChunkSnapshot.TICK_BUDGET_NS + 30_000_000L;
     /** Set when the loaded-chunks test is done with the shared snapshot state (the unloaded-chunks test waits for it). */
     static final AtomicBoolean loadedTestDone = new AtomicBoolean(false);
+    /**
+     * Real time the loaded-chunks test may take. Generating its far box takes real time (10-18 s on an idle CI host),
+     * and game ticks are no measure of that: the test server runs them far faster than 20 a second when it has little
+     * to do (CI run 40611300957: 2400 ticks in 5 s; 40626316291: 20000 ticks in 18 s).
+     */
+    static final long LOADED_TEST_LIMIT_NS = 120_000_000_000L;
+    /** Real time the unloaded-chunks test may take, its wait for the loaded-chunks test included. */
+    static final long UNLOADED_TEST_LIMIT_NS = 180_000_000_000L;
+    /** The GameTest timeout of both: far over their real-time limits, which fail them first. */
+    static final int REAL_TIME_TEST_TIMEOUT_TICKS = 2_000_000;
     /** Level compareFiles reads live chunks from, to say on a light mismatch which side the world now matches. */
     static ServerLevel diagLevel = null;
 
-    /** The old capture, kept as the reference: synchronous load + packet + encode for every chunk, in one go. */
+    /**
+     * The old capture, kept as the reference: synchronous load + packet + encode for every chunk, in one go. Like the
+     * capture (FogChunkSnapshot.createPendingBlockEntities), it first creates the block entities a chunk still holds
+     * only as pending tags: a chunk held at level 33 keeps those its features placed pending, and the packet lists
+     * only created ones (CI run 40638090592: "block entities (file only [...])" deep under the far box).
+     */
     static Map<ChunkPos, byte[]> oneTickCapture(ServerLevel level, int minCx, int maxCx, int minCz, int maxCz) {
         Map<ChunkPos, byte[]> out = new LinkedHashMap<>();
         for (int cx = minCx; cx <= maxCx; cx++)
             for (int cz = minCz; cz <= maxCz; cz++) {
                 LevelChunk chunk = level.getChunkSource().getChunk(cx, cz, true);
                 if (chunk == null) continue;
+                var created = chunk.getBlockEntities();
+                for (BlockPos p : chunk.getBlockEntitiesPos())   // a fresh set: pending and created positions
+                    if (!created.containsKey(p)) chunk.getBlockEntity(p);
                 out.put(new ChunkPos(cx, cz), encode(new ClientboundLevelChunkWithLightPacket(
                         chunk, level.getLightEngine(), null, null)));
             }
@@ -186,25 +205,37 @@ public class FogSnapshotGameTests {
      * arenas; on a busy CI host that light is still spreading for a few ticks), so the reference is taken once the box's
      * light has settled - the same condition the capture waits for (FogChunkSnapshot.lightBarrier) - and the capture
      * then runs over real server ticks (PlayerServerEvents drives it) while nothing in the box changes.
+     * <p>
+     * The 9x9 box is far west of the test grid (as capture_bounded_when_barrier_hangs's), held with a ring round it by
+     * non-ticking tickets (level 33): nothing ticks in it or next to it. It used to be the box round the arena, which
+     * took in the arenas of the batch before (stress_8v8): in CI runs 40452699161, 40469592779 and 40472451498 blocks
+     * changing in that arena after the reference moved the light of the box's corner chunks again after their files
+     * were built ("file != live, reference != live"). The chunk changed before its turn is changed on the top of a
+     * column, so its heightmaps change too: the snapshot must hold the heightmaps from before the change (the packet
+     * shares the chunk's heightmap arrays until it is encoded, CI run 40469592779: "heightmaps of [22, 52]").
+     * The test fails itself after {@link #LOADED_TEST_LIMIT_NS} of real time, not after a number of game ticks.
      */
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 600, batch = BATCH)
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = REAL_TIME_TEST_TIMEOUT_TICKS, batch = BATCH)
     public static void the_budgeted_snapshot_equals_the_one_tick_capture(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         diagLevel = level;
         List<String> problems = new ArrayList<>();
         BlockPos origin = helper.absolutePos(new BlockPos(1, 2, 1));
-        int cx0 = origin.getX() >> 4, cz0 = origin.getZ() >> 4;
+        int cx0 = (origin.getX() >> 4) - 200, cz0 = origin.getZ() >> 4;
         int minCx = cx0 - 4, maxCx = cx0 + 4, minCz = cz0 - 4, maxCz = cz0 + 4;
-        // keep the box loaded (FULL, lit, neighbours too) across the ticks the test spans
+        // the block changed before its chunk's turn: the first free block over a column of chunk (cx0, cz0)
+        int topX = (cx0 << 4) + 1, topZ = (cz0 << 4) + 1;
+        // keep the box and a ring round it loaded (FULL, lit) across the ticks the test spans: the box's light then
+        // depends on loaded chunks only
         TicketType<ChunkPos> hold = TicketType.FORCED;
-        for (int cx = minCx; cx <= maxCx; cx++)
-            for (int cz = minCz; cz <= maxCz; cz++) {
+        for (int cx = minCx - 1; cx <= maxCx + 1; cx++)
+            for (int cz = minCz - 1; cz <= maxCz + 1; cz++) {
                 ChunkPos p = new ChunkPos(cx, cz);
                 level.getChunkSource().addRegionTicket(hold, p, 0, p);
             }
         Runnable release = () -> {
-            for (int cx = minCx; cx <= maxCx; cx++)
-                for (int cz = minCz; cz <= maxCz; cz++) {
+            for (int cx = minCx - 1; cx <= maxCx + 1; cx++)
+                for (int cz = minCz - 1; cz <= maxCz + 1; cz++) {
                     ChunkPos p = new ChunkPos(cx, cz);
                     level.getChunkSource().removeRegionTicket(hold, p, 0, p);
                 }
@@ -216,10 +247,19 @@ public class FogSnapshotGameTests {
         CompletableFuture<Void>[] settled = new CompletableFuture[1];
         Map<ChunkPos, byte[]> reference = new LinkedHashMap<>();
         long[] t = {0, 0, 0}; // one-tick capture ns, capture start tick, settle start tick
+        long startNs = System.nanoTime();
         helper.onEachTick(() -> {
+            if (phase[0] < 5 && System.nanoTime() - startNs > LOADED_TEST_LIMIT_NS) {
+                problems.add("not done after " + LOADED_TEST_LIMIT_NS / 1_000_000_000L + " s, in phase " + phase[0]
+                        + " (0: box loading or lighting, 1-2: light barriers, 4: capture running)");
+                phase[0] = 5;
+                release.run();
+                finish(helper, problems);
+                return;
+            }
             if (phase[0] == 0) {
-                for (int cx = minCx; cx <= maxCx; cx++)
-                    for (int cz = minCz; cz <= maxCz; cz++) {
+                for (int cx = minCx - 1; cx <= maxCx + 1; cx++)
+                    for (int cz = minCz - 1; cz <= maxCz + 1; cz++) {
                         LevelChunk c = level.getChunkSource().getChunkNow(cx, cz);
                         if (c == null || !c.isLightCorrect()) return;
                     }
@@ -271,9 +311,9 @@ public class FogSnapshotGameTests {
             FogChunkSnapshot.beginCapture(level, minCx, maxCx, minCz, maxCz);
             if (!FogChunkSnapshot.hasAny())
                 problems.add("hasAny() false while a capture is running (a first join would restart it)");
-            var oldState = level.getBlockState(origin);
-            level.setBlock(origin, oldState.is(Blocks.GOLD_BLOCK) ? Blocks.IRON_BLOCK.defaultBlockState()
-                    : Blocks.GOLD_BLOCK.defaultBlockState(), 2);
+            BlockPos top = new BlockPos(topX, level.getHeight(Heightmap.Types.WORLD_SURFACE, topX, topZ), topZ);
+            var oldState = level.getBlockState(top);
+            level.setBlock(top, Blocks.GOLD_BLOCK.defaultBlockState(), 2);
             ClientboundLevelChunkWithLightPacket afterChange = FogChunkSnapshot.get(changed);
             if (afterChange == null)
                 problems.add("a chunk changed before its turn has no snapshot");
@@ -284,7 +324,7 @@ public class FogSnapshotGameTests {
                 problems.add("a chunk served before its turn has no snapshot (a dark player would get nothing)");
             else if (!Arrays.equals(encode(servedPacket), before.get(served)))
                 problems.add("a chunk served before its turn differs from the one-tick capture");
-            level.setBlock(origin, oldState, 2);
+            level.setBlock(top, oldState, 2);
             FogChunkSnapshot.finishNow();
             Map<ChunkPos, byte[]> changedRef = new LinkedHashMap<>();
             changedRef.put(changed, before.get(changed));
@@ -363,19 +403,21 @@ public class FogSnapshotGameTests {
      * snapshot depended on load order with the old capture too (it loaded the box one chunk at a time); the loaded-area
      * test above compares light byte for byte.
      */
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 3000, batch = BATCH)
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = REAL_TIME_TEST_TIMEOUT_TICKS, batch = BATCH)
     public static void the_snapshot_of_unloaded_chunks_loads_them_without_blocking_a_tick(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(BlockPos.ZERO);
         int minCx = (origin.getX() >> 4) + 96, minCz = (origin.getZ() >> 4) + 96;
         int maxCx = minCx + 5, maxCz = minCz + 5;
         long[] startTick = {-1};
+        long startNs = System.nanoTime();
         List<String> problems = new ArrayList<>();
         // a non-ticking hold (level 33, as the capture's own ticket) so the reference reads the same loaded chunks
         TicketType<ChunkPos> hold = TicketType.FORCED;
         // start once the other test of the batch is done with the shared snapshot state (or has timed out)
         helper.onEachTick(() -> {
-            if (startTick[0] >= 0 || !(loadedTestDone.get() || helper.getTick() > 620)) return;
+            if (startTick[0] >= 0 || !(loadedTestDone.get()
+                    || System.nanoTime() - startNs > LOADED_TEST_LIMIT_NS + 5_000_000_000L)) return;
             for (int cx = minCx; cx <= maxCx; cx++)
                 for (int cz = minCz; cz <= maxCz; cz++) {
                     if (level.getChunkSource().getChunkNow(cx, cz) != null)
@@ -391,6 +433,20 @@ public class FogSnapshotGameTests {
         });
         boolean[] done = {false};
         helper.onEachTick(() -> {
+            if (!done[0] && System.nanoTime() - startNs > UNLOADED_TEST_LIMIT_NS) {
+                done[0] = true;
+                if (startTick[0] >= 0)
+                    for (int cx = minCx; cx <= maxCx; cx++)
+                        for (int cz = minCz; cz <= maxCz; cz++) {
+                            ChunkPos p = new ChunkPos(cx, cz);
+                            level.getChunkSource().removeRegionTicket(hold, p, 0, p);
+                        }
+                FogChunkSnapshot.clear();
+                FogChunkSnapshot.awaitWrites();
+                helper.fail("not done after " + UNLOADED_TEST_LIMIT_NS / 1_000_000_000L + " s ("
+                        + (startTick[0] < 0 ? "never started" : "capture still running") + ")");
+                return;
+            }
             if (done[0] || startTick[0] < 0 || FogChunkSnapshot.isCapturing())
                 return;
             done[0] = true;

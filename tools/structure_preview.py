@@ -199,6 +199,7 @@ def quad(canvas, img, pts):
     ImageDraw.Draw(mask).polygon([(x - minx, y - miny) for x, y in pts], fill=255)
     alpha = Image.fromarray((np.asarray(warped)[..., 3].astype(np.uint16) * np.asarray(mask) // 255).astype(np.uint8))
     canvas.paste(warped, (minx, miny), alpha)
+    return minx, miny, alpha   # where it went and how opaque: structure_render's lighting marks the face's pixels
 
 
 def main():

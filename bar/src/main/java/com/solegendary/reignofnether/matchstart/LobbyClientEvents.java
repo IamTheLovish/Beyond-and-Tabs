@@ -42,9 +42,10 @@ public class LobbyClientEvents {
                     if (!wasOpen) {
                         dismissed = false;
                         // a lobby opening over a decided match is the rematch (Back to lobby): the old results go,
-                        // and their popup makes way for the lobby
-                        if (MatchEndClientEvents.hasResults())
-                            MatchEndClientEvents.clearResults();
+                        // but not from under a player still reading them - the popup stays until they close it, and
+                        // the lobby comes up then (MatchEndClientEvents.dismiss)
+                        if (MatchEndClientEvents.hasResults() && MatchEndClientEvents.onLobbyReopened())
+                            break;
                     }
                     if (!dismissed && !(mc.screen instanceof MultiplayerLobbyScreen)
                             && (mc.screen == null || mc.screen instanceof TopdownGui))
@@ -56,10 +57,20 @@ public class LobbyClientEvents {
             case START, SPECTATE -> {
                 if (mc.screen instanceof MultiplayerLobbyScreen)
                     mc.setScreen(null);
+                // the rematch is starting: results still kept up from the last match go now
+                if (MatchEndClientEvents.isStale())
+                    MatchEndClientEvents.clearResults();
                 enterRtsIn = 2;
                 enterAsSpectator = p.spectating;
             }
         }
+    }
+
+    /** The results popup kept up over a reopened lobby was closed: show the lobby now, unless it was hidden or closed. */
+    static void showLobbyIfOpen() {
+        Minecraft mc = Minecraft.getInstance();
+        if (latest != null && latest.open && !dismissed && (mc.screen == null || mc.screen instanceof TopdownGui))
+            mc.setScreen(new MultiplayerLobbyScreen());
     }
 
     /** Opens the lobby screen and asks the server for the lobby (the host's request opens one). */

@@ -75,12 +75,15 @@ public class PathingBudgetGameTests {
         int fluids = ArenaReady.sealed(helper, outside);
         String mine = owner(helper, "chase"), theirs = owner(helper, "chase_foe");
         Runnable daylight = ArenaReady.noSunlight(mine, theirs);
-        Runnable restore = () -> {
+        // run-once, and at the test's end however it ends (whenTicking throws, a timeout): the flags and the
+        // stone outside the arena must not outlive it
+        Runnable restore = TestCleanup.atEnd(helper, () -> {
             daylight.run();
             outside.forEach((abs, state) -> level.setBlock(abs, state, 3));
-        };
+        });
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
         Mob chaser = unit(level, EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(), mine, o.getX() + 1.5, o.getY(), o.getZ() + 2.5, made);
         Mob runner = unit(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, o.getX() + 4.5, o.getY(), o.getZ() + 2.5, made);
         if (chaser == null || runner == null) {
@@ -141,12 +144,15 @@ public class PathingBudgetGameTests {
         int fluids = ArenaReady.sealed(helper, outside);
         String mine = owner(helper, "range"), theirs = owner(helper, "range_foe");
         Runnable daylight = ArenaReady.noSunlight(mine, theirs);
-        Runnable restore = () -> {
+        // run-once, and at the test's end however it ends (whenTicking throws, a timeout): the flags and the
+        // stone outside the arena must not outlive it
+        Runnable restore = TestCleanup.atEnd(helper, () -> {
             daylight.run();
             outside.forEach((abs, state) -> level.setBlock(abs, state, 3));
-        };
+        });
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
         Mob shooter = unit(level, EntityRegistrar.SKELETON_UNIT.get(), mine, o.getX() + 1.5, o.getY(), o.getZ() + 1.5, made);
         Mob target = TerrainGameTests.dummy(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, o.getX() + 13.5, o.getY(), o.getZ() + 13.5, made);
         if (shooter == null || target == null) {
@@ -226,12 +232,15 @@ public class PathingBudgetGameTests {
         String mine = owner(helper, "detour");
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
         Mob m = unit(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, o.getX() + 2.5, o.getY(), o.getZ() + 4.5, made);
-        Runnable restore = () -> {
+        // run-once, and at the test's end however it ends (whenTicking throws, a timeout): the flags and the
+        // stone outside the arena must not outlive it
+        Runnable restore = TestCleanup.atEnd(helper, () -> {
             UnitServerEvents.rtsPathfinding = wasRts;
             VanillaPathBudget.shortRangeCapForTests = Float.MAX_VALUE;
             under.forEach((abs, state) -> level.setBlock(abs, state, 3));
-        };
+        });
         if (m == null) {
             restore.run();
             TerrainGameTests.cleanUp(made);

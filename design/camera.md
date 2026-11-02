@@ -49,6 +49,7 @@ Camera...
 | Reset angle, zoom, tilt | (none) | Right Ctrl | `key.reignofnether.reset` |
 | 90-degree rotate (minimap buttons) | (none) | Right / Left arrow, shown with Alt or the large map | `key.reignofnether.rot_cw`, `rot_ccw` |
 | RTS camera / Minecraft view | Backspace (Spring's mouse-look toggle) | Backspace (F12 also works) | `key.reignofnether.toggle_camera` |
+| Spectator free flight (watchers only: no side in a running match) | (spectators fly free in Spring) | Caps Lock: RTS view <-> vanilla spectator flight (noclip, no interaction); back to the RTS view the camera is focused on where the watcher flew to. Scroll sets the speed, 0.5x to 8x vanilla's, shown in the hint. The server refuses anyone holding a side (no scouting past the fog); watchers are never sent to the players | `key.reignofnether.toggle_free_fly` |
 | Rotate building ghost | [ and ] | [ and ] (the wheel no longer rotates ghosts) | `key.reignofnether.rotate_building_ccw`, `rotate_building_cw` |
 | Shift | queue orders (the engine's "move fast" scroll multiplier is not used by BAR players for the camera) | nothing for the camera | (none) |
 | Cycle the selection's unit types | n/a | Ctrl + Tab (Ctrl + Shift + Tab goes backwards); the vanilla player list is also on Ctrl + Tab | `key.reignofnether.tab` (RTS category) |

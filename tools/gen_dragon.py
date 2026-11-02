@@ -40,11 +40,13 @@ from gen_models import Model, OUT, slab  # noqa: E402
 PALETTE = {
     # r9 (the round-8 review: "beige stone brick", "horns = wood"): smooth ivory, the recesses a warm grey-ivory, no
     # brown; the horns bone with a dark tip only
-    "bone": "#e4ddc8", "bone_dark": "#b9b09a", "bone_pale": "#f4f0e4", "bone_old": "#d0c8b2",
+    "bone": "#e4ddc8", "bone_dark": "#b9b09a", "bone_pale": "#fbf8ee", "bone_old": "#c6bca3",   # r13: knuckles darker, ridges paler
     "tooth": "#f6f2e6", "claw": "#4a443b", "horn": "#dad3be",
     "deepslate": "#4f5055", "deepslate_dark": "#35363b", "blackstone": "#2a2729", "blackstone_edge": "#4b4448",
     # the sail: a saturated dusky lilac (r8's grey-pink dissolved into grass and terracotta from above)
-    "membrane": "#6a4e88", "membrane_dark": "#43305c", "membrane_pale": "#846aa4",   # r11: darker, the sail one dark shape
+    "membrane": "#7d61a6", "membrane_dark": "#5a4479", "membrane_hem": "#a08ac0",   # r11: darker, the sail one dark shape
+    # r13: the chord shades dark by the bone -> mid -> a paler, thinner hem (only "_hem" strips get the torn edge and
+    # its back-lit rim: tools/materials.py style "hem"), so the sail has facets and an outline at night
     # r10: the spine's thread is its own DIM colour (soul_thread: a desaturated soul-teal, luminance 121 vs
     # soul_glow's 209 = 58%, LabPBR emission 130 not 220 = 59%; the two multiply under a shader's bloom to ~35% of
     # r9's - tools/materials.py "emissive_dim"): under Complementary r9's thread bloomed into a white-cyan neon tube
@@ -67,21 +69,27 @@ DRAGON = dict(
     body_w=13.0, body_h=12.0, body_z0=-13.0, body_z1=7.0, body_y=13.0,     # the thorax barrel
     lumbar_z1=16.0, lumbar_w=10.0, lumbar_h=9.5,                            # spine_1
     pelvis_z1=24.0, pelvis_w=9.5, pelvis_h=8.5,                             # spine_2
-    tail_n=7, tail_seg=8.0, tail_w0=4.6, tail_w1=1.4,
-    neck_n=5, neck_seg=7.0, neck_w0=5.6, neck_w1=3.9, neck_y=15.5,
-    head_len=13.0, head_w=8.4, head_h=6.4, jaw_len=13.0,
+    # r13 (lovish, Oct 22: the neck "a stiff straight rod"): more, shorter links so the neck and the tail CURVE - 8 in
+    # the neck (r12: 5 x 7 px), 10 in the tail (r12: 7 x 8 px), about the same lengths; the neck a little thinner
+    tail_n=10, tail_seg=5.8, tail_w0=5.6, tail_w1=1.4,
+    neck_n=8, neck_seg=4.7, neck_w0=6.2, neck_w1=4.0, neck_y=15.5,
+    head_len=14.0, head_w=9.2, head_h=6.8, jaw_len=14.0,   # r13: a touch bigger - the head must read from above
     shoulder=(6.5, 9.5, -6.5), f_upper=9.0, f_lower=8.0, f_foot=5.0, f_w=3.0,
     hip=(5.0, 8.5, 20.0), h_upper=9.5, h_lower=8.5, h_foot=6.0, h_w=3.4,
-    wing_root=(5.5, 17.5, -5.0), arm=17.0, fore=21.0, hand=24.0,
-    arm_rest=(0, -12, 8), fore_rest=(0, 8, -5), hand_rest=(0, 18, -4),    # the left wing's rest rotations
+    # r13 (the r12 wing read as a plank with a rake at its end): a bat's proportions - a short humerus, a long forearm,
+    # LONG fingers that carry most of the sail; the chord at the elbow reaches back to the hip
+    # the leading edge a shallow M from above (the elbow swept back, the wrist forward of it) instead of r12's straight
+    # rod - the outline every reference wing has
+    wing_root=(5.5, 17.5, -5.0), arm=15.0, fore=22.0, hand=34.0,
+    arm_rest=(0, -28, 8), fore_rest=(0, 48, -5), hand_rest=(0, -8, -4),   # the left wing's rest rotations
     sag=11.0,                                                              # the sail's hang below its bones at rest, degrees per strip
 )
 
 # the neck's S-curve and the tail's droop at rest (degrees about x per link; x > 0 lifts a forward part's nose and
 # drops a backward part's tip)
-NECK_REST = [36, 20, -8, -24, -22]       # up out of the chest, over, and down to the head: ~55 deg of S
+NECK_REST = [24, 18, 11, 2, -7, -14, -17, -15]   # r13: the same S over eight links - up out of the chest, over, down to the head
 HEAD_REST = -2                          # the head carried level (the links sum to 2)
-TAIL_REST = [10, 7, 4, 1, -3, -5, -6]
+TAIL_REST = [7, 6, 4, 3, 1, 0, -2, -3, -4, -4]
 # the legs tucked under the body in flight: shoulder back, elbow folded, wrist dropped; hip forward, knee folded
 FRONT_REST = (-70, 160, 10)              # the thigh back ~65, the shin folded flat under it, the foot against the belly
 HIND_REST = (-70, -20, 80)               # the hip forward, the shin folded back flat, the foot drawn up under the tail base
@@ -97,23 +105,38 @@ def barrel(bone, cy, z0, z1, w, h, color, k=3, cx=0.0, **kw):
         bone.cube([cx - hw, cy - hh, z0], [2 * hw, 2 * hh, z1 - z0], color, **kw)
 
 
-def bar(bone, p0, p1, w, color, plane="xy", ext=0.0, **kw):
+def bar(bone, p0, p1, w, color, plane="xy", ext=0.0, rounded=True, **kw):
     """A straight bone between two points as one rotated box: in the x-y plane (a rib, rotated about z), the y-z
-    plane (a leg link seen from the side, about x) or the x-z plane (a wing finger, about y)."""
+    plane (a leg link seen from the side, about x) or the x-z plane (a wing finger, about y). Rounded (lovish, Oct 30:
+    "the model is really blocky"): a twin box rolled 45 degrees about the bone's own axis, a hair thinner, so the
+    bone's section is an octagon, not a square beam - from any camera angle the bone reads round."""
     x0, y0, z0 = p0
     x1, y1, z1 = p1
     c = [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2]
+    dx, dy, dz = x1 - x0, y1 - y0, z1 - z0
     if plane == "xy":
-        L = math.hypot(x1 - x0, y1 - y0) + ext
-        a = math.degrees(math.atan2(y1 - y0, x1 - x0))
-        return bone.box_at(c, [L, w, w], color, rotation=[0, 0, a], pivot=list(c), **kw)
-    if plane == "yz":
-        L = math.hypot(y1 - y0, z1 - z0) + ext
-        a = math.degrees(math.atan2(z1 - z0, y1 - y0))          # 0 = straight up; x > 0 swings a hanging part forward
-        return bone.box_at(c, [w, L, w], color, rotation=[-a, 0, 0], pivot=list(c), **kw)
-    L = math.hypot(x1 - x0, z1 - z0) + ext
-    a = math.degrees(math.atan2(-(z1 - z0), x1 - x0))           # about y: + turns a +x part toward -z
-    return bone.box_at(c, [L, w, w], color, rotation=[0, a, 0], pivot=list(c), **kw)
+        L = math.hypot(dx, dy) + ext
+        a = math.degrees(math.atan2(dy, dx))
+        box = bone.box_at(c, [L, w, w], color, rotation=[0, 0, a], pivot=list(c), **kw)
+        n = math.hypot(dx, dy) or 1.0
+        perp, other = (-dy / n, dx / n, 0.0), (0.0, 0.0, 1.0)
+    elif plane == "yz":
+        L = math.hypot(dy, dz) + ext
+        a = math.degrees(math.atan2(dz, dy))          # 0 = straight up; x > 0 swings a hanging part forward
+        box = bone.box_at(c, [w, L, w], color, rotation=[-a, 0, 0], pivot=list(c), **kw)
+        n = math.hypot(dy, dz) or 1.0
+        perp, other = (0.0, -dz / n, dy / n), (1.0, 0.0, 0.0)
+    else:
+        L = math.hypot(dx, dz) + ext
+        a = math.degrees(math.atan2(-dz, dx))           # about y: + turns a +x part toward -z
+        box = bone.box_at(c, [L, w, w], color, rotation=[0, a, 0], pivot=list(c), **kw)
+        n = math.hypot(dx, dz) or 1.0
+        perp, other = (-dz / n, 0.0, dx / n), (0.0, 1.0, 0.0)
+    if rounded and w >= 1.0:
+        along = {"xy": (dx, dy, 0.0), "yz": (0.0, dy, dz)}.get(plane, (dx, 0.0, dz))
+        across = tuple(p + o for p, o in zip(perp, other))
+        slab(bone, c, along, across, [w * 0.9, w * 0.9, L - 0.2], color, **kw)
+    return box
 
 
 def thread(bone, c, L, color="soul_thread", tilt=0.0):
@@ -128,7 +151,11 @@ def thread(bone, c, L, color="soul_thread", tilt=0.0):
 
 
 def knob(bone, c, r, color, **kw):
+    """A joint's ball: a cube with its corners cut by a twin turned 45 degrees about y and one about x (an octagon from
+    above and from the side, not a die - lovish, Oct 30: "really blocky"), and the long knuckle through it."""
     bone.box_at(list(c), [r, r, r], color, **kw)
+    bone.box_at(list(c), [r * 0.88, r * 0.82, r * 0.88], color, rotation=[0, 45, 0], pivot=list(c), **kw)
+    bone.box_at(list(c), [r * 0.82, r * 0.88, r * 0.88], color, rotation=[45, 0, 0], pivot=list(c), **kw)
     bone.box_at(list(c), [r * 0.7, r * 1.3, r * 0.7], color, **kw)
 
 
@@ -218,11 +245,18 @@ def membrane_panel(bone, xr, x0, x1, z_lead, depth0, depth1, y, s, color, dark, 
         if outer is None:
             bone.box_at([X(cx), y - 0.1 * i, z_lead + d / 2], [w, 0.7, d], col)
         else:
-            zh = outer.pivot[2]
-            bone.box_at([X(cx), y - 0.1 * i, (z_lead + zh) / 2], [w, 0.7, zh - z_lead + 0.3], col)
-            outer.box_at([X(cx), y - 0.1 * i - 0.05, (zh + z_lead + d) / 2], [w, 0.7, z_lead + d - zh], col)
+            # r13: the chord is THREE strips (outer = [middle, hem]), each hinged on the one ahead, so the sail can
+            # curve - billow and cup - instead of r12's two flat planes; thick and dark by the bone, thinner and
+            # paler toward the hem (the hem's light rim keeps the outline on a night sky - lovish's Oct 22 frame)
+            outs = outer if isinstance(outer, (list, tuple)) else [outer]
+            zs = [z_lead] + [o.pivot[2] for o in outs] + [max(z_lead + d, outs[-1].pivot[2] + 2.0)]
+            bones = [bone] + list(outs)
+            tones = ("membrane_dark", "membrane", "membrane_hem") if len(bones) == 3 else (col, col)
+            for q, b in enumerate(bones):
+                za, zb = zs[q], zs[q + 1]
+                b.box_at([X(cx), y - 0.1 * i - 0.05 * q, (za + zb) / 2], [w, 0.7, zb - za + (0.3 if q < len(bones) - 1 else 0.0)], tones[q])
         # the trailing fringe: a tatter hanging off the edge, every other slab
-        if i % 2 == 0:
+        if i % 2 == 0 and i < 2:          # (r13: one tatter per strip - the atlas)
             bone.box_at([X(cx + (xb - xa) * 0.2), y - 0.6, z_lead + d + 1.2], [w * 0.4, 0.4, 2.8], dark,
                         rotation=[-25, 0, 0], pivot=[X(cx + (xb - xa) * 0.2), y - 0.1 * i, z_lead + d])
 
@@ -246,11 +280,17 @@ def wing(m, P, s):
     # the arm panel to the hip so the wing reads as one sheet when the arm lifts
     SAG = P["sag"]
     mem0 = m.bone("mem_%s_0" % side, [rx, ry - 1.3, rz + 0.8], parent="body", rotation=[SAG * 0.6, 0, 0])
-    for q, (x0, x1, dd) in enumerate(((-2.5, 2.0, 24.0), (2.0, 5.5, 22.0))):
-        mem0.box_at([rx + s * (x0 + x1) / 2, ry - 1.3 - 0.05 * q, rz + 0.8 + dd / 2], [x1 - x0 + 0.3, 0.7, dd], "membrane")
-    mem1 = m.bone("mem_%s_1" % side, [rx, ry - 1.0, rz + 0.8], parent="wing_%s_arm" % side, rotation=[SAG, 0, 0])
-    mem1b = m.bone("mem_%s_1b" % side, [rx, ry - 1.0, rz + 0.8 + 9.5], parent="mem_%s_1" % side, rotation=[SAG * 0.8, 0, 0])
-    membrane_panel(mem1, rx, -1.5, A + 1.5, rz + 0.8, 23.0, 16.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=4, outer=mem1b)
+    for q, (x0, x1, dd) in enumerate(((-2.5, 5.5, 28.0),)):
+        # in three chord pieces: box UV charges a slab ~2 d^2 atlas px, so one 28 px slab cost more than three 9s
+        # (r13 kept the atlas at 256x256 UV this way)
+        for c in range(3):
+            za, zb = dd * c / 3, dd * (c + 1) / 3
+            mem0.box_at([rx + s * (x0 + x1) / 2, ry - 1.3 - 0.05 * q, rz + 0.8 + (za + zb) / 2],
+                        [x1 - x0 + 0.3, 0.7, zb - za + (0.2 if c < 2 else 0.0)], "membrane" if c < 2 else "membrane_hem")
+    mem1 = m.bone("mem_%s_1" % side, [rx, ry - 1.0, rz + 0.8], parent="wing_%s_arm" % side, rotation=[SAG * 0.7, 0, 0])
+    mem1b = m.bone("mem_%s_1b" % side, [rx, ry - 1.0, rz + 0.8 + 9.0], parent="mem_%s_1" % side, rotation=[SAG * 0.6, 0, 0])
+    mem1c = m.bone("mem_%s_1c" % side, [rx, ry - 1.0, rz + 0.8 + 18.0], parent="mem_%s_1b" % side, rotation=[SAG * 0.5, 0, 0])
+    membrane_panel(mem1, rx, -1.5, A + 7.0, rz + 0.8, 29.0, 24.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=4, outer=[mem1b, mem1c])
     # the elbow: the fore bone's pivot
     ex = rx + s * A
     fore = m.bone("wing_%s_fore" % side, [ex, ry, rz], parent="wing_%s_arm" % side, rotation=mir(P["fore_rest"]))
@@ -258,9 +298,10 @@ def wing(m, P, s):
     knob(fore, (ex, ry, rz), 3.4, "bone_old")
     bar(fore, (ex, ry, rz), (ex + s * F, ry, rz), 1.9, "bone", plane="xz", ext=0.8)
     bar(fore, (ex + s * 0.5, ry - 0.4, rz + 1.6), (ex + s * (F - 0.5), ry - 0.2, rz + 0.6), 0.9, "bone_old", plane="xz")   # the ulna
-    mem2 = m.bone("mem_%s_2" % side, [ex, ry - 1.1, rz + 0.8], parent="wing_%s_fore" % side, rotation=[SAG, 0, 0])
-    mem2b = m.bone("mem_%s_2b" % side, [ex, ry - 1.1, rz + 0.8 + 7.0], parent="mem_%s_2" % side, rotation=[SAG * 0.8, 0, 0])
-    membrane_panel(mem2, ex, -2.0, F + 1.0, rz + 0.8, 17.0, 12.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=3, hole=1, outer=mem2b)
+    mem2 = m.bone("mem_%s_2" % side, [ex, ry - 1.1, rz + 0.8], parent="wing_%s_fore" % side, rotation=[SAG * 0.7, 0, 0])
+    mem2b = m.bone("mem_%s_2b" % side, [ex, ry - 1.1, rz + 0.8 + 8.0], parent="mem_%s_2" % side, rotation=[SAG * 0.6, 0, 0])
+    mem2c = m.bone("mem_%s_2c" % side, [ex, ry - 1.1, rz + 0.8 + 16.0], parent="mem_%s_2b" % side, rotation=[SAG * 0.5, 0, 0])
+    membrane_panel(mem2, ex, -12.0, F + 1.0, rz + 0.8, 23.0, 21.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=5, hole=1, outer=[mem2b, mem2c])
     # tattered rags of the owner's colour at the elbow
     fore.box_at([ex + s * 2.0, ry - 2.6, rz + 0.4], [1.4, 4.4, 0.5], "tabard", rotation=[12, 0, s * 15], pivot=[ex + s * 2.0, ry - 0.4, rz + 0.4])
     fore.box_at([ex + s * 3.6, ry - 2.0, rz + 0.6], [1.0, 3.2, 0.5], "tabard_dark", rotation=[18, 0, s * -10], pivot=[ex + s * 3.6, ry - 0.4, rz + 0.6])
@@ -270,10 +311,11 @@ def wing(m, P, s):
     knob(hand, (hx, ry, rz), 3.0, "bone_old")
     hand.box_at([hx + s * 1.5, ry + 1.2, rz - 1.2], [2.2, 2.4, 1.6], "claw", rotation=[0, 0, s * 30], pivot=[hx, ry, rz])   # the thumb claw
     H = P["hand"]
-    fingers = ((0, 1.0, 1.8), (26, 0.92, 1.5), (52, 0.78, 1.3), (78, 0.55, 1.1))   # (angle back, length share, thickness)
+    # r13: the fan opened (r12: 0-78 deg) and the trailing fingers longer, so the hand carries a real sail
+    fingers = ((0, 1.0, 1.9), (28, 0.94, 1.6), (56, 0.80, 1.4), (84, 0.62, 1.2))   # (angle back, length share, thickness)
     # a fifth ray is not a bone: the web behind the last finger runs back to it (toward the fore panel) and rides the
     # last finger, closing the gap between the finger flaps and the arm sail
-    rays = fingers + ((112, 0.42, 0.0),)
+    rays = fingers + ((114, 0.46, 0.0),)
     # the first finger is the hand's own leading edge; the three trailing fingers are bones of their own (pivot at
     # the wrist) so they close toward it on the upstroke, each carrying the web between it and the finger ahead
     for k, (ang, share, th) in enumerate(rays):
@@ -284,7 +326,7 @@ def wing(m, P, s):
             tip = (hx + s * L * math.cos(a), ry, rz + L * math.sin(a))
             bar(b, (hx, ry, rz), tip, th, "bone" if k < 3 else "bone_old", plane="xz", ext=0.6)
             # a knuckle a third of the way out, a dark hooked tip
-            b.box_at([hx + s * L * 0.38 * math.cos(a), ry, rz + L * 0.38 * math.sin(a)], [th * 1.5, th * 1.5, th * 1.5], "bone_old")
+            knob(b, (hx + s * L * 0.38 * math.cos(a), ry, rz + L * 0.38 * math.sin(a)), th * 1.5, "bone_old")
             b.box_at([tip[0] + s * 0.4 * math.cos(a), ry - 0.6, tip[2] + 0.4 * math.sin(a)], [th * 0.9, 1.6, th * 0.9], "claw")
         if k == 0:
             continue
@@ -293,17 +335,22 @@ def wing(m, P, s):
         a0, a1 = math.radians(rays[k - 1][0]), a
         L0 = H * rays[k - 1][1]
         am = (a0 + a1) / 2
-        Lm = min(L0, L) - 1.5                                         # r11: the web runs out to the finger tips (bare tips read as a rake from the RTS camera)
+        # r11: the web runs out to the finger tips (bare tips read as a rake from the RTS camera); #145 (lovish allowed
+        # the 512x256 UV atlas this costs): halfway between the two tips, not 1.5 px short of the shorter one
+        Lm = 0.5 * (L0 + L) - 0.3
         web = m.bone("web_%s_%d" % (side, k + 1), [hx, ry - 0.9, rz], parent=b.name, rotation=[SAG * 0.7, s * (90 - math.degrees(am)), 0])
         # the outer half on its own bone hinged half way out (its pivot in the web's unrotated frame, swung into the
         # gap with it), so the web can belly and cup like the big spans
         webb = m.bone("web_%s_%db" % (side, k + 1), [hx, ry - 0.9, rz + 0.5 * Lm], parent=web.name, rotation=[SAG * 0.6, 0, 0])
-        for q, (r0, r1, wf) in enumerate(((0.0, 0.5, 0.95), (0.5, 1.0, 1.05))):
+        # r13: four radial pieces (two per hinge), each as wide as the gap at its own outer end - a tapering fan, not
+        # r12's two rectangles, and half the atlas area (box UV grows with the square of a slab's length)
+        for q, (r0, r1, wf) in enumerate(((0.0, 0.25, 0.95), (0.25, 0.5, 0.95), (0.5, 0.75, 1.0), (0.75, 1.0, 1.05))):
             rm = (r0 + r1) / 2 * Lm
             width = 2 * (r1 * Lm) * math.tan((a1 - a0) / 2) * wf + 0.4     # r11: the width at the slab's OUTER end, so the web fills the gap to the tips
             # laid along +z from the wrist; the bone's rotation swings it into the gap, and its +z side (where the
             # painter cuts the concave, ragged hem) is the web's outer, trailing edge
-            (web if q == 0 else webb).box_at([hx, ry - 0.9 - 0.1 * q, rz + rm], [width, 0.7, (r1 - r0) * Lm + 0.3], "membrane" if q == 0 else "membrane_dark")
+            (web if q < 2 else webb).box_at([hx, ry - 0.9 - 0.1 * (q // 2), rz + rm], [width, 0.7, (r1 - r0) * Lm + 0.3],
+                                            "membrane_hem" if q == 3 else ("membrane_dark" if q == 0 else "membrane"))
     return arm, fore, hand
 
 
@@ -340,7 +387,8 @@ def dragon(m, P):
     thread_y = sum(t[0] for t in tops) / n
     thread(body, (0, thread_y, (z0 + z1) / 2 + 1.0), z1 - z0 + 3.0)                            # ONE thread over the thorax
     # the sternum: a keel of bone under the chest the ribs meet
-    body.cube([-1.6, by - bh / 2 - 0.4, z0 + 1.5], [3.2, 2.0, z1 - z0 - 3.0], "bone_old")
+    for c in range(2):   # in two pieces (box UV: the atlas cost grows with the square of the length)
+        body.cube([-1.6, by - bh / 2 - 0.4, z0 + 1.5 + c * (z1 - z0 - 3.0) / 2], [3.2, 2.0, (z1 - z0 - 3.0) / 2 + (0.2 if c == 0 else 0)], "bone_old")
     body.box_at([0, by - bh / 2 + 0.3, z0 + 2.0], [4.5, 2.6, 4.0], "bone", rotation=[22, 0, 0])
     # the ribcage: its own bone so the breath swells it alone; seven curved arcs, the chest deepest at the third
     ribs = m.bone("ribs", [0, by, (z0 + z1) / 2], parent="body")
@@ -350,13 +398,13 @@ def dragon(m, P):
     for i in range(nr):
         cz = z0 + 1.2 + (z1 - z0 - 2.8) * i / (nr - 1)
         f = 1.0 - 0.10 * abs(i - 2.5) / 3.5
-        rib_arc(ribs, cz, bw / 2 * f, bh / 2 * f * 0.98, by + 0.3, 1.3, sweep=0.0, k=i)
+        rib_arc(ribs, cz, bw / 2 * f, bh / 2 * f * 0.98, by + 0.3, 1.3, n=6, sweep=0.0, k=i)   # r13: 6 bars an arc (the atlas)
     # the soul inside: a small lit heart low in the chest (r10: smaller and lower than r9's, so the gaps between the
     # ribs open onto the ground, not onto a glowing slab), a dim haze of it along the sternum
     # r11: the heart is NOT in the glow pass (it lit the rib gaps cyan from above); a dim lit ember, like the thread
     ribs.box_at([0, by - 1.5, (z0 + z1) / 2 - 1.0], [3.0, 3.0, 6.0], "soul_dim")
     ribs.box_at([0, by - 0.5, (z0 + z1) / 2 - 2.0], [1.8, 1.8, 3.0], "soul_thread")
-    ribs.box_at([0, by - 3.8, (z0 + z1) / 2], [5.0, 0.8, z1 - z0 - 8.0], "soul_dim")
+    ribs.box_at([0, by - 3.8, (z0 + z1) / 2], [5.0, 0.8, z1 - z0 - 12.0], "soul_dim")
     # the shoulder blades: small ivory plates at the wing roots, clear of the ribs (r9's lay over the top ribs and
     # read as grey rubble from above)
     for s in (1, -1):
@@ -388,10 +436,11 @@ def dragon(m, P):
         t = k / (P["tail_n"] - 1)
         w = tw0 + (tw1 - tw0) * t
         b = m.bone("tail_%d" % (k + 1), [0, ty - 0.25 * k, z], parent=parent, rotation=[TAIL_REST[k], 0, 0])
-        vertebra(b, z + seg / 2, ty - 0.25 * k, w, seg, plate=0.9 - 0.1 * k, disc=k < P["tail_n"] - 1, fin=k, back=2.5)
+        vertebra(b, z + seg / 2, ty - 0.25 * k, w, seg, plate=0.9 - 0.1 * k, disc=k < P["tail_n"] - 1 and k % 2 == 0, fin=k, back=2.5)
         if k < 4:
             # the chevron under the tail root: a short bone hanging under each of the first links
-            b.box_at([0, ty - 0.25 * k - w / 2 - 0.6, z + seg * 0.5], [w * 0.3, 1.6, seg * 0.4], "bone_old")
+            if k < 3:
+                b.box_at([0, ty - 0.25 * k - w / 2 - 0.6, z + seg * 0.5], [w * 0.3, 1.6, seg * 0.4], "bone_old")
             # a tattered scrap of the owner's colour hangs from the second and fourth links
             if k in (1, 3):
                 b.box_at([0.4, ty - w / 2 - 2.6, z + seg * 0.5], [1.2, 4.0, 0.5], "tabard" if k == 1 else "tabard_dark", rotation=[0, 0, 8], pivot=[0.4, ty - w / 2 - 0.6, z + seg * 0.5])
@@ -416,9 +465,9 @@ def dragon(m, P):
         b = m.bone("neck_%d" % (k + 1), [0, cy, z], parent=parent, rotation=[NECK_REST[k], 0, 0])
         # the neck's thread runs the other way (the links grow toward -z): the overlap reaches forward past the
         # next link's pivot, so a bend at any joint stays lit
-        vertebra(b, z - nseg / 2, cy, w, nseg, plate=0.9 - 0.15 * k, fin=k + 1, back=-2.5)
+        vertebra(b, z - nseg / 2, cy, w, nseg, plate=0.9 - 0.13 * k, disc=k % 2 == 1, fin=k + 1, back=-2.5)
         # the cervical rib: a short bar under each drum angled back, and the throat strap below it
-        for sgn in (1, -1):
+        for sgn in ((1, -1) if k % 2 == 0 else ()):     # r13: on every other link (eight links, one atlas)
             b.box_at([sgn * (w * 0.42), cy - w * 0.35, z - nseg * 0.45], [0.9, w * 0.4, nseg * 0.45], "bone_old", rotation=[25, 0, sgn * 12], pivot=[sgn * w * 0.42, cy - w * 0.2, z - nseg * 0.3])
         b.box_at([0, cy - w / 2 - 0.2, z - nseg / 2], [w * 0.45, 1.0, nseg * 0.7], "bone_old")
         parent, z = "neck_%d" % (k + 1), z - nseg
@@ -473,7 +522,7 @@ def bone_skull(m, P, head, z):
         # the brow shelf over the socket, overhanging it
         head.box_at([s * (hw / 2 - 1.0), top - 0.9, sz + 0.2], [2.2, 1.0, 3.6], "bone", rotation=[0, 0, s * -10], pivot=[s * (hw / 2 - 1.8), top - 0.6, sz])
         # the cheek: a bone bar under the socket back to the jaw hinge (the zygomatic arch)
-        head.box_at([s * (hw / 2 - 0.3), cy - 1.3, hz - hl * 0.14], [1.2, 1.4, hl * 0.4], "bone_old")
+        bar(head, (s * (hw / 2 - 0.3), cy - 1.3, hz - hl * 0.34), (s * (hw / 2 - 0.3), cy - 1.3, hz + hl * 0.06), 1.3, "bone_old", plane="yz")
         # the horn: BONE (ivory, a dark worn tip only), out of a boss at the skull's back corner, ONE long sweep
         # back and out (two slabs, nearly collinear) rising only a little - a clear line in plan from above
         hb = m.bone("horn_%s" % ("left" if s > 0 else "right"), [s * (hw / 2 - 0.6), top - 0.8, hz - 0.5], parent="head")

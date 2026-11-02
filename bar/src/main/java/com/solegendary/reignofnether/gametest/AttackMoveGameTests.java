@@ -83,6 +83,7 @@ public class AttackMoveGameTests {
     public static void attack_move_stops_to_fight_then_carries_on(GameTestHelper helper) {
         String owner = "gametest_amove_go_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Entity> made = new ArrayList<>();
+        TestCleanup.atEnd(helper, () -> cleanUp(made));   // also on a timeout: its cleanUp is the last line of a succeedWhen
         VindicatorUnit attacker = spawn(helper, owner, 1.5, 8.5, made);
         VindicatorUnit foe = spawn(helper, owner + "_foe", 8.5, 11.5, made);
         if (attacker == null || foe == null) {
@@ -139,6 +140,7 @@ public class AttackMoveGameTests {
         String owner = "gametest_amove_bld_" + helper.absolutePos(BlockPos.ZERO).asLong();
         String foeOwner = owner + "_foe";
         List<Entity> made = new ArrayList<>();
+        TestCleanup.atEnd(helper, () -> cleanUp(made));   // also on a timeout: its cleanUp is the last line of a succeedWhen
         BuildingPlacement wall = BuildingUtils.getNewBuildingPlacement(Buildings.WIND_GENERATOR_VILLAGERS, level,
             helper.absolutePos(new BlockPos(9, 1, 7)), Rotation.NONE, foeOwner, false);
         for (var b : wall.getBlocks())
@@ -147,6 +149,8 @@ public class AttackMoveGameTests {
         wall.initPlacedBlocks();
         wall.isBuilt = true;
         BuildingServerEvents.getBuildings().add(wall);
+        // still registered after a timeout, it stood in every later test's building list (idle aggro, the grid, bots)
+        TestCleanup.atEnd(helper, () -> BuildingServerEvents.getBuildings().remove(wall));
         VindicatorUnit attacker = spawn(helper, owner, 4.5, 8.5, made);
         if (attacker == null) {
             BuildingServerEvents.getBuildings().remove(wall);
@@ -186,6 +190,7 @@ public class AttackMoveGameTests {
     public static void attack_move_lets_a_runaway_target_go(GameTestHelper helper) {
         String owner = "gametest_amove_leash_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Entity> made = new ArrayList<>();
+        TestCleanup.atEnd(helper, () -> cleanUp(made));   // also on a timeout: its cleanUp is the last line of a succeedWhen
         VindicatorUnit attacker = spawn(helper, owner, 1.5, 8.5, made);
         VindicatorUnit foe = spawn(helper, owner + "_foe", 5.5, 8.5, made);
         if (attacker == null || foe == null) {

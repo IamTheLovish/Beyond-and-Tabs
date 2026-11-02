@@ -34,6 +34,11 @@ public class ParadeGroundGameTests {
         helper.assertTrue(types.size() > 50, "the parade knows the roster: " + types.size() + " unit types");
         ParadeGround parade = ParadeGround.start(level, helper.absolutePos(new BlockPos(2, 2, 2)), "parade_test", 1,
             false);
+        // the parade (one of every unit type, still looping) goes when the test ends, however it ends
+        TestCleanup.atEnd(helper, () -> {
+            if (ParadeGround.active() == parade)
+                ParadeGround.stop();
+        });
         helper.assertTrue(parade.units().size() == types.size(), "one of every type: " + parade.units().size()
             + " spawned of " + types.size());
         helper.runAfterDelay(ParadeGround.LOOP_TICKS + 20, () -> {

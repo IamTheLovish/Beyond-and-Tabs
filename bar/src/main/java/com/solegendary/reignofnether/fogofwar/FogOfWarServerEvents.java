@@ -224,6 +224,30 @@ public class FogOfWarServerEvents {
     public static boolean sharesVisionWith(String viewerName, String owner) {
         if (owner == null || owner.isEmpty()) return false;
         if (revealedPlayerNames.contains(owner)) return true;
+        return isOnViewersSide(viewerName, owner);
+    }
+
+    /**
+     * An own or allied unit of {@code viewer} (not merely a revealed enemy) standing in a chunk the viewer's client is
+     * sent. Vanilla tracks entities only within a circle of view distance * 16 blocks round the player, while chunks
+     * go out by ChunkMap.isChunkInRange, a rounded shape reaching view distance + 1 on the axes. The RTS camera is the
+     * player entity slid back along the view ray, so loaded ground on screen can sit outside that circle: an own unit
+     * there was never sent to its owner and could not be drawn, clicked or boxed (lovish, Oct 27). TrackedEntityMixin
+     * pairs these regardless of the circle. Keyed on the player's chunk, where vanilla sends chunks from its last
+     * section position: the same chunk except right after a move.
+     */
+    public static boolean tracksAcrossLoadedSquare(ServerPlayer viewer, Entity entity) {
+        if (entity == viewer || !(entity instanceof Unit unit)
+                || !isOnViewersSide(viewer.getName().getString(), unit.getOwnerName()))
+            return false;
+        int vd = ((com.solegendary.reignofnether.mixin.ChunkMapAccessor) viewer.serverLevel().getChunkSource().chunkMap)
+                .reignofnether$getViewDistance();
+        return net.minecraft.server.level.ChunkMap.isChunkInRange(viewer.chunkPosition().x, viewer.chunkPosition().z,
+                entity.chunkPosition().x, entity.chunkPosition().z, vd) && entity.broadcastToPlayer(viewer);
+    }
+
+    private static boolean isOnViewersSide(String viewerName, String owner) {
+        if (owner == null || owner.isEmpty()) return false;
         List<String> ids = com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(viewerName)
                 ? com.solegendary.reignofnether.hero.HeroRoles.commandersOf(viewerName) : List.of(viewerName);
         for (String id : ids)
@@ -317,6 +341,22 @@ public class FogOfWarServerEvents {
         playerEdgeChunks.remove(playerId);
         playerEdgeMasks.remove(playerId);
         pendingResends.remove(playerId);
+    }
+
+    /**
+     * The arena moved (maps.NewMatch): what the fog knew of the old one - every player's vision, the reveals, the
+     * neutrals seen there - belongs to a match that is over. Dropped whole, so the next match's first fog tick starts
+     * from nothing and nothing about the old arena can show on the new one.
+     */
+    public static void forgetArena() {
+        playerLiveChunks.clear();
+        playerEdgeChunks.clear();
+        playerEdgeMasks.clear();
+        pendingResends.clear();
+        revealedPlayerNames.clear();
+        revealedUnitExpiryTick.clear();
+        neutralFogUnits.clear();
+        isRtsPlayerCache.clear();
     }
 
     public static void onPlayerDisconnect(UUID playerId) {
@@ -603,7 +643,7 @@ public class FogOfWarServerEvents {
         }
         // held Sunken Bells and Watchtowers see round themselves for their owner (design/maps.md)
         for (net.minecraft.world.entity.Entity p : com.solegendary.reignofnether.startpos.CapturePointServerEvents.getPoints()) {
-            int sight = com.solegendary.reignofnether.startpos.CapturePointServerEvents.sightOf(p);
+            int sight = Vision.scaled(com.solegendary.reignofnether.startpos.CapturePointServerEvents.sightOf(p));
             String owner = sight > 0 ? com.solegendary.reignofnether.startpos.CapturePointServerEvents.ownerOf(p) : "";
             if (!owner.isEmpty() && !p.isRemoved())
                 addViewer(viewersByOwner.computeIfAbsent(owner, k -> new Long2IntOpenHashMap()),

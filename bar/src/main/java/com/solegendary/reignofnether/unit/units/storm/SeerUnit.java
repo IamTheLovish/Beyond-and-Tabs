@@ -40,7 +40,8 @@ import java.util.List;
 /**
  * Stormcallers T2 sensor - the <b>Seer</b> (design/stormcallers_plan.md, slice 4; section 2's T2 table): a far-sighted
  * court astrologer with a lantern staff on the illager body (its own skin, SeerRenderer) who does not fight. Its worth
- * is sight: {@link #SIGHT_RANGE} blocks (a capitol sees 32), and every {@link #REVEAL_PASS_TICKS} ticks it lifts the
+ * is sight: {@link #SIGHT_RANGE} base blocks (54 of fog at the 1.5x Vision multiplier; a capitol 32 base, 48 of fog),
+ * and every {@link #REVEAL_PASS_TICKS} ticks it lifts the
  * cover from every concealed enemy within {@link #REVEAL_RANGE} - a Shade Ranger's cloak, a thicket, a Fog Bank - for
  * {@link #REVEAL_TICKS} ticks through {@link Concealment#revealFor}, the Lighthouse Battery's hook. Radar (blips beyond
  * sight) needs a fog channel RoN does not have (plan section 7), so the Seer ships the reveal and the long sight.

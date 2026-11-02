@@ -103,7 +103,8 @@ class BoneMapsTest {
         BoneMap guard = BoneMaps.forModel(new RoyalGuardModel<>(RoyalGuardModel.createBodyLayer().bakeRoot()));
         assertNull(guard.parts[Motion.BODY], "the Royal Guard's head and arms are its body's siblings: a bent body leaves them");
         BoneMap hal = BoneMaps.forModel(new HalberdierModel<Entity>(HalberdierModel.createBodyLayer().bakeRoot()));
-        assertNull(hal.parts[Motion.BODY], "the Halberdier's body is its pelvis: bending it swings the legs and feet");
+        assertNotNull(hal.parts[Motion.BODY], "the Halberdier's body is its pelvis (bending it swings the legs and feet): its chest is the torso");
+        assertTrue(BoneMaps.bendsAlone(hal.parts[Motion.BODY], hal.parts[Motion.HEAD]), "a torso that carries the head, no legs");
         ModelPart head = part(Map.of());
         assertTrue(BoneMaps.bendsAlone(part(Map.of("head", head)), head), "a torso that carries the head");
         assertFalse(BoneMaps.bendsAlone(part(Map.of("head", head, "left_thigh", part(Map.of()))), head), "a pelvis");

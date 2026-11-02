@@ -132,13 +132,48 @@ class MotionTest {
     private static int crossings(float[] s) {
         int n = 0;
         float last = 0f;
+        float exertion = s[AnimState.EXERTION];
         for (int t = 0; t < 600; t++) {
+            // a standing unit, its exertion held where the test put it: the breath advances tick by tick
+            Kinematics.step(s, 0, 0f, 0f, 0f, 0f, 20f, 20f, false, false);
+            s[AnimState.EXERTION] = exertion;
             float x = v(pose(s, t, 20f, only(Motion.BREATH), false), Motion.BODY, Motion.RX);
             if (t > 0 && (x > 0f) != (last > 0f))
                 n++;
             last = x;
         }
         return n;
+    }
+
+    /**
+     * The breath must never jump between ticks while exertion changes (Mode A review, Oct 27): the phase was
+     * age / period(exertion), so with a large age every tick's change of exertion moved the phase by age * d(1/period)
+     * and the chest flickered at 20 Hz through a fight and for ~20 s after it (simulated -0.42 -> +0.84 -> +0.25 ->
+     * -0.99). Run hard for 15 s, then stand for 30 s, at an age of a long match; the largest change of the chest from
+     * one tick to the next may not exceed what a steady breath at full exertion (the fastest one) does by itself.
+     */
+    @Test
+    void theBreathNeverJumpsWhileExertionChanges() {
+        float age0 = 72_000f;   // an hour into a match
+        float[] varying = slot(), steady = slot();
+        float worstVarying = 0f, worstSteady = 0f, lastV = Float.NaN, lastS = Float.NaN;
+        for (int t = 0; t < 900; t++) {
+            boolean running = t < 300;
+            Kinematics.step(varying, 0, 0f, 0f, running ? 0.3f : 0f, 0f, 20f, 20f, false, false);
+            Kinematics.step(steady, 0, 0f, 0f, 0f, 0f, 20f, 20f, false, false);
+            steady[AnimState.EXERTION] = 1f;
+            float v = v(pose(varying, age0 + t, 20f, only(Motion.BREATH), false), Motion.BODY, Motion.RX);
+            float s = v(pose(steady, age0 + t, 20f, only(Motion.BREATH), false), Motion.BODY, Motion.RX);
+            if (t > 0) {
+                worstVarying = Math.max(worstVarying, Math.abs(v - lastV));
+                worstSteady = Math.max(worstSteady, Math.abs(s - lastS));
+            }
+            lastV = v;
+            lastS = s;
+        }
+        assertTrue(worstSteady > 0f, "the steady breath moved");
+        assertTrue(worstVarying <= worstSteady * 1.05f, "the chest jumped " + worstVarying
+            + " in one tick while exertion changed; a steady full-exertion breath moves at most " + worstSteady);
     }
 
     @Test

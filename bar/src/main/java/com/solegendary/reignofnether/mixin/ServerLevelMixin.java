@@ -66,6 +66,19 @@ public abstract class ServerLevelMixin {
         }
     }
 
+    /**
+     * Plan 014: the RTS registries are copied into their saved data at the start of every world save (autosave,
+     * /save-all, pause, stop), so the save that follows writes them with the chunks - in place of the 30 s timers
+     * that wrote all saved data mid-fight. {@code skipSave} is /save-off; RtsSaves skips the overworld's other
+     * dimensions and the stop (whose handlers have saved and cleared the live lists by then).
+     */
+    @Inject(method = "save(Lnet/minecraft/util/ProgressListener;ZZ)V", at = @At("HEAD"))
+    private void reignofnether$snapshotRtsState(net.minecraft.util.ProgressListener progress, boolean flush,
+                                                boolean skipSave, CallbackInfo ci) {
+        if (!skipSave)
+            com.solegendary.reignofnether.persistence.RtsSaves.snapshot((ServerLevel) (Object) this);
+    }
+
     /** [Sys] vanilla group: ServerLevel.tick as a whole, so its self time is the part no other section names. */
     @Unique private int reignofnether$levelToken = 0;
 
