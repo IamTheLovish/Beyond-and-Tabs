@@ -39,7 +39,7 @@ public class GeothermalPlant extends Building {
     public final static String buildingName = "Geothermal Plant";
     public final static String structureName = "geothermal_plant";
     /** 280 metal / 1000 energy (ResourceCost.Building takes food, wood = energy, ore = metal: no RoN conversion). */
-    public final static ResourceCost cost = ResourceCost.Building(0, 1000, 280, 0);
+    public final static ResourceCost cost = ResourceCost.Building(0, 1000, 280);
     public static final String MUST_BE_LAVA = "building.reignofnether.must_be_lava";
     static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/magma.png");
 

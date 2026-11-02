@@ -367,7 +367,7 @@ public class MiscUtil {
      * their sort key is the distance plus 100 (findClosestAttackableEntity, both scans).
      */
     public static boolean isDeprioritisedTarget(LivingEntity e, boolean attackerIsMelee) {
-        boolean isMeleeAgainstFlyer = attackerIsMelee && e instanceof Unit unit && unit.isFlyingUnit();
+        boolean isMeleeAgainstFlyer = attackerIsMelee && e instanceof Unit unit && unit.isFlyingOutOfMelee();
         return e instanceof PhantomSummon || (e instanceof Unit scout && scout.isScout()) || isMeleeAgainstFlyer
             || e instanceof BeeUnit;
     }
@@ -448,7 +448,7 @@ public class MiscUtil {
 
         // Prevents certain attacks based on specific unit and goal conditions
         if (targetEntity instanceof Unit unit &&
-                unit.isFlyingUnit() &&
+                unit.isFlyingOutOfMelee() &&
                 unitMob instanceof AttackerUnit attackerUnit &&
                 attackerUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal) {
             return false;

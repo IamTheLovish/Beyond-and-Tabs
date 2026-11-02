@@ -25,7 +25,7 @@ public class EndPortal extends ProductionBuilding {
 
     public final static String buildingName = "End Portal";
     public final static String structureName = "end_portal";
-    public final static ResourceCost cost = ResourceCost.Building(0,0,0,0);
+    public final static ResourceCost cost = ResourceCost.Building(0,0,0);
 
     public EndPortal() {
         super(structureName, cost, false);
