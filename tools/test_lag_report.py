@@ -66,6 +66,21 @@ class LagReportTest(unittest.TestCase):
         self.assertTrue(v.startswith("render-bound"), v)
         self.assertIn("45 ms", v, "the near-budget server window is still named: " + v)
 
+    def test_one_slow_server_window_is_a_hitch_not_server_bound(self):
+        # real-GPU run 2026-11-01 (main 43b84275, 1 bot): 120 fps, tick windows p95 45.2 (match start), 6.0, 15.6, 5.6 ms;
+        # the verdict said server-bound
+        lines = [frame(10 * i, 120) for i in range(1, 6)] + [tick(10 * (i + 1), p) for i, p in enumerate((45.2, 6.0, 15.6, 5.6))]
+        v = lag_report.verdict(lag_report.analyze(lines))
+        self.assertTrue(v.startswith("nothing obviously wrong"), v)
+        self.assertIn("1 of 4", v, "the one slow window is still named: " + v)
+        self.assertIn("45 ms", v, v)
+
+    def test_two_slow_server_windows_are_server_bound(self):
+        lines = [frame(10 * i, 120) for i in range(1, 6)] + [tick(10 * (i + 1), p) for i, p in enumerate((48.0, 6.0, 52.0, 5.6))]
+        v = lag_report.verdict(lag_report.analyze(lines))
+        self.assertTrue(v.startswith("server-bound"), v)
+        self.assertIn("2 of 4", v, v)
+
     def test_chunk_loading_verdict(self):
         lines = [frame(10 * i, 70) for i in range(1, 7)] + [tick(10 * i, 10.0) for i in range(1, 7)]
         for i in range(1, 7):
