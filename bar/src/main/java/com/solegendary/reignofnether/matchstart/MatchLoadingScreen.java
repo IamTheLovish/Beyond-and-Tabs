@@ -115,6 +115,12 @@ public final class MatchLoadingScreen extends Screen {
     }
 
     // ------------------------------------------------------------------------------------------ state for others
+    /** For the [Screen] log line: the share (0-100) of chunks in view that are present, or -1 when no veil is up. */
+    public static int chunkPct() {
+        MatchLoadingScreen c = current;
+        return c == null ? -1 : (int) Math.floor(c.lastPresent * 100);
+    }
+
 
     /** The veil is showing (fading out counts: the HUD and the hint bar stay hidden until it is gone). */
     public static boolean isUp() {
