@@ -62,9 +62,6 @@ public class BugSweep1GameTests {
                 var list = unit.getAbilities().get();
                 var keys = unit.getAbilities().effectiveHotkeys();
                 for (int i = 0; i < list.size(); i++) {
-                    // the Villager's Call to Arms is registered on hotkey 1 but drawn on slot 1 too: judged by CommanderKeyGameTests
-                    if (list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit)
-                        continue;
                     Keybinding kb = keys.get(i);
                     for (Keybinding cat : Keybindings.buildCategoryKeys())
                         if (kb != null && kb.getKey() != -1 && (kb.getKey() == cat.getDefaultKey() || kb.getAliasKey() == cat.getDefaultKey()))
