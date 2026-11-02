@@ -271,6 +271,7 @@ public class BattlefieldWall {
         planned = col;
         columnsPerTick = perTick;
         buildLevel = level;
+        lastRing = new double[] { cx, cz, radius };
         ArenaStructureClearing.setArenaRadius(level, (float) cx, (float) cz, (float) radius);
         // the whole arena generated in the background, so a spectator's camera never waits on world generation
         if (pregen)
@@ -292,6 +293,19 @@ public class BattlefieldWall {
     /** Columns of the current ring already built (a resumed ring counts the columns it started past). */
     public static int columnsDone() {
         return planned - queue.size();
+    }
+
+    /** The last ring planned this run, {centre x, centre z, radius}, kept after a cancel (what stands stays). */
+    private static volatile double[] lastRing = null;
+
+    /**
+     * The last ring planned {centre x, centre z, radius}, or null before any: the eyes structure photos keep their pad
+     * clear of it (EyesDirector scene 15 - a pad across the ring cleared the wall, round r34).
+     */
+    @Nullable
+    public static double[] lastRing() {
+        double[] r = lastRing;
+        return r == null ? null : r.clone();
     }
 
     /** Drop the build (what stands stays). */

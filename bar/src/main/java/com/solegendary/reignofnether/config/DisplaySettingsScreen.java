@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Display settings (DisplaySettings; design/hud.md "Settings"): strategic icons (by zoom / always / never, the zoom
- * threshold, icon size), the health-bar rule, the fog of war style, the building ambience (design/lively_buildings.md),
+ * threshold, icon size), the health-bar rule, the fog of war style, the building ambience (design/lively_buildings.md), the valley mist (ambient/mist),
  * the building animation (design/moving_buildings.md) and the world look (postfx/WorldLookPass). Its own page, like Camera, because the main settings screen has no
  * spare row at GUI scale 4. Every control writes the client config at once and takes effect on the next frame
  * (the fog style on the next tick, with one chunk rebuild).
@@ -85,6 +85,13 @@ public class DisplaySettingsScreen extends Screen {
         }));
         animation.setTooltip(Tooltip.create(Component.literal(
             "Moving parts drawn on buildings: the metal extractors' sheave wheel, ore skip and owner pennant. Full (default; drops to Low by itself under 40 fps), Low (the nearest 24, simpler when small) or Off.")));
+        y += step;
+        Button mist = addRenderableWidget(ReignOfNetherConfigScreen.button(left, y, colW, rowH, mistLabel(), b -> {
+            ReignOfNetherClientConfigs.VALLEY_MIST.set(!DisplaySettings.valleyMist());
+            b.setMessage(mistLabel());
+        }));
+        mist.setTooltip(Tooltip.create(Component.literal(
+            "Soft ground mist that pools in hollows, along water and under cliffs: thick at dawn, gone by late morning, back at dusk, drifting with the wind. None at strategic zoom or in rain.")));
         y += step + 12;
 
         addRenderableOnly(new Label("World look").pos(left, y - 4).size(colW * 2 + gap, rowH));
@@ -114,6 +121,10 @@ public class DisplaySettingsScreen extends Screen {
 
     private static Component ambienceLabel() {
         return Component.literal("Building ambience: " + (DisplaySettings.buildingAmbience() ? "On" : "Off"));
+    }
+
+    private static Component mistLabel() {
+        return Component.literal("Valley mist: " + (DisplaySettings.valleyMist() ? "On" : "Off"));
     }
 
     private static Component animationLabel() {

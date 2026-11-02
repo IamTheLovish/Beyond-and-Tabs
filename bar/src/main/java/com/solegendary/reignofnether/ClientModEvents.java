@@ -83,9 +83,10 @@ public class ClientModEvents {
                 BlockRegistrar.WRAITH_SNOW_LAYER.get()
         );
 
-        // Tidewrought tidepool: the grey vanilla water texture tinted the faction's shallow-sea teal
+        // Light Grid tile (the tidepool, design/ai_faction.md slice 1a): the white grid lines tinted one light colour
+        // (team-coloured lines need the owner on the client: later); the dark panel stays dark under any tint
         evt.register(
-                (state, level, pos, tintIndex) -> 0x3CC8BE,
+                (state, level, pos, tintIndex) -> 0x7FF4FF,
                 BlockRegistrar.TIDEPOOL.get()
         );
 
@@ -98,13 +99,7 @@ public class ClientModEvents {
 
         // wrap every block's provider with the fog multiplier; biome-tinted ones only fog their untinted quads
         // (BiomeColorsMixin fogs the biome colour itself)
-        java.util.Set<Block> biomeTinted = java.util.Set.of(
-                Blocks.GRASS_BLOCK, Blocks.FERN, Blocks.GRASS, Blocks.POTTED_FERN,
-                Blocks.PINK_PETALS, Blocks.SUGAR_CANE, Blocks.LARGE_FERN, Blocks.TALL_GRASS,
-                Blocks.OAK_LEAVES, Blocks.JUNGLE_LEAVES, Blocks.ACACIA_LEAVES,
-                Blocks.DARK_OAK_LEAVES, Blocks.VINE, Blocks.MANGROVE_LEAVES,
-                Blocks.WATER, Blocks.BUBBLE_COLUMN
-        );
+        java.util.Set<Block> biomeTinted = FogTintingBlockColor.BIOME_TINTED;
         BlockColors blockColors = evt.getBlockColors();
         java.util.Map<Holder.Reference<Block>, BlockColor> map =
                 ((BlockColorsAccessor) (Object) blockColors).getBlockColors();
@@ -128,6 +123,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.SPIDER_UNIT.get(), SpiderRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.POISON_SPIDER_UNIT.get(), PoisonSpiderUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WRAITH_UNIT.get(), WraithRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.TOMBCALLER_UNIT.get(), WraithRenderer::new);   // placeholder: the Wraith's body
+        evt.registerEntityRenderer(EntityRegistrar.TOMBSTONE_UNIT.get(), TotemOfRegenerationRenderer::new);   // placeholder: a totem's body
         evt.registerEntityRenderer(EntityRegistrar.VILLAGER_UNIT.get(), VillagerUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), RoyalArchitectRenderer::new);
         // Verdant Court T2: the Stag Lancer wears Alex's Mobs' own moose renderer (always antlered, StagLancerUnit)
@@ -137,6 +134,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.ELDER_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ElderTreantRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WISP_CHOIR_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WispChoirRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BloomPriestessRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.THORNWEAVER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ThornweaverRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.RENEWAL_SAPLING_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RenewalSaplingRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_DOG_UNIT.get(), DogUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_CAT_UNIT.get(), CatUnitRenderer::new);
         // the Sunforged Squire Runner (trained militia): a generated body (tools/gen_squire.py -> tools/dsl_to_game.py);
@@ -225,6 +224,11 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.WITCH_UNIT.get(), FieldMedicRenderer::new);
         // the Dome Cleric: the human body since Oct 21 (tools/gen_cleric.py -> tools/dsl_to_game.py)
         evt.registerEntityRenderer(EntityRegistrar.EVOKER_UNIT.get(), DomeClericRenderer::new);
+        // the Angel Caller on the Dome Cleric's body and its angels on the vex's, tinted per kind (placeholders)
+        evt.registerEntityRenderer(EntityRegistrar.ANGEL_CALLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelCallerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.MENDER_ANGEL_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SERAPH_ARCHER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SWORD_SERAPH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ENDERMAN_UNIT.get(), EndermanRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WARDEN_UNIT.get(), WardenRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.RAVAGER_UNIT.get(), RavagerRenderer::new);
@@ -465,11 +469,14 @@ public class ClientModEvents {
     @OnlyIn(Dist.CLIENT)
     public static void registerShaders(RegisterShadersEvent evt) {
         com.solegendary.reignofnether.postfx.WorldLookPass.registerShader(evt);
+        com.solegendary.reignofnether.ambient.mist.MistPass.registerShader(evt);   // the valley mist's volume (r6)
     }
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void registerParticles(RegisterParticleProvidersEvent evt) {
+        evt.registerSpriteSet(ParticleRegistrar.MIST.get(),
+                com.solegendary.reignofnether.ambient.mist.MistParticle.Provider::new);
         evt.registerSpriteSet(
                 ParticleRegistrar.BIG_ENCHANT.get(),
                 BigEnchantParticle.Provider::new

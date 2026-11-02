@@ -27,10 +27,6 @@ public class GameruleServerboundPacket {
         PacketHandler.INSTANCE.sendToServer(
                 new GameruleServerboundPacket(GameruleAction.SET_NEUTRAL_AGGRO, "", neutralAggro ? 1L : 0L));
     }
-    public static void setMaxPopulation(long maxPopulation) {
-        PacketHandler.INSTANCE.sendToServer(
-            new GameruleServerboundPacket(GameruleAction.SET_MAX_POPULATION, "", maxPopulation));
-    }
     public static void setUnitGriefing(boolean unitGriefing) {
         PacketHandler.INSTANCE.sendToServer(
             new GameruleServerboundPacket(GameruleAction.SET_UNIT_GRIEFING, "", unitGriefing ? 1L : 0L));
@@ -136,11 +132,6 @@ public class GameruleServerboundPacket {
                 case SET_NEUTRAL_AGGRO -> {
                     gameRules.getRule(GameRuleRegistrar.NEUTRAL_AGGRO).set(booleanValue, server);
                     GameruleClientboundPacket.setNeutralAggro(booleanValue);
-                }
-                case SET_MAX_POPULATION -> {
-                    UnitServerEvents.maxPopulation = Math.toIntExact(value);
-                    gameRules.getRule(GameRuleRegistrar.MAX_POPULATION).set(UnitServerEvents.maxPopulation, server);
-                    GameruleClientboundPacket.setMaxPopulation(UnitServerEvents.maxPopulation);
                 }
                 case SET_UNIT_GRIEFING -> {
                     gameRules.getRule(GameRuleRegistrar.DO_UNIT_GRIEFING).set(booleanValue, server);

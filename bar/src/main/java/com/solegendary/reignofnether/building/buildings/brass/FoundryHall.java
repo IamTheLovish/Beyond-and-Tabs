@@ -67,7 +67,6 @@ public class FoundryHall extends ProductionBuilding {
             () -> true,
             List.of(Component.translatable("buildings.reignofnether.foundry_hall").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPop(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("buildings.reignofnether.foundry_hall.tooltip1").getVisualOrderText(),
                 Component.translatable("buildings.reignofnether.foundry_hall.tooltip2").getVisualOrderText()

@@ -89,6 +89,15 @@ public class DisplaySettings {
         return Math.max(0, Math.min(get(ReignOfNetherClientConfigs.WORLD_LOOK_HAZE, 100), 200)) / 100f;
     }
 
+    /** Valley mist (ambient/mist/MistClientEvents): soft ground mist in hollows, by water and under cliffs at dawn and dusk. */
+    public static boolean valleyMist() {
+        try {
+            return ReignOfNetherClientConfigs.VALLEY_MIST.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
     /** Building ambience (design/lively_buildings.md): the idle particles round capitols, energy buildings and labs. */
     public static boolean buildingAmbience() {
         try {

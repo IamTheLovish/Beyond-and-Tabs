@@ -769,7 +769,7 @@ public class TutorialClientEvents {
                     progressStageAfterDelay(160);
                 } else if (stageProgress == 2 && hasUnitSelected("villager")) {
                     TutorialRendering.setButtonName(VillagerHouse.buildingName);
-                    msg("tutorial.reignofnether.houses");
+                    msg("tutorial.reignofnether.houses_energy");
                     progressStageAfterDelay(160);
                 } else if (stageProgress == 3 && hasUnitSelected("villager")) {
                     TutorialRendering.setButtonName(WheatFarm.buildingName);
@@ -828,7 +828,7 @@ public class TutorialClientEvents {
             case BUILD_ARMY -> {
                 if (stageProgress == 0) {
                     TutorialServerboundPacket.doServerAction(TutorialAction.SET_DAY_TIME);
-                    setHelpButtonText("tutorial.reignofnether.produce_illagers");
+                    setHelpButtonText("tutorial.reignofnether.produce_illagers_no_pop");
                     TutorialRendering.clearButtonName();
                     msg("tutorial.reignofnether.three_units");
                     progressStage();
