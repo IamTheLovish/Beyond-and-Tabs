@@ -152,7 +152,10 @@ def verdict(r):
     # frame with one 45 ms server window was called server-bound), and one window is a hitch, not a limit (real-GPU
     # run 2026-11-01: 120 fps, the one 45 ms window was the match start)
     if tick_p95 >= SLOW_TICK_P95_MS * 0.7 or (slow_windows >= 2 and not client_slow):
-        return "server-bound: the server tick p95 is %.0f ms in the median window, %.0f ms in the worst; %s; the top [Sys] systems below say what it spends it on" % (tick_p95, tick_max_p95, windows)
+        # both sides can be over at once (150 a side 2026-11-01: 15 fps and a 61 ms server p95)
+        client = ("; the client is slow too: the median frame is %.0f ms (%.0f fps)" % (frame_p50, 1000 / max(frame_p50, 0.1))
+                  if client_slow else "")
+        return "server-bound: the server tick p95 is %.0f ms in the median window, %.0f ms in the worst; %s%s; the top [Sys] systems below say what it spends it on" % (tick_p95, tick_max_p95, windows, client)
     if client_slow:
         g = r["gfx"]
         why = " on an integrated GPU" if g and is_integrated(g["renderer"], g["vendor"]) else ""
