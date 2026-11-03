@@ -58,6 +58,7 @@ public class Grove extends ProductionBuilding {
         this.productions.add(ProductionItems.THORNHEART_DRUID, Keybindings.abilitySlot8);
         this.productions.add(ProductionItems.THORNHEART_DRUID_REVIVE, Keybindings.abilitySlot8);
         this.productions.add(ProductionItems.BURL_SLINGER, Keybindings.abilitySlot7);   // T1 siege lobber (design/siege_t1.md)
+        this.productions.add(ProductionItems.THORNWEAVER, Keybindings.abilitySlot9);    // essence caster: Tier 1 (lovish, Oct 29)
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
         this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);
