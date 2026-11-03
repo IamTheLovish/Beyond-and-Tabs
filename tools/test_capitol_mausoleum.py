@@ -59,6 +59,19 @@ class MausoleumTest(unittest.TestCase):
         unk = sum(1 for v in self.vals if v is None) / max(1, len(self.vals))
         self.assertLessEqual(unk, 0.12)
 
+    def test_the_cross_is_the_outline(self):
+        """lovish: the capitols must not share the square stepped-pyramid outline. Two critics on every round: the
+        corner towers, buttresses and podium between the arms drew the square / diamond from the RTS camera. Nothing
+        stands above layer 0 in the cross's re-entrant corners (cells 3+ from both axes), and at most a few
+        headstones (<= 10 %) sit in layer 0 there - the field's own lawn shows (layer 0 sits a block over the field)."""
+        R = 7
+        corner = {(x, z) for x in range(15) for z in range(15) if min(abs(x - R), abs(z - R)) >= 3}
+        above = sorted({(x, y, z) for (x, y, z), v in self.b.blocks.items()
+                        if (x, z) in corner and y >= 1 and v[0] not in S.AIR})
+        self.assertEqual(above[:5], [], "%d blocks stand in the corners" % len(above))
+        floor = [q for q, v in self.b.blocks.items() if (q[0], q[2]) in corner and q[1] == 0 and v[0] not in S.AIR]
+        self.assertLessEqual(len(floor), 0.10 * len(corner), len(floor))
+
     def test_shipped_is_the_generator_and_keeps_the_game_rules(self):
         """mausoleum.nbt (data and assets) is what tools/capitol_mausoleum.py draws, and its check() passes."""
         import capitol_mausoleum as M
