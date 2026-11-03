@@ -108,8 +108,10 @@ final class ConstructionFx {
     private static final float FAR_ZOOM = 70;
     /** The halo's ring line stands this far outside the course's footprint (round 10 critic: pulled 0.5 in, clear of
      *  the selection box). Nov 3 (the ring back, eyes 41710151863): at 0.25 the white band lay on the white walls and
-     *  the pale ghost and did not read at all; 0.6 floats it, and its puffs, clear of the wall faces. */
-    private static final float RING_PAD = 0.6f;
+     *  the pale ghost and did not read at all. At 0.6 (eyes 41738511562) it sat inside the scaffold, whose poles stand
+     *  0.55 out with a rail at every level, and only showed between the rails; 1.4 puts it, and its near-side puffs,
+     *  in front of the scaffold. */
+    private static final float RING_PAD = 1.4f;
     /** The ring's cloud (Nov 3): camera-facing puffs, each a cool belly under a lit top - the shading is what tells a
      *  white cloud from the white Sunforged stone behind it and the lit top what tells it from the blue ghost. */
     private static final int CLOUD_LIT = 0xFFFDF6, CLOUD_BELLY = 0x8FA3C8;
