@@ -8,7 +8,7 @@
 # photograph it - RTS view, RTS close, a first-person 3/4 view, a first-person close-up among the plants at noon, the
 # 3/4 view at dusk and the RTS view at golden hour (EyesDirector scene 15) - with the real textures, the building-block
 # mods and, with `shaders`, the shader lane. Stills land on branch eyes-structures (eyes-structures-shaders with shaders
-# on) as bat_eyes_15_<name>_{rts,rts_close,34,close,dusk,golden_rts,rts_army}.png (rts_army: our militia round it at
+# on) as bat_eyes_15_<name>_{rts,rts_close,rts_edge,34,close,dusk,golden_rts,rts_army}.png (rts_army: our militia round it at
 # noon, for units in its shadow; with input `times` also _rts_t<T> / _34_t<T>, with input `mist` also _mist_rts).
 # An entry is a structure name in the jar (data/reignofnether/structures/<name>.nbt) or a .nbt path in the checkout.
 # Or work:<building id> (work:machine_shop): the real lab placed and photographed idle, then producing (stack smoke,
