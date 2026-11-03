@@ -271,7 +271,7 @@ public class BuildingAmbienceClientEvents {
     private static final Map<String, Spots> CAPITOL_SPOTS = Map.of(
         "town_centre", new Spots(new double[] { 7.5, 20.1, 7.5, 7.5, 14.5, 14.1, 0.9, 14.5, 7.5 },
             new Fx[] { Fx.GLINT, Fx.GLINT, Fx.GLINT }),
-        "mausoleum", new Spots(new double[] { 4.5, 16.7, 4.5, 10.5, 16.7, 4.5, 4.5, 16.7, 10.5, 10.5, 16.7, 10.5, 7.5, 21.7, 7.5 },
+        "mausoleum", new Spots(new double[] { 5.5, 17.7, 5.5, 9.5, 17.7, 5.5, 5.5, 17.7, 9.5, 9.5, 17.7, 9.5, 7.5, 21.7, 7.5 },
             new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL }),
         "central_portal", new Spots(new double[] { 1.5, 3.7, 2.5, 9.5, 3.7, 2.5, 1.5, 3.7, 6.5, 9.5, 3.7, 6.5 },
             new Fx[] { Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }),

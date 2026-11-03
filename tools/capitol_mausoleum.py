@@ -68,11 +68,28 @@ PBB, CPB, PB = "polished_blackstone_bricks", "chiseled_polished_blackstone", "po
 PBW, DTW = "polished_blackstone_wall", "deepslate_tile_wall"
 DTS, DBS, PBS = "deepslate_tile_stairs", "deepslate_brick_stairs", "polished_blackstone_stairs"
 GLASS = "green_stained_glass"
-# the value roles (the massing/value rounds swap these; tools/capitol_mausoleum_massing.py)
-WALL = DB                          # the church's walls: arms, fronts, towers, buttress piers, crossing corners
-CROWN_WALL = DT                    # the crossing tower's walls over the roofs
-ROOF, ROOFS = DT, DTS              # roof ridges / spire caps, and the roof and spire stairs
+PDI, PDIS = "polished_diorite", "polished_diorite_stairs"
+# the value roles and massing flags: the Nov 2026 rounds' winner (r4, critics 6.5 / 6.5; shipped 5 / 5) - pale bone-stone
+# walls and crossing over dark tile arm roofs, the cross itself the outline (tools/capitol_mausoleum_massing.py keeps
+# the options; its BASE is the cathedral that shipped before)
+WALL = PDI                          # the church's walls: arms, fronts, towers, buttress piers, crossing corners
+CROWN_WALL = PDI                   # the crossing tower's walls over the roofs
+ROOF, ROOFS = PDI, PDIS            # roof ridges / spire caps, and the roof and spire stairs
 TOWER_TOP = 12                     # the corner towers' band (their spires rise 4 over it)
+OPEN_CORNERS = True                # no corner towers or flying buttresses: the cross's re-entrant corners stay open
+CORNER_NEEDLES = False             # with OPEN_CORNERS: a slim blackstone needle in each re-entrant corner
+ARM_ROOF, ARM_ROOFS = DT, DTS      # the arms' ridge / roof stairs when they differ from the crossing's (None: ROOF / ROOFS)
+ARM_NEEDLES = True                 # a needle spire on each arm's gable apex (y15-17, a bone-white skull on top)
+DARK_CORNERS = False               # the podium terrace in the cross's open corners in blackstone (the cross reaches the outline)
+QUIET_GROUND = True                # no soul lanterns at ground level (stair cheeks, graves): the light gathers on the crossing
+CROSSING_LIGHTS = True             # the soul lanterns gather on the crossing (rib needles) - none on the gable finials
+CROSS_PODIUM = True                # the podium only under the arms: the cross's corners drop to a mossy grave lawn
+NEEDLE_TOP = 19                    # with ARM_NEEDLES: the needle's last wall post (the skull sits on it)
+AIR_CORNERS = True                 # with CROSS_PODIUM: the corners' layer 0 left empty - the field's own lawn runs in flush
+PALE_CROWN = True                  # the crossing's cornice and belfry eaves pale too: the crossing owns the brightest group
+WALL_PIERS = True                  # dark piers at the arm fronts' corners and a dark string course: less pale wall area
+DARK_ROSES = True                  # the rose windows without their glowing heart (two lit roses facing the camera = eyes)
+FRONT = {"south": 4, "west": 4, "north": 4, "east": 4}   # each arm's front ring (a Latin cross: one long arm)
 GLOW = "verdant_froglight"
 # standing skull rotation (16ths of a turn, 0 = facing south): facing out of each side, and out of each corner
 SKULL_OUT = {"south": "0", "west": "4", "north": "8", "east": "12"}
@@ -80,8 +97,8 @@ SKULL_CORNER = {(-1, 1): "2", (-1, -1): "6", (1, -1): "10", (1, 1): "14"}
 
 # where the game looks (structure coordinates: the centre cell is (R, y, R))
 BELL = (R, 15, R)                  # CapitolLife.MOTIONS["mausoleum"]: the belfry's empty cell under the spire
-# BuildingAmbienceClientEvents.CAPITOL_SPOTS["mausoleum"]: Fx.SOUL over the four tower-spire lanterns and the crown
-SOUL_SPOTS = ((4.5, 16.7, 4.5), (10.5, 16.7, 4.5), (4.5, 16.7, 10.5), (10.5, 16.7, 10.5), (7.5, 21.7, 7.5))
+# BuildingAmbienceClientEvents.CAPITOL_SPOTS["mausoleum"]: Fx.SOUL over the four crossing-rib lanterns and the crown
+SOUL_SPOTS = ((5.5, 17.7, 5.5), (9.5, 17.7, 5.5), (5.5, 17.7, 9.5), (9.5, 17.7, 9.5), (7.5, 21.7, 7.5))
 STARTING_TYPES = {"stone", "stone_bricks", "stone_brick_stairs"}   # Mausoleum.startingBlockTypes
 
 
@@ -132,7 +149,7 @@ def grave(c, dx, dz, h):
         skull(c, dx, 1, dz, rot, wither=False)
     elif k == 3:
         c.set(dx, 1, dz, "bone_block", axis="x" if dz in (R, -R) else "z")   # a bone half-sunk in the soil
-    elif k == 7 and abs(dx) != abs(dz):
+    elif k == 7 and abs(dx) != abs(dz) and not QUIET_GROUND:
         c.set(dx, 1, dz, "soul_lantern", **LANTERN)             # a grave light
 
 
@@ -140,9 +157,16 @@ def grave(c, dx, dz, h):
 def podium(c):
     """The crypt podium (rings <= 5, y1-2) and its face on ring 5: pier - niche - pier, an ossuary skull in each niche,
     the grand stair on each axis."""
+    if CROSS_PODIUM:
+        cross_podium(c)
+        return
     c.disc(5, 0, "stone")                                       # under the podium: the instant foundation
     for y in (1, 2):
         c.disc(5, y, PD if y == 2 else DB)
+    if DARK_CORNERS:
+        for dx, dz in c.cells(5):
+            if min(abs(dx), abs(dz)) >= 3:
+                c.set(dx, 2, dz, PB)
     for o in O4.values():
         for t in range(-5, 6):
             c.put(o, 5, t, 1, PBB if abs(t) in (2, 4, 5) else DB)
@@ -160,7 +184,11 @@ def podium(c):
             c.st(o, 5, t, 2, inward(o), name=DBS)
         for s in (-1, 1):
             c.put(o, 6, 2 * s, 1, PBW)
-            c.put(o, 6, 2 * s, 2, "soul_lantern", **LANTERN)
+            if QUIET_GROUND:
+                x, z = c.side(o, 6, 2 * s)
+                skull(c, x, 2, z, SKULL_OUT[outward(o)], wither=False)
+            else:
+                c.put(o, 6, 2 * s, 2, "soul_lantern", **LANTERN)
     # the podium corners: an ossuary obelisk on the ground ring's corner
     for (sx, sz) in CORNERS:
         x, z = sx * 6, sz * 6
@@ -170,53 +198,107 @@ def podium(c):
         skull(c, x, 4, z, SKULL_CORNER[(sx, sz)])
 
 
+def cross_podium(c):
+    """The podium under the arms only (five wide, out to each arm's front + 1): the cross is the outline from the RTS
+    camera, and its re-entrant corners drop to a mossy grave lawn (moss, a few headstones) that runs on into the grass.
+    The grand stair climbs each arm's end between bone door posts; skulls (no lanterns) on the cheek walls."""
+    for dx, dz in c.cells(R):
+        if min(abs(dx), abs(dz)) >= 3 and AIR_CORNERS:
+            if max(abs(dx), abs(dz)) <= 5 and hsh(dx, dz) % 7 == 0:
+                c.set(dx, 0, dz, DTW)                           # a headstone standing in the field's own lawn
+        elif min(abs(dx), abs(dz)) >= 3:
+            h = hsh(dx, dz)
+            c.set(dx, 0, dz, ("moss_block", "moss_block", "podzol", "moss_block", "rooted_dirt")[h % 5],
+                  **({"snowy": "false"} if h % 5 == 2 else {}))
+            if max(abs(dx), abs(dz)) <= 5 and h % 7 == 0:
+                c.set(dx, 1, dz, DTW)                           # a headstone in the lawn
+    for face, o in O4.items():
+        F = FRONT[face]
+        for a in range(0, F + 2):
+            for t in range(-2, 3):
+                c.put(o, a, t, 0, "stone")                      # under the podium: the instant foundation
+                c.put(o, a, t, 1, PBB if abs(t) == 2 else DB)
+                c.put(o, a, t, 2, PD)
+        for t in (-1, 0, 1):
+            c.st(o, F + 2, t, 1, inward(o), name=DBS)
+            c.put(o, F + 1, t, 1, DB)
+            c.st(o, F + 1, t, 2, inward(o), name=DBS)
+        for s in (-1, 1):
+            c.put(o, F + 2, 2 * s, 1, PBW)
+            x, z = c.side(o, F + 2, 2 * s)
+            skull(c, x, 2, z, SKULL_OUT[outward(o)], wither=False)
+        for a in range(F + 3, R + 1):                           # the approach flags out to the plot's edge
+            for t in (-1, 0, 1):
+                c.st(o, a, t, 0, inward(o), "top", "stone_brick_stairs")
+    if AIR_CORNERS:
+        c.put(O4["north"], R, 0, 0, "stone_bricks")             # the starting types all sit in layer 0
+    else:
+        c.set(R, 0, R, "stone_bricks")
+        c.set(-R, 0, -R, "stone_bricks")
+
+
 # ====================================================================================================== church
 def arms(c):
     """The four arms of the cross (rings 0..4, five wide): side walls on |t| = 2, a steep tile gable roof, and the
     gothic front on ring 4 - portal, wimperg, rose window, gable, apex finial."""
-    for o in O4.values():
-        for a in range(2, 5):
+    for face, o in O4.items():
+        F = FRONT[face]
+        for a in range(2, F + 1):
             for s in (-1, 1):
                 for y in range(3, 11):
-                    c.put(o, a, 2 * s, y, WALL)
+                    dark = WALL_PIERS and (a == F or y == 7)
+                    c.put(o, a, 2 * s, y, (PBB if y == 7 else DB) if dark else WALL)
             # the roof: tile stairs climbing in from the eaves, a tile ridge, blackstone cresting
             for s in (-1, 1):
-                c.st(o, a, 2 * s, 11, along(o, -s), name=ROOFS)
-                c.st(o, a, 1 * s, 12, along(o, -s), name=ROOFS)
-            c.put(o, a, 0, 13, ROOF)
+                c.st(o, a, 2 * s, 11, along(o, -s), name=ARM_ROOFS or ROOFS)
+                c.st(o, a, 1 * s, 12, along(o, -s), name=ARM_ROOFS or ROOFS)
+            c.put(o, a, 0, 13, ARM_ROOF or ROOF)
             c.put(o, a, 0, 14, PBW)
-        # the front wall, ring 4
+        # the front wall, ring F
         for t in range(-1, 2):
             for y in range(3, 12):
-                c.put(o, 4, t, y, WALL)
-        c.put(o, 4, 0, 12, WALL)
+                c.put(o, F, t, y, WALL)
+        c.put(o, F, 0, 12, WALL)
         # the portal: 3 wide, a pointed head (upside-down stair shoulders, a chiseled keystone)
         for t in (-1, 0, 1):
             for y in (3, 4):
-                c.put(o, 4, t, y, "air")
-        c.put(o, 4, 0, 5, "air")
+                c.put(o, F, t, y, "air")
+        c.put(o, F, 0, 5, "air")
         for s in (-1, 1):
-            c.st(o, 4, s, 5, along(o, s), "top", PBS)
-        c.put(o, 4, 0, 6, CPB)
+            c.st(o, F, s, 5, along(o, s), "top", PBS)
+        c.put(o, F, 0, 6, CPB)
         # the wimperg (the gable hood over the portal) on ring 5, carried by bone door posts
         for s in (-1, 1):
-            c.put(o, 5, 2 * s, 3, "bone_block", axis="y")
-            c.put(o, 5, 2 * s, 4, "bone_block", axis="y")
-            c.st(o, 5, 2 * s, 5, along(o, -s), name=PBS)
-            c.st(o, 5, s, 6, along(o, -s), name=PBS)
-        c.put(o, 5, 0, 7, CPB)
-        x, z = c.side(o, 5, 0)
+            c.put(o, F + 1, 2 * s, 3, "bone_block", axis="y")
+            c.put(o, F + 1, 2 * s, 4, "bone_block", axis="y")
+            c.st(o, F + 1, 2 * s, 5, along(o, -s), name=PBS)
+            c.st(o, F + 1, s, 6, along(o, -s), name=PBS)
+        c.put(o, F + 1, 0, 7, CPB)
+        x, z = c.side(o, F + 1, 0)
         skull(c, x, 8, z, SKULL_OUT[outward(o)])
         # the rose window: green glass round a glowing verdant heart, its corners rounded by stairs
-        c.put(o, 4, 0, 9, GLOW, axis="y")
+        if DARK_ROSES:
+            c.put(o, F, 0, 9, CPB)
+        else:
+            c.put(o, F, 0, 9, GLOW, axis="y")
         for (t, y) in ((-1, 9), (1, 9), (0, 8), (0, 10)):
-            c.put(o, 4, t, y, GLASS)
+            c.put(o, F, t, y, GLASS)
         for s in (-1, 1):
-            c.st(o, 4, s, 10, along(o, s), "top", DBS)
-            c.st(o, 4, s, 8, along(o, s), name=DBS)
+            c.st(o, F, s, 10, along(o, s), "top", DBS)
+            c.st(o, F, s, 8, along(o, s), name=DBS)
         # the apex finial: a lit soul lantern on the cresting's end
-        c.put(o, 4, 0, 14, CPB)
-        c.put(o, 4, 0, 15, "soul_lantern", **LANTERN)
+        c.put(o, F, 0, 14, CPB)
+        if ARM_NEEDLES:
+            c.put(o, F, 0, 15, CPB)
+            for y in range(16, NEEDLE_TOP + 1):
+                c.put(o, F, 0, y, PBW)
+            x, z = c.side(o, F, 0)
+            skull(c, x, NEEDLE_TOP + 1, z, SKULL_OUT[outward(o)], wither=False)
+        elif CROSSING_LIGHTS:
+            x, z = c.side(o, F, 0)
+            skull(c, x, 15, z, SKULL_OUT[outward(o)], wither=False)
+        else:
+            c.put(o, F, 0, 15, "soul_lantern", **LANTERN)
 
 
 def towers(c):
@@ -258,6 +340,19 @@ def towers(c):
             c.set(sx * 5, y, sz * 5, "chain", axis="y", waterlogged="false")   # a chain from its jaw
 
 
+def needles(c):
+    """Open corners: one slim needle per re-entrant corner of the cross (ring 4's diagonal), a blackstone shaft on a
+    chiseled foot, wall-post tip, a bone-white skull on top - the spires' outline without the towers' bulk."""
+    for (sx, sz) in CORNERS:
+        x, z = sx * 4, sz * 4
+        c.set(x, 3, z, CPB)
+        for y in range(4, 10):
+            c.set(x, y, z, PBB)
+        for y in range(10, 14):
+            c.set(x, y, z, PBW)
+        skull(c, x, 14, z, SKULL_CORNER[(sx, sz)], wither=False)
+
+
 def buttresses(c):
     """Eight flying buttresses: a pier on the ground ring (ring 6) leaps over the podium terrace (ring 5) to the tower;
     a chain hangs under each arch; each pier ends in a lit pinnacle."""
@@ -288,7 +383,7 @@ def crossing(c):
         c.st(o, 3, 0, 11, outward(o), "top", DBS)               # the lancet's sill over the ridge
         for t in (-1, 0, 1):
             c.st(o, 3, t, 14, inward(o), "top", DBS)            # the cornice corbels
-            c.put(o, 2, t, 14, PBB)
+            c.put(o, 2, t, 14, ROOF if PALE_CROWN else PBB)
     for (sx, sz) in CORNERS:
         for y in range(3, 11):
             c.set(sx * 2, y, sz * 2, WALL)
@@ -296,13 +391,15 @@ def crossing(c):
             c.set(sx * 2, y, sz * 2, "bone_block", axis="y")    # the bone ribs
         c.set(sx * 2, 15, sz * 2, PBW)                          # unlit needles: the tower spires beside them carry
         c.set(sx * 2, 16, sz * 2, PBW)                          # the light, one lantern per spire cluster
+        if CROSSING_LIGHTS:
+            c.set(sx * 2, 17, sz * 2, "soul_lantern", **LANTERN)
     # the belfry floor (the crossing's vault) with the hall's green light under it
     c.disc(1, 14, PD)
     c.set(0, 13, 0, GLOW, axis="y")
     # the belfry: bone posts on ring 1's corners; the bell cell and its four sides stay empty
     for (sx, sz) in CORNERS:
         c.set(sx, 15, sz, "bone_block", axis="y")
-    c.ring_stairs(1, 16, "top", DTS, out=True)                  # the belfry's eaves
+    c.ring_stairs(1, 16, "top", ROOFS if PALE_CROWN else DTS, out=True)   # the belfry's eaves
     c.set(0, 16, 0, PBB)                                        # the beam the bell hangs from
     # the spire
     c.ring_stairs(1, 17, name=ROOFS)
@@ -315,23 +412,27 @@ def crossing(c):
 
 def nave(c):
     """The cross-shaped nave inside: open from the floor (y2) up; a verdant inlay cross on the floor."""
-    for dx, dz in c.cells(3):
-        if min(abs(dx), abs(dz)) <= 1:
-            for y in range(3, 11):
-                c.set(dx, y, dz, "air")
-    for o in O4.values():
-        for a in (1, 2, 3):
+    for face, o in O4.items():
+        for a in range(0, FRONT[face]):
+            for t in (-1, 0, 1):
+                for y in range(3, 11):
+                    c.put(o, a, t, y, "air")
+        for a in range(1, FRONT[face]):
             c.put(o, a, 0, 2, PBB)
 
 
 def build():
     c = tc.Cap(R, H)
-    ossuary_garden(c)
+    if not CROSS_PODIUM:
+        ossuary_garden(c)
     podium(c)
     arms(c)
     nave(c)
-    towers(c)
-    buttresses(c)
+    if not OPEN_CORNERS:
+        towers(c)
+        buttresses(c)
+    elif CORNER_NEEDLES:
+        needles(c)
     crossing(c)
     # the nave's cleared cells stay as explicit air entries: placing them clears whatever stood in the hall
     c.rig.settle()
