@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.StructureUtils;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -45,5 +46,18 @@ public abstract class StructureUtilsMixin {
         // loads it the old way - no worse than before, but now the log says which chunk, and the tickets stay
         GameTestChunks.awaitLoaded(level, chunks, GameTestChunks.WAIT_MS);
         ci.cancel();
+    }
+
+    /**
+     * Vanilla clears a structure's space only up to 20 blocks above its top: whatever an earlier batch left higher at the
+     * same spot stayed, unsupported, and its gravel fell onto the new arenas (GameTestChunks.clearAbove).
+     */
+    @Inject(
+            method = "clearSpaceForStructure(Lnet/minecraft/world/level/levelgen/structure/BoundingBox;ILnet/minecraft/server/level/ServerLevel;)V",
+            at = @At("TAIL")
+    )
+    private static void reignofnether$clearAboveTheCeiling(BoundingBox box, int y, ServerLevel level, CallbackInfo ci) {
+        if (GameTestChunks.asyncStructureLoad(level))
+            GameTestChunks.clearAbove(level, box);
     }
 }
