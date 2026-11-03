@@ -24,7 +24,10 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.PolarBear;
 import net.minecraft.world.entity.monster.Slime;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.WeakHashMap;
 
 // Move towards a building to attack it
 // will continually try to move towards the building if too far away as long as this goal is being enacted
@@ -55,6 +58,15 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
     private BlockPos moveTargetFrom = null;
     private BlockPos cachedMoveTarget = null;
     private long moveTargetAt = Long.MIN_VALUE;
+
+    // The ground cells round each building its melee attackers head for (server side). A party sent at a building from
+    // one side all took the cell nearest themselves - the same few cells on the near face - and big units queued behind
+    // the front ones: six Marauders (iron-golem wide) on a converter came into reach at ticks 50-63 and the back pair at
+    // 72-112, and the raid timing test failed in CI (flake-stress 41708076632). Each attacker now takes the nearest cell
+    // at least the two units' width from every other attacker's cell, so a party spreads round the building; with no
+    // such cell left it takes the nearest, as before. Keyed by entity id, so a dead attacker or a destroyed building is
+    // not held here.
+    private static final Map<BuildingPlacement, Map<Integer, BlockPos>> ATTACK_CELLS = new WeakHashMap<>();
 
     public MeleeAttackBuildingGoal(Mob mob) {
         super(mob, true, 0);
@@ -176,12 +188,47 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
         long now = mob.level().getGameTime();
         if (cachedMoveTarget == null || moveTargetFor != buildingTarget || !from.equals(moveTargetFrom)
                 || now - moveTargetAt >= MOVE_TARGET_REFRESH || now < moveTargetAt) {
-            cachedMoveTarget = this.buildingTarget.getClosestGroundPos(from, 1);
+            cachedMoveTarget = mob.level().isClientSide() ? this.buildingTarget.getClosestGroundPos(from, 1) : claimCell(from);
             moveTargetFor = buildingTarget;
             moveTargetFrom = from;
             moveTargetAt = now;
         }
         this.moveTarget = cachedMoveTarget;
+    }
+
+    private BlockPos claimCell(BlockPos from) {
+        BuildingPlacement target = buildingTarget;
+        Map<Integer, BlockPos> cells = ATTACK_CELLS.computeIfAbsent(target, b -> new HashMap<>());
+        cells.remove(mob.getId());
+        Map<Mob, BlockPos> others = new HashMap<>();
+        cells.entrySet().removeIf(e -> {
+            if (mob.level().getEntity(e.getKey()) instanceof Mob m && m.isAlive() && m instanceof AttackerUnit au
+                    && au.getAttackBuildingGoal() instanceof MeleeAttackBuildingGoal g && g.buildingTarget == target) {
+                others.put(m, e.getValue());
+                return false;
+            }
+            return true;
+        });
+        BlockPos cell = others.isEmpty() ? null : target.getClosestGroundPos(from, 1, false, p -> {
+            for (Map.Entry<Mob, BlockPos> e : others.entrySet()) {
+                int need = Math.max(1, (int) Math.ceil((mob.getBbWidth() + e.getKey().getBbWidth()) / 2));
+                if (Math.max(Math.abs(e.getValue().getX() - p.getX()), Math.abs(e.getValue().getZ() - p.getZ())) < need)
+                    return false;
+            }
+            return true;
+        });
+        if (cell == null)
+            cell = target.getClosestGroundPos(from, 1);
+        cells.put(mob.getId(), cell);
+        return cell;
+    }
+
+    private void releaseCell() {
+        if (buildingTarget != null && !mob.level().isClientSide()) {
+            Map<Integer, BlockPos> cells = ATTACK_CELLS.get(buildingTarget);
+            if (cells != null)
+                cells.remove(mob.getId());
+        }
     }
 
     // only count as building if in range of the target - building is actioned in Building.tick()
@@ -225,6 +272,7 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
 
     // if we override stop() it for some reason is called after start() and we can never begin this goal...
     public void stopAttacking() {
+        releaseCell();
         buildingTarget = null;
         super.stopMoving();
         forced = false;
