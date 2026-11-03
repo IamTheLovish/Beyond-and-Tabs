@@ -598,7 +598,8 @@ public final class BiomePalette {
         // The Grand Foundry's yard (Oct 19) - cobbles and worn ground round the hall - is local ground and rubble.
         TABLES.put(FactionTraits.BRASSWORKS, ground(new Table())
             .rule(COBBLE, RUBBLE).rule(ROOTED_DIRT, ROOTED_GROUND)
-            .keep(DARK_OAK));
+            // the Works (Nov 2026): pale polished-andesite towers, gables and monitor roof are the capitol's light group
+            .keep(DARK_OAK, POLISHED_ANDESITE));
     }
 
     /** Ages blocks in place, shared by every faction (see the class comment). Salts keep the shares independent. */

@@ -45,6 +45,7 @@ OPTIONS = {
 
 
 def make(name):
+    saved = M.PALETTE, M.BOILER, M.BOILER_STRAP, M.DIAL_CORNER
     M.PALETTE = OPTIONS[name]
     M.BOILER, M.BOILER_STRAP = OX, (M.SB, M.SBS)
     M.DIAL_CORNER = "iron_block"    # the boiler drum verdigris on soot straps (the dials keep the brass)
@@ -53,9 +54,7 @@ def make(name):
         M.check_levels(s1, s2, s3)
         return s1, s2, s3
     finally:
-        M.PALETTE = {}
-        M.BOILER, M.BOILER_STRAP = M.CUB, (M.CU_E, M.st(M.CU_E))
-        M.DIAL_CORNER = M.CUB
+        M.PALETTE, M.BOILER, M.BOILER_STRAP, M.DIAL_CORNER = saved
 
 
 if __name__ == "__main__":

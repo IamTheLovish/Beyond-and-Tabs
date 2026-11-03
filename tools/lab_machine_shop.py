@@ -81,6 +81,7 @@ START_TYPES = ("polished_blackstone", "deepslate_bricks")   # MachineShop.starti
 CU, CU_E, CU_W, CU_O = ("waxed_cut_copper", "waxed_exposed_cut_copper", "waxed_weathered_cut_copper",
                         "waxed_oxidized_cut_copper")
 CUB = "waxed_copper_block"
+OX, PA = CU_O, "polished_andesite"     # the palette pass (Nov 2026): verdigris, the pale light group
 DO, DOL, DOS, DOF, DOSL = "dark_oak_planks", "stripped_dark_oak_log", "dark_oak_stairs", "dark_oak_fence", "dark_oak_slab"
 SB, SBS, SBW = "polished_blackstone_bricks", "polished_blackstone_brick_stairs", "polished_blackstone_wall"
 CPB = "chiseled_polished_blackstone"
@@ -227,7 +228,7 @@ def shop_l1(r):
         r.st(x, EAVE + 1, 0, "south", name=st(CU_W))
         r.st(x, EAVE + 1, 2, "north", name=st(CU_W))
         r.set(x, EAVE + 1, 1, CU_E)
-        r.slab(x, EAVE + 2, 1, sl(CU))
+        r.slab(x, EAVE + 2, 1, sl(CU_E))       # one material per roof plane (Nov 2026: no stripes)
     r.set(0, EAVE + 1, 1, "orange_stained_glass")
     r.set(1, EAVE + 1, 1, "shroomlight")
     for x in (2, 4):
@@ -287,7 +288,7 @@ def engine_l1(r):
     for z in range(1, 8):
         r.set(7, EH + 1, z, CU_E)
         r.slab(7, EH + 2, z, sl(CU))
-    stack(r, 8, 0, EH + 1, EH + 4)
+    stack(r, 8, 0, EH + 1, EH + 7)                   # the tallest thing on the plot (Nov 2026: +3, 'factory')
 
 
 def golem_l1(r):
@@ -296,7 +297,7 @@ def golem_l1(r):
     hanging from stair shoulders."""
     x, z = GOLEM
     r.set(x, 1, z, "polished_basalt", axis="y")
-    r.set(x, 2, z, "blast_furnace", facing="south", lit="true")
+    r.set(x, 2, z, "blast_furnace", facing="south", lit="false")   # unlit: the gear's hub is the glow (Nov 2026)
     r.set(x, 3, z, CU)
     r.set(x, 4, z, "shroomlight")
     r.slab(x, 5, z, sl(CU_E))
@@ -352,14 +353,14 @@ def stacks_l2(r):
     x, z = STACK_W
     stack(r, x, z, EAVE + 1, 12)
     x, z = STACK_E
-    stack(r, x, z, EH + 1, 14)
+    stack(r, x, z, EH + 1, 16)
     for xx in (6, 7):
         r.set(xx, 10, 0, SBW)
     r.slab(6, 11, 0, sl(CU_E))
 
 
-BOILER = CUB                                  # the drum's body (the palette pass: verdigris, see PALETTE)
-BOILER_STRAP = (CU_E, st(CU_E))               # its two straps (block, stairs)
+BOILER = OX                                   # the drum's body (the palette pass: verdigris, see PALETTE)
+BOILER_STRAP = (SB, SBS)                      # its two straps (block, stairs)
 
 
 def boiler_l2(r):
@@ -416,7 +417,7 @@ TW = 16          # the clock tower's cornice course
 DIAL = 12        # the dial's hub height
 
 
-DIAL_CORNER = CUB          # the dials' four corners (the palette pass: iron, so the brass rim reads round)
+DIAL_CORNER = "iron_block"       # the dials' four corners (the palette pass: iron, so the brass rim reads round)
 
 
 def tower_l3(r):
@@ -507,14 +508,17 @@ def draw_l3(r):
 
 
 # ======================================================================================================== build
-L1_SY = EH + 6
-L2_SY = 17
+L1_SY = EH + 9
+L2_SY = 18
 L3_SY = 23
 
 
 # THE PALETTE PASS (Nov 2026): block -> block swaps applied to every level after drawing (the massing is unchanged).
-# Empty = the Oct 19 colours. Set by tools/lab_machine_shop_palette.py's options; the winner is written in here.
-PALETTE = {}
+# Empty = the Oct 19 colours; tools/lab_machine_shop_palette.py holds the options the critics compared.
+PALETTE = {    # the critics' pick (eyes 41625784092, 6.5 / 6.5): verdigris body, the engine house's hip pale andesite
+    CU: OX, st(CU): PA + "_stairs", sl(CU): PA + "_slab",
+    CU_E: OX, st(CU_E): OX + "_stairs", sl(CU_E): OX + "_slab",
+    CU_W: OX, st(CU_W): OX + "_stairs", sl(CU_W): OX + "_slab"}
 
 
 def recolour(r, palette):
