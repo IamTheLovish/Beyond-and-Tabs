@@ -213,6 +213,11 @@ public final class Sys {
         return line;
     }
 
+    /** Ticks measured in the current window (GameTests: whether a window was cut short). */
+    public static int windowTicks() {
+        return TIMER.ticks;
+    }
+
     /**
      * The [Sys] line for what was measured since the last report - without the MIN_TICKS rule - and a new window. For
      * the GameTest, which measures a few dozen ticks.

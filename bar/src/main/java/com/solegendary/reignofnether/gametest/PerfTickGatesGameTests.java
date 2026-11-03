@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.perf.ServerTickProfile;
 import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.perf.TickGates;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
@@ -89,6 +90,40 @@ public class PerfTickGatesGameTests {
                 helper.fail("no [Sys] line came back");
             else if (covered < 0.90)
                 helper.fail(String.format(Locale.ROOT, "the timed sections cover only %.0f%% of the tick: %s", covered * 100, line));
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
+     * A GameTest's measuring window (Sys.force, then Sys.snapshot) counts every tick it was open. The periodic [Sys]
+     * report (every ServerTickProfile.LOG_EVERY_TICKS ticks) restarted the shared window, so a window that crossed it
+     * counted only its tail: a_300_unit_window_accounts_for_the_tick read "[Sys] 48 ticks" of its 100 and failed "the
+     * timed sections cover only 87% of the tick" (PR 488, run 41624764514), and "no [Sys] line came back" when the
+     * report fell on its last tick (PR 409, run 41599940498); PerfPushGameTests had worked round it with lifetime
+     * counters. Held for longer than the report's interval, the window must still count every tick. Its own batch: no
+     * other test's snapshot in the window.
+     */
+    @GameTest(template = ARENA, timeoutTicks = ServerTickProfile.LOG_EVERY_TICKS + 120, batch = "perf_sys_window")
+    public static void a_held_sys_window_counts_every_tick_across_the_periodic_report(GameTestHelper helper) {
+        Object hold = new Object();
+        TestCleanup.atEnd(helper, () -> Sys.force(hold, false));
+        int span = ServerTickProfile.LOG_EVERY_TICKS + 20;
+        long[] from = { -1 };
+        helper.runAfterDelay(10, () -> {
+            Sys.force(hold, true);
+            Sys.snapshot();   // a fresh window from here
+            from[0] = helper.getTick();
+        });
+        helper.runAfterDelay(10 + span, () -> {
+            int ticks = Sys.windowTicks();
+            long open = helper.getTick() - from[0];
+            String line = Sys.snapshot();
+            Sys.force(hold, false);
+            ReignOfNether.LOGGER.info("[SysWindow] GameTest: window open {} ticks, measured {}: {}", open, ticks, line);
+            if (ticks < open - 2)
+                helper.fail("the held [Sys] window counted " + ticks + " of the " + open + " ticks it was open (the periodic report"
+                    + " every " + ServerTickProfile.LOG_EVERY_TICKS + " ticks restarted it): " + line);
             else
                 helper.succeed();
         });
