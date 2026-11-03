@@ -85,9 +85,9 @@ public class VoodooShamanGameTests {
     static final String ARENA = SkirmishGameTests.ARENA;
     static final String BATCH = "caster_horde";
 
-    // the cost and health this PR chose (the PR body says why; kept when lovish moved the essence casters to T1, Oct 29):
-    // the Bloom Priestess's price
-    static final int METAL = 175, ENERGY = 220, POP = 3;
+    // the cost: every tier-1 essence caster's price (lovish, Oct 30 for all races, Nov 3 for the Shaman: "115 / 120, like
+    // all T1"; EssenceCasterTierGameTests holds the same line); the health is this PR's pick (the PR body says why)
+    static final int METAL = 115, ENERGY = 120, POP = 3;
     static final float HEALTH = 60f;
 
     private static String owner(GameTestHelper helper, String what) {

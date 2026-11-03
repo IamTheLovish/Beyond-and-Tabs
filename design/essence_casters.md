@@ -93,8 +93,9 @@ vanilla block display (like a wreck) carrying its value and birth tick in its pe
 `unit/units/piglins/VoodooShamanUnit`, trained at the Military Portal (the Horde's T1 army building, button 6; lovish,
 Oct 29: "essence casters should be tier 1 like rez bots" - it was the Flame Sanctuary's tenth button). Placeholder body: the Brute's piglin plumbing with the Spear Thrower's skin and a bone
 fetish for a staff (3 damage, 0.6 hits/s).
-- **Cost and health (this PR's pick, for lovish to tune):** 175 metal / 220 energy, 3 pop, 35 s (the Bloom Priestess's
-  metal and energy, the Witch's 35 s: a T2 support caster sits between the Blaze, 135 / 90, and the Wither Skeleton, 245 / 160); 60 HP, between the
+- **Cost:** 115 metal / 120 energy, 3 pop, 40 s - every tier-1 essence caster's price (lovish, Oct 30: "the same for
+  every race"; Nov 3 for the Shaman: "115 / 120, like all T1"; EssenceCasterTierGameTests lists it with the others).
+- **Health (this PR's pick, for lovish to tune):** 60 HP, between the
   Ghast (50) and the Wither Skeleton (100), sturdier than the other races' casters (40-45) as Horde units are.
 - **Hex** (5, 12 s, reach 8): DISARM + SEALED for 4 s - no attacks (the attack cooldown never runs out, and
   VoodooServerEvents cancels any blow a hexed unit still lands) and no abilities (every ability gate already refuses
@@ -123,5 +124,6 @@ fetish for a staff (3 damage, 0.6 hits/s).
 - **Population**: none to take - lovish, Oct 29: "no max population" (#394), so the puppet population rule and its test
   retired with it.
 - **Bots** (lovish, Oct 29): the Horde bot kit trains it with its T1 army at the Military Portal (one of its three T1 picks). Hex and Blood
-  Totem autocast (only with the essence to pay); Spirit Puppet and Empower stay manual for bots and players.
+  Totem autocast (only with the essence to pay); Empower is cast by BotPlayer.useEmpower (main's #362, shared by every
+  carrier with Empower); Spirit Puppet stays manual for bots and players.
 - Not in this PR: its essence is not on the HUD yet.
