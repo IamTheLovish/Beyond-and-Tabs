@@ -49,15 +49,15 @@ public abstract class StructureUtilsMixin {
     }
 
     /**
-     * Vanilla clears a structure's space only up to 20 blocks above its top: whatever an earlier batch left higher at the
-     * same spot stayed, unsupported, and its gravel fell onto the new arenas (GameTestChunks.clearAbove).
+     * Vanilla clears a structure's space only up to 20 blocks above its top: the ground's gravel resting on that ceiling
+     * hung over the arena and fell onto it (GameTestChunks.settleAbove).
      */
     @Inject(
             method = "clearSpaceForStructure(Lnet/minecraft/world/level/levelgen/structure/BoundingBox;ILnet/minecraft/server/level/ServerLevel;)V",
             at = @At("TAIL")
     )
-    private static void reignofnether$clearAboveTheCeiling(BoundingBox box, int y, ServerLevel level, CallbackInfo ci) {
+    private static void reignofnether$settleTheCeiling(BoundingBox box, int y, ServerLevel level, CallbackInfo ci) {
         if (GameTestChunks.asyncStructureLoad(level))
-            GameTestChunks.clearAbove(level, box);
+            GameTestChunks.settleAbove(level, box);
     }
 }
