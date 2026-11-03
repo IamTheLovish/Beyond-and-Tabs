@@ -299,7 +299,8 @@ public class GraveyardExitGameTests {
                 ReignOfNether.LOGGER.info("[GraveyardExit] {}: {} of {} NOT out and at the rally after {} ticks",
                     layout, stuck.size(), UNITS, LIMIT);
                 finish.accept(layout + ": " + stuck.size() + " of " + UNITS + " Zombies not out of the graveyard and at "
-                    + "the rally " + LIMIT + " ticks after the last was raised: " + String.join("; ", stuck));
+                    + "the rally " + LIMIT + " ticks after the last was raised: " + String.join("; ", stuck)
+                    + gateBlocks(level, gy, exitCells(level, gy)));
             } catch (GameTestAssertException e) {
                 throw e;   // helper.fail's own way of failing the test
             } catch (Throwable t) {
@@ -455,6 +456,34 @@ public class GraveyardExitGameTests {
         } catch (Throwable t) {
             sb.append("; grid A* now: ").append(t);
         }
+        // the path it follows and the body: next node, the nodes after it, collisions, velocity, the ground under it
+        net.minecraft.world.level.pathfinder.Path p = z.getNavigation().getPath();
+        if (p != null) {
+            sb.append("; nav path node ").append(p.getNextNodeIndex()).append('/').append(p.getNodeCount()).append(':');
+            for (int i = Math.max(0, p.getNextNodeIndex() - 1); i < Math.min(p.getNodeCount(), p.getNextNodeIndex() + 6); i++)
+                sb.append(' ').append(p.getNode(i).x).append(',').append(p.getNode(i).y).append(',').append(p.getNode(i).z);
+        }
+        sb.append(String.format(Locale.ROOT, "; hcol %s vcol %s onGround %s v %.3f,%.3f,%.3f; feet %s, below %s",
+            z.horizontalCollision, z.verticalCollision, z.onGround(), z.getDeltaMovement().x, z.getDeltaMovement().y,
+            z.getDeltaMovement().z, blockName(level, z.blockPosition()), blockName(level, z.blockPosition().below())));
+        return sb.toString();
+    }
+
+    private static String blockName(ServerLevel level, BlockPos bp) {
+        return net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(bp).getBlock()).getPath();
+    }
+
+    /** The blocks round each gate cell (floor and feet level, the cell and its outside neighbour), for a failure line. */
+    static String gateBlocks(ServerLevel level, BuildingPlacement gy, List<BlockPos> exits) {
+        StringBuilder sb = new StringBuilder(" | gate blocks:");
+        int floor = gy.minCorner.getY();
+        for (BlockPos e : exits)
+            for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++) {
+                    BlockPos c = new BlockPos(e.getX() + dx, floor, e.getZ() + dz);
+                    sb.append(' ').append(c.getX()).append(',').append(c.getZ()).append('=').append(blockName(level, c))
+                        .append('/').append(blockName(level, c.above())).append('/').append(blockName(level, c.above(2)));
+                }
         return sb.toString();
     }
 
