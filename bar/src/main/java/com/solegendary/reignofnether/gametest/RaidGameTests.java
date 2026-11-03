@@ -522,6 +522,10 @@ public class RaidGameTests {
      * period, everyone in reach) to 4.3 s against the 4.0 s ceiling (raid_infantry_party_times_against_eco_buildings,
      * CI shard 8 on #481 and #485; flake-stress 41708076632's per-attacker ticks). The move targets of any two attackers
      * of the building must stand at least their width apart (Chebyshev, cells); the in-reach ticks are logged.
+     * Each attacker must also keep its cell while the building stands: the 20-tick move-target refresh used to re-pick
+     * the cell from where the unit stood, so cells swapped mid-attack and a Marauder sent round the corner left reach
+     * for 20 ticks (its blow timer stops out of reach), and the converter still read 4.2 s (flake-stress 41738191824;
+     * per-attacker cells and blows in 41739474107 and 41740568219).
      */
     @GameTest(template = ARENA, timeoutTicks = 900)
     public static void raid_a_party_spreads_round_the_building_it_attacks(GameTestHelper helper) {
@@ -531,6 +535,9 @@ public class RaidGameTests {
         Pads pads = new Pads(level, 14, 1);
         int[] checkAt = { -1 };
         List<String> problems = new ArrayList<>();
+        List<Mob> watched = new ArrayList<>();
+        List<BlockPos> held = new ArrayList<>();
+        List<String> moves = new ArrayList<>();
         drive(helper, pads, 300, () -> {
             Sim s = new Sim(horde.name(), "spread", pads.cells.get(0), "gametest_raid_spread_a", "gametest_raid_spread_b");
             raiders(level, s, horde.raider(), 6);
@@ -545,12 +552,23 @@ public class RaidGameTests {
         }, sims -> {
             Sim s = sims.get(0);
             ReignOfNether.LOGGER.info("[Raid] GameTest spread {}: {}", s.group, s.timing());
+            if (!moves.isEmpty())
+                problems.add(moves.size() + " cell changes while the converter stood: " + moves);
             if (!problems.isEmpty())
                 throw new net.minecraft.gametest.framework.GameTestAssertException(String.join("; ", problems)
                     + " (in reach at " + java.util.Arrays.toString(s.arriveAt) + ")");
             helper.succeed();
         });
         helper.onEachTick(() -> {
+            if (checkAt[0] >= 0 && helper.getTick() > checkAt[0])
+                for (int i = 0; i < watched.size(); i++)
+                    if (watched.get(i).isAlive() && ((AttackerUnit) watched.get(i)).getAttackBuildingGoal()
+                            instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal g
+                            && g.getBuildingTarget() != null && g.getMoveTarget() != null && !g.getMoveTarget().equals(held.get(i))) {
+                        moves.add("attacker " + i + " at " + helper.getTick() + ": " + held.get(i).toShortString() + " -> "
+                            + g.getMoveTarget().toShortString());
+                        held.set(i, g.getMoveTarget());
+                    }
             if (checkAt[0] < 0 || helper.getTick() != checkAt[0])
                 return;
             List<Mob> party = new ArrayList<>();
@@ -574,6 +592,8 @@ public class RaidGameTests {
                         problems.add("two attackers head for cells " + apart + " apart (" + a.toShortString() + ", " + b.toShortString()
                             + "; they are " + party.get(i).getBbWidth() + " wide, need " + need + ")");
                 }
+            watched.addAll(party);
+            held.addAll(cells);
             ReignOfNether.LOGGER.info("[Raid] GameTest spread cells: {}", cells);
         });
     }
