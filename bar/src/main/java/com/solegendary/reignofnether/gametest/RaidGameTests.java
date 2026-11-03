@@ -229,6 +229,9 @@ public class RaidGameTests {
         int[] pathAt, arriveAt;
         int lastBlocks = -1;
         final List<String> blows = new ArrayList<>();
+        // per attacker: reach in/out, move-target changes and blows (a Marauder's big-hit counter steps on each blow)
+        final List<StringBuilder> events = new ArrayList<>();
+        boolean[] inReach; int[] hitCount; BlockPos[] lastMove;
 
         void watch(int t) {
             if (target == null)
@@ -238,6 +241,12 @@ public class RaidGameTests {
                 arriveAt = new int[attackers.size()];
                 java.util.Arrays.fill(pathAt, -1);
                 java.util.Arrays.fill(arriveAt, -1);
+                inReach = new boolean[attackers.size()];
+                hitCount = new int[attackers.size()];
+                java.util.Arrays.fill(hitCount, -1);
+                lastMove = new BlockPos[attackers.size()];
+                for (int i = 0; i < attackers.size(); i++)
+                    events.add(new StringBuilder());
             }
             for (int i = 0; i < attackers.size(); i++)
                 if (attackers.get(i) instanceof AttackerUnit au
@@ -246,6 +255,22 @@ public class RaidGameTests {
                         pathAt[i] = t;
                     if (arriveAt[i] < 0 && g.isAttacking())
                         arriveAt[i] = t;
+                    Mob m = attackers.get(i);
+                    StringBuilder ev = events.get(i);
+                    if (g.isAttacking() != inReach[i]) {
+                        inReach[i] = g.isAttacking();
+                        ev.append(' ').append(t).append(inReach[i] ? "in@" : "out@").append(m.getBlockX()).append(',').append(m.getBlockZ());
+                    }
+                    BlockPos mt = g.getMoveTarget();
+                    if (mt != null && !mt.equals(lastMove[i])) {
+                        lastMove[i] = mt;
+                        ev.append(' ').append(t).append("mt").append(mt.getX()).append(',').append(mt.getZ());
+                    }
+                    if (m instanceof com.solegendary.reignofnether.unit.units.piglins.MarauderUnit mu && mu.attacksToNextBigHit != hitCount[i]) {
+                        if (hitCount[i] >= 0)
+                            ev.append(' ').append(t).append("HIT");
+                        hitCount[i] = mu.attacksToNextBigHit;
+                    }
                 }
             int placed = target.getBlocksPlaced();
             if (lastBlocks >= 0 && placed < lastBlocks)
@@ -255,7 +280,7 @@ public class RaidGameTests {
 
         String timing() {
             return "contact " + contact + " done " + done + " path " + java.util.Arrays.toString(pathAt) + " arrive "
-                + java.util.Arrays.toString(arriveAt) + " blows " + blows;
+                + java.util.Arrays.toString(arriveAt) + " blows " + blows + " per-attacker " + events;
         }
 
         void observe(int t) {
