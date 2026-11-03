@@ -23,6 +23,7 @@ except ImportError:
 import building_gates as G  # noqa: E402
 import gen_blocks as GB  # noqa: E402
 import schem_study as S  # noqa: E402
+from test_engine_shed_r10 import ROOF_BAND  # noqa: E402
 if HAVE_NUMPY:
     import lab_vehicle_brass as L  # noqa: E402
 
@@ -165,7 +166,7 @@ class EngineShedR9(unittest.TestCase):
 
     def test_slate_roofs_are_mid_grey(self):
         """The hall, wing and shed roofs' cells seen from above (every roof shape off the cone whose material the pack
-        has measured, gen_blocks.TARGETS) average pack luma 0.28-0.36: real slate, a mid-dark grey. Both ends are
+        has measured, gen_blocks.TARGETS) average pack luma 0.34-0.42 (ROOF_BAND; 0.28-0.36 before #430's deepslate lift): real slate, a mid-dark grey. Both ends are
         critics' reads - r8b at ~0.22 read as a hole (r8 critic: roof luma 61 under walls 78), r9 at ~0.45 as pale
         striped concrete (r9 critic). r10 retired r9's ">= 0.40" floor for this band (the coordinator, Oct 29); the
         camera's own roof pixels are held to the same band in test_engine_shed_r10."""
@@ -173,7 +174,7 @@ class EngineShedR9(unittest.TestCase):
         lum = [GB.TARGETS[m]["luma"] for q in S.roof_cells(up) if not in_cone(q)
                for m in [base(self.n[q])] if m in GB.TARGETS]
         self.assertGreater(len(lum), 100)
-        self.assertTrue(0.28 <= sum(lum) / len(lum) <= 0.36, sum(lum) / len(lum))
+        self.assertTrue(ROOF_BAND[0] <= sum(lum) / len(lum) <= ROOF_BAND[1], sum(lum) / len(lum))
 
     # ------------------------------------------------------------------ 4. lit windows
     def test_every_camera_window_is_lit(self):

@@ -11,6 +11,8 @@
 # on) as bat_eyes_15_<name>_{rts,rts_close,34,close,dusk,golden_rts,rts_army}.png (rts_army: our militia round it at
 # noon, for units in its shadow; with input `times` also _rts_t<T> / _34_t<T>, with input `mist` also _mist_rts).
 # An entry is a structure name in the jar (data/reignofnether/structures/<name>.nbt) or a .nbt path in the checkout.
+# Or work:<building id> (work:machine_shop): the real lab placed and photographed idle, then producing (stack smoke,
+# lit windows), at noon and dusk - bat_eyes_15_work_<id>_{idle_rts,idle_close,work_close,work_rts,work_dusk,idle_dusk}.png.
 # For a design that only exists on a feature branch, dispatch ON THAT BRANCH (it must contain this workflow, i.e. be
 # based on a main that has it): the run then uses the jar of that branch's newest build run (its PR build) and the
 # branch's own .nbt files, e.g.
@@ -277,6 +279,9 @@ jobs:
                       print('near points', f + '.near')
                   entries.append(dest)
                   print('file', f, '->', dest)
+              elif re.fullmatch(r'work:[a-z0-9_]+', e):   # a real lab, idle then producing (EyesDirector.sceneWork)
+                  entries.append(e)
+                  print('work', e)
               elif re.fullmatch(r'[a-z0-9_]+', e):
                   if not os.path.isfile('bar/src/main/resources/data/reignofnether/structures/%s.nbt' % e):
                       print('::warning::%s is not in this checkout - the jar decides' % e)

@@ -14,7 +14,7 @@ window; (b) no unoxidised copper, (b2) no exposed (orange-tan) copper in any sti
 green; (c) no calcite / diorite / quartz anywhere (snow blotches, the white chimney); (d) the yard (apron, rails to
 the plot edge, a chassis under a gantry, a coal stage, two lamp posts) in the rts and 34 pictures; (e) every bay
 window shows glass to the 34 camera with a light behind it (dusk: r9's "lit windows" were dark slots); (f) the roofs
-mid-tone slate (pack luma 0.28-0.36: r8b's ~0.22 read as a hole, r9's ~0.45 as pale striped concrete), slate family
+mid-tone slate (pack luma 0.34-0.42, ROOF_BAND - 0.28-0.36 before #430's deepslate lift: r8b's ~0.22 read as a hole, r9's ~0.45 as pale striped concrete), slate family
 only, no camera chequer, no lengthwise stripes away from ridges, valleys and eaves, the wing in the same slate;
 (g) the cone's corner columns thin (critic: the 1-block dark corner columns make it a ziggurat).
 """
@@ -42,7 +42,11 @@ RAW_COPPER = ("copper_block", "cut_copper", "cut_copper_stairs", "cut_copper_sla
 PALE_BANNED = ("calcite", "diorite", "quartz")
 SLATE_FAMILY = ("deepslate_tiles", "deepslate_bricks", "cobbled_deepslate", "polished_deepslate", "deepslate",
                 "tuff", "stone", "stone_bricks")      # dark slate + the lighter grey courses (no andesite / calcite)
-ROOF_BAND = (0.28, 0.36)
+# Re-set Oct 31 (lovish: "check on screen first"): #430's round 45 lifted the deepslate family's pack luma on purpose
+# (tiles 0.21 -> 0.38, polished 0.31 -> 0.38, bricks 0.30 -> 0.35), +0.053 .. +0.070 on this shed's own roofs; the band
+# moves with it, both ends, same width. Eyes 41247504062 (main 181a840e) shows the roofs at on-screen luma 0.344-0.373
+# (rts / rts_close / day time 5000), between r8b's hole (0.22) and r9's concrete (0.45). Was (0.28, 0.36).
+ROOF_BAND = (0.34, 0.42)
 PAVING = ("stone_bricks", "polished_andesite", "smooth_stone", "smooth_stone_slab", "stone_brick_slab",
           "polished_deepslate", "deepslate_tiles", "deepslate_bricks", "andesite", "stone", "cobbled_deepslate",
           "deepslate_brick_slab", "deepslate_tile_slab", "polished_andesite_slab")
@@ -318,7 +322,7 @@ class EngineShedR10Camera(unittest.TestCase):
                 "shed": {q: n for q, n in roofs.items() if q[0] > L.HALL_X[1] + 1}}
 
     def test_f_roofs_mid_tone_slate_in_every_roof(self):
-        """The roof pixels of rts and rts_close, per roof (hall, wing, shed), average pack luma 0.28-0.36 (both ends:
+        """The roof pixels of rts and rts_close, per roof (hall, wing, shed), average pack luma ROOF_BAND 0.34-0.42 (0.28-0.36 before #430's deepslate lift; both ends:
         r8b ~0.22 read as a hole - r8 critic; r9 ~0.45 read as pale striped concrete - r9 critic), every one a slate-
         family stone (SLATE_FAMILY: deepslate tiles / bricks / cobbled, a lighter tuff or stone course) or green
         copper ornament (its share: test_f_roof_ornament_at_most_2_percent), >= 90 % of them measured by the pack."""

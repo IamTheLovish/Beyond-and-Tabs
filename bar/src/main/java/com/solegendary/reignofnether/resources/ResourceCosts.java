@@ -23,6 +23,7 @@ public class ResourceCosts {
     public static final ResourceCost SPIDER = new ResourceCost(ID, "SPIDER");
     public static final ResourceCost POISON_SPIDER = new ResourceCost(ID, "POISON_SPIDER");
     public static final ResourceCost WRAITH = new ResourceCost(ID, "WRAITH");
+    public static final ResourceCost TOMBCALLER = new ResourceCost(ID, "TOMBCALLER");   // Gravebound essence caster (T1)
     public static final ResourceCost SLIME = new ResourceCost(ID, "SLIME");
     public static final ResourceCost WARDEN = new ResourceCost(ID, "WARDEN");
     public static final ResourceCost ZOMBIE_PIGLIN = new ResourceCost(ID, "ZOMBIE_PIGLIN");
@@ -51,6 +52,7 @@ public class ResourceCosts {
     public static final ResourceCost ELDER_TREANT = new ResourceCost(ID, "ELDER_TREANT");
     public static final ResourceCost WISP_CHOIR = new ResourceCost(ID, "WISP_CHOIR");
     public static final ResourceCost BLOOM_PRIESTESS = new ResourceCost(ID, "BLOOM_PRIESTESS");
+    public static final ResourceCost THORNWEAVER = new ResourceCost(ID, "THORNWEAVER");
     public static final ResourceCost CIRCLE_OF_ELDERS = new ResourceCost(ID, "CIRCLE_OF_ELDERS");
     public static final ResourceCost SUN_COLOSSUS = new ResourceCost(ID, "SUN_COLOSSUS");
     // Verdant Court T3: the Heart of the Wild and the World Tree Walker
@@ -375,6 +377,7 @@ public class ResourceCosts {
         SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SPIDER);
         POISON_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.POISON_SPIDER);
         WRAITH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WRAITH);
+        TOMBCALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TOMBCALLER);
         SLIME.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SLIME);
         WARDEN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WARDEN);
         NECROMANCER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.NECROMANCER);
@@ -405,6 +408,7 @@ public class ResourceCosts {
         ELDER_TREANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ELDER_TREANT);
         WISP_CHOIR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WISP_CHOIR);
         BLOOM_PRIESTESS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BLOOM_PRIESTESS);
+        THORNWEAVER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.THORNWEAVER);
         CIRCLE_OF_ELDERS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CIRCLE_OF_ELDERS);
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
         WORLD_TREE_WALKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WORLD_TREE_WALKER);

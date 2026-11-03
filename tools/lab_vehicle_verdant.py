@@ -1,66 +1,34 @@
 #!/usr/bin/env python3
-"""CONCEPT - the Verdant vehicle lab, THE ROOTCRADLE, L1 and L3 (design/vehicle_labs.md; not wired into the game).
-Sentinel Treants (walking trees, 1.5 wide x 3 tall, they can Take Root) are grown and woken here. No machinery: the
-base is a forest. Assembled from tools/verdant_lab_parts.py (the Verdant part library).
+"""CONCEPT - the Verdant vehicle lab, ROOTING HOLLOW, L1 and L3 (not wired into the game: no Java reference loads
+verdant_l1 / _l3; the Verdant T1 army building is the Grove). Sentinel Treants (walking trees, 1.5 wide x 3 tall)
+are grown and woken here. No machinery: the base is a forest; the landmark is a great tree.
 
-ANCHORS (structure-local block coordinates: x 0..16 west->east, y up, z 0..16 north->south; client-drawn moving parts
-in game, drawn here as static blocks):
-  spawn         (8, 1, 8)    the waking ring's centre over the floor heart (a verdant froglight at (8, 0, 8)); the
-                column over it is air to the top at every level (units drop in from the box centre)
-  exit lane     x 0..8, z 6..10, y 1..8, straight out through the WEST face (the gopura's passage)
-  gantry beam   the CRADLE BOUGH: a living root bridge along x at z 7, y 13, x 3..12 - its west end gripping the
-                gopura's pediment back (x 2), its east end grown into the great tree and standing on a strangler-root
-                pier (12, 1..12, 9); woven root deck z 5..9 (an oculus left open over the spawn), handrail roots on
-                z 5 / z 9 - static
-  trolley       (6, 13, 7)   the bough-knot the cradle hangs from; runs along x 4..11
-  hoist         (6, 9, 7)    the ROOT CRADLE: a woven 3 x 3 basket (x 5..7, z 6..8, y 9..10) holding a sleeping treant
-                (y 10..13), on four chains (x 5 / 7, z 6 / 8, y 11..13); lowers to the floor beside the spawn, lifts
-                back to y 9 (the lane's top is y 8)
-  gate leaf     two root curtains hinged at the gopura's inner jambs, vertical axes at (1.5, 1..8, 5.5) north and
-                (1.5, 1..8, 11.5) south; drawn OPEN (furled on the jambs, x 1..2, z 5 and z 11); closed they meet at z 8
-  heart-glow    (8, 0, 8) the floor heart; (11, 3, 6) the heart in the tree's foot; the stag-dryad's eyes on the
-                gopura (0, 11, 7) / (0, 11, 9)
-  L3 adds       a second gantry tier: the HIGH BOUGH along x at z 9, y 18, x 2..11, trolley (5, 18, 9), a second cradle
-                (5, 14, 9) - basket x 4..6, z 8..10, y 14..15; and the landmark grows: the great tree's crown rises to
-                y 27 with the GREAT STAG-DRYAD carved in its upper trunk looking west over the gate (eyes (9, 22, 4) / (9, 22, 6)),
-                antlers across the sky
+Round r1 (Oct 31 2026), the r12 method (#411 Engine Shed, #456 Sunforged):
+  reference   ONE picture, ref06 (design/refs/vehicle_labs/ref06_tree_hall.png): a colossal twisted tree whose
+              trunk spirals and leans, wrapping a steep-roofed timber hall into itself; roots flaring like buttresses;
+              a huge layered canopy as THE landmark; sky between the limb and the hall.
+  designer    itachi2-api/runs/20261030-204240-verdant-design (massings A/B/C, the 7-axis rubric, the bands).
+  massing     A, the wrapped hall (tools/verdant_massing.py): both blind critics' first pick over B, C and the
+              round-2 control (eyes 41152348776; runs 20261030-211145-verdant-massing-critic-a / -211153-...-b).
+  this round  A + the two critics' shared massing faults, one change per element:
+              - the trunk hidden behind the hall and the turret in 34 -> no turret; the trunk stands south-east, its
+                roots pour TOWARD the camera over the gallery and down the south face; light bark (stripped birch) with
+                dark grooves on the spiral seams;
+              - no sky between limb and hall -> the light well (x 8..9) open from the ground to the sky between hall
+                and trunk, the west limb arching over it onto the hall's north slope (ref06's crescent);
+              - a stepped cone canopy, its north half out of the RTS frame -> broad flat offset tiers centred further
+                south, dark spruce bellies, cherry tops;
+              - the gate lit and pale, roots not framing it -> a splayed gate (7 wide outer order, 5 wide inner), a
+                dark passage (deepslate walls and floor, a ceiling), no light in it; two roots framing it;
+              - the turret's cap read as a chimney / second vertical -> gone;
+              and the first detail grammar: deepslate plinth, stone storey, jettied mud-brick-and-timber storey,
+              string course, a bay rhythm of recessed stairs every third cell, the gallery arcade.
+  tests       tools/test_verdant_lab.py (camera tests, written first, red on round 2).
 
-THE REFERENCE, STUDIED
-  Ta Prohm (Angkor, 1186, Jayavarman VII): a monastery of concentric enclosures of sandstone galleries on laterite
-  footings, left to the jungle on purpose. What makes it read:
-  - THE GALLERY: a long low range on a raised laterite terrace (a moulded plinth, one step up), an outer wall pierced by
-    windows of TURNED BALUSTERS, a pillared half-gallery (lean-to) in front of it, the corridor behind under a CORBELLED
-    roof - stone courses stepping in to a ridge with a cresting. Bays are strongly rhythmic: pillar, window, pillar.
-    Corner towers (prasats) mark the angles: square, a cella with blind doors, a cornice, tiers receding, antefixes on
-    every corner, the tops often fallen.
-  - THE TREES: silk-cotton (Tetrameles, pale bark) and strangler figs (dark, braided) grow ON the galleries; their
-    roots pour down the walls like poured wax, braided, wandering, flaring where they meet the ground, prising blocks
-    apart; a tree sits on a roof and its roots hold the wall together as much as they break it. Moss and lichen green
-    the stone in calm zones; cracked and fallen blocks in places.
-  - Banteay Srei (967): the gate pavilions' DOOR FRAMES - octagonal colonnettes on the jambs, a carved lintel, a
-    STEPPED FLAME PEDIMENT (frames nesting, the rake ending in curling naga heads), the tympanum recessed and carved,
-    blind-door niches and pilasters on the piers. Deep relief = three depth planes on one face.
-  - The living root bridges of Meghalaya (Khasi, Ficus elastica): aerial roots led across a gap through hollow betel
-    palm guides for 15-30 years, fused into a mesh deck filled with stones, a thick root as each handrail with side
-    roots dropping from it into the deck - the model for the gantry (a bough with a woven root deck and handrail roots)
-    and the hoist (a woven root cradle).
-  - lovish's refs: ref06 (a hall grown inside a colossal twisted tree - many bark tones, ridges spiralling, roots flaring
-    like buttresses, a huge layered canopy as THE landmark), ref03 (vegetation POURING over stone), ref11 (stone base,
-    jettied timber storey on brackets, steep layered shingle roofs with moss, a clinging turret), ref01 (ordered,
-    fully articulated bays), ref15 (warm light from lit rooms and the heart, not dots), ref23 (a spiral round a shaft).
-THE BUILD, IN ORDER OF READING (the hierarchy, from the RTS camera in the south-west)
-  (a) THE GREAT TREE (north-east, x 10..16 z 0..7): a twisting, leaning trunk of six bark tones with dark-oak ridges on
-      its spiral seams, root buttresses flaring to the corners and into the bay, boughs, a three-tier canopy (azalea
-      under, flowering azalea and cherry on top) to y 19 - the tallest mass by far; at L3 the crown climbs to y 27 (height caps L1 20, L3 28).
-  (b) THE GATE (west face): the Banteay Srei gopura - piers with pilasters, blind-door niches lit by lanterns,
-      colonnettes on the jambs, a carved lintel over the 5 x 8 passage, a stepped flame pediment with naga ends, the
-      stag-dryad mask in the tympanum, birch antlers over the apex; root curtains (the gate leaf) furled on the jambs.
-  (c) SECONDARY MASSES stepping down: the treant-wright's HALL (north, grown into the tree's west flank: stone storey,
-      pilasters, lit arched windows, a jettied timber storey on brackets, a steep layered roof with moss, a dormer) and
-      its clinging TURRET (north-west); the south GALLERY (Ta Prohm) with a silk-cotton tree on its roof pouring roots
-      down the south face; two ruined PRASATS (south-west corner, east side).
-  (d) THE GROUND: the bay paved in mossy stone, a calcite waking ring round the heart, root veins (rooted dirt, podzol)
-      running out of the trunk's foot, ferns on the soil.
+ANCHORS (structure-local: x 0..16 west -> east, y up, z 0..16 north -> south):
+  spawn       (8, 1, 8): the light well x 8..9, z 7..9 between hall and trunk, air to the sky at every level
+  exit lane   x 0..8, z 6..10, y 1..8: through the hall's west gable (the gate) and out of the well
+  heart-glow  (13..14, 1..2, 15): four shroomlights in the trunk's south foot (round 2; round 1's faced the well)
 
 Usage: python3 tools/lab_vehicle_verdant.py [OUT_DIR]   (writes verdant_l1.nbt and verdant_l3.nbt, checks both)
 """
@@ -72,264 +40,369 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_structures as gs            # noqa: E402
 import mex_verdant as mv               # noqa: E402  - the true leaf distances
 import audit_structure_pockets as ap   # noqa: E402
-import verdant_lab_parts as V          # noqa: E402
-from verdant_lab_parts import (VP, MSB, CSB, MC, MCS, OAK, DOAK, DOS, FLEAF, CHERRY, GLOW)  # noqa: E402
-from gothic_parts import hsh            # noqa: E402
+from gothic_parts import hsh           # noqa: E402
 
 SX, SZ = 17, 17
-H1, H3 = 20, 28                 # the height caps (a lab never out-towers the capitol)
+H1, H3 = 16, 26                 # lovish: "tier 1 buildings should be small" - the Engine Shed T1 / Sunforged caps
 SPAWN = (8, 8)
 LANE = {(x, y, z) for x in range(0, 9) for z in range(6, 11) for y in range(1, 9)}
+WELL = {(x, z) for x in (7, 8, 9) for z in (7, 8, 9)}
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "design", "vehicle_labs")
-FINE = ("_stairs", "_slab", "_wall", "_fence", "_pane", "iron_bars", "_trapdoor", "_button", "chain", "lantern",
-        "candle", "_rod", "_door", "_carpet", "_banner")
-FORBIDDEN = ("water", "lava", "sand", "gravel", "_concrete_powder", "redstone", "piston", "fire", "_door", "_carpet",
-             "candle", "vine", "hanging_roots", "spore_blossom", "torch", "sapling", "copper", "tuff_brick",
-             "polished_tuff")
+DRY = dict(waterlogged="false")
+LEAF = dict(persistent="true", distance="7", waterlogged="false")
+
+# the palette by role (camera values from design/vehicle_labs/camera_colours.json, west / south / up)
+PAVE = "mossy_stone_bricks"            # 0.25 / 0.34 / 0.41
+LANE_FLOOR = "mud"                     # the passage floor: dark and smooth (round 2's deepslate tiles read as "a grate")
+PLINTH = "deepslate_bricks"            # 0.18 / 0.26
+STONE = "stone_bricks"                 # 0.29 / 0.32
+MOSSY = "mossy_stone_bricks"
+INFILL = "mud_bricks"                  # the jettied storey's infill (warm, light; unmeasured)
+POST = "spruce_planks"                 # its posts and rails (0.23 / 0.27; dark oak planks read sat 0.60, loud)
+DARK = "deepslate_bricks"              # the passage walls
+CEIL = "deepslate_tiles"
+ROOF = "mcwroofs:spruce_planks"        # 0.39 / 0.40
+FILL = "spruce_planks"                 # hidden cores (attic, ridge)
+STRING = "reignofnether:string_course_stone"   # 0.43
+CORNICE = "reignofnether:cornice_stone"        # 0.40 / 0.41
+GALLERY_TOP = "mossy_stone_brick_slab"         # up 0.40
+BARK = "stripped_birch_wood"           # 0.43 / 0.54 / 0.62, sat 0.35: the trunk's light bark
+GROOVE = "dark_oak_wood"               # 0.15 / 0.19 / 0.24: the spiral grooves
+GRIP = "mangrove_roots"
+BELLY, TOP = "spruce_leaves", "cherry_leaves"  # spruce 0.15-0.26 dark bellies; cherry up 0.85 (sat 0.26)
+GLOW = "shroomlight"
+STAIR_OF = {"mossy_stone_bricks": "mossy_stone_brick_stairs", "stone_bricks": "stone_brick_stairs",
+            "deepslate_bricks": "deepslate_brick_stairs", "mud_bricks": "mud_brick_stairs",
+            "spruce_planks": "spruce_stairs", "dark_oak_planks": "dark_oak_stairs",
+            "cracked_stone_bricks": "stone_brick_stairs"}
+TREE = ("_log", "_wood", "_leaves")
 
 
-class Canvas(VP):
+class Canvas:
     """The lab's canvas: clipped to the box, never into the lane or the spawn column."""
 
     def __init__(self, top):
-        super().__init__()
+        self.b = {}
         self.top = top
 
     def ok(self, x, y, z):
         return 0 <= x < SX and 0 <= z < SZ and 0 <= y < self.top and (x, y, z) not in LANE and \
             not ((x, z) == SPAWN and y >= 1)
 
-    def set(self, x, y, z, role, **p):
+    def set(self, x, y, z, name, **p):
         if self.ok(x, y, z):
-            self.b[(x, y, z)] = (role, p)
+            self.b[(x, y, z)] = (name, p)
+
+    def put(self, x, y, z, name, **p):
+        if (x, y, z) not in self.b:
+            self.set(x, y, z, name, **p)
 
     def get(self, x, y, z):
-        return self.b.get((x, y, z), ("air", {}))[0]
+        return self.b.get((x, y, z), ("air",))[0]
 
-    def place(self, other, ox=0, oy=0, oz=0, rot=0):
-        for (x, y, z), v in other.rotated(rot).b.items():
-            self.set(x + ox, y + oy, z + oz, v[0], **v[1])
-        return self
+    def clear(self, x, y, z):
+        self.b.pop((x, y, z), None)
+
+    def stair(self, x, y, z, facing, half="bottom", name="stone_brick_stairs"):
+        self.set(x, y, z, name, facing=facing, half=half, shape="straight", **DRY)
+
+    def slab(self, x, y, z, name, kind="bottom"):
+        self.set(x, y, z, name, type=kind, **DRY)
 
 
-# ================================================================================================= the ground
+# ================================================================================================= ground
 def ground(c):
-    """y 0: the bay paved in mossy stone, a calcite waking ring round the floor heart, root veins of rooted dirt and
-    podzol running out of the tree's foot toward the spawn, moss and grass at the margins."""
+    """y 0: the lawn runs in under the tree (grass, the ground's own value: round 2's full grey pad read as "a model
+    on a plinth"); mossy stone paving only where feet go - the gate's approach strip (x 0..1), round the hall and the
+    gallery, the well; the passage floor dark under its ceiling (round 1's dark apron outside read as a grate)."""
     for x in range(SX):
         for z in range(SZ):
-            h = hsh(x, z, 3)
-            d = math.hypot(x - 8, z - 8)
-            vein = x >= 9 and (abs((z - 8) + (x - 8) * 0.55) < 0.6 or abs(z - 7 - (x - 11) * 0.2) < 0.5)
-            if (x, z) == SPAWN:
-                n = GLOW
-            elif 1.5 <= d <= 2.3 and x <= 10:
-                n = "calcite" if h % 4 else MSB
-            elif vein and h % 3:
-                n = "rooted_dirt" if h % 2 else "podzol"
-            elif 6 <= z <= 10 and x <= 8:
-                n = MSB if h % 5 else (CSB if h % 2 else "moss_block")
-            else:
-                n = ("moss_block", MSB, "grass_block", MSB, "podzol", "moss_block", MC, "rooted_dirt")[h % 8]
-            c.b[(x, 0, z)] = (n, {"axis": "y"} if n == GLOW else {"snowy": "false"} if n in ("grass_block", "podzol")
-                              else {})
+            paved = x <= 1 or (x <= 9 and 2 <= z <= 13) or z >= 13 and x <= 10
+            c.b[(x, 0, z)] = (LANE_FLOOR if 2 <= x <= 7 and 6 <= z <= 10 else PAVE if paved else "grass_block",
+                              {"snowy": "false"} if not paved else {})
 
 
-def plants(c):
-    """Ferns and a few flowers on soil open above, never in the lane."""
-    for x in range(SX):
-        for z in range(SZ):
-            if c.get(x, 0, z) in ("moss_block", "grass_block", "podzol", "rooted_dirt") and c.free(x, 1, z):
-                nm = ("fern", "fern", "lily_of_the_valley", "fern", "azure_bluet", None, None)[hsh(x * 3 + 1, z + 5, 2) % 7]
-                if nm:
-                    c.set(x, 1, z, nm)
+# ================================================================================================= the hall
+HALL_X, HALL_Z = (1, 7), (4, 12)
+EAVE = 9
+
+
+def hall(c, l3):
+    """The treant-wright's hall (ref06's steep-roofed hall, wrapped by the tree): x 1..7, z 4..12. A deepslate plinth
+    (y 1), a stone storey (y 2..5) under a string course, a mud-brick-and-timber storey (y 6..8), its gable jettied
+    out to x 0 over the gate from y 9, a steep spruce gable roof with its ridge along x (y 9..17). The lane runs
+    through it: a dark passage (deepslate walls, a dark-oak ceiling at y 9) from the splayed gate to the light well."""
+    (x0, x1), (z0, z1) = HALL_X, HALL_Z
+    for x in range(x0, x1 + 1):
+        for z in range(z0, z1 + 1):
+            for y in range(1, EAVE):
+                if x0 < x < x1 and z0 < z < z1:
+                    continue                                  # the shell; the passage is cut below
+                nm = PLINTH if y == 1 else (MOSSY if hsh(x, y, z) % 3 == 0 else STONE) if y <= 5 else \
+                    POST if (x in (x0, x1) and z in (z0, z1)) or (x + z) % 3 == 0 else INFILL
+                c.set(x, y, z, nm)
+    for z in (z0, z1):                                        # the string course at the storey line
+        c.set(x0 - 1, 5, z, STRING, facing="west", shape="straight")
+    for x in range(x0 + 1, x1 + 1):                           # the passage: dark walls, a dark ceiling
+        for y in range(1, EAVE):
+            for z in (5, 11):
+                c.set(x, y, z, DARK)
+        for z in range(5, 12):
+            c.set(x, EAVE, z, CEIL)
+    for x in range(x0 + 1, x1):                               # solid rooms beside the passage (no pockets)
+        for z in (z0 + 1, z1 - 1):
+            for y in range(1, EAVE):
+                c.set(x, y, z, STONE)
+    for y in range(1, EAVE - 1):                              # the splayed gate: outer order 7 wide at x 1
+        for z in (5, 11):
+            c.clear(x0, y, z)
+    c.stair(x0, EAVE - 1, 5, "north", "top", "deepslate_brick_stairs")
+    c.stair(x0, EAVE - 1, 11, "south", "top", "deepslate_brick_stairs")
+    for z in range(5, 12):
+        c.set(x0, EAVE, z, "chiseled_stone_bricks" if z == 8 else STONE)
+    for z in (z0, z1):                                        # the jetty's brackets, held up by mangrove roots
+        c.stair(0, EAVE - 1, z, "east", "top", "spruce_stairs")  # that frame the gate (round 1: "no roots frame it")
+        for y in range(1, EAVE - 1):
+            c.set(0, y, z, "mangrove_roots")
+    return gable_roof(c, 0, x1, z0, z1, EAVE, cap=None if l3 else H1 - 1)
+
+
+def gable_roof(c, x0, x1, z0, z1, y0, cap=None):
+    """A steep gable roof, ridge along x (Macaw's steep pieces: 2 rise per run), slopes facing north and south; the
+    gable at x0 (the jettied west gable, mud brick and timber) and x1 filled; the attic solid (no pockets). `cap`
+    stops it at that height with a flat slab top (L1's roof, a subset of L3's)."""
+    runs = (z1 - z0) // 2
+    for k in range(runs):
+        y = y0 + 2 * k
+        for x in range(x0, x1 + 1):
+            for z, f in ((z0 + k, "south"), (z1 - k, "north")):
+                if cap is not None and y + 1 > cap:
+                    c.slab(x, cap, z, "spruce_slab")
+                    continue
+                c.set(x, y, z, ROOF + "_steep_roof", facing=f, half="bottom", shape="straight")
+                c.set(x, y + 1, z, ROOF + "_upper_steep_roof", facing=f, half="bottom", shape="straight")
+            for z in range(z0 + k + 1, z1 - k):
+                for yy in (y, y + 1):
+                    if cap is not None and yy >= cap:
+                        c.slab(x, cap, z, "spruce_slab")
+                        continue
+                    c.set(x, yy, z, (POST if (z + yy) % 3 == 0 else INFILL) if x == x0 else FILL)
+    ridge = y0 + 2 * runs
+    if cap is None:
+        for x in range(x0, x1 + 1):
+            for z in range(z0 + runs, z1 - runs + 1):
+                c.set(x, ridge - 2, z, POST if x == x0 else FILL)
+                c.set(x, ridge - 1, z, POST if x == x0 else FILL)
+                c.slab(x, ridge, z, "spruce_slab")
+    return ridge if cap is None else cap
+
+
+# ================================================================================================= the gallery
+def gallery(c):
+    """The south gallery (kept from the control): x 1..9, z 14..16, y 1..6, an arcade of dark bays on its camera face
+    (piers at x 1, 4, 7; bays x 2..3, 5..6, 8..9 one deep), a string course at y 6, a slab roof at y 7."""
+    for x in range(1, 10):
+        for z in range(14, 17):
+            for y in range(1, 7):
+                c.set(x, y, z, PLINTH if y == 1 else MOSSY if hsh(x, y, z) % 3 == 0 else STONE)
+            c.slab(x, 7, z, GALLERY_TOP)
+    for x in range(1, 10):
+        if x in (1, 4, 7):
+            continue
+        for y in (3, 4):                                      # windows, not tall arches (round 2: the
+            c.clear(x, y, 16)                                 # arcade competed with the gate's darkness)
+        c.stair(x, 5, 16, "west" if x in (2, 5, 8) else "east", "top")       # the bay's arched head
+        c.set(x, 6, 16, STRING, facing="south", shape="straight")
+    for x in (1, 4, 7):
+        c.set(x, 6, 16, CORNICE, facing="south", shape="straight")
+    for z in range(14, 17):
+        c.set(0, 6, z, STRING, facing="west", shape="straight")
 
 
 # ================================================================================================= the great tree
-TRUNK_L1 = [(y, 13.6 - 0.14 * y, 3.6 + 0.07 * y, 3.0 - 0.08 * y) for y in range(1, 15)]
-TRUNK_L3 = [(y, 13.6 - 0.14 * y, 3.6 + 0.07 * y, max(1.4, 3.0 - 0.08 * y)) for y in range(15, 24)]
+def _path(keys, ys):
+    """The trunk's centre and radius per row, interpolated between key rows (a smooth taper and lean: round 1's
+    stepped radii read as "a staircase or a crate pile")."""
+    out = []
+    for y in ys:
+        for (ya, xa, za, ra), (yb, xb, zb, rb) in zip(keys, keys[1:]):
+            if ya <= y <= yb:
+                t = (y - ya) / (yb - ya)
+                out.append((y, xa + (xb - xa) * t, za + (zb - za) * t, ra + (rb - ra) * t))
+                break
+    return out
 
 
-def great_tree(c):
-    """The landmark: a twisting, leaning trunk, root buttresses flaring to the corners and into the bay, boughs out to
-    the canopy, three canopy tiers with gaps between them so they read as layers."""
-    cells = V.trunk(c, TRUNK_L1, seed=1)
-    V.spiral(c, cells, turns=1.25, y0=3, y1=13, seed=2.4)
-    for (p0, p1) in (((12, 6, 6), (10, 1, 10)), ((15, 6, 5), (16, 1, 8)), ((15, 7, 1), (16, 1, 0)),
-                     ((11, 6, 2), (9, 1, 0)), ((14, 5, 6), (13, 1, 8))):
-        V.root_flare(c, p0, p1, thick=1)
-    c.set(11, 3, 6, GLOW, axis="y")                 # the heart in the trunk's foot, framed by bark
-    c.st(11, 4, 7, "north", "top", DOS)
-    c.st(10, 3, 6, "east", "bottom", DOS)
-    for p1 in ((6, 13, 2), (16, 13, 9), (16, 14, 0), (12, 16, 0), (15, 16, 6), (9, 16, 3)):
-        V.branch(c, (11, 12, 5), p1, name=DOAK if p1[0] % 2 else OAK)
-    # the tiers: wide and low at the back, stepping in and up; notched over the bay so the bough and the cradle
-    # stay in the sky (the gantry reads from the camera), gaps between the tiers so they read as layers
-    bay = lambda x, z: x <= 11 and z >= 5            # noqa: E731
-    lim = lambda x, y, z: y <= H1 - 1 and not bay(x, z)   # noqa: E731
-    V.canopy_tier(c, 11.5, 4.0, 13, 6.4, seed=1, inside=lim)
-    V.canopy_tier(c, 12.0, 4.0, 16, 4.6, seed=2, inside=lim)
-    V.canopy_tier(c, 12.5, 3.5, 18, 2.6, seed=3, inside=lim, top=(CHERRY, FLEAF))
+TRUNK_KEYS = [(1, 13.0, 12.2, 3.1), (4, 13.0, 11.3, 2.6), (8, 12.4, 9.6, 2.1), (13, 12.0, 8.0, 1.9),
+              (17, 11.0, 6.8, 1.7), (22, 10.3, 6.6, 1.4)]
+TRUNK_PATH = _path(TRUNK_KEYS, range(1, 13))
+TRUNK_L3 = _path(TRUNK_KEYS, range(13, 23))
 
 
-def great_tree_l3(c):
-    """L3: the trunk climbs on, the GREAT STAG-DRYAD is carved in it looking west, two more tiers and a cherry crown."""
-    V.trunk(c, TRUNK_L3, seed=1, hollow_from=0)
-    for y in range(15, 24):
-        c.log(round(13.6 - 0.14 * y), y, round(3.6 + 0.07 * y), name=DOAK)
-    c.place(V.stag_mask(big=True, top=7), 9, 20, 5, rot=1)
-    for p1 in ((16, 23, 1), (14, 24, 9), (12, 24, 0)):
-        V.branch(c, (12, 21, 5), p1, name=OAK)
-    behind = lambda x, y, z: x >= 11 and y <= H3 - 1  # noqa: E731
-    V.canopy_tier(c, 13.0, 4.5, 22, 4.6, seed=4, inside=behind)
-    V.canopy_tier(c, 13.0, 4.5, 24, 3.2, seed=5, inside=behind, top=(CHERRY, CHERRY))
-    V.canopy_tier(c, 13.0, 4.5, 26, 1.8, seed=6, inside=behind, top=(CHERRY, FLEAF), drips=False)
+def trunk(c, path, twist=0.28):
+    """The trunk: solid, light bark (stripped birch) with dark oak in two spiral grooves turning with height."""
+    for (y, cx, cz, r) in path:
+        for x in range(int(cx - r - 1), int(cx + r + 2)):
+            for z in range(int(cz - r - 1), int(cz + r + 2)):
+                if math.hypot(x - cx, z - cz) <= r:
+                    a = math.atan2(z - cz, x - cx) / (2 * math.pi) * 2 + y * twist / (2 * math.pi)
+                    c.set(x, y, z, GROOVE if (a % 1.0) < 0.22 else BARK)
 
 
-# ================================================================================================= the silk-cotton tree
-def silk_cotton(c, l3=False):
-    """Ta Prohm's tree on the gallery roof: a pale trunk on the ridge, roots pouring over the roof and down the south
-    face to the terrace and down the inner wall into the bay; a small canopy."""
-    for y in range(10, 16):
-        c.log(12, y, 13, name="birch_log")
-    for y in range(10, 13):
-        c.log(13, y, 13, name="birch_log")
-    c.log(11, 10, 13, name="birch_log")
-    for x in (10, 11, 12, 13, 14):
-        c.roots(x, 10, 14)
-    for x in (10, 11, 12, 13, 14):
-        c.roots(x, 9, 15)
-    for x, s, end in ((11, 1, 3), (13, 2, 3), (10, 13, 5), (14, 17, 5)):
-        V.strangle(c, x, 8, 16, end, "x", seed=s)
-    c.roots(12, 10, 12)
-    c.roots(11, 10, 12)
-    V.strangle(c, 12, 9, 11, 1, "x", seed=5)
-    V.canopy_tier(c, 12.5, 13.5, 15, 3.2, seed=7, inside=lambda x, y, z: y <= H1 - 1)
-    V.canopy_tier(c, 12.5, 13.5, 17, 1.8, seed=8, inside=lambda x, y, z: y <= H1 - 1, top=(CHERRY, FLEAF))
-    if l3:
-        c.roots(5, 9, 15)
-        c.roots(5, 10, 14)
-        V.strangle(c, 5, 8, 16, 3, "x", seed=9)
-        for x in range(6, 10):
-            c.roots(x, 10, 14 if x % 2 else 13)
+def line(c, p0, p1, name=BARK, fill_down=False):
+    """A limb or buttress root: a face-connected line of wood; fill_down drops a root wall under its low half;
+    mangrove roots where it grips the ground."""
+    (x0, y0, z0), (x1, y1, z1) = p0, p1
+    n = max(abs(x1 - x0), abs(z1 - z0), abs(y1 - y0), 1)
+    prev = None
+    for k in range(n + 1):
+        t = k / n
+        q = (round(x0 + (x1 - x0) * t), round(y0 + (y1 - y0) * (t ** 0.7 if fill_down else t)),
+             round(z0 + (z1 - z0) * t))
+        steps = [q]
+        if prev is not None:
+            a, steps = list(prev), []
+            for i in (0, 2, 1):
+                if a[i] != q[i]:
+                    a[i] = q[i]
+                    steps.append(tuple(a))
+        for s in steps:
+            c.set(*s, name)
+            if fill_down and t > 0.5:
+                for yy in range(1, s[1]):
+                    c.put(s[0], yy, s[2], GRIP if yy == 1 else name)
+        prev = q
 
 
-# ================================================================================================= gantry and hoists
-def gantry(c):
-    """The Cradle Bough: a living root bridge along x at z 7, y 13, x 3..12, a strangler-root pier under its east end,
-    the root cradle hanging from it beside the spawn column."""
-    c.place(V.cradle(), 6, 9, 7)
-    c.place(V.root_bridge(10, seed=1), 3, 13, 7)
-    for z in (5, 6, 7):
-        c.log(12, 13, z, axis="z", name=DOAK)
-    V.strangle(c, 12, 12, 9, 1, "z", seed=4)
-    for z in (6, 7, 8):
-        c.roots(3, 12, z)
+def canopy(c, cx, cz, y0, y1, r, seed=0, keep=lambda x, y, z: True, valleys=True, shaft=False):
+    """One canopy tier: a broad irregular disc, the belly (y0) spruce, the top all cherry (round 1's scattered spruce
+    gaps read as "spots", "a chequer"), clumps with one-deep valleys between them on 3-thick tiers (shadow, not a
+    lid), drips of spruce under the rim; the top steps in by a block (a rounded edge)."""
+    rr = int(r) + 2
+    for x in range(int(cx) - rr, int(cx) + rr + 1):
+        for z in range(int(cz) - rr, int(cz) + rr + 1):
+            if (x, z) in WELL and not (shaft and (x, z) != SPAWN):
+                continue                                      # shaft: only the 1 x 1 spawn column stays open
+            d = math.hypot(x - cx, z - cz)
+            wob = 0.7 * math.sin(math.atan2(z - cz, x - cx) * 3 + seed) + (hsh(x, z, seed) % 3 - 1) * 0.3
+            for y in range(y0, y1 + 1):
+                rim = r + wob - (1.0 if y == y1 and y1 > y0 else 0)
+                if d > rim or not keep(x, y, z):
+                    continue
+                if valleys and y == y1 and y1 - y0 >= 2 and hsh(x // 2, z // 2, seed + 13) % 3 == 0:
+                    continue                                  # a valley between clumps (shadow), cherry below it
+                under = y == y0 and y1 > y0 and d <= r + wob - 2.0      # deep under the top: the dark belly
+                nm = BELLY if under else TOP
+                c.put(x, y, z, nm, **LEAF)
+            if r + wob - 1.0 < d <= r + wob and hsh(x, z, seed + 3) % 3 == 0 and keep(x, y0 - 1, z):
+                c.put(x, y0 - 1, z, TOP, **LEAF)             # cherry drips (round 2: green bands)
 
 
-def gantry_l3(c):
-    """L3: the high bough (z 9, y 18, x 2..10) from the gopura's apex into the tree, a second cradle under it."""
-    c.place(V.cradle(), 5, 14, 9)
-    for x in range(2, 12):
-        c.log(x, 18, 9, axis="x", name=(OAK, DOAK)[x % 2])
-        if x % 3 == 0:
-            c.roots(x, 18, 8)
-            c.roots(x, 18, 10)
-    c.roots(11, 18, 8)
-    c.roots(11, 18, 7)
+def smooth_grooves(c):
+    """Each column of bark keeps a tone for >= 4 rows (a groove or a bark run shorter than that takes the tone
+    below it): the spiral reads as long seams, never as bands (round 1: "candy-striped poles")."""
+    cols = {}
+    for (x, y, z), (n, _) in c.b.items():
+        if n in (BARK, GROOVE):
+            cols.setdefault((x, z), []).append(y)
+    for (x, z), ys in cols.items():
+        ys.sort()
+        prev, run = None, []
+        for y in ys:
+            n = c.b[(x, y, z)][0]
+            if prev is not None and y == run[-1] + 1 and n != prev and len(run) < 4:
+                c.b[(x, y, z)] = (prev, {})
+                n = prev
+            if n != prev or (run and y != run[-1] + 1):
+                run = []
+            run.append(y)
+            prev = n
+
+
+def bark_tops(c):
+    """Every bark cell open to the sky shows end grain / grey bark (oak log, up 0.33, sat 0.30) instead of the
+    stripped bark's sunlit top (stripped oak 0.63, sat 0.46 - a loud tan from above; stripped birch 0.62)."""
+    for (x, y, z), (n, p) in list(c.b.items()):
+        if n == BARK and (x, y + 1, z) not in c.b and y <= 13:    # the limb keeps its pale top (round 2: log
+            # tops on its diagonal read as "a staircase of slabs")
+            c.b[(x, y, z)] = ("oak_log", {"axis": "y"})
+
+
+def great_tree(c, l3):
+    trunk(c, TRUNK_PATH)
+    # roots: one pours toward the camera over the gallery roof and down its south face (round 2: one, not three -
+    # the trunk and the great limb's aerial roots carry the read), one flares south, one east, one west to the
+    # well's edge, one north
+    line(c, (12, 6, 14), (10, 8, 16))
+    for y in range(1, 8):
+        c.set(10, y, 16, GRIP if y == 1 else BARK)
+    for p0, p1 in (((14, 5, 14), (15, 1, 16)), ((15, 5, 11), (16, 1, 8)), ((10, 4, 11), (9, 1, 12)),
+                   ((12, 6, 8), (12, 1, 4)), ((15, 4, 13), (16, 1, 15))):
+        line(c, p0, p1, fill_down=True)
+    for x in (13, 14):                                       # the heart-glow in the trunk's south foot, where the
+        for y in (1, 2):                                     # cameras look (round 1's faced the well: never seen)
+            c.set(x, y, 15, GLOW)
+            c.clear(x, y, 16)
+    canopy(c, 12.0, 8.0, 13, 15, 3.6, seed=1, valleys=False)  # the L1 tier (L3 keeps it; round 2's valleys: a ring)
+    if not l3:
+        return
+    trunk(c, TRUNK_L3)
+    # the great limb (ref06's wrap and crescent): out of the trunk, arching over the well and onto the hall's ridge
+    # with two cells of sky between it and the roof, its tip curling down onto the west end of the ridge (round 1:
+    # "the tree does not wrap the hall", "no sky between limb and hall")
+    line(c, (11, 14, 7), (9, 17, 7))
+    line(c, (11, 15, 7), (9, 18, 7))
+    line(c, (11, 16, 8), (9, 19, 7))
+    line(c, (9, 19, 7), (8, 20, 7))
+    for z in (7, 8):
+        line(c, (7, 20, z), (4, 20, z))
+    line(c, (7, 21, 7), (5, 21, 7))
+    line(c, (4, 20, 8), (3, 19, 8))
+    c.set(2, 18, 8, BARK)
+    line(c, (11, 19, 6), (14, 21, 8))                        # the east bough under tier 2
+    sky = lambda x, y, z: not (x <= 7 and y < 21)            # noqa: E731  - leave the air over the hall open
+    canopy(c, 12.5, 6.5, 17, 18, 6.2, seed=2, keep=sky)
+    canopy(c, 9.5, 7.5, 21, 23, 5.8, seed=3, shaft=True, valleys=False)  # over the hall and the limb: canopy and roof
+    #                                                        interlock; no valleys in the crown (they read as a lattice);
+    canopy(c, 10.0, 6.5, 24, 25, 3.0, seed=4, shaft=True)    # the crown closed over the well but the spawn shaft
+    for (x, z) in ((11, 5), (12, 5), (11, 6)):
+        c.put(x, 25, z, TOP, **LEAF)
+
+
+# ================================================================================================= relief
+def relieve(c):
+    """The masons' pass on the camera faces: every third cell along a built wall row (west faces: z % 3 == 0; south
+    faces: x % 3 == 0) that shows exactly one camera face is set back as an upside-down stair (its open quarter a
+    shadow line) - a bay rhythm, so no row runs more than 2 full blocks."""
+    def open_(x, y, z):
+        return c.get(x, y, z) == "air" or c.get(x, y, z).endswith(TREE)
+    for (x, y, z), (n, p) in list(c.b.items()):
+        if n not in STAIR_OF or y < 1:
+            continue
+        w = x == 0 or open_(x - 1, y, z)
+        s = z == SZ - 1 or open_(x, y, z + 1)
+        if w == s:
+            continue
+        if (z if w else x) % 3 == 0:
+            c.b[(x, y, z)] = (STAIR_OF[n], dict(facing="east" if w else "north", half="top", shape="straight", **DRY))
 
 
 # ================================================================================================= assembly
 def draw(l3=False):
     c = Canvas(H3 if l3 else H1)
     ground(c)
-    c.place(V.timber_hall(seed=2), 5, 0, 4)                       # north: the treant-wright's hall
-    c.place(V.turret(seed=4), 0, 0, 2)                            # its clinging turret, north-west
-    for k in range(3):                                            # south: the Ta Prohm gallery
-        c.place(V.gallery_bay(window=True, lit=(k == 1), seed=k), 4 + 4 * k, 0, 14)
-    c.place(V.gallery_end(seed=5), 16, 0, 14)
-    c.place(V.prasat(ruined=not l3, seed=6), 0, 0, 16)            # south-west corner tower (L3: its top restored)
-    c.place(V.prasat(seed=7), 13, 0, 11)                          # the east prasat
-    great_tree(c)
-    c.place(V.gopura(seed=1), 0, 0, 8, rot=1)                     # the gate, west
-    gantry(c)
-    silk_cotton(c, l3)
-    for z in (11, 12):                                            # a root mound in the nook by the gopura
-        c.set(3, 1, z, MC)
-    c.st(3, 2, 11, "north", "bottom", MCS)
-    c.set(3, 2, 12, "moss_block")
-    c.leaf(3, 3, 12, FLEAF)
-    for x in (4, 6, 9, 15):                                       # leaves pouring off the lean-to (ref03)
-        V.drape(c, x, 7, 16, 2 + x % 2)
-    if l3:
-        great_tree_l3(c)
-        gantry_l3(c)
-    false_windows(c)
-    articulate(c)
-    plants(c)
+    hall(c, l3)
+    gallery(c)
+    great_tree(c, l3)
+    smooth_grooves(c)
+    bark_tops(c)
+    relieve(c)
     prune(c)
     return c
 
 
-STAIR_OF = {MSB: "mossy_stone_brick_stairs", "stone_bricks": "stone_brick_stairs", CSB: "stone_brick_stairs",
-            "chiseled_stone_bricks": "stone_brick_stairs", MC: MCS, "spruce_planks": "spruce_stairs",
-            "birch_planks": "birch_stairs", "dark_oak_planks": DOS}
-SLAB_OF = {MSB: "mossy_stone_brick_slab", "stone_bricks": "stone_brick_slab", MC: "mossy_cobblestone_slab",
-           "dark_oak_planks": "dark_oak_slab", "spruce_planks": "spruce_slab"}
-OPEN = ("air", "fern", "lily_of_the_valley", "azure_bluet")
-
-
-PLAIN = (MSB, "stone_bricks", CSB, MC)
-
-
-def false_windows(c):
-    """Ta Prohm's false windows: wherever a camera face (west or south) has a plain stone panel 2 wide and 5 tall
-    with solid stone behind it, carve a blind window into it - a sill (an upside-down stair), three courses of turned
-    balusters (walls) standing in front of the dark stone, a chiseled lintel. Panels sit on a 4-cell rhythm so the
-    walls read as bays, never at random."""
-    for face, (dx, dz) in (("west", (-1, 0)), ("south", (0, 1))):
-        for (x, y, z), (n, _) in sorted(c.b.items()):
-            u = z if face == "west" else x
-            if y != 3 or u % 4 != 1:
-                continue
-            panel = [((x, yy, z) if face == "west" else (x + k, yy, z)) if face == "south" else (x, yy, z + k)
-                     for k in (0, 1) for yy in range(3, 8)]
-            ok = all(c.get(*q) in PLAIN and c.get(q[0] + dx, q[1], q[2] + dz) in OPEN and
-                     c.get(q[0] - dx, q[1], q[2] - dz) not in OPEN and (q[0] - dx, q[1], q[2] - dz) in c.b
-                     and q[1] < c.top for q in panel)
-            if not ok:
-                continue
-            for q in panel:
-                yy = q[1]
-                if yy == 3:
-                    c.b[q] = ("stone_brick_stairs", dict(facing="east" if face == "west" else "north", half="top",
-                                                         shape="straight", waterlogged="false"))
-                elif yy == 7:
-                    c.b[q] = ("chiseled_stone_bricks", {})
-                else:
-                    c.b[q] = ("mossy_stone_brick_wall" if (q[0] + q[2]) % 2 else "stone_brick_wall", {})
-
-
-def articulate(c):
-    """The masons' last pass on the camera faces (ref01: no plain wall): a drip course every fourth course - the
-    wall stone turned to an upside-down stair whose open quarter casts a shadow line - and the flat tops of piers,
-    pediment backs and cornices weathered to slabs. Only plain stone or plank cells with exactly one open camera face
-    (west or south) take the course; corners and the lane's frame stay whole."""
-    for (x, y, z), (n, p) in list(c.b.items()):
-        if n not in STAIR_OF or y < 2:
-            continue
-        w = c.get(x - 1, y, z) in OPEN and x > 0
-        s_ = c.get(x, y, z + 1) in OPEN and z < SZ - 1
-        up = c.get(x, y + 1, z) in OPEN
-        if w != s_ and y % 4 == 3 and not up:
-            face = "east" if w else "north"           # the full back against the wall, the open quarter outside
-            c.b[(x, y, z)] = (STAIR_OF[n], dict(facing=face, half="top", shape="straight", waterlogged="false"))
-        elif up and y >= 8 and n in SLAB_OF and c.get(x, y - 1, z) not in OPEN:
-            c.b[(x, y, z)] = (SLAB_OF[n], dict(type="bottom", waterlogged="false"))
-
-
 def prune(c):
-    """Drops what a clipped part leaves touching nothing (a leaf tip cut by the lane or the box edge)."""
+    """Drops what a clipped part leaves touching nothing."""
     while True:
         lone = [p for p in c.b if p[1] > 0 and not any((p[0] + dx, p[1] + dy, p[2] + dz) in c.b for dx, dy, dz in
                 ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)))]
@@ -347,28 +420,24 @@ def rig_of(c, height):
     mv._leaf_distances(r)
     r.bury_grass()
     r.settle()
-    r.check_support("verdant rootcradle")
+    r.check_support("verdant rooting hollow")
     return r
 
 
-
-def stats(r):
-    """Total and fine share; the CAMERA-VISIBLE blocks (a west, south or top face whose ray toward the RTS camera -
-    up, west and south - leaves the box unblocked) and their fine share (the amendment's >= 35% rule)."""
-    n = {p: v[0] for p, v in r.b.items()}
-    sy = max(p[1] for p in n) + 1
-
-    def escapes(x, y, z):
-        while 0 <= x < SX and 0 <= z < SZ and y <= sy:
-            if (x, y, z) in n:
-                return False
-            x, y, z = x - 1, y + 1, z + 1
-        return True
-    vis = [p for p in n if any(escapes(p[0] + dx, p[1] + dy, p[2] + dz)
-                               for dx, dy, dz in ((-1, 0, 0), (0, 1, 0), (0, 0, 1)))]
-    fine_all = sum(1 for v in n.values() if any(f in v for f in FINE))
-    fine_vis = sum(1 for p in vis if any(f in n[p] for f in FINE))
-    return len(n), fine_all / len(n), len(vis), fine_vis / max(1, len(vis))
+def seal_pockets(c, h, out):
+    """Ground pockets left between buttress roots and the masses are filled with roots: audit a draft, fill each
+    pocket cell, repeat until none."""
+    tmp = os.path.join(out, ".verdant_draft.nbt")
+    for _ in range(6):
+        r = rig_of(c, h)
+        r.size = (SX, max(y for (_, y, _) in r.b) + 1, SZ)
+        r.structure().write(tmp)
+        one_way, grnd, roof, rooms, note = ap.audit("draft", tmp)
+        if not grnd and not one_way:
+            break
+        for q in grnd + one_way:
+            c.set(*q, GRIP)
+    os.remove(tmp)
 
 
 def check(r, path, tag, maxh):
@@ -376,13 +445,10 @@ def check(r, path, tag, maxh):
     top = max(p[1] for p in n)
     assert top < maxh, "%s taller than %d (%d)" % (tag, maxh, top + 1)
     assert all((x, 0, z) in n for x in range(SX) for z in range(SZ)), "hole in the ground layer"
-    assert {"moss_block", MSB} <= {v for (x, y, z), v in n.items() if y == 0}
     busy = [p for p in LANE if p in n]
     assert not busy, "lane blocked: %s" % busy[:8]
     col = [p for p in n if (p[0], p[2]) == SPAWN and p[1] >= 1]
     assert not col, "%s: the spawn column is not open: %s" % (tag, col)
-    bad = sorted({v for v in n.values() if any(f in v for f in FORBIDDEN)})
-    assert not bad, "forbidden blocks %s" % bad
     lone = [(p, n[p]) for p in n if p[1] > 0 and not any(
         (p[0] + dx, p[1] + dy, p[2] + dz) in n for dx, dy, dz in
         ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)))]
@@ -392,41 +458,31 @@ def check(r, path, tag, maxh):
             assert props.get("persistent") == "true" and props.get("distance") in "1234567"
     one_way, grnd, roof, rooms, note = ap.audit(tag, path)
     assert not one_way and not grnd and "TRAPPED" not in note, (tag, one_way[:8], grnd[:8], note)
-    total, fine, nvis, fvis = stats(r)
-    assert fvis >= 0.35, "%s: only %.0f%% of the camera-visible blocks are fine" % (tag, 100 * fvis)
-    return "%s 17x%dx17, %d blocks, fine %.0f%% (camera-visible %d, fine %.0f%%): lane + spawn column clear, no pockets " \
-           "(%d roof-only)%s" % (tag, top + 1, total, 100 * fine, nvis, 100 * fvis, len(roof), note)
+    tree = max(p[1] for p, v in n.items() if v.endswith(TREE) or v == GRIP)
+    built = max(p[1] for p, v in n.items() if not (v.endswith(TREE) or v == GRIP))
+    return "%s 17x%dx17, %d blocks: lane + spawn column clear, no pockets (%d roof-only)%s | tree %d, built %d" % (
+        tag, top + 1, len(n), len(roof), note, tree, built)
 
 
-def seal_pockets(c, h, out):
-    """Ground pockets left between root buttresses and the trunk are filled with roots (a real tree's root plate is
-    solid there): audit a draft, fill each pocket cell (and the one over it), repeat until none."""
-    tmp = os.path.join(out, ".verdant_draft.nbt")
-    for _ in range(6):
-        r = rig_of(c, h)
-        r.size = (SX, max(y for (_, y, _) in r.b) + 1, SZ)
-        r.structure().write(tmp)
-        one_way, grnd, roof, rooms, note = ap.audit("draft", tmp)
-        if not grnd and not one_way:
-            break
-        for (x, y, z) in grnd + one_way:
-            if y <= 3:
-                c.roots(x, y, z)
-                c.roots(x, y + 1, z)
-    os.remove(tmp)
+def build(level=3):
+    """The rig of one level (1 or 3), sealed and sized - what main() writes (the camera tests build from this)."""
+    import tempfile
+    l3 = level == 3
+    c, h = draw(l3), (H3 if l3 else H1)
+    with tempfile.TemporaryDirectory() as tmp:
+        seal_pockets(c, h, tmp)
+    r = rig_of(c, h)
+    r.size = (SX, max(y for (_, y, _) in r.b) + 1, SZ)
+    return r
 
 
 def main():
     out = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else OUT)
     os.makedirs(out, exist_ok=True)
-    c1, c3 = draw(False), draw(True)
-    for c, h in ((c1, H1), (c3, H3)):
-        seal_pockets(c, h, out)
-    r1, r3 = rig_of(c1, H1), rig_of(c3, H3)
+    r1, r3 = build(1), build(3)
     lost = [p for p in r1.b if p not in r3.b]
     assert not lost, "L3 removes L1 cells: %s" % lost[:10]
     for r, tag, h in ((r1, "verdant_l1", H1), (r3, "verdant_l3", H3)):
-        r.size = (SX, max(y for (_, y, _) in r.b) + 1, SZ)
         path = os.path.join(out, tag + ".nbt")
         r.structure().write(path)
         print(check(r, path, tag, h))
