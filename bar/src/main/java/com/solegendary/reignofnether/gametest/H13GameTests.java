@@ -68,8 +68,13 @@ public class H13GameTests {
         return m;
     }
 
-    /** A Shaman owned by {@code owner} with every ability at rank 1, ready to cast. */
+    /**
+     * A Shaman owned by {@code owner} with every ability at rank 1, ready to cast - by the test alone: its owner's Hero
+     * AI is switched off, since with PR 418 the AI casts the Shaman's spells at the dummies by itself and a test that
+     * checks who its own cast hurt must be the only caster.
+     */
     static FactionHero readyShaman(GameTestHelper helper, String owner, int x, int z) {
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(owner, false);
         Mob m = HeroGameTests.spawnHero(helper, HeroKits.ASH_SHAMAN, owner, x, z);
         if (!(m instanceof FactionHero fh))
             return null;
@@ -83,7 +88,7 @@ public class H13GameTests {
 
     /**
      * AC-1: the Flame Sanctuary offers the Shaman and its revive (slot 9); the server refuses a second Shaman while one
-     * is alive or fallen, and then the revive is what the lab accepts.
+     * is fallen or alive; the revive is what the lab accepts for a fallen one, and it is refused while one is alive.
      */
     @GameTest(template = ARENA, timeoutTicks = 60)
     public static void h13_flame_sanctuary_offers_the_shaman(GameTestHelper helper) {
@@ -98,6 +103,7 @@ public class H13GameTests {
         if (type == null || ProductionItems.getProductionItem(type) != ProductionItems.ASH_SHAMAN)
             problems.add("the Shaman type does not resolve to its production item");
         String me = owner(helper, "offer");
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(me, false);   // no Shaman AI casting at a neighbouring pad (PR 418; see readyShaman)
         ProductionPlacement pp = sanctuary(helper, me);
         if (pp == null) {
             helper.fail("no Flame Sanctuary placement");
@@ -117,12 +123,9 @@ public class H13GameTests {
             if (ProductionItems.ASH_SHAMAN_REVIVE.getProduceErrorMsg(pp) == null)
                 problems.add("a revive was offered with no fallen Shaman");
 
-            shaman = HeroGameTests.spawnHero(helper, HeroKits.ASH_SHAMAN, me, 6, 6);
-            if (ProductionItems.ASH_SHAMAN.getProduceErrorMsg(pp) == null)
-                problems.add("a second Shaman was accepted while one is alive");
-            shaman.discard();
-            shaman = null;
-
+            // fallen first, alive last: no check runs after a discard. The server's unit list drops an entity on its
+            // leave event, and a Shaman discarded the tick it was spawned was sometimes still listed in the same tick,
+            // so the revive read "duplicate" (main e7b4e941: 1 runner of 8; PR 418's old base: 3 of 8)
             String heroName = type.getDescriptionId();
             fallen = new HeroUnitSave("00000000-0000-0000-0000-000000000013", heroName, me,
                 HeroProgression.xpForLevel(3), 1, 0, 1, 0, 0, 0, null);
@@ -131,6 +134,14 @@ public class H13GameTests {
                 problems.add("a second Shaman was accepted while one is fallen");
             if (ProductionItems.ASH_SHAMAN_REVIVE.getProduceErrorMsg(pp) != null)
                 problems.add("the revive is refused for a fallen Shaman: " + ProductionItems.ASH_SHAMAN_REVIVE.getProduceErrorMsg(pp));
+            HeroServerEvents.fallenHeroes.remove(fallen);
+            fallen = null;
+
+            shaman = HeroGameTests.spawnHero(helper, HeroKits.ASH_SHAMAN, me, 6, 6);
+            if (ProductionItems.ASH_SHAMAN.getProduceErrorMsg(pp) == null)
+                problems.add("a second Shaman was accepted while one is alive");
+            if (ProductionItems.ASH_SHAMAN_REVIVE.getProduceErrorMsg(pp) == null)
+                problems.add("a revive was offered while the Shaman is alive");
         } finally {
             if (fallen != null)
                 HeroServerEvents.fallenHeroes.remove(fallen);
@@ -153,6 +164,7 @@ public class H13GameTests {
     public static void h13_shaman_skips_the_castle_clamp_but_counts_against_the_cap(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         String me = owner(helper, "cap");
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(me, false);   // no Shaman AI casting at a neighbouring pad (PR 418; see readyShaman)
         ProductionPlacement pp = sanctuary(helper, me);
         if (pp == null) {
             helper.fail("no Flame Sanctuary placement");
@@ -200,6 +212,7 @@ public class H13GameTests {
     public static void h13_shaman_first_then_t1_hero_without_castle(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         String me = owner(helper, "order");
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(me, false);   // no Shaman AI casting at a neighbouring pad (PR 418; see readyShaman)
         ProductionPlacement pp = sanctuary(helper, me);
         if (pp == null) {
             helper.fail("no Flame Sanctuary placement");
@@ -234,10 +247,15 @@ public class H13GameTests {
     }
 
     /** AC-3: a Shaman trained the real way (item completion) spawns at level 3 holding exactly 3 ability points. */
-    @GameTest(template = ARENA, timeoutTicks = 80)
+    // own batch: any enemy unit dying within 20-28 blocks pays a hero XP at once (#419 kill XP, the commander burst),
+    // so a neighbouring arena's deaths land on this Shaman. After #362 re-laid the default batch, WinPays'
+    // commander_kill_gives_a_nearby_enemy_hero_400_xp killed its commander 17.6 blocks away at tick 4: 400 burst +
+    // 50 kill XP = "experience 1250, not 800" on every main run from 6436eb6f (XP trail, PR 473 run 41248146752)
+    @GameTest(template = ARENA, timeoutTicks = 80, batch = "h13_shaman_level_alone")
     public static void h13_shaman_spawns_at_level_three_with_three_points(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "level");
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(me, false);   // no Shaman AI casting at a neighbouring pad (PR 418; see readyShaman)
         ProductionPlacement pp = sanctuary(helper, me);
         if (pp == null) {
             helper.fail("no Flame Sanctuary placement");
@@ -257,12 +275,30 @@ public class H13GameTests {
             return;
         }
         Mob shaman = found;
+        // where any XP came from (main 6436eb6f..181a840e: "experience 1250, not 800" every run): the XP at spawn and
+        // at each tick it changed, with every unit dying within the kill-XP range at that tick
+        StringBuilder trail = new StringBuilder("t0:" + fh.getExperience() + " at " + shaman.blockPosition().toShortString());
+        int[] lastXp = {fh.getExperience()};
+        helper.onEachTick(() -> {
+            if (fh.getExperience() == lastXp[0])
+                return;
+            lastXp[0] = fh.getExperience();
+            trail.append(" t").append(helper.getTick()).append(':').append(lastXp[0]).append(" [");
+            for (LivingEntity le : level.getEntitiesOfClass(LivingEntity.class, shaman.getBoundingBox().inflate(30)))
+                if (le != shaman && (le.isDeadOrDying() || !le.isAlive()))
+                    trail.append(net.minecraft.world.entity.EntityType.getKey(le.getType()).getPath())
+                        .append(" owner=").append(le instanceof Unit u ? u.getOwnerName() : "-")
+                        .append(" pop=").append(le instanceof Unit pu && pu.getCost() != null ? pu.getCost().population : -1)
+                        .append(" d=").append(String.format(java.util.Locale.ROOT, "%.1f", le.distanceTo(shaman))).append("; ");
+            trail.append(']');
+        });
         helper.runAfterDelay(5, () -> {   // past the first tick, when the level's stats are applied
             List<String> problems = new ArrayList<>();
             if (fh.getHeroLevel() != 3)
                 problems.add("level " + fh.getHeroLevel() + ", not 3");
             if (fh.getExperience() != HeroProgression.xpForLevel(3))
-                problems.add("experience " + fh.getExperience() + ", not " + HeroProgression.xpForLevel(3));
+                problems.add("experience " + fh.getExperience() + ", not " + HeroProgression.xpForLevel(3)
+                    + " (XP trail: " + trail + ")");
             if (fh.getSkillPoints() != 3)
                 problems.add(fh.getSkillPoints() + " ability points, not exactly 3");
             float wantHp = HeroKits.ASH_SHAMAN.health * HeroProgression.statMultiplier(3);

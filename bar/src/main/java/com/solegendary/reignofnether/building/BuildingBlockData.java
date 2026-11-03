@@ -25,12 +25,29 @@ import java.util.Optional;
 public class BuildingBlockData {
 
     public static ArrayList<BuildingBlock> getBuildingBlocksFromNbt(String structureName, LevelAccessor level) {
-        ResourceManager resourceManager;
         if (level.isClientSide())
-            resourceManager = Minecraft.getInstance().getResourceManager();
-        else
-            resourceManager = level.getServer().getResourceManager();
+            return readBuildingBlocks(structureName, level, Minecraft.getInstance().getResourceManager());
+        // the server parses each structure once per resource manager (a /reload brings a new one) and hands out copies:
+        // every placement check read and unzipped the .nbt again, and a bot's site search makes hundreds of them
+        ResourceManager resourceManager = level.getServer().getResourceManager();
+        ArrayList<BuildingBlock> parsed;
+        synchronized (SERVER_BLOCKS) {
+            if (serverBlocksFor != resourceManager) {
+                SERVER_BLOCKS.clear();
+                serverBlocksFor = resourceManager;
+            }
+            parsed = SERVER_BLOCKS.computeIfAbsent(structureName, n -> readBuildingBlocks(n, level, resourceManager));
+        }
+        ArrayList<BuildingBlock> copy = new ArrayList<>(parsed.size());
+        for (BuildingBlock b : parsed)
+            copy.add(new BuildingBlock(b.getBlockPos(), b.getBlockState(), b.getBlockNbt() == null ? null : b.getBlockNbt().copy()));
+        return copy;
+    }
 
+    private static final java.util.Map<String, ArrayList<BuildingBlock>> SERVER_BLOCKS = new java.util.HashMap<>();
+    private static ResourceManager serverBlocksFor = null;
+
+    private static ArrayList<BuildingBlock> readBuildingBlocks(String structureName, LevelAccessor level, ResourceManager resourceManager) {
         CompoundTag nbt = getBuildingNbt(structureName, resourceManager);
         // a blueprint missing from this side's jar (assets/ on the client, data/ on the server) used to NPE here -
         // every frame on the client while the ghost was shown; warn once and hand back no blocks instead

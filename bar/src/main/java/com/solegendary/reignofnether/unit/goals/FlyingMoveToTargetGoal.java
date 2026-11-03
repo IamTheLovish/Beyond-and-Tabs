@@ -11,8 +11,18 @@ import javax.annotation.Nullable;
 
 public class FlyingMoveToTargetGoal extends MoveToTargetBlockGoal {
 
+    /** How high over the ground a move order takes the flyer. */
+    public static final int DEFAULT_ALTITUDE = 10;
+    private final int altitude;
+
     public FlyingMoveToTargetGoal(Mob mob, int reachRange) {
+        this(mob, reachRange, DEFAULT_ALTITUDE);
+    }
+
+    /** A flyer that cruises {@code altitude} blocks over the ground instead (the low-flying Seraph Archer: 3). */
+    public FlyingMoveToTargetGoal(Mob mob, int reachRange, int altitude) {
         super(mob, false, reachRange);
+        this.altitude = altitude;
     }
 
     @Override
@@ -73,7 +83,7 @@ public class FlyingMoveToTargetGoal extends MoveToTargetBlockGoal {
                 if (y > 30)
                     break;
             }
-            BlockPos targetBp = bpGround.offset(0,10,0);
+            BlockPos targetBp = bpGround.offset(0,altitude,0);
             double maxHeight = this.mob.level().getGameRules().getRule(GameRuleRegistrar.FLYING_MAX_Y_LEVEL).get();
             if (targetBp.getY() > maxHeight)
                 targetBp = new BlockPos(targetBp.getX(), (int) maxHeight, targetBp.getZ());

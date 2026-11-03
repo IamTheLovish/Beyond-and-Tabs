@@ -47,6 +47,8 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.SPIDER_UNIT.get(), SpiderUnit.createAttributes().build());
         evt.put(EntityRegistrar.POISON_SPIDER_UNIT.get(), SpiderUnit.createAttributes().build());
         evt.put(EntityRegistrar.WRAITH_UNIT.get(), WraithUnit.createAttributes().build());
+        evt.put(EntityRegistrar.TOMBCALLER_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.TOMBSTONE_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit.createAttributes().build());
         evt.put(EntityRegistrar.VILLAGER_UNIT.get(), VillagerUnit.createAttributes().build());
         evt.put(EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit.createAttributes().build());
         // Verdant Court T2
@@ -56,6 +58,8 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.ELDER_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ElderTreantUnit.createAttributes().build());
         evt.put(EntityRegistrar.WISP_CHOIR_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.createAttributes().build());
         evt.put(EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit.createAttributes().build());
+        evt.put(EntityRegistrar.THORNWEAVER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ThornweaverUnit.createAttributes().build());
+        evt.put(EntityRegistrar.RENEWAL_SAPLING_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.RenewalSaplingUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_DOG_UNIT.get(), ScoutDogUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_CAT_UNIT.get(), ScoutCatUnit.createAttributes().build());
         evt.put(EntityRegistrar.MILITIA_UNIT.get(), MilitiaUnit.createAttributes().build());
@@ -133,6 +137,10 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit.createAttributes().build());
         evt.put(EntityRegistrar.WITCH_UNIT.get(), WitchUnit.createAttributes().build());
         evt.put(EntityRegistrar.EVOKER_UNIT.get(), EvokerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ANGEL_CALLER_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.AngelCallerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.MENDER_ANGEL_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.MenderAngelUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SERAPH_ARCHER_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.SeraphArcherUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SWORD_SERAPH_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.SwordSeraphUnit.createAttributes().build());
         evt.put(EntityRegistrar.ENDERMAN_UNIT.get(), EndermanUnit.createAttributes().build());
         evt.put(EntityRegistrar.WARDEN_UNIT.get(), WardenUnit.createAttributes().build());
         evt.put(EntityRegistrar.RAVAGER_UNIT.get(), RavagerUnit.createAttributes().build());
@@ -269,6 +277,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.WORLD_TREE_WALKER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.WISP_CHOIR_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.BLOOM_PRIESTESS_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.THORNWEAVER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SEEDSHAPER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SHIPWRIGHT_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.GULL_SPOTTER_UNIT_SPAWN_EGG);
