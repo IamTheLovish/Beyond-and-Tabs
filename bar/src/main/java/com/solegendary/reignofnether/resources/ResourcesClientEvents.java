@@ -160,6 +160,18 @@ public class ResourcesClientEvents {
         }
     }
 
+    /** One line of floating text at {@code pos}, in the RTS view (a hero's "+N XP"; the caller decides who sees it). */
+    public static void addFloatingText(String text, BlockPos pos) {
+        if (!OrthoviewClientEvents.isEnabled())
+            return;
+        // staggered like the resource lines: a text that starts while another at the spot is still young waits its turn
+        int tickAge = 0;
+        for (FloatingText f : floatingTexts)
+            if (f.pos.equals(pos) && f.tickAge < 25)
+                tickAge = Math.min(tickAge, f.tickAge - 25);
+        floatingTexts.add(new FloatingText(text, pos, tickAge));
+    }
+
     public static void addFloatingTextsFromResources(Resources res, BlockPos pos) {
         if (!OrthoviewClientEvents.isEnabled()) {
             return;
@@ -192,6 +204,7 @@ public class ResourcesClientEvents {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fpS = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_FLOATTEXT);
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
@@ -253,6 +266,7 @@ public class ResourcesClientEvents {
             }
             floatingTexts.removeIf(t -> t.tickAge > FLOATING_TEXT_MAX_AGE);
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fpS);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }

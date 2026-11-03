@@ -149,7 +149,7 @@ public class PlayerServerEvents {
     // modifythephasevariance - ignore building requirements
     // medievalman - get all research (cannot reverse)
     // greedisgood X - gain X of each resource
-    // foodforthought - ignore soft population caps
+    // foodforthought - kept for old scripts and tests; inert (there is no population cap - lovish, Oct 29)
     // thereisnospoon - allow changing survival wave by clicking the wave indicator and using debug commands
     // slipslopslap - monster units are unaffected by sunlight
     // wouldyoukindly - allow control of non-unit mobs in RTS mode
@@ -194,7 +194,6 @@ public class PlayerServerEvents {
                     break;
                 }
             }
-            UnitServerEvents.maxPopulation = level.getGameRules().getInt(GameRuleRegistrar.MAX_POPULATION);
 
             level.getGameRules().getRule(RULE_DISABLE_ELYTRA_MOVEMENT_CHECK).set(true, evt.getServer());
         }
@@ -729,6 +728,51 @@ public class PlayerServerEvents {
      * lost: lovish's Oct 12 Watch Battle had three of four bots sit at +0 income with untouched pools). Returns how
      * many joined the level.
      */
+    /**
+     * The top block a start unit is dropped on: its own column (x, z) when that is solid, dry ground, else the nearest
+     * such column within 4 blocks (rings outward), else its own column as before. getHighestNonAirBlock stops at a
+     * fluid, so a lava pool beside a seat took a start worker before the bot's first think (build 40632885850: "the
+     * Verdant bot should start with 3 Seedshapers, got 2", "court seedshaper_unit died t10 lava"). A column whose eight
+     * neighbours are dry too is preferred (the three units shove each other apart as they land), then any dry one.
+     */
+    static BlockPos dryStartColumn(ServerLevel level, int x, int z) {
+        BlockPos own = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z));
+        for (int pass = 0; pass < 2; pass++)
+            for (int r = 0; r <= 4; r++)
+                for (int dx = -r; dx <= r; dx++)
+                    for (int dz = -r; dz <= r; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != r)
+                            continue;
+                        BlockPos top = r == 0 ? own : MiscUtil.getHighestNonAirBlock(level, new BlockPos(x + dx, 0, z + dz));
+                        if (dryTop(level, top) && (pass == 1 || dryAround(level, top)))
+                            return top;
+                    }
+        return own;
+    }
+
+    private static boolean dryAround(ServerLevel level, BlockPos top) {
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+                if ((dx != 0 || dz != 0)
+                        && !dryTop(level, MiscUtil.getHighestNonAirBlock(level, new BlockPos(top.getX() + dx, 0, top.getZ() + dz))))
+                    return false;
+        return true;
+    }
+
+    /** A top block a unit can stand on: no fluid in it or the two blocks above, and not a fire or magma block. */
+    private static boolean dryTop(ServerLevel level, BlockPos top) {
+        var state = level.getBlockState(top);
+        if (!state.getFluidState().isEmpty() || state.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK)
+                || state.is(net.minecraft.tags.BlockTags.FIRE))
+            return false;
+        for (int up = 1; up <= 2; up++) {
+            var above = level.getBlockState(top.above(up));
+            if (!above.getFluidState().isEmpty() || above.is(net.minecraft.tags.BlockTags.FIRE))
+                return false;
+        }
+        return true;
+    }
+
     public static int spawnBotStartUnits(ServerLevel level, String owner, Faction faction, Vec3 pos, boolean withCommander) {
         EntityType<?> entityType = faction == null ? null : ForgeRegistries.ENTITY_TYPES.getValue(faction.workerEntityType);
         UnitChunkLoader.holdArea(level, BlockPos.containing(pos.x, pos.y, pos.z));
@@ -737,9 +781,7 @@ public class PlayerServerEvents {
         for (int i = -1; i <= 1; i++) {
             Entity entity = entityType != null ? entityType.create(level) : null;
             if (entity instanceof Unit unit) {
-                BlockPos bp = MiscUtil.getHighestNonAirBlock(level, new BlockPos((int) (pos.x + i), 0, (int) pos.z))
-                    .above()
-                    .above();
+                BlockPos bp = dryStartColumn(level, (int) (pos.x + i), (int) pos.z).above().above();
                 unit.setOwnerName(owner);
                 entity.moveTo(bp, 0, 0);
                 if (first) {
@@ -944,7 +986,6 @@ public class PlayerServerEvents {
                 playerName.equalsIgnoreCase("altsolegendary"))
             ) {
                 ResourcesServerEvents.addSubtractResources(new Resources(playerName, 99999, 99999, 99999));
-                UnitServerEvents.maxPopulation = 99999;
                 enableAllCheats(playerName);
                 evt.setCanceled(true);
                 sendMessageToAllPlayers("server.reignofnether.all_cheats", false, playerName);
@@ -1311,6 +1352,16 @@ public class PlayerServerEvents {
         if (!isSandboxOrScenario)
             for (BuildingPlacement building : BuildingServerEvents.getBuildings())
                 building.ownerName = "";
+
+        // nothing the match dropped outlives it: loose items and experience orbs (lovish's Oct 29 game left ~1,300
+        // items and 2,600 entities in all, 8.9 ms of every tick of the lobby after it; perf survey Oct 30)
+        if (!isSandboxOrScenario) {
+            List<net.minecraft.world.entity.Entity> loose = new ArrayList<>();
+            for (net.minecraft.world.entity.Entity e : serverLevel.getAllEntities())
+                if (e instanceof net.minecraft.world.entity.item.ItemEntity || e instanceof net.minecraft.world.entity.ExperienceOrb)
+                    loose.add(e);
+            loose.forEach(net.minecraft.world.entity.Entity::discard);
+        }
 
         ResearchServerEvents.removeAllResearch();
         ResearchServerEvents.removeAllCheats();

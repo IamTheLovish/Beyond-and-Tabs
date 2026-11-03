@@ -44,14 +44,17 @@ public final class ArenaReady {
      * villager on its glass at 41 and the vindicators floating at 62). Every other pad is 120 or higher, and each caller
      * takes its own, 11 or more from the rest (3D distance inside aggro range is the thing to avoid): 301 is the slot
      * left (WaterPathingGameTests' basin took 135: 132-141). Returns the standing position (y + 1) at the arena's corner; template offsets are added to it.
+     * The pad and the air above it are put back when the test ends, however it ends (TestCleanup.blocks).
      */
     public static BlockPos pad(GameTestHelper helper, int y) {
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        // put back when the test ends, pass or fail (TestCleanup): later batches find this column's sky as it was
+        TestCleanup.BlockUndo pad = TestCleanup.blocks(helper);
         for (int dx = 0; dx < 16; dx++)
             for (int dz = 0; dz < 16; dz++) {
-                helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState(), 3);
+                pad.set(new BlockPos(corner.getX() + dx, y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState());
                 for (int dy = 1; dy <= 6; dy++)
-                    helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, y + dy, corner.getZ() + dz), Blocks.AIR.defaultBlockState(), 3);
+                    pad.set(new BlockPos(corner.getX() + dx, y + dy, corner.getZ() + dz), Blocks.AIR.defaultBlockState());
             }
         return new BlockPos(corner.getX(), y + 1, corner.getZ());
     }

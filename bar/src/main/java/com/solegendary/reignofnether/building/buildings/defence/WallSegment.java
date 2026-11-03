@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
@@ -64,12 +65,16 @@ public class WallSegment extends DefenceBuilding {
 
     /** Whether this unit auto-targets walls: siege, heavies and experimentals only (MiscUtil.isBuildingAutoAttackable). */
     public static boolean drawsAggroFrom(Mob attacker) {
-        return damageMultFrom(attacker) > 1f;
+        return damageMultFrom(attacker) > 1f || attacker instanceof SiegeLobberUnit;
     }
 
-    /** How much harder than its normal building damage this attacker hits a wall. */
+    /**
+     * How much harder than its normal building damage this attacker hits a wall. Not the siege lobber: its shells already
+     * take the defence rate off a wall (lovish Oct 29, "walls should be strong"; design/siege_t1.md), though it still
+     * picks walls as targets ({@link #drawsAggroFrom}).
+     */
     public static float damageMultFrom(Entity attacker) {
-        if (!(attacker instanceof Unit u))
+        if (!(attacker instanceof Unit u) || attacker instanceof SiegeLobberUnit)
             return 1f;
         int metal = u.getCost() == null ? 0 : u.getCost().metal();
         if (metal >= T3_METAL)

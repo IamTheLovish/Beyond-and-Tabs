@@ -105,6 +105,8 @@ def style_for(colour_name):
     Face)."""
     mat = material_for(colour_name)
     n = colour_name.lower()
+    if mat == "membrane":           # r13: only a sail's trailing strip is torn along its far edge (and rimmed)
+        return "hem" if "hem" in n else "inner"
     if mat == "cloth":
         for frag, st in _CLOTH_STYLE:
             if frag in n:
@@ -860,7 +862,9 @@ class Face:
         # the joints: the ends of the face along the grain go softly darker (a shadowed knuckle, a socket)
         eu = g.wv                                                                  # the length along the grain
         dv = np.minimum(v, eu - v)
-        ao = 1.0 - 0.10 * (1.0 - _smooth_v(np, dv / max(1.0, 0.9 * D)))
+        # r13: the joints darker (0.10 -> 0.20): from the night chase camera r12's bone was one grey-teal tube; the
+        # shadowed knuckles give each vertebra and finger joint its own read
+        ao = 1.0 - 0.20 * (1.0 - _smooth_v(np, dv / max(1.0, 0.9 * D)))
         # a rare stain the size of a model pixel, soft-edged (never a single-texel dot - ART-FAULTS "pepper dots")
         pit = _smooth_v(np, (_value_v(np, s + 124, u, v, 1.1 * D) - 0.55) / 0.3)
         g.A *= (1.0 + mott + grain) * ao * (1.0 - 0.07 * pit)
@@ -901,14 +905,28 @@ class Face:
             arc = np.sin(np.clip(x / max(1.0, float(self.fw)), 0.0, 1.0) * math.pi)
             notch = np.clip((_value_v(np, cs + 174, x, jz * 0.05, 1.3 * D) - 0.58) / 0.18, 0.0, 1.0)   # deep rips along the hem
             hem = D * (0.3 + 1.0 * arc ** 1.3 + 0.4 * _value_v(np, cs + 173, x, jz * 0.3, 0.6 * D) + 1.2 * notch)   # r11: a shallower scallop, the webs reach the finger tips
-            ragged = (self.fh - jz) < hem
+            # r13: the chord is three strips (tools/gen_dragon.py); only the trailing one ("hem") is torn along its far
+            # edge - the inner strips' far edges are hidden seams, and tearing them shredded the sail into bands
+            is_hem = self.style != "inner"
+            ragged = ((self.fh - jz) < hem) if is_hem else np.zeros(x.shape, dtype=bool)
             near_lead = jz < 1.2 * D                                   # the skin holds along the bone
             cut = ((holes | small) & ~near_lead) | ragged
+            if not is_hem:
+                cut = cut & ((self.fh - jz) > 1.0 * D)                 # no hole opens on a seam
             self._cut = cut.tolist()
-            # lighter by the bone, DARKER toward the hem (r10: a 30% fall-off that steepens over the last third, so
-            # the trailing edge is a dark rim that draws the sail's outline on the ground)
             tt = np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)
-            g.A *= 1.04 - 0.12 * tt - 0.22 * np.clip((tt - 0.6) / 0.4, 0.0, 1.0) ** 1.5
+            if is_hem:
+                # r13 (lovish's night frame: the sail lost on a dark sky): the hem is THIN skin - a darker band a
+                # little in from the tear, then a back-lit pale rim along the tear itself (~1 model px), so the wing
+                # has an outline on grass AND on a night sky (design/REFERENCES.md 11: "catches light at the edges")
+                dist = (self.fh - jz) - hem                            # texels in from the torn edge
+                rim = np.clip(1.0 - dist / max(1.0, 0.9 * D), 0.0, 1.0)
+                band = np.clip(1.0 - np.abs(dist - 2.0 * D) / max(1.0, 1.4 * D), 0.0, 1.0)
+                g.A *= (1.0 - 0.18 * band) * (1.0 + 0.55 * rim)
+                self._tint(g, rim * 0.8, (1.04, 0.98, 1.10))
+            else:
+                # by the bone the skin is thick and dark; it thins (lighter) toward the strip's far side
+                g.A *= 0.94 + 0.10 * tt
         g.A *= (1.0 + 0.08 * thin + stretch) * (1.0 - 0.50 * vein) * (1.0 - 0.22 * rot) * (1.0 + 0.10 * edge)
         g.H = 0.45 + 0.35 * vein + 0.08 * stretch / 0.05 * 0.1 - 0.15 * rot
         g.S += 0.10 * vein - 0.10 * rot

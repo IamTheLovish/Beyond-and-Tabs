@@ -455,6 +455,9 @@ public class PossessionClientEvents {
                 long win = MC.getWindow().getWindow();
                 if (InputConstants.isKeyDown(win, GLFW.GLFW_KEY_LEFT_ALT) || InputConstants.isKeyDown(win, GLFW.GLFW_KEY_RIGHT_ALT))
                     PossessionServerboundPacket.rankUp(possessedId, i);
+                else if (i == 0 && com.solegendary.reignofnether.hero.wager.WagerClient.enabled
+                        && MC.level != null && MC.level.getEntity(possessedId) instanceof FactionHero)
+                    com.solegendary.reignofnether.hero.wager.WagerClient.open(possessedId);   // key 1 is the Wager Book (/wagerbook)
                 else {
                     PossessionServerboundPacket.ability(possessedId, i, yaw, pitch);
                     PossessionHudClient.onKeyPressed(i);   // the press shows at once; the server's verdict follows

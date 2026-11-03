@@ -168,8 +168,8 @@ public final class StuckNudge {
 
     private static void repath(Mob mob, Unit unit) {
         // the chase goals repath within their next recalc (5-20 ticks) once the navigation is empty, and the move
-        // goal restarts from here on its next canContinueToUse. Not forceRepath: that resets the move goal's own
-        // stuck count, and a move order that keeps ending on the same node must still reach its give-up.
+        // goal restarts from here on its next canContinueToUse. Not forceRepath: that drops the move goal's
+        // backoff, and a move order that keeps ending on the same node must still back off on its way to the give-up.
         mob.getNavigation().stop();
     }
 

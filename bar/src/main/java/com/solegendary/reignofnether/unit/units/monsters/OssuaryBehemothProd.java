@@ -62,7 +62,7 @@ public class OssuaryBehemothProd extends ProductionItem implements IUnitProducti
             List.of(
                 Component.translatable("entity.reignofnether.ossuary_behemoth_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.ossuary_behemoth_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.ossuary_behemoth_unit.tooltip2").getVisualOrderText()

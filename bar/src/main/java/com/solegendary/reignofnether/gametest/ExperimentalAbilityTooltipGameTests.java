@@ -49,6 +49,7 @@ public class ExperimentalAbilityTooltipGameTests {
         }
         String desc, line;
         if (found instanceof WitheringFog f) { desc = f.description(); line = f.rangeLine(); }
+        else if (found instanceof com.solegendary.reignofnether.ability.abilities.DragonDive f) { desc = f.description(); line = f.rangeLine(); }
         else if (found instanceof SolarLance f) { desc = f.description(); line = f.rangeLine(); }
         else if (found instanceof Tempest f) { desc = f.description(); line = f.rangeLine(); }
         else if (found instanceof TidalSlam f) { desc = f.description(); line = f.rangeLine(); }
@@ -90,6 +91,9 @@ public class ExperimentalAbilityTooltipGameTests {
         try {
             if (dragon != null)
                 check(problems, "Bone Dragon", dragon, WitheringFog.class, ExperimentalAbilityText.rangeLine(WitheringFog.RANGE));
+            if (dragon != null)
+                check(problems, "Bone Dragon", dragon, com.solegendary.reignofnether.ability.abilities.DragonDive.class,
+                    ExperimentalAbilityText.rangeLine(com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit.DIVE_RANGE));
             if (colossus != null)
                 check(problems, "Sun Colossus", colossus, SolarLance.class, ExperimentalAbilityText.rangeLine(SolarLance.LENGTH));
             if (celestial != null)

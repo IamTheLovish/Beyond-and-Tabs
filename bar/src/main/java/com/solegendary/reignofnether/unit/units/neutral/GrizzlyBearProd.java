@@ -61,7 +61,7 @@ public class GrizzlyBearProd extends ProductionItem implements IUnitProductionIt
                 List.of(
                         Component.translatable("entity.reignofnether.grizzly_bear_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         ResourceCosts.getFormattedCost(cost),
-                        ResourceCosts.getFormattedPopAndTime(cost),
+                        ResourceCosts.getFormattedTime(cost),
                         fcs(""),
                         Component.translatable("entity.reignofnether.grizzly_bear_unit.tooltip1").getVisualOrderText()
                 ),

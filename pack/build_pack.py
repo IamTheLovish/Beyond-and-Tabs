@@ -2,7 +2,8 @@
 """Builds BeyondAndTabs-test.mrpack for remote testers (run by .github/workflows/modpack.yml).
 
 Every third-party mod is resolved on Modrinth by the sha1 of lovish's own file (pack/instance_mods.json), so a tester's
-launcher downloads byte-identical jars from cdn.modrinth.com; nothing is rehosted. e4mc (the open-source Open-to-LAN
+launcher downloads byte-identical jars from cdn.modrinth.com; nothing is rehosted. A required mod that is not on
+Modrinth (Domum Ornamentum) carries its official CurseForge CDN "url" in instance_mods.json, checked byte for byte. e4mc (the open-source Open-to-LAN
 internet tunnel) is added so lovish can host without port forwarding. Our own GPL jar goes in overrides/.
 
 usage: build_pack.py <our jar> <out dir>
@@ -13,6 +14,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -41,10 +43,9 @@ CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "fe
 # fresh Sound Culling (3 days old) or Particle Core could change under testers between two pack builds.
 # Canary (server tick) is NOT here: it changes vanilla code our mod also hooks, so it waits for a CI run of every
 # GameTest with it loaded. Dynamic Lights Reforged is CurseForge-only, and this pack uses Modrinth only.
-#   oculus                   LGPL-3   shader loader (Iris for Forge), client-only: lovish Oct 22 "the game needs better
-#                            graphics, everything still feels flat" - the PBR maps (_n/_s) only show under a shader
-#                            pack. Pinned to 1.8.0, Embeddium 0.3.31's pair (the eyes shader lane's exact setup).
-#                            Complementary Reimagined (the shader pack itself) is added by build_packwiz.py.
+# Oculus (the shader loader) is NOT here since Oct 29: it shipped only to carry Complementary Reimagined, whose author
+# refused us permission to ship it, and a loader with no shader pack does nothing for players. It comes back with our
+# own shader pack. Nothing we ship may include Complementary (tools/test_pack_no_complementary.py).
 #   The landscape mods (lovish, Oct 28; pack dependencies only, never bundled in our jar):
 #   nsHXyrFh                  MIT      This Rocks! (Forge) (slug this-rocks-forge): rocks, sticks, pinecones, seashells,
 #                            starfish, geysers. Adds blocks, so the server needs it. Listed by project id.
@@ -59,22 +60,21 @@ CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "fe
 #   slug, by author and by search), and this builder resolves from Modrinth only; no CurseForge file is hand-added.
 EXTRA_PROJECTS = ("spark", "macaws-bridges", "macaws-paths-and-pavings", "macaws-lights-and-lamps",
                   "sound-physics-remastered", "packet-fixer", "sound-culling", "particle-core",
-                  "oculus", "nsHXyrFh", "particular-reforged", "immersive-weathering", "better-biome-blend",
+                  "nsHXyrFh", "particular-reforged", "immersive-weathering", "better-biome-blend",
                   "cosy-critters", "light-dust")
 # project slug -> exact Modrinth version_number; a pinned project that has no such Forge 1.20.1 version fails the build
 PINNED_VERSIONS = {"packet-fixer": "3.3.2", "sound-culling": "2.1.0", "particle-core": "0.3.3+1.20.1+forge",
-                   "oculus": "1.20.1-1.8.0",
                    # Oct 28, each the newest Forge 1.20.1 release on Modrinth that day
                    "nsHXyrFh": "1.5.1", "particular-reforged": "1.5.7", "immersive-weathering": "1.20.1-2.0.5",
                    "better-biome-blend": "1.20.1-1.4.0-forge",
                    "cosy-critters": "v0.3.3+1.20.1-forge", "light-dust": "2.1.3"}
 # top-level extras that only the client runs (a dedicated server may leave them out, like CLIENT_ONLY below)
-CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core", "oculus",
+CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core",
                         "particular-reforged", "better-biome-blend", "cosy-critters", "light-dust")
 # files the Mac pack drops: Embeddium and ImmediatelyFast misbehave on macOS drivers, and an addon that needs
 # Embeddium (Embeddium Extra = rubidium-extra) would crash the Mac pack if it slipped through (research Oct 21).
 # One list for macpack.yml, build_packwiz.py and publish-pack's guard.
-# Oculus needs Embeddium, so it goes too (and with it the shader pack: build_packwiz.py)
+# "oculus" stays as a guard: it needs Embeddium, so a future Oculus (our own shader pack) must not reach the Mac pack
 MAC_SKIP = ("embeddium", "immediatelyfast", "rubidium-extra", "oculus")
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Config files the pack ships under config/ (file name -> text). packwiz writes them once as "preserve" files (a
@@ -160,7 +160,8 @@ PACK_CONFIGS = {
 # our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
 REQUIRED_FILES = ("alexsmobs-", "citadel-", "mcw-roofs-", "mcw-mcwwindows-", "mcw-mcwfences-", "chipped-forge-",
-                  "athena-forge-", "resourcefullib-forge-")
+                  "athena-forge-", "resourcefullib-forge-", "FramedBlocks-",
+                  "domum_ornamentum-")
 
 
 def get_json(url):
@@ -206,6 +207,25 @@ def index_entry(filename, sha1, sha512, size, url, client_only=False):
             "downloads": [url], "fileSize": size}
 
 
+# official hosts a mod may download from: Modrinth's CDN, and CurseForge's for a required mod that is not on Modrinth
+# (Domum Ornamentum): its instance_mods.json entry names the official file URL ("url") and the bytes are checked here
+DOWNLOAD_HOSTS = ("cdn.modrinth.com", "edge.forgecdn.net")
+
+
+def resolve_pinned_url(m):
+    """An instance_mods.json entry with its own official "url" (a mod not on Modrinth): download it and check that
+    the bytes are lovish's pinned file (size, sha1, sha512) - nothing is rehosted, the launcher fetches that URL."""
+    if urllib.parse.urlparse(m["url"]).hostname not in DOWNLOAD_HOSTS[1:]:
+        sys.exit(f"::error::{m['file']}: pinned url host is not one of {DOWNLOAD_HOSTS[1:]}: {m['url']}")
+    with tempfile.TemporaryDirectory() as tmp:
+        dest = os.path.join(tmp, m["file"])
+        download(m["url"], dest)
+        sha1, sha512 = file_hashes(dest)
+        if (sha1, sha512, os.path.getsize(dest)) != (m["sha1"], m["sha512"], m["size"]):
+            sys.exit(f"::error::{m['file']}: the bytes at {m['url']} are not the pinned file")
+    return index_entry(m["file"], m["sha1"], m["sha512"], m["size"], m["url"])
+
+
 def resolve_instance_mods():
     mods = json.load(open(os.path.join(HERE, "instance_mods.json")))
     absent = [p for p in REQUIRED_FILES if not any(m["file"].startswith(p) for m in mods)]
@@ -213,6 +233,10 @@ def resolve_instance_mods():
         sys.exit("::error::pack/instance_mods.json lacks mods our mods.toml requires: " + ", ".join(absent))
     entries, missing, project_ids = [], [], set()
     for m in mods:
+        if m.get("url"):
+            entries.append(resolve_pinned_url(m))
+            print(f"ok  {m['file']} -> {m['url']}")
+            continue
         v = get_json(f"{API}/version_file/{m['sha1']}?algorithm=sha1")
         f = next((f for f in (v or {}).get("files", []) if f["hashes"].get("sha1") == m["sha1"]), None)
         if f is None:
@@ -298,10 +322,10 @@ def main():
     e4mc_entries, e4mc_records = resolve_e4mc(out_dir, projects)
     files += e4mc_entries
 
-    for f in files:  # the pack must only point at Modrinth's CDN
+    for f in files:  # the pack must only point at the mods' official hosts
         for u in f["downloads"]:
-            if urllib.parse.urlparse(u).hostname != "cdn.modrinth.com":
-                sys.exit(f"::error::{f['path']}: download host is not cdn.modrinth.com: {u}")
+            if urllib.parse.urlparse(u).hostname not in DOWNLOAD_HOSTS:
+                sys.exit(f"::error::{f['path']}: download host is not one of {DOWNLOAD_HOSTS}: {u}")
 
     sha = os.environ.get("GITHUB_SHA", "local")[:7]
     index = {"formatVersion": 1, "game": "minecraft",

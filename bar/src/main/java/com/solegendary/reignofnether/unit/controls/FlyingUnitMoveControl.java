@@ -58,7 +58,7 @@ public class FlyingUnitMoveControl extends MoveControl {
     }
 
     /** True when the body can move {@code steps} whole body-steps along {@code dir} without touching a block. */
-    private boolean canReach(Vec3 dir, int steps) {
+    protected boolean canReach(Vec3 dir, int steps) {
         AABB box = this.mob.getBoundingBox();
         for (int i = 1; i < Math.max(2, steps); ++i) {
             box = box.move(dir);

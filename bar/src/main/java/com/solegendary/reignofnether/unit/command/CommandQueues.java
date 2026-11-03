@@ -360,9 +360,10 @@ public final class CommandQueues {
      * Whether a busy unit is still carrying out {@code c}, the order its queue last started - so that a Ctrl order
      * interrupting it should hand it back. The queue only knows what it started; the unit's own state says whether
      * that is still going: a finished move or a dead attack target is not resumed, and neither is anything once the
-     * unit has moved on to a fight of its own choosing (an auto-acquired target).
+     * unit has moved on to a fight of its own choosing (an auto-acquired target). Public for the hero AI's OrderLock:
+     * one rule for "is the player's order still going".
      */
-    static boolean stillCarriedOut(LivingEntity le, Unit unit, UnitCommand c) {
+    public static boolean stillCarriedOut(LivingEntity le, Unit unit, UnitCommand c) {
         CommandKind kind = c.kind();
         if (!kind.resumable)
             return false;

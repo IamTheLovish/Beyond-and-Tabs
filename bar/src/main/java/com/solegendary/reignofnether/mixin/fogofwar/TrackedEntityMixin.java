@@ -34,6 +34,13 @@ public abstract class TrackedEntityMixin {
             ci.cancel();
             return;
         }
+        // own/allied units: every chunk the owner is sent, not vanilla's circle (the RTS camera sits far off its view)
+        if (FogOfWarServerEvents.tracksAcrossLoadedSquare(player, entity)) {
+            if (seenBy.add(player.connection))
+                serverEntity.addPairing(player);
+            ci.cancel();
+            return;
+        }
         // shared check: own/allied units always, others only inside the viewer's current vision
         if (FogOfWarServerEvents.isEntityVisibleTo(player, entity)) return;
         // a living entity the player already tracks is dropped too, or it keeps streaming its moves from the fog

@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.hero;
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.HeroAbility;
+import com.solegendary.reignofnether.hero.ai.HeroBrain;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
@@ -45,6 +46,10 @@ public final class HeroCore {
     public int experience = 0;
     public int skillPoints = 1;   // the first point comes with the hero (Reign of Nether's heroes do the same)
     public boolean rankUpMenuOpen = false;
+    // auto-learn (HeroBot.autoLearn; server only): the game time each unspent point was first seen, oldest first - each
+    // point waits its own 20 s - and the owner's rank-up menu hold, which lapses unless the client refreshes it
+    final java.util.ArrayDeque<Long> pointArrivals = new java.util.ArrayDeque<>();
+    long rankMenuHeldUntil = -1;
     public boolean needsStatSync = false;
     boolean clientSynced = false; // the first experience sync on a client is a load, not a boon
     public float mana;
@@ -73,12 +78,29 @@ public final class HeroCore {
     // a hero that spawns above level 1 (H13) gets its level's stats once its attributes exist (first server tick)
     boolean needsStartStats = false;
 
+    // the v2 hero AI's state (hero/ai/HeroBrain), made on first use: it lives and dies with the hero
+    @Nullable HeroBrain brain;
+
     // timed ground effects (Firewall, Lava Geyser, Ember Totem): each returns true when finished; run every server tick
     final List<java.util.function.BooleanSupplier> timers = new ArrayList<>();
 
     // temporary summons (Raise Dead): entity + game time it crumbles
     final List<Entity> summons = new ArrayList<>();
     final List<Long> summonEnds = new ArrayList<>();
+
+    /** The owner's rank-up menu is open (HeroServerboundPacket RANK_MENU_OPEN): auto-learn waits until {@code until}. */
+    public void holdRankMenu(long until) {
+        rankMenuHeldUntil = until;
+    }
+
+    /** The menu closed, or its player left (HeroServerEvents.onPlayerLogout): auto-learn may go on. */
+    public void releaseRankMenu() {
+        rankMenuHeldUntil = -1;
+    }
+
+    public boolean rankMenuHeld(long now) {
+        return rankMenuHeldUntil > now;
+    }
 
     public HeroCore(HeroKit kit, Mob mob) {
         this.kit = kit;
@@ -146,7 +168,23 @@ public final class HeroCore {
 
     public boolean inMotion() { return motionTo != null; }
 
+    /** The v2 brain's state for this hero (made on first use). */
+    public HeroBrain brain() {
+        if (brain == null)
+            brain = new HeroBrain(mob.getId());
+        return brain;
+    }
+
+    /** The brain if one was ever made (MiscUtil asks this for every target pick: never makes one). */
+    @Nullable
+    public HeroBrain brainIfAny() {
+        return brain;
+    }
+
     void addSummon(Entity e, long endTick) {
+        // every hero summon passes here (Raise the Fallen calls it directly, Phenomena through HeroFx): its death
+        // pays nothing - no essence wisp, XP orbs or veterancy (unit/Summons; PR 360 review: the skeletons were free essence)
+        com.solegendary.reignofnether.unit.Summons.mark(e);
         summons.add(e);
         summonEnds.add(endTick);
     }

@@ -91,6 +91,22 @@ def make(canvas, px, rect, outline, line, darker, lighter):
         rect(im, 6, 7, 6, 8, dark); rect(im, 9, 7, 9, 8, dark)
         return im
 
+    def siege_guard(c):
+        """The tallest tower, two accent bands and one thick level shot: the anti-siege (HLT) tower."""
+        stone, dark, acc = c
+        im = canvas()
+        rect(im, 4, 3, 11, 14, stone)
+        rect(im, 3, 1, 12, 3, lighter(stone, .15))
+        for x in (3, 6, 9, 12):
+            px(im, x, 0, stone)
+        rect(im, 4, 6, 11, 6, acc)                    # the bands
+        rect(im, 4, 10, 11, 10, acc)
+        outline(im, 4, 3, 11, 14, dark)
+        rect(im, 7, 2, 8, 3, dark)                    # the heavy gun
+        line(im, 9, 2, 15, 2, acc); line(im, 9, 3, 15, 3, lighter(acc, .4))   # a level shot, out at the siege line
+        rect(im, 7, 8, 8, 8, dark); rect(im, 7, 12, 8, 12, dark)
+        return im
+
     def sky_watch(c, heavy=False):
         """A slim tower with the shot going straight up - points at the sky, reads as anti-air."""
         stone, dark, acc = c
@@ -174,6 +190,7 @@ def make(canvas, px, rect, outline, line, darker, lighter):
         out[f"sky_watch_{s}.png"] = sky_watch(c)
         out[f"sky_watch_heavy_{s}.png"] = sky_watch(c, heavy=True)
         out[f"flak_{s}.png"] = flak(c)
+        out[f"siege_guard_{s}.png"] = siege_guard(c)
         out[f"wall_fortified_{s}.png"] = fortified(c)
         for kind in TRAPS[s]:
             out[f"trap_{kind}_{s}.png"] = trap(c, kind)

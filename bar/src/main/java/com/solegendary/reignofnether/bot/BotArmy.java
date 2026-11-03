@@ -86,8 +86,11 @@ public class BotArmy {
 
     /** Enemy units within this many blocks of home count as a threat to the base. */
     public static final double BASE_RADIUS = 45;
-    /** How far a bot unit or building "sees" an enemy building for {@link #knownSites} (a unit's sight, roughly). */
-    static final double SIGHT = 28;
+    /**
+     * How far a bot unit or building "sees" an enemy building for {@link #knownSites} (a unit's sight, roughly): 28
+     * base, through the same Vision multiplier as every player unit's fog (42 at 1.5x), so bots keep parity.
+     */
+    static final double SIGHT = com.solegendary.reignofnether.fogofwar.Vision.scaled(28);
     /** The circle round the army's centre the retreat check weighs both sides in. */
     static final double FIGHT_RADIUS = 24;
     /** Units more than this far above or below the point of interest are not part of the fight there. */

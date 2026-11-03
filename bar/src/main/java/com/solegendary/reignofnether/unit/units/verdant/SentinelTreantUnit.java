@@ -93,6 +93,9 @@ public class SentinelTreantUnit extends IronGolemUnit {
     private double pendingDx = 0, pendingDz = 0;
     /** A move order given while immobile: uprooting starts and the Treant walks here once it is free. */
     @Nullable private BlockPos heldMove = null;
+    /** The held move the last behaviour reset cleared, and the tick it did: the anchor walk-back gives it back. */
+    @Nullable private BlockPos droppedMove = null;
+    private int droppedAt = -1;
     /** Spike lines struck so far (game test). */
     public int linesFired = 0;
 
@@ -111,7 +114,9 @@ public class SentinelTreantUnit extends IronGolemUnit {
 
     /**
      * The Take Root button: root if walking, uproot if rooted. Cancelling a root in progress frees it at once (it never
-     * planted); a press while uprooting is ignored. Public for the ability and the game test.
+     * planted); a press while uprooting is ignored. Public for the ability and the game test. A press that roots or
+     * uproots is a new order (TakeRoot skips the dispatcher's reset so an ignored press keeps a held move): orders, the
+     * attack target and a group move still waiting in the formation dispatch queue are all dropped.
      */
     public void toggleRoot() {
         if (!rootWanted) {
@@ -119,12 +124,20 @@ public class SentinelTreantUnit extends IronGolemUnit {
                 return;   // already uprooting
             rootWanted = true;
             transitionLeft = ROOT_TIMES.rootTicks();
-            heldMove = null;
-            Unit.fullResetBehaviours(this);   // a standing order: no chase drags it off the spot
+            pressReset();   // a standing order: no chase or late group move drags it off the spot
             rootChanged();
         } else {
+            pressReset();
             uproot();
         }
+    }
+
+    private void pressReset() {
+        heldMove = null;
+        Unit.fullResetBehaviours(this);
+        droppedMove = null;
+        if (!level().isClientSide())
+            UnitServerEvents.cancelQueuedFormationMove(getId());
     }
 
     /** Cancels a root in progress (free at once) or starts uprooting a planted Treant; nothing while uprooting. */
@@ -143,6 +156,17 @@ public class SentinelTreantUnit extends IronGolemUnit {
         rootChanged();
     }
 
+    /**
+     * Any new order (stop, attack, another move) replaces a held move; a move order is held again on the next tick. The
+     * idle walk back to the anchor resets behaviours too but is no order: takeMoveOrder restores what it dropped.
+     */
+    @Override
+    public void resetBehaviours() {
+        droppedMove = heldMove;
+        droppedAt = tickCount;
+        heldMove = null;
+    }
+
     void rootChanged() {
         this.entityData.set(rootWantedDataAccessor, rootWanted);
         level().playSound(null, blockPosition(), rootWanted ? SoundEvents.ROOTED_DIRT_PLACE : SoundEvents.ROOTED_DIRT_BREAK, SoundSource.NEUTRAL, 1.5f, 0.6f);
@@ -150,7 +174,8 @@ public class SentinelTreantUnit extends IronGolemUnit {
 
     /**
      * A move order to an immobile Treant (BAR's deployables): it is held, not walked; the Treant uproots (a root in
-     * progress is cancelled) and walks there once free. The idle walk back to its anchor is not an order: dropped.
+     * progress is cancelled) and walks there once free. The idle walk back to its anchor is not an order: dropped, and
+     * the held move its reset (this same tick) cleared is put back.
      */
     void takeMoveOrder() {
         MoveToTargetBlockGoal mg = getMoveGoal();
@@ -158,8 +183,12 @@ public class SentinelTreantUnit extends IronGolemUnit {
         if (ordered == null)
             return;
         mg.stopMoving();
-        if (Unit.hasAnchor(this) && ordered.equals(getAnchor()))
+        if (Unit.hasAnchor(this) && ordered.equals(getAnchor())) {
+            if (droppedAt == tickCount && droppedMove != null)
+                heldMove = droppedMove;
+            droppedMove = null;
             return;
+        }
         heldMove = ordered;
         uproot();
     }
