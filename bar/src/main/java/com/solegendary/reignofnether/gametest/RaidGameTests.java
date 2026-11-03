@@ -514,6 +514,70 @@ public class RaidGameTests {
             problems.add(what + ": " + fmt(s) + " s outside " + min + "-" + max + " s");
     }
 
+    /**
+     * A party sent at a building from one side spreads round it instead of queueing behind the front units. Every melee
+     * attacker used to head for the ground cell nearest itself, so the whole party took the same few cells on the near
+     * face: six Marauders (iron-golem wide) on a 3x3 converter reached it at ticks 50, 51, 60, 63 and then 72-112, the
+     * back pair pushing round the front four, and the converter's time (first blow to death) ran from 3.3 s (one swing
+     * period, everyone in reach) to 4.3 s against the 4.0 s ceiling (raid_infantry_party_times_against_eco_buildings,
+     * CI shard 8 on #481 and #485; flake-stress 41708076632's per-attacker ticks). The move targets of any two attackers
+     * of the building must stand at least their width apart (Chebyshev, cells); the in-reach ticks are logged.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 900)
+    public static void raid_a_party_spreads_round_the_building_it_attacks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<Fac> facs = facs();
+        Fac horde = facs.get(2);
+        Pads pads = new Pads(level, 14, 1);
+        int[] checkAt = { -1 };
+        List<String> problems = new ArrayList<>();
+        drive(helper, pads, 300, () -> {
+            Sim s = new Sim(horde.name(), "spread", pads.cells.get(0), "gametest_raid_spread_a", "gametest_raid_spread_b");
+            raiders(level, s, horde.raider(), 6);
+            siege(level, s, horde.conv(), false);
+            Runnable order = s.order;
+            s.order = () -> {
+                if (order != null)
+                    order.run();
+                checkAt[0] = (int) helper.getTick() + 5;
+            };
+            return List.of(s);
+        }, sims -> {
+            Sim s = sims.get(0);
+            ReignOfNether.LOGGER.info("[Raid] GameTest spread {}: {}", s.group, s.timing());
+            if (!problems.isEmpty())
+                throw new net.minecraft.gametest.framework.GameTestAssertException(String.join("; ", problems)
+                    + " (in reach at " + java.util.Arrays.toString(s.arriveAt) + ")");
+            helper.succeed();
+        });
+        helper.onEachTick(() -> {
+            if (checkAt[0] < 0 || helper.getTick() != checkAt[0])
+                return;
+            List<Mob> party = new ArrayList<>();
+            List<BlockPos> cells = new ArrayList<>();
+            Cell c = pads.cells.get(0);
+            for (Mob m : level.getEntitiesOfClass(Mob.class, new net.minecraft.world.phys.AABB(c.x0(), PAD_Y - 2, c.z0(), c.x0() + 32, PAD_Y + 8, c.z0() + 16)))
+                if (m instanceof AttackerUnit au
+                        && au.getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal g
+                        && g.getBuildingTarget() != null && g.getMoveTarget() != null) {
+                    party.add(m);
+                    cells.add(g.getMoveTarget());
+                }
+            if (party.size() != 6)
+                problems.add(party.size() + " of 6 Marauders have the converter as their target 5 ticks after the order");
+            for (int i = 0; i < party.size(); i++)
+                for (int j = i + 1; j < party.size(); j++) {
+                    BlockPos a = cells.get(i), b = cells.get(j);
+                    int apart = Math.max(Math.abs(a.getX() - b.getX()), Math.abs(a.getZ() - b.getZ()));
+                    int need = Math.max(1, (int) Math.ceil((party.get(i).getBbWidth() + party.get(j).getBbWidth()) / 2));
+                    if (apart < need)
+                        problems.add("two attackers head for cells " + apart + " apart (" + a.toShortString() + ", " + b.toShortString()
+                            + "; they are " + party.get(i).getBbWidth() + " wide, need " + need + ")");
+                }
+            ReignOfNether.LOGGER.info("[Raid] GameTest spread cells: {}", cells);
+        });
+    }
+
     // ---------------------------------------------------------------------------------------------------------------
     // 3. Vehicles against windmill and extractors, and infantry slower than vehicles
     // ---------------------------------------------------------------------------------------------------------------
