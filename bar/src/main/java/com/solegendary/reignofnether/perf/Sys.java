@@ -200,6 +200,11 @@ public final class Sys {
      * and starts a new window. Returns the line, or null when there was nothing to say.
      */
     static String report() {
+        // a GameTest holds the timer (force): the window is the holder's, and its snapshot writes the line. Restarting
+        // it here cut the holder's window to its tail (a_300_unit_window_accounts_for_the_tick: "[Sys] 48 ticks" of
+        // 100, "covers only 87% of the tick"; "no [Sys] line came back" when the report fell on its last tick)
+        if (forced)
+            return null;
         String line = null;
         if (TIMER.ticks >= MIN_TICKS) {
             line = write();
