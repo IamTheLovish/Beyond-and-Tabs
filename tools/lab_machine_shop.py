@@ -184,6 +184,10 @@ BAYS = (1, 4)        # the shop's furnace bays on the yard face
 GOLEM = (1, 6)       # the assembly stand
 
 
+YARD_APRON = True         # Nov 2026 round 3: the yard's open half polished andesite (critic: "a dark well")
+HUB = "iron_block"        # the turntable's hub (was bright copper: a salmon tile in the yard)
+
+
 def pad_l1(r):
     """Layer 0: the instant foundation. The yard is polished blackstone with a deepslate-brick kerb on its two open
     sides (both starting types); the ranges stand on deepslate-brick footings round deepslate tiles; a copper
@@ -194,9 +198,14 @@ def pad_l1(r):
             edge = x in (0, SX - 1) or z in (0, SZ - 1)
             r.set(x, 0, z, ("deepslate_bricks" if edge else "polished_blackstone") if yard else
                   ("deepslate_bricks" if edge else DT))
+    if YARD_APRON:     # the palette pass, round 3: a pale apron where the yard opens; the soot stays at the ranges' feet
+        for x in range(1, 6):
+            for z in range(3, 8):
+                if (x, z) not in CLEAR and not (z <= 4 or x == 5):
+                    r.set(x, 0, z, PA)
     for (x, z) in CLEAR:
         r.set(x, 0, z, CU_O)
-    r.set(4, 0, 4, CUB)
+    r.set(4, 0, 4, HUB)
 
 
 def shop_l1(r):
@@ -235,6 +244,10 @@ def shop_l1(r):
         r.rod(x, EAVE + 3, 1)
 
 
+GEAR_HUB = CPB        # Nov 2026 round 4: a dark hub (the lit cream hub read as "a square eye") ...
+GEAR_DISC = SB        # ... on a soot disc behind the brass rim and the iron spokes (was verdigris)
+
+
 def gear(r, gz, gy):
     """THE GEAR (the capitol's great gear, small): on the engine house's west face (x 6) a round rim of bright copper
     (a 5 x 5 border with its corners cut, so it reads round), iron teeth beyond the rim's top and bottom, and inside
@@ -248,8 +261,11 @@ def gear(r, gz, gy):
             else:
                 r.b.pop((6, gy + dy, gz + dz), None)      # the recess (and the cut corners) stay open
             if not border:
-                r.set(7, gy + dy, gz + dz, CU_O)
-    r.set(6, gy, gz, "ochre_froglight", axis="x")
+                r.set(7, gy + dy, gz + dz, GEAR_DISC)
+    if GEAR_HUB == "ochre_froglight":
+        r.set(6, gy, gz, GEAR_HUB, axis="x")
+    else:
+        r.set(6, gy, gz, GEAR_HUB)
     r.set(6, gy + 1, gz, "iron_bars")
     r.set(6, gy, gz + 1, "iron_bars")
     r.set(6, gy - 3, gz, "iron_block")               # the teeth
