@@ -1,12 +1,15 @@
 package com.solegendary.reignofnether.mixin;
 
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.pathfinding.LineOfWalk;
 import com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig;
 import com.solegendary.reignofnether.unit.pathfinding.VanillaPathBudget;
+import com.solegendary.reignofnether.unit.pathfinding.WidePathMemo;
 import com.solegendary.reignofnether.unit.units.monsters.SpiderUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
@@ -29,7 +32,7 @@ import java.util.Set;
 // not the follower's. The ONLY thing we still relax is the VERTICAL advance gate, so a unit perched on a stair
 // step (held up by its width ~1.0 above the next node) commits to the drop instead of spinning on the ledge.
 @Mixin(PathNavigation.class)
-public abstract class PathNavigationMixin {
+public abstract class PathNavigationMixin implements WidePathMemo.Holder {
 
     @Shadow @Final protected Mob mob;
     @Shadow protected Path path;
@@ -38,8 +41,17 @@ public abstract class PathNavigationMixin {
     @Shadow protected abstract Path createPath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy, float followRange);
     @Shadow protected abstract boolean canUpdatePath();
 
+    @Unique private final WidePathMemo reignofnether$wideMemo = new WidePathMemo();
+
+    @Override
+    public WidePathMemo reignofnether$wideMemo() {
+        return reignofnether$wideMemo;
+    }
+
     // Distance-scaled vanilla search for units (VanillaPathBudget): a short search first, the stock full-range one only
-    // when the short one finds no complete path. Every public createPath overload funnels through this one.
+    // when the short one finds no complete path. For every unit (WidePathMemo; wide bodies Oct 30, all units Oct 31):
+    // the same search that found no complete path under a second ago is not run again - its path is handed back - and
+    // a full-range search that failed is not repeated for 5 s. Every public createPath overload funnels through this one.
     @Inject(method = "createPath(Ljava/util/Set;IZI)Lnet/minecraft/world/level/pathfinder/Path;", at = @At("HEAD"), cancellable = true)
     private void reignofnether$scaledSearch(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy,
                                             CallbackInfoReturnable<Path> cir) {
@@ -49,11 +61,27 @@ public abstract class PathNavigationMixin {
         if (this.path != null && !this.path.isDone() && targets.contains(((PathNavigation) (Object) this).getTargetPos()))
             return;
         VanillaPathBudget.calls++;
+        BlockPos from = mob.blockPosition();
+        long now = mob.level().getGameTime();
+        // the same targets from about here found no way under a second ago: a chase asking every tick (a ranged unit's
+        // moveTo(target) at the end of a partial path) gets that answer again instead of a ~5 ms search (Oct 31)
+        Path lately = reignofnether$wideMemo.repeatOf(from, targets, now);
+        if (lately != null) {
+            VanillaPathBudget.repeats++;
+            reignofnether$rejudgeLine(lately);
+            cir.setReturnValue(lately);
+            return;
+        }
         float full = (float) mob.getAttributeValue(Attributes.FOLLOW_RANGE);
         float range = VanillaPathBudget.shortRange(VanillaPathBudget.farthest(mob, targets), full);
         boolean wide = reignofnether$isWideUnit();
-        if (range >= full && !wide)
-            return;   // nothing to save: the stock search as before
+        if (range >= full && !wide) {
+            // nothing to save on the range: the stock search as vanilla runs it, remembered if it finds no way
+            Path stock = createPath(targets, regionOffset, offsetUpward, accuracy, full);
+            reignofnether$wideMemo.searched(from, targets, now, stock);
+            cir.setReturnValue(stock);
+            return;
+        }
         float baseMultiplier = this.maxVisitedNodesMultiplier;
         Path p;
         try {
@@ -66,13 +94,24 @@ public abstract class PathNavigationMixin {
         VanillaPathBudget.shortSearches++;
         // a complete path, or no path for a reason a wider search can not fix (airborne for a tick, below the world)
         if ((p != null && p.canReach()) || (p == null && !canUpdatePath())) {
+            reignofnether$wideMemo.searched(from, targets, now, p);
             cir.setReturnValue(p);
             return;
         }
-        VanillaPathBudget.fallbacks++;
-        VanillaPathBudget.fallbacksTotal++;
+        // this unit searched the whole range for these targets from here a moment ago and found no way: the same
+        // answer again (12-33 ms for a wide body, ~5 ms for a headhunter) - keep the short search's
+        if (reignofnether$wideMemo.failedLately(from, targets, now)) {
+            VanillaPathBudget.wideRepeats++;
+            reignofnether$wideMemo.searched(from, targets, now, p);
+            cir.setReturnValue(p);
+            return;
+        }
+        VanillaPathBudget.fellBack(net.minecraft.world.entity.EntityType.getKey(mob.getType()).getPath());
         Path again = createPath(targets, regionOffset, offsetUpward, accuracy, full);
-        cir.setReturnValue(again != null ? again : p);
+        reignofnether$wideMemo.fullSearched(from, targets, now, again != null && again.canReach());
+        Path result = again != null ? again : p;
+        reignofnether$wideMemo.searched(from, targets, now, result);
+        cir.setReturnValue(result);
     }
 
     @Unique
@@ -149,5 +188,69 @@ public abstract class PathNavigationMixin {
         double reach = mob.getBbWidth() / 2.0 + 1.0;
         if (dx * dx + dz * dz <= reach * reach)
             p.advance();
+    }
+
+    // Straight lines (LineOfWalk; troop animation gain 2, lovish Oct 30 "Smooth the real path"): after vanilla's own
+    // step, a ground unit aims at the farthest of the next few nodes its whole body can walk to in a straight line, so
+    // it walks an off-axis route straight instead of zig-zagging node to node (and its body stops rocking). Judged
+    // when the path changes, when the unit reaches the node it aimed at, and every LineOfWalk.REAIM_TICKS ticks on the
+    // way (from where it is then, so a long route is aimed further along it) - not every tick, and not on every node it
+    // passes while no line is clear (in a town that would be every 3-4 ticks a unit). At each re-aim the line to the
+    // node it aims at is judged again from where it now is: a unit pushed off it (a crowd, a knockback) walks on from
+    // the nearest node it skipped instead of through cells nobody checked.
+    @Unique private Path reignofnether$linedPath = null;
+    @Unique private int reignofnether$linedFrom = -1;
+    @Unique private int reignofnether$linedTo = -1;
+    @Unique private boolean reignofnether$linedFound = false;
+    @Unique private long reignofnether$linedAt = 0;
+
+    // #468 review r1 (non-blocking 2): a repeat (WidePathMemo.repeatOf) hands back the Path object this unit already
+    // walked, its next node perhaps moved ahead by walkTheLine. Installed again after the navigation stopped (stuck
+    // detection, a goal's stop), it would look like the same path and keep that aim for up to REAIM_TICKS, though the
+    // unit may stand up to 3 blocks elsewhere now (a crowd, a nudge).
+    // Judge the line to that node again on the next followThePath, from where the unit is - as for a unit pushed off
+    // its line: from the path's first node, so a lost line walks back to the nearest node it skipped.
+    @Unique
+    private void reignofnether$rejudgeLine(Path p) {
+        // not the path walkTheLine last judged: judged as a new one anyway. Still the path being walked (a ranged
+        // unit asks every tick while out of reach): moveTo keeps it as it is, and so does the line's aim
+        if (p != reignofnether$linedPath || this.path == p)
+            return;
+        reignofnether$linedFrom = 0;
+        reignofnether$linedTo = p.getNextNodeIndex();
+        reignofnether$linedFound = true;
+        reignofnether$linedAt = mob.level().getGameTime() - LineOfWalk.REAIM_TICKS;
+    }
+
+    @Inject(method = "followThePath", at = @At("TAIL"))
+    private void reignofnether$walkTheLine(CallbackInfo ci) {
+        Path p = this.path;
+        if (p == null || p.isDone() || !(mob instanceof Unit) || !((Object) this instanceof GroundPathNavigation)
+                || reignofnether$isClimbingSpider() || !mob.onGround() || mob.isInWater())
+            return;
+        int next = p.getNextNodeIndex();
+        long now = mob.level().getGameTime();
+        boolean samePath = p == reignofnether$linedPath;
+        if (samePath && now - reignofnether$linedAt < LineOfWalk.REAIM_TICKS
+                && (next <= reignofnether$linedTo || !reignofnether$linedFound))
+            return;
+        if (!samePath || next > reignofnether$linedTo)
+            reignofnether$linedFrom = next;
+        reignofnether$linedPath = p;
+        reignofnether$linedAt = now;
+        // aiming past nodes it skipped, and the line there is lost: back to the nearest of them
+        if (next > reignofnether$linedFrom && !LineOfWalk.canWalkTo(mob, p, next)) {
+            int back = LineOfWalk.nearest(mob, p, reignofnether$linedFrom, next);
+            p.setNextNodeIndex(back);
+            reignofnether$linedFrom = reignofnether$linedTo = back;
+            reignofnether$linedFound = false;
+            return;
+        }
+        int to = next >= p.getNodeCount() - 1 ? next : LineOfWalk.farthest(mob, p);
+        reignofnether$linedTo = Math.max(to, next);
+        // walking a line (now or since linedFrom): at its end the next is judged at once, not REAIM_TICKS later
+        reignofnether$linedFound = reignofnether$linedTo > reignofnether$linedFrom;
+        if (to > next)
+            p.setNextNodeIndex(to);
     }
 }
