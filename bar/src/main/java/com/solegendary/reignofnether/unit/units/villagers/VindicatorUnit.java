@@ -11,6 +11,7 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
+import com.solegendary.reignofnether.unit.BlowTiming;
 import com.solegendary.reignofnether.unit.HeldBlow;
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
 import com.solegendary.reignofnether.unit.goals.*;
@@ -370,10 +371,14 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit, Ke
         return getClass() == VindicatorUnit.class ? HalberdierAnim.THRUST_TICKS : 0;
     }
 
-    /** The thrust's blade arrives at THRUST_HIT_P of the clip (0.27 x 18 = tick 5): the blow lands there, not at 0. */
+    /**
+     * The thrust's blade arrives at THRUST_HIT_P of the clip (0.27 x 18 = tick 5): the blow lands there, not at 0.
+     * Subclasses swing vanilla's arm and land theirs on its downstroke (BlowTiming).
+     */
     @Override
     public int keyedHitTicks() {
-        return getClass() == VindicatorUnit.class ? Math.round(HalberdierAnim.THRUST_HIT_P * HalberdierAnim.THRUST_TICKS) : 0;
+        return getClass() == VindicatorUnit.class ? Math.round(HalberdierAnim.THRUST_HIT_P * HalberdierAnim.THRUST_TICKS)
+            : BlowTiming.hitTicks(this);
     }
 
     private final HeldBlow heldBlow = new HeldBlow();
