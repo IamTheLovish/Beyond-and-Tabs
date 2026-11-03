@@ -237,7 +237,12 @@ public final class MetalPatches {
             java.util.List<int[]> earlierPads = new java.util.ArrayList<>(earlier.size());
             for (BlockPos o : earlier)
                 earlierPads.add(new int[] { o.getX(), o.getY(), o.getZ() });
-            padY = PadHeight.of(x, z, padY, earlierPads);
+            // only to a height where the pad is still dry: drySpot checked the water at the patch's own ground, and the
+            // leveller leaves a cell with water at the pad's height alone - snapped down beside a pond, the pond stayed in
+            // the extractor's footprint (review r1 on PR 408; ExtractorFootprintGameTests ..._keeps_a_pond_out_...)
+            int snapped = PadHeight.of(x, z, padY, earlierPads);
+            if (snapped == padY || padDry(level, x, z, snapped))
+                padY = snapped;
         }
         if (wet) {
             // no dry ground in reach (open water): the pad becomes an island flush with the water's surface
