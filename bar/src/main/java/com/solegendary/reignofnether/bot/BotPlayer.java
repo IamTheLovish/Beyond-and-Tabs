@@ -16,8 +16,10 @@ import com.solegendary.reignofnether.resources.MetalPatches;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import com.solegendary.reignofnether.unit.support.SupportState;
 import com.solegendary.reignofnether.util.MiscUtil;
 
 import net.minecraft.core.BlockPos;
@@ -32,7 +34,7 @@ import java.util.Random;
 /**
  * A skirmish opponent. Each bot owns an RTSPlayer (PlayerServerEvents.startRTSBot gives it workers and resources)
  * and this brain plays the match for it: a capitol, workers, metal extractors on the map's metal patches, wind
- * generators, houses ahead of the population cap, an army building, then waves of fighters at the nearest enemy.
+ * generators, an army building, then waves of fighters at the nearest enemy (no population: nothing to wait for).
  * Decisions are re-derived from world state every second, so it recovers cleanly after a reload.
  */
 public class BotPlayer {
@@ -67,7 +69,7 @@ public class BotPlayer {
         // the Horde's army lab is a Basic Portal the bot refits to a Military Portal (think() queues the refit): the
         // old kit named the Bastion, which only researches, so a Horde bot never trained a single Brute
         if (faction.equals(Factions.PIGLINS))
-            return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, null,   // no farms any more (Factions)
+            return new Kit(Buildings.CENTRAL_PORTAL, null, null,   // no house (no supply: lovish, Oct 29) or farm
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
                     null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
@@ -77,7 +79,10 @@ public class BotPlayer {
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, null, null,   // no house or farm any more (Factions)
                     Buildings.METAL_EXTRACTOR_MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Buildings.GRAVEYARD,
-                    Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON),
+                    // the Tombcaller (essence caster, tier 1: lovish Oct 29; "bots build and use all 7 casters") casts by
+                    // its own autocast: tombstones on a crowd, Grave Tide in a fight, its Grave Adept when it has none
+                    Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER,
+                    List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON, ProductionItems.TOMBCALLER),
                     Buildings.DUNGEON, ProductionItems.EMBALMER,
                     List.of(ProductionItems.CREEPER, ProductionItems.WRAITH, ProductionItems.WARDEN, ProductionItems.OSSUARY_BEHEMOTH),
                     Buildings.STRONGHOLD, ProductionItems.BONE_DRAGON, Buildings.ENERGY_CONVERTER_MONSTERS);
@@ -97,7 +102,8 @@ public class BotPlayer {
                 Buildings.METAL_EXTRACTOR_VERDANT, Buildings.WIND_GENERATOR_VERDANT, Buildings.GROVE,
                 null, ProductionItems.SEEDSHAPER,
                 List.of(ProductionItems.LEAFBLADE, ProductionItems.THORNBOW, ProductionItems.SENTINEL_TREANT,
-                        ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER),
+                        ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER,
+                        ProductionItems.THORNWEAVER),   // the essence caster, Tier 1 (lovish, Oct 29: bots build and use all seven)
                 Buildings.CIRCLE_OF_ELDERS, ProductionItems.ELDER_DRUID,
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT,
                         ProductionItems.BLOOM_PRIESTESS, ProductionItems.MOSSBACK_BISON),   // the Wisp Choir is queued only against flyers (queueAntiAir)
@@ -126,20 +132,20 @@ public class BotPlayer {
         // ley links and the T2 spells (Singularity into Judgement, Mirror Images, Ground Slam, Mana Wells) are stormHabits.
         // Slice 4: a Seer, a Lantern Fortress and a Phoenix join the T2 mix (stormDomes keeps the Fortress's dome up in a
         // fight); Tier 3: the Ley Master raises Heaven's Gate and it makes Celestial Dragons (stormTempest casts with them).
-        // The essence caster, the Spark Sage, joins the T2 mix (lovish, Oct 29: bots build and use every caster); the
-        // AutoCaster casts its spells whenever it holds the essence
+        // The essence caster, the Spark Sage, joins the T1 mix (lovish, Oct 29: bots build and use every caster, and
+        // casters are tier 1); the AutoCaster casts its spells whenever it holds the essence
         if (faction.equals(Factions.STORMCALLERS))
             return new Kit(Buildings.JADE_PAGODA, null, null,
                 Buildings.METAL_EXTRACTOR_STORM, Buildings.WIND_GENERATOR_STORM, Buildings.LOTUS_ACADEMY,
                 null, ProductionItems.GEOMANCER,
                 List.of(ProductionItems.JADE_GUARD, ProductionItems.JADE_GUARD, ProductionItems.FIRE_ADEPT,
                         ProductionItems.FIRE_ADEPT, ProductionItems.BLADE_DANCER, ProductionItems.FROST_ADEPT,
-                        ProductionItems.ROCKET_BATTERY, ProductionItems.INK_SCRIBE),   // the Wind Monk only against flyers (queueAntiAir)
+                        ProductionItems.ROCKET_BATTERY, ProductionItems.INK_SCRIBE,   // the Wind Monk only against flyers (queueAntiAir)
+                        ProductionItems.SPARK_SAGE),   // essence caster, tier 1: its spells autocast (Static Step, Captured Spark, Thunderhead)
                 Buildings.CELESTIAL_OBSERVATORY, ProductionItems.LEY_MASTER,
                 List.of(ProductionItems.EARTHSHAKER, ProductionItems.EARTHSHAKER, ProductionItems.THUNDER_DRAGON,
                         ProductionItems.GRAVITY_MONK, ProductionItems.MIRROR_MAGE, ProductionItems.LANTERN_FORTRESS,
-                        ProductionItems.PHOENIX, ProductionItems.SEER, ProductionItems.JADE_QILIN,   // beasts-2 T2 beast
-                        ProductionItems.SPARK_SAGE),   // essence caster: its spells autocast (Static Step, Captured Spark, Thunderhead)
+                        ProductionItems.PHOENIX, ProductionItems.SEER, ProductionItems.JADE_QILIN),   // beasts-2 T2 beast
                 Buildings.HEAVENS_GATE, ProductionItems.CELESTIAL_DRAGON, Buildings.ENERGY_CONVERTER_STORM);
         // the Brassworks have no farm, house or tower - every use of those checks for null - so the bot plays an economy
         // and a T1 army (Iron Wardens in front, Rifle Squads behind, Steam Runners raiding, a Mortar Crawler, a Shield
@@ -154,12 +160,12 @@ public class BotPlayer {
                 null, ProductionItems.TINKER,
                 List.of(ProductionItems.IRON_WARDEN, ProductionItems.IRON_WARDEN, ProductionItems.RIFLE_SQUAD,
                         ProductionItems.RIFLE_SQUAD, ProductionItems.STEAM_RUNNER, ProductionItems.MORTAR_CRAWLER,
-                        ProductionItems.SHIELD_PROJECTOR, ProductionItems.SAPPER),   // the Flak Cart only against flyers (queueAntiAir)
+                        ProductionItems.SHIELD_PROJECTOR, ProductionItems.SAPPER,   // the Flak Cart only against flyers (queueAntiAir)
+                        ProductionItems.SOUL_ENGINEER),   // essence caster, tier 1: Patch Kit (BUILDING_HURT), Ghost Furnace and Soul Boiler autocast; Empower stays manual
                 Buildings.ASSEMBLY_WORKS, ProductionItems.ENGINEER_CAPTAIN,
                 List.of(ProductionItems.STEAM_JUGGERNAUT, ProductionItems.STEAM_JUGGERNAUT, ProductionItems.TESLA_WALKER,
                         ProductionItems.CLOCKWORK_SPIDER, ProductionItems.GYROCOPTER_GUNSHIP, ProductionItems.DRILL_BURROWER,
-                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER,   // beasts-2 T2 beast
-                        ProductionItems.SOUL_ENGINEER),   // essence caster: Patch Kit (BUILDING_HURT), Ghost Furnace and Soul Boiler autocast; Empower stays manual
+                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER),   // beasts-2 T2 beast
                 Buildings.GREAT_FORGE, ProductionItems.IRON_LEVIATHAN_ENGINE, Buildings.ENERGY_CONVERTER_BRASS);
         return null;
     }
@@ -190,7 +196,7 @@ public class BotPlayer {
     // game time since when metal or energy has sat at the storage cap without a break (-1 = not at cap)
     long atCapSince = -1;
     static final long VAULT_AFTER_TICKS = 20 * 20;   // 20 s at the cap and the bot raises a vault
-    // game time since when the easy bot's T1 labs have paused to save for the T2 lab (-1 = not saving)
+    // game time of the easy bot's first pause to save for the missing T2 lab (-1 = the lab stands or isn't due)
     long t2SaveSince = -1;
     static final long T2_SAVE_MAX_TICKS = 20 * 60 * 3;   // three minutes of saving at most, then the labs train again
 
@@ -279,6 +285,42 @@ public class BotPlayer {
         return b == kit.armyBuilding() || (kit.armyBuilding() == Buildings.PORTAL_BASIC && b == Buildings.PORTAL_MILITARY);
     }
     // ---- the tier gate (resources/TierGate): a bot techs when it is ready, not just when the clock says so ----
+
+    /** The essence casters among the bot's units (for the [T2Snap] line; they do not count toward t2MinArmy). */
+    static int casters(List<LivingEntity> mine) {
+        int n = 0;
+        for (LivingEntity le : mine)
+            if (le instanceof com.solegendary.reignofnether.essence.EssenceCarrier && !(le instanceof WorkerUnit))
+                n++;
+        return n;
+    }
+
+    /**
+     * The fighters of the army list that count toward {@code t2MinArmy}: an essence caster is support, not army (lovish,
+     * Oct 31: "Count as support") - the Voodoo Shaman is the one caster that is also an AttackerUnit, so it marches in
+     * the army list, but like every other healer and caster it does not make the army a bot fields before Tier 2.
+     */
+    public static int t2Fighters(List<? extends LivingEntity> army) {
+        int n = 0;
+        for (LivingEntity le : army)
+            if (!(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))
+                n++;
+        return n;
+    }
+
+    /**
+     * A kit's essence caster (support, not army: lovish, Oct 31). Before Tier 2, while the bot's fighters are short of
+     * t2MinArmy, its T1 labs train fighters only (pickArmyItem): the Angel Caller was a third of a Villagers bot's T1 mix,
+     * so a hard Villagers bot fielded about a fighter a minute, waited on its gate's 8 till 8:35-8:47 and teched after
+     * the medium bot (bots_reach_tier_2, flake-stress 41168069584 runners 2 and 8).
+     */
+    static boolean isCasterItem(ProductionItem item) {
+        return item == ProductionItems.ANGEL_CALLER || item == ProductionItems.TOMBCALLER
+            || item == ProductionItems.SPARK_SAGE || item == ProductionItems.SOUL_ENGINEER;
+    }
+
+    /** Before Tier 2 with fewer than t2MinArmy fighters (t2Fighters): T1 labs train no casters (set each think). */
+    boolean fightersFirst = false;
 
     /**
      * Whether the bot may start Tier 2: it has a finished army lab, has fielded {@code t2MinArmy} fighters (the army comes
@@ -547,6 +589,17 @@ public class BotPlayer {
             return;
         }
 
+        // 1a) stranded workers (BotStranded) build nothing: out of every builder pick and the worker count from here on,
+        // so the capitol trains replacements, and walked home now and then. Only once the capitol stands: until then
+        // nothing can train a replacement, and the site watch must see the capitol's builders to relocate a capitol on
+        // ground they cannot reach. The watch always gets every worker (allWorkers): a site ordered only to stranded
+        // workers must still be cancelled at 45 s, or it holds the site allowance for good
+        List<LivingEntity> allWorkers = new ArrayList<>(workers);
+        if (capitol.isBuilt)
+            dropStranded(gameTime, workers, capitol);
+        else
+            strandedNow = 0;
+
         // the economy snapshot every step below reads: income, and how full the two pools are
         var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name);
         com.solegendary.reignofnether.resources.Resources res = pool();
@@ -554,7 +607,15 @@ public class BotPlayer {
         metalFill = res == null ? 0 : res.getMetal() / Math.max(1f, eco.metalStorage);
         energyFill = res == null ? 0 : res.getEnergy() / Math.max(1f, eco.energyStorage);
 
-        // 2) workers from the capitol
+        // 2) workers from the capitol - held while the tier gate waits on the army past the tech minute (a lab standing,
+        // eight workers out), so the metal goes to the labs: a hard bot kept training toward 24-28 workers on an empty pool,
+        // fielded a fighter a minute and teched at 8:35-8:47, after the medium bot (flake-stress 41168069584). Only up to
+        // the patience minute: a bot whose army keeps dying in fights must not stop growing its economy for good
+        fightersFirst = t2Fighters(army) < tuning.t2MinArmy()
+            && !ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name)
+            && !com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name, ProductionItems.RESEARCH_TIER_2);
+        armyFirst = fightersFirst && labBuilt && minutesIn >= tuning.t2Minute()
+            && minutesIn < tuning.t2Minute() + BotTuning.T2_PATIENCE_MINUTES && workers.size() >= 8;
         trainWorkers(capitol, workers.size());
 
         // 3) build sites need builders: any unbuilt or damaged building gets the nearest idle worker
@@ -564,7 +625,7 @@ public class BotPlayer {
         // Tidewrought capitol and two extractors sat unbuilt for four minutes, filled the bot's site allowance and
         // it never placed, trained or logged again). The watch says why, cancels the site for its refund and, for
         // the capitol, lays the next one a step away; the think step starts over on the next second
-        if (siteWatch.think(level, gameTime, buildings, workers))
+        if (siteWatch.think(level, gameTime, buildings, allWorkers))
             return;
 
         // 3b) reclaim: idle workers walk to the nearest wrecks in our territory (BAR players do this by habit)
@@ -608,7 +669,8 @@ public class BotPlayer {
                 done = placeLab(level, armyBuildings, workers);
             // the research's energy (resources/TierGate, ~110 energy/s) ahead of the annex: a floating easy bot laid an
             // annex every think and no wind for six minutes, sat at 48-104 energy/s under the gate and only teched at the
-            // patience minute (bots_reach_tier_2, flake-stress 40779463480, Oct 28). The refits' energy stays below
+            // patience minute (bots_reach_tier_2, flake-stress 40779463480, Oct 28). After Tier 2 the refits'
+            // energy target is served by the rule's second copy, after the extractors
             float energyTarget = techEnergyTarget(tier2, buildings);
             if (!done && !tier2 && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
                     && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
@@ -745,12 +807,14 @@ public class BotPlayer {
         // ready to tech: the capitol stops training workers so its queue empties and the research can start (a hard bot's
         // worker target keeps growing, so its queue was never empty and it only teched after twelve minutes)
         techPending = !tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
-            && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
+            && t2Ready(minutes, t2Fighters(army), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
         if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
-        techDiag = String.format("workers %d/%d avgE %.0f planE %.0f pend %b capq %d last %s", workers.size(), targetWorkers(),
-            averageEnergyIncome(eco.energyIncome, buildings, false), plannedEnergyIncome(eco.energyIncome, buildings), techPending,
-            capitol instanceof ProductionPlacement cpq ? cpq.productionQueue.size() : -1, lastPlacedName);
+        if (techDiagOn)
+            techDiag = String.format("workers %d/%d stranded %d casters %d avgE %.0f planE %.0f pend %b capq %d last %s", workers.size(),
+                targetWorkers(), strandedNow, casters(mine), averageEnergyIncome(eco.energyIncome, buildings, false),
+                plannedEnergyIncome(eco.energyIncome, buildings), techPending,
+                capitol instanceof ProductionPlacement cpq ? cpq.productionQueue.size() : -1, lastPlacedName);
         if (tier2) {
             boolean upgrading = false;
             for (BuildingPlacement bp : buildings)
@@ -776,6 +840,7 @@ public class BotPlayer {
         // 4c) the commander's signature ability when a fight is on near it (same rules as a player: cooldown)
         useCommanderAbility(level, mine);
         useFactionPowers(level, mine);
+        useEmpower(level, mine);
         useTitanAbilities(level, mine);
 
         // 4d) level the labs up instead of building a third (design/building_upgrades.md)
@@ -794,13 +859,16 @@ public class BotPlayer {
         // Easy bots only (lovish's call, Oct 29), never while floating, and for T2_SAVE_MAX_TICKS at most: a lab its
         // workers can't reach would otherwise cap the army for the rest of the game (121 fighters from minute 13 on
         // a pool that went 933 -> 3500, flake-stress 40839167566)
-        boolean researchStarved = !tier2 && metalFill < 0.1f
-            && com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
-        boolean wantsT2Save = difficulty.easyLike() && !floating() && (tier2 || researchStarved) && kit.t2Lab() != null
-            && army.size() >= tuning.t2MinArmy() && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
-        if (!wantsT2Save)
+        // The clock runs from the first pause until the lab stands: an army dip or a spell of floating stops the pause
+        // without re-arming it
+        boolean researching = com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
+        boolean t2LabMissing = difficulty.easyLike() && kit.t2Lab() != null && (tier2 || researching)
+            && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
+        if (!t2LabMissing)
             t2SaveSince = -1;
-        else if (t2SaveSince < 0)
+        boolean researchStarved = !tier2 && researching && metalFill < 0.1f;
+        boolean wantsT2Save = t2LabMissing && (tier2 || researchStarved) && !floating() && t2Fighters(army) >= tuning.t2MinArmy();
+        if (wantsT2Save && t2SaveSince < 0)
             t2SaveSince = gameTime;
         boolean savingForT2Lab = wantsT2Save && gameTime - t2SaveSince < T2_SAVE_MAX_TICKS;
         for (BuildingPlacement bp : buildings)
@@ -815,10 +883,12 @@ public class BotPlayer {
                     pp.setRepeatQueue(false);
                     continue;
                 }
-                pp.setRepeatQueue(true);
+                // (no repeat while the fighters come first: repeat re-queues the finished item, a caster too; the top-up
+                // below keeps the queue full each think)
+                pp.setRepeatQueue(!fightersFirst);
                 queueAntiAir(pp, mine, gameTime);   // the Tidewrought's anti-air is T1 (the Court's is in its T2 lab)
                 while (pp.productionQueue.size() < tuning.queueDepth() && pp.startProductionItem(pickArmyItem(kit.army(), mine, false)))
-                    ;   // (startProductionItem false = can't afford population or the queue is full: stop)
+                    ;   // (startProductionItem false = the queue is full or an emerald cost can't be met: stop)
             }
 
         // 5') the Verdant Court's slice-2 habits: snares at the home choke, an owl over it, healers with the army
@@ -931,6 +1001,15 @@ public class BotPlayer {
             if (sieges * 5 < fighters)
                 return siege;
         }
+        if (!t2 && fightersFirst) {
+            // before Tier 2 the T1 labs fill t2MinArmy with fighters; the kit's casters come after (isCasterItem)
+            List<ProductionItem> fighterItems = new ArrayList<>();
+            for (ProductionItem item : list)
+                if (!isCasterItem(item))
+                    fighterItems.add(item);
+            if (!fighterItems.isEmpty())
+                return fighterItems.get(rng.nextInt(fighterItems.size()));
+        }
         return list.get(rng.nextInt(list.size()));
     }
 
@@ -949,8 +1028,48 @@ public class BotPlayer {
     /** The bot is ready for Tier 2 and waits only for the capitol's queue to empty (set each think by the tech step). */
     boolean techPending = false;
 
+    final BotStranded stranded = new BotStranded();
+    /** Workers stranded at the last think (BotStranded; public for the game test's [T2Snap] line). */
+    public int strandedNow = 0;
+
+    /** Takes this think's stranded workers out of {@code workers}; each is walked home every BotStranded.RESCUE_EVERY_TICKS. */
+    void dropStranded(long gameTime, List<LivingEntity> workers, BuildingPlacement capitol) {
+        java.util.Set<Integer> alive = new java.util.HashSet<>();
+        List<LivingEntity> out = new ArrayList<>();
+        for (LivingEntity w : workers) {
+            alive.add(w.getId());
+            if (!(w instanceof WorkerUnit wu) || wu.getBuildRepairGoal() == null)
+                continue;
+            var goal = wu.getBuildRepairGoal();
+            boolean ordered = goal.getBuildingTarget() != null;
+            // at the capitol is home, not stranded (a rescued worker that reached it, or one waiting beside it)
+            boolean atHome = capitol.isPosInsideBuilding(w.getOnPos(), 3);
+            if (stranded.sample(w.getId(), w.getX(), w.getZ(), ordered, atHome || (ordered && goal.isBuilding()), gameTime))
+                out.add(w);
+        }
+        stranded.retain(alive);
+        strandedNow = out.size();
+        if (out.isEmpty())
+            return;
+        workers.removeAll(out);
+        if (home == null)
+            return;
+        List<Integer> due = new ArrayList<>();
+        for (LivingEntity w : out)
+            if (stranded.rescueDue(w.getId(), gameTime))
+                due.add(w.getId());
+        if (!due.isEmpty())
+            UnitServerEvents.addActionItem(name, UnitAction.MOVE, -1, due.stream().mapToInt(Integer::intValue).toArray(), home, home);
+    }
+
+    /** Past the tech minute with the tier gate's army still short: the capitol trains no workers (set each think). */
+    boolean armyFirst = false;
+
     void trainWorkers(BuildingPlacement capitol, int workerCount) {
-        if (techPending || workerCount >= targetWorkers() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
+        // (stranded workers are replaced, but the bot never keeps more than workerCap + workerBase in all: an easy bot reached
+        // 5 working and 12 stranded, flake-stress 41172556017 runner 3)
+        if (techPending || armyFirst || workerCount >= targetWorkers()
+                || workerCount + strandedNow >= tuning.workerCap() + tuning.workerBase() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
             return;
         // (two at a time while metal floats: more constructors is the fastest way to turn a stockpile into buildings)
         if (pp.productionQueue.size() < (floating() ? 2 : 1))
@@ -1100,6 +1219,7 @@ public class BotPlayer {
      */
     public void castFightAbilities(ServerLevel level, List<LivingEntity> mine) {
         useFactionPowers(level, mine);
+        useEmpower(level, mine);
         useTitanAbilities(level, mine);
         tideKrakens(level, mine);
         tideLeviathans(level, mine);
@@ -1379,26 +1499,29 @@ public class BotPlayer {
             BlockPos centre = null;
             List<LivingEntity> lagging = new ArrayList<>();
             for (LivingEntity le : mine) {
-                // Moonwell Bearers and Bloom Priestesses: healers, not fighters (neither is an AttackerUnit, so the
-                // army list never holds them and they would otherwise idle at the lab)
-                if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit)    // the Fortress shields it
-                        && !(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))   // essence casters follow the army too
+                if (!followsArmy(le))
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
                     centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
                 BlockPos mt = mb.getMoveGoal() == null ? null : mb.getMoveGoal().getMoveTarget();
+                // a support unit already on its Fight to (near) here holds its standoff on the way, off that spot
+                SupportState ss = le instanceof SupportUnit su ? su.getSupportState() : null;
+                BlockPos fight = ss != null && ss.mode() == SupportState.Mode.SUPPORT_MOVE ? ss.destination() : null;
                 if (le.distanceToSqr(centre.getX() + 0.5, le.getY(), centre.getZ() + 0.5) > 10 * 10
-                        && (mt == null || mt.distSqr(centre) > 8 * 8))
+                        && (mt == null || mt.distSqr(centre) > 8 * 8)
+                        && (fight == null || fight.distSqr(centre) > 12 * 12))
                     lagging.add(le);
             }
-            if (centre != null)
-                order(lagging, UnitAction.MOVE, centre);
+            if (centre != null) {
+                // support units get a Fight, not a Move (lovish, Oct 30: "stay behind units"): a Move ends their support
+                // order, so they walked into the middle of a fighting army; a Fight holds them behind its front
+                List<LivingEntity> supports = new ArrayList<>(), others = new ArrayList<>();
+                for (LivingEntity le : lagging)
+                    (le instanceof SupportUnit ? supports : others).add(le);
+                order(supports, UnitAction.ATTACK_MOVE, centre);
+                order(others, UnitAction.MOVE, centre);
+            }
         }
         if (minutes < 2 || home == null)
             return;
@@ -2228,12 +2351,66 @@ public class BotPlayer {
         chokeAcrossZ = az;
     }
 
+    /**
+     * The bot's units that are not fighters but walk with its army (none is an AttackerUnit, so the army list never
+     * holds them and they would otherwise idle at the lab): every support unit - the healers, the Field Medic too
+     * (the old hand-written list left a villager bot's medics at the lab), the Ink Scribe that seals from the line -
+     * the Seer that watches from it, the Lantern Fortress that shields it, and the essence casters.
+     */
+    public static boolean followsArmy(LivingEntity le) {
+        return le instanceof SupportUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit
+            || le instanceof com.solegendary.reignofnether.essence.EssenceCarrier;
+    }
+
     /** The top solid block of a column from the heightmap (a single read, unlike a scan down from build height). */
     static BlockPos ground(ServerLevel level, int x, int z) {
         return new BlockPos(x, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z);
     }
 
     /** A sealed unit (Stormcallers Seal) can't use abilities: the bot doesn't try, exactly as a player's order is refused. */
+    /** A carrier empowers only when it holds this much: within 5 of full, where more wisps would go to waste. */
+    static final int EMPOWER_SPARE = com.solegendary.reignofnether.essence.Essence.CAPACITY - 5;
+
+    /**
+     * Empower for the essence casters (design/essence_casters.md; lovish, Oct 29: bots build and use all seven). Their
+     * spells are autocast (AutoCaster, each gated on the caster's essence), but Empower is manual: a player picks who
+     * earns a rank. A bot empowers only with essence to spare ({@link #EMPOWER_SPARE}), so its big spell is never
+     * starved, and picks the dearest friendly unit in reach first. Every attempt is Empower's own quiet rule, so a
+     * target it refuses (top rank, a summon, a hero, a recent rank) costs nothing and the next one is tried. Shared by
+     * every caster that carries Empower.
+     */
+    void useEmpower(ServerLevel level, List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof Unit u) || !le.isAlive() || u.getAbilities() == null || sealed(le)
+                    || com.solegendary.reignofnether.essence.Essence.get(le) < EMPOWER_SPARE)
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.Empower) || !a.isOffCooldown(u))
+                    continue;
+                double r = com.solegendary.reignofnether.ability.abilities.Empower.RANGE;
+                List<LivingEntity> friends = new ArrayList<>();
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), r, scan))
+                    if (other != le && other.isAlive() && other instanceof Unit ou && other.distanceToSqr(le) <= r * r
+                            && AlliancesServerEvents.isAlliedOrOwned(name, ou.getOwnerName()))
+                        friends.add(other);
+                friends.sort((x, y) -> Integer.compare(metalOf(y), metalOf(x)));
+                for (LivingEntity f : friends)
+                    if (com.solegendary.reignofnether.ability.abilities.Empower.cast(level, le, name, f, true)) {
+                        a.setToMaxCooldown(u);
+                        com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), a.action, a.cooldownMax);
+                        break;
+                    }
+                break;
+            }
+        }
+    }
+
+    private static int metalOf(LivingEntity le) {
+        return le instanceof Unit u && u.getCost() != null ? u.getCost().metal() : 0;
+    }
+
     static boolean sealed(LivingEntity le) {
         return com.solegendary.reignofnether.mana.SealServerEvents.isSealed(le);
     }
@@ -2325,6 +2502,8 @@ public class BotPlayer {
 
     /** The tech gate's inputs at the last think and the last building placed, for TierGateGameTests' [T2Snap] line. */
     public String techDiag = "-";
+    /** Off in play: the [T2Snap] test turns it on, so a live game never formats a line nobody reads. */
+    public boolean techDiagOn = false;
     String lastPlacedName = "-";
 
     /** A placement that found no site: counted, named, and reported through {@link #blocked}. */
@@ -2444,7 +2623,7 @@ public class BotPlayer {
 
     boolean placeNearImpl(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
         lastSiteRejections.clear();
-        int[][] footprintCols = null;   // read once per search, on its first ground_not_flat refusal
+        int[][] footprintCols = null;   // looked up on the search's first ground_not_flat refusal
         for (int ring = 0; ring <= 8; ring++) {
             for (int attempt = 0; attempt < (ring == 0 ? 1 : 8); attempt++) {
                 double a = attempt * Math.PI / 4 + ring;
@@ -2499,8 +2678,15 @@ public class BotPlayer {
         return b == kit.t2Lab() || b == com.solegendary.reignofnether.resources.TierGate.t1LabFor(kit.t2Lab());
     }
 
-    /** The footprint's four corners and centre (x, z offsets from the origin), or none when it has no block data. */
+    /** The footprint's four corners and centre (x, z offsets from the origin), or none when it has no block data;
+     *  once per building type (the structure doesn't change in a game). */
     int[][] footprintColumns(ServerLevel level, Building building) {
+        return FOOTPRINT_COLS.computeIfAbsent(building.structureName, n -> readFootprintColumns(level, building));
+    }
+
+    static final java.util.Map<String, int[][]> FOOTPRINT_COLS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static int[][] readFootprintColumns(ServerLevel level, Building building) {
         var blocks = building.getRelativeBlockData(level);
         if (blocks == null || blocks.isEmpty())
             return new int[0][];
@@ -2592,7 +2778,7 @@ public class BotPlayer {
     /**
      * BAR bots go experimental late: from the difficulty's t3Minute (hard 11, so the T3 lab stands by ~18; medium
      * 14) a bot researches Tier 3, has a T2 constructor build its T3 lab near home, then keeps one experimental in
-     * production whenever it has 20 population free. Easy bots never do (t3Minute 99).
+     * production (no population to wait for: lovish, Oct 29). Easy bots never do (t3Minute 99).
      */
     void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
         if (difficulty.easyLike() || minutes < tuning.t3Minute())
@@ -2636,13 +2822,11 @@ public class BotPlayer {
         }
         if (!t3.isBuilt || !(t3 instanceof ProductionPlacement pp))
             return;
-        int pop = UnitServerEvents.getCurrentPopulation(name);
-        int popCap = BuildingServerEvents.getTotalPopulationSupply(name);
         boolean queued = false;
         for (var item : pp.productionQueue)
             if (item.item == t3Unit())
                 queued = true;
-        if (!queued && popCap - pop >= 20)
+        if (!queued)
             pp.startProductionItem(t3Unit());
     }
 

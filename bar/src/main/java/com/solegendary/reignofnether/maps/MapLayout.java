@@ -1129,7 +1129,7 @@ public final class MapLayout {
             boolean ford = v < 5 || db < 5;
             h = ford ? -1 : -3;
             surf = Surface.WATER;
-        } else if (dr < 7) {
+        } else if (dr < bankEdge(u, v)) {
             h = 0;
             surf = Surface.SAND;
         }
@@ -1140,6 +1140,18 @@ public final class MapLayout {
         double cu = camp * Math.cos(half), cv = camp * Math.sin(half);
         s.forest = surf == Surface.GRASS && db < 16 && hd > 70 && r > rv + 10 && r < radius - 12
             && Math.hypot(u - cu, v - cv) > 11;
+    }
+
+    /**
+     * Verdant Valley: how far from the river's centre line the sand bank reaches at (u, v). It was a fixed 7, and a
+     * perfect ring rasterised to blocks is a staircase - from the RTS camera a sawtooth ribbon round the whole river
+     * (Oct 29, claude/environment-palette-oct29.md). Two octaves of the terrain noise (~14 and ~4 block features) let
+     * the shore swell into beaches and pinch to a single block, clamped so the bank is always at least one block
+     * (the water ends at 5) and never eats into the lawn past 10.
+     */
+    double bankEdge(double u, double v) {
+        double e = 7.5 + 2.2 * noise(u, v, 0.07) + 0.6 * noise(u + 31, v - 17, 0.23);
+        return Math.max(6, Math.min(10, e));
     }
 
     private void desertMesa(double r, double u, double v, double db, double hd, Sample s) {

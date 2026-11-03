@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "reignofnether:block/corbel_brick",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "reignofnether:block/corbel_brick"
+    },
+    "facing=south": {
+      "model": "reignofnether:block/corbel_brick",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "reignofnether:block/corbel_brick",
+      "y": 270
+    }
+  }
+}
