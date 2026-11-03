@@ -499,7 +499,8 @@ public class GraveyardExitGameTests {
                     StringBuilder falling = new StringBuilder();
                     for (var fb : level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,
                             new net.minecraft.world.phys.AABB(e.getKey()).inflate(4, 24, 4)))
-                        falling.append(" falling ").append(blockName(fb.getBlockState())).append(String.format(Locale.ROOT, "@%.1f,%.1f,%.1f", fb.getX(), fb.getY(), fb.getZ()));
+                        falling.append(" falling ").append(blockName(fb.getBlockState())).append(String.format(Locale.ROOT, "@%.1f,%.1f,%.1f", fb.getX(), fb.getY(), fb.getZ()))
+                            .append(" from ").append(fb.getStartPos().toShortString());
                     String line = "t" + (helper.getTick() - start[0]) + " " + e.getKey().toShortString() + " " + blockName(e.getValue())
                         + "->" + blockName(now) + falling;
                     out.add(line);
