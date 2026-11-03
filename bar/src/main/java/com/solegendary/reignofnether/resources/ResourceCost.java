@@ -5,7 +5,7 @@ import com.solegendary.reignofnether.config.ResourceCostConfigEntry;
 import java.util.HashMap;
 
 // defined here because we need to be able to access in both
-// static (for ProductionItems) and nonstatic (for getCurrentPopulation) contexts
+// static (for ProductionItems) and nonstatic (per unit) contexts
 // and we can't declare static getters in the Unit interface
 
 public class ResourceCost {
@@ -17,7 +17,11 @@ public class ResourceCost {
     public int ore;
     public int emerald = 0;
     public int ticks;
-    public int population; // for a building, indicates supply, for a unit, indicates usage
+    // a size weight, not a cost (lovish Oct 29: no population): nothing is paid, shown or limited by it. A few
+    // mechanics read it as how big a unit is - Mirror Images' experimental check, Soul Siphon souls, hero XP, creep
+    // score, mana restored, Possess channel time, the Wraith's target size, slime splits, the spawner's big-unit check,
+    // cursor priority, hero revive cost, survival wave budgets. A building's is always 0 (no supply).
+    public int population;
     public String id;
 
     private ResourceCost(int food, int wood, int ore, int ticks, int population) { // units
@@ -49,8 +53,8 @@ public class ResourceCost {
     public static ResourceCost Research(int food, int wood, int ore, int seconds) { // buildings
         return new ResourceCost(food, wood, ore, seconds, 0);
     }
-    public static ResourceCost Building(int food, int wood, int ore, int supply) { // buildings
-        return new ResourceCost(food, wood, ore, 0, supply);
+    public static ResourceCost Building(int food, int wood, int ore) { // buildings: no supply (lovish, Oct 29)
+        return new ResourceCost(food, wood, ore, 0, 0);
     }
     public static ResourceCost Enchantment(int food, int wood, int ore) { // buildings
         return new ResourceCost(food, wood, ore, 0, 0);

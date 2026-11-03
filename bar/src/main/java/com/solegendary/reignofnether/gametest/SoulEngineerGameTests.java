@@ -32,11 +32,13 @@ import com.solegendary.reignofnether.unit.UnitActionItem;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit;
 import com.solegendary.reignofnether.unit.units.brass.GhostFurnaceUnit;
 import com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd;
 import com.solegendary.reignofnether.unit.units.brass.SoulEngineerUnit;
 import com.solegendary.reignofnether.unit.units.tide.BombardShell;
+import com.solegendary.reignofnether.unit.support.SupportState;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -975,8 +977,9 @@ public class SoulEngineerGameTests {
 
     /**
      * The bots' Soul Boiler: the unit casts it by itself (autoBoil) at a friendly building in reach that is working -
-     * never at an idle one, a queue held at the population cap or a site nobody is building - only with 20 essence, and
-     * never while sealed (the AutoCaster's gates).
+     * never at an idle one or a site nobody is building - only with 20 essence, and never while sealed (the
+     * AutoCaster's gates). (Its "a queue held at the population cap" check retired - lovish Oct 29: no max population;
+     * no queue is ever held now.)
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
     public static void soul_engineer_soul_boiler_autocasts_at_a_busy_building(GameTestHelper helper) {
@@ -996,21 +999,6 @@ public class SoulEngineerGameTests {
                 Essence.add(caster, 1);
                 if (se.autoBoil() || SoulBoiler.isBoiling(shop))
                     problems.add("the Soul Engineer boiled an idle building by itself");
-                // a unit queued with no population room (the cap lowered to 0 for this check): the queue is held, no boil
-                pp.productionQueue.add(new ActiveProduction(ProductionItems.STEAM_RUNNER, false, me));
-                int maxPop = UnitServerEvents.maxPopulation;   // BAR: everyone's supply is the host's cap
-                // a server global: keep this window tick-free (no delay, spawn or anything that ticks between the set
-                // and the restore), or parallel tests would see the 0 cap
-                try {
-                    UnitServerEvents.maxPopulation = 0;
-                    if (ProductionItems.STEAM_RUNNER.isBelowPopulationSupply(pp))
-                        problems.add("setup: with a population cap of 0 the Steam Runner's queue is not held");
-                    else if (se.autoBoil() || SoulBoiler.isBoiling(shop))
-                        problems.add("the Soul Engineer boiled a queue held at the population cap by itself");
-                } finally {
-                    UnitServerEvents.maxPopulation = maxPop;
-                }
-                pp.productionQueue.clear();
                 pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, me));   // no population
                 // a friendly site nobody is building, alone in reach
                 BuildingServerEvents.getBuildings().remove(shop);
@@ -1076,7 +1064,9 @@ public class SoulEngineerGameTests {
     /**
      * A bot's Soul Engineer is not an AttackerUnit, so the army list never holds it; the bot's "healers follow the army"
      * block (BotPlayer.verdantHabits, run for every faction) orders a lagging essence caster to the army's centre
-     * (shared edit, briefs/essence-caster-bot-follow-line.md). The Soul Engineer 14 blocks from the army is sent there;
+     * (shared edit, briefs/essence-caster-bot-follow-line.md). The Soul Engineer 14 blocks from the army is sent there by
+     * a Fight, not a Move (lovish, Oct 30: "stay behind units" - a Move ends a support unit's support order, a Fight
+     * keeps it behind the army's front), so it heads for its rear-rank spot, at most 6.5 blocks short of the centre;
      * the one 3 blocks from it is left alone. verdantHabits is package-private and its signature is the same in every
      * caster PR, so the test reaches it by reflection (as the Tide Seer's does).
      */
@@ -1091,6 +1081,7 @@ public class SoulEngineerGameTests {
         List<Entity> all = live(lagging, close, f1, f2);
         List<String> early = new ArrayList<>();
         BlockPos[] moveTo = new BlockPos[1];
+        int[] moves = { 0 };
         helper.runAfterDelay(3, () -> {
             if (all.size() != 4) {
                 early.add("could not spawn the two Soul Engineers and the army");
@@ -1100,8 +1091,10 @@ public class SoulEngineerGameTests {
                 var brain = new com.solegendary.reignofnether.bot.BotPlayer(me, Factions.BRASSWORKS,
                     com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, helper.absolutePos(new BlockPos(1, 2, 1)));
                 brain.orderListener = (action, target) -> {
-                    if (action == UnitAction.MOVE)
+                    if (action == UnitAction.ATTACK_MOVE)
                         moveTo[0] = target;
+                    else if (action == UnitAction.MOVE)
+                        moves[0]++;
                 };
                 List<LivingEntity> mine = new ArrayList<>(List.of(lagging, close, f1, f2));
                 List<LivingEntity> army = new ArrayList<>(List.of(f1, f2));
@@ -1110,7 +1103,9 @@ public class SoulEngineerGameTests {
                 habits.setAccessible(true);
                 habits.invoke(brain, level, mine, army, new ArrayList<>(), new ArrayList<>(), level.getGameTime(), 0L);
                 if (moveTo[0] == null)
-                    early.add("the bot gave no move order: its lagging Soul Engineer stays at the lab");
+                    early.add("the bot gave no Fight order: its lagging Soul Engineer stays at the lab");
+                if (moves[0] > 0)
+                    early.add("the bot gave " + moves[0] + " Move orders: a Move ends a support unit's support order");
             } catch (ReflectiveOperationException | RuntimeException ex) {
                 early.add("calling the bot's follow-the-army block threw " + ex);
             }
@@ -1119,9 +1114,12 @@ public class SoulEngineerGameTests {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (moveTo[0] != null) {
-                    BlockPos t = ((Unit) lagging).getMoveGoal() == null ? null : ((Unit) lagging).getMoveGoal().getMoveTarget();
-                    if (t == null || Math.abs(t.getX() - moveTo[0].getX()) > 1 || Math.abs(t.getZ() - moveTo[0].getZ()) > 1)
-                        problems.add("the lagging Soul Engineer is headed for " + t + ", not the army's centre " + moveTo[0]);
+                    SupportState ls = ((SupportUnit) lagging).getSupportState();
+                    BlockPos d = ls.mode() == SupportState.Mode.SUPPORT_MOVE ? ls.destination() : null;
+                    // the rear-rank spot: the standoff (reach - 1.5, at most 6.5) short of the centre, spread across
+                    if (d == null || Math.hypot(d.getX() - moveTo[0].getX(), d.getZ() - moveTo[0].getZ()) > 7.5)
+                        problems.add("the lagging Soul Engineer is on " + ls.mode() + " to " + d + ", not a Fight to the army's centre "
+                            + moveTo[0]);
                     BlockPos c = ((Unit) close).getMoveGoal() == null ? null : ((Unit) close).getMoveGoal().getMoveTarget();
                     if (c != null)
                         problems.add("the Soul Engineer 3 blocks from the army was ordered to " + c + ": only a lagging one should be");

@@ -20,35 +20,35 @@ public final class DefenceCosts {
     private DefenceCosts() { }
 
     // BAR's dragon's teeth: a few metal each, the cheapest thing a constructor can make. 2x2 blocks of wall.
-    public static final ResourceCost WALL = ResourceCost.Building(0, 0, 15, 0);
+    public static final ResourceCost WALL = ResourceCost.Building(0, 0, 15);
     // a gate is a wall segment with a mechanism: a little dearer
-    public static final ResourceCost GATE = ResourceCost.Building(0, 20, 40, 0);
+    public static final ResourceCost GATE = ResourceCost.Building(0, 20, 40);
     // the T1 anti-raid tower (BAR's LLT): about one and a half T1 raiders (a Cutlass Raider is 80m / 100e)
-    public static final ResourceCost RAID_TOWER = ResourceCost.Building(0, 150, 110, 0);
+    public static final ResourceCost RAID_TOWER = ResourceCost.Building(0, 150, 110);
     // traps: under half a raider each - a trap is a gamble on the enemy walking over it
-    public static final ResourceCost TRAP_SPIKES = ResourceCost.Building(0, 40, 35, 0);
-    public static final ResourceCost TRAP_SNARE = ResourceCost.Building(0, 50, 30, 0);
-    public static final ResourceCost TRAP_MINE = ResourceCost.Building(0, 60, 50, 0);
+    public static final ResourceCost TRAP_SPIKES = ResourceCost.Building(0, 40, 35);
+    public static final ResourceCost TRAP_SNARE = ResourceCost.Building(0, 50, 30);
+    public static final ResourceCost TRAP_MINE = ResourceCost.Building(0, 60, 50);
     // the enhanced T1 towers (BAR's HLLT; lovish Oct 21 02:51): ~2.2x the price for ~2.3x the weapon - a slightly
     // better rate, with more eggs in one basket (one artillery unit kills more value)
-    public static final ResourceCost RAID_TOWER_HEAVY = ResourceCost.Building(0, 400, 260, 0);
+    public static final ResourceCost RAID_TOWER_HEAVY = ResourceCost.Building(0, 400, 260);
     // anti-air (lovish Oct 21 02:47, flyers sniped his commander): a Sky Watch costs under half a T2 flyer (a Gyrocopter
     // Gunship is 255m, 90 hp) and downs one in ~6 s, the enhanced one in ~3 s; the flak hurts a whole clump at once
-    public static final ResourceCost SKY_WATCH = ResourceCost.Building(0, 160, 120, 0);
-    public static final ResourceCost SKY_WATCH_HEAVY = ResourceCost.Building(0, 380, 260, 0);
-    public static final ResourceCost FLAK = ResourceCost.Building(0, 350, 280, 0);
+    public static final ResourceCost SKY_WATCH = ResourceCost.Building(0, 160, 120);
+    public static final ResourceCost SKY_WATCH_HEAVY = ResourceCost.Building(0, 380, 260);
+    public static final ResourceCost FLAK = ResourceCost.Building(0, 350, 280);
     // the anti-siege tower (BAR's HLT; lovish Oct 29, design/siege_t1.md): ~1.7x the enhanced anti-raid tower, the
     // price of about five T1 siege lobbers (95 m each) - six of them die before it falls
-    public static final ResourceCost SIEGE_GUARD = ResourceCost.Building(0, 650, 450, 0);
+    public static final ResourceCost SIEGE_GUARD = ResourceCost.Building(0, 650, 450);
     // baked from the T3 costs (bakeAntiT3); until then a placeholder that is never shown (costs bake at common setup)
-    public static final ResourceCost ANTI_T3 = ResourceCost.Building(0, 260, 275, 0);
+    public static final ResourceCost ANTI_T3 = ResourceCost.Building(0, 260, 275);
 
     // the enhanced (T1 lab) walls and traps, lovish Oct 21 02:51 "kinda like in bar": a fortified wall is ~2.7x a wall
     // for 2.75x its health; an enhanced trap ~2x its trap for a wider, harder blast and one spare charge
-    public static final ResourceCost WALL_FORTIFIED = ResourceCost.Building(0, 20, 40, 0);
-    public static final ResourceCost TRAP_SPIKES_ENHANCED = ResourceCost.Building(0, 80, 70, 0);
-    public static final ResourceCost TRAP_SNARE_ENHANCED = ResourceCost.Building(0, 100, 60, 0);
-    public static final ResourceCost TRAP_MINE_ENHANCED = ResourceCost.Building(0, 120, 100, 0);
+    public static final ResourceCost WALL_FORTIFIED = ResourceCost.Building(0, 20, 40);
+    public static final ResourceCost TRAP_SPIKES_ENHANCED = ResourceCost.Building(0, 80, 70);
+    public static final ResourceCost TRAP_SNARE_ENHANCED = ResourceCost.Building(0, 100, 60);
+    public static final ResourceCost TRAP_MINE_ENHANCED = ResourceCost.Building(0, 120, 100);
 
     /** The price of a trap of this kind, base or enhanced. */
     public static ResourceCost of(Trap.Kind kind, boolean enhanced) {

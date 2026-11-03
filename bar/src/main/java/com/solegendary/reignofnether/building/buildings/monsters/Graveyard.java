@@ -67,6 +67,8 @@ public class Graveyard extends ProductionBuilding {
         this.productions.add(ProductionItems.GRAVECALLER, Keybindings.abilitySlot8);
         this.productions.add(ProductionItems.GRAVECALLER_REVIVE, Keybindings.abilitySlot8);
         this.productions.add(ProductionItems.SKULL_HURLER, Keybindings.abilitySlot6);   // T1 siege lobber (design/siege_t1.md)
+        // the essence caster, tier 1 (lovish Oct 29: "essence casters should be tier 1 like rez bots")
+        this.productions.add(ProductionItems.TOMBCALLER, Keybindings.abilitySlot7);
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
         this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);
