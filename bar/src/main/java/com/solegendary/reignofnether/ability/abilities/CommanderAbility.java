@@ -108,7 +108,7 @@ public class CommanderAbility extends Ability {
             case RIPTIDE -> {
                 title = "Riptide";
                 line1 = "A " + (int) RIPTIDE_RANGE + "-block cone of surf: " + (int) RIPTIDE_DAMAGE
-                    + " damage and a hard shove, twice as hard on foes in water or tidepools.";
+                    + " damage and a hard shove, twice as hard on foes standing on the grid.";
                 line2 = "The sea goes where the Admiral points.";
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/trident.png");
             }

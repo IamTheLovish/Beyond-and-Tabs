@@ -9,7 +9,7 @@ import java.util.function.UnaryOperator;
 
 /**
  * A production queue that counts its changes: every change to ANY queue bumps one shared {@link #epoch()}, so a cache
- * of queue totals (QueuePopulation) knows at once when it is out of date, without walking every building to find out.
+ * of queue totals knows at once when it is out of date, without walking every building to find out.
  * The queues are public lists changed from many places (placements, packets, match end, tests); this catches them all,
  * including changes through an iterator, a list iterator and a sub-list's add / remove / clear (ArrayList routes those
  * through the methods overridden here). One atomic increment per change; reads cost nothing.
