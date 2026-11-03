@@ -563,7 +563,7 @@ public final class BiomePalette {
         TABLES.put(FactionTraits.GRAVEBOUND, ground(masonry(new Table()))
             .rules(new Block[][] { SPRUCE, OAK, BIRCH }, TIMBER)
             .rule(ROOTED_DIRT, ROOTED_GROUND)
-            .keep(DARK_OAK, PODZOL, MOSS));
+            .keep(DARK_OAK, PODZOL, MOSS, POLISHED_DIORITE));   // the Mausoleum's bone-pale walls and crossing (Nov 2026)
         // Ironhide Horde: the Horde brings the Nether with it - every block is nether stone, gilded blackstone, basalt
         // or red wood, which no biome changes. It still takes the snow and the sun-cracks, and its Nether Zones (RoN)
         // terraform the ground around its portals. The Ashborn volcano-temple capitol (tools/capitol_central_portal.py,
