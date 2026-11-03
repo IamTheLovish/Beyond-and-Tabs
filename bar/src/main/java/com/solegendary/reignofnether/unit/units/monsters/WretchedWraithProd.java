@@ -59,7 +59,7 @@ public class WretchedWraithProd extends HeroProductionItem implements IUnitProdu
         ArrayList<FormattedCharSequence> tooltips = new ArrayList<>(List.of(
                 Component.translatable("entity.reignofnether.wretched_wraith_unit").append(Component.literal(" (")).append(Component.translatable("hud.units.reignofnether.hero")).append(Component.literal(")")).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.wretched_wraith_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.wretched_wraith_unit.tooltip2").getVisualOrderText(),

@@ -146,6 +146,7 @@ public final class AnimStates {
             le.yBodyRot - le.yBodyRotO, le.getHealth(), le.getMaxHealth(), fighting, fresh);
         Kinematics.look(s, b, le.yHeadRot, le.getXRot(),
             le instanceof RangedAttackerUnit && le instanceof Mob m2 && m2.isAggressive(), fresh);
+        Kinematics.turn(s, b, le.yBodyRot, fresh);
         if (fresh) {
             // its own tempo and a phase of its own: neighbours never breathe in step (Desync, Life.offset)
             s[b + AnimState.TEMPO] = Desync.tempo(id);

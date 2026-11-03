@@ -52,6 +52,11 @@ if grep -q "\[SysSample\]" gametest.log; then
 fi
 # the 8v8 stress benchmark's per-system timings, as notices readable through the GitHub API
 grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
+# the straight-line walks (gametest/WalkLineGameTests): each walk's rocking, swing, contact and cost and the start of its
+# yaw trace, passed or not, folded into ONE notice (the margins against the bounds), only in a shard that ran walks
+if grep -q "\[Walk\]" gametest.log; then
+  grep -oE "\[Walk\].*" gametest.log | head -9 | cut -c1-420 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Walk]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
 # the melee diagnostics (gametest/DuelGameTests): one line per fight, folded into ONE notice (%0A = newline)
 # because a step only keeps the first 10 notices
 grep -oE "\[Melee\].*" gametest.log | head -40 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Melee diagnostics]"} {printf "%%0A%s", $0} END{print ""}' || true
@@ -75,6 +80,11 @@ grep -oE "\[Raid\].*" gametest.log | head -46 | sed 's/%/%25/g' | awk 'BEGIN{pri
 # the vocabulary for structure generators (only in the shard that ran that test)
 if grep -q "\[ModBlocks\]" gametest.log; then
   grep -oE "\[ModBlocks\].*" gametest.log | head -6 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Mod blocks]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
+# order response latency (gametest/OrderLatencyGameTests: unit ticks from an order to moving / to the tracker sending
+# it) and graveyard exits (GraveyardExitGameTests), one notice - lovish Oct 22 20:23 "sometimes a delay in actions"
+if grep -qE "\[(Latency|GraveyardExit)\]" gametest.log; then
+  grep -oE "\[(Latency|GraveyardExit)\].*" gametest.log | head -20 | cut -c1-400 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Order latency]"} {printf "%%0A%s", $0} END{print ""}' || true
 fi
 # how fast a pile of units spreads (gametest/PerfPushGameTests): the tick it passed, so a flake-stress run shows the
 # margin to the 400-tick timeout (the Oct 27 flake). Last of the notices: a full shard, already at the 10-notice limit,

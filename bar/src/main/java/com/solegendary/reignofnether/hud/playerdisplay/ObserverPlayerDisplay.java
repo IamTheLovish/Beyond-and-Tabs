@@ -61,12 +61,9 @@ public class ObserverPlayerDisplay extends AbstractPlayerDisplay {
                 // so a far bot read 0 (lovish's Oct 12 Watch Battle)
                 var synced = PlayerPanelClientEvents.entryOf(this.playerName);
                 var used = synced != null && synced.hasAllyData() ? synced.popUsed()
-                    : UnitClientEvents.getCurrentPopulation(this.playerName);
-                var produced = BuildingClientEvents.getTotalPopulationSupply(this.playerName);
-                value = used + "/" + produced;
-                color = used > produced
-                        ? 0xFF0000
-                        : 0xFFFFFF;
+                    : UnitClientEvents.getUnitCount(this.playerName);
+                value = String.valueOf(used);   // the unit count: no population (lovish, Oct 29)
+                color = 0xFFFFFF;
             }
         }
 
@@ -119,11 +116,10 @@ public class ObserverPlayerDisplay extends AbstractPlayerDisplay {
                     continue;
                 }
 
-                if (unit instanceof WorkerUnit) {
-                    civilianSupply += unit.getCost().population;
-                } else {
-                    militarySupply += unit.getCost().population;
-                }
+                if (unit instanceof WorkerUnit)   // unit counts, not population (lovish, Oct 29)
+                    civilianSupply++;
+                else
+                    militarySupply++;
             }
         }
 

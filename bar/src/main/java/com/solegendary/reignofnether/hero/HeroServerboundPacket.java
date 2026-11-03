@@ -25,9 +25,35 @@ public class HeroServerboundPacket {
         PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(-1, on ? HeroAction.HERO_AI_ON : HeroAction.HERO_AI_OFF));
     }
 
+    /** Tells the server this player's "Auto-learn hero abilities" setting (on login and whenever the box is clicked). */
+    public static void sendAutoLearn(boolean on) {
+        PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(-1, on ? HeroAction.AUTO_LEARN_ON : HeroAction.AUTO_LEARN_OFF));
+    }
+
+    /** Tells the server the player opened or closed their hero's rank-up menu (auto-learn waits while it is open). */
+    public static void sendRankMenu(int unitId, boolean open) {
+        PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(unitId, open ? HeroAction.RANK_MENU_OPEN : HeroAction.RANK_MENU_CLOSED));
+    }
+
     /** Tells the server the player selected their hero (UnitClientEvents, when a hero joins the selection). */
     public static void sendHeroSelected(int unitId) {
         PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(unitId, HeroAction.HERO_SELECTED));
+    }
+
+    /**
+     * The server's side of RANK_MENU_OPEN / RANK_MENU_CLOSED (public for the GameTests, which drive it as the packet
+     * does): the owner's open menu holds auto-learn back for {@link HeroBot#RANK_MENU_HOLD_TICKS} - refreshed by the
+     * client while the menu stays up - and closing it lets go at once. Only the hero's owner: an ally who may command
+     * the hero cannot hold back its owner's points.
+     */
+    public static void onRankMenu(net.minecraft.server.level.ServerPlayer sender, int unitId, boolean open) {
+        if (!(sender.serverLevel().getEntity(unitId) instanceof FactionHero hero)
+                || !sender.getName().getString().equals(hero.getOwnerName()))
+            return;
+        if (open)
+            hero.heroCore().holdRankMenu(sender.serverLevel().getGameTime() + HeroBot.RANK_MENU_HOLD_TICKS);
+        else
+            hero.heroCore().releaseRankMenu();
     }
 
     public HeroServerboundPacket(
@@ -60,6 +86,19 @@ public class HeroServerboundPacket {
                 // a player's own setting, for their own heroes only (the owner name is the player's name)
                 if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_ai_switch", 10, 100))
                     HeroBot.setAiEnabled(sender.getName().getString(), heroAction == HeroAction.HERO_AI_ON);
+                success.set(true);
+                return;
+            }
+            if (heroAction == HeroAction.AUTO_LEARN_ON || heroAction == HeroAction.AUTO_LEARN_OFF) {
+                // as the Hero AI switch: the player's own setting, for their own heroes only
+                if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_auto_learn_switch", 10, 100))
+                    HeroBot.setAutoLearn(sender.getName().getString(), heroAction == HeroAction.AUTO_LEARN_ON);
+                success.set(true);
+                return;
+            }
+            if (heroAction == HeroAction.RANK_MENU_OPEN || heroAction == HeroAction.RANK_MENU_CLOSED) {
+                if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_rank_menu", 20, 100))
+                    onRankMenu(sender, this.unitId, heroAction == HeroAction.RANK_MENU_OPEN);
                 success.set(true);
                 return;
             }
