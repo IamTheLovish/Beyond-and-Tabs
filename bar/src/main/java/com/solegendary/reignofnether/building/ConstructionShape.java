@@ -149,6 +149,20 @@ public final class ConstructionShape {
     }
 
     /**
+     * The cloud ring's height for a build front at {@code frontY} (the laid/missing boundary, ConstructionGrid.meanRimY):
+     * half way up the course being laid, so it rings that course and climbs with it - never on the ground (round 12
+     * critic: lying RING_DROP under the rim, it sat on the lawn at the walls' foot as a white haze) and never over the
+     * top course. With {@link #layerBox}({@code frontY}) as its footprint it narrows as the building does (lovish, Nov 3:
+     * "bring the ring back").
+     */
+    public float ringY(float frontY) {
+        int layers = perLayer.length;
+        if (layers == 0)
+            return minY + 0.5f;
+        return Math.max(minY + 0.5f, Math.min(minY + layers - 0.5f, frontY + 0.5f));
+    }
+
+    /**
      * A point a fraction {@code u} (wrapping) of the way round a footprint {x0, x1, z0, z1}, walked from (x0, z0)
      * along +x, +z, -x, -z, written to {@code out} as {x, z, nx, nz} with the outward normal of that side. The White
      * Angel's tools walk the cut line with it (round 4 critic: on the ring's circle their blows landed on the lawn).

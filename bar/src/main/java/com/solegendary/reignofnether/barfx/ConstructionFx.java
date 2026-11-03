@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.barfx;
 
+import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
@@ -7,6 +8,7 @@ import com.solegendary.reignofnether.building.ConstructionCrew;
 import com.solegendary.reignofnether.building.ConstructionGrid;
 import com.solegendary.reignofnether.building.ConstructionShape;
 import com.solegendary.reignofnether.faction.FactionTraits;
+import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.BlockPos;
 import org.joml.Matrix4f;
@@ -24,12 +26,14 @@ import java.util.WeakHashMap;
  *   LIGHTENED onto the scene and then tinted once a pixel (the laid stone outside it stays white, its upper courses over
  *   the laid wall read pale blue - round 16 critic), a dark 1.5 px outline on its silhouette: cool "not yet" against the warm white "done" (round 12 critic: separate them by hue; rounds 13-14:
  *   one volume, not a lattice; round 15: the laid wall read as ghost);</li>
- *   <li>ONE build front for the whole building: an opaque #FFD080 line ON the laid/ghost boundary of the course being
- *   laid, stepping up over the blocks of it already laid (round 17 critic); the next block to be placed - one the camera
- *   can see - flashing amber over everything (round 16, 17 critic);</li>
+ *   <li>the luminous CLOUD RING round the course being laid (lovish, Nov 3: "bring the ring back" - rounds 12-19 had
+ *   dropped it while a site rose): half way up that course, on its footprint, so it climbs and narrows with the
+ *   building (ConstructionShape.ringY / layerBox), drawn over the ghost; it replaces round 17-19's amber line on the
+ *   same course (two bands a course apart);</li>
+ *   <li>the next block to be placed - one the camera can see - flashing amber over everything (round 16, 17 critic);</li>
  *   <li>three thin beams rising from the front row, slow gold motes;</li>
  *   <li>a small tool in the hands of each builder at work (up to three), each blow a 2-frame flash and sparks;</li>
- *   <li>done: a cloud halo swells and fades, a flash on the top, a light ring runs out over the ground.</li>
+ *   <li>done: the ring swells and fades, a flash on the top, a light ring runs out over the ground.</li>
  * </ul>
  * Building-agnostic: everything comes from the placement's own blocks (the buildings are being reworked). Pure client
  * rendering through BarFxClient's passes; thinner when zoomed out; nothing allocated per frame once a site is cached.
@@ -51,12 +55,6 @@ final class ConstructionFx {
     private static final int COOL = 0xB9CBEE;   // round 11 critic: desaturated (a periwinkle kerb at #8FB0F0, 0.7)
     /** The next block's flash (round 16 critic). */
     private static final int FRONT = 0xFFB347;
-    /** The build front (round 17 critic: never seen in a still - at its breath's low point #FFB347 x 0.65 read as a gold
-     *  trim on the Sunforged white): fully opaque, no breath - the flash is what moves. Round 18 critic: #FFD080 and the
-     *  flash were "nearly the same hue and blur together", and the line read 1-2 px (the still measures 3-4 px vertical
-     *  runs on its 30-degree slopes, i.e. 3 px across: its luminance, L ~212 against the lit white's ~233, is what got
-     *  lost). Now a deeper, quieter amber, L ~160: a line by contrast, not by glow; the flash is the white one. */
-    private static final int FRONT_LINE = 0xE0973E;
     /**
      * The ghost, LIGHTENED onto the scene (BarFxRenderTypes.LIGHTEN: each channel max(scene, ghost)). Round 15 critic:
      * blended over at 0.45, #4C6BA8 tinted the laid white wall top under the ghost of the courses above it pale blue
@@ -110,10 +108,6 @@ final class ConstructionFx {
     /** The halo's ring line stands this far outside the course's footprint (round 10 critic: pulled 0.5 in, clear of
      *  the selection box). */
     private static final float RING_PAD = 0.25f;
-    /** The halo lies this far below the rim, never lower than RING_FLOOR above the building's foot. */
-    private static final float RING_DROP = 0.7f, RING_FLOOR = 0.35f;
-    /** The rim sits this far inside the wall faces, never on the selection box's edge (round 6 critic). */
-    private static final float RIM_INSET = 0.05f;
     /** Seconds between recounts of what stands (a few hundred block-state reads per site). */
     private static final float RECOUNT = 0.5f;
 
@@ -122,7 +116,7 @@ final class ConstructionFx {
         final ConstructionShape shape;
         final ConstructionGrid grid;
         final int[] standing;                          // blocks standing per layer (the fallback front)
-        final float[] cut = new float[4];              // the course's footprint at the rim
+        final float[] cut = new float[4];              // the footprint of the course being laid
         final float[] course = new float[4];           // ... inset half a block: the motes' area
         final float[] ring = { Float.NaN, 0, 0, 0 };   // the halo's footprint, easing toward the course's
         final float[] tmp = new float[4];
@@ -133,6 +127,7 @@ final class ConstructionFx {
         float countedAt = -1;
         float shown = Float.NaN;
         float doneAt = -1;
+        float seenAt = -1;                             // when it was last drawn rising (the completion beat's freshness)
         float lastFront;
         final float[] quad = new float[12];            // a ghost face's corners (ConstructionGrid.ghostQuad)
         final int[] next = new int[4];                 // the next block to be placed {x, y, z, valid} (nextBlock)
@@ -172,6 +167,15 @@ final class ConstructionFx {
 
     static boolean isAngel(BuildingPlacement p) {
         return FactionTraits.of(p.getFaction()) == FactionTraits.SUNFORGED;
+    }
+
+    /** Whether the player sees {@code p}'s work: their own or an ally's, or any in a bright chunk (fog of war) - the
+     *  rule of the world build bar this effect replaces (BuildProgressBarClientEvents). */
+    private static boolean seen(BuildingPlacement p) {
+        net.minecraft.client.player.LocalPlayer me = net.minecraft.client.Minecraft.getInstance().player;
+        if (me == null || AlliancesClient.isAlliedOrOwned(me.getName().getString(), p.ownerName))
+            return true;
+        return !FogOfWarClientEvents.isEnabled() || FogOfWarClientEvents.isInBrightChunk(p.centrePos);
     }
 
     private static Site siteOf(BuildingPlacement p) {
@@ -238,11 +242,16 @@ final class ConstructionFx {
             angel++;
             Site known = SITES.get(p);
             boolean rising = !p.isBuilt && p.serverBlocksPlaced > 0;
-            boolean finishing = p.isBuilt && known != null && (known.doneAt < 0 || clock - known.doneAt < DONE_SECONDS);
+            // the completion beat only for a site drawn rising a moment ago (review r1: one that finished while the
+            // camera was away played its beat whenever the camera next came near)
+            boolean finishing = p.isBuilt && known != null && (known.doneAt < 0 ? clock - known.seenAt < 1f
+                    : clock - known.doneAt < DONE_SECONDS);
             if (!rising && !finishing)
                 continue;
             angelRising++;
             if (!BarFxClient.near(p.centrePos.getX(), p.centrePos.getY(), p.centrePos.getZ(), 24))
+                continue;
+            if (!seen(p))   // review r1: an enemy site in the fog shows nothing (it is frozen at its last-seen state)
                 continue;
             scratch.add(p);
         }
@@ -259,9 +268,10 @@ final class ConstructionFx {
 
         // Pass order (rounds 13, 16, 17 critic). 1 normal-blended: the halo (done), the beams - before the ghost, which
         // then lies over whatever is inside its volume. 2 additive: motes, the workers' sparks, the completion flash.
-        // 3 the ghost: its nearest surface into the depth buffer, lightened, then tinted once a pixel. 4 its outline
-        // (against laid stone only), the tools in the workers' hands. 5 the next block's flash, a block in view, no depth
-        // test. 6 the build front on the laid/ghost boundary, opaque, polygon-offset.
+        // 3 the ghost: its nearest surface into the depth buffer, lightened, then tinted once a pixel. 4 the cloud ring
+        // (over the ghost's tint where it stands in front of it; hidden behind it on the far side, by the ghost's
+        // depth), its outline (against laid stone only), the tools in the workers' hands. 5 the next block's flash, a
+        // block in view, no depth test.
         BarFxClient.begin(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
         for (BuildingPlacement p : scratch) {
             Site s = siteOf(p);
@@ -280,28 +290,30 @@ final class ConstructionFx {
                 s.countedAt = clock;
                 recount(s, p);
             }
+            s.seenAt = clock;
             if (activeN < MAX_ACTIVE) {   // this site's bounds, for absorbsNano
+                // the site's own cells (maxX / maxZ exclusive); nano targets are block centres, so a neighbour's centre
+                // half a block outside never counts (review r1: the box took in one cell on every side)
                 ACTIVE_SITE[activeN] = s;
                 int a = activeN++ * 6;
-                ACTIVE[a] = s.grid.minX() - 0.5f; ACTIVE[a + 1] = s.grid.maxX() + 0.5f;
-                ACTIVE[a + 2] = s.shape.minY() - 0.5f; ACTIVE[a + 3] = s.shape.minY() + s.shape.layers() + 0.5f;
-                ACTIVE[a + 4] = s.grid.minZ() - 0.5f; ACTIVE[a + 5] = s.grid.maxZ() + 0.5f;
+                ACTIVE[a] = s.grid.minX(); ACTIVE[a + 1] = s.grid.maxX();
+                ACTIVE[a + 2] = s.shape.minY(); ACTIVE[a + 3] = s.shape.minY() + s.shape.layers();
+                ACTIVE[a + 4] = s.grid.minZ(); ACTIVE[a + 5] = s.grid.maxZ();
             }
-            // the height the halo follows: the rim's mean (each column's own build front), else the layered front
+            // the height the ring follows: the rim's mean (each column's own build front), else the layered front
             float target = s.grid.meanRimY();
             if (Float.isNaN(target))
                 target = s.shape.frontFromLayers(s.standing);
             s.shown = Float.isNaN(s.shown) ? target : s.shown + (target - s.shown) * Math.min(1, dt * 4);
             float front = s.shown;
             s.lastFront = front;
-            s.shape.layerBox(front - 0.5f, s.cut);
+            s.shape.layerBox(front, s.cut);   // the course being laid
             inset(s.cut, 0.5f, s.course);
-            // the halo's footprint glides to a narrower course rather than snapping at a step
+            // the ring's footprint glides to a narrower course rather than snapping at a step
             float ease = Float.isNaN(s.ring[0]) ? 1 : Math.min(1, dt * 2.5f);
             for (int i = 0; i < 4; i++)
                 s.ring[i] = Float.isNaN(s.ring[i]) || ease >= 1 ? s.cut[i] : s.ring[i] + (s.cut[i] - s.ring[i]) * ease;
-            // (no halo while it rises - round 12 critic: it lay as a white ground haze at the walls' foot; the completion
-            // beat still swells it once)
+            // (the ring is drawn after the ghost, below)
             // (no pool of light under the ghost - round 14 critic: anything under the ghost reads as a second layer -
             // and no struck face or dust: the tools are in the workers' hands, not on the wall)
             if (!far)
@@ -356,6 +368,13 @@ final class ConstructionFx {
         for (BuildingPlacement p : scratch)
             if (!p.isBuilt)
                 ghostFaces(SITES.get(p), GHOST_TINT, GHOST_TINT_A, GHOST_TINT_TOP_A);
+        for (BuildingPlacement p : scratch) {   // the ring round the course being laid, at every zoom
+            Site s = SITES.get(p);
+            if (s != null && !p.isBuilt && !Float.isNaN(s.ring[0])) {
+                drawHalo(s, s.lastFront, clock, far, 1, 1);
+                dRing++;
+            }
+        }
         for (BuildingPlacement p : scratch) {
             Site s = SITES.get(p);
             if (s == null || p.isBuilt || far)   // done: the workers walk off, their tools with them
@@ -378,21 +397,14 @@ final class ConstructionFx {
             }
             buffers.endBatch(BarFxRenderTypes.TRANSLUCENT_SEE_THROUGH);
         }
-
-        // the build front last, on the laid/ghost boundary (ConstructionGrid.frontSeg*), opaque, pulled forward
-        BarFxClient.begin(buffers, BarFxRenderTypes.TRANSLUCENT_OFFSET, mat);
-        for (BuildingPlacement p : scratch)
-            if (!p.isBuilt)
-                drawFront(SITES.get(p));
-        buffers.endBatch(BarFxRenderTypes.TRANSLUCENT_OFFSET);
         BarFxClient.vc = null;
         diagnose(clock, null);
     }
 
     // ------------------------------------------------------------------ diagnostics (round 17 critic)
 
-    /** This frame's counts: ghost quads, front segments drawn / turned away, flash quads. */
-    private static int dGhost, dFront, dFrontAway, dFlash;
+    /** This frame's counts: ghost quads, rings, flash quads. */
+    private static int dGhost, dRing, dFlash;
     private static float diagAt = -1;
     private static String lastDiag = "no frame yet";
 
@@ -405,12 +417,12 @@ final class ConstructionFx {
      */
     private static void diagnose(float clock, String reason) {
         if (!com.solegendary.reignofnether.matchstart.EyesDirector.ENABLED) {
-            dGhost = dFront = dFrontAway = dFlash = 0;
+            dGhost = dRing = dFlash = 0;
             return;
         }
         if ((diagAt >= 0 && clock - diagAt < 1f && clock >= diagAt)
                 || (reason != null && lastDiag.endsWith(reason))) {   // a reason for nothing: once, until it changes
-            dGhost = dFront = dFrontAway = dFlash = 0;
+            dGhost = dRing = dFlash = 0;
             return;
         }
         diagAt = clock;
@@ -425,8 +437,8 @@ final class ConstructionFx {
                     continue;
                 ConstructionGrid g = s.grid;
                 b.append("; ").append(p.centrePos.toShortString()).append(" course y ").append(g.courseLayerY())
-                        .append(", ").append(g.missingCount()).append(" missing, front segs ").append(g.frontSegCount())
-                        .append(" (").append(g.courseEdgeCount()).append(" course edges)");
+                        .append(", ").append(g.missingCount()).append(" missing, ring y ").append(String.format(
+                                java.util.Locale.ROOT, "%.2f", s.shape.ringY(s.lastFront)));
                 if (s.next[3] != 0)
                     b.append(", next block ").append(s.next[0]).append(' ').append(s.next[1]).append(' ').append(s.next[2])
                             .append(g.inView(s.next[0], s.next[1], s.next[2], BarFxClient.lookX, BarFxClient.lookY,
@@ -435,15 +447,15 @@ final class ConstructionFx {
                     b.append(", no next block");
                 b.append(", crew ").append(s.crew.active(clock));
             }
-            b.append(" | drawn: ghost quads ").append(dGhost).append(", front segs ").append(dFront).append(" (")
-                    .append(dFrontAway).append(" turned away), flash quads ").append(dFlash).append(" (flash ")
+            b.append(" | drawn: ghost quads ").append(dGhost).append(", rings ").append(dRing)
+                    .append(", flash quads ").append(dFlash).append(" (flash ")
                     .append((clock * NEXT_HZ) % 1f < 0.5f ? "on" : "off").append(String.format(java.util.Locale.ROOT,
                             "), look %.2f %.2f %.2f, zoom %.1f, %.3f blocks/px", BarFxClient.lookX, BarFxClient.lookY,
                             BarFxClient.lookZ, BarFxClient.zoom, pxBlocks));
         }
         lastDiag = b.toString();
         com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Eyes] construction fx: {}", lastDiag);
-        dGhost = dFront = dFrontAway = dFlash = 0;
+        dGhost = dRing = dFlash = 0;
     }
 
     /** BarFxClient caught an exception out of render: logged once (it was swallowed silently before round 18). */
@@ -473,9 +485,10 @@ final class ConstructionFx {
     // ------------------------------------------------------------------ the halo
 
     /**
-     * The cloud halo round the course's footprint (ConstructionShape.ringPoint, rounded corners), RING_DROP under the
-     * rim. Round 10 critic: still a hard ring track (grass to band in 6 px on both sides - the cool band's 0.08-block
-     * fringes - no puffs visible), a second selection indicator. Now: pulled in to RING_PAD (0.25) outside the walls,
+     * The cloud ring round the course's footprint (ConstructionShape.ringPoint, rounded corners), half way up the course
+     * being laid (ConstructionShape.ringY: lovish, Nov 3, "bring the ring back"). Round 10 critic: still a hard ring
+     * track (grass to band in 6 px on both sides - the cool band's 0.08-block fringes - no puffs visible), a second
+     * selection indicator. Now: pulled in to RING_PAD (0.25) outside the walls,
      * clear of the selection box; a soft falloff 0.4 block inward and 0.65 outward (its outer edge wandering with slow
      * noise), neutral #F4F4F6, 0.35-0.55 pulsing at 0.6 Hz on the near side, 0.25 at most on the far side; 6-8 flat
      * puffs on it (0.5-0.75 block radius, +-25% scale, 0.3-0.5 alpha) drifting at 0.1 block a second; then the cool band
@@ -488,7 +501,7 @@ final class ConstructionFx {
         float mx = (s.ring[0] + s.ring[1]) * 0.5f, mz = (s.ring[2] + s.ring[3]) * 0.5f;
         box[0] = mx + (s.ring[0] - mx) * grow; box[1] = mx + (s.ring[1] - mx) * grow;
         box[2] = mz + (s.ring[2] - mz) * grow; box[3] = mz + (s.ring[3] - mz) * grow;
-        float pad = RING_PAD * grow, y = Math.max(front - RING_DROP, s.shape.minY() + RING_FLOOR);
+        float pad = RING_PAD * grow, y = s.shape.ringY(front);
         float pulse = 0.45f + 0.1f * (float) Math.sin(clock * 2 * Math.PI * 0.6f);   // 0.35-0.55 at 0.6 Hz
         float len = ConstructionShape.ringLength(box, pad);
         int n = Math.max(32, Math.min(128, Math.round(len / 0.5f)));
@@ -725,47 +738,6 @@ final class ConstructionFx {
         float ox = -BarFxClient.lookX * EDGE_NUDGE, oy = -BarFxClient.lookY * EDGE_NUDGE, oz = -BarFxClient.lookZ * EDGE_NUDGE;
         line(x0 + ox, y0 + oy, z0 + oz, x1 + ox, y1 + oy, z1 + oz, 1.5f * pxBlocks, GHOST_EDGE, 0.6f);
         return 1;
-    }
-
-    // ------------------------------------------------------------------ the build front
-
-    /** The front's on-screen width (px) at every zoom; how far it is pulled toward the camera. */
-    private static final float FRONT_PX = 3, FRONT_NUDGE = 0.3f;
-
-    /**
-     * ONE build front for the whole building (rounds 14-16 critic: orange-trimmed blocks, five pieces a face, a faint
-     * dashed outline). Round 17 critic: never seen in a still. The eyes log (run 41148221488) had the site at 41-54%
-     * laid: the front course - the lowest with a block missing - was a course all but laid, and its band ran along that
-     * course's BED, a full laid course under the ghost: a seam in the white wall, which at the breath's low point
-     * (#FFB347 x 0.65 = (166, 118, 50)) read as one more of the Sunforged gold trims. Now:
-     * <ul>
-     *   <li>ON the laid/ghost boundary (ConstructionGrid.frontSeg*): over the top of each laid block of the front course
-     *   that has ghost above it, along the bed of each missing one, and up the step between - one continuous stepped
-     *   line, on every outer face of the course turned to the camera - on WALL cells only (round 18 critic: amber pads
-     *   on a lone lamp post or pedestal, ConstructionGrid.isWall);</li>
-     *   <li>FRONT_LINE (#E0973E since round 18), fully opaque, normal-blended, 3 px on screen at every zoom (FRONT_PX x
-     *   the frame's blocks per px), no breath (the next block's flash is what moves); polygon-offset and pulled FRONT_NUDGE toward the camera so the laid stone it lies on never covers
-     *   it. No see-through pass (its 0.4 stretches crossed the laid tops as beige noise).</li>
-     * </ul>
-     */
-    static void drawFront(Site s) {
-        if (s == null)
-            return;
-        ConstructionGrid g = s.grid;
-        float w = FRONT_PX * pxBlocks;
-        float lx = BarFxClient.lookX, lz = BarFxClient.lookZ;
-        float ox = -lx * FRONT_NUDGE, oy = -BarFxClient.lookY * FRONT_NUDGE, oz = -lz * FRONT_NUDGE;
-        for (int i = 0, n = g.frontSegCount(); i < n; i++) {
-            int side = g.frontSegSide(i);
-            if (sideNx(side) * lx + sideNz(side) * lz > -0.05f) {   // a face turned away: hidden behind the building
-                dFrontAway++;
-                continue;
-            }
-            float ix = -sideNx(side) * RIM_INSET + ox, iz = -sideNz(side) * RIM_INSET + oz;
-            line(g.frontSegX0(i) + ix, g.frontSegY0(i) + oy, g.frontSegZ0(i) + iz, g.frontSegX1(i) + ix,
-                    g.frontSegY1(i) + oy, g.frontSegZ1(i) + iz, w, FRONT_LINE, 1f);
-            dFront++;
-        }
     }
 
     // ------------------------------------------------------------------ light from above

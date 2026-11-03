@@ -73,15 +73,6 @@ public final class BarFxRenderTypes extends RenderType {
                     .setDepthTestState(NO_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY).createCompositeState(false));
 
-    /** Alpha blended and pulled forward with polygon offset: lines on a surface that must not sink into it (the build
-     *  front, round 13 critic). */
-    public static final RenderType TRANSLUCENT_OFFSET = create("reignofnether_barfx_translucent_offset",
-            DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1 << 16, false, false,
-            CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setCullState(NO_CULL)
-                    .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
-                    .setLayeringState(POLYGON_OFFSET_LAYERING)
-                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY).createCompositeState(false));
-
     /** Flashes, fire, sparks, beams, shockwaves: added on top of what is behind (reads as light). */
     public static final RenderType ADDITIVE = create("reignofnether_barfx_additive", DefaultVertexFormat.POSITION_COLOR,
             VertexFormat.Mode.QUADS, 1 << 18, false, false,

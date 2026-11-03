@@ -131,6 +131,35 @@ class ConstructionShapeTest {
     }
 
     /**
+     * lovish, Nov 3 ("bring the ring back"): the approved method's "luminous cloud RING round the layer being built ...
+     * the ring climbs and narrows". From a front (the laid/missing boundary) the ring rings the course being laid: half
+     * way up it, on that course's footprint - higher and narrower as the tower rises, never on the ground (round 12: a
+     * white haze on the lawn) and never above the top course.
+     */
+    @Test
+    void theRingClimbsAndNarrowsRoundTheCourseBeingLaid() {
+        ConstructionShape s = tower();
+        float[] r = new float[4];
+        float lastY = Float.NEGATIVE_INFINITY, lastW = Float.POSITIVE_INFINITY;
+        for (float front : new float[] { 64f, 66f, 67f, 69f, 70f, 73f }) {
+            float y = s.ringY(front);
+            s.layerBox(front, r);
+            float w = r[1] - r[0];
+            assertEquals(front + 0.5f, y, 1e-4, "half way up the course laid from " + front);
+            assertTrue(y > lastY, "climbs: " + y + " after " + lastY);
+            assertTrue(w <= lastW, "narrows: " + w + " after " + lastW);
+            lastY = y; lastW = w;
+        }
+        s.layerBox(67f, r);
+        assertEquals(5f, r[1] - r[0], 1e-4, "the base done: it rings the 5x5 middle");
+        s.layerBox(70f, r);
+        assertEquals(1f, r[1] - r[0], 1e-4, "then the spire");
+        assertEquals(64.5f, s.ringY(63f), 1e-4, "never on the ground");
+        assertEquals(73.5f, s.ringY(74f), 1e-4, "all laid: round the top course, not above it");
+        assertEquals(0.5f, ConstructionShape.of(List.of()).ringY(5f), 1e-4, "an empty shape never throws");
+    }
+
+    /**
      * Round 3 (eyes 41023134378): at "39% laid" the walls stood well above the front the COUNT implied, so the gold
      * outline wrapped built walls. Builders mostly go bottom-up, but stragglers (a jammed pool's water, blocks the
      * placement skips) hold the count back. The front now comes from what is actually standing per layer: the lowest
