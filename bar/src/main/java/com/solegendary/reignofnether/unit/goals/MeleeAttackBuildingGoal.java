@@ -65,7 +65,9 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
     // 72-112, and the raid timing test failed in CI (flake-stress 41708076632). Each attacker now takes the nearest cell
     // at least the two units' width from every other attacker's cell, so a party spreads round the building; with no
     // such cell left it takes the nearest, as before. Keyed by entity id, so a dead attacker or a destroyed building is
-    // not held here.
+    // not held here. A cell is kept while it stays clear of the others: re-picking it from where the unit stood every
+    // move-target refresh swapped cells mid-attack, and a Marauder sent round the corner left reach for 20 ticks (its
+    // blow timer stops out of reach) - the converter still read 4.2 s (flake-stress 41738191824; 41739474107).
     private static final Map<BuildingPlacement, Map<Integer, BlockPos>> ATTACK_CELLS = new WeakHashMap<>();
 
     public MeleeAttackBuildingGoal(Mob mob) {
@@ -199,7 +201,7 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
     private BlockPos claimCell(BlockPos from) {
         BuildingPlacement target = buildingTarget;
         Map<Integer, BlockPos> cells = ATTACK_CELLS.computeIfAbsent(target, b -> new HashMap<>());
-        cells.remove(mob.getId());
+        BlockPos mine = cells.remove(mob.getId());
         Map<Mob, BlockPos> others = new HashMap<>();
         cells.entrySet().removeIf(e -> {
             if (mob.level().getEntity(e.getKey()) instanceof Mob m && m.isAlive() && m instanceof AttackerUnit au
@@ -209,14 +211,16 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
             }
             return true;
         });
-        BlockPos cell = others.isEmpty() ? null : target.getClosestGroundPos(from, 1, false, p -> {
+        java.util.function.Predicate<BlockPos> clear = p -> {
             for (Map.Entry<Mob, BlockPos> e : others.entrySet()) {
                 int need = Math.max(1, (int) Math.ceil((mob.getBbWidth() + e.getKey().getBbWidth()) / 2));
                 if (Math.max(Math.abs(e.getValue().getX() - p.getX()), Math.abs(e.getValue().getZ() - p.getZ())) < need)
                     return false;
             }
             return true;
-        });
+        };
+        BlockPos cell = mine != null && clear.test(mine) ? mine
+            : others.isEmpty() ? null : target.getClosestGroundPos(from, 1, false, clear);
         if (cell == null)
             cell = target.getClosestGroundPos(from, 1);
         cells.put(mob.getId(), cell);
@@ -242,6 +246,7 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
         if (blockPos != null) {
             currentMeleeRecalcCooldown = MELEE_RECALC_COOLDOWN_MAX;
             cachedMoveTarget = null;   // a new order always takes a fresh ground cell
+            releaseCell();
             if (this.mob.level().isClientSide()) {
                 BuildingPlacement b = BuildingUtils.findBuilding(this.mob.level().isClientSide(), blockPos);
                 if (b != null && b.isAttackable()) {
