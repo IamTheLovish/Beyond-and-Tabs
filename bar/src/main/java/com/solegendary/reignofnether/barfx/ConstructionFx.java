@@ -28,7 +28,8 @@ import java.util.WeakHashMap;
  *   one volume, not a lattice; round 15: the laid wall read as ghost);</li>
  *   <li>the luminous CLOUD RING round the course being laid (lovish, Nov 3: "bring the ring back" - rounds 12-19 had
  *   dropped it while a site rose): half way up that course, on its footprint, so it climbs and narrows with the
- *   building (ConstructionShape.ringY / layerBox), drawn over the ghost; it replaces round 17-19's amber line on the
+ *   building (ConstructionShape.ringY / layerBox), drawn over the ghost - a chain of puffs with cool bellies and lit
+ *   tops over a soft band (drawCloud, drawHalo); it replaces round 17-19's amber line on the
  *   same course (two bands a course apart);</li>
  *   <li>the next block to be placed - one the camera can see - flashing amber over everything (round 16, 17 critic);</li>
  *   <li>three thin beams rising from the front row, slow gold motes;</li>
@@ -106,8 +107,12 @@ final class ConstructionFx {
     /** Past this RTS zoom (strategic) the ghost loses its lines, the tools become glints and the light stops. */
     private static final float FAR_ZOOM = 70;
     /** The halo's ring line stands this far outside the course's footprint (round 10 critic: pulled 0.5 in, clear of
-     *  the selection box). */
-    private static final float RING_PAD = 0.25f;
+     *  the selection box). Nov 3 (the ring back, eyes 41710151863): at 0.25 the white band lay on the white walls and
+     *  the pale ghost and did not read at all; 0.6 floats it, and its puffs, clear of the wall faces. */
+    private static final float RING_PAD = 0.6f;
+    /** The ring's cloud (Nov 3): camera-facing puffs, each a cool belly under a lit top - the shading is what tells a
+     *  white cloud from the white Sunforged stone behind it and the lit top what tells it from the blue ghost. */
+    private static final int CLOUD_LIT = 0xFFFDF6, CLOUD_BELLY = 0x8FA3C8;
     /** Seconds between recounts of what stands (a few hundred block-state reads per site). */
     private static final float RECOUNT = 0.5f;
 
@@ -372,6 +377,7 @@ final class ConstructionFx {
             Site s = SITES.get(p);
             if (s != null && !p.isBuilt && !Float.isNaN(s.ring[0])) {
                 drawHalo(s, s.lastFront, clock, far, 1, 1);
+                drawCloud(s, s.lastFront, clock);
                 dRing++;
             }
         }
@@ -488,7 +494,7 @@ final class ConstructionFx {
      * The cloud ring round the course's footprint (ConstructionShape.ringPoint, rounded corners), half way up the course
      * being laid (ConstructionShape.ringY: lovish, Nov 3, "bring the ring back"). Round 10 critic: still a hard ring
      * track (grass to band in 6 px on both sides - the cool band's 0.08-block fringes - no puffs visible), a second
-     * selection indicator. Now: pulled in to RING_PAD (0.25) outside the walls,
+     * selection indicator. Now: RING_PAD outside the walls,
      * clear of the selection box; a soft falloff 0.4 block inward and 0.65 outward (its outer edge wandering with slow
      * noise), neutral #F4F4F6, 0.35-0.55 pulsing at 0.6 Hz on the near side, 0.25 at most on the far side; 6-8 flat
      * puffs on it (0.5-0.75 block radius, +-25% scale, 0.3-0.5 alpha) drifting at 0.1 block a second; then the cool band
@@ -541,6 +547,29 @@ final class ConstructionFx {
             float side = 1 - (1 - 0.25f / 0.55f) * Math.max(0, Math.min(1, pt[2] * lx + pt[3] * lz));
             float py = y + 0.3f * (2 * hash(k * 7 + 1) - 1) + 0.05f * (float) Math.sin(clock * 0.7f + k);
             flatDisc(pt[0], py + 0.03f, pt[1], r, HALO, (0.3f + 0.2f * hash(k * 5 + 3)) * side * alpha, 14);
+        }
+    }
+
+    /**
+     * The rising ring's cloud (lovish, Nov 3: "bring the ring back"; the approved paintover's "luminous cloud RING"):
+     * a chain of camera-facing puffs one every ~1.1 blocks round the halo's line (10 to 40), 0.55-0.85 block, each a
+     * cool belly (CLOUD_BELLY, 0.55, a quarter of its size lower) under a lit top (CLOUD_LIT, 0.8, a little smaller and
+     * higher), breathing +-10% and drifting round at 0.15 block a second; the far side at under half (and hidden where
+     * the ghost stands in front of it, by its depth). Neighbours overlap, so it reads as one band of cloud.
+     */
+    static void drawCloud(Site s, float front, float clock) {
+        float[] box = s.tmp, pt = s.pt;   // drawHalo just wrote s.ring (grow 1) into s.tmp
+        float y = s.shape.ringY(front), len = ConstructionShape.ringLength(box, RING_PAD);
+        float lx = BarFxClient.lookX, lz = BarFxClient.lookZ, lh = (float) Math.sqrt(lx * lx + lz * lz);
+        if (lh > 1e-4f) { lx /= lh; lz /= lh; }
+        int n = Math.max(10, Math.min(40, Math.round(len / 1.1f)));
+        for (int k = 0; k < n; k++) {
+            ConstructionShape.ringPoint(box, RING_PAD, (k + 0.3f * hash(k * 5 + 2)) / n + clock * 0.15f / len, pt);
+            float side = 1 - (1 - 0.45f) * Math.max(0, Math.min(1, pt[2] * lx + pt[3] * lz));
+            float r = (0.55f + 0.3f * hash(k * 11 + 7)) * (1 + 0.1f * (float) Math.sin(clock * 0.6f + k * 1.7f));
+            float py = y + 0.2f * (2 * hash(k * 7 + 1) - 1);
+            BarFxClient.softDisc(pt[0], py - 0.25f * r, pt[1], r, CLOUD_BELLY, 0.55f * side, CLOUD_BELLY, 0, 12, k, 0);
+            BarFxClient.softDisc(pt[0], py + 0.12f * r, pt[1], 0.8f * r, CLOUD_LIT, 0.8f * side, CLOUD_LIT, 0, 12, k, 0);
         }
     }
 
