@@ -423,7 +423,39 @@ public class GraveyardExitGameTests {
             goal == null || goal.getMoveTarget() == null ? "none" : goal.getMoveTarget().toShortString(),
             z.getNavigation().isDone(), goal != null && goal.isPathPending(), goal != null && goal.isGoalRunning(),
             goal == null || goal.getLastUnreachableTarget() == null ? "none" : goal.getLastUnreachableTarget().toShortString(),
-            ((Unit) z).isIdle(), UnitUnstick.isPocketed(level, cell), z.isAlive() ? "" : " DEAD");
+            ((Unit) z).isIdle(), UnitUnstick.isPocketed(level, cell), z.isAlive() ? "" : " DEAD") + paths(level, z, goal, rally);
+    }
+
+    /**
+     * What the unit's path requests came back with (MoveToTargetBlockGoal's dbg counters) and what the RTS grid A*
+     * finds from where it stands to the rally right now: a way the grid sees now but the unit gave up on points at the
+     * requests (busy answers, the vanilla fallback, a stale grid at the time); no way now points at the grid itself.
+     */
+    private static String paths(ServerLevel level, ZombieUnit z, MoveToTargetBlockGoal goal, BlockPos rally) {
+        StringBuilder sb = new StringBuilder();
+        if (goal != null)
+            sb.append(String.format(Locale.ROOT, ", requests: rts %d (reached %d), null %d, busy %d, vanilla fallbacks %d, give-ups %d, last %s",
+                goal.dbgRtsPaths, goal.dbgRtsReached, goal.dbgRtsNull, goal.dbgBusy, goal.dbgSyncFallbacks, goal.dbgGiveUps, goal.dbgLastPath));
+        try {
+            var mobility = com.solegendary.reignofnether.unit.pathfinding.MobilityClass.of((Unit) z);
+            int radius = com.solegendary.reignofnether.unit.pathfinding.RtsPathfinder.footprintRadiusFor(z);
+            int clearance = Math.max(2, net.minecraft.util.Mth.ceil(z.getBbHeight()));
+            BlockPos start = z.blockPosition();
+            BlockPos goalCell = com.solegendary.reignofnether.unit.pathfinding.RtsPathfinder.findStandable(level, rally, mobility, radius,
+                clearance, 0f, com.solegendary.reignofnether.unit.pathfinding.RtsPathfinder.SNAP_RADIUS);
+            BlockPos target = goalCell == null ? rally : goalCell;
+            var snap = com.solegendary.reignofnether.unit.pathfinding.ChunkSnapshot.capture(level, start, target,
+                com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig.dilationFor(start, target), mobility, clearance, radius, 0f, false);
+            var r = com.solegendary.reignofnether.unit.pathfinding.GridAStar.search(snap, start, target, 0,
+                com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig.MAX_RADIUS, com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig.MAX_NODES);
+            sb.append(String.format(Locale.ROOT, "; grid A* now from %s to %s: %s, %d nodes, %d waypoints, ends %s",
+                start.toShortString(), target.toShortString(), r.reached ? "REACHED" : "NOT reached", r.nodesExpanded,
+                r.waypoints == null ? 0 : r.waypoints.size(),
+                r.waypoints == null || r.waypoints.isEmpty() ? "-" : r.waypoints.get(r.waypoints.size() - 1).toShortString()));
+        } catch (Throwable t) {
+            sb.append("; grid A* now: ").append(t);
+        }
+        return sb.toString();
     }
 
     private static List<ZombieUnit> zombiesOf(ServerLevel level, GraveyardPlacement gy, String owner) {

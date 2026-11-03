@@ -45,6 +45,11 @@ public class MoveToTargetBlockGoal extends Goal {
     // The target most recently dropped as unreachable (for errands such as Plant Thicket to tell "gave up" apart
     // from "was told to stop"). Cleared by the next order.
     @Nullable protected BlockPos lastUnreachableTarget = null;
+    // What this goal's path requests came back with, for a GameTest's failure line (GraveyardExitGameTests: 3 of 5
+    // Zombies stood inside a half-blocked graveyard with the rally "unreachable" while 2 walked out): RTS paths, how
+    // many reached, null answers, busy answers, the vanilla fallbacks the busy answers led to, give-ups, the last path
+    public int dbgRtsPaths, dbgRtsReached, dbgRtsNull, dbgBusy, dbgSyncFallbacks, dbgGiveUps;
+    public String dbgLastPath = "none";
     @Nullable public BlockPos getLastUnreachableTarget() { return lastUnreachableTarget; }
 
     // Only the units' plain move goal gives up: the subclasses (build, gather, attack-building, garrison...) are
@@ -144,6 +149,7 @@ public class MoveToTargetBlockGoal extends Goal {
         if (stuckRepaths >= GIVE_UP_AFTER_STUCK_REPATHS && givesUpWhenUnreachable() && moveTarget != null
                 && !this.mob.level().isClientSide() && !(this.mob instanceof Unit u && u.getHoldPosition())) {
             lastUnreachableTarget = moveTarget;
+            dbgGiveUps++;
             stuckRepaths = 0;
             moveTarget = null;
             this.mob.getNavigation().stop();
@@ -460,6 +466,7 @@ public class MoveToTargetBlockGoal extends Goal {
         // and retry after a short cooldown - do NOT stop() or back off. Stopping here is exactly what made
         // units shuffle back and forth: they'd stop, re-submit next tick, get dropped again, repeat.
         if (busy) {
+            dbgBusy++;
             if (pendingRepath) {
                 repathFromX = repathPrevFromX;
                 repathFromZ = repathPrevFromZ;
@@ -477,6 +484,9 @@ public class MoveToTargetBlockGoal extends Goal {
                 if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
                 this.mob.getNavigation().moveTo(fallback, speedMod);
                 lastPathEnd = getFinalNodePos();
+                dbgSyncFallbacks++;
+                dbgLastPath = "vanilla fallback " + (fallback == null ? "null" : (fallback.canReach() ? "reached" : "partial")
+                    + " end " + (lastPathEnd == null ? "-" : lastPathEnd.toShortString()));
             }
             return;
         }
@@ -493,6 +503,8 @@ public class MoveToTargetBlockGoal extends Goal {
             return;
         }
         if (path == null) {
+            dbgRtsNull++;
+            dbgLastPath = "rts null";
             this.mob.getNavigation().stop();
             if (wasRepath) {
                 onStuckRepath(forced);
@@ -507,6 +519,10 @@ public class MoveToTargetBlockGoal extends Goal {
         this.mob.getNavigation().moveTo(path, speedMod);
         pathInHand = this.mob.getNavigation().getPath();
         lastPathEnd = getFinalNodePos();
+        dbgRtsPaths++;
+        if (path.canReach())
+            dbgRtsReached++;
+        dbgLastPath = "rts " + (path.canReach() ? "reached" : "partial") + " end " + (lastPathEnd == null ? "-" : lastPathEnd.toShortString());
         // The RTS pathfinder is async: node 0 is the unit's position when the request was SUBMITTED, a few
         // ticks ago. By delivery the unit has often drifted off it (crowd/formation separation, momentum),
         // and vanilla navigation always starts following at node 0 - so it would steer the unit BACK to the
