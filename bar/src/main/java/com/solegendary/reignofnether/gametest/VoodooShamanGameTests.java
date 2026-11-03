@@ -145,6 +145,47 @@ public class VoodooShamanGameTests {
     }
 
     /**
+     * A test's timed steps, counted from the tick every unit it spawned has ticked ArenaReady.TICKS times of its own, not
+     * from the spawn: a unit added at tick 0 can still be missing from level.getEntity at tick 3 while its section is not
+     * entity-ticking, so a click by id finds nothing (flake-stress 41629620585 runner 2: "its owner could not possess the
+     * Vindicator: That unit is gone."; the GameTestChunks.whenEntitiesReady family). One tick callback, registered from
+     * the test body: vanilla iterates its tick map while it runs the callbacks, so steps are never registered from inside
+     * one. A test waits at most READY_WAIT ticks for its units (its timeoutTicks carries that much more).
+     */
+    static final class Steps {
+        static final int READY_WAIT = 90;
+        private final List<Integer> delays = new ArrayList<>();
+        private final List<Runnable> bodies = new ArrayList<>();
+        private int start = -1, next = 0;
+
+        static Steps ready(GameTestHelper helper, List<Entity> made) {
+            Steps s = new Steps();
+            List<Entity> units = new ArrayList<>();
+            for (Entity e : made)
+                if (e instanceof LivingEntity)
+                    units.add(e);
+            ArenaReady.whenTicking(helper, units, READY_WAIT, tick -> s.start = tick);
+            helper.onEachTick(() -> {
+                if (s.start < 0)
+                    return;
+                long t = helper.getTick() - s.start;
+                while (s.next < s.delays.size() && t >= s.delays.get(s.next))
+                    s.bodies.get(s.next++).run();
+            });
+            return s;
+        }
+
+        /** Runs {@code body} {@code delay} ticks after the units are ticking; steps are added in delay order. */
+        Steps at(int delay, Runnable body) {
+            if (!delays.isEmpty() && delay < delays.get(delays.size() - 1))
+                throw new IllegalArgumentException("steps out of order: " + delay + " after " + delays.get(delays.size() - 1));
+            delays.add(delay);
+            bodies.add(body);
+            return this;
+        }
+    }
+
+    /**
      * What a Spirit Puppet click met, for a failure message: the beaten-puppeteer test once found a take not done (green
      * 40840131301, 1 run in 7) with no word of why.
      */
@@ -291,7 +332,7 @@ public class VoodooShamanGameTests {
     }
 
     /** The shaman gathers the wisps near it like any carrier: a 4-essence wisp 5 blocks off flies in. */
-    @GameTest(template = ARENA, timeoutTicks = 120, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 220, batch = BATCH)
     public static void voodoo_shaman_gathers_essence_wisps(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         Mob caster = shaman(helper, owner(helper, "gather"), 3, 3, 0, made);
@@ -302,7 +343,8 @@ public class VoodooShamanGameTests {
         Entity wisp = EssenceServerEvents.spawnWisp(helper.getLevel(), caster.getX() + 5, caster.getY() + 1, caster.getZ(), 4);
         if (wisp != null)
             made.add(wisp);
-        helper.runAfterDelay(100, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(100, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (wisp == null)
@@ -325,7 +367,7 @@ public class VoodooShamanGameTests {
      * melee blow deals nothing where an unhexed twin's lands, and SealServerEvents calls it sealed - and both are free
      * again after the 4 s. Each cast costs 5 essence and starts the 12 s cooldown.
      */
-    @GameTest(template = ARENA, timeoutTicks = 140, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 240, batch = BATCH)
     public static void voodoo_hex_disarms_and_seals_a_t1_or_t2_enemy_for_4_seconds(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "hexa"), b = owner(helper, "hexb");
@@ -342,7 +384,8 @@ public class VoodooShamanGameTests {
         }
         List<String> early = new ArrayList<>();
         float[] hp = new float[2];
-        helper.runAfterDelay(3, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(3, () -> {
             try {
                 if (Hex.ESSENCE_COST != 5 || Hex.CD_SECONDS != 12 || Hex.DURATION_SECONDS != 4)
                     early.add("lovish set Hex at 5 essence / 12 s / 4 s, it has " + Hex.ESSENCE_COST + " / " + Hex.CD_SECONDS + " / " + Hex.DURATION_SECONDS);
@@ -373,7 +416,7 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(3 + Hex.DURATION_SECONDS * 20 + 10, () -> {
+        steps.at(3 + Hex.DURATION_SECONDS * 20 + 10, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 for (Mob m : new Mob[] { t1, t2 })
@@ -390,7 +433,7 @@ public class VoodooShamanGameTests {
      * Hex is refused - nothing spent, no cooldown, no hex - on a T3 enemy (a War Mammoth), on an ally, and with 4 of the
      * 5 essence; and once cast, a second Hex inside the 12 s cooldown does nothing.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 140, batch = BATCH)
     public static void voodoo_hex_refuses_t3_allies_short_essence_and_its_cooldown(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "hexra"), b = owner(helper, "hexrb");
@@ -404,7 +447,8 @@ public class VoodooShamanGameTests {
             spawnFailed(helper, made, "the shamans and their targets");
             return;
         }
-        helper.runAfterDelay(3, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 Hex hex = ability(rich, Hex.class);
@@ -446,7 +490,7 @@ public class VoodooShamanGameTests {
      * attacks 25% faster and an enemy moves 15% slower, each against an identical unit 11+ blocks away that is untouched.
      * An enemy may target the totem and its blow lands.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 160, batch = BATCH)
     public static void voodoo_blood_totem_speeds_allies_and_slows_enemies_within_8(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         // open ground (stone at y 1, air above): the arena's grass layer sits at helper y 2, the units' feet, so a click
@@ -466,7 +510,8 @@ public class VoodooShamanGameTests {
         BlockPos ground = new BlockPos(2, 1, 4);
         Vec3 spot = Vec3.atBottomCenterOf(helper.absolutePos(ground.above()));
         List<String> early = new ArrayList<>();
-        helper.runAfterDelay(2, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(2, () -> {
             try {
                 if (BloodTotem.ESSENCE_COST != 10 || BloodTotem.CD_SECONDS != 25 || BloodTotem.DURATION_SECONDS != 15 || BloodTotem.RADIUS != 8)
                     early.add("lovish set Blood Totem at 10 essence / 25 s / 15 s / 8 blocks, it has " + BloodTotem.ESSENCE_COST + " / "
@@ -492,7 +537,7 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(30, () -> {
+        steps.at(30, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 float in = ((AttackerUnit) allyIn).getAttacksPerSecond(), out = ((AttackerUnit) allyOut).getAttacksPerSecond();
@@ -527,7 +572,7 @@ public class VoodooShamanGameTests {
      * The totem stands 15 s, then falls - and, a summon, leaves no essence wisp; a second Blood Totem with 9 essence is
      * refused with nothing spent and no cooldown.
      */
-    @GameTest(template = ARENA, timeoutTicks = 360, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 460, batch = BATCH)
     public static void voodoo_blood_totem_lasts_15_seconds_drops_no_essence_and_refuses_when_short(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         // open ground (stone at y 1, air above): the arena's grass layer sits at helper y 2, the units' feet, so a click
@@ -545,7 +590,8 @@ public class VoodooShamanGameTests {
         Vec3 spot = Vec3.atBottomCenterOf(helper.absolutePos(ground.above()));
         Vec3 poorSpot = Vec3.atBottomCenterOf(helper.absolutePos(poorGround.above()));
         List<String> early = new ArrayList<>();
-        helper.runAfterDelay(2, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(2, () -> {
             try {
                 castAtGround(helper, caster, UnitAction.BLOOD_TOTEM, ground);
                 castAtGround(helper, poor, UnitAction.BLOOD_TOTEM, poorGround);
@@ -559,11 +605,11 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(2 + BloodTotem.DURATION_SECONDS * 20 - 20, () -> {
+        steps.at(2 + BloodTotem.DURATION_SECONDS * 20 - 20, () -> {
             if (totemsNear(level, spot, 2).size() != 1)
                 early.add("the totem fell before 14 s");
         });
-        helper.runAfterDelay(2 + BloodTotem.DURATION_SECONDS * 20 + 25, () -> {
+        steps.at(2 + BloodTotem.DURATION_SECONDS * 20 + 25, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (!totemsNear(level, spot, 2).isEmpty())
@@ -586,7 +632,7 @@ public class VoodooShamanGameTests {
      * whatever the puppeteer ordered cleared and no puppet record left. The shaman stands 4 blocks off, unhurt, unstunned:
      * the channel holds the whole 15 s.
      */
-    @GameTest(template = ARENA, timeoutTicks = 360, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 460, batch = BATCH)
     public static void voodoo_spirit_puppet_controls_a_t1_enemy_for_15_seconds_then_returns_it(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<Entity> made = new ArrayList<>();
@@ -599,7 +645,8 @@ public class VoodooShamanGameTests {
         }
         BlockPos bOrder = helper.absolutePos(new BlockPos(12, 2, 12)), aOrder = helper.absolutePos(new BlockPos(2, 2, 12));
         List<String> early = new ArrayList<>();
-        helper.runAfterDelay(2, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(2, () -> {
             try {
                 if (SpiritPuppet.ESSENCE_COST != 20 || SpiritPuppet.CD_SECONDS != 60 || SpiritPuppet.DURATION_SECONDS != 15)
                     early.add("lovish set Spirit Puppet at 20 essence / 60 s / 15 s, it has " + SpiritPuppet.ESSENCE_COST + " / "
@@ -625,11 +672,11 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(2 + SpiritPuppet.DURATION_SECONDS * 20 - 20, () -> {
+        steps.at(2 + SpiritPuppet.DURATION_SECONDS * 20 - 20, () -> {
             if (!a.equals(((Unit) foe).getOwnerName()))
                 early.add("the puppet went back before 14 s (the channel broke with nothing breaking it)");
         });
-        helper.runAfterDelay(2 + SpiritPuppet.DURATION_SECONDS * 20 + 20, () -> {
+        steps.at(2 + SpiritPuppet.DURATION_SECONDS * 20 + 20, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (!b.equals(((Unit) foe).getOwnerName()))
@@ -654,7 +701,7 @@ public class VoodooShamanGameTests {
      * walks 17 blocks from its puppet - each puppet goes back to its owner at once (orders cleared, record gone), well
      * before the 15 s.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 160, batch = BATCH)
     public static void voodoo_spirit_puppet_breaks_when_the_shaman_is_hit_stunned_or_16_blocks_away(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "pupca"), b = owner(helper, "pupcb");
@@ -671,7 +718,8 @@ public class VoodooShamanGameTests {
         Mob[][] pairs = { { hit, foeHit }, { stunned, foeStunned }, { walker, foeWalker } };
         String[] how = { "hit", "stunned", "17 blocks away" };
         List<String> early = new ArrayList<>();
-        helper.runAfterDelay(2, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(2, () -> {
             try {
                 for (int i = 0; i < pairs.length; i++) {
                     castAt(helper, pairs[i][0], UnitAction.SPIRIT_PUPPET, pairs[i][1]);
@@ -682,7 +730,7 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(6, () -> {
+        steps.at(6, () -> {
             try {
                 hit.hurt(hit.damageSources().generic(), 2f);
                 stunned.addEffect(new MobEffectInstance(MobEffectRegistrar.STUN.get(), 40));
@@ -691,7 +739,7 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(12, () -> {
+        steps.at(12, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (SpiritPuppet.CHANNEL_RANGE != 16)
@@ -715,7 +763,7 @@ public class VoodooShamanGameTests {
      * artillery tests claim one) is let go when it goes back - the possession ends with the hand-back, so the 15 s steal
      * cannot become permanent control. The channel is broken early (the shaman is hit) to hand it back.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 160, batch = BATCH)
     public static void voodoo_spirit_puppet_hand_back_ends_the_puppeteers_possession(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "pupposa"), b = owner(helper, "pupposb");
@@ -727,7 +775,8 @@ public class VoodooShamanGameTests {
             return;
         }
         List<String> early = new ArrayList<>();
-        helper.runAfterDelay(2, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(2, () -> {
             try {
                 castAt(helper, caster, UnitAction.SPIRIT_PUPPET, foe);
                 if (!a.equals(((Unit) foe).getOwnerName()))
@@ -736,7 +785,7 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(3, () -> {
+        steps.at(3, () -> {
             try {
                 String why = PossessionServer.claim(helper.getLevel(), a, driver, foe.getId(), true);
                 if (why != null)
@@ -747,14 +796,14 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(6, () -> {
+        steps.at(6, () -> {
             try {
                 caster.hurt(caster.damageSources().generic(), 2f);   // breaks the channel: the puppet goes back
             } catch (RuntimeException ex) {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(10, () -> {
+        steps.at(10, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (!b.equals(((Unit) foe).getOwnerName()))
@@ -774,7 +823,7 @@ public class VoodooShamanGameTests {
      * finished side, where nobody could order it: it is stripped (owner "") and killed, as MatchOutcome's strip does, and
      * its record goes. The channel is broken early (the shaman is hit).
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 160, batch = BATCH)
     public static void voodoo_spirit_puppet_of_a_beaten_owner_is_stripped_not_returned(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "pupdefa"), b = owner(helper, "pupdefb");
@@ -787,7 +836,8 @@ public class VoodooShamanGameTests {
         }
         List<Vec3> spots = new ArrayList<>();
         List<String> early = new ArrayList<>();
-        helper.runAfterDelay(2, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(2, () -> {
             try {
                 castAt(helper, caster, UnitAction.SPIRIT_PUPPET, foe);
                 if (!a.equals(((Unit) foe).getOwnerName()))
@@ -799,7 +849,7 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(5, () -> {
+        steps.at(5, () -> {
             try {
                 spots.add(foe.position());
                 caster.hurt(caster.damageSources().generic(), 2f);   // breaks the channel
@@ -807,7 +857,7 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(9, () -> {
+        steps.at(9, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (foe.isAlive() && !foe.isRemoved())
@@ -829,7 +879,7 @@ public class VoodooShamanGameTests {
      * owner unchanged - on a unit its owner drives in first person, on a rider and on the unit it rides, and on an enemy
      * summon (a Blood Totem); Hex refuses the summon too. A plain T1 enemy is then taken (the control).
      */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 140, batch = BATCH)
     public static void voodoo_spirit_puppet_and_hex_refuse_possessed_mounted_and_summoned_targets(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "puprefa"), b = owner(helper, "puprefb");
@@ -845,7 +895,8 @@ public class VoodooShamanGameTests {
             return;
         }
         Essence.markSummoned(totem);   // as BloodTotem.cast marks it
-        helper.runAfterDelay(3, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 String why = PossessionServer.claim(helper.getLevel(), b, driver, driven.getId(), true);
@@ -889,7 +940,7 @@ public class VoodooShamanGameTests {
      * and on a loaded runner the Vindicators' chunk is not always entity-ticking at tick 2 - green 40840131301 and
      * 40952359012 each lost both takes once in 7-8 runs ("in level true/false"), the test's own setup, not its point.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 140, batch = BATCH)
     public static void voodoo_spirit_puppets_of_a_beaten_puppeteer_go_back_before_its_strip(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "puplosa"), b = owner(helper, "puplosb"), c = owner(helper, "puplosc");
@@ -901,7 +952,8 @@ public class VoodooShamanGameTests {
             spawnFailed(helper, made, "the shamans and the enemies");
             return;
         }
-        helper.runAfterDelay(2, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(2, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 SpiritPuppet.cast(helper.getLevel(), beaten, a, foe, true);
@@ -933,7 +985,7 @@ public class VoodooShamanGameTests {
      * with 19 of the 20 essence; a puppet killed while it is controlled drops its essence wisp as any unit does (a
      * Vindicator: 95 metal, 3 essence) and leaves no puppet record behind.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 160, batch = BATCH)
     public static void voodoo_spirit_puppet_refuses_t2_and_short_essence_and_a_dead_puppet_drops_essence(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "pupra"), b = owner(helper, "puprb");
@@ -949,7 +1001,8 @@ public class VoodooShamanGameTests {
         List<Vec3> spots = new ArrayList<>();
         List<String> early = new ArrayList<>();
         int want = Essence.essenceFor(((Unit) foe).getCost().metal());
-        helper.runAfterDelay(2, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(2, () -> {
             try {
                 SpiritPuppet sp = ability(rich, SpiritPuppet.class);
                 castAt(helper, rich, UnitAction.SPIRIT_PUPPET, t2);
@@ -974,7 +1027,7 @@ public class VoodooShamanGameTests {
                 early.add("threw " + ex);
             }
         });
-        helper.runAfterDelay(8, () -> {
+        steps.at(8, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (SpiritPuppets.isPuppet(foe) || SpiritPuppets.tracks(foe))
@@ -993,7 +1046,7 @@ public class VoodooShamanGameTests {
      * holding 10 essence hexes the enemy beside it. A shaman short of the essence does not try (no order, so its attack
      * target is kept) - the AutoCaster's order would reset it before the refusal.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 140, batch = BATCH)
     public static void voodoo_bots_train_the_shaman_and_it_autocasts_hex_only_with_the_essence(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<Entity> made = new ArrayList<>();
@@ -1006,7 +1059,8 @@ public class VoodooShamanGameTests {
             spawnFailed(helper, made, "the shamans and the enemies");
             return;
         }
-        helper.runAfterDelay(3, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 BotPlayer.Kit kit = BotPlayer.kitFor(Factions.PIGLINS);
@@ -1060,7 +1114,7 @@ public class VoodooShamanGameTests {
      * too. Both gates that read the army are pinned: the research gate (t2Ready, through t2ArmyOut, its patience path
      * included) and the easy bot's T1 pause for the T2 lab (wantsT2Save).
      */
-    @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 120, batch = BATCH)
     public static void voodoo_shaman_counts_as_support_not_army_toward_a_bots_tier_2_minimum(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "bota");
@@ -1071,7 +1125,8 @@ public class VoodooShamanGameTests {
             spawnFailed(helper, made, "the shaman, the brute and the tombcaller");
             return;
         }
-        helper.runAfterDelay(2, () -> {
+        Steps steps = Steps.ready(helper, made);
+        steps.at(2, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 int fighters = BotPlayer.t2Fighters(List.of(shaman, brute));
