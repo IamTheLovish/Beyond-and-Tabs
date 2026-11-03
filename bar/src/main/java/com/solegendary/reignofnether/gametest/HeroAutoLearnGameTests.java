@@ -77,7 +77,42 @@ public class HeroAutoLearnGameTests {
             new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(name.getBytes(java.nio.charset.StandardCharsets.UTF_8)), name));
     }
 
+    /** What changed the hero's XP or points, by tick (watchPoints): appended to a failure, so its cause is in the log. */
+    static final java.util.Map<Integer, List<String>> POINT_HISTORY = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Every tick, any change of the hero's XP or points is recorded with who stood within 28 blocks of it then (owner,
+     * type, distance) and where the hero stood: a "points 0, ranks 2" failure (CI shard 8, 9 of 31 jobs Nov 1-3) said
+     * the hero had a second point, never where it came from.
+     */
+    static void watchPoints(GameTestHelper helper, FactionHero w) {
+        Mob mob = (Mob) w;
+        net.minecraft.core.BlockPos origin = helper.absolutePos(net.minecraft.core.BlockPos.ZERO);
+        List<String> history = POINT_HISTORY.computeIfAbsent(mob.getId(), k -> new ArrayList<>());
+        int[] last = { w.getExperience(), w.getSkillPoints() };
+        long start = mob.level().getGameTime();
+        helper.onEachTick(() -> {
+            if (!mob.isAlive() || (w.getExperience() == last[0] && w.getSkillPoints() == last[1]))
+                return;
+            StringBuilder near = new StringBuilder();
+            for (net.minecraft.world.entity.LivingEntity le : com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits())
+                if (le != mob && le.distanceToSqr(mob) < 28 * 28 && le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    near.append(' ').append(le.getType().toShortString()).append('(').append(u.getOwnerName()).append(le.isAlive() ? "" : " dead")
+                        .append(String.format(" %.0f", Math.sqrt(le.distanceToSqr(mob)))).append(')');
+            String line = "t" + (mob.level().getGameTime() - start) + " xp " + last[0] + "->" + w.getExperience() + " points " + last[1]
+                + "->" + w.getSkillPoints() + " level " + w.getHeroLevel() + " ranks " + ranks(w) + String.format(" at %.1f/%.1f", mob.getX() - origin.getX(),
+                mob.getZ() - origin.getZ()) + " near:" + (near.length() == 0 ? " none" : near);
+            history.add(line);
+            ReignOfNether.LOGGER.info("[AutoLearn] GameTest {}: {}", w.getOwnerName(), line);
+            last[0] = w.getExperience();
+            last[1] = w.getSkillPoints();
+        });
+    }
+
     static void finish(GameTestHelper helper, List<String> problems, Mob hero, String owner) {
+        List<String> history = POINT_HISTORY.remove(hero.getId());
+        if (!problems.isEmpty() && history != null && !history.isEmpty())
+            problems.add("XP/points changes: " + String.join(" | ", history));
         hero.discard();
         HeroBot.setAutoLearn(owner, true);
         if (problems.isEmpty())
@@ -93,6 +128,7 @@ public class HeroAutoLearnGameTests {
             helper.fail("could not spawn the test hero");
             return null;
         }
+        watchPoints(helper, (FactionHero) witch);
         return witch;
     }
 
