@@ -5,6 +5,8 @@ a game run - the r10 copper was green by block id and MINT in the pictures (sat 
 
 Measure (appends / overwrites the blocks it saw; keeps the rest):
   python3 tools/camera_colour.py <built.nbt> <stills dir> <still prefix, e.g. brass_t1> [--source "<run id / sha>"]
+      [--add-only]   (adds only block / face entries the table lacks: another lab's run must not move the numbers the
+                      Engine Shed's tests were set on - Oct 30, the Sunforged lab's run shifted a copper blotch share)
 Stills: bat_eyes_15_<prefix>_{rts,rts_close,34}.png (plain lane, Subtle look), downloaded from eyes-structures*.
 """
 import colorsys
@@ -81,8 +83,12 @@ def main(argv):
     source = argv[argv.index("--source") + 1] if "--source" in argv else prefix
     table = load() if os.path.exists(TABLE) else {"about": __doc__.split("\n")[0], "sources": [], "blocks": {}}
     got = measure(nbt, stills_dir, prefix)
+    add_only = "--add-only" in argv
     for name, faces in got.items():
-        table["blocks"].setdefault(name, {}).update(faces)
+        have = table["blocks"].setdefault(name, {})
+        for face, v in faces.items():
+            if not (add_only and face in have):
+                have[face] = v
     if source not in table["sources"]:
         table["sources"].append(source)
     table["blocks"] = dict(sorted(table["blocks"].items()))
