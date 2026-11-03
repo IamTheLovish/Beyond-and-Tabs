@@ -151,7 +151,7 @@ public final class ConstructionShape {
     /**
      * The cloud ring's height for a build front at {@code frontY} (the laid/missing boundary, ConstructionGrid.meanRimY):
      * half way up the course being laid, so it rings that course and climbs with it - never on the ground (round 12
-     * critic: lying RING_DROP under the rim, it sat on the lawn at the walls' foot as a white haze) and never over the
+     * critic: lying 0.7 block under the rim, it sat on the lawn at the walls' foot as a white haze) and never over the
      * top course. With {@link #layerBox}({@code frontY}) as its footprint it narrows as the building does (lovish, Nov 3:
      * "bring the ring back").
      */
