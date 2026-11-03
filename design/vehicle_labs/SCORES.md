@@ -115,3 +115,24 @@ detail; green_stained_glass reads dull olive (0.23-0.26) and lime glass reads li
 lawn's hue family; a 1 x 1 lit band under a spire's cap is a few pixels at RTS zoom - from the steep RTS camera a
 landmark differs by its plan (cap size, form), not by its side faces; a scratchpad file named pr.md shared by parallel
 builders overwrote one PR's body: name every scratch file after its lab.
+
+## Thunder Arsenal r1 (Stormcallers T1 vehicle lab, the r12 method; PR #459) - ref08, 17 x 17 x 26, one fixed rubric
+Designer pass: itachi2-api run 20261030-234157-storm-design (rubric = r12's 7 axes). Each round photographed with its
+control in ONE eyes run (build 39266a8 = build_run 41124019976, branch pack, plain lane, keep_only, times 6000); two
+fresh API critics per round, a / b. Expected and measured numbers: design/vehicle_labs/storm_expected.md.
+
+| Round | Eyes run | RTS | Close | Landmark | Gate | Roofs | Materials | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| round 1 (the old lab, Oct 28) | - | 4 overall (round 1 critic) | | | | | | | one roof slab on a box; the tower a bump, the armillary floats; no yard; gate unreadable; flat roofs; gold / copper noise; scattered light | - |
+| massing A / B / C + control | 41166006117 | A 6 / 7, B 6 / 7, C 6 / 7, old 4 / 4 | - | A 6 / 6, B 7 / 7, C 5 / 5, old 3 / 3 | A 5 / 6, B 5 / 6, old 4 / 4 | A 7 / 7, B 6 / 6, old 4 / 4 | - | - | sums of 60: A 37 / 39, B 37 / 39, C 33 / 38, old 21 / 22; both pick A (resemblance, roof rhythm); A's keep a bump with equal tiers and a ring on a pole; gate lighter than its wall, no road; the court a strip; every option reads temple / palace before arsenal | A + the shared faults |
+| detail r1 (8a67a4c9) | 41168410538 | 7 / 6 (control 6 / 5) | 5 / 4.5 | 6 / 6 | 6 / 6 | 6 / 5 | 6 / 5 | 4 / 4.5 | overall 6 / 5.5 vs the greybox 5 / 4.5: the keep clearly tallest, the gate the darkest opening, the court open, muted salmon posts (not team red); faults: the cart route does not read (a black "pit" at the gate, a half-width dark road, the court split orange / black); the keep a "striped lighthouse" (post / panel on 3-wide bodies), its top tiers equal, the crown "an X in a box", no glow at dusk; roofs one tone, the full-cube corner tips "studs / teeth / battlements"; no workshop props | one face grammar, granite posts, no gold, the keep's lead |
+| detail r2 (bb424623) | 41170130456 | 7 / 7 (r1 6 / 6) | 5 / 6 | 6 / 6 | 5 / 5 | 6 / 6 | 5 / 5.5 | 5 / 5 | overall 6 / 6.5 vs r1 rescored 5.5 / 5.5: keep stripes and corner teeth gone, the court no longer split; faults: the cart route still unreadable (black gate patch against one grey court, kerbs invisible, the cart "a pile" in the corner); the crown "letters from above, a cross from 3/4", its prismarine flickering ice-blue (animated); roofs "stepped ziggurats, no flare", wings near one height (massing - for lovish) | quiet keep bodies, eaves 7 / 7 / 5, dark eave line |
+| detail r3 (final, e2bc95d9) | 41171665335 | 6 / 6.5 (r2 6.5 / 6.5) | 5.5 / 6 | 6 / 6.5 | 6 / 6.5 | 6 / 6 | 5.5 / 6 | 6 / 6.5 | overall 6 / 6.5 vs r2 rescored 6 / 6: level / narrow gain; both: round 3 the better base, detail has plateaued (3 rounds) - next is massing; faults: the gate passage roofed by the west wing so the lane never meets open sky (a plan fault), the court one dark value, the mud only a sliver; the flat crown "a plus / crosshair in a square" from above, "a lid on a stick" in 3/4; the corner slab upturns read as ~20 dark studs; ziggurat roofs, wings near one height; every round reads temple / palace before arsenal | round 3 kept (both critics' better base) |
+
+Lessons (Thunder Arsenal r1): plain prismarine is an ANIMATED texture - between stills of one build it flickers teal /
+ice-blue (a cool-team-like hue); keep it off anything that must hold one colour. Dark oak reads as a loud colour on
+camera (sat 0.54-0.60) and stripped mangrove at 0.55-0.57: a muted red lacquer is polished granite (hue 12, sat
+0.32-0.35). A 3-wide body with post / panel / post reads as "candy stripes" at RTS; a full-looking corner tip (an
+inverted stair on a stair) reads as studs / battlements, and even a slab upturn reads as studs from the RTS camera.
+A road the gate's width reads only where it meets open sky: under a gatehouse roof the lane is hidden, so the gate-to-
+court line is a plan (massing) question, not a paving one.
