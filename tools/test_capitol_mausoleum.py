@@ -44,10 +44,13 @@ class MausoleumTest(unittest.TestCase):
 
     def test_lights_own_the_top(self):
         """BAT - Art method, value: lights 0.50+ belong to buildings; the capitol is not a dark hole in the lawn.
-        25-55 % of the RTS pixels read value >= 0.50 (both edges: under 25 % it is the dark heap, over 55 % a white
-        box with no darks). Shipped: ~12 %."""
+        12-55 % of the RTS pixels read value >= 0.50 (both edges: under 12 % it is the dark heap, over 55 % a white
+        box with no darks). The camera model reads the shipped cathedral at 5.5 % (eyes 41263811904: 6 %, critics
+        5 / 5 "dark heap"). Re-set from 25 % on screen evidence, Nov 3: every critic-backed winner of four blind rounds
+        sat at 15-16 % on screen (eyes 41340659537, 41586495970, 41588222195; the final 6.5 / 6.5 at 16 %, model
+        16.9 %), and the paler options at 18 % were ranked lower ("snow", "white box")."""
         light = sum(1 for v in self.vals if v is not None and v >= 0.50) / max(1, len(self.vals))
-        self.assertTrue(0.25 <= light <= 0.55, light)
+        self.assertTrue(0.12 <= light <= 0.55, light)
 
     def test_darks_stay_a_group(self):
         """The faction's deepslate and blackstone stay the dark group: >= 20 % of the RTS pixels under 0.28."""
