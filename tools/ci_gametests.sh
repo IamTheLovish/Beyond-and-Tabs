@@ -70,6 +70,9 @@ fi
 # once a game-minute (buildings, incomes, what held it back) - one notice per bot (a notice keeps only ~4 KB)
 for bot in hard medium easy; do
   grep -oE "\[T2(Timing|Snap)\] $bot .*" gametest.log | head -20 | cut -c1-230 | sed 's/%/%25/g' | awk -v b="$bot" 'BEGIN{printf "::notice::[T2 " b "]"} {printf "%%0A%s", $0} END{print ""}' || true
+  # what held it back, which the 230-character cut above drops (the snapshot's last field): the medium Horde's red runs
+  # (Nov 1-3, 3 of 31 CI jobs) never built a Hoglin Stables, and the snapshot never said why
+  sed -nE "s/.*\[T2Snap\] $bot (min [0-9]+) .* blk (.*)/\1 \2/p" gametest.log | head -20 | cut -c1-190 | sed 's/%/%25/g' | awk -v b="$bot" 'BEGIN{printf "::notice::[T2 " b " blocked]"} {printf "%%0A%s", $0} END{print ""}' || true
 done
 # combat reactions (gametest/ReactionGameTests): kite steps and brace damage ratios, one notice
 grep -oE "\[Reaction\].*" gametest.log | head -12 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Reactions]"} {printf "%%0A%s", $0} END{print ""}' || true
