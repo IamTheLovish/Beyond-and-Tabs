@@ -2547,7 +2547,55 @@ public class BotPlayer {
             ok = placeOnOwnNether(level, building, workers, builders);
         if (!ok)
             techSlotShift = (techSlotShift + 1) % 8;
+        if (!ok && techDiagOn && !denseScanned) {
+            denseScanned = true;
+            denseScan(level, building);
+        }
         return ok;
+    }
+
+    /** The diagnostic scan below ran (once per bot). */
+    private boolean denseScanned = false;
+
+    /**
+     * Diagnostic, the [T2Snap] test's bots only (techDiagOn): the first time a tech building finds no site, every valid
+     * origin within 40 blocks of home on a 2-block grid (as placeNearImpl tries one: the surface, then raised origins
+     * on rolling ground), logged as a GameTest line - whether the sparse search (8 tries a ring, rings 4 blocks apart)
+     * missed sites that exist, or none exist (bots_reach_tier_2: the medium Horde's Hoglin Stables "no valid site" all game).
+     */
+    private void denseScan(ServerLevel level, Building building) {
+        int valid = 0, tried = 0;
+        BlockPos nearest = null;
+        java.util.Map<String, Integer> why = new java.util.TreeMap<>();
+        int[][] cols = footprintColumns(level, building);
+        for (int dx = -40; dx <= 40; dx += 2)
+            for (int dz = -40; dz <= 40; dz += 2) {
+                int x = home.getX() + dx, z = home.getZ() + dz;
+                if (!level.hasChunk(x >> 4, z >> 4))
+                    continue;
+                tried++;
+                BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z), true);
+                String error = BuildingValidators.getPlacementValidityError(level, building, surface, name, Rotation.NONE, false, false, true);
+                BlockPos site = error == null ? surface : null;
+                if (site == null && error != null && error.endsWith("ground_not_flat"))
+                    for (BlockPos at : raisedHeights(level, surface, cols)) {
+                        String e2 = BuildingValidators.getPlacementValidityError(level, building, at, name, Rotation.NONE, false, false, true);
+                        if (e2 == null) {
+                            site = at;
+                            break;
+                        }
+                    }
+                if (site == null) {
+                    why.merge(error == null ? "?" : error.replace("building.reignofnether.", ""), 1, Integer::sum);
+                    continue;
+                }
+                valid++;
+                if (nearest == null || site.distSqr(home) < nearest.distSqr(home))
+                    nearest = site;
+            }
+        com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("[Bot] GameTest {} dense scan for {}: {} valid of {} origins within 40 of home {}, nearest {}{}; refused {}",
+            name, building.structureName, valid, tried, home.toShortString(), nearest == null ? "none" : nearest.toShortString(),
+            nearest == null ? "" : String.format(java.util.Locale.ROOT, " (%.0f blocks)", Math.sqrt(nearest.distSqr(home))), why);
     }
 
     /**
