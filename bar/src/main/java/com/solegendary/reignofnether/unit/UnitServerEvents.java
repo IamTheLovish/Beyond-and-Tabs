@@ -233,6 +233,7 @@ public class UnitServerEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         isServerStopping = true;
+        HeldBlow.clearAll();
         ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
         if (level != null) {
             saveFallenHeroUnits(level);
@@ -519,6 +520,7 @@ public class UnitServerEvents {
             if (allUnits.removeIf(e -> e.getId() == entity.getId()))
                 allUnitsModCount++;
             CommandQueues.forget(entity.getId());   // its orders leave with it (a reloaded unit gets a new id anyway)
+            HeldBlow.forget(entity);   // and a blow it was holding to its weapon's strike
             UnitSyncClientboundPacket.sendLeavePacket(entity);
 
             //ChunkAccess chunk = evt.getLevel().getChunk(entity.getOnPos());

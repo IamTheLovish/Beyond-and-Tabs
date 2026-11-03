@@ -9,6 +9,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.DirectionalPlaceContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -34,8 +36,10 @@ import java.util.Set;
  * Our own architectural moulding blocks, slice 1 (lovish Oct 29 2026: the Engine Shed "looks blocky and toy"; he
  * approved "our own architectural blocks (custom models)"): a cornice / string course (straight, outer and inner
  * corner as its `shape`), a window sill, a lintel (with or without a `keystone`) and the arch ring of a 3-wide round
- * arch (its `piece`s). Written before the blocks (red on main): the ids and properties below are the spec, typed
- * here by hand, not read from the implementation.
+ * arch (its `piece`s). Slice 2 (Oct 30): pilaster (`part` base / shaft / capital / single), quoin (`long_side`; a
+ * full stone cube that replaces the wall's corner block), corbel bracket, corbel course (a chimney crown; `shape` like
+ * the cornice). Each slice written before its blocks (red on main): the ids and properties of expected() are the spec,
+ * typed here by hand; the checks run over those AND every block ArchBlocks registers (ids()).
  * <p>
  * Every block must be registered with an item and ship a blockstate (every variant of it), block models, an item
  * model, a loot table and an en_us name; every state must have a partial collision shape (not empty, not a full
@@ -60,7 +64,28 @@ public class ArchBlocksGameTests {
         }
         for (String m : new String[] { "stone", "brick" })
             ids.put("arch_ring_" + m, new String[] { "piece" });
+        // slice 2 (lovish Oct 30 2026: "every one that reads"; quoins replace the wall's corner block)
+        for (String m : new String[] { "stone", "brick", "slate" })
+            ids.put("pilaster_" + m, new String[] { "part" });
+        ids.put("quoin_stone", new String[] { "long_side" });
+        for (String m : new String[] { "stone", "brick", "copper" })
+            ids.put("corbel_" + m, new String[0]);
+        for (String m : new String[] { "brick", "stone", "slate" })
+            ids.put("corbel_course_" + m, new String[] { "shape" });
         return ids;
+    }
+
+    /** The spec's ids and every block ArchBlocks registers (the key set comes from the code too, lesson 9). */
+    static Set<String> ids() {
+        Set<String> out = new java.util.LinkedHashSet<>(expected().keySet());
+        for (var b : com.solegendary.reignofnether.blocks.arch.ArchBlocks.BLOCKS.getEntries())
+            out.add(b.getId().getPath());
+        return out;
+    }
+
+    /** Full stone cubes that occlude like a wall block (the quoins), not mouldings hung on a wall face. */
+    static boolean solid(String id) {
+        return id.startsWith("quoin_");
     }
 
     static JsonObject json(String path, List<String> problems) {
@@ -127,8 +152,7 @@ public class ArchBlocksGameTests {
     public static void arch_blocks_are_registered_with_blockstate_model_loot_and_name(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         JsonObject lang = json("/assets/reignofnether/lang/en_us.json", problems);
-        for (Map.Entry<String, String[]> e : expected().entrySet()) {
-            String id = e.getKey();
+        for (String id : ids()) {
             Block b = block(id);
             if (b == null) {
                 problems.add(id + " is not a registered block");
@@ -138,7 +162,7 @@ public class ArchBlocksGameTests {
                 problems.add(id + " has no block item");
             if (!b.defaultBlockState().hasProperty(BlockStateProperties.HORIZONTAL_FACING))
                 problems.add(id + " has no horizontal facing");
-            for (String prop : e.getValue())
+            for (String prop : expected().getOrDefault(id, new String[0]))
                 if (b.getStateDefinition().getProperty(prop) == null)
                     problems.add(id + " has no '" + prop + "' property");
             JsonObject bs = json("/assets/reignofnether/blockstates/" + id + ".json", problems);
@@ -181,7 +205,7 @@ public class ArchBlocksGameTests {
         List<String> problems = new ArrayList<>();
         boolean clientAssets = resourceExists("/assets/minecraft/textures/block/stone.png");
         int checked = 0;
-        for (String id : expected().keySet()) {
+        for (String id : ids()) {
             JsonObject bs = json("/assets/reignofnether/blockstates/" + id + ".json", problems);
             if (bs == null || !bs.has("variants"))
                 continue;
@@ -228,7 +252,9 @@ public class ArchBlocksGameTests {
         BlockPos rel = new BlockPos(3, 3, 3);
         BlockPos abs = helper.absolutePos(rel);
         int states = 0;
-        for (String id : expected().keySet()) {
+        for (String id : ids()) {
+            if (solid(id))
+                continue;      // arch_quoins_are_solid_stone_cubes_with_stones_proud
             Block b = block(id);
             if (b == null || !b.defaultBlockState().hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
                 problems.add(id + " is not registered with a facing");
@@ -265,6 +291,121 @@ public class ArchBlocksGameTests {
         helper.setBlock(rel, Blocks.AIR);
         if (states == 0)
             problems.add("no state was checked");
+        finish(helper, problems);
+    }
+
+    /** The name of the value of property `name` of a state ("base"), or null if it has no such property. */
+    static String prop(BlockState s, String name) {
+        Property<?> p = s.getBlock().getStateDefinition().getProperty(name);
+        return p == null ? null : valueName(s, p);
+    }
+
+    /** The state `b` picks when placed at `rel` by a click on the south side of a wall behind it (so facing south). */
+    static BlockState placed(GameTestHelper helper, Block b, BlockPos rel) {
+        return b.getStateForPlacement(new DirectionalPlaceContext(helper.getLevel(), helper.absolutePos(rel),
+            Direction.NORTH, ItemStack.EMPTY, Direction.SOUTH));
+    }
+
+    /**
+     * Slice 2: a pilaster picks its part from the pilasters (same facing) above and below it, like a wall post: a
+     * stack of three placed bottom to top reads base / shaft / capital, taking the top off makes the middle a capital,
+     * and one on its own is a single (base and capital in one block).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void arch_pilasters_pick_base_shaft_capital_from_their_neighbours(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        int checked = 0;
+        BlockPos[] stack = { new BlockPos(2, 2, 2), new BlockPos(2, 3, 2), new BlockPos(2, 4, 2) };
+        for (String id : ids()) {
+            if (!id.startsWith("pilaster_"))
+                continue;
+            Block b = block(id);
+            if (b == null) {
+                problems.add(id + " is not registered");
+                continue;
+            }
+            checked++;
+            for (BlockPos p : stack) {
+                BlockState s = placed(helper, b, p);
+                if (s == null) {
+                    problems.add(id + " has no placement state");
+                    break;
+                }
+                helper.setBlock(p, s);
+            }
+            String[] want = { "base", "shaft", "capital" };
+            for (int i = 0; i < 3; i++) {
+                String got = prop(helper.getBlockState(stack[i]), "part");
+                if (!want[i].equals(got))
+                    problems.add(id + " block " + (i + 1) + " of a stack of 3 is part=" + got + ", not " + want[i]);
+            }
+            helper.setBlock(stack[2], Blocks.AIR);
+            String top = prop(helper.getBlockState(stack[1]), "part");
+            if (!"capital".equals(top))
+                problems.add(id + " with the top taken off, the new top is part=" + top + ", not capital");
+            helper.setBlock(stack[1], Blocks.AIR);
+            helper.setBlock(stack[0], Blocks.AIR);
+            BlockState lone = placed(helper, b, stack[0]);
+            String single = lone == null ? null : prop(lone, "part");
+            if (!"single".equals(single))
+                problems.add(id + " placed on its own is part=" + single + ", not single");
+        }
+        if (checked == 0)
+            problems.add("no pilaster was checked");
+        finish(helper, problems);
+    }
+
+    /**
+     * Slice 2: a quoin replaces the wall's corner block (lovish Oct 30): every state collides as a full cube and
+     * occludes like the wall it replaces; its stones stand proud of the cell (a model element outside 0..16); placed
+     * by hand, one course above another alternates long_side, so the long and short stones zip up the corner.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void arch_quoins_are_solid_stone_cubes_with_stones_proud(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        BlockPos rel = new BlockPos(3, 3, 3);
+        BlockPos abs = helper.absolutePos(rel);
+        int checked = 0;
+        for (String id : ids()) {
+            if (!solid(id))
+                continue;
+            Block b = block(id);
+            if (b == null) {
+                problems.add(id + " is not registered");
+                continue;
+            }
+            checked++;
+            for (BlockState s : b.getStateDefinition().getPossibleStates()) {
+                helper.setBlock(rel, s);
+                BlockState placed = helper.getLevel().getBlockState(abs);
+                VoxelShape c = placed.getCollisionShape(helper.getLevel(), abs);
+                if (c.isEmpty() || Shapes.joinIsNotEmpty(Shapes.block(), c, BooleanOp.NOT_SAME))
+                    problems.add(id + "[" + variantKey(s) + "] does not collide as a full cube");
+                if (!placed.canOcclude())
+                    problems.add(id + "[" + variantKey(s) + "] does not occlude like the wall block it replaces");
+            }
+            helper.setBlock(rel, Blocks.AIR);
+            JsonObject bs = json("/assets/reignofnether/blockstates/" + id + ".json", problems);
+            if (bs != null && bs.has("variants"))
+                for (String model : modelsOf(bs)) {
+                    JsonObject m = json("/assets/reignofnether/models/block/"
+                        + model.substring(model.indexOf("block/") + "block/".length()) + ".json", problems);
+                    boolean proud = false;
+                    if (m != null && m.has("elements"))
+                        for (JsonElement e : m.getAsJsonArray("elements"))
+                            for (String k : new String[] { "from", "to" })
+                                for (JsonElement v : e.getAsJsonObject().getAsJsonArray(k))
+                                    proud |= v.getAsDouble() < 0 || v.getAsDouble() > 16;
+                    if (!proud)
+                        problems.add(model + " has no stone standing proud of the cell");
+                }
+            BlockState low = placed(helper, b, new BlockPos(2, 2, 2)), high = placed(helper, b, new BlockPos(2, 3, 2));
+            String a = low == null ? null : prop(low, "long_side"), z = high == null ? null : prop(high, "long_side");
+            if (a == null || a.equals(z))
+                problems.add(id + " placed in two courses one above the other has long_side " + a + " and " + z);
+        }
+        if (checked == 0)
+            problems.add("no quoin was checked");
         finish(helper, problems);
     }
 }

@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.solegendary.reignofnether.environment.wind.WindField;
+import com.solegendary.reignofnether.time.ClientTicks;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
@@ -63,7 +64,7 @@ public class MistParticle extends TextureSheetParticle {
         this.spin = (random.nextFloat() - 0.5f) * 0.0012f;       // r4: barely turns - it stays a band along the wind
         this.phase = random.nextFloat() * Mth.TWO_PI;
         // r4: laid along the wind it drifts with (WindField.heading), give or take ~17 degrees: bands, not discs
-        this.rot = this.oRot = (float) (WindField.heading(level.getGameTime() / 20.0) + (random.nextFloat() - 0.5f) * 0.6f);
+        this.rot = this.oRot = (float) (WindField.heading(ClientTicks.now() / 20.0) + (random.nextFloat() - 0.5f) * 0.6f);
         this.alpha = 0;
         this.quadSize = (float) (start / 2);
         setSprite(sprites.get(random.nextInt(4), 3));
@@ -91,7 +92,7 @@ public class MistParticle extends TextureSheetParticle {
         if (!MistClientEvents.mayShow() || (age % 20 == 0 && MistMath.density(level.getDayTime()) <= 0))
             leaving = Math.min(leaving, 0.999f);
         // drift with the wind (the trees' WindField heading), plus whatever push a running unit gave it, damped
-        double[] d = MistMath.drift(WindField.heading(level.getGameTime() / 20.0), speed);
+        double[] d = MistMath.drift(WindField.heading(ClientTicks.now() / 20.0), speed);
         if (age % 5 == 0)
             stir();
         pushX *= 0.92;

@@ -53,6 +53,8 @@ public final class EconomyWarning {
 
     /** Was a stall or overflow line up on the player's own bar in the last half second? */
     public static boolean barLineUp() {
-        return System.currentTimeMillis() - barLineMs < 500;
+        // MIN_VALUE = never (now - MIN_VALUE overflowed negative: "up" until the first line ever showed, and the
+        // idle-factory nag, which waits for the bar to be clear, never fired)
+        return barLineMs != Long.MIN_VALUE && System.currentTimeMillis() - barLineMs < 500;
     }
 }
