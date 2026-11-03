@@ -268,7 +268,8 @@ public class RaidGameTests {
                     }
                     if (m instanceof com.solegendary.reignofnether.unit.units.piglins.MarauderUnit mu && mu.attacksToNextBigHit != hitCount[i]) {
                         if (hitCount[i] >= 0)
-                            ev.append(' ').append(t).append("HIT");
+                            ev.append(' ').append(t).append("HIT@").append(m.getBlockX()).append(',').append(m.getBlockZ())
+                                .append(m.getNavigation().isDone() ? "/still" : "/walking");
                         hitCount[i] = mu.attacksToNextBigHit;
                     }
                 }
