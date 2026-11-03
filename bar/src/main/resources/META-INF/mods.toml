@@ -159,3 +159,18 @@ A fork of Reign of Nether by SoLegendary (GPL v3).
     versionRange="[4.1,)"
     ordering="AFTER"
     side="BOTH"
+# FramedBlocks (Oct 29 2026; LGPL-3.0): framed slopes / prisms / pillars that take any block's texture (camo)
+[[dependencies.reignofnether]]
+    modId="framedblocks"
+    mandatory=true
+    versionRange="[9.4,)"
+    ordering="AFTER"
+    side="BOTH"
+# Domum Ornamentum (Oct 29 2026; GPL-3.0): shingle roofs, timber frames, pillars with material skins. Its 1.20.1
+# builds are snapshots named 1.20.1-1.0.<n>-snapshot; no lower bound, since that version string is not plain semver.
+[[dependencies.reignofnether]]
+    modId="domum_ornamentum"
+    mandatory=true
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"

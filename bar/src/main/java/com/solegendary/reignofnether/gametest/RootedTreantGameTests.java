@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.gametest;
 
+import com.mojang.datafixers.util.Pair;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.abilities.TakeRoot;
@@ -7,6 +8,7 @@ import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitActionItem;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.units.verdant.RootboundEffect;
 import com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit;
 import net.minecraft.core.BlockPos;
@@ -15,6 +17,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraftforge.gametest.GameTestHolder;
@@ -106,6 +109,14 @@ public class RootedTreantGameTests {
                 m.discard();
         helper.fail("could not create the Rooted Treant test units");
         return false;
+    }
+
+    /** What UnitUnstick reads, for a failure message. */
+    static String unstickState(SentinelTreantUnit t) {
+        return String.format("{pos %.2f %.2f %.2f, encased %s, standable %s, onGround %s, idle %s, target %s, nav done %s, noPhysics %s, rooted %s}",
+            t.getX(), t.getY(), t.getZ(), com.solegendary.reignofnether.unit.UnitUnstick.isEncased(t),
+            com.solegendary.reignofnether.unit.UnitUnstick.isOnStandableGround(t), t.onGround(), t.isIdle(),
+            t.getTarget() == null ? "none" : t.getTarget().getType().toShortString(), t.getNavigation().isDone(), t.noPhysics, t.isRooted());
     }
 
     static double movedFrom(Mob m, double x0, double z0) {
@@ -200,7 +211,20 @@ public class RootedTreantGameTests {
             return;
         List<String> problems = new ArrayList<>();
         double[] start = new double[4];
-        everyTick(helper, 60, tick -> {
+        double[] walkedMost = new double[1];
+        double[] last = new double[3];
+        String[] jump = new String[1];
+        everyTick(helper, 85, tick -> {
+            if (tick > 1) {
+                walkedMost[0] = Math.max(walkedMost[0], movedFrom(walker, start[2], start[3]));
+                // the first tick the rooted Treant shifts: from where to where, and what UnitUnstick read then
+                double step = Math.hypot(rooted.getX() - last[0], rooted.getZ() - last[2]);
+                if (jump[0] == null && step > 0.05)
+                    jump[0] = String.format("tick %d: %.2f %.2f %.2f -> state %s", tick, last[0], last[1], last[2], unstickState(rooted));
+            }
+            last[0] = rooted.getX();
+            last[1] = rooted.getY();
+            last[2] = rooted.getZ();
             if (tick == 1) {
                 rootNow(rooted, level);
                 start[0] = rooted.getX();
@@ -209,13 +233,19 @@ public class RootedTreantGameTests {
                 start[3] = walker.getZ();
                 rooted.setUnitAttackTargetForced(foeA);
                 walker.setUnitAttackTargetForced(foeB);
-            } else if (tick == 50) {
+            } else if (tick == 80) {
                 double moved = movedFrom(rooted, start[0], start[1]);
                 if (moved > 0.3 || !rooted.isRooted())
-                    problems.add("a rooted Treant moved " + moved + " blocks (rooted " + rooted.isRooted() + ")");
-                double walked = movedFrom(walker, start[2], start[3]);
-                if (walked < 1.0)
-                    problems.add("the walking control Treant only moved " + walked + " blocks: the check can't see movement");
+                    problems.add("a rooted Treant moved " + moved + " blocks (rooted " + rooted.isRooted() + "; first shift "
+                        + (jump[0] == null ? "none seen" : jump[0]) + ")");
+                // the control chases its foe 9 blocks off: the most it got from its start at any tick, so a chase that
+                // reached the foe early and stood there still counts; on a miss, say where it was and why
+                if (walkedMost[0] < 1.0)
+                    problems.add(String.format("the walking control Treant only got %.2f blocks from its start: the check "
+                        + "can't see movement (at %.2f, %.2f from %.2f, %.2f; navigation done %s; target %s; foe at %.2f, %.2f)",
+                        walkedMost[0], walker.getX(), walker.getZ(), start[2], start[3], walker.getNavigation().isDone(),
+                        walker.getTargetGoal().getTarget() == null ? "none" : walker.getTargetGoal().getTarget() == foeB ? "the foe" : "another",
+                        foeB.getX(), foeB.getZ()));
                 return finish(helper, problems, units);
             }
             return false;
@@ -358,6 +388,120 @@ public class RootedTreantGameTests {
                     problems.add("the anchor walk-back during the uproot dropped the held move (walked " + walkedA + " toward it)");
                 if (walkedB < 1.5)
                     problems.add("a Take Root press during the uproot dropped the held move (walked " + walkedB + " toward it)");
+                return finish(helper, problems, units);
+            }
+            return false;
+        });
+    }
+
+    /**
+     * A Take Root press is a new order: rooting drops a group move still waiting in the formation dispatch queue (else
+     * it lands later and uproots the Treant), and uprooting drops the attack target it held while rooted.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void rooted_treant_take_root_press_drops_a_queued_move_and_the_target(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "treant_press"), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 1, 1, 14, 14);
+        SentinelTreantUnit walking = treant(helper, owner, 2.5, 3.5);
+        SentinelTreantUnit rooted = treant(helper, owner, 2.5, 10.5);
+        Mob foe = sturdyWorker(helper, foeOwner, 8.5, 10.5);
+        List<Mob> units = new ArrayList<>();
+        for (Mob m : new Mob[] { walking, rooted, foe })
+            units.add(m);
+        if (!allMade(helper, units, 3))
+            return;
+        List<String> problems = new ArrayList<>();
+        everyTick(helper, 5, tick -> {
+            if (tick == 1) {
+                // a 20+ unit move's slot for the walking Treant, still waiting to dispatch, then the root press
+                UnitServerEvents.queueFormationMove(List.of(Pair.<net.minecraft.world.entity.LivingEntity, BlockPos>of(walking, helper.absolutePos(new BlockPos(12, 2, 3)))));
+                new UnitActionItem(owner, UnitAction.TAKE_ROOT, -1, new int[] { walking.getId() }).action(level);
+                if (!walking.isRootWanted())
+                    problems.add("the press should start rooting the walking Treant");
+                if (UnitServerEvents.hasQueuedFormationMove(walking.getId()))
+                    problems.add("rooting should drop the Treant's queued formation move");
+                rootNow(rooted, level);
+                rooted.setUnitAttackTargetForced(foe);
+                if (rooted.getTargetGoal().getTarget() != foe)
+                    problems.add("the rooted Treant should hold its attack target");
+                new UnitActionItem(owner, UnitAction.TAKE_ROOT, -1, new int[] { rooted.getId() }).action(level);
+                if (rooted.isRootWanted())
+                    problems.add("the press should start uprooting the rooted Treant");
+                if (rooted.getTargetGoal().getTarget() != null)
+                    problems.add("uprooting should drop the attack target it held while rooted");
+                return finish(helper, problems, units);
+            }
+            return false;
+        });
+    }
+
+    /**
+     * The stuck-unit rescue (UnitUnstick) leaves a rooted Treant where it is: in a small walled pit, with a target it
+     * can't reach, an unrooted Treant (the control) is lifted out, a rooted one stays put and rooted. A rooted Treant
+     * caught inside blocks is still freed.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void rooted_treant_is_not_lifted_out_of_a_pit_but_is_freed_from_blocks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "treant_pit"), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 1, 1, 14, 14);
+        // two 3x3 pits walled three high (no step-up out): nine cells, under UnitUnstick.POCKET_MAX_CELLS
+        for (int cz : new int[] { 4, 10 })
+            for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                    if (Math.abs(dx) == 2 || Math.abs(dz) == 2)
+                        for (int y = 2; y <= 4; y++)
+                            level.setBlock(helper.absolutePos(new BlockPos(4 + dx, y, cz + dz)), Blocks.STONE.defaultBlockState(), 3);
+        SentinelTreantUnit rooted = treant(helper, owner, 4.5, 4.5);
+        SentinelTreantUnit control = treant(helper, owner, 4.5, 10.5);
+        SentinelTreantUnit buried = treant(helper, owner, 11.5, 12.5);
+        Mob foe = sturdyWorker(helper, foeOwner, 11.5, 6.5);
+        List<Mob> units = new ArrayList<>();
+        for (Mob m : new Mob[] { rooted, control, buried, foe })
+            units.add(m);
+        if (!allMade(helper, units, 4))
+            return;
+        List<String> problems = new ArrayList<>();
+        double[] start = new double[7];
+        double[] mostOff = new double[3];
+        String[] seen = new String[2];
+        everyTick(helper, 250, tick -> {
+            if (tick == 2) {
+                seen[0] = unstickState(rooted);
+                seen[1] = unstickState(buried);
+            }
+            if (tick > 1) {
+                mostOff[0] = Math.max(mostOff[0], movedFrom(rooted, start[0], start[1]));
+                mostOff[1] = Math.max(mostOff[1], movedFrom(control, start[2], start[3]));
+                mostOff[2] = Math.max(mostOff[2], Math.sqrt(buried.distanceToSqr(start[4], start[5], start[6])));
+            }
+            if (tick == 1) {
+                rootNow(rooted, level);
+                rootNow(buried, level);
+                rooted.setUnitAttackTargetForced(foe);   // a target it can't reach: not idle, so a pocket suspect
+                control.setUnitAttackTargetForced(foe);
+                BlockPos feet = buried.blockPosition();
+                level.setBlock(feet, Blocks.OAK_LOG.defaultBlockState(), 3);
+                level.setBlock(feet.above(), Blocks.OAK_LOG.defaultBlockState(), 3);
+                start[0] = rooted.getX();
+                start[1] = rooted.getZ();
+                start[2] = control.getX();
+                start[3] = control.getZ();
+                start[4] = buried.getX();
+                start[5] = buried.getY();
+                start[6] = buried.getZ();
+            } else if (tick == 240) {
+                if (mostOff[1] < 1.5)
+                    problems.add("the unrooted control was not lifted out of its pit (got " + mostOff[1] + " blocks off): the pit is no pocket");
+                if (mostOff[0] > 0.3 || !rooted.isRooted())
+                    problems.add("the stuck-unit rescue moved a rooted Treant " + mostOff[0] + " blocks (rooted " + rooted.isRooted() + ")");
+                // the rescue lifts it onto the nearest cell it fits, here the top of the logs it was caught in
+                if (mostOff[2] < 0.5 || com.solegendary.reignofnether.unit.UnitUnstick.isEncased(buried))
+                    problems.add("a rooted Treant inside blocks should still be freed (got " + mostOff[2] + " blocks off; at tick 2 "
+                        + seen[1] + "; now " + unstickState(buried) + ")");
+                if (!problems.isEmpty())
+                    problems.add("pit-rooted Treant at tick 2 " + seen[0] + ", now " + unstickState(rooted));
                 return finish(helper, problems, units);
             }
             return false;

@@ -59,7 +59,7 @@ public class SoundClientEvents {
         }
 
         // Periodically prune stale sound deduplication keys
-        long currentTick = MC.level != null ? MC.level.getGameTime() : -1;
+        long currentTick = MC.level != null ? SoundTicks.now() : -1;
         if (currentTick > 0 && currentTick % 20 == 0) {
             recentSoundTimes.entrySet().removeIf(e -> {
                 e.getValue().removeIf(t -> currentTick - t > SOUND_DEDUPE_WINDOW_TICKS);
@@ -112,7 +112,7 @@ public class SoundClientEvents {
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) return;
 
-        long currentTick = level.getGameTime();
+        long currentTick = SoundTicks.now();   // a real tick: the level's game time is the time of day here
 
         // Get or create the list of recent play times for this action
         List<Long> times = recentSoundTimes.computeIfAbsent(soundAction, k -> new ArrayList<>());

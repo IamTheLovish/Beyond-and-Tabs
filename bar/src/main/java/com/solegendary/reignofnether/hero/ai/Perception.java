@@ -64,6 +64,13 @@ public final class Perception {
         public final List<Tower> towers = new ArrayList<>();
         public long tick = Long.MIN_VALUE;
 
+        /** Forgets everything the last scan saw. */
+        public void clear() {
+            enemies.clear();
+            friends.clear();
+            towers.clear();
+        }
+
         /** Would going after {@code target} take a hero standing outside every tower's reach into one? */
         public boolean chaseIntoTower(Entity hero, Entity target, double reach) {
             for (Tower t : towers)
@@ -94,9 +101,7 @@ public final class Perception {
 
     /** Fills {@code out} with what {@code owner}'s side sees round the hero now. Server thread only. */
     public static void scan(ServerLevel level, Mob hero, String owner, Snapshot out) {
-        out.enemies.clear();
-        out.friends.clear();
-        out.towers.clear();
+        out.clear();
         out.tick = level.getGameTime();
         double hx = hero.getX(), hz = hero.getZ(), r2 = RADIUS * RADIUS;
         // the owner's own fog, looked up once per scan

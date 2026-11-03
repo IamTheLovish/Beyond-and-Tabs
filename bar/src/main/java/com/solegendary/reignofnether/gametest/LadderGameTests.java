@@ -210,11 +210,8 @@ public class LadderGameTests {
         void start() {
             BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
             // two dry bases 160 blocks apart, found the way the bot soak finds its row (a random-ish coast can drown a
-            // line, so every line and 16 steps along it are tried)
-            Vec3[] seats = null;
-            for (int bz : SkirmishGameTests.soakLines(origin.getZ()))
-                for (int step = 0; step < 16 && seats == null; step++)
-                    seats = SkirmishGameTests.soakRow(level, origin.getX() + 1500 + step * 96, bz, 2);
+            // line, so every line and 16 steps along it are tried, then the same further out: soakAnyRow)
+            Vec3[] seats = SkirmishGameTests.soakAnyRow(level, origin.getX() + 1500, origin.getZ(), 2);
             if (seats == null) {
                 writeResult(failedResult("no dry ground for two bases near x=" + (origin.getX() + 1500)));
                 helper.fail("no dry ground for two bot bases near x=" + (origin.getX() + 1500));

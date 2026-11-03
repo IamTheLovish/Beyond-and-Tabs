@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.unit.AreaCommandClientEvents;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -88,7 +89,7 @@ public class WreckClientEvents {
             clear();
             return;
         }
-        if (MC.level.getGameTime() % 20 != 0)
+        if (ClientTicks.now() % 20 != 0)
             return;
         stale.clear();
         for (Int2IntMap.Entry e : metal.int2IntEntrySet()) {
@@ -105,6 +106,7 @@ public class WreckClientEvents {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fpS = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_WRECK);
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || metal.isEmpty()
@@ -150,6 +152,7 @@ public class WreckClientEvents {
             }
             drawLabel(pose, camera, hovered.getX(), hovered.getY() + 1.1, hovered.getZ(), hoverLabel);
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fpS);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }

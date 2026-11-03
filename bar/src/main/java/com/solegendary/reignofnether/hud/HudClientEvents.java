@@ -760,12 +760,6 @@ public class HudClientEvents {
                     float percentageDoneInv = firstProdItem.ticksLeft / firstProdItem.item.getCost(true, selProdBuilding.ownerName).ticks;
 
                     int colour = 0xFFFFFF;
-                    if (!firstProdItem.item.isBelowPopulationSupply(selProdBuilding)) {
-                        colour = 0xFF0000;
-                        if (percentageDoneInv <= 0) {
-                            percentageDoneInv = 0.01f;
-                        }
-                    }
                     evt.getGuiGraphics().drawString(
                         MC.font,
                         Math.round(100 - (percentageDoneInv * 100f)) + "% " + productionButtons.get(0).name,  // TODO: translatable
@@ -2547,6 +2541,8 @@ public class HudClientEvents {
     @SubscribeEvent
     // hudSelectedEntity and portraitRendererUnit should be assigned in the same event to avoid desyncs
     public static void onRenderLivingEntity(RenderLivingEvent.Post<? extends LivingEntity, ? extends Model> evt) {
+        if (com.solegendary.reignofnether.unit.modelling.motion.Corpses.drawing())
+            return;   // a dead unit's body the client holds (Corpses): not a unit any more
         ControlGroupNumbers.queue(evt.getEntity());
         // the same rule as the selection (SelectionKeep): a unit kept selected past tracking range stays the HUD
         // focus. Dropping it here (isRemoved) re-picked it straight away, every rendered entity, every frame, and

@@ -58,6 +58,9 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitDressServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchesServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.WreckServerEvents.class);
+        // essence wisps: every death drops one, carriers gather them (design/essence_casters.md)
+        vanillaEventBus.register(com.solegendary.reignofnether.essence.EssenceServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.essence.TombcallerServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.TreeClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingReclaim.class);   // Decommission (design/building_upgrades.md)
         vanillaEventBus.register(com.solegendary.reignofnether.building.FactionAuraServerEvents.class);   // faction terraform (design/biome_bases.md)
@@ -104,6 +107,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.PlantThicket.class);
         vanillaEventBus.register(com.solegendary.reignofnether.blocks.ThicketCover.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.AwakenThicket.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SproutGuardian.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.StagLeap.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);
         // Tidewrought Tides core: tidepool registry/expiry/drain + /rts-tidepool, and the wet buff
@@ -127,6 +131,8 @@ public class ServerEventRegistrar {
         // Stormcallers slice 4: the Lantern Fortress's dome, the Celestial Dragon's Tempest, the Phoenix's rebirth
         vanillaEventBus.register(com.solegendary.reignofnether.mana.LanternDomeServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.TempestServerEvents.class);
+        // the Spark Sage's Thunderhead clouds (design/essence_casters.md)
+        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.Thunderhead.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.OnceRevive.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);

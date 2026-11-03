@@ -31,24 +31,28 @@ public final class BotRoles {
         return null;
     }
 
-    /** The unit the bot adds against static defences (role siege/artillery in the roster), or null. */
+    /**
+     * The unit the bot adds against static defences (role siege/artillery in the roster), or null: every faction's T1
+     * siege lobber (design/siege_t1.md, lovish Oct 29). It used to be the Ravager, Creeper, Ghast and Elder Treant at
+     * the T2 labs, the Bombard Crew and the Rocket Battery at the T1 labs, and nothing for the Brassworks.
+     */
     public static ProductionItem siegeFor(Faction faction) {
-        if (Factions.VILLAGERS.equals(faction)) return ProductionItems.RAVAGER;         // T2 lab
-        if (Factions.MONSTERS.equals(faction)) return ProductionItems.CREEPER;          // T2 lab: the Gravebound's wall-breaker
-        if (Factions.PIGLINS.equals(faction)) return ProductionItems.GHAST;             // T2 lab
-        if (Factions.VERDANT_COURT.equals(faction)) return ProductionItems.ELDER_TREANT;   // T2 lab: no artillery, a tank that eats tower fire
-        if (Factions.TIDEWROUGHT.equals(faction)) return ProductionItems.BOMBARD_CREW;  // T1 lab
-        if (Factions.STORMCALLERS.equals(faction)) return ProductionItems.ROCKET_BATTERY;   // T1 lab
+        if (Factions.VILLAGERS.equals(faction)) return ProductionItems.SUNFIRE_MANGONEL;
+        if (Factions.MONSTERS.equals(faction)) return ProductionItems.SKULL_HURLER;
+        if (Factions.PIGLINS.equals(faction)) return ProductionItems.BOULDER_CHUCKER;
+        if (Factions.VERDANT_COURT.equals(faction)) return ProductionItems.BURL_SLINGER;
+        if (Factions.TIDEWROUGHT.equals(faction)) return ProductionItems.POWDER_MONKEY;
+        if (Factions.STORMCALLERS.equals(faction)) return ProductionItems.THUNDERSTONE_MONK;
+        if (Factions.BRASSWORKS.equals(faction)) return ProductionItems.STEAM_LOBBER;
         return null;
     }
 
-    /** Which lab trains {@link #siegeFor}: the T1 army building or the T2 lab. */
+    /** Which lab trains {@link #siegeFor}: the T1 army building (every faction's lobber) or the T2 lab. */
     public static boolean siegeIsT2(Faction faction) {
-        return Factions.VILLAGERS.equals(faction) || Factions.MONSTERS.equals(faction) || Factions.PIGLINS.equals(faction)
-            || Factions.VERDANT_COURT.equals(faction);
+        return false;
     }
 
-    /** True for a unit of the siege role (what {@link #siegeFor} produces, plus the Tidewrought's Mortar Galley). */
+    /** True for a unit of the siege role (what {@link #siegeFor} produces and the units it used to: the T2 wall-breakers, the long artillery). */
     public static boolean isSiege(LivingEntity le) {
         return le instanceof com.solegendary.reignofnether.unit.units.villagers.RavagerUnit
             || le instanceof com.solegendary.reignofnether.unit.units.monsters.CreeperUnit
@@ -56,7 +60,8 @@ public final class BotRoles {
             || le instanceof com.solegendary.reignofnether.unit.units.verdant.ElderTreantUnit
             || le instanceof com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit
             || le instanceof com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.storm.RocketBatteryUnit;
+            || le instanceof com.solegendary.reignofnether.unit.units.storm.RocketBatteryUnit
+            || le instanceof com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit;
     }
 
     /** True for a scout-role unit: it never joins the army and is never sent on a raid. */

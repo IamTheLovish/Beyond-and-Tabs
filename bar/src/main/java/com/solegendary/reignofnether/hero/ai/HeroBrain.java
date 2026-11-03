@@ -68,10 +68,11 @@ public final class HeroBrain {
         followUpTarget = null;
     }
 
-    /** The player took the hero (possession) or switched the AI off: the brain lets go of everything it started. */
+    /** The player took the hero (possession) or switched the AI off: the brain lets go of everything it started and saw. */
     public void off() {
         state = State.OFF;
         clearCombo();
+        seen.clear();   // no hold on units that may die or unload while the player has the hero
     }
 
     public void record(long tick, DecisionLog.Why why, int slot, int targetId) {

@@ -150,6 +150,30 @@ public final class Life {
         }
     }
 
+    /**
+     * The shared look solver (design/animation-foundation-audit.md, section 3, item 4): one look angle (degrees, yaw or
+     * pitch, relative to the body) split over a chain of bones from the root out - chest, then neck, then head. Each
+     * bone but the last takes its share of the whole look, clamped to its own limit; the last takes what is left, up
+     * to its limit, so the head arrives on the target whenever the chain can reach it and the chest only ever turns
+     * part of the way. Writes one angle per bone into out[0..n-1]; no allocation.
+     *
+     * @param shares the fraction of the look each bone but the last takes (chest 0.15 at rest, more when aiming)
+     * @param limits each bone's own limit, degrees (positive)
+     */
+    public static void look(float angle, float[] shares, float[] limits, int n, float[] out) {
+        if (!Float.isFinite(angle))
+            angle = 0f;
+        float left = angle;
+        for (int k = 0; k < n - 1; k++) {
+            float part = Mth.clamp(angle * shares[k], -limits[k], limits[k]);
+            if (Math.abs(part) > Math.abs(left))      // never past the target
+                part = left;
+            out[k] = part;
+            left -= part;
+        }
+        out[n - 1] = Mth.clamp(left, -limits[n - 1], limits[n - 1]);
+    }
+
     /** Degrees to radians, for readable call sites. */
     public static float deg(float d) {
         return d * Mth.DEG_TO_RAD;

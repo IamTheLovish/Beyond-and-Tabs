@@ -255,7 +255,10 @@ public class HeroGameTests {
             helper.succeed();
     }
 
-    /** A kill near the hero drops XP orbs that fly to it: its experience rises (Reign of Nether's orbs, unchanged). */
+    /**
+     * A kill near the hero pays it XP: its experience rises (paid at the kill since PR 419; the orbs that fly to it are
+     * the look of it - HeroXpGameTests holds the exact amount and the orbs).
+     */
     @GameTest(template = ARENA, timeoutTicks = 300)
     public static void hero_gains_xp_from_a_kill(GameTestHelper helper) {
         String me = owner(helper, "killer"), them = owner(helper, "victim");
@@ -265,8 +268,8 @@ public class HeroGameTests {
             helper.fail("could not spawn the hero or its victim");
             return;
         }
-        hero.setNoAi(true);   // stands still: the orbs come to it
-        // kill() (generic damage): any death near an enemy hero drops orbs for it - who struck the blow doesn't matter
+        hero.setNoAi(true);   // stands still
+        // kill() (generic damage): any death near an enemy hero pays it - who struck the blow doesn't matter
         helper.runAfterDelay(3, victim::kill);
         helper.runAfterDelay(6, () -> {
             if (victim.isAlive())
