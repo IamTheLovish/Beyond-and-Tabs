@@ -24,7 +24,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from preview_structure import load_nbt   # noqa: E402
 from gen_structures import OUT, OUT_DATA   # noqa: E402
-from gen_lab_levels import Canvas, b, wall_banner, is_air   # noqa: E402
+from gen_lab_levels import Canvas, is_air   # noqa: E402
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "capitol_bases")
 # RoN's non-air block counts: the capitols' buildTimeBlocks (their build time must not change with the detail)
@@ -81,55 +81,13 @@ def mausoleum():
 
 
 def central_portal():
-    """The Horde's Central Portal: RoN's towering obsidian portal in a nether-brick frame on a netherrack platform,
-    turned into the war camp's heart:
-    - braziers on the platform's four corner piers: blackstone posts with lit campfires (smoke columns, firelight);
-    - red war banners down the frame pillars' camera-facing (+z) side;
-    - a gilded crown: gilded blackstone in the crown's corners, a gold block at its heart, magma eyes glowing over the
-      portal front and back;
-    - skull totems (bone posts with wither skulls) at three platform corners, a bone post under RoN's stray
-      netherwart block at the fourth;
-    - crimson growth: two nylium patches with crimson roots and a fungus on the platform.
-    The obsidian frame and the air inside it are untouched (the portal must light). Ambience: embers off the braziers.
-    11 x 16 x 9, as RoN's."""
-    c = base("central_portal")
-    frame = {(x, y, 4) for x in (3, 7) for y in range(2, 12)} | {(x, 12, 4) for x in (4, 5, 6)} \
-        | {(x, 1, 4) for x in (4, 5, 6)}
-    inside = {(x, y, 4) for x in (4, 5, 6) for y in range(2, 12)}
-    before = {p: c.get(*p) for p in frame | inside}
-    for (x, z) in ((1, 2), (9, 2), (1, 6), (9, 6)):
-        expect(c, x, 1, z, "chiseled_nether_bricks")
-        c.set(x, 2, z, b("polished_blackstone_wall", **WALL_POST))
-        c.set(x, 3, z, b("campfire", **CAMPFIRE))
-    for x in (3, 7):
-        for y in (6, 10):
-            expect(c, x, y, 5, "chiseled_nether_bricks")
-            c.set(x, y, 6, wall_banner("red", "south"))
-    expect(c, 5, 13, 4, "nether_bricks")
-    c.set(5, 13, 4, b("gold_block"))
-    for (x, z) in ((3, 3), (7, 3), (3, 5), (7, 5)):
-        expect(c, x, 13, z, "chiseled_nether_bricks")
-        c.set(x, 13, z, b("gilded_blackstone"))
-    for z in (3, 5):
-        assert c.empty(5, 12, z), (5, 12, z)
-        c.set(5, 12, z, b("magma_block"))
-    for (x, z) in ((0, 1), (10, 1), (10, 7)):
-        assert c.empty(x, 1, z) and c.empty(x, 2, z), (x, z)
-        c.set(x, 1, z, b("bone_block", axis="y"))
-        c.set(x, 2, z, b("wither_skeleton_skull", rotation=FACES_OUT["west" if x == 0 else "east"]))
-    # RoN's stray block names "reignofnether:decayable_netherwart_block", an id its BlockRegistrar never had (it
-    # registers decayable_nether_wart_block): it was always air. A vanilla nether wart block takes its place - the
-    # decayable one is for growth that should rot away, not a capitol's ornament.
-    assert c.empty(0, 1, 7) and c.name(0, 2, 7) == "reignofnether:decayable_netherwart_block"
-    c.set(0, 2, 7, b("nether_wart_block"))
-    c.set(0, 1, 7, b("bone_block", axis="y"))
-    for (x, z, plant) in ((2, 6, "crimson_fungus"), (3, 6, "crimson_roots"), (8, 2, "crimson_roots")):
-        expect(c, x, 1, z, "netherrack")
-        c.set(x, 1, z, b("crimson_nylium"))
-        c.set(x, 2, z, b(plant))
-    for p, blk in before.items():
-        assert c.get(*p) == blk, "the portal frame changed at %s" % (p,)
-    return finish(c, "central_portal")
+    """The Ashborn capitol is no longer an overlay on RoN's nether-brick portal: it is the stepped volcano-temple
+    (tools/capitol_central_portal.py, Nov 2026), 15 x 22 x 15 - lovish, Oct 19: the Ashborn "must NOT resemble Reign
+    of Nether's Piglins: no pigs, gold, gilded blackstone, nether brick, portals"."""
+    import capitol_central_portal
+    c = capitol_central_portal.build()
+    capitol_central_portal.check(c)
+    return c.structure()
 
 
 def town_centre():
