@@ -234,6 +234,11 @@ public class GraveyardExitGameTests {
         if (!missing.isEmpty())
             ReignOfNether.LOGGER.warn("[GraveyardExit] GameTest {}: {} chunk(s) round the graveyard never loaded", layout, missing.size());
         int[] readyAt = { -1 };
+        // diagnostic: every change of a block round the gate after setup, with the tick and any falling block near it
+        // (stress 41639234475: the stuck units' grid saw no way out, gravel stood at feet height outside the gate)
+        List<String> gateChanges = GATE_CHANGES.computeIfAbsent(layout, k -> new ArrayList<>());
+        gateChanges.clear();
+        watchGate(helper, level, gy, gateChanges, layout);
         // one callback, a state machine on the tick (DragonDiveGameTests: vanilla iterates its tick-time map while it
         // runs the callbacks, so nothing is scheduled from inside one): wait for the chunks, raise the units, then watch
         helper.onEachTick(() -> {
@@ -300,7 +305,7 @@ public class GraveyardExitGameTests {
                     layout, stuck.size(), UNITS, LIMIT);
                 finish.accept(layout + ": " + stuck.size() + " of " + UNITS + " Zombies not out of the graveyard and at "
                     + "the rally " + LIMIT + " ticks after the last was raised: " + String.join("; ", stuck)
-                    + gateBlocks(level, gy, exitCells(level, gy)));
+                    + gateBlocks(level, gy, exitCells(level, gy)) + " | gate changes: " + String.join("; ", gateChanges));
             } catch (GameTestAssertException e) {
                 throw e;   // helper.fail's own way of failing the test
             } catch (Throwable t) {
@@ -467,6 +472,46 @@ public class GraveyardExitGameTests {
             z.horizontalCollision, z.verticalCollision, z.onGround(), z.getDeltaMovement().x, z.getDeltaMovement().y,
             z.getDeltaMovement().z, blockName(level, z.blockPosition()), blockName(level, z.blockPosition().below())));
         return sb.toString();
+    }
+
+    static final java.util.Map<String, List<String>> GATE_CHANGES = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Records (and logs) each change of a block round the gate side - 1 to 3 above the floor, 2 cells either side - by tick. */
+    static void watchGate(GameTestHelper helper, ServerLevel level, BuildingPlacement gy, List<String> out, String layout) {
+        int gz = gy.maxCorner.getZ(), floor = gy.minCorner.getY();
+        int x0 = gy.minCorner.getX() - 2, x1 = gy.maxCorner.getX() + 2;
+        java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> last = new java.util.HashMap<>();
+        for (int x = x0; x <= x1; x++)
+            for (int z = gz - 1; z <= gz + 2; z++)
+                for (int y = floor + 1; y <= floor + 3; y++) {   // above the floor: the aura restyles the floor itself all the time
+                    BlockPos c = new BlockPos(x, y, z);
+                    last.put(c, level.getBlockState(c));
+                }
+        long[] start = { -1 };
+        helper.onEachTick(() -> {
+            if (start[0] < 0)
+                start[0] = helper.getTick();
+            if (out.size() >= 24)
+                return;
+            for (var e : last.entrySet()) {
+                var now = level.getBlockState(e.getKey());
+                if (now != e.getValue()) {
+                    StringBuilder falling = new StringBuilder();
+                    for (var fb : level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,
+                            new net.minecraft.world.phys.AABB(e.getKey()).inflate(4, 24, 4)))
+                        falling.append(" falling ").append(blockName(fb.getBlockState())).append(String.format(Locale.ROOT, "@%.1f,%.1f,%.1f", fb.getX(), fb.getY(), fb.getZ()));
+                    String line = "t" + (helper.getTick() - start[0]) + " " + e.getKey().toShortString() + " " + blockName(e.getValue())
+                        + "->" + blockName(now) + falling;
+                    out.add(line);
+                    ReignOfNether.LOGGER.info("[GraveyardExit] GameTest {}: gate block {}", layout, line);
+                    e.setValue(now);
+                }
+            }
+        });
+    }
+
+    private static String blockName(net.minecraft.world.level.block.state.BlockState bs) {
+        return net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(bs.getBlock()).getPath();
     }
 
     private static String blockName(ServerLevel level, BlockPos bp) {
