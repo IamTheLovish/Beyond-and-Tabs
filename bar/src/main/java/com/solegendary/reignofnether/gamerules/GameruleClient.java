@@ -25,7 +25,6 @@ public class GameruleClient {
 
     public static boolean doLogFalling = true; // only for GUI
     public static boolean neutralAggro = false;
-    public static int maxPopulation = ResourceCosts.DEFAULT_MAX_POPULATION;
     public static boolean doUnitGriefing = false; // only for GUI
     public static boolean doPlayerGriefing = true; // only for GUI
     public static double groundYLevel = -320;
@@ -190,25 +189,6 @@ public class GameruleClient {
             List.of(
                     fcs(I18n.get("commands.reignofnether.gamerule.allowed_heroes")),
                     fcs(I18n.get("hud.gamerule.reignofnether.click"))
-            )
-        ));
-        boolean unlimitedPop = maxPopulation >= com.solegendary.reignofnether.resources.ResourceCosts.UNLIMITED_POPULATION;
-        buttons.add(new GameruleIntegerButton("maxPopulation: " + (unlimitedPop ? "unlimited" : String.valueOf(Math.round(maxPopulation))),
-            () -> {
-                // past 10000 the next step is "unlimited" (the default); stepping down from unlimited lands on 10000
-                int value = maxPopulation >= 10000 ? com.solegendary.reignofnether.resources.ResourceCosts.UNLIMITED_POPULATION
-                    : Math.min(10000, maxPopulation + (Keybindings.shiftMod.isDown() ? 10 : 1));
-                GameruleServerboundPacket.setMaxPopulation(value);
-            },
-            () -> {
-                int value = maxPopulation >= com.solegendary.reignofnether.resources.ResourceCosts.UNLIMITED_POPULATION ? 10000
-                    : Math.max(0, maxPopulation - (Keybindings.shiftMod.isDown() ? 10 : 1));
-                GameruleServerboundPacket.setMaxPopulation(value);
-            },
-            List.of(
-                fcs(I18n.get("commands.reignofnether.gamerule.max_population")),
-                fcs(I18n.get("hud.gamerule.reignofnether.click")),
-                fcs(I18n.get("hud.gamerule.reignofnether.shift_click"))
             )
         ));
         buttons.add(new GameruleIntegerButton("groundYLevel: " + Math.round(groundYLevel),

@@ -2,7 +2,6 @@ package com.solegendary.reignofnether.unit.units.monsters;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.buildings.placements.CustomBuildingPlacement;
-import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.*;
 import com.solegendary.reignofnether.hud.buttons.UnitSpawnButton;
@@ -30,17 +29,10 @@ public class SkeletonProd extends GraveyardUnitProductionItem implements IUnitPr
         super(cost);
         this.onComplete = (Level level, ProductionPlacement placement) -> {
             if (!level.isClientSide()) {
-                if (placement instanceof GraveyardPlacement gy && banksAsSkull(placement)) {
-                    if (ResearchServerEvents.playerHasResearch(placement.ownerName, ProductionItems.RESEARCH_STRAYS))
-                        gy.createSkull(EntityRegistrar.STRAY_UNIT.get());
-                    else
-                        gy.createSkull(EntityRegistrar.SKELETON_UNIT.get());
-                } else {
-                    if (ResearchServerEvents.playerHasResearch(placement.ownerName, ProductionItems.RESEARCH_STRAYS) && !(placement instanceof CustomBuildingPlacement))
-                        placement.produceUnit((ServerLevel) level, EntityRegistrar.STRAY_UNIT.get(), placement.ownerName, true);
-                    else
-                        placement.produceUnit((ServerLevel) level, EntityRegistrar.SKELETON_UNIT.get(), placement.ownerName, true);
-                }
+                if (ResearchServerEvents.playerHasResearch(placement.ownerName, ProductionItems.RESEARCH_STRAYS) && !(placement instanceof CustomBuildingPlacement))
+                    placement.produceUnit((ServerLevel) level, EntityRegistrar.STRAY_UNIT.get(), placement.ownerName, true);
+                else
+                    placement.produceUnit((ServerLevel) level, EntityRegistrar.SKELETON_UNIT.get(), placement.ownerName, true);
             }
         };
     }
@@ -87,7 +79,7 @@ public class SkeletonProd extends GraveyardUnitProductionItem implements IUnitPr
             List.of(
                 Component.translatable("entity.reignofnether.skeleton_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.skeleton_unit.tooltip1").getVisualOrderText(),
                 FormattedCharSequence.forward("", Style.EMPTY),
