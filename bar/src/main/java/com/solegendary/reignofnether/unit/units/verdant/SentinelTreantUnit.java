@@ -114,7 +114,9 @@ public class SentinelTreantUnit extends IronGolemUnit {
 
     /**
      * The Take Root button: root if walking, uproot if rooted. Cancelling a root in progress frees it at once (it never
-     * planted); a press while uprooting is ignored. Public for the ability and the game test.
+     * planted); a press while uprooting is ignored. Public for the ability and the game test. A press that roots or
+     * uproots is a new order (TakeRoot skips the dispatcher's reset so an ignored press keeps a held move): orders, the
+     * attack target and a group move still waiting in the formation dispatch queue are all dropped.
      */
     public void toggleRoot() {
         if (!rootWanted) {
@@ -122,12 +124,20 @@ public class SentinelTreantUnit extends IronGolemUnit {
                 return;   // already uprooting
             rootWanted = true;
             transitionLeft = ROOT_TIMES.rootTicks();
-            heldMove = null;
-            Unit.fullResetBehaviours(this);   // a standing order: no chase drags it off the spot
+            pressReset();   // a standing order: no chase or late group move drags it off the spot
             rootChanged();
         } else {
+            pressReset();
             uproot();
         }
+    }
+
+    private void pressReset() {
+        heldMove = null;
+        Unit.fullResetBehaviours(this);
+        droppedMove = null;
+        if (!level().isClientSide())
+            UnitServerEvents.cancelQueuedFormationMove(getId());
     }
 
     /** Cancels a root in progress (free at once) or starts uprooting a planted Treant; nothing while uprooting. */

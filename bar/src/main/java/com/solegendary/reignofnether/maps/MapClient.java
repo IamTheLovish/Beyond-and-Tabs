@@ -23,6 +23,7 @@ import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.startpos.CapturePointServerEvents;
 import com.solegendary.reignofnether.startpos.CapturePointsClient;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -394,7 +395,7 @@ public final class MapClient {
         int fill = s.owner().isEmpty() ? 0xB4B4B4 : PlayerColors.getPlayerDisplayColorHex(s.owner()) & 0xFFFFFF;
         boolean contested = !s.claimant().isEmpty() && !s.claimant().equals(s.owner()) && s.progress() > 0
             && (s.owner().isEmpty() ? s.progress() < 1 : s.progress() < 1);
-        int ring = contested && (MC.level.getGameTime() / 10) % 2 == 0
+        int ring = contested && (ClientTicks.now() / 10) % 2 == 0
             ? PlayerColors.getPlayerDisplayColorHex(s.claimant()) & 0xFFFFFF : 0x000000;
         for (int x = -4; x <= 4; x++)
             for (int z = -4; z <= 4; z++) {
@@ -462,8 +463,16 @@ public final class MapClient {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fpS = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_MAP);
         try {
-            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            int fg = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_GATE);
+            boolean skip;
+            try {
+                skip = com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays();
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fg);
+            }
+            if (skip) return;   // shader pack shadow map: overlays cast no shadow
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
                 return;
             // the start markers show from the ground too (a hero sees the rim, fence and pillars); the rest is RTS-only
@@ -471,6 +480,7 @@ public final class MapClient {
                 StartMarkers.render(evt.getPoseStack(), evt.getCamera());
             if (!OrthoviewClientEvents.isEnabled())
                 return;
+            int fw = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_MAPWORLD);
             try {
                 renderWorld(evt.getPoseStack(), evt.getCamera());
             } catch (Exception e) {
@@ -478,8 +488,11 @@ public final class MapClient {
                 if (!renderFailed)
                     ReignOfNether.LOGGER.error("[Maps] the map overlay failed to draw", e);
                 renderFailed = true;
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fw);
             }
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fpS);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }

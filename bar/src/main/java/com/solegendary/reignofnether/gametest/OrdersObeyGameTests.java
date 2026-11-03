@@ -97,6 +97,7 @@ public class OrdersObeyGameTests {
         String mine = owner(helper, "reclick");
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
         Mob a = vindicator(level, mine, o.getX() + 0.5, o.getY(), o.getZ() + 1.5, made);
         Mob b = vindicator(level, mine, o.getX() + 0.5, o.getY(), o.getZ() + 12.5, made);
         if (a == null || b == null) {
@@ -183,8 +184,8 @@ public class OrdersObeyGameTests {
     @GameTest(template = ARENA, batch = BATCH_RTS, timeoutTicks = 800)
     public static void a_move_into_unloaded_chunks_walks_toward_it_never_stands_busy(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        boolean wasRts = UnitServerEvents.rtsPathfinding;
-        UnitServerEvents.rtsPathfinding = true;
+        // on until this test ends, however it ends (put back by hand, a whenTicking throw left it on for the shard)
+        TestCleanup.rtsPathfinding(helper);
         // on the ground, not a sky pad: a pad near the build limit sits at the edge of the pathfinder's vertical band
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         // a closed stone pen (x 0..14, z 0..15): the unit must not walk out into fresh world - generating new
@@ -197,9 +198,9 @@ public class OrdersObeyGameTests {
         BlockPos pad = helper.absolutePos(new BlockPos(0, 2, 0));
         String mine = owner(helper, "unloaded");
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
         Mob m = vindicator(level, mine, pad.getX() + 2.5, pad.getY(), pad.getZ() + 8.5, made);
         if (m == null) {
-            UnitServerEvents.rtsPathfinding = wasRts;
             TerrainGameTests.cleanUp(made);
             helper.fail("could not create the vindicator");
             return;
@@ -217,7 +218,6 @@ public class OrdersObeyGameTests {
         ArenaReady.whenTicking(helper, made, 150, tick -> {
             if (level.getChunkSource().getChunkNow(far.getX() >> 4, far.getZ() >> 4) != null) {
                 done[0] = true;
-                UnitServerEvents.rtsPathfinding = wasRts;
                 TerrainGameTests.cleanUp(made);
                 helper.fail("the far target's chunk is loaded: this test proves nothing");
                 return;
@@ -273,7 +273,6 @@ public class OrdersObeyGameTests {
                     problems.add("the unit did not walk toward the target: " + state);
                 TerrainGameTests.finish(helper, problems);
             } finally {
-                UnitServerEvents.rtsPathfinding = wasRts;
                 TerrainGameTests.cleanUp(made);
             }
         });
@@ -290,8 +289,8 @@ public class OrdersObeyGameTests {
     @GameTest(template = ARENA, batch = BATCH_RTS_SHIFTED, timeoutTicks = 800)
     public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        boolean wasRts = UnitServerEvents.rtsPathfinding;
-        UnitServerEvents.rtsPathfinding = true;
+        // on until this test ends, however it ends (put back by hand, a whenTicking throw left it on for the shard)
+        TestCleanup.rtsPathfinding(helper);
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         // the same closed stone pen as a_move_into_unloaded_chunks... (x 0..14, z 0..15)
         for (int x = 0; x <= 14; x++)
@@ -302,9 +301,9 @@ public class OrdersObeyGameTests {
         BlockPos pad = helper.absolutePos(new BlockPos(0, 2, 0));
         String mine = owner(helper, "shifted");
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
         Mob m = vindicator(level, mine, pad.getX() + 2.5, pad.getY(), pad.getZ() + 8.5, made);
         if (m == null) {
-            UnitServerEvents.rtsPathfinding = wasRts;
             TerrainGameTests.cleanUp(made);
             helper.fail("could not create the vindicator");
             return;
@@ -322,7 +321,6 @@ public class OrdersObeyGameTests {
         ArenaReady.whenTicking(helper, made, 150, tick -> {
             if (level.getChunkSource().getChunkNow(far.getX() >> 4, far.getZ() >> 4) != null) {
                 done[0] = true;
-                UnitServerEvents.rtsPathfinding = wasRts;
                 TerrainGameTests.cleanUp(made);
                 helper.fail("the far target's chunk is loaded: this test proves nothing");
                 return;
@@ -402,7 +400,6 @@ public class OrdersObeyGameTests {
                         + " exercise the drift:" + events + " trace:" + trace);
                 TerrainGameTests.finish(helper, problems);
             } finally {
-                UnitServerEvents.rtsPathfinding = wasRts;
                 TerrainGameTests.cleanUp(made);
             }
         });
@@ -734,6 +731,7 @@ public class OrdersObeyGameTests {
         String mine = owner(helper, "stop");
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
         List<Mob> units = new ArrayList<>();
         for (int i = 0; i < 24; i++) {
             Mob m = vindicator(level, mine, o.getX() + 1.5 + 2 * (i % 6), o.getY(), o.getZ() + 1.5 + 2 * (i / 6), made);
@@ -810,6 +808,7 @@ public class OrdersObeyGameTests {
         String mine = owner(helper, "forced_a"), theirs = owner(helper, "forced_b");
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
         Mob stuck = vindicator(level, mine, o.getX() + 2.5, o.getY(), o.getZ() + 7.5, made);
         Mob foe = TerrainGameTests.dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, o.getX() + 8.5, o.getY(), o.getZ() + 7.5, made);
         if (stuck == null || foe == null) {

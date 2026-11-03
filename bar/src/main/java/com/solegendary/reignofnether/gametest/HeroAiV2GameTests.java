@@ -24,8 +24,11 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -412,6 +415,10 @@ public class HeroAiV2GameTests {
      * Target pick sees only what the hero's side sees: a cloaked Shade Ranger it could finish with one Judgement is not
      * there for it; Judgement goes to the enemy in plain view. Main: the brain reads every unit round the hero, hidden
      * or not, and spends Judgement on the cloaked one (the kill it can finish scores highest).
+     * It plays on a sky pad of its own (SKY_PAD_Y): on the arena floor a neighbouring test's units came within the
+     * ranger's reach, and an engaged ranger never cloaks - the intermittent "setup: the Shade Ranger did not cloak"
+     * (6 of 48 runners on the vision branch, where heroes perceive 36 blocks, not 24). The setup failure says what kept
+     * it visible.
      */
     @GameTest(template = ARENA, batch = "hero_ai_v2_target", timeoutTicks = 260)
     public static void hero_ai_v2_target_pick_skips_an_enemy_its_side_cannot_see(GameTestHelper helper) {
@@ -424,6 +431,9 @@ public class HeroAiV2GameTests {
             HeroAiGameTests.finish(helper, List.of("could not spawn the enemies"), mobs, null);
             return;
         }
+        int padY = skyPad(helper);
+        onPad(ranger, padY);
+        onPad(plain, padY);
         EngagementStance.set(ranger, EngagementStance.HOLD_FIRE);
         ((Unit) ranger).setHoldPosition(true);
         // a Shade Ranger cloaks after standing still with no target for its cloak delay; the hero comes after that.
@@ -436,7 +446,7 @@ public class HeroAiV2GameTests {
         helper.runAfterDelay(spawnAt, () -> {
             if (!ShadeRangerUnit.isCloaked(ranger)) {
                 done[0] = true;
-                HeroAiGameTests.finish(helper, List.of("setup: the Shade Ranger did not cloak"), mobs, null);
+                HeroAiGameTests.finish(helper, List.of("setup: the Shade Ranger did not cloak" + cloakDiag(ranger, them)), mobs, null);
                 return;
             }
             hero[0] = paladin(helper, me, 6, 5);
@@ -445,6 +455,7 @@ public class HeroAiV2GameTests {
                 HeroAiGameTests.finish(helper, List.of("could not spawn the hero"), mobs, null);
                 return;
             }
+            onPad(hero[0], padY);
             mobs.add(hero[0]);
             judgement[0] = HeroAiGameTests.learn(p, 1);
             ranger.setHealth(4);   // one Judgement (10) finishes it
@@ -477,19 +488,11 @@ public class HeroAiV2GameTests {
     public static void hero_ai_v2_never_chases_into_an_enemy_tower(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2_tower"), them = me + "_foe";
-        BuildingPlacement placed = BuildingUtils.getNewBuildingPlacement(Defences.VILLAGERS.raidTower(), helper.getLevel(),
-            helper.absolutePos(new BlockPos(1, 1, 1)), Rotation.NONE, them, false);
-        if (!(placed instanceof DefenceTower.DefenceTowerPlacement tower)) {
+        DefenceTower.DefenceTowerPlacement tower = raidTower(helper, them);
+        if (tower == null) {
             HeroAiGameTests.finish(helper, List.of("setup: the raid tower is not a DefenceTowerPlacement"), new ArrayList<>(), null);
             return;
         }
-        for (var block : tower.getBlocks())
-            if (!block.getBlockState().isAir())
-                helper.getLevel().setBlock(block.getBlockPos(), block.getBlockState(), 3);
-        tower.initPlacedBlocks();   // a placement with no blocks standing counts as destroyed on its first tick
-        tower.isBuilt = true;
-        tower.onlyFoe = them + "_nobody";   // it never fires in this test: the hero must stay out on its own judgement
-        BuildingServerEvents.getBuildings().add(tower);
         Runnable cleanup = () -> BuildingServerEvents.getBuildings().remove(tower);
         double tx = tower.centrePos.getX() + 0.5, tz = tower.centrePos.getZ() + 0.5;
         int range = tower.tower.kind.range;
@@ -521,6 +524,96 @@ public class HeroAiV2GameTests {
                     problems.add(String.format("the hero went %.1f blocks from an enemy raid tower that reaches %d", closest[0], range));
                 if (!cast[0])
                     problems.add("the hero never struck the enemy from outside the tower's reach (Judgement reached it)");
+                HeroAiGameTests.finish(helper, problems, mobs, cleanup);
+            });
+        }
+    }
+
+    /**
+     * A built enemy raid tower in the arena's corner (1, 1), registered with the server, that never fires: the hero
+     * must stay out on its own judgement. Null when the raid tower is not a tower placement. The caller removes it.
+     */
+    static DefenceTower.DefenceTowerPlacement raidTower(GameTestHelper helper, String them) {
+        BuildingPlacement placed = BuildingUtils.getNewBuildingPlacement(Defences.VILLAGERS.raidTower(), helper.getLevel(),
+            helper.absolutePos(new BlockPos(1, 1, 1)), Rotation.NONE, them, false);
+        if (!(placed instanceof DefenceTower.DefenceTowerPlacement tower))
+            return null;
+        for (var block : tower.getBlocks())
+            if (!block.getBlockState().isAir())
+                helper.getLevel().setBlock(block.getBlockPos(), block.getBlockState(), 3);
+        tower.initPlacedBlocks();   // a placement with no blocks standing counts as destroyed on its first tick
+        tower.isBuilt = true;
+        tower.onlyFoe = them + "_nobody";
+        BuildingServerEvents.getBuildings().add(tower);
+        return tower;
+    }
+
+    /**
+     * Handed back by the player, the hero knows the enemy tower at once. The brain forgets its scan when the player
+     * takes the hero (off()), and its next look is up to a second away: until then the hero's own idle targeting may
+     * walk it under the tower's guns after an enemy standing there. The AI is switched back on just after a think, and
+     * on the first tick the brain has the hero it must already rule that chase out. Main (Abigail's note N2 on PR 345):
+     * the brain sees no tower until its next think. The hero's legs are held (speed 0) so it waits where it was put.
+     */
+    @GameTest(template = ARENA, batch = "hero_ai_v2_hand_back", timeoutTicks = 160)
+    public static void hero_ai_v2_handed_back_the_hero_knows_the_tower_at_once(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        String me = HeroGameTests.owner(helper, "v2_hand_back"), them = me + "_foe";
+        DefenceTower.DefenceTowerPlacement tower = raidTower(helper, them);
+        if (tower == null) {
+            HeroAiGameTests.finish(helper, List.of("setup: the raid tower is not a DefenceTowerPlacement"), new ArrayList<>(), null);
+            return;
+        }
+        Runnable cleanup = () -> {
+            BuildingServerEvents.getBuildings().remove(tower);
+            HeroBot.setAiEnabled(me, true);
+        };
+        double tx = tower.centrePos.getX() + 0.5, tz = tower.centrePos.getZ() + 0.5;
+        int range = tower.tower.kind.range;
+        Mob hero = paladin(helper, me, 15, 15);
+        HeroBot.setAiEnabled(me, false);   // the player has the Hero AI switched off
+        Mob foe = dummy(helper, them, 11, 11);
+        List<Mob> mobs = mobs(hero, foe);
+        if (!(hero instanceof FactionHero p) || foe == null) {
+            HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, cleanup);
+            return;
+        }
+        if (flat(hero, tx, tz) <= range + 2 || flat(foe, tx, tz) >= range - 1) {
+            HeroAiGameTests.finish(helper, List.of(String.format("setup: hero %.1f and enemy %.1f from the tower (range %d)",
+                flat(hero, tx, tz), flat(foe, tx, tz), range)), mobs, cleanup);
+            return;
+        }
+        AttributeInstance speed = hero.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed != null)
+            speed.setBaseValue(0);
+        int[] onAt = { -1 };
+        boolean[] done = { false };
+        for (int t = 1; t <= 140; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                if (onAt[0] < 0) {
+                    // just after a think (FactionHero: tickCount % 20 == 7), so the brain's next look is most of a second away
+                    if (tick >= 20 && hero.tickCount % 20 == 10) {
+                        onAt[0] = tick;
+                        HeroBot.setAiEnabled(me, true);   // the player hands the hero back
+                    }
+                    return;
+                }
+                HeroBrain b = p.heroCore().brainIfAny();
+                if (b == null || !b.active()) {
+                    if (tick - onAt[0] >= 5) {
+                        done[0] = true;
+                        HeroAiGameTests.finish(helper, List.of("setup: switched back on, the brain never took the hero"), mobs, cleanup);
+                    }
+                    return;
+                }
+                done[0] = true;
+                List<String> problems = new ArrayList<>();
+                if (HeroBot.mayAutoTarget(p, hero, foe))
+                    problems.add(String.format("handed back, the hero may chase an enemy under a raid tower's guns (the brain sees %d towers, %d ticks after the hand-back)",
+                        b.seen.towers.size(), tick - onAt[0]));
                 HeroAiGameTests.finish(helper, problems, mobs, cleanup);
             });
         }
@@ -674,6 +767,66 @@ public class HeroAiV2GameTests {
         });
     }
 
+    /**
+     * One of a bot test's scheduled checks: if it throws (a bug in the test or the code under it), the bot test still
+     * ends through its cleanup, so the test bot leaves BotServerEvents.brains, and the exception goes on to fail the test.
+     * The framework fails a test whose runnable throws at once, and botGuard's own runnable then never runs.
+     */
+    static Runnable botStep(boolean[] done, List<Mob> mobs, Runnable cleanup, Runnable body) {
+        return () -> {
+            try {
+                body.run();
+            } catch (RuntimeException e) {
+                // finish's own fail throws too: by then done is set and the cleanup has run
+                if (!done[0]) {
+                    done[0] = true;
+                    for (Mob m : mobs)
+                        if (m != null)
+                            m.discard();
+                    cleanup.run();
+                }
+                throw e;
+            }
+        };
+    }
+
+    /**
+     * botStep at work: a bot test's check that throws leaves no test bot registered and no units standing, and the
+     * exception still reaches the framework. Main (Abigail's note N3 on PR 345): botGuard covered a timeout only, so a
+     * throw left the test bot thinking for the rest of the run.
+     */
+    @GameTest(template = ARENA, batch = "hero_ai_v2_bot_throw", timeoutTicks = 40)
+    public static void hero_ai_v2_a_bot_test_check_that_throws_unregisters_its_bot(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        String bot = HeroGameTests.owner(helper, "v2_bot_throw");
+        BotPlayer brain = new BotPlayer(bot, Factions.VILLAGERS, BotPlayer.Difficulty.PASSIVE, helper.absolutePos(new BlockPos(8, 2, 1)));
+        brain.enemyFilter = o -> false;
+        BotServerEvents.brains.put(bot, brain);
+        Mob unit = dummy(helper, bot + "_foe", 8, 8);
+        List<Mob> mobs = mobs(unit);
+        boolean[] done = { false };
+        Runnable cleanup = () -> BotServerEvents.brains.remove(bot);
+        Runnable check = botStep(done, mobs, cleanup, () -> {
+            throw new IllegalStateException("a check that throws, on purpose");
+        });
+        helper.runAfterDelay(2, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                check.run();
+                problems.add("the check's exception was swallowed (the test would never fail)");
+            } catch (IllegalStateException expected) {
+                // it must reach the framework
+            }
+            if (BotServerEvents.brains.containsKey(bot))
+                problems.add("a bot test check that threw left its test bot in BotServerEvents.brains");
+            if (unit != null && !unit.isRemoved())
+                problems.add("a bot test check that threw left its units standing");
+            if (!done[0])
+                problems.add("a bot test check that threw did not end the test's other checks");
+            HeroAiGameTests.finish(helper, problems, mobs, cleanup);
+        });
+    }
+
     static HeroBrain.State state(Mob hero) {
         HeroBrain b = ((FactionHero) hero).heroCore().brainIfAny();
         return b == null ? HeroBrain.State.OFF : b.state;
@@ -693,12 +846,12 @@ public class HeroAiV2GameTests {
         double[] moved = { 0 };
         boolean[] done = { false };
         Runnable cleanup = () -> BotServerEvents.brains.remove(bot);
-        helper.runAfterDelay(2, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
+        helper.runAfterDelay(2, botStep(done, mobs, cleanup, () -> hero.setHealth(hero.getMaxHealth() * 0.25f)));
         // every check is scheduled here, from the top (a runnable that schedules more breaks the test's runnable map);
         // a rest seen by tick 260 leaves the order its 120 ticks before the guard at 390
         for (int t = 3; t <= 385; t++) {
             final int tick = t;
-            helper.runAfterDelay(t, () -> {
+            helper.runAfterDelay(t, botStep(done, mobs, cleanup, () -> {
                 if (done[0])
                     return;
                 if (restAt[0] < 0 && state(hero) == HeroBrain.State.REST) {
@@ -723,7 +876,7 @@ public class HeroAiV2GameTests {
                     HeroAiGameTests.finish(helper, List.of("setup: the bot hero at a quarter health never fled and rested (state "
                         + state(hero) + ")"), mobs, cleanup);
                 }
-            });
+            }));
         }
         botGuard(helper, 390, done, mobs, cleanup);
     }
@@ -743,11 +896,11 @@ public class HeroAiV2GameTests {
         long[] restAt = { -1 };
         boolean[] done = { false };
         Runnable cleanup = () -> BotServerEvents.brains.remove(bot);
-        helper.runAfterDelay(2, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
+        helper.runAfterDelay(2, botStep(done, mobs, cleanup, () -> hero.setHealth(hero.getMaxHealth() * 0.25f)));
         int limit = 20 * 20 + 60;   // BOT_REST_TICKS and a few thinks
         for (int t = 3; t <= 840; t++) {
             final int tick = t;
-            helper.runAfterDelay(t, () -> {
+            helper.runAfterDelay(t, botStep(done, mobs, cleanup, () -> {
                 if (done[0])
                     return;
                 HeroBrain.State s = state(hero);
@@ -767,8 +920,48 @@ public class HeroAiV2GameTests {
                     HeroAiGameTests.finish(helper, List.of(String.format("the bot hero rested %d ticks with no heal and no order (it should go back by itself)",
                         tick - restAt[0])), mobs, cleanup);
                 }
-            });
+            }));
         }
         botGuard(helper, 880, done, mobs, cleanup);
+    }
+
+    /** Standing height on this test's own glass pad, SKY_PAD_Y over its arena (no other test's pad is at this height). */
+    static final int SKY_PAD_Y = 210;
+
+    static int skyPad(GameTestHelper helper) {
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        for (int dx = 0; dx < 16; dx++)
+            for (int dz = 0; dz < 16; dz++)
+                helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, SKY_PAD_Y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState(), 3);
+        return SKY_PAD_Y + 1;
+    }
+
+    static void onPad(Mob m, int padY) {
+        m.teleportTo(m.getX(), padY, m.getZ());
+    }
+
+    /** What kept a Shade Ranger visible: still ticks, target, who hurt it, and every stranger's unit within 48. */
+    static String cloakDiag(Mob ranger, String owner) {
+        var r = (ShadeRangerUnit) ranger;
+        var goal = r.getTargetGoal();
+        StringBuilder b = new StringBuilder(" (still ticks ").append(r.getStillTicks())
+            .append(", invisible ").append(ranger.isInvisible())
+            .append(", target ").append(name(goal == null ? null : goal.getTarget()))
+            .append(", hurt by ").append(name(ranger.getLastHurtByMob()))
+            .append(", strangers:");
+        for (var e : ranger.level().getEntitiesOfClass(LivingEntity.class, ranger.getBoundingBox().inflate(48))) {
+            if (e == ranger || !(e instanceof Unit u) || owner.equals(u.getOwnerName()))
+                continue;
+            b.append(' ').append(name(e)).append(String.format("@%.1f", e.distanceTo(ranger)));
+            if (e instanceof Mob m && m.getTarget() != null)
+                b.append("->").append(name(m.getTarget()));
+        }
+        return b.append(')').toString();
+    }
+
+    static String name(Entity e) {
+        if (e == null)
+            return "none";
+        return e.getType().toShortString() + "(" + (e instanceof Unit u ? u.getOwnerName() : "wild") + ")";
     }
 }

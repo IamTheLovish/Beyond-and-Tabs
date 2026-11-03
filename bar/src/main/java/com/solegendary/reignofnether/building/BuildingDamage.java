@@ -14,8 +14,8 @@ package com.solegendary.reignofnether.building;
  *       ({@code BombardShell}, on top of its own {@code BUILDING_DAMAGE_MULT}).</li>
  * </ul>
  * Not scaled: hits that already carry their own building number (a Ravager's roar, a Gorehorn Rhino's breach, a
- * Shellback Turtle's battery, a Royal Guard's mace slam, a sapper's charge), the game-enders and the commander's blast,
- * TNT, the converter's chain blast and the console command. Never apply it a second time to something that went through
+ * Shellback Turtle's battery, a Royal Guard's mace slam, a sapper's charge, a siege lobber's shell), the game-enders
+ * and the commander's blast, TNT, the converter's chain blast and the console command. Never apply it a second time to something that went through
  * {@link #MELEE_MULT}.
  */
 public final class BuildingDamage {

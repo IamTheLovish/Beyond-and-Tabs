@@ -72,9 +72,11 @@ public class DragonDiveGameTests {
     /** A 16x16 glass floor high over the arena: open sky to dive through. Returns the standing position's corner. */
     private static BlockPos skyPad(GameTestHelper helper, int y) {
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        // put back when the test ends, pass or fail: a pad left over another test's column is in its sky
+        TestCleanup.BlockUndo pad = TestCleanup.blocks(helper);
         for (int dx = 0; dx < 16; dx++)
             for (int dz = 0; dz < 16; dz++)
-                helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState(), 3);
+                pad.set(new BlockPos(corner.getX() + dx, y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState());
         return new BlockPos(corner.getX(), y + 1, corner.getZ());
     }
 
