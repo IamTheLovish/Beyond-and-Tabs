@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """The Brassworks capitol, the Foundry Hall, redrawn as THE GRAND FOUNDRY - the centrepiece of the base.
 
+NOV 2026 - THE WORKS: build() now draws the works hall the blind critic rounds chose (tools/foundry_hall_massing.py
+round3: a monitor-roofed verdigris hall, one great stack, a furnace hood on the east portal, pale andesite towers;
+5 / 5 -> 6.5 / 6.5, PR #485). Its plinth, hall faces, portals, nave, yard and golems are this file's functions; the
+roof, clock tower, gables, pipes and stacks described below are the Grand Foundry's, kept drawable as build_grand().
+
 lovish, Oct 19 2026: capitols "can be a lot bigger than the current capital size, a lot taller, a lot more detailed",
 "I want it to be the center piece of the base", everything "connects" to it with "fluidity", "don't break the game".
 Detailed = fine-grained (stairs, slabs, walls, chains, bars), not chunky blocks. The bar is the Sunforged Temple of the
