@@ -422,6 +422,29 @@ public final class GameTestChunks {
      * {@code -Dreignofnether.asyncStructureChunks=true|false}. Normal play never runs the game-test framework, and
      * stays untouched either way.
      */
+    /**
+     * Above vanilla's ceiling: StructureUtils.clearSpaceForStructure clears a structure's box (its footprint widened by
+     * 2-3) only up to 20 blocks over its top, so what an earlier batch left higher at the same spot stayed there,
+     * unsupported, and gravel among it fell ~30 blocks onto the next batch's arenas once their setup touched a neighbour
+     * (flake-stress 41646780667: it closed a half-blocked graveyard's one open gate cell; ArenaClearingGameTests). Every
+     * column of the box is cleared from there up to its highest block, and anything already falling there is removed.
+     */
+    public static void clearAbove(ServerLevel level, net.minecraft.world.level.levelgen.structure.BoundingBox box) {
+        int x0 = box.minX() - 2, x1 = box.maxX() + 3, z0 = box.minZ() - 3, z1 = box.maxZ() + 3, from = box.maxY() + 21;
+        int top = level.getMaxBuildHeight() - 1;
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int x = x0; x <= x1; x++)
+            for (int z = z0; z <= z1; z++) {
+                int to = Math.min(top, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z) - 1);
+                for (int y = from; y <= to; y++)
+                    if (!level.getBlockState(p.set(x, y, z)).isAir())
+                        level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+            }
+        for (var falling : level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,
+                new net.minecraft.world.phys.AABB(x0, from, z0, x1 + 1, top + 1, z1 + 1)))
+            falling.discard();
+    }
+
     public static boolean asyncStructureLoad(ServerLevel level) {
         String prop = System.getProperty("reignofnether.asyncStructureChunks");
         if (prop != null)
