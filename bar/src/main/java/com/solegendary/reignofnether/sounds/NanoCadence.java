@@ -1,5 +1,8 @@
 package com.solegendary.reignofnether.sounds;
 
+import java.util.function.BooleanSupplier;
+import java.util.function.IntSupplier;
+
 /**
  * When a builder's construction granule plays (pure, so NanoCadenceTest can simulate a minute of builders).
  *
@@ -27,5 +30,32 @@ public final class NanoCadence {
     /** Whether a beam event at {@code tick} plays: the gap drawn at the last granule has passed. */
     public static boolean shouldPlay(long tick, long lastPlay, int gap) {
         return tick - lastPlay >= gap;
+    }
+
+    /**
+     * One faction's loop. A beam event whose gap has passed is offered to {@code play}, which says whether the granule
+     * really played (SfxClient.playAt: out of reach, over budget, fogged or too quiet - it did not); only a granule that
+     * played books the gap and draws the next one. A builder out of earshot never uses up the loop: review r1 on PR 409
+     * found the gap booked before playAt, so same-faction builders 48-200 blocks away (BarFx sends NANO that far, and
+     * own units are never fogged) took the slot - the builder in view fell from ~28 granules a minute to 2.7 with ten
+     * far ones.
+     */
+    public static final class Loop {
+        private long last;
+        private int gap;
+
+        /** Offers a beam event at {@code tick}; true if its granule played (and booked the gap). */
+        public boolean offer(long tick, BooleanSupplier play, IntSupplier nextGap) {
+            if (!shouldPlay(tick, last, gap) || !play.getAsBoolean())
+                return false;
+            last = tick;
+            gap = nextGap.getAsInt();
+            return true;
+        }
+
+        public void reset() {
+            last = 0;
+            gap = 0;
+        }
     }
 }
