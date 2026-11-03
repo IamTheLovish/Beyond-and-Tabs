@@ -47,10 +47,10 @@ class KeybindMigrationTest {
     @Test
     void stopSavedOnTheOldDefaultSIsUnbound() {
         // Nov 3 (Nick): a short tap of S while WASD-panning fired Stop on the selected workers. Every install of the
-        // Oct 11 - Nov 3 builds saved Stop on S, so the new unbound default needs this move to reach them.
+        // Oct 11 - Nov 3 builds saved Stop on S, so the new unbound default (Ctrl+S runs it) needs this move to reach them.
         List<KeybindMigration.Move> moves = plan(2, Map.of(STOP, GLFW.GLFW_KEY_S));
         assertEquals(List.of(new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_UNKNOWN)), moves);
-        assertTrue(KeybindMigration.history(STOP).contains("unbound"), KeybindMigration.history(STOP));
+        assertTrue(KeybindMigration.history(STOP).contains("Ctrl+S"), KeybindMigration.history(STOP));
     }
 
     @Test

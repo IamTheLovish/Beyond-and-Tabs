@@ -65,9 +65,9 @@ public final class KeybindMigration {
         new Stale(1, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_X, "Build slot 9 X -> , (X is Attack)"),
         new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)"),
         // Oct 11 (c4d0b47) to Nov 3: Stop was S, sharing the key with pan-down by the tap/hold rule. Nick: a short tap
-        // of S while panning stopped the selected workers. Stop now ships unbound; listed after its layout-1 row so
+        // of S while panning stopped the selected workers. Stop is now the Ctrl+S chord, its own key unbound; listed after its layout-1 row so
         // history() names this, the newest move.
-        new Stale(3, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> unbound (a tap of S while panning stopped workers)")
+        new Stale(3, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> Ctrl+S (a tap of S while panning stopped workers)")
     );
 
     private KeybindMigration() { }

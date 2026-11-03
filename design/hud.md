@@ -137,7 +137,7 @@ production item and distinct hotkeys, so the grid never empties once research is
 lovish's clip 5: "I can't use formation when using attack command, which I don't even see an attack command" - the
 orders row read X (sword), B, G, N, Y, P and a cut-off "Spc", seven tiles in a row the portrait starts 6.5 tiles in.
 The card is now laid out from `CommandCard` (side-neutral, shared with the hotkey GameTest) in rows of 6 from the
-bottom: **Attack (X)**, **Move (M)**, **Stop** (unbound by default since Nov 3; set a key in Controls), **Hold (H)** for fighters or **Build (B)** for workers,
+bottom: **Attack (X)**, **Move (M)**, **Stop (Ctrl+S)**, **Hold (H)** for fighters or **Build (B)** for workers,
 **Patrol (P)**, **Guard (G)**; above them the fire state (click), the gather target (click; it lost G to Guard) and
 **Garrison (N)**. Ability and build-menu rows start above the order rows.
 
@@ -152,7 +152,7 @@ bottom: **Attack (X)**, **Move (M)**, **Stop** (unbound by default since Nov 3; 
   lovish's card kept reading "A". `KeybindMigration` moves a saved binding still on an old default to the new one once
   (client config `keybind_layout`, toast "Controls updated"); a key the player chose is never touched. Moving a default
   later = bump `LAYOUT_VERSION` and add the old key to `KeybindMigration.STALE`. Controls marks a card key a player put
-  on a pan key red (`KeyConflicts`); Stop ships unbound (Nov 3: a tap of S while panning stopped workers), so a fresh install has no red key.
+  on a pan key red (`KeyConflicts`); Stop is the Ctrl+S chord since Nov 3 (a tap of a bare S while panning stopped workers), so a fresh install has no red key.
 - **Space** looks at the last alert (`Keybindings.lastAlert`), so Stop lost its Space default.
 - **Card keys win**: a key used by the selected card's own buttons (`HudClientEvents.cardButtons`: orders, abilities,
   build menu, production) never also fires a HUD-wide button - the minimap toggle on M, the idle-worker cycler on
@@ -183,7 +183,7 @@ the item shop). Alert lines with a place ("Base under attack", "Units under atta
 
 From the reference clip of another Minecraft RTS mod: with nothing selected the unit-info corner shows a small,
 localised **controls cheat-sheet** (Left-drag select, Right-click move/attack, Right-drag line formation, A
-attack-move, H hold, B build, . idle worker, Space last alert, Ctrl+right-drag area command; keys read from
+attack-move, Ctrl+S stop, H hold, B build, . idle worker, Space last alert, Ctrl+right-drag area command; keys read from
 the live bindings), hidden as soon as anything is selected or hovered. **Hovering a building** instead shows its card
 (`HoverCards`): name, owner swatch, health or build progress, and "Producing <item> 45% +N". Your own and allied
 queues are on the client already; for anyone else the client asks the server (`BuildingHoverServerboundPacket`,
