@@ -134,6 +134,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.ELDER_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ElderTreantRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WISP_CHOIR_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WispChoirRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BloomPriestessRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.THORNWEAVER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ThornweaverRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.RENEWAL_SAPLING_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RenewalSaplingRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_DOG_UNIT.get(), DogUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_CAT_UNIT.get(), CatUnitRenderer::new);
         // the Sunforged Squire Runner (trained militia): a generated body (tools/gen_squire.py -> tools/dsl_to_game.py);

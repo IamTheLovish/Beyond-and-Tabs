@@ -28,7 +28,8 @@ Names are placeholders; numbers are tuned later.
   when it dies (it is not dropped again as a wisp).
 
 ## lovish's answers (~05:25Z)
-New caster per race (7, T2 lab); essence drops on every death (both sides); each caster has 3 distinct abilities;
+New caster per race (7; first the T2 lab, then **tier 1 at each race's T1 army lab, 115 metal / 120 energy** - lovish,
+Oct 29-30); essence drops on every death (both sides); each caster has 3 distinct abilities;
 essence can also buy veterancy XP.
 
 ## Abilities, draft 2 (cheap 5 / mid 10 / big 20 essence; cooldowns 12 / 25 / 60 s)
@@ -50,7 +51,7 @@ damage, max rank 3).
 ## Build order
 1. **PR 1 (this one):** essence wisps (drop, float 45 s, cap 200), carriers (gather within 8, hold 30, saved with the
    unit) and Empower, test-first (`gametest/EssenceGameTests`).
-2. One PR per race caster: the unit, its T2 lab button, its 3 abilities, autocast rules and tests, built on the API
+2. One PR per race caster: the unit, its T1 army lab button, its 3 abilities, autocast rules and tests, built on the API
    below.
 
 ## Revision 1 (Oct 29 design review; base fixes in the PR stacked on PR 1, branch claude/essence-base-r1)
