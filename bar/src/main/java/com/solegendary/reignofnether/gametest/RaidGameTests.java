@@ -225,7 +225,42 @@ public class RaidGameTests {
             this.foe = foe;
         }
 
+        // diagnostic: per attacker the tick its path came back and the tick it first stood in reach; the ticks blocks fell
+        int[] pathAt, arriveAt;
+        int lastBlocks = -1;
+        final List<String> blows = new ArrayList<>();
+
+        void watch(int t) {
+            if (target == null)
+                return;
+            if (pathAt == null) {
+                pathAt = new int[attackers.size()];
+                arriveAt = new int[attackers.size()];
+                java.util.Arrays.fill(pathAt, -1);
+                java.util.Arrays.fill(arriveAt, -1);
+            }
+            for (int i = 0; i < attackers.size(); i++)
+                if (attackers.get(i) instanceof AttackerUnit au
+                        && au.getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal g) {
+                    if (pathAt[i] < 0 && !g.isPathPending())
+                        pathAt[i] = t;
+                    if (arriveAt[i] < 0 && g.isAttacking())
+                        arriveAt[i] = t;
+                }
+            int placed = target.getBlocksPlaced();
+            if (lastBlocks >= 0 && placed < lastBlocks)
+                blows.add(t + ":-" + (lastBlocks - placed));
+            lastBlocks = placed;
+        }
+
+        String timing() {
+            return "contact " + contact + " done " + done + " path " + java.util.Arrays.toString(pathAt) + " arrive "
+                + java.util.Arrays.toString(arriveAt) + " blows " + blows;
+        }
+
         void observe(int t) {
+            if (done < 0)
+                watch(t);
             if (target != null) {
                 if (contact < 0 && startBlocks >= 0 && target.getBlocksPlaced() < startBlocks)
                     contact = t;
@@ -456,6 +491,8 @@ public class RaidGameTests {
                 ReignOfNether.LOGGER.info("[Raid] infantry {} {} x6: converter {}s windmill {}s extractor {}s extractor2 {}s (HP {}/{}/{}/{})",
                     f.name(), f.raiderName(), fmt(conv.pure()), fmt(wind.pure()), fmt(ext.pure()), fmt(ext2.pure()),
                     conv.target.getMaxHealth(), wind.target.getMaxHealth(), ext.target.getMaxHealth(), ext2.target.getMaxHealth());
+                for (Sim s : new Sim[] { conv, wind })
+                    ReignOfNether.LOGGER.info("[Raid] GameTest timing {} {}: {}", s.group, s.kind, s.timing());
                 window(problems, f.name() + " converter", conv.pure(), CONV_MIN, CONV_MAX);
                 window(problems, f.name() + " windmill", wind.pure(), WIND_INF_MIN, WIND_INF_MAX);
                 window(problems, f.name() + " T1 extractor", ext.pure(), EXT_INF_MIN, EXT_INF_MAX);
