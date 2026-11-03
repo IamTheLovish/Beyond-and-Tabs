@@ -358,18 +358,22 @@ def stacks_l2(r):
     r.slab(6, 11, 0, sl(CU_E))
 
 
+BOILER = CUB                                  # the drum's body (the palette pass: verdigris, see PALETTE)
+BOILER_STRAP = (CU_E, st(CU_E))               # its two straps (block, stairs)
+
+
 def boiler_l2(r):
     """A BOILER on the engine house's roof: a riveted drum along z (bright copper, its round shoulders stairs), two
     verdigris straps, a pressure dome with a gauge valve; a soot pipe feeds the stack."""
     for z in range(2, 7):
         strap = z in (2, 6)
-        side = st(CU_E) if strap else st(CU)
+        side = BOILER_STRAP[1] if strap else st(CU)
         r.st(6, EH + 2, z, "east", "top", side)
         r.st(8, EH + 2, z, "west", "top", side)
         r.st(6, EH + 3, z, "east", "bottom", side)
         r.st(8, EH + 3, z, "west", "bottom", side)
-        r.set(7, EH + 2, z, CU_E if strap else CUB)
-        r.set(7, EH + 3, z, CU_E if strap else CUB)
+        r.set(7, EH + 2, z, BOILER_STRAP[0] if strap else BOILER)
+        r.set(7, EH + 3, z, BOILER_STRAP[0] if strap else BOILER)
     r.set(7, EH + 4, 4, CUB)
     r.slab(7, EH + 5, 4, sl(CU_O))
     r.rod(7, EH + 6, 4)
@@ -412,6 +416,9 @@ TW = 16          # the clock tower's cornice course
 DIAL = 12        # the dial's hub height
 
 
+DIAL_CORNER = CUB          # the dials' four corners (the palette pass: iron, so the brass rim reads round)
+
+
 def tower_l3(r):
     """The CLOCK TOWER on the shop's west end (x 0..2, z 0..2), the corner the camera meets first: a soot foot, an
     exposed-copper band with lit windows, an oxidized-copper shaft between dark-oak quoins, then the clock stage - a
@@ -435,14 +442,14 @@ def tower_l3(r):
     # the west dial, in the face (x 0)
     for k in (-1, 0, 1):
         for dy in (-1, 0, 1):
-            r.set(0, DIAL + dy, 1 + k, CUB)
+            r.set(0, DIAL + dy, 1 + k, DIAL_CORNER if k and dy else CUB)
     r.set(0, DIAL, 1, "ochre_froglight", axis="x")
     r.set(0, DIAL - 2, 1, "iron_block")
     r.set(0, DIAL + 2, 1, "iron_block")
     # the south dial, proud of the face (z 3, over the yard's west side - never over the spawn's 3 x 3)
     for k in (-1, 0, 1):
         for dy in (-1, 0, 1):
-            r.set(1 + k, DIAL + dy, 3, CUB)
+            r.set(1 + k, DIAL + dy, 3, DIAL_CORNER if k and dy else CUB)
     r.set(1, DIAL, 3, "ochre_froglight", axis="z")
     r.set(1, DIAL + 1, 3, "iron_bars")                # the hand, at twelve
     r.set(1, DIAL - 2, 3, "iron_block")
@@ -505,9 +512,21 @@ L2_SY = 17
 L3_SY = 23
 
 
+# THE PALETTE PASS (Nov 2026): block -> block swaps applied to every level after drawing (the massing is unchanged).
+# Empty = the Oct 19 colours. Set by tools/lab_machine_shop_palette.py's options; the winner is written in here.
+PALETTE = {}
+
+
+def recolour(r, palette):
+    for pos, (n, p) in list(r.b.items()):
+        if n in palette:
+            r.b[pos] = (palette[n], p)
+
+
 def build(draw, sy, tier):
     r = Rig(sy)
     draw(r)
+    recolour(r, PALETTE)
     r.settle()
     r.check_support(tier)
     s = r.structure()
@@ -572,7 +591,7 @@ def check_levels(s1, s2, s3, paths=None):
         # campfires (they burn units) only on stack tops: high up, on the stack's copper cap
         for (x, y, z), nm in n.items():
             if nm == "campfire":
-                assert y >= 9 and n.get((x, y - 1, z)) == CU, "%s: a campfire at %s is not on a stack top" % (
+                assert y >= 9 and n.get((x, y - 1, z)) == PALETTE.get(CU, CU), "%s: a campfire at %s is not on a stack top" % (
                     tag, (x, y, z))
     # the chain: an upgrade only adds or replaces (BuildingPlacement.changeStructure / refreshBlocks)
     for (ta, a), (tb, b) in ((levels[0], levels[1]), (levels[1], levels[2])):
