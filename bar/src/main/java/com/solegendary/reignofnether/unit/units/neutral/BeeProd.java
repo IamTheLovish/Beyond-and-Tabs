@@ -59,7 +59,7 @@ public class BeeProd extends ProductionItem {
                 List.of(
                         fcs(I18n.get("entity.reignofnether.bee_unit"), true),
                         ResourceCosts.getFormattedCost(cost),
-                        ResourceCosts.getFormattedPopAndTime(cost),
+                        ResourceCosts.getFormattedTime(cost),
                         fcs(""),
                         fcs(I18n.get("entity.reignofnether.bee_unit.tooltip1"))
                 ),

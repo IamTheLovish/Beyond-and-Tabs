@@ -65,7 +65,6 @@ public class WreckHarbour extends ProductionBuilding {
             () -> true,
             List.of(Component.translatable("buildings.reignofnether.wreck_harbour").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPop(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("buildings.reignofnether.wreck_harbour.tooltip1").getVisualOrderText(),
                 Component.translatable("buildings.reignofnether.wreck_harbour.tooltip2").getVisualOrderText()

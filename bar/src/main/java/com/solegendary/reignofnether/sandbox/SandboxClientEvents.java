@@ -284,7 +284,7 @@ public class SandboxClientEvents {
                 null,
                 List.of(hasCheats ? fcs(I18n.get("sandbox.reignofnether.unit_cheats_on")) :
                                     fcs(I18n.get("sandbox.reignofnether.unit_cheats_off")),
-                                    fcs(I18n.get("sandbox.reignofnether.unit_cheats1")),
+                                    fcs(I18n.get("sandbox.reignofnether.unit_cheats1_no_pop")),
                                     fcs(I18n.get("sandbox.reignofnether.unit_cheats2"))
                 )
         );
