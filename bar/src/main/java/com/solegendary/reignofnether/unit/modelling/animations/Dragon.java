@@ -378,6 +378,19 @@ public final class Dragon {
     }
 
     /** A fresh per-entity state (see STATE). */
+    /** The breath's period (ticks): it quickens on the wing. */
+    static float breathPeriod(Params P, float glide) {
+        return P.breathTicks * (1f - 0.3f * glide);
+    }
+
+    /**
+     * The breath's phase (cycles) this frame, from last frame's ({@code prev}; negative = not seeded yet) and the
+     * frame's elapsed ticks {@code dt}. STUB (tests first): still the stateless age / period that strobes.
+     */
+    public static float breathPhase(float prev, float age, float dt, int id, Params P, float glide) {
+        return Life.advance(0f, (age + Life.offset(id)) / breathPeriod(P, glide));
+    }
+
     public static float[] newState(float age) {
         float[] st = new float[ST_LEN];
         st[2] = age;
