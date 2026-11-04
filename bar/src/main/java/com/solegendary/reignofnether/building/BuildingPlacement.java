@@ -598,6 +598,12 @@ public class BuildingPlacement {
                 BlockState bsBelow = level.getBlockState(bp.below());
                 if (!bs.getFluidState().isEmpty() || !bsBelow.getFluidState().isEmpty())
                     dist += 100; // disincentivise walking onto water/lava
+                // a cell at the foundation's height where the ground falls away (open air) or rises (inside a hill):
+                // nobody can stand there, so a path to it ends short and a builder never comes in range (the storm
+                // bot's capitol, run 41913285997: approach 2723, 78, 167 four blocks above its builder at y 74). Any
+                // cell a unit can stand at wins; on flat ground every cell can, and nothing changes
+                if (!standableAt(bp, bs))
+                    dist += UNSTANDABLE_PENALTY;
 
                 if (dist < minDist) {
                     minDist = dist;
@@ -606,6 +612,22 @@ public class BuildingPlacement {
             }
         }
         return minPos;
+    }
+
+    /** Larger than any squared distance round a footprint: an unstandable ring cell loses to every standable one. */
+    static final float UNSTANDABLE_PENALTY = 1_000_000f;
+
+    /**
+     * Whether a unit can stand at a ring cell taken at the foundation's height: a floor in the cell with two clear
+     * above it, or a floor under it with the cell and the one above clear (callers use the cell both ways - a move
+     * target and an "on pos").
+     */
+    private boolean standableAt(BlockPos bp, BlockState atBp) {
+        boolean c0 = !atBp.getCollisionShape(level, bp).isEmpty();
+        boolean c1 = !level.getBlockState(bp.above()).getCollisionShape(level, bp.above()).isEmpty();
+        if (c0)
+            return !c1 && level.getBlockState(bp.above(2)).getCollisionShape(level, bp.above(2)).isEmpty();
+        return !c1 && !level.getBlockState(bp.below()).getCollisionShape(level, bp.below()).isEmpty();
     }
 
     // does not account for fog of war
