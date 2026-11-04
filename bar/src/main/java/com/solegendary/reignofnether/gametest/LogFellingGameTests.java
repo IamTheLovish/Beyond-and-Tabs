@@ -55,7 +55,7 @@ public class LogFellingGameTests {
         BlockPos far = base.offset(3, 0, 0);
         level.setBlock(far, oak, 2);
 
-        ResourcesServerEvents.fellAdjacentLogs(base, level);
+        ResourcesServerEvents.fellAdjacentLogs(base, new java.util.ArrayList<>(), level);
 
         List<BlockPos> felled = List.of(base.above(1), base.above(2), base.above(3), branch, spruce, spruce.above());
         for (BlockPos p : felled) {
