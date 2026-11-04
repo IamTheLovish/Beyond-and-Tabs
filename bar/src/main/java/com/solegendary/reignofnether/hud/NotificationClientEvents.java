@@ -100,7 +100,7 @@ public class NotificationClientEvents {
 
         /** The line for one of our units dying: null for a hero, whose death the fallen-hero packet announces. */
         static Alert forDeath(boolean commander, boolean hero) {
-            return commander ? COMMANDER_KILLED : UNIT_LOST;   // STUB (tests first): heroes still say "Unit lost"
+            return commander ? COMMANDER_KILLED : hero ? null : UNIT_LOST;
         }
 
         public final String key;
@@ -325,9 +325,23 @@ public class NotificationClientEvents {
         if (!evt.getLevel().isClientSide() || !(evt.getEntity() instanceof Unit unit)
                 || !(evt.getEntity() instanceof LivingEntity le) || !le.isDeadOrDying())
             return;
-        // the commander's death is its own, louder line: it also means the com-blast is about to go off
-        if (canAlert() && myName.equals(unit.getOwnerName()))
-            fire(CommanderServerEvents.looksLikeCommander(le) ? Alert.COMMANDER_KILLED : Alert.UNIT_LOST, null);
+        // the commander's death is its own, louder line: it also means the com-blast is about to go off; a hero's is
+        // announced by onHeroFallen (the packet reaches us even when the hero fell out of tracking range)
+        if (canAlert() && myName.equals(unit.getOwnerName())) {
+            Alert a = Alert.forDeath(CommanderServerEvents.looksLikeCommander(le),
+                le instanceof com.solegendary.reignofnether.unit.interfaces.HeroUnit);
+            if (a != null)
+                fire(a, null);
+        }
+    }
+
+    /**
+     * From FallenHeroClientboundPacket: one of our heroes died. The same packet re-sends every fallen hero when a
+     * player joins; canAlert()'s RTS warm-up keeps that resync quiet, so only a death during play is news.
+     */
+    public static void onHeroFallen(String ownerName, String heroDescriptionId) {
+        if (canAlert() && myName.equals(ownerName))
+            fire(Alert.HERO_FALLEN, I18n.get(heroDescriptionId));
     }
 
     // The T3 announcement is a plain translatable chat line; reading its key avoids adding a packet for it.
@@ -674,6 +688,11 @@ public class NotificationClientEvents {
             case CAPTURE_LOST -> {
                 note(SoundEvents.BEACON_DEACTIVATE, 0.8f, 0.6f * v, 0);
                 note(SoundEvents.NOTE_BLOCK_BASS.value(), 0.7f, 0.8f * v, 3);
+            }
+            case HERO_FALLEN -> {          // a low tolling bell, twice, over a falling horn: heavier than a unit lost
+                note(SoundEvents.BELL_BLOCK, 0.5f, 0.6f * v, 0);
+                note(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), 0.6f, 0.7f * v, 0);
+                note(SoundEvents.BELL_BLOCK, 0.45f, 0.5f * v, 8);
             }
         }
     }

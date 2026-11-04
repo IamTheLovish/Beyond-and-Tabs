@@ -105,6 +105,7 @@ public class FallenHeroClientboundPacket {
                         ability4Rank,
                         items
                     ));
+                    com.solegendary.reignofnether.hud.NotificationClientEvents.onHeroFallen(ownerName, name);
                     success.set(true);
                 });
         });
