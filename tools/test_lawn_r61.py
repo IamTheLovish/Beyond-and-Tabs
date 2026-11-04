@@ -42,14 +42,14 @@ class LawnRound61Test(unittest.TestCase):
         self.assertGreaterEqual(lawn_at_rts()["p95"], 0.50)
 
     def test_forms_the_camera_keeps(self):
-        """'intricate lines': structure at 1/8-1/2 block (meso) past round 60's 0.0166, as a BAND 0.020-0.035.
-        RE-SET after seeing results (Nov 4, the session that set it): first band >= 0.028 ("about twice round 60").
-        The first r61 build met it (0.031) only because a block-scale lattice (eyes 41793444430; see
-        test_no_lattice_at_the_block) fed the meso band; with the lattice gone the tufts' own structure measures
-        0.0214. Floor 0.020 = 1.2x round 60 (more structure, never back to the felt); ceiling 0.035 = above the
-        latticed 0.031, so block-scale blotches or pepper pushed into this band fail too."""
+        """'intricate lines': structure at 1/8-1/2 block (meso), a BAND 0.018-0.035 set where round 61b's grain is.
+        History: first floor 0.028 (set before any build); c0d3bd3 re-set it to 0.020 after the lattice fix - not
+        approved; 9a402fe restored 0.028. Then lovish chose (Nov 4 ~15:25 ET), asked with the in-game numbers -
+        bench 0.005, 61b 0.016-0.018 ("61b looks better"), r62 0.027 ("terrible", tree canopy) - "Set it where 61b
+        is": meeting 0.028 meant going back to r62-sized clumps. Floor 0.018 = 61b's grain (it can't drift flat);
+        ceiling 0.035 unchanged (above the latticed 0.031, so block-scale blotches or pepper still fail)."""
         m = lawn_at_rts()["meso"]
-        self.assertGreaterEqual(m, 0.020)
+        self.assertGreaterEqual(m, 0.018)
         self.assertLessEqual(m, 0.035)
 
     def test_no_block_scale_blotches(self):
