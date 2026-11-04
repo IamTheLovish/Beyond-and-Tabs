@@ -554,6 +554,9 @@ public class RaidGameTests {
             ReignOfNether.LOGGER.info("[Raid] GameTest spread {}: {}", s.group, s.timing());
             if (!moves.isEmpty())
                 problems.add(moves.size() + " cell changes while the converter stood: " + moves);
+            for (int i = 0; s.arriveAt != null && i < s.arriveAt.length; i++)
+                if (s.arriveAt[i] < 0)
+                    problems.add("attacker " + i + " never came within reach while the converter stood");
             if (!problems.isEmpty())
                 throw new net.minecraft.gametest.framework.GameTestAssertException(String.join("; ", problems)
                     + " (in reach at " + java.util.Arrays.toString(s.arriveAt) + ")");
@@ -595,6 +598,60 @@ public class RaidGameTests {
             watched.addAll(party);
             held.addAll(cells);
             ReignOfNether.LOGGER.info("[Raid] GameTest spread cells: {}", cells);
+        });
+    }
+
+    /**
+     * A raider whose nearest cells round the building are walled off attacks from another side instead of standing
+     * idle at the wall. The cell a melee attacker heads for is picked by distance only, and a unit that could not reach
+     * it re-asked for the same path with a growing back-off (to 5 s) and kept the cell: one Marauder of six never came
+     * in reach of a converter in 194 ticks (green flake-stress 41742015436, runner 1, arrive [-1, ...]). Here a
+     * three-high U of stone closes off the converter's near face and the near halves of its sides, so every cell a
+     * Marauder sent from the west would pick first lies inside the U; the Marauder must stand in reach within 300 ticks.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 900)
+    public static void raid_a_raider_whose_nearest_cells_are_walled_off_attacks_from_another_side(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Fac horde = facs().get(2);
+        Pads pads = new Pads(level, 15, 1);
+        Cell c = pads.cells.get(0);
+        List<BlockPos> wall = new ArrayList<>();
+        drive(helper, pads, 300, () -> {
+            Sim s = new Sim(horde.name(), "walled", c, "gametest_raid_walled_a", "gametest_raid_walled_b");
+            raiders(level, s, horde.raider(), 1);
+            siege(level, s, horde.conv(), false);
+            if (s.target != null) {
+                // footprint x minX..maxX, z minZ..maxZ: a wall 3 off the near (west) face, rows 3 off the sides from it
+                // to one past the near face's corner, and closures from those rows in to the building's side band
+                int minX = s.target.minCorner.getX(), minZ = s.target.minCorner.getZ(), maxZ = s.target.maxCorner.getZ();
+                for (int z = minZ - 3; z <= maxZ + 3; z++)
+                    wall.add(new BlockPos(minX - 3, 0, z));
+                for (int x = minX - 2; x <= minX + 1; x++) {
+                    wall.add(new BlockPos(x, 0, minZ - 3));
+                    wall.add(new BlockPos(x, 0, maxZ + 3));
+                }
+                for (int d = 1; d <= 2; d++) {
+                    wall.add(new BlockPos(minX + 1, 0, minZ - d));
+                    wall.add(new BlockPos(minX + 1, 0, maxZ + d));
+                }
+                for (BlockPos w : wall)
+                    for (int y = 1; y <= 3; y++)
+                        level.setBlock(new BlockPos(w.getX(), PAD_Y + y, w.getZ()), Blocks.STONE.defaultBlockState(), 2);
+            }
+            return List.of(s);
+        }, sims -> {
+            Sim s = sims.get(0);
+            for (BlockPos w : wall)
+                for (int y = 1; y <= 3; y++)
+                    level.setBlock(new BlockPos(w.getX(), PAD_Y + y, w.getZ()), Blocks.AIR.defaultBlockState(), 2);
+            ReignOfNether.LOGGER.info("[Raid] GameTest walled {}: {}", s.group, s.timing());
+            if (s.arriveAt == null || s.arriveAt[0] < 0)
+                throw new net.minecraft.gametest.framework.GameTestAssertException("the Marauder never came within reach of the"
+                    + " converter in 300 ticks; it stood at " + (s.attackers.isEmpty() ? "?" : s.attackers.get(0).blockPosition().toShortString())
+                    + " heading for " + (s.attackers.isEmpty() || !(s.attackers.get(0) instanceof AttackerUnit au)
+                        || !(au.getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal g)
+                        || g.getMoveTarget() == null ? "?" : g.getMoveTarget().toShortString()));
+            helper.succeed();
         });
     }
 
