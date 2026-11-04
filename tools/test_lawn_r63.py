@@ -13,8 +13,9 @@ B 0.827 - the biome-tint pull that is the shader lane's to fix). They sit beside
   lit side (the asymmetry above) is the same structure - every setting of the recipe with the lit side showing
   measured 0.45-0.49 (bigger leaves / denser carpets reached 0.42-0.44 and lost the lit side); under 0.40 the grain
   has gone the way of r62's clumps (0.38), 0.50 is r62's ceiling (61b 0.54)
-- block-scale share (wavelengths of 2+ blocks) 0.15-0.30, test_lawn_r62's restored band: here it is the worn-soil
-  patches and the 2-4 block colour patches lovish asked for, never blotches
+- block-scale share (wavelengths of 2+ blocks) 0.08-0.30, test_lawn_r62's band (0.15 until lovish's "D, and lower
+  both floors", Nov 4 ~17:05 ET): here it is the worn-soil patches and the 2-4 block colour patches lovish asked
+  for, never blotches
 - the grain is FINE, 61b's scale not 62's: more luma variance under 0.2 block than at 0.25-0.6 block
 - saturation >= 0.58; L >= 0.34 under our gain (r62 in game 0.343; a white albedo under this gain is 0.50, and the
   cool shade between the leaves and the worn soil are what the brief asked for - L 0.38+ waits on the shader fix)
@@ -117,9 +118,11 @@ class LawnSheetRound63Test(unittest.TestCase):
 
     def test_block_scale_band(self):
         """wavelengths of 2+ blocks (64+ px): the soil and colour patches lovish asked for ("blending ... between the
-        ground"), never blotches that read as cloud shadow."""
+        ground"), never blotches that read as cloud shadow. test_lawn_r62's band: floor 0.15 -> 0.08 with it on
+        lovish's "D, and lower both floors" (Nov 4 ~17:05 ET, after "The grass looks blotchy" at 16:53 - see
+        test_lawn_r62 for the history); the ceiling 0.30 stays."""
         share = band_share(sim.luma(field(gain=False)), 64, 1e9, wavelength=True)
-        self.assertGreaterEqual(share, 0.15)
+        self.assertGreaterEqual(share, 0.08)
         self.assertLessEqual(share, 0.30)
 
     def test_fine_grain(self):

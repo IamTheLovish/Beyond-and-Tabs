@@ -190,7 +190,8 @@ class LawnSheetRound64Test(unittest.TestCase):
         """test_lawn_r62/r63 mip the sheet to a fixed 128 px (32 texels per block of the 4-block sheet they were
         written for), so they keep measuring lawn_sheet's default 4-block cut of the same recipe; the pack's 8 x 8
         sheet is held to the SAME bands here at 32 texels per block (3 x 3 sheets, as they tile): near-black
-        < 0.5% under our gain, speckle 0.40-0.50, 2+ block share 0.15-0.30, fine grain (under 0.2 block over
+        < 0.5% under our gain, speckle 0.40-0.50, 2+ block share 0.08-0.30 (floor 0.15 -> 0.08 with test_lawn_r62's
+        on lovish's "D, and lower both floors", Nov 4 ~17:05 ET), fine grain (under 0.2 block over
         0.25-0.6 block), saturation >= 0.58 and L >= 0.34 under our gain, worn soil 1-8% in pieces of 32-4096 px,
         the brightest 0.5% in 8+ specks of 2+ px (4+ of 5+ px, none over 30), and the sheet wraps."""
         f3 = np.tile(sheet_mip(), (3, 3, 1))
@@ -203,7 +204,7 @@ class LawnSheetRound64Test(unittest.TestCase):
             self.assertLess(band_share(Lg, 2, 8), 0.50)
         with self.subTest("block-scale band"):
             share = band_share(L, 64, 1e9, wavelength=True)
-            self.assertGreaterEqual(share, 0.15)
+            self.assertGreaterEqual(share, 0.08)
             self.assertLessEqual(share, 0.30)
         with self.subTest("fine grain"):
             self.assertGreater(band_share(Lg, 1.5, 6.4), band_share(Lg, 8, 20))

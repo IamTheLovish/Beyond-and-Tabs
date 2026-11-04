@@ -6,7 +6,8 @@ What the fresh critic of round 61b measured (claude/round-r61b-critic-nov4.md) a
 (the sheet box-mipped to 32 texels per block, tiled 3 x 3 = 12 x 12 blocks, tinted #6FA64A, not turned):
 - 10% near-black (holes, not shade; bench 0%)            -> near-black (L < 0.15) under 1%
 - zero lit-side asymmetry (the blade flanks never showed) -> round the darkest 10%, away-from-sun minus toward-sun >= 0.02
-- 4% of its variance at 2+ blocks (bench 48%: "calm")     -> >= 15% of the luma variance at wavelengths of 2+ blocks
+- 4% of its variance at 2+ blocks (bench 48%: "calm")     -> >= 8% of the luma variance at wavelengths of 2+ blocks
+                                                             (15% until lovish's "D, and lower both floors", Nov 4 ~17:05 ET)
 - 60% at 2-8 screen px (speckle; bench 27%)              -> under 50%
 and the round 61 gains stay: saturation >= 0.58, a lawn not darker than round 61b (L >= 0.34).
 
@@ -66,12 +67,15 @@ class LawnSheetRound62Test(unittest.TestCase):
 
     def test_calm_patches_across_blocks(self):
         """wavelengths of 2+ blocks (64+ px; the sheet's own 4-block period is the longest it can hold), as a BAND
-        0.15-0.30. The floor 0.15 is the one set from the critic's numbers (bench 48%, r61b 4%) before any sheet
+        0.08-0.30. History: the floor 0.15 was set from the critic's numbers (bench 48%, r61b 4%) before any sheet
         existed; 2b44f04 re-set it to 0.08 after the r62 clumps' depth left the patches at 0.103 - lovish (via
-        Eris.10, Nov 4 04:54 ET) did not approve that re-set: "make it better and realistic". So the floor is back;
-        the ceiling 0.30 (patches never the main pattern - blotches) stays, it only makes the band stricter."""
+        Eris.10, Nov 4 04:54 ET) did not approve that re-set: "make it better and realistic", and 9a402fe restored
+        0.15. Then round 64 landed in game with its 2-6 block tonal patches carrying the share (0.25 in game) and
+        lovish said (Nov 4 16:53 ET) "The grass looks blotchy"; shown r65's candidates (B = those patches at half
+        amplitude, D = A + B + C) he chose (~17:05 ET) "D, and lower both floors". D measures ~0.10 at the test mip,
+        so the floor is 0.08 by his choice; the ceiling 0.30 (patches never the main pattern - blotches) stays."""
         share = band_share(sim.luma(field()), 64, 1e9, wavelength=True)
-        self.assertGreaterEqual(share, 0.15)
+        self.assertGreaterEqual(share, 0.08)
         self.assertLessEqual(share, 0.30)
 
     def test_not_speckle(self):
