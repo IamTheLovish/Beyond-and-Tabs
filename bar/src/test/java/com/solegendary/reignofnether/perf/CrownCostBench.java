@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -94,6 +96,9 @@ class CrownCostBench {
                 + "(pose + write, best of %d) = %.3f ms a frame for the hall, %.3f ms for the Full budget (%d vertices)",
             n, verts, best, ROUNDS, best * verts / 1e6, best * BUDGET_FULL / 1e6, BUDGET_FULL);
         System.out.println(line);
+        Path file = Path.of("build", "crown-bench.txt");     // build.yml turns it into a [CrownBench] notice
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, line + System.lineSeparator());
         assertTrue(sink.count > 0 && sink.sum != 0, "the sink saw the vertices");
         assertTrue(best < GATE_NS_PER_VERTEX, line);
     }
