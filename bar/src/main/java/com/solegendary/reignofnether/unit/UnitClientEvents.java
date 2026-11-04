@@ -707,6 +707,23 @@ public class UnitClientEvents {
         return SelectionKeep.shouldDrop(e.isDeadOrDying(), e.getRemovalReason());
     }
 
+    // each selected unit's owner as of the last tick (by entity id), for SelectionKeep.ownerFlipped
+    private static final java.util.Map<Integer, String> selectedOwners = new java.util.HashMap<>();
+
+    /** Drops a selected unit whose owner changed since the last tick (the Voodoo Shaman's Spirit Puppet, both ways). */
+    private static void dropOwnerFlips() {
+        if (selectedUnits.isEmpty()) {
+            selectedOwners.clear();
+            return;
+        }
+        if (selectedUnits.removeIf(e -> e instanceof Unit u && SelectionKeep.ownerFlipped(selectedOwners.get(e.getId()), u.getOwnerName())))
+            markSelectedUnitsChanged();
+        selectedOwners.clear();
+        for (LivingEntity e : selectedUnits)
+            if (e instanceof Unit u)
+                selectedOwners.put(e.getId(), u.getOwnerName());
+    }
+
     private static final int VIS_CHECK_TICKS_MAX = 10;
     private static int ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;
     @SubscribeEvent
@@ -723,6 +740,7 @@ public class UnitClientEvents {
             markSelectedUnitsChanged();
         if (!preselectedUnits.isEmpty())
             preselectedUnits.removeIf(UnitClientEvents::isDeadForSelection);
+        dropOwnerFlips();
 
         if (ticksToNextVisCheck <= 0) {
             ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;

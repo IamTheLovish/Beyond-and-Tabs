@@ -63,6 +63,8 @@ public final class HeroCore {
     // the one aimed cast in flight (FactionHeroAbility.use -> startCast)
     GenericTargetedSpellGoal castGoal;
     @Nullable FactionHeroAbility castGoalAbility;
+    /** Casts handed to the cast goal so far: the v2 brain notes the ones it started (HeroBot.everyTick). */
+    int castSeq = 0;
     int castChannel = 0;
 
     // timed effects
@@ -128,6 +130,17 @@ public final class HeroCore {
             castGoal = new GenericTargetedSpellGoal(mob, 0, 8, null, null, null) {
                 @Override
                 public int getChannelTicksMax() { return castChannel; }
+
+                // the wind-up starts where the hero stands: the move control drops whatever it was still walking to
+                // (setTarget asks for a path before the goal sees the aim is in range, and navigation.stop() leaves
+                // the move control's wanted spot), or the hero slides there while it channels - review r3 on PR 416:
+                // held heroes drifted 0.57-0.66 blocks during the cast with the navigation done and no path
+                @Override
+                public void startCasting() {
+                    super.startCasting();
+                    mob.getNavigation().stop();
+                    mob.getMoveControl().setWantedPosition(mob.getX(), mob.getY(), mob.getZ(), 0);
+                }
             };
         }
         return castGoal;
@@ -138,6 +151,7 @@ public final class HeroCore {
         GenericTargetedSpellGoal g = castGoal();
         g.stopExceptAnimations();
         castGoalAbility = ability;
+        castSeq++;
         castChannel = ability.spec.channelTicks;
         g.range = Math.max(1.5f, ability.range);
         g.setAbility(null);   // FactionHeroAbility.castNow pays the cooldown/mana, and only when the effect worked
