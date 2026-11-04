@@ -39,7 +39,8 @@ public class EssenceCasterTierGameTests {
     static final List<Caster> CASTERS = List.of(
         new Caster("Soul Engineer", ResourceCosts.SOUL_ENGINEER, EntityRegistrar.SOUL_ENGINEER_UNIT),
         new Caster("Spark Sage", ResourceCosts.SPARK_SAGE, EntityRegistrar.SPARK_SAGE_UNIT),
-        new Caster("Angel Caller", ResourceCosts.ANGEL_CALLER, EntityRegistrar.ANGEL_CALLER_UNIT));
+        new Caster("Angel Caller", ResourceCosts.ANGEL_CALLER, EntityRegistrar.ANGEL_CALLER_UNIT),
+        new Caster("Voodoo Shaman", ResourceCosts.VOODOO_SHAMAN, EntityRegistrar.VOODOO_SHAMAN_UNIT));
 
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
     public static void essence_casters_cost_and_read_as_tier_1(GameTestHelper helper) {

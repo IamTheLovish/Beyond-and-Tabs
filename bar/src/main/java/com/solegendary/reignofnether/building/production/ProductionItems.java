@@ -269,6 +269,8 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.engineers.PioneerProd PIONEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pioneer"), new com.solegendary.reignofnether.unit.units.engineers.PioneerProd());
     // the Brassworks essence caster (design/essence_casters.md; appended last so no existing item's id moves)
     public static final com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd SOUL_ENGINEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_engineer"), new com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd());
+    // the Horde essence caster (design/essence_casters.md): appended last too, so no existing item's id moves
+    public static final com.solegendary.reignofnether.unit.units.piglins.VoodooShamanProd VOODOO_SHAMAN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "voodoo_shaman"), new com.solegendary.reignofnether.unit.units.piglins.VoodooShamanProd());
     // second T3 per faction, slot 5 of the T3 lab (second-t3-design.md, slice T3b-1): PLACEHOLDERS that train the first T3's body
     public static final com.solegendary.reignofnether.building.production.SecondT3Prod SUN_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.villagers.CathedralWardenUnit.ITEM_NAME, "sun_colossus", com.solegendary.reignofnether.resources.ResourceCosts.SUN_T3B, SUN_COLOSSUS, () -> EntityRegistrar.CATHEDRAL_WARDEN_UNIT.get(), "entity.reignofnether.cathedral_warden_unit"));
     public static final com.solegendary.reignofnether.building.production.SecondT3Prod GRAVE_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "grave_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.ITEM_NAME, "zoglin", com.solegendary.reignofnether.resources.ResourceCosts.GRAVE_T3B, BONE_DRAGON, () -> EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get(), "entity.reignofnether.plague_abomination_unit"));
@@ -452,6 +454,7 @@ public class ProductionItems {
         SALVAGER,
         JADE_MENDER,
         PIONEER,
+        VOODOO_SHAMAN,
         // the second T3 per faction (unit/T3Cap): trainable, so getProductionItem finds them
         SUN_T3B,
         GRAVE_T3B,
