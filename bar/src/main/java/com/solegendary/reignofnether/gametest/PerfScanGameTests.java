@@ -45,15 +45,56 @@ public class PerfScanGameTests {
             level.addFreshEntity(u);
         }
         rider.getMountGoal().autofind = true;
+        // gone however the test ends: the discards below only ran on a pass, so a timeout left three units standing
+        TestCleanup.entities(helper, java.util.List.of(rider, near, far));
+        // This test failed on 6 of the last 40 red CI builds (Nov 1-4, shard 1 and shard 8) with only "has not
+        // mounted the nearest spider yet" and no way to tell why. A timeout reports the LAST message, so the message
+        // carries what the rider did over the run: a line every 10 ticks, kept only when something changed.
+        java.util.List<String> history = new java.util.ArrayList<>();
+        String[] last = { "" };
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 10 != 0)
+                return;
+            String now = mountState(level, rider, near, far);
+            if (!now.equals(last[0])) {
+                history.add("t" + helper.getTick() + " " + now);
+                last[0] = now;
+            }
+        });
         helper.succeedWhen(() -> {
             if (far.isVehicle())
-                helper.fail("the rider mounted the farther spider");
+                helper.fail("the rider mounted the farther spider; history: " + String.join(" | ", history));
             if (rider.getVehicle() != near)
-                helper.fail("the rider has not mounted the nearest spider yet");
+                helper.fail("the rider has not mounted the nearest spider yet; now " + mountState(level, rider, near, far)
+                    + "; history: " + String.join(" | ", history));
             rider.discard();
             near.discard();
             far.discard();
         });
+    }
+
+    /** What the mount test's failure needs to name: where the three are, the goal's state, what holds the rider. */
+    static String mountState(ServerLevel level, SkeletonUnit rider, SpiderUnit near, SpiderUnit far) {
+        var goal = rider.getMountGoal();
+        BlockPos mt = goal.getMoveTarget();
+        net.minecraft.world.entity.LivingEntity target = goal.getTarget();
+        String targetName = target == null ? "none" : target == near ? "near" : target == far ? "far" : target.getType().toShortString();
+        net.minecraft.world.entity.LivingEntity attack = rider.getTarget();
+        String attackName = attack == null ? "none" : attack.getType().toShortString()
+            + (attack instanceof com.solegendary.reignofnether.unit.interfaces.Unit u ? "(" + u.getOwnerName() + ")" : "");
+        boolean webbed = level.getBlockState(rider.blockPosition()).is(net.minecraft.world.level.block.Blocks.COBWEB)
+            || level.getBlockState(rider.blockPosition().above()).is(net.minecraft.world.level.block.Blocks.COBWEB);
+        return String.format(java.util.Locale.ROOT,
+            "rider %s%s at %.1f,%.1f,%.1f vehicle %s | near at %.1f,%.1f,%.1f d %.2f passengers %d alive %s | far passengers %d"
+                + " | goal autofind %s target %s moveTarget %s running %s unreachable %s | attack %s | webbed %s",
+            rider.isAlive() ? "alive" : "DEAD", rider.isRemoved() ? " REMOVED" : "",
+            rider.getX(), rider.getY(), rider.getZ(),
+            rider.getVehicle() == null ? "none" : rider.getVehicle() == near ? "near" : rider.getVehicle() == far ? "far" : rider.getVehicle().getType().toShortString(),
+            near.getX(), near.getY(), near.getZ(), rider.distanceTo(near), near.getPassengers().size(), near.isAlive(),
+            far.getPassengers().size(),
+            goal.autofind, targetName, mt == null ? "none" : mt.toShortString(), goal.isGoalRunning(),
+            goal.getLastUnreachableTarget() == null ? "none" : goal.getLastUnreachableTarget().toShortString(),
+            attackName, webbed);
     }
 
     /**
