@@ -63,15 +63,14 @@ class KeybindMigrationTest {
             "key.reignofnether.move", GLFW.GLFW_KEY_M, "key.reignofnether.select_commander", -1));
         List<KeybindMigration.Move> moves = plan(2, old);
         assertEquals(14, moves.size(), moves.toString());
-        // Stop has two moves from S (layout 3 to unbound, then layout 4 to G); the glue applies them in order, so the
-        // last move per binding is where it lands. Every binding lands on its BarGridDefaults row.
+        // Stop matches two rows from S (layouts 3 and 4); plan() sends every move to the binding's current default, so
+        // both are S -> G. Every binding lands on its BarGridDefaults row.
         Map<String, Integer> landed = new HashMap<>();
         for (KeybindMigration.Move m : moves)
             landed.put(m.binding(), m.to());
         for (Map.Entry<String, Integer> e : landed.entrySet())
             assertEquals(KeybindMigration.bindings().get(e.getKey()).getDefaultKey(), e.getValue(), e.getKey());
-        assertTrue(moves.contains(new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_UNKNOWN)), moves.toString());
-        assertTrue(moves.contains(new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_G)), moves.toString());
+        assertEquals(2, moves.stream().filter(m -> m.equals(new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_G))).count(), moves.toString());
         assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.move", GLFW.GLFW_KEY_M, -1)), moves.toString());
         assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.select_commander", -1, GLFW.GLFW_KEY_TAB)), moves.toString());
         assertEquals(List.of(), plan(5, old), "a layout 5 install is left alone");
@@ -92,10 +91,11 @@ class KeybindMigrationTest {
     @Test
     void stopSavedOnTheOldDefaultSEndsOnG() {
         // Nov 3 (Nick): a short tap of S while WASD-panning fired Stop on the selected workers. Every install of the
-        // Oct 11 - Nov 3 builds saved Stop on S. Layout 3 (main) unbinds it (Ctrl+S runs it), layout 4 moves it to G.
+        // Oct 11 - Nov 3 builds saved Stop on S. Rows of layouts 3 (main: unbound, Ctrl+S runs it) and 4 (G) both match S;
+        // plan() moves to the binding's current default, so both moves are S -> G (Ctrl+S still stops).
         List<KeybindMigration.Move> moves = plan(2, Map.of(STOP, GLFW.GLFW_KEY_S));
         assertEquals(List.of(
-            new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_UNKNOWN),
+            new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_G),
             new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_G)), moves);
         // the glue applies the moves in order, so the last one is where Stop ends
         assertEquals(GLFW.GLFW_KEY_G, moves.get(moves.size() - 1).to());
