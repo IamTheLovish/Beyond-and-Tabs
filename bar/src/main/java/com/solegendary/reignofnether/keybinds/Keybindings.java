@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 // Beyond and Tabs default rebinds (all still rebindable in Controls): WASD now pans the camera, so the
-// RoN defaults that sat on W/A/S/D moved: ability slot 2 W->Z, open shop S->Space (Stop is back on S as a tap, see
+// RoN defaults that sat on W/A/S/D moved: ability slot 2 W->Z, open shop S->Space (Stop is Ctrl+S since Nov 3, see
 // the order keys below; Attack moved to X on Oct 21),
 // return resources (hotkey 5) D->;, observer/diplomacy toggle (hotkey 8) Z->., hotkey 9 X->,
 // A changed default does NOT reach an install that already saved the old one (Minecraft keeps every mapping in
@@ -133,19 +133,22 @@ public class Keybindings {
     // (BuildingClientEvents) before the HUD sees the key. ReturnResourcesKeyGameTests checks this key against each faction's worker.
     public static final Keybinding returnResources = new Keybinding("key.reignofnether.return_resources", GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY_RTS, "]");
     // Oct 21 (lovish: the order on A blocks the WASD camera): Attack moved off A to X so A is pure pan-left. Fight stays
-    // on F. S (Stop) still shares the tap/hold rule below. Installs that saved the old A were moved to X once
-    // (KeybindMigration, layout 1). Oct 26: kept on X (BAR Legacy has A, but #39 took it off A on purpose: a hold of A
-    // waited before panning).
+    // on F. Installs that saved the old A were moved to X once (KeybindMigration, layout 1). Oct 26: kept on X (BAR
+    // Legacy has A, but #39 took it off A on purpose: a hold of A waited before panning).
+    // Nov 3 (Nick): Stop came off S for the same reason - a short tap of S while panning stopped the selected workers -
+    // so S is pure pan-down and Stop runs on the fixed chord Ctrl+S (ChordKeys; the camera never pans with Ctrl held),
+    // its own key unbound (a player can still set one in Controls). Installs that saved S are unbound once
+    // (KeybindMigration, layout 3).
     // BAR's order keys on the command card (lovish: "I can't use formation when using attack command, which I don't
-    // even see an attack command" - the card read X / B / G / N / Y / P / "Spc"). X attack, S stop, M move, H hold,
-    // P patrol, G guard (BAR's Attack is A, which is camera pan-left here). S is also WASD panning: a TAP
-    // (< KeyTaps.TAP_MS, lag allowed for) fires the order when the card has one on that key, a hold pans (KeyTaps,
-    // OrthoviewClientEvents). Space jumps to the last alert (lastAlert), as in BAR.
+    // even see an attack command" - the card read X / B / G / N / Y / P / "Spc"). X attack, M move, H hold,
+    // P patrol, G guard, Ctrl+S stop (BAR's Attack is A and Stop is S, both camera pans here). An order a player binds
+    // onto W/A/S/D still follows the tap rule: a TAP (< KeyTaps.TAP_MS, lag allowed for) fires the order when the card
+    // has one on that key, a hold pans (KeyTaps, OrthoviewClientEvents). Space jumps to the last alert (lastAlert).
     public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_X,             CATEGORY_RTS, RtsConflictContext.COMMAND, "X");
     // BAR's Fight (F): attack-move, armed - a click fights to the spot, a drag lays a fight line (lovish, Oct 14 02:38:
     // "add a fight command on F"). Fighters only: a worker's F is its build menu slot (hotkey3) and the commander is both.
     public static final Keybinding fight       = new Keybinding("key.reignofnether.fight",        GLFW.GLFW_KEY_F,             CATEGORY_RTS, RtsConflictContext.COMMAND, "F");
-    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_S,             CATEGORY_RTS, RtsConflictContext.COMMAND, "S");
+    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_UNKNOWN,       CATEGORY_RTS, RtsConflictContext.COMMAND, "").withChord(ChordKeys.Chord.STOP);
     public static final Keybinding move        = new Keybinding("key.reignofnether.move",         GLFW.GLFW_KEY_M,             CATEGORY_RTS, RtsConflictContext.COMMAND, "M");
     public static final Keybinding hold        = new Keybinding("key.reignofnether.hold",         GLFW.GLFW_KEY_H,             CATEGORY_RTS, RtsConflictContext.COMMAND, "H");
     public static final Keybinding build       = new Keybinding("key.reignofnether.build",        GLFW.GLFW_KEY_B,             CATEGORY_RTS, "B");

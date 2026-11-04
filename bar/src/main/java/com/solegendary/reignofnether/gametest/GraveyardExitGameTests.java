@@ -224,6 +224,15 @@ public class GraveyardExitGameTests {
         java.util.Arrays.fill(firstOut, -1);
         boolean[] madeUnit = new boolean[UNITS];
         List<long[]> chunks = chunksAround(gy, rally);
+        // vanilla makes a chunk entity-ticking only once every chunk within 2 of it is FULL. The game-test framework
+        // (StructureUtilsMixin) waits for the arenas' forced chunks, not for that ring: the row north of the arenas
+        // sits at border level, the lowest generation priority, and on a busy shard it was still generating when the
+        // cap ran out (main 43b84275 run 41281967490, shard 8: chunks entity-ticking at ticks 0, 22, 221 along the row,
+        // never by 300 for the four farthest graveyards; alone, every test of the batch by tick 68). Wait for the ring
+        // here, before the clock starts, as the structure load does (bounded, logs and carries on if it stalls)
+        List<long[]> missing = GameTestChunks.awaitLoaded(level, ring(chunks, 2), GameTestChunks.WAIT_MS);
+        if (!missing.isEmpty())
+            ReignOfNether.LOGGER.warn("[GraveyardExit] GameTest {}: {} chunk(s) round the graveyard never loaded", layout, missing.size());
         int[] readyAt = { -1 };
         // one callback, a state machine on the tick (DragonDiveGameTests: vanilla iterates its tick-time map while it
         // runs the callbacks, so nothing is scheduled from inside one): wait for the chunks, raise the units, then watch
@@ -237,7 +246,8 @@ public class GraveyardExitGameTests {
                         readyAt[0] = (int) tick;
                         ReignOfNether.LOGGER.info("[GraveyardExit] {}: chunks entity-ticking at tick {} (cap {})", layout, tick, READY_CAP);
                     } else if (tick >= READY_CAP) {
-                        finish.accept(layout + ": the graveyard's chunks were not entity-ticking after " + READY_CAP + " ticks");
+                        finish.accept(layout + ": the graveyard's chunks were not entity-ticking after " + READY_CAP + " ticks ("
+                            + notReady(level, chunks) + ")");
                     }
                     return;
                 }
@@ -308,6 +318,33 @@ public class GraveyardExitGameTests {
             for (int cz = z0 >> 4; cz <= z1 >> 4; cz++)
                 out.add(new long[] { cx, cz });
         return out;
+    }
+
+    /** {@code chunks} and every chunk within {@code r} of one: [chunkX, chunkZ]. */
+    private static List<long[]> ring(List<long[]> chunks, int r) {
+        Set<Long> seen = new HashSet<>();
+        List<long[]> out = new ArrayList<>();
+        for (long[] c : chunks)
+            for (int dx = -r; dx <= r; dx++)
+                for (int dz = -r; dz <= r; dz++)
+                    if (seen.add(net.minecraft.world.level.ChunkPos.asLong((int) c[0] + dx, (int) c[1] + dz)))
+                        out.add(new long[] { c[0] + dx, c[1] + dz });
+        return out;
+    }
+
+    /** For a failure message: each chunk that is not ready and why (not FULL, entities not loaded, not entity-ticking). */
+    private static String notReady(ServerLevel level, List<long[]> chunks) {
+        StringBuilder sb = new StringBuilder();
+        for (long[] c : chunks) {
+            int cx = (int) c[0], cz = (int) c[1];
+            boolean full = GameTestChunks.isLoaded(level, cx, cz);
+            boolean ents = level.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(cx, cz));
+            boolean ticking = level.isPositionEntityTicking(new BlockPos((cx << 4) + 8, 64, (cz << 4) + 8));
+            if (!full || !ents || !ticking)
+                sb.append(cx).append(',').append(cz).append(full ? "" : " not-full").append(ents ? "" : " no-entities")
+                    .append(ticking ? "" : " not-entity-ticking").append("; ");
+        }
+        return sb.length() == 0 ? "all ready now" : sb.toString();
     }
 
     /** Every chunk has its entities loaded and is entity-ticking (an entity made in one that is not cannot be found yet). */

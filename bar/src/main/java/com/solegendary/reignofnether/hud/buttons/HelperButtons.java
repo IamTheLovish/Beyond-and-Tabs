@@ -183,6 +183,8 @@ public class HelperButtons {
             case IDLE_T2_BUILDER -> cycleIdleT2Builder(false);
             case SELECT_ALL_UNITS -> selectAllUnits();
             case SELECT_SAME_TYPE -> selectSameTypeOnMap();
+            // Ctrl+S: the card's Stop for the selected units (the bare S is camera pan-down only since Nov 3)
+            case STOP -> UnitClientEvents.sendUnitCommand(com.solegendary.reignofnether.unit.UnitAction.STOP);
             default -> {
                 return false;
             }

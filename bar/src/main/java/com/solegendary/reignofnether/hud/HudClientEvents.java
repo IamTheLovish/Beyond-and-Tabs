@@ -2330,13 +2330,13 @@ public class HudClientEvents {
         if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
             return;
         // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W army, Ctrl+C commander, Ctrl+B / Ctrl+Shift+B idle builders,
-        // Ctrl+A all units, Ctrl+Z same type) win over every button on the letter. Before the tap/hold rule: with Ctrl
+        // Ctrl+A all units, Ctrl+Z same type, Ctrl+S stop) win over every button on the letter. Before the tap/hold rule: with Ctrl
         // held the camera never pans (OrthoviewClientEvents), so a slow Ctrl+A is still the chord
         if (OrthoviewClientEvents.isEnabled() && com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
                 com.solegendary.reignofnether.keybinds.ChordKeys.of(key, Keybindings.ctrlMod.isDown(),
                     net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())))
             return;
-        // S is WASD panning as well as Stop (and so is any order a player puts on W/A/S/D): a press
+        // any order a player puts on W/A/S/D shares the key with WASD panning (none ship there; Stop is Ctrl+S): a press
         // the camera panned for, or one held past a tap once frame lag is allowed for, was a pan, not an order
         // (keybinds/KeyTapTracker)
         if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.isHold(key))
