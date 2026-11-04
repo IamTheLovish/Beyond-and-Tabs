@@ -96,6 +96,54 @@ class GroveTest(unittest.TestCase):
         dark = [v for v in deep if v[0][1] == "dark_oak_leaves"]
         self.assertGreaterEqual(len(dark), len(deep) / 2, (len(dark), len(deep)))
 
+    # ---- review round (Nov 4, PR #481 head 1c531381, a fresh critic at the RTS camera, lit, --px 28): 40 % of the L1
+    # rays hit one block (cherry leaves) and every sky-facing leaf was cherry ("big flat pink planes", the PR's own
+    # open question); 29 % of the rays hit the bare flagstone pad (69 % of the court one block, no plant on it); thin
+    # blocks 1.4 % of L1 (architecture_rules G2 wants 8 %); five exposed bough cells (a tree with no lines).
+    def _tops(self, i):
+        sol = self.solid[i]
+        return [n for (x, y, z), n in sol.items() if n.endswith("_leaves") and (x, y + 1, z) not in sol]
+
+    def test_crown_top_is_not_one_texture(self):
+        """At every level no single leaf block is more than 80 % of the sky-facing leaf faces: the crown is cherry
+        broken by flowering azalea (the capitol's crown rule), not one flat pink plane."""
+        for i in range(3):
+            tops = self._tops(i)
+            top = max(tops.count(n) for n in set(tops))
+            self.assertLessEqual(top / len(tops), 0.80, "L%d %d of %d" % (i + 1, top, len(tops)))
+
+    def test_boughs_show_as_lines_in_the_crown(self):
+        """At L1 at least 12 horizontal bark cells (log / wood with axis x or z) at y >= 5 touch air: boughs that
+        leave the trunk and surface through the crown as dark lines (the shipped build has five, one bough)."""
+        sol = self.solid[0]
+        raw = {q: p for q, (n, p) in self.lv[0].blocks.items() if n in TRUNK}
+        seen = 0
+        for (x, y, z), p in raw.items():
+            if y < 5 or dict(p).get("axis") not in ("x", "z"):
+                continue
+            if any((x + dx, y + dy, z + dz) not in sol for dx, dy, dz in
+                   ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, 0, 1), (0, 0, -1))):
+                seen += 1
+        self.assertGreaterEqual(seen, 12, seen)
+
+    def test_glade_floor_is_overgrown(self):
+        """Inside the kerb (x 1..7, z 1..6) no floor block is more than half the cells, and at least 8 ground-cover
+        plants (ferns, grass, flowers) stand on it: an overgrown court, not a bare pad."""
+        sol = self.solid[0]
+        inner = [(x, z) for x in range(1, L.SX - 1) for z in range(1, L.SZ - 1)]
+        floor = [sol[(x, 0, z)] for (x, z) in inner]
+        top = max(floor.count(n) for n in set(floor))
+        self.assertLessEqual(top / len(inner), 0.50, "%d of %d" % (top, len(inner)))
+        plants = [q for q, n in sol.items() if q[1] == 1 and (q[0], q[2]) in inner and n in L.FLOWERS]
+        self.assertGreaterEqual(len(plants), 8, plants)
+
+    def test_detail_blocks_are_a_share_of_the_build(self):
+        """Thin blocks (fences, walls, lanterns) are at least 3.5 % of L1's blocks (G2's spirit at a lab this small:
+        copings, antlers and lights that throw their own shadow lines; shipped 1.4 %)."""
+        sol = self.solid[0]
+        thin = sum(1 for n in sol.values() if n.endswith(("_fence", "_wall")) or n == "lantern")
+        self.assertGreaterEqual(thin / len(sol), 0.035, "%d of %d" % (thin, len(sol)))
+
     def test_no_target_blocks(self):
         """No target block at any level: red and white rings read as a bullseye in a warm team hue (all critics)."""
         for i in range(3):
