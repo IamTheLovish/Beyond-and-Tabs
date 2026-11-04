@@ -70,13 +70,12 @@ class MachineShopTest(unittest.TestCase):
                     self.assertTrue(d["ok"], (level, face, d["planes"]))
 
     def test_piers_stand_on_the_plinth(self):
-        """G7's base on every camera-facing wall run of 3 or more: the course at y 1 is a plinth, not the pier's own
-        block carried down to the ground (architecture_rules 1.1: piers carry, a paler heavier base at the ground).
-        Shipped: the dark-oak piers ran from y 1, so the shop's yard face, its west end and the engine house's south
-        end had no base course (base False on all three runs)."""
+        """G7's base on every camera-facing wall run, whatever its length (a pier between two niches is a run of one):
+        the course at y 1 is a plinth, not the pier's own block carried down to the ground (architecture_rules 1.1:
+        piers carry, a paler heavier base at the ground). Shipped: the dark-oak piers ran from y 1, so the shop's yard
+        face, its west end and the engine house's south end had no base course (base False on all three runs)."""
         for level in LEVELS:
-            runs = [r for r in G.base_cap(self.gate_build(level))["runs"]
-                    if r["face"] in ("south", "west") and r["len"] >= 3]
+            runs = [r for r in G.base_cap(self.gate_build(level))["runs"] if r["face"] in ("south", "west")]
             with self.subTest(level=level):
                 self.assertTrue(runs, level)
                 self.assertTrue(all(r["base"] for r in runs), (level, [r for r in runs if not r["base"]]))

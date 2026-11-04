@@ -27,7 +27,9 @@ THE BRASSWORKS STYLE KIT (the capitol's, the extractor's):
 THE PLAN (9 x 9, the shipped footprint). The RTS camera looks from the south-west: it sees the roofs, the west face
 (x = 0) and the south face (z = 8). So the shop is an L round a WORKS YARD that opens toward the camera:
   - the SHOP (x 0..5, z 0..2): a dark-oak and copper range under a copper gable, two furnace bays facing the yard and a
-    lit smoker's mouth and gable window on its west end toward the camera;
+    lit smoker's mouth and gable window on its west end toward the camera; since the depth round (Nov 4 2026, see
+    THE DEPTH ROUND below) the piers stand on the plinth, the bays are niches behind them, the west end is set back
+    behind its ledge under the gable's verge;
   - the ENGINE HOUSE (x 6..8, z 0..8): a taller weathered-copper block whose west face carries THE GEAR over the yard
     and whose south end (the camera's face) holds the big furnace door; its smokestack on the back corner;
   - the WORKS YARD (x 0..5, z 3..8): blackstone with a copper turntable under the spawn, rails running out to the
@@ -177,11 +179,19 @@ def stack(r, x, z, y1, y2, smoke=True):
 
 
 # ======================================================================================================== L1
-EAVE = 4             # the shop's eave course (the copper lintel over the bays)
+EAVE = 5             # the shop's eave course (the copper lintel over the bays); 4 until the depth round (below)
 EH = 7               # the engine house's top wall course
 GZ, GY = 5, 5        # THE GEAR's hub on the engine house's west face (x 6)
-BAYS = (1, 4)        # the shop's furnace bays on the yard face
+BAYS = (2, 4)        # the shop's furnace bays on the yard face, between the piers at x 1, 3, 5
 GOLEM = (1, 6)       # the assembly stand
+
+# THE DEPTH ROUND (Nov 4 2026, the Fable review of #489 - design/architecture_rules.md 1.1 tectonics, 1.2 base-body-
+# cap, 1.6 "depth, not colour"; tools/test_lab_machine_shop.py pins it): the piers STAND ON the plinth instead of
+# running down through it; the shop's west end is set back one block behind its plinth ledge, so the gable's verge
+# oversails it; every furnace bay is a NICHE one block behind its piers (a sill, two glass courses, the lintel proud)
+# and the shop's eave over the yard oversails one block where the open 3 x 3 allows (x 0..2); the shop's storey is 5
+# courses (EAVE 4 -> 5: a 2-high window in a 4-course storey left no wall - architecture_rules 1.4, storey 4-5).
+WEST_INSET = 1       # the shop's west wall stands at x = WEST_INSET; its plinth and roof reach x 0
 
 
 YARD_APRON = True         # Nov 2026 round 3: the yard's open half polished andesite (critic: "a dark well")
@@ -209,35 +219,48 @@ def pad_l1(r):
 
 
 def shop_l1(r):
-    """The shop (x 0..5, z 0..2): a soot plinth, a dark-oak timber frame with weathered-copper infill, two furnace
-    bays facing the yard, a west end with a lit smoker's mouth and a window toward the
-    camera. A solid range: nothing to walk into."""
+    """The shop (x 0..5, z 0..2): a soot plinth the full plan, a dark-oak timber frame STANDING ON it (piers at x 1, 3, 5
+    on the yard face, the quoin at the back of the west end) with verdigris infill set back one block at the west end,
+    two furnace bays facing the yard - a lit furnace mouth in the plinth, a niche one block behind the piers holding a
+    sill and a glowing window, a copper lintel proud over it - and the west end toward the camera a smoker's mouth in
+    the plinth under the same niche. A solid range: nothing to walk into."""
+    xw = WEST_INSET
     r.fill(0, 1, 0, 5, 1, 2, SB)
-    r.fill(0, 2, 0, 5, EAVE, 2, CU_W)
-    for x in (0, 2, 3, 5):                           # the timber frame on the yard face (pier plane)
-        for y in range(1, EAVE + 1):
+    r.fill(xw, 2, 0, 5, EAVE, 2, CU_W)
+    for x in (xw, 3, 5):                              # the timber frame on the yard face (pier plane), on the plinth
+        for y in range(2, EAVE + 1):
             r.log(x, y, 2)
-    for y in range(1, EAVE + 1):                     # the quoin at the back of the west end
-        r.log(0, y, 0)
-    for bx in BAYS:                                  # the bays: a furnace mouth, a tall window, a copper lintel
+    for y in range(2, EAVE + 1):                     # the quoin at the back of the west end
+        r.log(xw, y, 0)
+
+    def niche(x, z, dx, dz):
+        """A bay at the pier plane (x, z): the niche one block behind it (dx, dz into the wall) - a sill, two glass
+        courses lit from behind - under the lintel in the pier plane."""
+        for y in (2, 3, 4):
+            r.b.pop((x, y, z), None)
+        r.set(x + dx, 2, z + dz, CU_W)
+        for y in (3, 4):
+            r.set(x + dx, y, z + dz, "orange_stained_glass")
+            r.set(x + 2 * dx, y, z + 2 * dz, "shroomlight")
+        r.set(x, EAVE, z, CU_E)
+
+    for bx in BAYS:                                  # the bays: a furnace mouth in the plinth, the niche, the lintel
         r.set(bx, 1, 2, "blast_furnace", facing="south", lit="true")
-        r.set(bx, 2, 2, "orange_stained_glass")
-        r.set(bx, 3, 2, "orange_stained_glass")
-        r.set(bx, 2, 1, "shroomlight")
-        r.set(bx, 3, 1, "shroomlight")
-        r.set(bx, EAVE, 2, CU_E)
-    r.set(0, 2, 1, "smoker", facing="west", lit="true")   # the west end: a furnace mouth and a window over it
-    r.set(0, 3, 1, "orange_stained_glass")
-    r.set(1, 3, 1, "shroomlight")
-    r.set(0, EAVE, 1, CU_E)
+        niche(bx, 2, 0, -1)
+    r.set(xw, 1, 1, "smoker", facing="west", lit="true")   # the west end: the smoker's mouth in the plinth ...
+    r.b.pop((xw - 1, 1, 1), None)                          # ... open to the west (a notch in the ledge), the niche over it
+    niche(xw, 1, 1, 0)
     # the roof: a copper gable with its ridge along x (weathered stairs on both eaves, an exposed ridge course, a slab
     # cap) and two vent pipes standing on the ridge; the west gable end, toward the camera, a dark-oak tympanum with a
-    # glowing window
+    # glowing window; the verge oversails the set-back west end, and the eave oversails the yard where the open 3 x 3
+    # allows (x 0..2 - the tower's and the crane's end)
     for x in range(0, 6):
         r.st(x, EAVE + 1, 0, "south", name=st(CU_W))
         r.st(x, EAVE + 1, 2, "north", name=st(CU_W))
         r.set(x, EAVE + 1, 1, CU_E)
         r.slab(x, EAVE + 2, 1, sl(CU_E))       # one material per roof plane (Nov 2026: no stripes)
+    for x in range(0, 3):
+        r.slab(x, EAVE + 1, 3, sl(CU_W))
     r.set(0, EAVE + 1, 1, "orange_stained_glass")
     r.set(1, EAVE + 1, 1, "shroomlight")
     for x in (2, 4):
@@ -273,31 +296,31 @@ def gear(r, gz, gy):
 
 
 def engine_l1(r):
-    """The engine house (x 6..8, z 0..8): weathered copper on a soot plinth, dark-oak quoins, THE GEAR on its west face
-    over the yard, a furnace door with a grilled window on its south end (the camera's face), a hip of copper stairs
-    and a ridge, and the smokestack on its back corner."""
+    """The engine house (x 6..8, z 0..8): weathered copper on a soot plinth, dark-oak quoins standing on it, THE GEAR
+    on its west face over the yard, a furnace door with a grilled window set one block back on its south end (the
+    camera's face), a hip of copper stairs and a ridge, and the smokestack on its back corner."""
     r.fill(6, 1, 0, 8, 1, 8, SB)
     r.fill(7, 2, 0, 8, EH, 8, CU_W)
-    r.fill(6, 2, 0, 6, EH, 2, CU_W)
-    r.fill(6, 2, 3, 6, 2, 7, SB)                     # the gear's footing: a two-course soot plinth
-    for (x, z) in ((8, 0), (6, 8), (8, 8), (6, 2)):
-        for y in range(1, EH + 1):
+    r.fill(6, 2, 0, 6, EH, 7, CU_W)                  # (the depth round: one plinth course under the gear, not two)
+    for (x, z) in ((8, 0), (6, 8), (8, 8), (6, 2)):  # the quoins stand on the plinth
+        for y in range(2, EH + 1):
             r.log(x, y, z)
-    r.set(6, 6, 1, "orange_stained_glass")           # a lit window in the face that stands over the shop's roof
-    r.set(7, 6, 1, "shroomlight")
-    r.st(6, 7, 1, "west", "top", st(CU_E))           # its hood
+    r.set(6, EH, 1, "orange_stained_glass")          # a lit window in the face that stands over the shop's roof, in
+    r.set(7, EH, 1, "shroomlight")                   # the course under the hip's eave
     for z in range(3, 8):                            # the frame over the gear
         r.set(6, EH, z, CU_E)
     gear(r, GZ, GY)
-    # the south end (z 8): a lit blast furnace (the door), a soot lintel, a window of orange glass recessed behind an
-    # iron grille, an exposed band
-    r.set(7, 1, 8, "blast_furnace", facing="south", lit="true")
-    r.set(7, 2, 8, SB)
+    # the south end (z 8): the bay between the quoins set one block back (the depth round) - a lit blast furnace (the
+    # door) under a soot lintel in the recess, over it a window of orange glass behind an iron grille that stands in
+    # the quoins' plane, and a hood leaning out over it
+    for y in (1, 2, 5):
+        r.b.pop((7, y, 8), None)
+    r.set(7, 1, 7, "blast_furnace", facing="south", lit="true")
+    r.set(7, 2, 7, SB)
     for y in (3, 4):
         r.set(7, y, 8, "iron_bars")
         r.set(7, y, 7, "orange_stained_glass")
         r.set(7, y, 6, "shroomlight")
-    r.set(7, 5, 8, CU_E)
     r.st(7, 6, 8, "south", "top", st(CU_E))          # a hood over the window
     # the roof: a hip of copper stairs climbing to an exposed deck and a slab ridge; the stack on the back corner
     ring(r, 6, 8, 0, 8, EH + 1)
@@ -493,22 +516,24 @@ def stacks_l3(r):
     x, z = STACK_E
     stack(r, x, z, EH + 1, 18)
     for x in range(3, 6):
-        r.set(x, 8, 1, SBW)
+        r.set(x, EAVE + 3, 1, SBW)                  # over the sawtooth's teeth
 
 
 def catwalk_l3(r):
     """A CATWALK from the tower to the engine house along the yard's back edge (z 2, never over the spawn's 3 x 3):
     dark-oak top slabs over the sawtooth, an iron-bar rail, a lantern hung under its copper middle beam."""
     for x in range(3, 6):
-        r.slab(x, 9, 2, DOSL, "top")
-        r.set(x, 10, 2, "iron_bars")
-    r.set(4, 9, 2, CU_E)               # a copper cross-beam in the middle, a lantern hung from it
-    r.lantern(4, 8, 2, hanging=True)
+        r.slab(x, EAVE + 4, 2, DOSL, "top")
+        r.set(x, EAVE + 5, 2, "iron_bars")
+    r.set(4, EAVE + 4, 2, CU_E)        # a copper cross-beam in the middle, a lantern hung from it
+    r.lantern(4, EAVE + 3, 2, hanging=True)
 
 
 def golem_l3(r):
-    """The golem finished: a boiler pack on its back, a bright copper crown on the helm."""
+    """The golem finished: a boiler pack on its back standing on a basalt foot (the depth round: it hung in the air
+    beside the belly), a bright copper crown on the helm."""
     x, z = GOLEM
+    r.set(x, 1, z - 1, "polished_basalt", axis="y")
     r.set(x, 2, z - 1, SB)
     r.set(x, 3, z - 1, CU_E)
     r.set(x, 4, z - 1, SB)
