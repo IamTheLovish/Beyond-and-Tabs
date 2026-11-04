@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.environment.ground;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -19,6 +20,17 @@ import java.util.function.Predicate;
  *   from the quad's POSITION (u along +x, v along +z, vanilla's unturned up face), so a lowered top (dirt_path at
  *   15/16) and a model the blockstate turns (vanilla turns dirt and the path at random) still meet their neighbours
  *   edge to edge.</li>
+ *   <li><b>Which sheet (round 64, lovish: "8x8 sheet + hashed pick", so the patches never line up into a grid):</b> a
+ *   top may have up to {@link #MAX_VARIANTS} same-sized sheets. Variant 1 is the set above ({@code <top>_g<i>},
+ *   unchanged); variant k = 2..4 is {@code <top>_k<k>_g<i>}, numbered the same way. The {@code _k} cannot collide with
+ *   {@link #isTop}'s {@code <top>_v<digits>} (the pack's per-block variants of the top itself, which a sheet replaces):
+ *   a name with {@code _k} is never a top, and {@code _v} names never carry a {@code _g}. A variant counts only when it
+ *   has exactly N*N sprites, 1..N*N (the size variant 1 gives); a partial set is ignored (and logged once), so a set
+ *   being drawn cannot put holes in the ground. Each N x N square of the world (floorDiv(x, N), floorDiv(z, N)) picks
+ *   one of the K complete variants by a well-mixed hash of the square ({@link #variantIndex}): uniform, constant
+ *   inside the square, independent of its neighbours. NEVER turned or mirrored - the art bakes its light from the east
+ *   (the engine's sun at t5000) and a turn would spin the sun per square; the variants differ in content and each
+ *   one's edge rows are drawn to join any other's (the texture side's job).</li>
  * </ul>
  */
 final class GroundSheetRules {
@@ -44,6 +56,11 @@ final class GroundSheetRules {
     static final int[] SIZES = {8, 4, 2};
     /** The most cells of any sheet (8 x 8). */
     static final int MAX_CELLS = 64;
+    /** The most sheet variants of one top (variant 1 plus _k2.._k4). */
+    static final int MAX_VARIANTS = 4;
+    /** The most slots (a variant's cell) of any top: what the model data carries. */
+    static final int MAX_SLOTS = MAX_VARIANTS * MAX_CELLS;
+
 
     private GroundSheetRules() {
     }
@@ -57,6 +74,12 @@ final class GroundSheetRules {
     /** The atlas path of a cell's sprite: {@code <top>_g<cell>} (namespace minecraft). */
     static String sheetSprite(String top, int cell) {
         return top + "_g" + cell;
+    }
+
+    /** The atlas path of variant k's cell: {@code <top>_g<cell>} for variant 1 (round 62's names), else
+     * {@code <top>_k<k>_g<cell>}. */
+    static String variantSprite(String top, int variant, int cell) {
+        return "";   // STUB (round 64 red): the names follow in the code commit
     }
 
     /** A sprite the sheet replaces: the block's top itself or a pack variant of it ({@code <top>_v<digits>}) - an
@@ -87,6 +110,46 @@ final class GroundSheetRules {
             if (count == n * n)
                 return n;
         return 0;
+    }
+
+    /** The variants of a top's N x N sheet: the complete ones (variant numbers, ascending; 1 first) and the partial
+     * ones (some sprites, not exactly 1..N*N). */
+    record Variants(int[] complete, int[] partial) {
+        int count() {
+            return complete.length;
+        }
+    }
+
+    /**
+     * Which sheet variants the pack ships for a top whose variant 1 is an n x n sheet (n from {@link #sheetSize}; 0 =
+     * no sheet, no variants). Variant 1 is complete by that; variant k = 2..MAX_VARIANTS is complete when its sprites
+     * are exactly {@code <top>_k<k>_g1 .. _g<n*n>} - none missing, none past n*n (a sheet of another size) - and
+     * partial when it has some sprite but is not complete.
+     */
+    static Variants variants(String top, int n, Predicate<String> present) {
+        return new Variants(new int[0], new int[0]);   // STUB (round 64 red): nothing detected
+    }
+
+    /** Which of k variants (0..k-1, an index into Variants.complete) the n x n square holding block (x, z) shows: a
+     * hash of the square's coordinates, so every block of the square agrees and the squares are independent. */
+    static int variantIndex(int x, int z, int n, int k) {
+        return 0;   // STUB (round 64 red): always variant 1, as round 63
+    }
+
+    /** The slot (1..k*n*n) of block (x, z) in a top with k variants of an n x n sheet: its variant's block of n*n
+     * slots, then its cell - the same cell in every variant (no turn, no mirror). */
+    static int slot(int x, int z, int n, int k) {
+        return 1;   // STUB (round 64 red)
+    }
+
+    /** The cell (1..n*n) of a slot. */
+    static int cellOfSlot(int slot, int n) {
+        return 1;   // STUB (round 64 red)
+    }
+
+    /** The variant index (0..k-1) of a slot. */
+    static int variantIndexOfSlot(int slot, int n) {
+        return 0;   // STUB (round 64 red)
     }
 
     private static float clamp01(float t) {

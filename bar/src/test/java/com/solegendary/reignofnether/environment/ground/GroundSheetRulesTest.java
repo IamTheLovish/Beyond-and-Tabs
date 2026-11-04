@@ -177,6 +177,180 @@ class GroundSheetRulesTest {
         assertEquals(0, GroundSheetRules.sheetSize(t, upTo(t, 65)));
     }
 
+    // ---- round 64: sheet variants by a hash of the square ("8x8 sheet + hashed pick") ----------------------------
+
+    /** Every cell of the given variants of an n x n sheet of top. */
+    private static Predicate<String> sets(String top, int n, int... variants) {
+        Set<String> names = new HashSet<>();
+        for (int k : variants)
+            for (int c = 1; c <= n * n; c++)
+                names.add(GroundSheetRules.variantSprite(top, k, c));
+        return names::contains;
+    }
+
+    @Test
+    void variantSpriteNamesKeepVariantOnesAndNeverReadAsTheTop() {
+        String g = "block/grass_block_top";
+        assertEquals("block/grass_block_top_g1", GroundSheetRules.variantSprite(g, 1, 1), "variant 1 = round 62's names");
+        assertEquals("block/grass_block_top_g64", GroundSheetRules.variantSprite(g, 1, 64));
+        assertEquals("block/grass_block_top_k2_g1", GroundSheetRules.variantSprite(g, 2, 1));
+        assertEquals("block/grass_block_top_k4_g64", GroundSheetRules.variantSprite(g, 4, 64));
+        assertEquals("block/dirt_path_top_k3_g16", GroundSheetRules.variantSprite("block/dirt_path_top", 3, 16));
+        assertEquals(4, GroundSheetRules.MAX_VARIANTS);
+        // a variant cell is never the top a sheet replaces (no double swap), and never another table entry's top
+        for (GroundSheetRules.Entry e : GroundSheetRules.TABLE)
+            for (int k = 1; k <= GroundSheetRules.MAX_VARIANTS; k++)
+                for (int c : new int[]{1, 4, 16, 64})
+                    for (GroundSheetRules.Entry o : GroundSheetRules.TABLE)
+                        assertFalse(GroundSheetRules.isTop(o.top(), GroundSheetRules.variantSprite(e.top(), k, c)),
+                                o.top() + " vs " + GroundSheetRules.variantSprite(e.top(), k, c));
+        // the variants do not change the size variant 1 gives
+        assertEquals(8, GroundSheetRules.sheetSize(g, sets(g, 8, 1, 2, 3, 4)));
+    }
+
+    @Test
+    void completeVariantSetsAreDetected() {
+        String t = "block/grass_block_top";
+        assertArrayEquals(new int[]{1}, GroundSheetRules.variants(t, 8, sets(t, 8, 1)).complete(), "variant 1 alone");
+        assertEquals(1, GroundSheetRules.variants(t, 8, sets(t, 8, 1)).count());
+        assertArrayEquals(new int[]{1, 2, 3, 4}, GroundSheetRules.variants(t, 8, sets(t, 8, 1, 2, 3, 4)).complete());
+        assertEquals(4, GroundSheetRules.variants(t, 8, sets(t, 8, 1, 2, 3, 4)).count());
+        assertArrayEquals(new int[]{1, 2, 3, 4}, GroundSheetRules.variants(t, 2, sets(t, 2, 1, 2, 3, 4)).complete());
+        // a missing variant 2 does not hide variant 3
+        GroundSheetRules.Variants v = GroundSheetRules.variants(t, 4, sets(t, 4, 1, 3));
+        assertArrayEquals(new int[]{1, 3}, v.complete());
+        assertArrayEquals(new int[0], v.partial(), "an absent set is not a partial one");
+        // no sheet: no variants
+        assertEquals(0, GroundSheetRules.variants(t, 0, sets(t, 8, 1, 2, 3, 4)).count());
+    }
+
+    @Test
+    void incompleteVariantSetsAreIgnoredAndReported() {
+        String t = "block/mud";
+        // variant 2 missing one cell
+        Predicate<String> holed = sets(t, 8, 1, 2, 3)
+                .and(name -> !name.equals(GroundSheetRules.variantSprite(t, 2, 37)));
+        GroundSheetRules.Variants v = GroundSheetRules.variants(t, 8, holed);
+        assertArrayEquals(new int[]{1, 3}, v.complete());
+        assertArrayEquals(new int[]{2}, v.partial());
+        // variant 2 drawn at another size: a 4x4 set beside an 8x8 variant 1 is partial
+        v = GroundSheetRules.variants(t, 8, sets(t, 8, 1).or(sets(t, 4, 2)));
+        assertArrayEquals(new int[]{1}, v.complete());
+        assertArrayEquals(new int[]{2}, v.partial());
+        // and an 8x8 variant beside a 4x4 variant 1 (cells past 16): partial, not complete
+        v = GroundSheetRules.variants(t, 4, sets(t, 4, 1).or(sets(t, 8, 4)));
+        assertArrayEquals(new int[]{1}, v.complete());
+        assertArrayEquals(new int[]{4}, v.partial());
+        // a single stray sprite
+        v = GroundSheetRules.variants(t, 2, sets(t, 2, 1).or(n -> n.equals(GroundSheetRules.variantSprite(t, 3, 1))));
+        assertArrayEquals(new int[]{1}, v.complete());
+        assertArrayEquals(new int[]{3}, v.partial());
+    }
+
+    @Test
+    void theVariantIsConstantInsideASquareAndInRange() {
+        for (int n : new int[]{2, 4, 8})
+            for (int k = 1; k <= 4; k++)
+                for (int sx = -5; sx < 5; sx++)
+                    for (int sz = -5; sz < 5; sz++) {
+                        int first = GroundSheetRules.variantIndex(sx * n, sz * n, n, k);
+                        assertTrue(first >= 0 && first < k, "index " + first + " of " + k);
+                        for (int x = sx * n; x < sx * n + n; x++)
+                            for (int z = sz * n; z < sz * n + n; z++)
+                                assertEquals(first, GroundSheetRules.variantIndex(x, z, n, k),
+                                        "n " + n + " k " + k + " block " + x + "," + z + ": one variant per square");
+                    }
+        assertEquals(0, GroundSheetRules.variantIndex(123, -77, 8, 1), "one variant: always it");
+    }
+
+    @Test
+    void theVariantPickIsUniformOverK() {
+        int span = 256;   // squares per side: 65536 squares
+        for (int k = 2; k <= 4; k++) {
+            int[] counts = new int[k];
+            for (int sx = -span / 2; sx < span / 2; sx++)
+                for (int sz = -span / 2; sz < span / 2; sz++)
+                    counts[GroundSheetRules.variantIndex(sx * 8, sz * 8, 8, k)]++;
+            for (int i = 0; i < k; i++)
+                assertEquals(1.0 / k, counts[i] / (double) (span * span), 0.01, "k " + k + " variant " + i);
+        }
+    }
+
+    @Test
+    void neighbouringSquaresPickIndependently() {
+        // for independent squares: P(same as a neighbour) = 1/k, and the pair (here, east) is uniform over k*k
+        int span = 256, k = 4;
+        int sameEast = 0, sameNorth = 0, sameDiag = 0, n = 0;
+        int[][] pairs = new int[k][k];
+        for (int sx = -span / 2; sx < span / 2; sx++)
+            for (int sz = -span / 2; sz < span / 2; sz++) {
+                int v = GroundSheetRules.variantIndex(sx * 8, sz * 8, 8, k);
+                int east = GroundSheetRules.variantIndex(sx * 8 + 8, sz * 8, 8, k);
+                if (v == east) sameEast++;
+                if (v == GroundSheetRules.variantIndex(sx * 8, sz * 8 - 8, 8, k)) sameNorth++;
+                if (v == GroundSheetRules.variantIndex(sx * 8 + 8, sz * 8 + 8, 8, k)) sameDiag++;
+                pairs[v][east]++;
+                n++;
+            }
+        assertEquals(0.25, sameEast / (double) n, 0.01, "east neighbour");
+        assertEquals(0.25, sameNorth / (double) n, 0.01, "north neighbour");
+        assertEquals(0.25, sameDiag / (double) n, 0.01, "diagonal neighbour");
+        for (int a = 0; a < k; a++)
+            for (int b = 0; b < k; b++)
+                assertEquals(1.0 / 16, pairs[a][b] / (double) n, 0.006, "pair " + a + "," + b);
+        // the squares really differ: along a row of 64 squares the variant changes more than half the time
+        int changes = 0;
+        for (int sx = 0; sx < 64; sx++)
+            if (GroundSheetRules.variantIndex(sx * 8, 40, 8, k) != GroundSheetRules.variantIndex(sx * 8 + 8, 40, 8, k))
+                changes++;
+        assertTrue(changes > 32, "changes along a row: " + changes);
+    }
+
+    @Test
+    void theVariantPickHasNoLatticeOrAxisPattern() {
+        // not a function of sx + sz, sx - sz or of one axis alone (a diagonal stripe or a column of one variant)
+        int k = 4;
+        for (int line = 0; line < 8; line++) {
+            int[] diag = new int[k], anti = new int[k], column = new int[k];
+            for (int t = 0; t < 400; t++) {
+                diag[GroundSheetRules.variantIndex(t * 4, (t + line) * 4, 4, k)]++;
+                anti[GroundSheetRules.variantIndex(t * 4, (line - t) * 4, 4, k)]++;
+                column[GroundSheetRules.variantIndex(line * 4, t * 4, 4, k)]++;
+            }
+            for (int i = 0; i < k; i++) {
+                assertTrue(diag[i] > 60 && diag[i] < 140, "diagonal " + line + " variant " + i + ": " + diag[i]);
+                assertTrue(anti[i] > 60 && anti[i] < 140, "anti-diagonal " + line + " variant " + i + ": " + anti[i]);
+                assertTrue(column[i] > 60 && column[i] < 140, "column " + line + " variant " + i + ": " + column[i]);
+            }
+        }
+    }
+
+    @Test
+    void slotsKeepTheUnturnedCellInEveryVariant() {
+        // no rotation, no mirror: whatever variant a square picks, the block shows the same cell (column floorMod(x, N),
+        // row floorMod(z, N)) of it - the variant only changes which sprite set, never the layout
+        for (int n : new int[]{2, 4, 8})
+            for (int k = 1; k <= 4; k++) {
+                Set<Integer> variantsSeen = new HashSet<>();
+                for (int x = -40; x < 40; x++)
+                    for (int z = -40; z < 40; z++) {
+                        int slot = GroundSheetRules.slot(x, z, n, k);
+                        assertTrue(slot >= 1 && slot <= k * n * n, "slot " + slot);
+                        assertEquals(GroundSheetRules.cell(x, z, n), GroundSheetRules.cellOfSlot(slot, n),
+                                "n " + n + " k " + k + " block " + x + "," + z + ": the unturned cell");
+                        assertEquals(GroundSheetRules.variantIndex(x, z, n, k),
+                                GroundSheetRules.variantIndexOfSlot(slot, n));
+                        variantsSeen.add(GroundSheetRules.variantIndexOfSlot(slot, n));
+                    }
+                assertEquals(k, variantsSeen.size(), "n " + n + ": all " + k + " variants appear");
+            }
+        assertEquals(GroundSheetRules.MAX_VARIANTS * GroundSheetRules.MAX_CELLS, GroundSheetRules.MAX_SLOTS);
+        // k = 1 is round 63 exactly: slot = cell
+        for (int x = -9; x < 9; x++)
+            for (int z = -9; z < 9; z++)
+                assertEquals(GroundSheetRules.cell(x, z, 8), GroundSheetRules.slot(x, z, 8, 1));
+    }
+
     // ---- UVs from the position -----------------------------------------------------------------------------------
 
     /** One BLOCK-format vertex: x, y, z, colour, u, v, light, normal. */
