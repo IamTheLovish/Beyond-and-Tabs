@@ -75,8 +75,10 @@ TARGETS = {
     # (k ~ 1.03), this world's tint ~ (0.56, 0.77, 0.35), so the target albedo mean is ~0.75 with a slight neutral-
     # magenta cast (1.07 / 1.0 / 1.02: it tempers the tint's green instead of adding yellow) - luma 0.677 -> 0.75, sat
     # 0.21 -> 0.08; the r50 calm speckle and own-seed variants kept
-    "grass_block_top":  dict(luma=0.75, std=0.024, sat=0.08, lf=0.3, ao=0.15, tilt=4.0, smooth=24, pore=40, soften=2.4,
-                             shoulder=0.82),
+    "grass_block_top":  dict(luma=0.75, std=0.160, sat=0.08, lf=0.3, ao=0.15, tilt=4.0, smooth=24, pore=40, soften=1.0,
+                             shoulder=0.82),   # r60 (tuft_meadow, lovish's pick of concept A): std 0.024 -> 0.160 ~
+    # concept A's own spread at the fit's mip (in game 0.068 vs the clover's flat 0.015); soften 2.4 -> 1.0 (one 128
+    # texel: the tufts' lit flanks are the look, the 2.4 blur ate them)
     # r46 (eyes stack7: the sampler pads' rim - this face - was the darkest thing on screen at ~0.12 at 5000): the
     # soil is the dirt texture (_scan_grass_side), so the lift is its humus band (0.22 -> 0.10 darker) - gate G5
     # (top - side >= 0.08) holds at 0.085
@@ -91,8 +93,9 @@ TARGETS = {
     # luma 0.34 -> 0.31, std 0.055 -> 0.10 (the quarter-block clods' tones and the pebbles carry it: at the 32-texel
     # calibration mip the r52 crumbs had averaged away, so the fit left the clods no room), mid 1.5 -> 0.8 (with the
     # wider spread the band boost drove the scan's pits to black specks)
-    "dirt":             dict(luma=0.31, std=0.090, sat=0.36, lf=0.0, tilt=14.0, smooth=26, pore=56, soften=0.8, mid=0.4,
-                             toe=0.17, hspan=0.25),   # r53: toe 0.285 -> 0.22; r54: 0.17 (the pebble shadows and hollows live under 0.22)
+    "dirt":             dict(luma=0.31, std=0.069, sat=0.43, lf=0.0, tilt=14.0, smooth=26, pore=56, hspan=0.25),
+    # r60 (soil_scan, lovish's pick of concept C): std / sat = concept C's own at the fit's mip; no soften / mid / toe
+    # (the scan's raised 12- and 36-texel forms replace them)   # r53: toe 0.285 -> 0.22; r54: 0.17 (the pebble shadows and hollows live under 0.22)
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
     # r51 (lovish Oct 30 "more detailed, use the reference photos" - Ref 10, a rock wall of big angular chunks): the
@@ -277,7 +280,7 @@ TARGETS = {
     # r46 (eyes stack7 at 5000: snow read cool grey-blue - the sky in its satin): matte (smooth 60 -> 28), neutral, 3% noise
     "snow": dict(luma=0.94, std=0.028, sat=0.0, tilt=9.0, smooth=28, pore=0),   # r35; r44: drift relief; r45; r46: matte
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
-    "coarse_dirt": dict(luma=0.36, std=0.080, sat=0.37, tilt=25.0, smooth=10, pore=56),
+    "coarse_dirt": dict(luma=0.36, std=0.079, sat=0.40, tilt=25.0, smooth=10, pore=56),   # r60: concept C (soil_scan)
     "clay": dict(luma=0.53, std=0.035, sat=0.10,   # r21: read pink-white under the warm sun - bluer
     tilt=8.9, smooth=102, pore=64),
     "red_sand": dict(luma=0.52, std=0.040, sat=0.60, tilt=12.9, smooth=34, pore=60),
@@ -332,7 +335,7 @@ TARGETS = {
     "chiseled_stone_bricks": dict(luma=0.48, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
     # r34: cracked dry earth (m_cracked_path) - the spread is the cracks' (std 0.05 -> 0.065), the value stays on
     # the palette band
-    "dirt_path_top": dict(luma=0.47, std=0.085, sat=0.44, tilt=15.0, smooth=29, pore=50, toe=0.33),   # r55: 0.085, toe (the r54 pits)   # r53: std 0.065 -> 0.085 (the plates apart); r54: 0.095 (plates a size up)
+    "dirt_path_top": dict(luma=0.47, std=0.062, sat=0.45, tilt=15.0, smooth=29, pore=50),   # r60: concept C (soil_scan, trodden)   # r55: 0.085, toe (the r54 pits)   # r53: std 0.065 -> 0.085 (the plates apart); r54: 0.095 (plates a size up)
     "dirt_path_side": dict(luma=0.40, std=0.069, sat=0.46, tilt=18.0, smooth=18, pore=56),
     # round 14: single-block numbers, pack-study 38763481360 (vanilla 38763491796 beside it); metal and gem blocks
     # between the reference (which leans on shader reflections) and vanilla's brighter colours; relief trimmed on
@@ -5686,7 +5689,158 @@ def m_clover_top(F, n):
     return dict(alb=alb, H=H, nxy=None)
 
 
-SCAN_BASES = {"stone": m_scan_stone, "dirt": m_scan_dirt, "grass_block_top": m_clover_top}   # r34: clover lawn
+# ------------------------------------------------------------------ round 60: grass + dirt (lovish, Nov 3) --------
+# lovish Nov 3: "the textures look terrible", "ten times worse then completmentary", "the grass and dirt is aweful".
+# He picked from the Look lane's three ground concepts on the ground sampler (tools/look_concepts.py, eyes 41619070620
+# A / 41621977127 C): the LAWN of concept A (soft tufts 1/8-1/4 block across with lit tops and shaded gaps - the scale
+# the RTS camera keeps after mipmapping) and the SOIL of concept C (the Ground106 scan with its forms 3-12 and ~36
+# texels across raised). In game (plain lane, rts view): main's clover lawn std 0.015 meso 0.002 (a flat felt) vs
+# concept A 0.068 / 0.016. Here they are built properly - per BLOCK, not per texel (the concept's counts were per
+# texel, so at 256 its tufts overlapped into a std of 0.034), with normals from their own height.
+
+def r60_band(F, lo, hi, aniso=1.0):
+    """Seamless noise (std 1) holding wavelengths lo..hi (fractions of the block): white noise on F's seed filtered
+    in the frequency domain, so it wraps by construction. aniso > 1 stretches the features along u."""
+    n = F.n
+    w = F.rng.standard_normal((n, n))
+    f = np.fft.fftfreq(n)
+    fx, fy = np.meshgrid(f * aniso, f)
+    wl = 1.0 / (np.sqrt(fx * fx + fy * fy) + 1e-9) / n          # wavelength in blocks
+    keep = np.exp(-0.5 * (np.log(wl / math.sqrt(lo * hi)) / (0.5 * math.log(hi / lo) + 0.25)) ** 2)
+    out = np.real(np.fft.ifft2(np.fft.fft2(w) * keep))
+    return (out - out.mean()) / (out.std() + 1e-9)
+
+
+def r60_domes(F, per_block, rmin, rmax, squash=1.0):
+    """The max of `per_block` toroidal paraboloids of radius rmin..rmax (fractions of the block), each 0.6-1.0 high:
+    tufts, clumps, clods. The count is per block, so the pattern is the same at 128 and at 256."""
+    n = F.n
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float64)
+    H = np.zeros((n, n))
+    for _ in range(int(per_block)):
+        cx, cy, r = F.rng.uniform(0, n), F.rng.uniform(0, n), F.rng.uniform(rmin, rmax) * n
+        x0, x1 = int(math.floor(cx - r)) - 1, int(math.ceil(cx + r)) + 2
+        y0, y1 = int(math.floor(cy - r / squash)) - 1, int(math.ceil(cy + r / squash)) + 2
+        wy, wx = np.arange(y0, y1) % n, np.arange(x0, x1) % n
+        dx = (np.arange(x0, x1) - cx)[None, :]
+        dy = ((np.arange(y0, y1) - cy) * squash)[:, None]
+        h = np.clip(1 - (dx * dx + dy * dy) / (r * r), 0, None) * (0.6 + 0.4 * F.rng.random())
+        sub = H[np.ix_(wy, wx)]
+        H[np.ix_(wy, wx)] = np.maximum(sub, h)
+    return H
+
+
+def r60_lit(H, k, n):
+    """Light from the upper left on a periodic height field (0 flat, + lit, - shaded); the gradient is per BLOCK
+    (scaled by n / 128), so a 256 texture is lit like the 128 concept."""
+    gx = (np.roll(H, -1, 1) - np.roll(H, 1, 1)) * 0.5 * (n / 128.0)
+    gy = (np.roll(H, -1, 0) - np.roll(H, 1, 0)) * 0.5 * (n / 128.0)
+    return -(gx * -0.6 + gy * -0.8) * k
+
+
+def r60_tips(F, per_block, length):
+    """Short blade strokes catching the light (toroidal): `per_block` of them, `length` (fraction of the block) long,
+    at any angle, fading toward their ends; ~1/128 block wide (two texels at 256)."""
+    n = F.n
+    S = np.zeros((n, n))
+    wide = n >= 256
+    for _ in range(int(per_block)):
+        x, y, a = F.rng.uniform(0, n), F.rng.uniform(0, n), F.rng.uniform(0, math.pi)
+        ln = F.rng.uniform(0.5, 1.0) * length * n
+        v = F.rng.uniform(0.5, 1.0)
+        for t in np.linspace(0, ln, int(ln * 2) + 2):
+            px, py = int(x + math.cos(a) * t) % n, int(y + math.sin(a) * t) % n
+            s = v * (1 - t / (ln + 1e-9) * 0.5)
+            S[py, px] = max(S[py, px], s)
+            if wide:
+                S[py, (px + 1) % n] = max(S[py, (px + 1) % n], s)
+    return S
+
+
+def tuft_meadow(F, n):
+    """The lawn, round 60 (concept A, lovish's pick): tufts 0.12-0.26 block across over a few bigger clumps, each lit
+    on its upper-left flank, the bare gaps between them in shade; blade tips catching the light; lit tips a little
+    yellower, gaps a little cooler. Returns (H, alb): alb a grey with a hue spread (the biome colour tints it).
+    The ring every variant shares (variant_frame) is calmed to half its relief, so it does not draw a lattice."""
+    frame = F.blur(variant_frame(n, VARIANT_FEATHER["grass_block_top"], VARIANT_MARGIN_OF["grass_block_top"]), n / 64)
+    H = r60_domes(F, 31, 0.06, 0.13)                       # tufts (concept A: 128 * 128 / 520 = 31 per block)
+    H2 = r60_domes(F, 10, 0.10, 0.18)                      # a few bigger clumps under them (128 * 128 / 1600)
+    Ht = 0.75 * H + 0.5 * H2 + 0.15 * r60_band(F, 1 / 10, 1 / 3)
+    Ht = Ht.mean() + (Ht - Ht.mean()) * (1 - 0.5 * frame)
+    lit = r60_lit(Ht, 9.0, n)
+    gap = np.clip(0.35 - Ht, 0, None)                      # bare shade between tufts
+    S = r60_tips(F, 410, 0.05)                             # 128 * 128 / 40 blade tips per block
+    v = 1.0 + 0.28 * np.tanh(lit) - 0.85 * gap + 0.08 * S + 0.04 * r60_band(F, 3 / 128, 8 / 128)
+    warm = np.clip(np.tanh(lit), 0, 1) * 0.06 + 0.03 * S
+    alb = np.stack([v * (1 + warm), v * (1 + 0.3 * warm), v * (1 - 1.2 * warm + 0.04 * gap)], -1) * 0.6
+    H = Ht + 0.06 * S - 0.4 * gap                          # the tips stand proud, the gaps lie low
+    return H, np.clip(alb, 0, 1)
+
+
+def m_tuft_top(F, n):
+    """The grass block's top, round 60: tuft_meadow in place of the r34 clover lawn (its own normals from its
+    height, nxy None). The variants are their own seed inside the blob (OWN_SEED_VARIANTS), as the clover's were."""
+    H, alb = tuft_meadow(F, n)
+    return dict(alb=alb, H=H, nxy=None)
+
+
+def r60_raise(L, n, k, centre):
+    """The luma's forms round `centre` (fraction of the block) raised by k, seamlessly (frequency domain)."""
+    f = np.fft.fftfreq(n)
+    fx, fy = np.meshgrid(f, f)
+    wl = 1.0 / (np.sqrt(fx * fx + fy * fy) + 1e-9) / n
+    gain = 1 + (k - 1) * np.exp(-0.5 * (np.log(wl / centre) / 0.6) ** 2)
+    return np.real(np.fft.ifft2(np.fft.fft2(L) * gain))
+
+
+def soil_scan(F, n, base, smooth=0.0):
+    """Soil, round 60 (concept C, lovish's pick): the Ground106 scan at one tile per block, rolled by F's seed (each
+    variant its own roll; still seamless), its value field times a warm soil colour - the scan's own hue (leaf
+    litter, moss) taken out - with its forms ~12/256 and ~36/256 block across raised (x1.6, x2.2: the crumbs and
+    the clods the RTS camera keeps). `smooth` calms the value spread (the trodden path). Returns (H, alb, nxy): the
+    scan's height and normals come with it (rolled alike)."""
+    d = scan_set(SCAN_SOIL, n)
+    ru, rv = int(F.rng.integers(n)), int(F.rng.integers(n))
+    alb = np.roll(d["alb"], (rv, ru), (0, 1))
+    H = np.roll(d["H"], (rv, ru), (0, 1))
+    nx, ny = (np.roll(a, (rv, ru), (0, 1)) for a in d["nxy"])
+    L = alb @ LUMA
+    v = L / L.mean()
+    if smooth:
+        v = 1 + (v - 1) * (1 - smooth)
+    v = r60_raise(r60_raise(v, n, 1.6, 12 / 256), n, 2.2, 36 / 256)
+    return H, np.clip(v[..., None] * np.array(base)[None, None, :], 0, 1), (nx, ny)
+
+
+SOIL60 = (0.44, 0.35, 0.25)          # warm brown, hue ~32 (the palette's dirt band 28-40)
+PATH60 = (0.58, 0.47, 0.32)          # trodden tan
+COARSE60 = (0.50, 0.40, 0.30)
+
+
+def m_soil_dirt(F, n):
+    """Dirt, round 60 (concept C): soil_scan in the soil colour. The grass block's side soil is this texture too."""
+    H, alb, nxy = soil_scan(F, n, SOIL60)
+    return dict(alb=alb, H=H, nxy=nxy)
+
+
+def m_soil_path(F, n, side):
+    """Dirt path, round 60 (concept C; lovish: main's r34 cracked plates read as loud beige chips): the soil scan in
+    the path's tan, its spread calmed 40% (trodden flat). The side: the path's top 1/8 block over the soil."""
+    H, alb, _ = soil_scan(F, n, PATH60, smooth=0.4)
+    if not side:
+        return H, alb
+    Hd, ad, _ = soil_scan(F, n, SOIL60)
+    band = F.v < (0.125 + 0.015 * F.noise(4, 12, 0.5)[0:1, :])
+    return np.where(band, H + 0.1, Hd), np.where(band[..., None], alb, ad)
+
+
+def m_soil_coarse(F, n):
+    """Coarse dirt, round 60 (concept C): the soil scan in coarse dirt's paler, greyer brown, its full spread."""
+    H, alb, _ = soil_scan(F, n, COARSE60)
+    return H, alb
+
+
+SCAN_BASES = {"stone": m_scan_stone, "dirt": m_soil_dirt, "grass_block_top": m_tuft_top}   # r60: tuft lawn + soil scan
 # (basalt left the scans in r31: m_columnar)
 
 
@@ -6665,7 +6819,7 @@ def recipes():
         "diorite": m_diorite,
         "snow": m_snow,
         "podzol_top": m_podzol,
-        "coarse_dirt": m_coarse_dirt,
+        "coarse_dirt": m_soil_coarse,   # r60: the soil scan (concept C)
         "clay": lambda F, n: m_clayish(F, n, (0.62, 0.64, 0.70), pits=0.02, mottle=0.05),
         "red_sand": lambda F, n: m_sand(F, n, (0.75, 0.42, 0.18)),
         # ("mud" moved below: r31 m_mud paints its own smoothness)
@@ -6700,8 +6854,8 @@ def recipes():
         # each with its own tone and a hard bright edge - the shader's smooth/F0 gives the glint
         "red_nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.42, 0.08, 0.08), pits=0.05),
         "chiseled_stone_bricks": m_chiseled,
-        "dirt_path_top": lambda F, n: m_cracked_path(F, n, False),   # r34: cracked dry earth
-        "dirt_path_side": lambda F, n: m_cracked_path(F, n, True),
+        "dirt_path_top": lambda F, n: m_soil_path(F, n, False),   # r60: the soil scan, trodden (r34: cracked plates)
+        "dirt_path_side": lambda F, n: m_soil_path(F, n, True),
         # round 14: cracked / chiseled variants, metals and gems, the structure preview's gaps
         "cracked_stone_bricks": lambda F, n: m_stone_bricks(F, n, cracks=1.0),   # r31: the plain layout
         "cracked_deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32), cracks=1.0),
