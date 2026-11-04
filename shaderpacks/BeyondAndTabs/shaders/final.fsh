@@ -229,6 +229,9 @@ vec3 grade(vec3 c) {
     // split tone in bells over the dark tones (SHADOW_TONE_PEAK) and at 3/4 luma: black, white and the sunlit field
     // stay neutral
     float shadows = smoothstep(0.0, SHADOW_TONE_PEAK, lc) - smoothstep(SHADOW_TONE_PEAK, SHADOW_TONE_END, lc);
+    // EYES ONLY, never merge: even 40 px screen columns take the old bell (full at 0.25, gone by 0.50)
+    if (mod(floor(gl_FragCoord.x / 40.0), 2.0) < 0.5)
+        shadows = smoothstep(0.0, 0.25, lc) - smoothstep(0.25, 0.5, lc);
     float highlights = smoothstep(0.5, 0.75, lc) - smoothstep(0.75, 1.0, lc);
     c *= mix(vec3(1.0), SHADOW_TINT, shadows * SPLIT_TONE) * mix(vec3(1.0), HIGHLIGHT_TINT, highlights * SPLIT_TONE);
     // the tint turns hue but never adds colour (near-greys may take its faint colour)

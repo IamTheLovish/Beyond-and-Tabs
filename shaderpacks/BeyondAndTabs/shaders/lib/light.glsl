@@ -26,6 +26,10 @@ uniform float rainStrength;
 // field toward yellow - the lawn read olive (Itachi 1, Nov 4). The fill alone is 40% of that
 const vec3 SUN_HIGH = vec3(1.00, 0.965, 0.91) * 0.68;
 const vec3 SKY_HIGH = vec3(0.92, 0.97, 1.055) * 0.41;
+// EYES ONLY, never merge: an A/B inside one still - even 40 px screen columns take the old noon table
+const vec3 SUN_HIGH_OLD = vec3(1.00, 0.94, 0.84) * 0.68;
+const vec3 SKY_HIGH_OLD = vec3(0.92, 0.96, 1.04) * 0.41;
+bool abOldLight() { return mod(floor(gl_FragCoord.x / 40.0), 2.0) < 0.5; }
 // low sun: golden light raking across, a dim warm-violet fill
 const vec3 SUN_LOW = vec3(1.00, 0.62, 0.34) * 1.50;
 const vec3 SKY_LOW = vec3(0.74, 0.70, 0.80) * 0.17;
@@ -54,10 +58,10 @@ void lightColours(out vec3 sunColour, out vec3 skyColour) {
     float high = smoothstep(0.10, 0.55, h);    // low sun -> high sun (Dusk 11800, h ~0.23, stays mostly golden)
     // the directional light: the sun's colour only while the sun is the light, the moon's after it sets; zero at the
     // horizon, where the loader swaps one body for the other
-    sunColour = h > 0.0 ? mix(SUN_LOW, SUN_HIGH, high) : MOON;
+    sunColour = h > 0.0 ? mix(SUN_LOW, abOldLight() ? SUN_HIGH_OLD : SUN_HIGH, high) : MOON;
     sunColour *= smoothstep(0.0, 0.05, abs(h));
     // the sky's fill has no direction: it may glow on through twilight
-    skyColour = mix(SKY_NIGHT, mix(SKY_LOW, SKY_HIGH, high), smoothstep(-0.08, 0.02, h));
+    skyColour = mix(SKY_NIGHT, mix(SKY_LOW, abOldLight() ? SKY_HIGH_OLD : SKY_HIGH, high), smoothstep(-0.08, 0.02, h));
     sunColour *= 1.0 - 0.75 * rainStrength;
     skyColour *= 1.0 - 0.30 * rainStrength;
 }
