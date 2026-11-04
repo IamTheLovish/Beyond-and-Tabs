@@ -5892,6 +5892,123 @@ def m_blade_top(F, n):
     return dict(alb=alb, H=H, nxy=None)
 
 
+# ------------------------------------------------------------------ round 62: the lawn as a 4 x 4 sheet (Nov 4) ----
+# The fresh critic of 61b (claude/round-r61b-critic-nov4.md, 3/10): one scale only and the smallest (60% of the luma
+# variance at 2-8 screen px - speckle), 10% near-black (holes), no lit side on screen; the benchmark reads calm because
+# 48% of its variance sits in patches of 2+ BLOCKS, which no single repeating tile can hold. lovish (~03:30 ET, "Yes,
+# try it"): the top as a sheet over 4 x 4 blocks, laid by world position (GiantLawnBakedModel; Athena's giant loader
+# would put it on the dirt sides too). Built at the CLUMP scale the camera keeps: rounded clumps 0.18-0.34 block across
+# (3-4 cross a block), lit on the rim facing the shader's sun (LAWN_SUN), darker on the far rim, over a connected gap network in blue-green
+# shade (never black); soft blade highlights inside the clumps only; patches 1-4 blocks across (value up to +-17%, the
+# lighter ones yellower) and a few clover heads and flowers big enough to show (2+ screen px). Painted as the lit lane
+# colour / R61_TINT.
+
+LAWN_SHEET_BLOCKS = 4
+# where the painted light comes from, in top-face texture space (u = east, v = south): our shader's sun at day time
+# 5000 with sunPathRotation +30 stands high in the NORTH, a little east (lessons-itachi1-oct30-day.md; the flip to -30
+# waits on lovish - if it lands, the sun is in the south and this becomes (0.45, 0.89))
+LAWN_SUN = (0.45, -0.89)
+
+
+def _hsv(h, s, v):
+    import colorsys
+    return np.array(colorsys.hsv_to_rgb(h / 360.0, s, v))
+
+
+def lawn_sheet(res, blocks=LAWN_SHEET_BLOCKS, seed=None):
+    """The sheet: (H, alb), (res * blocks)^2 texels, seamless (everything toroidal over the sheet)."""
+    n = res * blocks
+    F = Field(n, SEEDS["grass_block_top"] + 62 if seed is None else seed)
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float64)
+    H = np.zeros((n, n))
+    for per, rlo, rhi in ((2, 0.20, 0.26), (3, 0.13, 0.18)):     # per block side: a jittered grid of clumps
+        g = per * blocks
+        for gy in range(g):
+            for gx in range(g):
+                cx = (gx + F.rng.uniform(0.15, 0.85)) * n / g
+                cy = (gy + F.rng.uniform(0.15, 0.85)) * n / g
+                r = F.rng.uniform(rlo, rhi) * res
+                ph = F.rng.uniform(0, 2 * math.pi, 2)
+                k = int(math.ceil(r * 1.2)) + 1
+                xs = np.arange(int(cx) - k, int(cx) + k + 1)
+                ys = np.arange(int(cy) - k, int(cy) + k + 1)
+                dx = (xs - cx)[None, :]
+                dy = (ys - cy)[:, None]
+                ang = np.arctan2(dy, dx)
+                rr = r * (1 + 0.10 * np.sin(3 * ang + ph[0]) + 0.06 * np.sin(5 * ang + ph[1]))
+                h = np.clip(1 - (dx * dx + dy * dy) / (rr * rr), 0, None) ** 0.6 * F.rng.uniform(0.75, 1.0)
+                ix = np.ix_(ys % n, xs % n)
+                H[ix] = np.maximum(H[ix], h)
+    gx_ = (np.roll(H, -1, 1) - np.roll(H, 1, 1)) * res / 16
+    gy_ = (np.roll(H, -1, 0) - np.roll(H, 1, 0)) * res / 16
+    lit = np.tanh(-(gx_ * LAWN_SUN[0] + gy_ * LAWN_SUN[1]))   # + where the clump faces the sun
+    top, tip = _hsv(90, 0.60, 0.66), _hsv(80, 0.62, 0.80)
+    shade, gapc = _hsv(105, 0.62, 0.46), _hsv(110, 0.60, 0.32)
+    t = np.clip(0.5 + 0.5 * lit, 0, 1)[..., None]
+    img = shade + (top - shade) * np.clip(t * 1.4 - 0.2, 0, 1)
+    img = img + (tip - img) * (np.clip(lit - 0.45, 0, 1)[..., None] * 1.6)
+    S = F.blur(r60_tips(F, 160 * blocks * blocks, 0.06 * res / n), 1.2 * res / 256)   # soft blades inside the clumps
+    img = img * (1 + 0.18 * np.clip(S / (S.max() + 1e-9), 0, 1))[..., None]
+    img = img + (gapc - img) * np.clip((0.30 - H) / 0.12, 0, 1)[..., None]
+    img[H < 0.18] = gapc
+    # patches 1-4 blocks across: value +-8%, hue +-6 deg (yellower where lighter)
+    def patches(lo, hi):
+        r = np.sqrt(F.fx ** 2 + F.fy ** 2) / blocks                   # cycles per block
+        keep = (r >= 1.0 / hi) & (r <= 1.0 / lo)
+        w = np.real(np.fft.ifft2(np.fft.fft2(F.rng.standard_normal((n, n))) * keep))
+        return w / (w.std() + 1e-9)
+    P = patches(1.0, 4.0)           # x0.34 / 2 of a clipped unit noise: +-17% at the extremes, ~10% of the variance
+    img = img * (1 + 0.34 * np.clip(P, -2, 2) / 2)[..., None]
+    img[..., 0] *= 1 + 0.05 * np.clip(P, -2, 2) / 2                     # warmer (yellower) in the light patches
+    img[..., 2] *= 1 - 0.05 * np.clip(P, -2, 2) / 2
+    # accents: one clover head per ~2 blocks, a flower per ~3 blocks, each with a contact shadow
+    for _ in range(max(1, blocks * blocks // 2)):
+        cx, cy = F.rng.uniform(0, n, 2)
+        a0 = F.rng.uniform(0, 2 * math.pi)
+        for lobe in range(3):
+            a = a0 + lobe * 2 * math.pi / 3
+            lx, ly = cx + math.cos(a) * 0.05 * res, cy + math.sin(a) * 0.05 * res
+            dx = (xx - lx + n / 2) % n - n / 2
+            dy = (yy - ly + n / 2) % n - n / 2
+            d = np.sqrt(dx * dx + dy * dy)
+            m = d < 0.055 * res
+            sh = np.clip(0.7 + 0.4 * ((dx * LAWN_SUN[0] + dy * LAWN_SUN[1]) / (0.055 * res)), 0.35, 1.0)
+            img[m] = (_hsv(100, 0.55, 0.78)[None, None] * sh[..., None])[m]
+            img[m & (d >= 0.045 * res)] *= 0.72
+    for _ in range(max(1, blocks * blocks // 3)):
+        cx, cy = F.rng.uniform(0, n, 2)
+        dx = (xx - cx + n / 2) % n - n / 2
+        dy = (yy - cy + n / 2) % n - n / 2
+        img[np.sqrt((dx + LAWN_SUN[0] * 0.03 * res) ** 2 + (dy + LAWN_SUN[1] * 0.03 * res) ** 2) < 0.04 * res] *= 0.55
+        img[np.sqrt(dx * dx + dy * dy) < 0.032 * res] = [_hsv(52, 0.75, 0.95), _hsv(60, 0.06, 0.97)][int(F.rng.integers(2))]
+    alb = np.clip(img / R61_TINT, 0, 1)
+    return H - 0.25 * (H < 0.18), alb
+
+
+def write_lawn_sheet(res, preview_dir=None):
+    """grass_block_top_g1.._g16 (+ _n, _s): the sheet cut per block, row-major from its top left (1 + x + z * N, as
+    Athena's giant; GiantLawnBakedModel picks cell 1 + floorMod(x, N) + floorMod(z, N) * N). No blockstate: the
+    grass block keeps its own model and variants - the wrapper only swaps the top face's sprite."""
+    blocks = LAWN_SHEET_BLOCKS
+    t = targets_for("grass_block_top")
+    big = res * blocks
+    F = Field(big, SEEDS["grass_block_top"] + 63)
+    H, alb = lawn_sheet(res, blocks)
+    n_img, s_img, k = maps(F, H, t)
+    for z in range(blocks):
+        for x in range(blocks):
+            i = 1 + x + z * blocks
+            sl = (slice(z * res, (z + 1) * res), slice(x * res, (x + 1) * res))
+            to_png(alb[sl]).save(os.path.join(BLOCK_DIR, "grass_block_top_g%d.png" % i), **PNG_OPTS)
+            Image.fromarray(n_img[sl], "RGBA").save(os.path.join(BLOCK_DIR, "grass_block_top_g%d_n.png" % i), **PNG_OPTS)
+            Image.fromarray(s_img[sl], "RGBA").save(os.path.join(BLOCK_DIR, "grass_block_top_g%d_s.png" % i), **PNG_OPTS)
+    if preview_dir:
+        img = lit_preview(np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1), n_img)
+        Image.fromarray((img * 255).astype(np.uint8), "RGB").resize((512, 512), Image.LANCZOS).save(
+            os.path.join(preview_dir, "grass_block_top_sheet_lit.png"))
+    return {"normal_strength": round(k, 2), "blocks": blocks}
+
+
 def r60_raise(L, n, k, centre):
     """The luma's forms round `centre` (fraction of the block) raised by k, seamlessly (frequency domain)."""
     f = np.fft.fftfreq(n)
@@ -7265,6 +7382,8 @@ def _job(args):
         res *= 2
     if name.endswith("_giant"):
         return name, write_giant(name[:-6], res, preview_dir)
+    if name == "grass_block_top_sheet":                # r62: the lawn's 4 x 4 sheet (GiantLawnBakedModel)
+        return name, write_lawn_sheet(res * 2 if hires else res, preview_dir)   # 256 per block, as the top
     if name == "water_still":
         return name, write_water(res, preview_dir)
     if name == "water_flow":
@@ -7283,7 +7402,7 @@ def build(res, preview_dir=None, jobs=None, hires=True):
     if preview_dir:
         os.makedirs(preview_dir, exist_ok=True)
     # the two water strips are the longest jobs: first, so no worker is left finishing them alone
-    names = ["water_flow", "water_still"] + [g + "_giant" for g in GIANT] + list(TARGETS)
+    names = ["water_flow", "water_still", "grass_block_top_sheet"] + [g + "_giant" for g in GIANT] + list(TARGETS)
     jobs = max(1, jobs or os.cpu_count() or 1)
     work = [(n, res, preview_dir, hires) for n in names]
     if jobs == 1:
@@ -7292,7 +7411,8 @@ def build(res, preview_dir=None, jobs=None, hires=True):
         from concurrent.futures import ProcessPoolExecutor
         with ProcessPoolExecutor(max_workers=jobs) as ex:
             done = dict(ex.map(_job, work))
-    report = {n: done[n] for n in list(TARGETS) + ["water_still", "water_flow"] + [g + "_giant" for g in GIANT]}
+    report = {n: done[n] for n in list(TARGETS) + ["water_still", "water_flow", "grass_block_top_sheet"] +
+              [g + "_giant" for g in GIANT]}
     write_models()
     # LabPBR format declaration: Iris / Oculus read assets/minecraft/optifine/texture.properties and give shader packs
     # MC_TEXTURE_FORMAT_LAB_PBR(_1_3) - without it a pack can't tell our _n / _s maps are LabPBR 1.3 (study notes,
