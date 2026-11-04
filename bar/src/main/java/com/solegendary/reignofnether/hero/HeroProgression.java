@@ -84,8 +84,7 @@ public final class HeroProgression {
                 continue;
             String heroOwner = heroUnit.getOwnerName();
             if (heroOwner == null || heroOwner.isBlank() || heroOwner.equals(deadOwner)
-                    || AlliancesServerEvents.isAllied(heroOwner, deadOwner) || hero.getHeroLevel() >= HeroUnit.MAX_LEVEL
-                    || com.solegendary.reignofnether.gametest.GameTestArenas.apart(le, dead))   // another game test's arena
+                    || AlliancesServerEvents.isAllied(heroOwner, deadOwner) || hero.getHeroLevel() >= HeroUnit.MAX_LEVEL)
                 continue;
             hero.addExperience(xp);
             PlayerServerEvents.sendMessageToPlayerNoNewLines(heroOwner, "hud.hero.reignofnether.kill_burst", false, xp);
@@ -215,8 +214,7 @@ public final class HeroProgression {
     static boolean isTeamHeroInRange(LivingEntity le, Entity point, String owner) {
         if (!(le instanceof HeroUnit) || !(le instanceof Unit u) || !le.isAlive())
             return false;
-        if (le.distanceToSqr(point) > CAPTURE_RANGE * CAPTURE_RANGE
-                || com.solegendary.reignofnether.gametest.GameTestArenas.apart(le, point))   // another game test's arena
+        if (le.distanceToSqr(point) > CAPTURE_RANGE * CAPTURE_RANGE)
             return false;
         String o = u.getOwnerName();
         return o != null && !o.isBlank() && AlliancesServerEvents.isAlliedOrOwned(o, owner);

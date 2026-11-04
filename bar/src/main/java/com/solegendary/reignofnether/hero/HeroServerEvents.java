@@ -63,10 +63,8 @@ public class HeroServerEvents {
             if (popCost > 0) {
                 for (LivingEntity unit : UnitServerEvents.getAllUnits()) {
                     boolean inRange = unit.distanceToSqr((LivingEntity) deadUnit) < HeroExperienceOrb.RANGE * HeroExperienceOrb.RANGE;
-                    // a fallen hero (its body stays in the unit list a moment) earns nothing: its record is written;
-                    // nor does a hero in another game test's arena (GameTestArenas: always false in play)
-                    if (unit instanceof HeroUnit heroUnit && unit.isAlive() && inRange && heroUnit != evt.getEntity()
-                            && !com.solegendary.reignofnether.gametest.GameTestArenas.apart(unit, evt.getEntity())) {
+                    // a fallen hero (its body stays in the unit list a moment) earns nothing: its record is written
+                    if (unit instanceof HeroUnit heroUnit && unit.isAlive() && inRange && heroUnit != evt.getEntity()) {
                         String heroOwner = ((Unit) heroUnit).getOwnerName();
                         String deadOwner = deadUnit.getOwnerName();
 

@@ -40,7 +40,6 @@
     "ServerGamePacketListenerImplMixin",
     "ServerLevelMixin",
     "StructureUtilsMixin",
-    "GameTestTickerAccessor",
     "SynchedEntityDataMixin",
     "ThrownPotionMixin",
     "ThrownTridentMixin",

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.hero.HeroExperienceOrb;
 import com.solegendary.reignofnether.hero.HeroKits;
 import com.solegendary.reignofnether.hero.HeroProgression;
 import com.solegendary.reignofnether.hero.HeroServerEvents;
@@ -9,7 +10,6 @@ import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.gametest.framework.GameTestInfo;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
@@ -20,16 +20,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A hero earns XP only from deaths in its own game-test arena (gametest/GameTestArenas). The suite runs tests 20 blocks
- * apart, and a hero's kill XP (20 blocks) and decisive-kill burst (28) reached the arena next door: WinPays' hero kill at
- * tick 3 paid HeroAutoLearn's witch a second point, so hero_auto_learn_logout_ends_the_menu_hold failed with "points 0,
- * ranks 2" in 9 of 31 CI shard-8 jobs (Nov 1-3; flake-stress 41599142411 traced the 350 XP to the Dawn Paladin dying 20
- * blocks away), and H13's Shaman read "experience 1250, not 800" (PR 473) the same way.
+ * The suite lays its arenas out far enough apart that no hero XP rule reaches from one test's arena into another's
+ * (gametest/GameTestLayout). Vanilla left 5 blocks between arenas (6 between rows), 21 from one arena's spot to the same
+ * spot next door, and a hero earns XP from any enemy death within 20 blocks (28 for a decisive kill, capture within 24):
+ * WinPays' hero kill at tick 3 paid HeroAutoLearn's witch a second point, so hero_auto_learn_logout_ends_the_menu_hold
+ * failed with "points 0, ranks 2" in 9 of 31 CI shard-8 jobs (Nov 1-3; flake-stress 41599142411 traced the 350 XP to
+ * the Dawn Paladin dying 20 blocks away), and H13's Shaman read "experience 1250, not 800" (PR 473) the same way.
  * <p>
  * Two tests in a batch of their own, so they stand side by side: each kills an enemy hero in its own arena - the first at
  * tick {@value #FIRST_KILL}, the second at tick {@value #SECOND_KILL} - beside its own hero (hung 4 blocks up, no AI, so
- * it stays where it is put), and its hero's XP may change only at its own kill. The other test's victim falls within the
- * 28-block burst of this hero (each test checks the layout still puts it there, or it would prove nothing).
+ * it stays where it is put). The other test's victim must stand out of every hero XP reach of this hero, and this
+ * hero's XP may change only at its own kill.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -91,13 +92,13 @@ public class HeroXpArenaGameTests {
                     + " (its own kill at " + FIRST_KILL + " paid " + xp[0] + ")");
             if (me == 1 && end <= xp[0])
                 problems.add("its own kill at tick " + SECOND_KILL + " paid the hero nothing");
-            // the layout: the other test's victim within the burst's reach of this hero, in another arena
-            GameTestInfo self = GameTestArenas.arenaAt(helper.getLevel(), hero.getX(), hero.getZ());
-            if (neighbour[0] < 0 || neighbour[0] > HeroProgression.BURST_RANGE)
-                problems.add("the other test's victim stood " + (neighbour[0] < 0 ? "nowhere" : String.format("%.1f blocks", neighbour[0]))
-                    + " from this hero, out of the " + HeroProgression.BURST_RANGE + "-block burst: the test proves nothing");
-            else if (self == null)
-                problems.add("no running test's arena holds this hero (GameTestArenas)");
+            // the layout: the other test's victim out of every hero XP reach of this hero
+            double reach = Math.max(HeroProgression.BURST_RANGE, Math.max(HeroProgression.CAPTURE_RANGE, HeroExperienceOrb.RANGE));
+            if (neighbour[0] < 0)
+                problems.add("the other test's victim was nowhere at this test's kill: the two did not run side by side");
+            else if (neighbour[0] <= reach)
+                problems.add(String.format("the other test's victim stood %.1f blocks from this hero, inside the %.0f-block reach of"
+                    + " a hero's kill XP: the arenas are laid out too close", neighbour[0], reach));
             ReignOfNether.LOGGER.info("[XpArena] GameTest {}: XP {} after its own kill, {} at the end; the other victim {} blocks away",
                 me == 0 ? "first" : "second", xp[0], end, String.format("%.1f", neighbour[0]));
             hero.discard();
