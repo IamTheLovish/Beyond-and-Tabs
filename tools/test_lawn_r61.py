@@ -42,10 +42,8 @@ class LawnRound61Test(unittest.TestCase):
         self.assertGreaterEqual(lawn_at_rts()["p95"], 0.50)
 
     def test_forms_the_camera_keeps(self):
-        """'intricate lines': structure at 1/8-1/2 block (meso) well past round 60's 0.0166. Retired 0.028 -> 0.020
-        (Nov 4, same session that set it): the first r61 build met 0.031 only because a block-scale lattice (see
-        test_no_lattice_at_the_block) fed the meso band; with the lattice gone the tufts' own structure is ~0.021."""
-        self.assertGreaterEqual(lawn_at_rts()["meso"], 0.020)
+        """'intricate lines': structure at 1/8-1/2 block (meso) about twice round 60's 0.0166."""
+        self.assertGreaterEqual(lawn_at_rts()["meso"], 0.028)
 
     def test_no_block_scale_blotches(self):
         """the block-scale unevenness that drew the lattice stays out (macro; the latticed build measured 0.019)."""
