@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.unit.modelling.models.gen.WhiteAngelStatueModel;
 import com.solegendary.reignofnether.unit.modelling.renderers.GeneratedBodies;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipRenderTypes;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelPart;
@@ -100,8 +101,9 @@ public class StatueRenderClientEvents {
         }
         if (disabled)
             return;
-        long now = MC.level.getGameTime();
-        if (now - refreshedAt < REFRESH_TICKS && now >= refreshedAt)
+        long now = ClientTicks.now();
+        // MIN_VALUE = refresh now (now - MIN_VALUE overflowed negative, and that skipped the refresh for good)
+        if (refreshedAt != Long.MIN_VALUE && now - refreshedAt < REFRESH_TICKS && now >= refreshedAt)
             return;
         refreshedAt = now;
         try {
@@ -184,7 +186,7 @@ public class StatueRenderClientEvents {
             != com.solegendary.reignofnether.config.DisplaySettings.ANIM_OFF;
         boolean detail = OrthoviewClientEvents.isEnabled() ? OrthoviewClientEvents.getZoom() <= GeneratedBodies.DETAIL_ZOOM
             : true;
-        long tick = MC.level.getGameTime();
+        long tick = ClientTicks.now();
         float now = (tick % 72000L) + evt.getPartialTick();
         MultiBufferSource.BufferSource buffers = null;
         PoseStack pose = evt.getPoseStack();

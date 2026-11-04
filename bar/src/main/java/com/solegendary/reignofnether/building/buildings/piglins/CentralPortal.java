@@ -46,7 +46,8 @@ public class CentralPortal extends ProductionBuilding implements NetherConvertin
         this.canAcceptResources = true;
         this.maxHealth = 380d;
 
-        this.startingBlockTypes.add(Blocks.NETHER_BRICKS);
+        // the volcano-temple's foundation course (tools/capitol_central_portal.py; RoN's portal stood on nether brick)
+        this.startingBlockTypes.add(Blocks.POLISHED_BLACKSTONE_BRICKS);
 
         this.productions.add(ProductionItems.GRUNT, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.STRIDER, Keybindings.abilitySlot2);
@@ -70,7 +71,6 @@ public class CentralPortal extends ProductionBuilding implements NetherConvertin
                 List.of(
                         Component.translatable("buildings.reignofnether.central_portal").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         ResourceCosts.getFormattedCost(cost),
-                        ResourceCosts.getFormattedPop(cost),
                         FormattedCharSequence.forward("", Style.EMPTY),
                         Component.translatable("buildings.reignofnether.central_portal.tooltip1").getVisualOrderText()
                 ),

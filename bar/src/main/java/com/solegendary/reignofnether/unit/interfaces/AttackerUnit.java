@@ -10,6 +10,7 @@ import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.sounds.SoundAction;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.EngagementStance;
+import com.solegendary.reignofnether.unit.HeldBlow;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.TargetScan;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
@@ -362,6 +363,8 @@ public interface AttackerUnit {
         Mob unitMob = (Mob) attackerUnit;
         Unit unit = (Unit) attackerUnit;
 
+        if (!unitMob.level().isClientSide)
+            HeldBlow.tickHeld(unitMob);   // a blow held to its weapon's strike (BlowTiming) lands on its tick
         if (!unitMob.level().isClientSide && !unit.isEatingFood()) {
             if (attackerUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal meleeAttackUnitGoal) {
                 meleeAttackUnitGoal.tickAttackCooldown();
@@ -676,8 +679,11 @@ public interface AttackerUnit {
         int attackSlowdownAmp = attackSlowdown != null ? attackSlowdown.getAmplifier() + 1 : 0;
 
         MobEffectInstance bloodlust = ((LivingEntity) (this)).getEffect(MobEffectRegistrar.BLOODLUST.get());
+        // the Voodoo Shaman's Blood Totem: +25% attacks per second within its circle
+        boolean frenzy = ((LivingEntity) (this)).hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get());
 
-        return (1 + (attackSlowdownAmp * 0.05f)) / (bloodlust != null ? 1.6f : 1.0f);
+        return (1 + (attackSlowdownAmp * 0.05f)) / (bloodlust != null ? 1.6f : 1.0f)
+            / (frenzy ? 1 + com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit.ATTACK_SPEED_BONUS : 1.0f);
     }
 
     public default void attackMoveNearestEnemyBuilding() {

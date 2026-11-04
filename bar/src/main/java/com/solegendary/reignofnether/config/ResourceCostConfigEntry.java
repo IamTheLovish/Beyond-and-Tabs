@@ -24,10 +24,18 @@ public class ResourceCostConfigEntry {
     private final int default_ore;
     private final int default_seconds;
     private final int default_population;
+    // a building's entry has no population at all (lovish, Oct 29: no supply), so an old config file's value is ignored
+    private final boolean hasPopulation;
     public final String id;
     private final String comment;
 
     private ResourceCostConfigEntry(int food, int wood, int ore, int seconds, int population, ResourceCost associatedCost, String comment) {
+        this(food, wood, ore, seconds, population, true, associatedCost, comment);
+    }
+
+    private ResourceCostConfigEntry(int food, int wood, int ore, int seconds, int population, boolean hasPopulation,
+                                    ResourceCost associatedCost, String comment) {
+        this.hasPopulation = hasPopulation;
         this.default_food = food;
         this.default_wood = wood;
         this.default_ore = ore;
@@ -44,8 +52,8 @@ public class ResourceCostConfigEntry {
     public static ResourceCostConfigEntry Research(int food, int wood, int ore, int seconds, ResourceCost associatedCost, String comment) { // research
         return new ResourceCostConfigEntry(food, wood, ore, seconds, 0, associatedCost, comment);
     }
-    public static ResourceCostConfigEntry Building(int food, int wood, int ore, int supply, ResourceCost associatedCost, String comment) { // buildings
-        return new ResourceCostConfigEntry(food, wood, ore, 0, supply, associatedCost, comment);
+    public static ResourceCostConfigEntry Building(int food, int wood, int ore, ResourceCost associatedCost, String comment) { // buildings
+        return new ResourceCostConfigEntry(food, wood, ore, 0, 0, false, associatedCost, comment);   // no supply
     }
     public static ResourceCostConfigEntry Ability(int food, int wood, int ore, ResourceCost associatedCost, String comment) { // enchantments and equipment
         return new ResourceCostConfigEntry(food, wood, ore, 0, 0, associatedCost, comment);
@@ -58,7 +66,8 @@ public class ResourceCostConfigEntry {
         this.WOOD = builder.define("Wood cost", this.default_wood);
         this.ORE = builder.define("Ore cost", this.default_ore);
         this.SECONDS = builder.define("Time to create", this.default_seconds);
-        this.POPULATION = builder.define("Population value", this.default_population);
+        if (this.hasPopulation)
+            this.POPULATION = builder.define("Population value", this.default_population);
         builder.pop();
     }
 
@@ -66,7 +75,7 @@ public class ResourceCostConfigEntry {
     public int getWood() {return read(this.WOOD);}
     public int getOre() {return read(this.ORE);}
     public int getSeconds() {return read(this.SECONDS);}
-    public int getPopulation() {return read(this.POPULATION);}
+    public int getPopulation() {return this.POPULATION == null ? 0 : read(this.POPULATION);}
 
     /**
      * A loaded value is never null, but Forge 47's ConfigValue.get() can return null while the config reloads on
