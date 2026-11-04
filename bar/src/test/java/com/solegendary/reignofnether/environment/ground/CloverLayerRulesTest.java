@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The floating clover layer (lovish, Nov 4, concept C: "a low thick clover carpet everywhere"): about three grass
  * blocks in four get one extra cutout up-quad 0.6/16 above the lawn top, one of eight mostly transparent clover sheets
  * turned by a multiple of 90 degrees, chosen by a hash of the block position so the carpet never shows a pattern. The
- * pure rules behind CloverLayer / GiantGroundBakedModel: the pick and its distribution, the sprite names, the switch-off
+ * pure rules behind FloatingLayer / GiantGroundBakedModel: the pick and its distribution, the sprite names, the switch-off
  * when the art is missing, and the quad's vertices. Written before CloverLayerRules.
  */
 class CloverLayerRulesTest {

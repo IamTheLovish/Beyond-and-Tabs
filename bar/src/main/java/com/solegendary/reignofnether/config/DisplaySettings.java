@@ -128,11 +128,21 @@ public class DisplaySettings {
         }
     }
 
-    /** Clover layer (environment/ground/CloverLayer): the floating clover carpet over three lawn blocks in four. Read
+    /** Clover layer (environment/ground/FloatingLayer): the floating clover carpet over three lawn blocks in four. Read
      * by the chunk mesher's threads; a change takes effect when the terrain is rebuilt. */
     public static boolean cloverLayer() {
         try {
             return ReignOfNetherClientConfigs.CLOVER_LAYER.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
+    /** Flower layer (environment/ground/FloatingLayer): the untinted flower drifts over ~6% of lawn blocks. Read by the
+     * chunk mesher's threads; a change takes effect when the terrain is rebuilt. */
+    public static boolean flowerLayer() {
+        try {
+            return ReignOfNetherClientConfigs.FLOWER_LAYER.get();
         } catch (IllegalStateException e) {   // config not loaded yet
             return true;
         }

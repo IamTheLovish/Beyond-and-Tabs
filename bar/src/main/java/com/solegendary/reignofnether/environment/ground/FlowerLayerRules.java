@@ -3,8 +3,6 @@ package com.solegendary.reignofnether.environment.ground;
 import java.util.function.Predicate;
 
 /**
- * STUB (round 64, tests first: this commit's CI run is the red; the rules follow in the next commit).
- * <p>
  * The pure rules of the floating flower layer (lovish, Nov 4, concept C: "flower specks", the meadow photo's daisies;
  * the round 62 critic: "flower DRIFTS: 6-12 dots ... pale yellow / white, inside a 1-2 block patch, ~1 drift per 12
  * blocks"; round 63's critic found "no white or yellow specks" - under the biome tint a baked speck turns green). So
@@ -35,19 +33,24 @@ final class FlowerLayerRules {
     /** The flowering probability on a drift's plateau. */
     static final double PEAK_MIN = 0.40, PEAK_MAX = 0.58;
 
+    private static final String SPRITE = "block/grass_flower_layer_";
+    private static final long SALT_DRIFT = 0xD21F7L, SALT_PICK = 0xF10E55L;
 
     private FlowerLayerRules() {
     }
 
     /** The atlas path of flower sprite k (namespace minecraft). */
     static String sprite(int layer) {
-        return "";   // STUB (round 64 red)
+        return SPRITE + layer;
     }
 
     /** Whether the pack has all the flower sprites; one missing switches the layer off (safe to merge before the art
      * exists). */
     static boolean ready(Predicate<String> present) {
-        return false;   // STUB (round 64 red): always off
+        for (int k = 1; k <= LAYERS; k++)
+            if (!present.test(sprite(k)))
+                return false;
+        return true;
     }
 
     /**
@@ -57,17 +60,43 @@ final class FlowerLayerRules {
      * round the block hold every drift that can touch it.
      */
     static double field(int x, int z) {
-        return 0;   // STUB (round 64 red): no drifts
+        double px = x + 0.5, pz = z + 0.5;
+        int sx = Math.floorDiv(x, DRIFT_SQUARE), sz = Math.floorDiv(z, DRIFT_SQUARE);
+        double best = 0;
+        for (int i = sx - 1; i <= sx + 1; i++)
+            for (int j = sz - 1; j <= sz + 1; j++) {
+                long c = GroundMath.hash(i, j, SALT_DRIFT);
+                int seeds = 2 + (int) (c & 1);
+                for (int k = 1; k <= seeds; k++) {
+                    long h = GroundMath.mix(c + k * GroundMath.KX);
+                    double dx = (i + GroundMath.unit16(h, 0)) * DRIFT_SQUARE - px;
+                    double dz = (j + GroundMath.unit16(h, 16)) * DRIFT_SQUARE - pz;
+                    double r = RADIUS_MIN + (RADIUS_MAX - RADIUS_MIN) * GroundMath.unit16(h, 32);
+                    double d2 = dx * dx + dz * dz;
+                    if (d2 >= r * r)
+                        continue;
+                    double d = Math.sqrt(d2), inner = r * PLATEAU;
+                    double t = d <= inner ? 1 : (r - d) / (r - inner);
+                    double p = (PEAK_MIN + (PEAK_MAX - PEAK_MIN) * GroundMath.unit16(h, 48)) * t * t * (3 - 2 * t);
+                    if (p > best)
+                        best = p;
+                }
+            }
+        return best;
     }
 
     /** The flowers of the block at (x, y, z): 0 = none (about 94 blocks in 100), else the sprite 1..LAYERS. */
     static int pick(int x, int y, int z) {
-        return 0;   // STUB (round 64 red): no flowers
+        long h = GroundMath.hash(x, y, z, SALT_PICK);
+        double u = (h >>> 11) * 0x1.0p-53;   // the top 53 bits; the sprite takes the low 3, independent of them
+        if (u >= PEAK_MAX || u >= field(x, z))
+            return 0;
+        return 1 + (int) (h & (LAYERS - 1));
     }
 
     /** The flower quad over the whole block at {@link #HEIGHT}, unturned (u along +x, v along +z), white: the layer
      * is untinted, so white and yellow stay white and yellow (see GroundMath.upQuad for the format). */
     static int[] quad(float u0, float u1, float v0, float v1) {
-        return new int[32];   // STUB (round 64 red)
+        return GroundMath.upQuad(HEIGHT, 0, u0, u1, v0, v1);
     }
 }

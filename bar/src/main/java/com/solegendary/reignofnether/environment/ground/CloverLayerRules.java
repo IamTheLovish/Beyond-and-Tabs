@@ -10,7 +10,7 @@ import java.util.function.Predicate;
  * cutout edge over the soil and grass) and never repeats. The pick is a hash of the block position: deterministic (the
  * same block meshes the same every rebuild), independent between neighbours and of the 4x4 lawn cells. Studied from
  * the Optimum Realism pack (numbers only; nothing copied): ~75% of grass blocks, 0.5-0.8/16 lift, AO and shade off.
- * No Minecraft types here: CloverLayerRulesTest checks them; CloverLayer bakes the quads.
+ * No Minecraft types here: CloverLayerRulesTest checks them; FloatingLayer bakes the quads.
  */
 final class CloverLayerRules {
 
@@ -26,19 +26,9 @@ final class CloverLayerRules {
     private CloverLayerRules() {
     }
 
-    /** murmur3's 64-bit finaliser: every input bit reaches every output bit. */
-    private static long mix(long h) {
-        h ^= h >>> 33;
-        h *= 0xff51afd7ed558ccdL;
-        h ^= h >>> 33;
-        h *= 0xc4ceb9fe1a85ec53L;
-        h ^= h >>> 33;
-        return h;
-    }
-
     /** The clover of the block at (x, y, z): 0 = none (one block in four), else 1..PICKS (see layer / rotation). */
     static int pick(int x, int y, int z) {
-        long h = mix(x * 0x9E3779B97F4A7C15L ^ z * 0xC2B2AE3D27D4EB4FL ^ y * 0x165667B19E3779F9L ^ 0x7C10E5L);
+        long h = GroundMath.hash(x, y, z, 0x7C10E5L);
         if ((h & 3) == 0)
             return 0;
         return 1 + (int) ((h >>> 2) & (PICKS - 1));
@@ -75,21 +65,6 @@ final class CloverLayerRules {
      * i + rotation shows unturned). White (the grass tint colours it), light 0 (the lighter fills it), normal up.
      */
     static int[] quad(int rotation, float u0, float u1, float v0, float v1) {
-        float[][] xz = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-        float[][] uv = {{u0, v0}, {u0, v1}, {u1, v1}, {u1, v0}};
-        int[] q = new int[32];
-        for (int i = 0; i < 4; i++) {
-            int o = i * 8;
-            float[] t = uv[(i + rotation) & 3];
-            q[o] = Float.floatToRawIntBits(xz[i][0]);
-            q[o + 1] = Float.floatToRawIntBits(HEIGHT);
-            q[o + 2] = Float.floatToRawIntBits(xz[i][1]);
-            q[o + 3] = -1;
-            q[o + 4] = Float.floatToRawIntBits(t[0]);
-            q[o + 5] = Float.floatToRawIntBits(t[1]);
-            q[o + 6] = 0;
-            q[o + 7] = 0x7F << 8;
-        }
-        return q;
+        return GroundMath.upQuad(HEIGHT, rotation, u0, u1, v0, v1);
     }
 }

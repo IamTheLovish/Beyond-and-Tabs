@@ -11,7 +11,8 @@ import java.util.function.Predicate;
  * blocks' baked quads.
  * <ul>
  *   <li><b>Which blocks:</b> {@link #TABLE} - the block, the sprite its top draws (with the pack's _v2.._v6 variants),
- *   which client option switches it, and whether it also gets the floating clover layer (the lawn only).</li>
+ *   which client option switches it, and whether it also gets the floating clover and flower layers (the lawn
+ *   only).</li>
  *   <li><b>How big:</b> the art decides. A sheet is the sprites {@code <top>_g1 .. _g<N*N>} (row-major from the top
  *   left: i = 1 + column + row * N, as tools/gen_blocks.py and Athena's giant loader number them) and the pack ships 4,
  *   16 or 64 of them for a 2x2, 4x4 or 8x8 sheet; anything else (none, a missing cell, 9) leaves the block as it is,
@@ -37,7 +38,8 @@ final class GroundSheetRules {
 
     /**
      * One ground block: its registry path (namespace minecraft), the atlas path of the sprite its top draws, whether
-     * the lawn option ({@code lawn_sheet}) switches it rather than {@code ground_sheets}, and whether it gets the clover.
+     * the lawn option ({@code lawn_sheet}) switches it rather than {@code ground_sheets}, and whether it gets the
+     * floating layers (the clover and, round 64, the flowers: the lawn only).
      */
     record Entry(String block, String top, boolean lawn, boolean clover) {
     }
@@ -61,6 +63,7 @@ final class GroundSheetRules {
     /** The most slots (a variant's cell) of any top: what the model data carries. */
     static final int MAX_SLOTS = MAX_VARIANTS * MAX_CELLS;
 
+    private static final long SALT_VARIANT = 0x5EE7L;
 
     private GroundSheetRules() {
     }
@@ -79,7 +82,7 @@ final class GroundSheetRules {
     /** The atlas path of variant k's cell: {@code <top>_g<cell>} for variant 1 (round 62's names), else
      * {@code <top>_k<k>_g<cell>}. */
     static String variantSprite(String top, int variant, int cell) {
-        return "";   // STUB (round 64 red): the names follow in the code commit
+        return variant == 1 ? sheetSprite(top, cell) : top + "_k" + variant + "_g" + cell;
     }
 
     /** A sprite the sheet replaces: the block's top itself or a pack variant of it ({@code <top>_v<digits>}) - an
@@ -127,29 +130,53 @@ final class GroundSheetRules {
      * partial when it has some sprite but is not complete.
      */
     static Variants variants(String top, int n, Predicate<String> present) {
-        return new Variants(new int[0], new int[0]);   // STUB (round 64 red): nothing detected
+        if (n <= 0)
+            return new Variants(new int[0], new int[0]);
+        int[] complete = new int[MAX_VARIANTS];
+        int[] partial = new int[MAX_VARIANTS];
+        int nc = 0, np = 0;
+        complete[nc++] = 1;
+        for (int k = 2; k <= MAX_VARIANTS; k++) {
+            int count = 0;
+            boolean whole = true;
+            for (int c = 1; c <= MAX_CELLS + 1; c++) {
+                boolean has = present.test(variantSprite(top, k, c));
+                if (has)
+                    count++;
+                else if (c <= n * n)
+                    whole = false;
+            }
+            if (whole && count == n * n)
+                complete[nc++] = k;
+            else if (count > 0)
+                partial[np++] = k;
+        }
+        return new Variants(Arrays.copyOf(complete, nc), Arrays.copyOf(partial, np));
     }
 
     /** Which of k variants (0..k-1, an index into Variants.complete) the n x n square holding block (x, z) shows: a
      * hash of the square's coordinates, so every block of the square agrees and the squares are independent. */
     static int variantIndex(int x, int z, int n, int k) {
-        return 0;   // STUB (round 64 red): always variant 1, as round 63
+        if (k <= 1)
+            return 0;
+        long h = GroundMath.hash(Math.floorDiv(x, n), Math.floorDiv(z, n), SALT_VARIANT);
+        return (int) Long.remainderUnsigned(h, k);
     }
 
     /** The slot (1..k*n*n) of block (x, z) in a top with k variants of an n x n sheet: its variant's block of n*n
      * slots, then its cell - the same cell in every variant (no turn, no mirror). */
     static int slot(int x, int z, int n, int k) {
-        return 1;   // STUB (round 64 red)
+        return 1 + variantIndex(x, z, n, k) * n * n + (cell(x, z, n) - 1);
     }
 
     /** The cell (1..n*n) of a slot. */
     static int cellOfSlot(int slot, int n) {
-        return 1;   // STUB (round 64 red)
+        return 1 + (slot - 1) % (n * n);
     }
 
     /** The variant index (0..k-1) of a slot. */
     static int variantIndexOfSlot(int slot, int n) {
-        return 0;   // STUB (round 64 red)
+        return (slot - 1) / (n * n);
     }
 
     private static float clamp01(float t) {

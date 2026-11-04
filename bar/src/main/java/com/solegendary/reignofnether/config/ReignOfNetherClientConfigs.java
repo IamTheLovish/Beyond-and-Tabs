@@ -96,8 +96,10 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> LAWN_SHEET;
     // the other ground tops (dirt, coarse dirt, path, gravel, mud, podzol) as N x N-block sheets (environment/ground)
     public static final ForgeConfigSpec.ConfigValue<Boolean> GROUND_SHEETS;
-    // the floating clover carpet over the lawn (environment/ground/CloverLayer)
+    // the floating clover carpet over the lawn (environment/ground/FloatingLayer)
     public static final ForgeConfigSpec.ConfigValue<Boolean> CLOVER_LAYER;
+    // the untinted flower drifts over the lawn (environment/ground/FloatingLayer, FlowerLayerRules)
+    public static final ForgeConfigSpec.ConfigValue<Boolean> FLOWER_LAYER;
     // tree limbs swaying in the wind (environment/wind, design/branch_wind.md): 0 Off, 1 Near (within 60 blocks of the camera), 2 All
     public static final ForgeConfigSpec.ConfigValue<Integer> BRANCH_WIND;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
@@ -259,6 +261,8 @@ public class ReignOfNetherClientConfigs {
         GROUND_SHEETS = BUILDER.define("ground_sheets", true);
         BUILDER.comment("Clover layer: three grass blocks in four carry a low clover carpet floating just above the lawn (a pack with the grass_clover_layer_1..8 sprites). Built with the terrain (no per-frame cost); false = the bare lawn. Takes effect when the terrain is rebuilt (F3+A)");
         CLOVER_LAYER = BUILDER.define("clover_layer", true);
+        BUILDER.comment("Flower layer: white and yellow flower drifts on about 6 lawn blocks in 100, floating just above the clover and never biome-tinted (a pack with the grass_flower_layer_1..8 sprites). Built with the terrain (no per-frame cost); false = no flowers. Takes effect when the terrain is rebuilt (F3+A)");
+        FLOWER_LAYER = BUILDER.define("flower_layer", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
         BUILDER.comment("Living army (design/living_army.md): units breathe, shift their weight, fidget, lean into turns, rock on starts and stops and flinch from where a blow came from - realistic up close, a little larger from the RTS camera. false = the old motion. Client only.");
