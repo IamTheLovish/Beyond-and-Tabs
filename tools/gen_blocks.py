@@ -75,8 +75,12 @@ TARGETS = {
     # (k ~ 1.03), this world's tint ~ (0.56, 0.77, 0.35), so the target albedo mean is ~0.75 with a slight neutral-
     # magenta cast (1.07 / 1.0 / 1.02: it tempers the tint's green instead of adding yellow) - luma 0.677 -> 0.75, sat
     # 0.21 -> 0.08; the r50 calm speckle and own-seed variants kept
-    "grass_block_top":  dict(luma=0.75, std=0.160, sat=0.08, lf=0.3, ao=0.15, tilt=4.0, smooth=24, pore=40, soften=1.0,
-                             shoulder=0.82),   # r60 (tuft_meadow, lovish's pick of concept A): std 0.024 -> 0.160 ~
+    "grass_block_top":  dict(luma=0.62, std=0.212, sat=0.37, lf=0.3, ao=0.40, tilt=14.0, smooth=24, pore=40,
+                             soften=1.0, shoulder=0.95),   # r61 (blade_meadow, lovish's pick "A lush meadow", Nov 4):
+    # the painted lane colours / (tint x 1.1) measure luma 0.62, std 0.212 at the fit's mip, sat 0.37 - kept as they
+    # are (the colour IS the recipe now: a green-biased albedo, not a grey for the tint to colour); tilt 4 -> 14 and
+    # ao 0.15 -> 0.40 so the shader can model the blades and the gaps fall into real shadow (round 60's flat normals);
+    # shoulder 0.82 -> 0.95 (it held the lit tips under the RTS p95 0.50). Was r60 (tuft_meadow, lovish's pick of concept A): luma 0.75, sat 0.08, ao 0.15, tilt 4.0; std 0.024 -> 0.160 ~
     # concept A's own spread at the fit's mip (in game 0.068 vs the clover's flat 0.015); soften 2.4 -> 1.0 (one 128
     # texel: the tufts' lit flanks are the look, the 2.4 blur ate them)
     # r46 (eyes stack7: the sampler pads' rim - this face - was the darkest thing on screen at ~0.12 at 5000): the
@@ -5784,6 +5788,94 @@ def m_tuft_top(F, n):
     return dict(alb=alb, H=H, nxy=None)
 
 
+# ------------------------------------------------------------------ round 61: the lawn (lovish, Nov 4) -------------
+# lovish Nov 4 on round 60: "it needs more saturation it looks dull and lifeless. We want realistic organic, lush, depth,
+# shadows, intricate lines, I thought you were referencing things". He picked concept A "lush meadow" from the r61
+# concept sheet (02:40 ET; built through tools/texture_camera_sim.py at the RTS camera's own scale). Refs 2, 5, 8: dense
+# blades, deep self-shadow between clumps, each blade catching light. Round 60's tufts were soft domes with 2-texel tip
+# strokes (under a screen pixel at 32 texels per block: gone); here every tuft is a star of TAPERED BLADES 0.04-0.07
+# block wide at the base (1.3-2 screen px) and 0.1-0.3 block long, lit on the sun flank with a dark separation line on
+# the other, brighter and yellower towards the tip, over gaps in deep blue-green shade. The colours are painted as the
+# lit lane colour and divided by the biome tint (#6FA64A) x 1.1 to give the albedo, so tint x albedo lands on them.
+
+R61_TINT = np.array([0x6F, 0xA6, 0x4A], dtype=np.float64) / 255.0 * 1.1
+R61_SUN = np.array([-0.6, -0.8]) / 1.0      # light from the upper left (texture space, v down), as r60_lit
+
+
+def r61_blades(F, img, hgt, cols, per_block, blades, length, width, curve=0.25):
+    """`per_block` tufts, each `blades` (lo, hi) tapered blades radiating from its centre, `length` and `width` as
+    fractions of the block (per BLOCK, so the look is the same at 128 and 256). A blade is a chain of discs along its
+    spine; a disc only paints where it stands taller than what is there (blades rise towards the tip), so later and
+    taller blades lie on top. cols = (base, lit, tip, line) colours. Toroidal: every texture tiles."""
+    n = F.n
+    base, lit, tip, line = cols
+    for _ in range(int(per_block)):
+        cx, cy = F.rng.uniform(0, n, 2)
+        nb = int(F.rng.integers(blades[0], blades[1] + 1))
+        a0 = F.rng.uniform(0, 2 * math.pi)
+        tuft_h = F.rng.uniform(0.6, 1.0)
+        for b in range(nb):
+            ang = a0 + 2 * math.pi * b / nb + F.rng.normal(0, 0.35)
+            ln = F.rng.uniform(*length) * n
+            w0 = F.rng.uniform(*width) * n
+            bend = F.rng.normal(0, curve)
+            steps = int(ln / (1.5 * n / 256)) + 2
+            for s in range(steps):
+                t = s / (steps - 1)
+                a = ang + bend * t
+                px, py = cx + math.cos(a) * ln * t, cy + math.sin(a) * ln * t
+                r = max(0.7 * n / 256, w0 * (1 - t) ** 0.8 / 2)
+                h = tuft_h * (0.35 + 0.65 * t)
+                ri = int(math.ceil(r)) + 1
+                xs = np.arange(int(px) - ri, int(px) + ri + 1)
+                ys = np.arange(int(py) - ri, int(py) + ri + 1)
+                dx = (xs - px)[None, :]
+                dy = (ys - py)[:, None]
+                d = np.sqrt(dx * dx + dy * dy)
+                wy, wx = ys % n, xs % n
+                sub_h = hgt[np.ix_(wy, wx)]
+                m = (d <= r) & (h > sub_h)
+                if not m.any():
+                    continue
+                nx, ny = -math.sin(a), math.cos(a)                    # across the blade
+                facing = 1.0 if nx * R61_SUN[0] + ny * R61_SUN[1] > 0 else -1.0
+                k = np.clip(0.5 + 0.5 * (dx * nx + dy * ny) / max(r, 1e-3) * facing, 0, 1)   # 1 = the lit flank
+                c = base + (lit - base) * (k[..., None] ** 1.3)
+                c = c + (tip - c) * (t * t * 0.8)
+                c = np.where(((1 - k) > 0.85)[..., None], line, c)  # the dark line on the shade flank
+                sub = img[np.ix_(wy, wx)]
+                sub[m] = c[m]
+                img[np.ix_(wy, wx)] = sub
+                sub_h[m] = h
+                hgt[np.ix_(wy, wx)] = sub_h
+
+
+def blade_meadow(F, n):
+    """The lawn, round 61 (concept A "lush meadow", lovish's pick): an under-layer of short dense blades, then the
+    taller tufts over it; the bare ground between in deep blue-green shade. Returns (H, alb)."""
+    gap = np.array([0.07, 0.17, 0.12])
+    base = np.array([0.30, 0.54, 0.17])
+    lit = np.array([0.55, 0.78, 0.24])
+    tip = np.array([0.70, 0.86, 0.32])
+    line = np.array([0.11, 0.24, 0.09])
+    img = np.zeros((n, n, 3))
+    hgt = np.zeros((n, n))
+    r61_blades(F, img, hgt, (base * 0.8, lit * 0.8, tip * 0.8, line), 36, (5, 7), (0.10, 0.18), (0.039, 0.055))
+    r61_blades(F, img, hgt, (base, lit, tip, line), 16, (6, 8), (0.16, 0.30), (0.047, 0.070))
+    empty = hgt <= 0
+    img[empty] = gap
+    alb = np.clip(img / R61_TINT, 0, 1)
+    H = hgt - 0.25 * empty                                    # the gaps lie below the blades' roots
+    return H, alb
+
+
+def m_blade_top(F, n):
+    """The grass block's top, round 61: blade_meadow (its own normals from its height, nxy None); the variants are their
+    own seed inside the blob (OWN_SEED_VARIANTS), as round 60's were."""
+    H, alb = blade_meadow(F, n)
+    return dict(alb=alb, H=H, nxy=None)
+
+
 def r60_raise(L, n, k, centre):
     """The luma's forms round `centre` (fraction of the block) raised by k, seamlessly (frequency domain)."""
     f = np.fft.fftfreq(n)
@@ -5840,7 +5932,7 @@ def m_soil_coarse(F, n):
     return H, alb
 
 
-SCAN_BASES = {"stone": m_scan_stone, "dirt": m_soil_dirt, "grass_block_top": m_tuft_top}   # r60: tuft lawn + soil scan
+SCAN_BASES = {"stone": m_scan_stone, "dirt": m_soil_dirt, "grass_block_top": m_blade_top}   # r61: blade lawn (r60: tuft lawn) + soil scan
 # (basalt left the scans in r31: m_columnar)
 
 
