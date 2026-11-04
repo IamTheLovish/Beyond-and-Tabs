@@ -78,6 +78,8 @@ def build_variant(root, entries, our, rp, version, skip):
     files.append(("mods/beyondandtabs.pw.toml", metafile("Beyond and Tabs", our[0], "both", our[1], our[2]), True, False))
     files.append((f"resourcepacks/{slug(rp[0])}.pw.toml",
                   metafile("Beyond and Tabs - Realistic", rp[0], "client", rp[1], rp[2]), True, False))
+    # shipped mod configs (build_pack.PACK_CONFIGS): written once, a tester's own edits survive updates
+    files += [(f"config/{name}", text, False, True) for name, text in build_pack.PACK_CONFIGS.items()]
     # options.txt is only written when the tester has none yet (preserve): it switches our resource pack on once.
     options = (f"version:{MC_DATA_VERSION}\n"
                f"resourcePacks:[\"vanilla\",\"file/{rp[0]}\"]\n")
