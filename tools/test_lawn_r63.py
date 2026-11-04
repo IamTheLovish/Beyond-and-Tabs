@@ -19,7 +19,8 @@ B 0.827 - the biome-tint pull that is the shader lane's to fix). They sit beside
 - the grain is FINE, 61b's scale not 62's: more luma variance under 0.2 block than at 0.25-0.6 block
 - saturation >= 0.58; L >= 0.34 under our gain (r62 in game 0.343; a white albedo under this gain is 0.50, and the
   cool shade between the leaves and the worn soil are what the brief asked for - L 0.38+ waits on the shader fix)
-- worn soil 1-8% of the mip in patches, not specks; flower specks 2+ screen px, the brightest thing on the sheet
+- worn soil 0.3-8% of the mip in patches, not specks (1% until lovish's "D, and lower both floors", Nov 4 ~17:05
+  ET); flower specks 2+ screen px, the brightest thing on the sheet
 and the clover layer sprites (grass_clover_layer_1..8, a floating cutout plane another lane draws): 128 x 128 RGBA,
 10-25% opaque, pale albedo (the biome tint makes them bright green), nothing near-black.
 
@@ -137,13 +138,17 @@ class LawnSheetRound63Test(unittest.TestCase):
         self.assertGreaterEqual(m["L"], 0.34)
 
     def test_worn_soil_patches(self):
-        """worn ground (brown-ish: hue under 80 deg at the mip, before the gain) 1-8% of the area - the clover creeps
-        over the patch cores, so a mip pixel of worn soil is mostly a mix - in patches, not specks: the biggest
-        4-connected piece 32+ mip px (0.03 block^2), none over 2 x 2 blocks (4096 px)."""
+        """worn ground (brown-ish: hue under 80 deg at the mip, before the gain) 0.3-8% of the area - the clover
+        creeps over the patch cores, so a mip pixel of worn soil is mostly a mix - in patches, not specks: the biggest
+        4-connected piece 32+ mip px (0.03 block^2), none over 2 x 2 blocks (4096 px). The floor was 1% (round 63,
+        set before the build); round 64's blind critic read the soil as "scorch marks / droppings" (hard-edged,
+        near-black brown, evenly scattered) and lovish said "The grass looks blotchy" (Nov 4 16:53 ET); r65's
+        candidate A halves the scuffs, lightens them ~30% and feathers them - the lighter ones no longer count as
+        soil here (0.4%) - and he chose "D, and lower both floors" (~17:05 ET): floor 0.3% by his choice."""
         f = field(gain=False)
         soil = (hue_deg(f) < 80) & (sim.luma(f) < 0.35)
         share = float(soil.mean())
-        self.assertGreaterEqual(share, 0.01)
+        self.assertGreaterEqual(share, 0.003)
         self.assertLessEqual(share, 0.08)
         sizes = components(soil)
         self.assertGreaterEqual(max(sizes), 32)
