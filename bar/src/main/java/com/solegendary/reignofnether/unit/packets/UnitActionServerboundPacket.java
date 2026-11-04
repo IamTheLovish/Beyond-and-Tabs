@@ -148,6 +148,13 @@ public class UnitActionServerboundPacket {
      * (CommandQueues.issue): a plain or Ctrl order takes effect right here, in the tick the packet is handled.
      * Returns false when the order is refused outright.
      */
+    /** STUB (the red for UnitActionFogGameTests): the overload's signature, the rule not applied yet. */
+    public static boolean accept(ServerPlayer player, String ownerName, UnitAction action, int unitId, int[] unitIds,
+                                 BlockPos preselectedBlockPos, BlockPos selectedBuildingPos, QueueMode queueMode,
+                                 java.util.function.BiPredicate<ServerPlayer, net.minecraft.world.entity.Entity> seenBySender) {
+        return accept(player, ownerName, action, unitId, unitIds, preselectedBlockPos, selectedBuildingPos, queueMode);
+    }
+
     public static boolean accept(ServerPlayer player, String ownerName, UnitAction action, int unitId, int[] unitIds,
                                  BlockPos preselectedBlockPos, BlockPos selectedBuildingPos, QueueMode queueMode) {
         if (player == null || !PacketAuth.mayActFor(player, ownerName)) {
