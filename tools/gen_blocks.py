@@ -145,12 +145,15 @@ TARGETS = {
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
     # the _s blue CODE: 65-255 = subsurface scattering (light through the leaf under a shader pack)
     # round 18: leaves' tilt 18 -> 12 (every leaf edge drew a dark rim under shaders)
-    "oak_leaves":       dict(luma=0.55, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "birch_leaves":     dict(luma=0.58, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    # Oct 29 (claude/environment-palette-oct29.md item 3): oak 0.55 -> 0.74, dark oak 0.50 -> 0.68, birch 0.58 -> 0.76 (it
+    # stays the lightest). From the RTS camera the crowns were near-black masses (luma 0.12-0.15, r54) with no room
+    # for modelling; the band is 0.18-0.26, at least 0.08 under the lawn so the canopy still reads as a mass.
+    "oak_leaves":       dict(luma=0.74, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "birch_leaves":     dict(luma=0.76, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
     "spruce_leaves":    dict(luma=0.48, std=0.085, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
     "acacia_leaves":    dict(luma=0.55, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
     "jungle_leaves":    dict(luma=0.52, std=0.095, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
-    "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
+    "dark_oak_leaves":  dict(luma=0.68, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
     "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.26, tilt=24.0, smooth=76, pore=10),   # r31: pink-grey, rust blooms
