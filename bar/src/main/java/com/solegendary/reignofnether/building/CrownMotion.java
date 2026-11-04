@@ -200,8 +200,11 @@ public final class CrownMotion {
     /** Lanterns swing at most this far (degrees) in the strongest wind, with this pendulum period. */
     public static final float LANTERN_MAX_DEG = 12f;
     public static final float LANTERN_PERIOD_TICKS = 44f;
+    /** The chain's links (cells) between the bough and the lantern: the reference's "long chains" drop the lantern
+     *  below the crown's rim, where the RTS camera sees it (one link hid it under the rim: eyes run 41813334313). */
+    public static final int LANTERN_CHAIN = 2;
     /** Cells under the hang point that must be open: the chain, the lantern, and room to swing. */
-    public static final int LANTERN_CLEAR = 3;
+    public static final int LANTERN_CLEAR = LANTERN_CHAIN + 2;
 
     /** How many lanterns a crown of this radius carries: none under a small crown, one per 2 blocks, at most 6. */
     public static int lanternCount(float radius) {

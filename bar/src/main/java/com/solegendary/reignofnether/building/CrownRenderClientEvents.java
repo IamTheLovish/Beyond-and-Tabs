@@ -144,7 +144,7 @@ public class CrownRenderClientEvents {
     private static final ArrayList<RenderType> USED = new ArrayList<>();
 
     private static boolean disabled = false, firstDrawLogged = false;
-    // eyes tours only: a [Crowns] timing line a minute
+    // eyes tours only: a [Crowns] timing line every 20 s
     private static long nanosTotal = 0, nanosPeak = 0, timingFrom = 0;
     private static int timedFrames = 0, vertsPeak = 0, treesPeak = 0;
 
@@ -380,6 +380,22 @@ public class CrownRenderClientEvents {
         }
     }
 
+    private static boolean completedLogged = false;
+
+    /**
+     * Once a session: what a built crown's first capture holds - proof in a log (an eyes tour's) that the cells and
+     * the lanterns were really captured, not only that the renderer ran.
+     */
+    private static boolean log(Tree t, String when, boolean done) {
+        if (done)
+            return true;
+        ReignOfNether.LOGGER.info("[Crowns] {} {}: {} of {} leaf cells standing, {} crown vertices, {} lanterns ({} vertices), "
+                + "biggest crown sway {} block", when, t.structure, t.standingCount, t.cx.length,
+            t.mesh == null ? 0 : t.mesh.vertexCount, t.lanterns.size(),
+            t.lanternMesh == null ? 0 : t.lanternMesh.vertexCount, t.sway.length == 0 ? 0 : t.sway[0]);
+        return true;
+    }
+
     private static void petals(Tree t) {
         if (t.standingCount == 0)
             return;
@@ -474,6 +490,8 @@ public class CrownRenderClientEvents {
         captureLanterns(t, level, dispatcher);
         t.dirty = false;
         t.capturedAt = now;
+        if (t.built)
+            completedLogged = log(t, "built crown captured:", completedLogged);
     }
 
     // the lanterns' look: a vanilla hanging lantern on a chain, its light purple-pink and fullbright (the reference's
@@ -506,8 +524,8 @@ public class CrownRenderClientEvents {
             phase[l] = (float) CrownMotion.flutterPhase(h[0], h[1], h[2]) * 7f;
             if (!level.getBlockState(MUT.set(h[0], h[1], h[2])).is(net.minecraft.tags.BlockTags.LEAVES))
                 continue;                       // its bough is not there (yet, or any more): no lantern
-            for (int k = 1; k <= 2; k++) {
-                BlockState state = k == 1 ? CHAIN : LANTERN;
+            for (int k = 1; k <= CrownMotion.LANTERN_CHAIN + 1; k++) {
+                BlockState state = k <= CrownMotion.LANTERN_CHAIN ? CHAIN : LANTERN;
                 BlockPos pos = MUT.set(h[0], h[1] - k, h[2]).immutable();
                 BakedModel model = dispatcher.getBlockModel(state);
                 long seed = state.getSeed(pos);
@@ -783,7 +801,7 @@ public class CrownRenderClientEvents {
         }
     }
 
-    /** Eyes tours: one line a minute with what the crowns cost on the render thread. */
+    /** Eyes tours: one line every 20 s with what the crowns cost on the render thread. */
     private static void timing(long nanos, int verts, int trees) {
         nanosTotal += nanos;
         nanosPeak = Math.max(nanosPeak, nanos);
@@ -793,7 +811,7 @@ public class CrownRenderClientEvents {
         long ms = System.currentTimeMillis();
         if (timingFrom == 0)
             timingFrom = ms;
-        if (ms - timingFrom < 60_000)
+        if (ms - timingFrom < 20_000)           // every 20 s: an eyes work scene lasts ~45 s
             return;
         ReignOfNether.LOGGER.info(String.format("[Crowns] timing: %.3f ms/frame on average, %.3f peak, up to %d crowned "
                 + "buildings and %d vertices a frame, %d frames", nanosTotal / 1e6 / timedFrames, nanosPeak / 1e6, treesPeak,
