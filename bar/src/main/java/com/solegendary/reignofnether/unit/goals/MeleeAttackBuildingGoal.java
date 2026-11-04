@@ -69,6 +69,15 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
     // move-target refresh swapped cells mid-attack, and a Marauder sent round the corner left reach for 20 ticks (its
     // blow timer stops out of reach) - the converter still read 4.2 s (flake-stress 41738191824; 41739474107).
     private static final Map<BuildingPlacement, Map<Integer, BlockPos>> ATTACK_CELLS = new WeakHashMap<>();
+    // Cells of this target this unit could not reach (its repath came back to the same end node while out of reach).
+    // A cell is picked by distance only, so a walled-off one (or one other units stand round) used to be kept while the
+    // repath back-off grew to 5 s: one Marauder of six never came in reach of a converter (flake-stress 41742015436).
+    // Such a cell is given up for the next nearest, with the ring cells within 2 of it: what blocked the unit (bodies
+    // or a wall across its way) blocks those as well, and a unit only learns it is stuck when its navigation stops
+    // (~5 s without progress), so giving them up one at a time took a face's worth of stops. Cleared with a new order;
+    // bounded by the ring round the building.
+    private final java.util.Set<BlockPos> unreachableCells = new java.util.HashSet<>();
+    private int cellsGivenUp = 0;
 
     public MeleeAttackBuildingGoal(Mob mob) {
         super(mob, true, 0);
@@ -110,7 +119,10 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
                     this.start();
                     BlockPos newFinalNode = getFinalNodePos();
                     if (oldFinalNode != null && oldFinalNode.equals(newFinalNode)) {
-                        currentMeleeRecalcCooldown = Math.min(currentMeleeRecalcCooldown * 2, MELEE_RECALC_COOLDOWN_CAP);
+                        if (giveUpCell())
+                            currentMeleeRecalcCooldown = MELEE_RECALC_COOLDOWN_MAX;
+                        else
+                            currentMeleeRecalcCooldown = Math.min(currentMeleeRecalcCooldown * 2, MELEE_RECALC_COOLDOWN_CAP);
                     } else {
                         currentMeleeRecalcCooldown = MELEE_RECALC_COOLDOWN_MAX;
                     }
@@ -217,14 +229,38 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
                 if (Math.max(Math.abs(e.getValue().getX() - p.getX()), Math.abs(e.getValue().getZ() - p.getZ())) < need)
                     return false;
             }
-            return true;
+            return !unreachableCells.contains(p);
         };
         BlockPos cell = mine != null && clear.test(mine) ? mine
-            : others.isEmpty() ? null : target.getClosestGroundPos(from, 1, false, clear);
+            : others.isEmpty() && unreachableCells.isEmpty() ? null : target.getClosestGroundPos(from, 1, false, clear);
+        if (cell == null && !unreachableCells.isEmpty())
+            cell = target.getClosestGroundPos(from, 1, false, p -> !unreachableCells.contains(p));
         if (cell == null)
             cell = target.getClosestGroundPos(from, 1);
         cells.put(mob.getId(), cell);
         return cell;
+    }
+
+    /** Gives up the cell this unit could not reach and claims the next; false (and keeps the back-off) with none left. */
+    private boolean giveUpCell() {
+        if (mob.level().isClientSide() || buildingTarget == null || cachedMoveTarget == null)
+            return false;
+        BlockPos lost = cachedMoveTarget;
+        for (int dx = -2; dx <= 2; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                unreachableCells.add(lost.offset(dx, 0, dz));
+        releaseCell();
+        cachedMoveTarget = null;
+        calcMoveTarget();
+        if (moveTarget == null || unreachableCells.contains(moveTarget))
+            return false;
+        cellsGivenUp++;
+        return true;
+    }
+
+    /** How many cells this unit has given up as unreachable since its last order (for the tests). */
+    public int getCellsGivenUp() {
+        return cellsGivenUp;
     }
 
     private void releaseCell() {
@@ -247,6 +283,8 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
             currentMeleeRecalcCooldown = MELEE_RECALC_COOLDOWN_MAX;
             cachedMoveTarget = null;   // a new order always takes a fresh ground cell
             releaseCell();
+            unreachableCells.clear();
+            cellsGivenUp = 0;
             if (this.mob.level().isClientSide()) {
                 BuildingPlacement b = BuildingUtils.findBuilding(this.mob.level().isClientSide(), blockPos);
                 if (b != null && b.isAttackable()) {
