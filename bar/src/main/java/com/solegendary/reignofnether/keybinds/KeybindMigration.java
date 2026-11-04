@@ -29,7 +29,7 @@ import java.util.function.ToIntFunction;
 public final class KeybindMigration {
 
     /** The key layout the saved bindings are moved to; stored in the client config as keybind_layout. */
-    public static final int LAYOUT_VERSION = 3;
+    public static final int LAYOUT_VERSION = 4;
 
     /** What {@code savedKey} returns for a binding that must not move: a modifier combo, a mouse button, not found. */
     public static final int CUSTOM = Integer.MIN_VALUE;
@@ -44,7 +44,7 @@ public final class KeybindMigration {
     public record Move(String binding, int from, int to) { }
 
     static final List<Stale> STALE = List.of(
-        // (Attack A -> X, layout 1, is gone with the Attack binding itself: see CARRY below, layout 3.)
+        // (Attack A -> X, layout 1, is gone with the Attack binding itself: see CARRY below, layout 4.)
         // Oct 23 to Oct 26: the commander and idle T2 builder buttons shipped on End / Home, which the production
         // monitor (Home) and pause unit production (End) now use. Their chords are Ctrl+C / Ctrl+Shift+B (ChordKeys).
         new Stale(2, "key.reignofnether.select_commander", GLFW.GLFW_KEY_END, "Select commander End -> Ctrl+C"),
@@ -63,9 +63,13 @@ public final class KeybindMigration {
         new Stale(1, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_Z, "Build slot 8 Z -> . (Z is ability slot 2)"),
         new Stale(1, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_X, "Build slot 9 X -> , (X is Attack)"),
         new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)"),
-        // Oct 21 (b6e85bad): Select all military units moved K -> "-" because K is build slot 7. Layouts 1 and 2 forgot
+        // Oct 11 (c4d0b47) to Nov 3: Stop was S, sharing the key with pan-down by the tap/hold rule. Nick: a short tap
+        // of S while panning stopped the selected workers. Stop is now the Ctrl+S chord, its own key unbound; listed after its layout-1 row so
+        // history() names this, the newest move.
+        new Stale(3, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> Ctrl+S (a tap of S while panning stopped workers)"),
+        // Oct 21 (b6e85bad): Select all military units moved K -> "-" because K is build slot 7. Layouts 1 to 3 forgot
         // the row, so every install that saved K kept it, and K picked the building instead (Lane C tester, TESTER-ASKS 16).
-        new Stale(3, "key.reignofnether.select_army", GLFW.GLFW_KEY_K, "Select army K -> - (K is build slot 7)")
+        new Stale(4, "key.reignofnether.select_army", GLFW.GLFW_KEY_K, "Select army K -> - (K is build slot 7)")
     );
 
     /**
@@ -78,7 +82,7 @@ public final class KeybindMigration {
     public record Carry(int version, String retired, String successor, List<Integer> oldDefaults, String history) { }
 
     static final List<Carry> CARRY = List.of(
-        new Carry(3, "key.reignofnether.attack", "key.reignofnether.fight", List.of(GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_X),
+        new Carry(4, "key.reignofnether.attack", "key.reignofnether.fight", List.of(GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_X),
             "Attack merged into Fight: your Attack key now starts Fight / Attack-move")
     );
 
@@ -129,11 +133,17 @@ public final class KeybindMigration {
         return moves;
     }
 
-    /** The one-line history of a move, for the log and the toast ("Attack A -> X, ..."). */
+    /**
+     * The one-line history of a binding's newest move, for the log and the toast ("Attack A -> X, ..."). A binding that
+     * moved twice (Stop: Space -> S -> unbound) has a row per layout; the highest layout is the move being applied.
+     */
     public static String history(String binding) {
+        Stale newest = null;
         for (Stale row : STALE)
-            if (row.binding().equals(binding))
-                return row.history();
+            if (row.binding().equals(binding) && (newest == null || row.version() > newest.version()))
+                newest = row;
+        if (newest != null)
+            return newest.history();
         for (Carry row : CARRY)
             if (row.successor().equals(binding))
                 return row.history();

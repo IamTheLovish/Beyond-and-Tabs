@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class KeybindMigrationTest {
 
     private static final String ATTACK = "key.reignofnether.attack";
+    private static final String STOP = "key.reignofnether.stop";
 
     /** A player's bindings: everything on its default, except what the test overrides. */
     private static int saved(Map<String, Integer> overrides, String name) {
@@ -50,11 +51,26 @@ class KeybindMigrationTest {
     void anAttackKeyThePlayerChoseNowStartsFight() {
         List<KeybindMigration.Move> moves = plan(2, Map.of(ATTACK, GLFW.GLFW_KEY_Z));
         assertEquals(List.of(new KeybindMigration.Move(FIGHT, GLFW.GLFW_KEY_F, GLFW.GLFW_KEY_Z)), moves);
+        assertTrue(KeybindMigration.history(FIGHT).contains("Attack merged into Fight"), KeybindMigration.history(FIGHT));
     }
 
     @Test
     void aFightKeyThePlayerAlreadyChoseIsLeftAlone() {
         assertEquals(List.of(), plan(2, Map.of(ATTACK, GLFW.GLFW_KEY_Z, FIGHT, GLFW.GLFW_KEY_R)));
+    }
+
+    @Test
+    void stopSavedOnTheOldDefaultSIsUnbound() {
+        // Nov 3 (Nick): a short tap of S while WASD-panning fired Stop on the selected workers. Every install of the
+        // Oct 11 - Nov 3 builds saved Stop on S, so the new unbound default (Ctrl+S runs it) needs this move to reach them.
+        List<KeybindMigration.Move> moves = plan(2, Map.of(STOP, GLFW.GLFW_KEY_S));
+        assertEquals(List.of(new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_UNKNOWN)), moves);
+        assertTrue(KeybindMigration.history(STOP).contains("Ctrl+S"), KeybindMigration.history(STOP));
+    }
+
+    @Test
+    void stopThePlayerPutOnAnotherKeyIsLeftAlone() {
+        assertEquals(List.of(), plan(2, Map.of(STOP, GLFW.GLFW_KEY_K)));
     }
 
     @Test
@@ -66,7 +82,7 @@ class KeybindMigrationTest {
 
     @Test
     void anAlreadyMigratedInstallIsNotCarriedAgain() {
-        // layout 3 ran once; a later launch must not move Fight again
+        // layout 4 ran once; a later launch must not move Fight again
         assertEquals(List.of(), plan(KeybindMigration.LAYOUT_VERSION, Map.of(ATTACK, GLFW.GLFW_KEY_Z)));
     }
 
@@ -78,12 +94,13 @@ class KeybindMigrationTest {
 
     @Test
     void anInstallFromTheFirstWasdBuildsGetsEveryStaleKeyBack() {
-        // an options.txt written by the Oct 8-11 builds / Reign of Nether itself: every old default saved
+        // an options.txt written by the Oct 8-11 builds / Reign of Nether itself: every old default saved. A binding
+        // that moved twice (Stop: Space -> S -> unbound) was saved on its OLDEST key, the first row that names it.
         Map<String, Integer> old = new HashMap<>();
         for (KeybindMigration.Stale row : KeybindMigration.STALE)
-            old.put(row.binding(), row.oldKey());
+            old.putIfAbsent(row.binding(), row.oldKey());
         List<KeybindMigration.Move> moves = plan(0, old);
-        assertEquals(KeybindMigration.STALE.size(), moves.size());
+        assertEquals(old.size(), moves.size(), moves.toString());
         // applying them leaves every binding on its default and nothing on a camera key it does not ship on
         Map<String, Integer> after = new HashMap<>(old);
         for (KeybindMigration.Move m : moves)
