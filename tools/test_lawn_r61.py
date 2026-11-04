@@ -22,8 +22,8 @@ _CACHE = {}
 
 def lawn_at_rts():
     if "m" not in _CACHE:
-        albs = [gen_blocks.scan_textures("grass_block_top", i, 256)["alb"] for i in range(3)]
-        field = sim.tile(albs, 10, 32, sim.hex_rgb(sim.LAWN_TINT), seed=3)
+        albs = [gen_blocks.scan_textures("grass_block_top", i, 256)["alb"] for i in range(6)]
+        field = sim.tile(albs, 10, 32, sim.hex_rgb(sim.LAWN_TINT), seed=3, rotate=False)   # the blockstate turns no variant
         _CACHE["m"] = sim.measure(field)
     return _CACHE["m"]
 
@@ -42,12 +42,30 @@ class LawnRound61Test(unittest.TestCase):
         self.assertGreaterEqual(lawn_at_rts()["p95"], 0.50)
 
     def test_forms_the_camera_keeps(self):
-        """'intricate lines': structure at 1/8-1/2 block (meso) about twice round 60's 0.0166."""
-        self.assertGreaterEqual(lawn_at_rts()["meso"], 0.028)
+        """'intricate lines': structure at 1/8-1/2 block (meso) well past round 60's 0.0166. Retired 0.028 -> 0.020
+        (Nov 4, same session that set it): the first r61 build met 0.031 only because a block-scale lattice (see
+        test_no_lattice_at_the_block) fed the meso band; with the lattice gone the tufts' own structure is ~0.021."""
+        self.assertGreaterEqual(lawn_at_rts()["meso"], 0.020)
+
+    def test_no_block_scale_blotches(self):
+        """the block-scale unevenness that drew the lattice stays out (macro; the latticed build measured 0.019)."""
+        self.assertLessEqual(lawn_at_rts()["macro"], 0.010)
 
     def test_not_a_dark_lawn(self):
         """lush, not murky: the mean stays near round 60's (0.41), never a dark mat."""
         self.assertGreaterEqual(lawn_at_rts()["L"], 0.34)
+
+    def test_no_lattice_at_the_block(self):
+        """Eyes 41793444430 (round 61, our shader): a diamond lattice on every block - the base tile's shared border
+        ring (every variant keeps it, so the blocks join seamlessly) came out darker than its middle by chance
+        (luma 0.55 vs 0.69 at the RTS mip), so each block drew a dark frame round a light lozenge. The border and the
+        middle of every variant must be the same value at the RTS mip."""
+        P = gen_blocks.scan_textures
+        for i in range(6):
+            L = sim.box_mip(P("grass_block_top", i, 256)["alb"], 32) @ [0.2126, 0.7152, 0.0722]
+            ring = list(L[:4].ravel()) + list(L[-4:].ravel()) + list(L[4:-4, :4].ravel()) + list(L[4:-4, -4:].ravel())
+            centre = L[8:24, 8:24].mean()
+            self.assertLess(abs(centre - sum(ring) / len(ring)), 0.03, "variant %d" % i)
 
     def test_normals_model_the_tufts(self):
         """the handoff's diagnosis: tilt 4 deg is flat normals - our shader cannot model the tufts; AO 0.15 too low."""

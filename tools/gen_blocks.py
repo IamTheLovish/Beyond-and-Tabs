@@ -5802,16 +5802,20 @@ R61_TINT = np.array([0x6F, 0xA6, 0x4A], dtype=np.float64) / 255.0 * 1.1
 R61_SUN = np.array([-0.6, -0.8]) / 1.0      # light from the upper left (texture space, v down), as r60_lit
 
 
-def r61_blades(F, img, hgt, cols, per_block, blades, length, width, curve=0.25):
+def r61_blades(F, img, hgt, cols, per_block, blades, length, width, curve=0.25, keep=None):
     """`per_block` tufts, each `blades` (lo, hi) tapered blades radiating from its centre, `length` and `width` as
     fractions of the block (per BLOCK, so the look is the same at 128 and 256). A blade is a chain of discs along its
     spine; a disc only paints where it stands taller than what is there (blades rise towards the tip), so later and
     taller blades lie on top. cols = (base, lit, tip, line) colours. Toroidal: every texture tiles."""
     n = F.n
     base, lit, tip, line = cols
-    for _ in range(int(per_block)):
-        cx, cy = F.rng.uniform(0, n, 2)
+    g = max(1, int(round(math.sqrt(per_block))))            # a jittered grid, not free random: one tuft per cell, so
+    for k in range(int(per_block)):                          # every part of the block holds as many (no lattice)
+        cx = ((k % g) + F.rng.uniform(0, 1)) * n / g
+        cy = (((k // g) % g) + F.rng.uniform(0, 1)) * n / g
         nb = int(F.rng.integers(blades[0], blades[1] + 1))
+        if keep is not None and not keep[int(cy) % n, int(cx) % n]:
+            continue
         a0 = F.rng.uniform(0, 2 * math.pi)
         tuft_h = F.rng.uniform(0.6, 1.0)
         for b in range(nb):
@@ -5860,11 +5864,23 @@ def blade_meadow(F, n):
     line = np.array([0.11, 0.24, 0.09])
     img = np.zeros((n, n, 3))
     hgt = np.zeros((n, n))
-    r61_blades(F, img, hgt, (base * 0.8, lit * 0.8, tip * 0.8, line), 36, (5, 7), (0.10, 0.18), (0.039, 0.055))
+    # hollows ~1/6-1/3 block across where the low blades thin out: the clumps stand round shaded dips (Ref 8's deep
+    # self-shadow between clumps) - structure at the scale the RTS camera keeps, well above the lattice's one cycle
+    hollow = r60_band(F, 1 / 6, 1 / 3) > 0.2
+    r61_blades(F, img, hgt, (base * 0.8, lit * 0.8, tip * 0.8, line), 49, (5, 7), (0.10, 0.18), (0.039, 0.055),
+               keep=~hollow)
     r61_blades(F, img, hgt, (base, lit, tip, line), 16, (6, 8), (0.16, 0.30), (0.047, 0.070))
     empty = hgt <= 0
     img[empty] = gap
     alb = np.clip(img / R61_TINT, 0, 1)
+    # eyes 41793444430: ~50 tufts per block leave the block-scale value uneven by chance (the base tile's border ring
+    # 0.55, its middle 0.69 at the RTS mip); every variant keeps the base's ring (seamless joins), so every block drew a
+    # dark frame round a light lozenge - a lattice. The tufts sit on a jittered grid (r61_blades), and what block-scale
+    # unevenness is left (one cycle per tile) is divided out as a gain - never the tufts' own 1/8-1/4 block
+    L = alb @ LUMA
+    r = np.sqrt(F.fx ** 2 + F.fy ** 2)
+    low = np.real(np.fft.ifft2(np.fft.fft2(L) * ((r > 0) & (r <= 1.5))))
+    alb = np.clip(alb * (L.mean() / np.maximum(L.mean() + low, 0.05))[..., None], 0, 1)   # a gain: the gaps stay deep
     H = hgt - 0.25 * empty                                    # the gaps lie below the blades' roots
     return H, alb
 
