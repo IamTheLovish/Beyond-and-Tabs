@@ -59,6 +59,19 @@ class KeybindMigrationTest {
     }
 
     @Test
+    void aLayoutThreeInstallStillGetsTheFourCameraAnchors() {
+        // main shipped layout 3 for Stop -> Ctrl+S (#487) before this PR landed, so an install already at layout 3
+        // with the anchors saved unbound must still receive F5-F8: the anchor rows need a layout above 3.
+        Map<String, Integer> saved = new HashMap<>();
+        for (int i = 1; i <= 4; i++)
+            saved.put("key.reignofnether.camera_anchor_" + i, GLFW.GLFW_KEY_UNKNOWN);
+        List<KeybindMigration.Move> moves = plan(3, saved);
+        assertEquals(4, moves.size(), moves.toString());
+        for (KeybindMigration.Move m : moves)
+            assertTrue(m.binding().startsWith("key.reignofnether.camera_anchor_"), m.toString());
+    }
+
+    @Test
     void aKeyThePlayerChoseIsLeftAlone() {
         // another letter, unbound, a modifier combination / mouse button (the glue passes CUSTOM for those)
         for (int key : new int[] {GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_F, -1, KeybindMigration.CUSTOM})
