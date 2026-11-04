@@ -19,11 +19,17 @@ public class ParticleUtil {
 
     private static final Random RANDOM = new Random();
 
+    // N5 burst cap (ParticleBudget): one budget per side - in single player the client and the integrated server
+    // call this from different threads, and the server side also saves one packet per particle
+    private static final ParticleBudget CLIENT_BUDGET = new ParticleBudget();
+    private static final ParticleBudget SERVER_BUDGET = new ParticleBudget();
+
     public static void addParticleExplosion(SimpleParticleType particleType, int amount, Level level, Vec3 pos) {
         addParticleExplosion(particleType, amount, level, pos, 0.1f);
     }
 
     public static void addParticleExplosion(SimpleParticleType particleType, int amount, Level level, Vec3 pos, double velocityScale) {
+        amount = (level.isClientSide() ? CLIENT_BUDGET : SERVER_BUDGET).grant(level.getGameTime(), pos.x, pos.z, amount);
         RandomSource rand = RandomSource.create();
         for (int j = 0; j < amount; ++j) {
             double d0 = rand.nextGaussian() * velocityScale;
