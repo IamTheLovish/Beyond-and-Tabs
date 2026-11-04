@@ -38,7 +38,8 @@ import java.util.List;
  * acceptance criterion, all un-hosted and inside the test's own arena: trained from slot 5 (T) of the Abyssal Shipyard
  * as its own type and capped one alive beside the Leviathan; Three Heads pick three different targets, air included,
  * and a severed head silences one; Brine Mist hides friends and spoils enemy shots for 6 s; Regrow heals 3 HP/s and
- * speeds it in water and on a tidepool, and not on dry land; the numbers keep the T3 rules.
+ * speeds it on a tidepool, and neither in real water (the grid rule, slice 1a: only a tile counts) nor on dry land;
+ * the numbers keep the T3 rules.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -306,7 +307,7 @@ public class AbyssalHydraGameTests {
     }
 
     /**
-     * AC-5 (Regrow): in real water and on a tidepool the Tides pass heals the Hydra 3 HP/s (1.5 per 10-tick pass) and gives
+     * AC-5 (Regrow): on a tidepool the Tides pass heals the Hydra 3 HP/s (1.5 per 10-tick pass) and gives
      * it the wet speed bonus (more than any plain Tidewrought unit's); on dry land neither; it cannot drown.
      */
     @GameTest(template = ARENA, timeoutTicks = 80)
@@ -341,17 +342,21 @@ public class AbyssalHydraGameTests {
             float perPass = TidesServerEvents.REGEN_PER_PASS + AbyssalHydraUnit.WET_REGEN_BONUS;
             if (Math.abs(perPass * 2f - 3f) > 0.01f)
                 problems.add("the wet regen is " + perPass * 2f + " HP/s, expected 3");
-            for (var u : List.of(inWater, onPool))
-                if (Math.abs(u.getHealth() - (u.getMaxHealth() - 100 + perPass)) > 0.05f)
-                    problems.add("a Hydra in the " + (u == inWater ? "water" : "pool") + " healed "
-                        + (u.getHealth() - (u.getMaxHealth() - 100)) + " in one pass, expected " + perPass);
+            if (Math.abs(onPool.getHealth() - (onPool.getMaxHealth() - 100 + perPass)) > 0.05f)
+                problems.add("a Hydra on the pool healed " + (onPool.getHealth() - (onPool.getMaxHealth() - 100))
+                    + " in one pass, expected " + perPass);
+            // slice 1a (#380): only a grid tile counts, real water gives nothing (TidesServerEvents.isWet, GridGameTests)
+            if (inWater.getHealth() != base)
+                problems.add("a Hydra in real water regrew: only a tidepool counts");
             if (dry.getHealth() != dry.getMaxHealth() - 100)
                 problems.add("a Hydra on dry land regrew");
-            if (!TidesServerEvents.hasSpeedBonus(inWater) || !TidesServerEvents.hasSpeedBonus(onPool))
-                problems.add("a Hydra in the water has no speed modifier");
+            if (!TidesServerEvents.hasSpeedBonus(onPool))
+                problems.add("a Hydra on the pool has no speed modifier");
+            if (TidesServerEvents.hasSpeedBonus(inWater))
+                problems.add("a Hydra in real water got the wet speed: only a tidepool counts");
             if (TidesServerEvents.hasSpeedBonus(dry))
                 problems.add("a Hydra on dry land got the wet speed");
-            double wet = inWater.getAttributeValue(Attributes.MOVEMENT_SPEED);
+            double wet = onPool.getAttributeValue(Attributes.MOVEMENT_SPEED);
             double expect = plain * (1 + TidesServerEvents.SPEED_BONUS + AbyssalHydraUnit.WET_SPEED_BONUS);
             if (Math.abs(wet - expect) > 0.005)
                 problems.add("wet speed is " + wet + ", expected " + expect);
@@ -361,7 +366,7 @@ public class AbyssalHydraGameTests {
                 problems.add("the Hydra drowns");
             if (inWater.hurt(level.damageSources().drown(), 50f))
                 problems.add("drowning hurt the Hydra");
-            if (Math.abs(inWater.getHealth() - (base + perPass)) > 0.05f)
+            if (inWater.getHealth() != base)
                 problems.add("drowning changed the Hydra's HP");
             T3RoleGameTests.finish(helper, problems);
         } finally {
