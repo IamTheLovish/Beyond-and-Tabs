@@ -37,6 +37,13 @@ L1 (<= 16): the plinth with the pens, the ring, the gatehouse with a lower crest
 stump under a light cap. L3 (<= 26, adds or replaces only): the crest grows to 17, the keep to its crown and needle,
 the two coned towers (NW x 1..3 z 1..3, SE x 13..15 z 13..15).
 
+REVIEW ROUND (Nov 4 2026, Fable review of PR #462, design/vehicle_labs/briefs/ashborn_review_nov4.md; control = round 3,
+design/vehicle_labs/ashborn_l3_r3.nbt): "beast gate not yet", "flat tile bays", "one orange spark" (every round-3
+critic) -> the pens are 2-deep MOUTHS behind inset bars (pens()), two 1 x 3 EMBER POOLS sunk in the ring's top flank
+the court on the gate's axis (ember_pools(); ref29 holds its lava in terrace pools, the tops are what the RTS camera
+reads), three capped PIERS stand proud of the ring's south face (buttresses()). Tests first: tools/test_ashborn_lab.py
+(beast_mouths_are_deep, ember_pools_on_the_terraces, ring_south_face_has_buttresses).
+
 Usage: python3 tools/lab_vehicle_ashborn.py [OUT_DIR]   (default design/vehicle_labs) -> ashborn_l1.nbt, ashborn_l3.nbt
 """
 import os
@@ -69,6 +76,14 @@ FORGE_GLOW = "magma_block"                  # the court forge (never seen by the
 BARS = "iron_bars"
 HIDE = "black_wool"
 PEN_POST = "deepslate_tiles"               # KEEP: the dark pilasters between the stalls
+MOUTH_DEPTH = 2                             # review round: air behind every stall's bars (tools/test_ashborn_lab.py)
+POOLS = tuple((x, z) for z in (12, 4) for x in (3, 4, 5))   # review round: the ember pools' floor cells on the
+#                                             ring's top (y 10), flanking the court on the gate's axis, inside the light
+#                                             zone of test_one_glow_focus (x <= 12, z 4..12); a pool is a 1 x 3 trough
+#                                             cut 1 deep, its rim closed all round (ref29: lava only in pools); on the
+#                                             camera model their tops add ~0.8 % glow to the heart's 0.6 % (band 0.5-2 %)
+BUTTRESS_X = (3, 7, 11)                     # review round: piers 1 proud of the ring's south face, each beside a slot
+#                                             (slot + pier = one deep shadow line; x 12 would adjoin the SE tower)
 DRY = dict(waterlogged="false")
 POST = dict(up="true", north="none", south="none", east="none", west="none", **DRY)
 AXIAL = (PLINTH, "basalt")
@@ -297,16 +312,26 @@ def towers(g):
 
 
 def pens(g):
-    """KEEP: the beast-pen row in the south face (z 16), y 1..3 barred stalls (black hides behind) two wide between
-    dark deepslate-tile pilasters at x 2, 5, 8, 11, 14, a light upside-down stair lintel over each stall (y 4)."""
-    for x in range(1, 16):
-        if x in (2, 5, 8, 11, 14):
+    """KEEP: the beast-pen row in the south face (z 16), y 1..3 barred stalls two wide between dark deepslate-tile
+    pilasters at x 2, 5, 8, 11, 14, a light upside-down stair lintel over each stall (y 4).
+    Review round (Nov 4, every round-3 critic: "beast gate not yet"): the stalls were a barred plane flush with the
+    pilasters, 0 deep, a stripe of bars at the RTS camera. Now each stall is a MOUTH: the bars stand 1 back (z 15)
+    under the lintel and between the pilasters (an eave line and a reveal, gate G1), with MOUTH_DEPTH cells of air
+    behind them and the black hide at the back - a black recess that throws its own shadow (form beats speckle)."""
+    for x in range(2, 15):                  # x 1 and 15 stay plinth: a 1-wide end stall's mouth would run behind the
+        if x in (2, 5, 8, 11, 14):          # west face's corner column and leave it a 1-thick wall no joint can cut
             for y in range(1, 5):
                 g.set(x, y, 16, PEN_POST)
             continue
         for y in (1, 2, 3):
-            g.set(x, y, 16, BARS, **DRY)
-            g.set(x, y, 15, HIDE)
+            g.clear(x, y, 16)                   # the reveal in front of the bars
+            g.set(x, y, 15, BARS, **DRY)
+            for z in range(15 - MOUTH_DEPTH, 15):
+                g.clear(x, y, z)                # the mouth
+            g.set(x, y, 14 - MOUTH_DEPTH, HIDE)
+        for z in range(15 - MOUTH_DEPTH, 15):   # the beast's chains hang from the mouth's roof: a chain blocks a
+            for y in (2, 3):                    # unit's body (WalkabilityBuilder.blocksBody), so no cell of the mouth
+                g.set(x, y, z, "chain", axis="y", **DRY)    # is a ground pocket a rescued unit could land in
         g.stair(x, 4, 16, "north", "top", "polished_andesite_stairs")    # a light lintel over each stall
 
 
@@ -370,6 +395,29 @@ def string_courses(g):
             g.slab(x, y, z, "deepslate_tile_slab", "top")
 
 
+def ember_pools(g):
+    """Review round (Nov 4; round-3 critics: "one orange spark"): ref29's terraces carry their lava in sunken pools,
+    which is where the RTS camera looks (the tops carry the read; a west-face glow is a sliver). Two 1 x 2 troughs
+    cut 1 deep into the ring's top either side of the court on the gate's axis, their floors shroomlight (the one
+    block that reads as a glow on camera: up 0.96, hue 26), their rims the terrace paving all round - contained, as
+    the designer's "glow only in sunken courts"."""
+    for (x, z) in POOLS:
+        g.clear(x, 11, z)
+        g.set(x, 10, z, GLOW)
+
+
+def buttresses(g):
+    """Review round (Nov 4; rounds 1-3: "flat tile bays"): the ring's south face is the biggest tier wall the camera
+    sees. Three piers of the wall's stone stand 1 proud of it (z 15, y 7..10) between its slots, from the plinth's
+    terrace to a light cap at the ring's cap line (a pinnacle on every buttress) - three planes on that face (slot,
+    wall, pier), each pier a shadow line the sun draws. Called after the string course so the pier shafts stay whole
+    (the course runs between them, as a real course stops at a buttress)."""
+    for x in BUTTRESS_X:
+        for y in range(7, 11):
+            g.set(x, y, 15, WALL)
+        g.slab(x, 11, 15)
+
+
 def clear_lane_and_spawn(g):
     for x in LANE_X:
         for z in LANE_Z:
@@ -396,6 +444,8 @@ def draw(level):
     clear_lane_and_spawn(g)
     grooves(g)
     string_courses(g)
+    ember_pools(g)
+    buttresses(g)
     return g
 
 
@@ -455,8 +505,13 @@ def check(rig, path, tag, h_max):
     assert not floating(n), "%s: floating %s" % (tag, floating(n)[:8])
     bad = sorted({v for v in n.values() if any(f in v for f in BANNED)})
     assert not bad, "forbidden: %s" % bad
-    glow_top = [q for q, v in n.items() if v == GLOW and not any((q[0], y, q[2]) in n for y in range(q[1] + 1, rig.size[1]))]
-    assert not glow_top, "glow open to the sky %s" % glow_top
+    # every glow is CONTAINED (the designer: lava only in sunken courts): covered, or a sunken pool whose rim (the four
+    # cells beside the cell above it) is closed - review round: the terrace pools are open to the sky by design
+    glow = {q for q, v in n.items() if v == GLOW}
+    spilt = [q for q in glow if not any((q[0], y, q[2]) in n for y in range(q[1] + 1, rig.size[1]))
+             and not all((q[0] + a, q[1] + 1, q[2] + c) in n or (q[0] + a, q[1], q[2] + c) in glow
+                         for a, c in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
+    assert not spilt, "glow open to the sky and not sunk in a pool %s" % spilt
     one_way, ground_, roof, rooms, note = ap.audit(tag, path)
     assert not one_way and not ground_ and "TRAPPED" not in note, (one_way[:8], ground_[:8], note)
     pad = ap.Pad(ap.load_nbt(path))
