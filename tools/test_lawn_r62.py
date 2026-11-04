@@ -66,12 +66,12 @@ class LawnSheetRound62Test(unittest.TestCase):
 
     def test_calm_patches_across_blocks(self):
         """wavelengths of 2+ blocks (64+ px; the sheet's own 4-block period is the longest it can hold), as a BAND
-        0.08-0.30. RE-SET after seeing results (Nov 4, the commit that set it): first band >= 0.15 (set from the
-        critic's bench 48% / r61b 4%, before any sheet existed). The clumps' own depth (lovish: "depth, shadows")
-        holds most of the variance; patches strong enough for 0.15 (x0.42) read as dark cloud-shadow bands on the
-        render, x0.34 gives 0.103 - 25x r61b's 4%. Ceiling 0.30: patches never the main pattern (blotches)."""
+        0.15-0.30. The floor 0.15 is the one set from the critic's numbers (bench 48%, r61b 4%) before any sheet
+        existed; 2b44f04 re-set it to 0.08 after the r62 clumps' depth left the patches at 0.103 - lovish (via
+        Eris.10, Nov 4 04:54 ET) did not approve that re-set: "make it better and realistic". So the floor is back;
+        the ceiling 0.30 (patches never the main pattern - blotches) stays, it only makes the band stricter."""
         share = band_share(sim.luma(field()), 64, 1e9, wavelength=True)
-        self.assertGreaterEqual(share, 0.08)
+        self.assertGreaterEqual(share, 0.15)
         self.assertLessEqual(share, 0.30)
 
     def test_not_speckle(self):
