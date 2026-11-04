@@ -6130,7 +6130,12 @@ def lawn_carpet_r63(res, blocks=4, seed=None, knobs=None):
 CLOVER_LAYERS = 8
 
 
-def clover_layer(res, k, knobs=None):
+CLOVER_MARGIN = 0.03    # blocks: no leaf within this of the sprite's edge (r65 C, in lovish's pick D: a leaf cut at the
+                        # block edge and not continued on the neighbour draws the block grid - the sheet itself is
+                        # continuous across block edges; the sim's edge step across block borders 1.17 -> 0.94 x inner)
+
+
+def clover_layer(res, k, knobs=None, margin=None):
     """grass_clover_layer_<k>: one sprite of the floating cutout plane another lane draws 0.5-0.8/16 above the lawn
     (the Optimum Realism study: ~75% of grass blocks get one such quad; its leaves, pale on a transparent ground,
     take the biome tint and read as the carpet's top layer catching the light). Returns (H, alb, alpha): 10-25%
@@ -6146,6 +6151,7 @@ def clover_layer(res, k, knobs=None):
     H = np.zeros((n, n))
     g = K["grain"]
     target = rng.uniform(0.12, 0.22)
+    m = (CLOVER_MARGIN if margin is None else margin) * res
     while alpha.mean() < target:
         cx, cy = rng.uniform(0, n, 2)
         rr = rng.uniform(0.05, 0.09) * res * g
@@ -6153,6 +6159,8 @@ def clover_layer(res, k, knobs=None):
             a, d = rng.uniform(0, 2 * math.pi), rng.uniform(0.0, 1.0) * rr
             lx, ly = cx + math.cos(a) * d, cy + math.sin(a) * d
             r = rng.uniform(0.032, 0.058) * res * g
+            if m > 0 and not (m + r <= lx < n - m - r and m + r <= ly < n - m - r):
+                continue
             kk = int(math.ceil(1.1 * r)) + 2
             ix, dx, dy = _lawn_window(n, lx, ly, kk)
             cov = _trefoil(dx, dy, r, a + 0.3)
@@ -6232,15 +6240,28 @@ LAWN_R64 = dict(
     crease=1.3,                      # valley sharpening (0 = the raw noise, symmetric, no lit side at the camera)
     relief=0.16,                     # luma swing of the forms (the lit flank vs the body)
     slope_k=8.0,                     # H units per block that count as a fully lit flank
-    selfshade=0.6,                   # how far a flank facing away from the sun goes into shade (x its slope)
+    selfshade=0.55,                  # how far a flank facing away from the sun goes into shade (x its slope)
     sun_k=6.0,                       # the sun ray's slope, H units per block: lower = longer shadows at the west feet
     shadow_len=0.10,                 # blocks: the longest shadow sampled (short: a line of shade, not a pool)
     shadow=1.0,                      # how far full shade goes toward LAWN64_UNDER (1 = all the way; that is the floor)
-    patch=0.24,                      # the 2-6 block tonal patches: luma x (1 +- patch/2 at one std)
-    undul=0.06,                      # the 0.6-2.5 block undulation: luma x (1 +- undul/2)
+    under=0.91,                      # x LAWN64_UNDER: the crease floor's value (r65 D: a shade deeper - with the patches
+                                     # halved the p5-p95 range needed it back; near-black stays ~0.3% under our gain)
+    patch=0.12,                      # the 2-6 block tonal patches: luma x (1 +- patch/2 at one std); r64 0.24 -> r65 D
+                                     # 0.12 (lovish: "The grass looks blotchy"; the calm-patches floor went to 0.08)
+    undul=0.14,                      # the 0.6-2.5 block undulation: luma x (1 +- undul/2); r64 0.06 -> r65 D 0.14: soft
+                                     # rolling tone in place of the halved 2-6 block patches (keeps the speckle share
+                                     # under test_lawn_r62's 0.50 ceiling and the luma range at r64's 0.31)
     clover=0.14,                     # share of flat clover / broadleaf patches
     scuff=0.035,                     # share of warm bare scuffs
-    soil=0.025,                      # share of worn dark soil (test_lawn_r63: 1-8% at the mip, in patches)
+    # the worn soil: r64 had 0.025 of it, hard-edged (0.3), full LAWN64_SOIL, scattered evenly - the r64 blind critic
+    # read it as "scorch marks / droppings"; r65 D (lovish's pick) halves it, lightens it ~30%, feathers it and groups
+    # it in 1.5-3 block drifts (test_lawn_r63's soil floor went to 0.3%: the lighter scuffs no longer count as soil)
+    soil=0.0125,                     # share of worn soil
+    soil_soft=0.6,                   # the soil mask's edge width (noise units): higher = feathered
+    soil_tone=1.3,                   # x LAWN64_SOIL (1.3 = ~30% lighter)
+    soil_cluster=1.0,                # 0: 0.6-1.8 block patches scattered evenly; 1: specks grouped in 1.5-3 block drifts
+    soil_fine=0.4,                   # weight of the 0.1-0.35 block detail in the soil mask (lower = chunkier pieces;
+                                     # 0.4 keeps test_lawn_r63's 32-px piece with the soil halved and feathered)
     flowers=0.25,                    # buttercup specks per block, baked (test_lawn_r63's specks; the real flowers
                                      # are the untinted layer below)
     band=0.35,                       # blocks: the edge band where every variant shows the common fine detail
@@ -6337,7 +6358,9 @@ def lawn_turf(res, blocks=LAWN_SHEET_BLOCKS, variant=1, knobs=None, seed=None):
     fine = dual(lambda r: _r64_band(F, blocks, 0.03, 0.08, r))
     cl_n = dual(lambda r: _r64_band(F, blocks, 0.3, 0.9, r) + 0.35 * _r64_band(F, blocks, 0.08, 0.3, r), wm)
     sc_n = dual(lambda r: _r64_band(F, blocks, 0.12, 0.3, r) + 0.3 * _r64_band(F, blocks, 0.05, 0.12, r), wm)
-    so_n = dual(lambda r: _r64_band(F, blocks, 0.6, 1.8, r) + 0.35 * _r64_band(F, blocks, 0.1, 0.4, r), wm)
+    sc_ = K["soil_cluster"]
+    so_n = dual(lambda r: _r64_band(F, blocks, 0.6 + 0.9 * sc_, 1.8 + 1.2 * sc_, r)
+                + K["soil_fine"] * _r64_band(F, blocks, 0.1, 0.4 - 0.05 * sc_, r), wm)
 
     def mask(noise, share, soft):
         if share <= 0:
@@ -6346,7 +6369,7 @@ def lawn_turf(res, blocks=LAWN_SHEET_BLOCKS, variant=1, knobs=None, seed=None):
         return np.clip((noise - thr) / soft + 0.5, 0, 1)
     clover = mask(cl_n, K["clover"], 0.3)
     scuff = mask(sc_n, K["scuff"], 0.25) * (1 - clover)
-    soil = mask(so_n, K["soil"], 0.3)
+    soil = mask(so_n, K["soil"], K["soil_soft"])
     flat = np.clip(clover + scuff + soil, 0, 1)
     # height: tufts and blades, flattened on the patches, then the valleys sharpened into creases
     H = 0.62 * tuft + 0.30 * blade + 0.18 * fine + 0.25 * U
@@ -6370,15 +6393,16 @@ def lawn_turf(res, blocks=LAWN_SHEET_BLOCKS, variant=1, knobs=None, seed=None):
     rel = K["relief"] / 0.16
     col = LAWN64_MID[None, None] * (1 + 0.05 * rel * H + 0.06 * rel * blade)[..., None]
     col = col + (LAWN64_LEAF[None, None] - col) * (lit * 0.9 * rel)[..., None]
-    col = col + (LAWN64_UNDER[None, None] - col) * np.clip(shade * K["shadow"], 0, 1)[..., None]
+    col = col + (LAWN64_UNDER[None, None] * K["under"] - col) * np.clip(shade * K["shadow"], 0, 1)[..., None]
     cl_col = LAWN64_CLOVER[None, None] * (1 + 0.12 * fine + 0.04 * slope)[..., None]       # flat, its own speckle
     col = col * (1 - clover)[..., None] + cl_col * clover[..., None]
     sc_col = LAWN64_SCUFF[None, None] * (1 + 0.08 * fine)[..., None]
     col = col * (1 - scuff)[..., None] + sc_col * scuff[..., None]
     crumbs = np.clip(1 + 0.12 * fine + 0.25 * slope, 0.8, 1.4)                             # lit crumbs, never black
-    col = col * (1 - soil)[..., None] + (LAWN64_SOIL[None, None] * crumbs[..., None]) * soil[..., None]
+    col = col * (1 - soil)[..., None] + (LAWN64_SOIL[None, None] * K["soil_tone"] * crumbs[..., None]) * soil[..., None]
     pv = np.clip(P, -2, 2) / 2 * (1 - 0.5 * soil)                                           # the tonal patches
-    col = col * (1 + K["patch"] * pv)[..., None] * np.stack([1 + 0.05 * pv, np.ones_like(pv), 1 - 0.06 * pv], -1)
+    hv = pv * K["patch"] / 0.24                                                              # hue +-6 deg at 0.24
+    col = col * (1 + K["patch"] * pv)[..., None] * np.stack([1 + 0.05 * hv, np.ones_like(hv), 1 - 0.06 * hv], -1)
     col = col * (1 + K["undul"] * np.clip(U, -2, 2) / 2)[..., None]
     # buttercup specks and clover heads: this variant's own, clear of the edge band, each with a short west shadow
     Hf = H.copy()
@@ -6460,7 +6484,7 @@ def write_lawn_sheet(res, preview_dir=None, variant=1):
 # within 3 texels of the edge (a head cut at the block edge would draw the block grid).
 FLOWER_LAYERS = 8
 FLOWER_DAISY = np.array([0.97, 0.97, 0.93])
-FLOWER_DAISY_EYE = np.array([1.00, 0.84, 0.22])
+FLOWER_DAISY_EYE = np.array([1.00, 0.95, 0.62])
 FLOWER_BUTTERCUP = np.array([1.00, 0.93, 0.36])
 FLOWER_CLOVER = np.array([0.97, 0.83, 0.88])
 
@@ -6473,7 +6497,7 @@ def flower_layer(res, k):
     alb = np.zeros((n, n, 3))
     alpha = np.zeros((n, n))
     H = np.zeros((n, n))
-    count = int(rng.integers(6, 12))
+    count = int(rng.integers(6, 10))
     # a loose drift: the heads scatter along a band through the block (so neighbouring flower blocks can read as one
     # drift), kept clear of the edges
     ang = rng.uniform(0, math.pi)
@@ -6490,24 +6514,27 @@ def flower_layer(res, k):
         if not (margin <= cx < n - margin and margin <= cy < n - margin):
             continue
         kind = rng.random()
-        if kind < 0.5:                                              # daisy: white disc, yellow eye
-            r = rng.uniform(0.036, 0.048) * n
+        # r65 (the r64 blind critic: "3 px heads with a lighter centre"): heads 0.08-0.10 block = ~3 screen px, the
+        # rim a shade down and a 1-px centre at full value (the daisy's eye a pale warm yellow, not a dark dot)
+        if kind < 0.5:                                              # daisy
+            r = rng.uniform(0.042, 0.050) * n
             col, eye = FLOWER_DAISY, FLOWER_DAISY_EYE
         elif kind < 0.85:                                           # buttercup
-            r = rng.uniform(0.030, 0.042) * n
-            col, eye = FLOWER_BUTTERCUP, FLOWER_BUTTERCUP * np.array([0.98, 0.90, 0.70])
+            r = rng.uniform(0.038, 0.046) * n
+            col, eye = FLOWER_BUTTERCUP, np.array([1.00, 0.98, 0.62])
         else:                                                       # clover head
-            r = rng.uniform(0.032, 0.044) * n
-            col, eye = FLOWER_CLOVER, FLOWER_CLOVER * 0.96
+            r = rng.uniform(0.038, 0.046) * n
+            col, eye = FLOWER_CLOVER, np.array([1.00, 0.94, 0.95])
         kk = int(math.ceil(r)) + 2
         ix, dx, dy = _lawn_window(n, cx, cy, kk)
         if (alpha[ix] > 0.3).any():                                 # heads do not overlap
             continue
         cov = _disc(dx, dy, r, 1.0)
-        # a touch of form: a little lighter toward the east rim (weak; FlowerLayerRules never turns the sprite), the eye
-        tone = 1 - 0.06 * np.clip(-(dx * LAWN_SUN[0] + dy * LAWN_SUN[1]) / r, 0, 1)
+        # the rim 10% down, a touch more on the west (FlowerLayerRules never turns the sprite), the centre at full
+        rr = np.sqrt(dx * dx + dy * dy) / r
+        tone = 1 - 0.10 * np.clip((rr - 0.3) / 0.7, 0, 1) - 0.04 * np.clip(-(dx * LAWN_SUN[0] + dy * LAWN_SUN[1]) / r, 0, 1)
         c = col[None, None] * tone[..., None]
-        c = np.where(_disc(dx, dy, 0.33 * r, 0.8)[..., None] > 0.5, eye[None, None], c)
+        c = np.where(_disc(dx, dy, 0.30 * r, 0.8)[..., None] > 0.5, eye[None, None], c)
         on = cov > alpha[ix]
         alb[ix] = np.where(on[..., None], c, alb[ix])
         alpha[ix] = np.maximum(alpha[ix], cov)
