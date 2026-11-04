@@ -563,12 +563,14 @@ public final class BiomePalette {
         TABLES.put(FactionTraits.GRAVEBOUND, ground(masonry(new Table()))
             .rules(new Block[][] { SPRUCE, OAK, BIRCH }, TIMBER)
             .rule(ROOTED_DIRT, ROOTED_GROUND)
-            .keep(DARK_OAK, PODZOL, MOSS));
+            .keep(DARK_OAK, PODZOL, MOSS, POLISHED_DIORITE));   // the Mausoleum's bone-pale walls and crossing (Nov 2026)
         // Ironhide Horde: the Horde brings the Nether with it - every block is nether stone, gilded blackstone, basalt
         // or red wood, which no biome changes. It still takes the snow and the sun-cracks, and its Nether Zones (RoN)
-        // terraform the ground around its portals.
+        // terraform the ground around its portals. The Ashborn volcano-temple capitol (tools/capitol_central_portal.py,
+        // Nov 2026) rings its dark tiers with pale ash-stone ledges and a pale gate frame: they are its read from the
+        // RTS camera, so they stay in every biome.
         TABLES.put(FactionTraits.HORDE, new Table()
-            .keep(MANGROVE, BAMBOO_TRIM));
+            .keep(MANGROVE, BAMBOO_TRIM, row(Blocks.SMOOTH_STONE, Blocks.SMOOTH_STONE_SLAB, Blocks.POLISHED_ANDESITE)));
         // Verdant Court: the azalea canopy, moss, mossy stone, calcite moonwells, silver birch and the spirit tree's
         // cherry are the Court; its living trunks grow the local species. The Root Spring extractor's ruined well
         // (Oct 19) is old stone the tree took over - its chiseled and cracked bricks stay ruins in every biome, as its
