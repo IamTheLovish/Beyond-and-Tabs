@@ -59,7 +59,7 @@ public final class CrownMotion {
      * only; {@code verdant} is the building's faction (FactionTraits.VERDANT) or a shared building's Verdant skin.
      */
     public static boolean animates(String structure, boolean verdant) {
-        return false;   // RED STUB: main has no living crowns
+        return verdant && structure != null && structure.startsWith("heartwood_hall");
     }
 
     /**
@@ -77,7 +77,7 @@ public final class CrownMotion {
 
     /** The crown's sway at the top from its radius: SWAY_PER_BLOCK a block, kept within MIN_SWAY..MAX_SWAY. */
     public static float swayOf(float radius) {
-        return 0f;   // RED STUB
+        return Math.max(MIN_SWAY, Math.min(MAX_SWAY, radius * SWAY_PER_BLOCK));
     }
 
     /**
@@ -85,7 +85,49 @@ public final class CrownMotion {
      * the returned list; crowns come biggest first.
      */
     public static List<Crown> crowns(int[] xs, int[] ys, int[] zs, int[] crownOf) {
-        return new ArrayList<>();   // RED STUB: no crowns found
+        int n = xs.length;
+        int[] parent = new int[n];
+        Map<Long, Integer> at = new HashMap<>(n * 2);
+        for (int i = 0; i < n; i++) {
+            parent[i] = i;
+            at.put(key(xs[i], ys[i], zs[i]), i);
+        }
+        for (int i = 0; i < n; i++)
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dz = -1; dz <= 1; dz++) {
+                        Integer j = at.get(key(xs[i] + dx, ys[i] + dy, zs[i] + dz));
+                        if (j != null)
+                            union(parent, i, j);
+                    }
+        Map<Integer, List<Integer>> groups = new HashMap<>();
+        for (int i = 0; i < n; i++)
+            groups.computeIfAbsent(find(parent, i), k -> new ArrayList<>()).add(i);
+        List<List<Integer>> sorted = new ArrayList<>(groups.values());
+        // biggest first; ties by the lowest cell index, so the order never depends on hashing
+        sorted.sort((a, b) -> a.size() != b.size() ? b.size() - a.size() : Integer.compare(a.get(0), b.get(0)));
+        List<Crown> out = new ArrayList<>(sorted.size());
+        for (List<Integer> g : sorted) {
+            double sx = 0, sz = 0;
+            int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+            for (int i : g) {
+                sx += xs[i] + 0.5;
+                sz += zs[i] + 0.5;
+                lo = Math.min(lo, ys[i]);
+                hi = Math.max(hi, ys[i]);
+            }
+            float cx = (float) (sx / g.size()), cz = (float) (sz / g.size());
+            float r = 0;
+            for (int i : g) {
+                float dx = xs[i] + 0.5f - cx, dz = zs[i] + 0.5f - cz;
+                r = Math.max(r, (float) Math.sqrt(dx * dx + dz * dz));
+            }
+            int index = out.size();
+            for (int i : g)
+                crownOf[i] = index;
+            out.add(new Crown(cx, cz, lo, hi + 1 - lo, r, swayOf(r), g.size()));
+        }
+        return out;
     }
 
     private static long key(int x, int y, int z) {
@@ -111,12 +153,14 @@ public final class CrownMotion {
      * quadratic between (a bough bends most toward its tip).
      */
     public static float heightWeight(float y, int baseY, int height) {
-        return 0f;   // RED STUB
+        float u = (y - baseY) / Math.max(1, height);
+        u = Math.max(0f, Math.min(1f, u));
+        return u * u;
     }
 
     /** The flutter's phase at a vertex: smooth in position, so a corner two cells share has one phase. */
     public static double flutterPhase(double x, double y, double z) {
-        return 0;   // RED STUB
+        return 0.83 * x + 0.61 * y + 1.27 * z;
     }
 
     /** The flutter's clock term at a time in seconds (the phase moves with it). */
@@ -135,27 +179,122 @@ public final class CrownMotion {
      * @param flutterSin sin(flutterPhase + flutterClock) of the point
      */
     public static float push(float sway, double windMul, double gust, float weight, double flutterSin) {
-        return 0f;   // RED STUB: nothing moves
+        double w = Math.max(0, Math.min(windMul, WindField.MAX_WIND_MUL));
+        return (float) (w * weight * (sway * gust + FLUTTER * flutterSin));
     }
 
     /** How far a pushed point sinks (a negative y), from the lean part of its push only. */
     public static float sag(float sway, double windMul, double gust, float weight) {
-        return 0f;   // RED STUB
+        double w = Math.max(0, Math.min(windMul, WindField.MAX_WIND_MUL));
+        return (float) (-SAG * Math.abs(w * weight * sway * gust));
     }
 
     /** The largest push any point of a crown can get: the top, the strongest wind, gust and flutter at their peaks. */
     public static float maxPush(float sway) {
-        return 0f;   // RED STUB
+        return (float) (WindField.MAX_WIND_MUL * (sway + FLUTTER));
+    }
+
+    // ---- hanging lanterns (lovish's Verdant reference, Nov 4: lanterns hang on long chains from the branches of a
+    //      tree grown round a tower, with a purple-pink glow - "sway and glow are natural animation channels") ----
+
+    /** Lanterns swing at most this far (degrees) in the strongest wind, with this pendulum period. */
+    public static final float LANTERN_MAX_DEG = 12f;
+    public static final float LANTERN_PERIOD_TICKS = 44f;
+    /** Cells under the hang point that must be open: the chain, the lantern, and room to swing. */
+    public static final int LANTERN_CLEAR = 3;
+
+    /** How many lanterns a crown of this radius carries: none under a small crown, one per 2 blocks, at most 6. */
+    public static int lanternCount(float radius) {
+        return radius < 3f ? 0 : Math.min(6, Math.round(radius / 2f));
+    }
+
+    /** A cell's key for {@link #lanterns}' {@code solid} set. */
+    public static long cellKey(int x, int y, int z) {
+        return key(x, y, z);
+    }
+
+    /**
+     * Where a building's lanterns hang: under leaf cells of the outer half of each crown whose underside is open - no
+     * block of the structure in the {@link #LANTERN_CLEAR} cells below and no leaf anywhere under it (so a lantern
+     * never hangs inside the crown, where no camera sees it) - one per angular sector round the pivot, the furthest
+     * out in each. Returns {x, y, z, crown} of the leaf cell each hangs from; deterministic.
+     *
+     * @param solid every non-air cell of the structure ({@link #cellKey})
+     */
+    public static List<int[]> lanterns(int[] xs, int[] ys, int[] zs, int[] crownOf, List<Crown> crowns,
+                                       java.util.Set<Long> solid) {
+        java.util.Set<Long> leaves = new java.util.HashSet<>();
+        for (int i = 0; i < xs.length; i++)
+            leaves.add(key(xs[i], ys[i], zs[i]));
+        List<int[]> out = new ArrayList<>();
+        for (int c = 0; c < crowns.size(); c++) {
+            Crown cr = crowns.get(c);
+            int count = lanternCount(cr.radius());
+            if (count == 0)
+                continue;
+            int[] best = new int[count];
+            float[] bestR = new float[count];
+            java.util.Arrays.fill(best, -1);
+            for (int i = 0; i < xs.length; i++) {
+                if (crownOf[i] != c)
+                    continue;
+                float dx = xs[i] + 0.5f - cr.cx(), dz = zs[i] + 0.5f - cr.cz();
+                float r = (float) Math.sqrt(dx * dx + dz * dz);
+                if (r < 0.5f * cr.radius() || !openBelow(xs[i], ys[i], zs[i], cr.baseY(), solid, leaves))
+                    continue;
+                int sector = (int) Math.floor((Math.atan2(dz, dx) + Math.PI) / TWO_PI * count) % count;
+                int b = best[sector];
+                if (b < 0 || r > bestR[sector] || r == bestR[sector] && (ys[i] < ys[b] || ys[i] == ys[b] && i < b)) {
+                    best[sector] = i;
+                    bestR[sector] = r;
+                }
+            }
+            for (int s = 0; s < count; s++)
+                if (best[s] >= 0)
+                    out.add(new int[] { xs[best[s]], ys[best[s]], zs[best[s]], c });
+        }
+        return out;
+    }
+
+    private static boolean openBelow(int x, int y, int z, int baseY, java.util.Set<Long> solid, java.util.Set<Long> leaves) {
+        for (int k = 1; k <= LANTERN_CLEAR; k++)
+            if (solid.contains(key(x, y - k, z)))
+                return false;
+        for (int yy = y - 1; yy >= baseY - LANTERN_CLEAR; yy--)
+            if (leaves.contains(key(x, yy, z)))
+                return false;
+        return true;
+    }
+
+    /**
+     * A lantern's swing (degrees, positive = downwind) at a time: pushed by the gust and swinging on its own period,
+     * scaled by the match wind; never past LANTERN_MAX_DEG.
+     *
+     * @param phase the lantern's own phase (radians), so a row of lanterns never swings in lockstep
+     */
+    public static float lanternSwing(double gust, double windMul, double seconds, double phase) {
+        double w = Math.max(0, Math.min(windMul, WindField.MAX_WIND_MUL)) / WindField.MAX_WIND_MUL;
+        double own = Math.sin(TWO_PI * seconds * 20.0 / LANTERN_PERIOD_TICKS + phase);
+        double g = Math.max(-1, Math.min(1, gust));
+        return (float) (LANTERN_MAX_DEG * w * (0.55 * g + 0.45 * own));
     }
 
     /** A laid cell's scale {@code age} ticks after it appeared: 0 .. a little past 1 .. 1 (easeOutBack), 1 once grown. */
     public static float growScale(float age) {
-        return 1f;   // RED STUB: no growing in
+        if (age >= GROW_TICKS)
+            return 1f;
+        if (age <= 0)
+            return 0f;
+        float u = age / GROW_TICKS - 1f;
+        return 1f + (GROW_BACK + 1f) * u * u * u + GROW_BACK * u * u;
     }
 
     /** The crown's scale {@code since} ticks after the building completed or levelled up: 1 .. 1 + SWELL .. 1. */
     public static float swellScale(float since) {
-        return 1f;   // RED STUB: no swell
+        if (since <= 0 || since >= SWELL_TICKS)
+            return 1f;
+        double s = Math.sin(Math.PI * since / SWELL_TICKS);
+        return (float) (1 + SWELL * s * s);
     }
 
     /**
@@ -163,6 +302,12 @@ public final class CrownMotion {
      * first while the total stays within the budget; the nearest is always taken.
      */
     public static int takeCount(int[] vertsNearestFirst, int count, int budget) {
-        return count;   // RED STUB: no budget
+        int total = 0;
+        for (int i = 0; i < count; i++) {
+            total += vertsNearestFirst[i];
+            if (i > 0 && total > budget)
+                return i;
+        }
+        return count;
     }
 }

@@ -101,15 +101,54 @@ public final class CrownMesh {
      */
     public void pose(float offX, float offY, float offZ, double seconds, double windMul, double heading, float[] gust,
                      float now, float swellSince, float[] out) {
-        for (int v = 0; v < vertexCount; v++) {   // RED STUB: the captured vertices, unmoved
-            out[v * 3] = pos[v * 3] + offX;
-            out[v * 3 + 1] = pos[v * 3 + 1] + offY;
-            out[v * 3 + 2] = pos[v * 3 + 2] + offZ;
+        float dirX = (float) Math.cos(heading), dirZ = (float) Math.sin(heading);
+        double clock = CrownMotion.flutterClock(seconds);
+        float cosT = (float) Math.cos(clock), sinT = (float) Math.sin(clock);
+        float flut = CrownMotion.push(1f, windMul, 0, 1f, 1);            // windMul x FLUTTER, clamped like the lean
+        float sw = CrownMotion.swellScale(swellSince);
+        for (int c = 0; c < crowns.length; c++) {
+            lean[c] = CrownMotion.push(crowns[c].sway(), windMul, gust[c], 1f, 0);
+            sag[c] = CrownMotion.sag(crowns[c].sway(), windMul, gust[c], 1f);
+        }
+        for (int v = 0; v < vertexCount; v++) {
+            int i = v * 3, c = crown[v];
+            float w = weight[v];
+            float push = w * (lean[c] + flut * (phaseSin[v] * cosT + phaseCos[v] * sinT));
+            float x = pos[i] + dirX * push, y = pos[i + 1] + w * sag[c], z = pos[i + 2] + dirZ * push;
+            float born = bornAt[cell[v]];
+            if (born == born) {                     // not NaN: this cell is growing in (or has just grown)
+                float g = CrownMotion.growScale(now - born);
+                if (g != 1f) {
+                    int m = cell[v] * 3;
+                    x = cellMid[m] + (x - cellMid[m]) * g;
+                    y = cellMid[m + 1] + (y - cellMid[m + 1]) * g;
+                    z = cellMid[m + 2] + (z - cellMid[m + 2]) * g;
+                }
+            }
+            if (sw != 1f) {
+                int p = c * 3;
+                x = pivot[p] + (x - pivot[p]) * sw;
+                y = pivot[p + 1] + (y - pivot[p + 1]) * sw;
+                z = pivot[p + 2] + (z - pivot[p + 2]) * sw;
+            }
+            out[i] = x + offX;
+            out[i + 1] = y + offY;
+            out[i + 2] = z + offZ;
         }
     }
 
     /** Settles every cell that has finished growing (so pose skips them); true while any is still growing. */
     public boolean settle(float now) {
-        return false;   // RED STUB
+        boolean growing = false;
+        for (int k = 0; k < bornAt.length; k++) {
+            float b = bornAt[k];
+            if (b != b)
+                continue;
+            if (now - b >= CrownMotion.GROW_TICKS)
+                bornAt[k] = Float.NaN;
+            else
+                growing = true;
+        }
+        return growing;
     }
 }

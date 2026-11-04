@@ -166,6 +166,68 @@ class CrownMotionTest {
         assertTrue(CrownMotion.SWELL > 0.03f && CrownMotion.SWELL <= 0.08f, "seen, not a balloon");
     }
 
+    // ---------------------------------------------------------------- hanging lanterns (the tree-tower reference)
+
+    @Test
+    void heartwoodHallHangsLanternsUnderItsCrownsOpenUnderside() throws IOException {
+        // lovish's Verdant reference (Nov 4): lanterns hang on chains from the branches, swaying and glowing
+        Leaves s = read("heartwood_hall");
+        int[] of = new int[s.xs.length];
+        List<CrownMotion.Crown> crowns = CrownMotion.crowns(s.xs, s.ys, s.zs, of);
+        List<int[]> hung = CrownMotion.lanterns(s.xs, s.ys, s.zs, of, crowns, s.solid);
+        CrownMotion.Crown big = crowns.get(0);
+        long onBig = hung.stream().filter(h -> h[3] == 0).count();
+        assertEquals(CrownMotion.lanternCount(big.radius()), onBig, "one per sector round the great crown");
+        assertTrue(onBig >= 3 && onBig <= 6, "a few lanterns, not a fairground: " + onBig);
+        java.util.Set<Long> leaves = new java.util.HashSet<>();
+        for (int i = 0; i < s.xs.length; i++)
+            leaves.add(CrownMotion.cellKey(s.xs[i], s.ys[i], s.zs[i]));
+        for (int[] h : hung) {
+            assertTrue(leaves.contains(CrownMotion.cellKey(h[0], h[1], h[2])), "hangs from a leaf cell");
+            for (int k = 1; k <= CrownMotion.LANTERN_CLEAR; k++)
+                assertFalse(s.solid.contains(CrownMotion.cellKey(h[0], h[1] - k, h[2])), "room below " + h[0] + "," + h[1] + "," + h[2]);
+            CrownMotion.Crown c = crowns.get(h[3]);
+            float dx = h[0] + 0.5f - c.cx(), dz = h[2] + 0.5f - c.cz();
+            assertTrue(Math.sqrt(dx * dx + dz * dz) >= 0.5f * c.radius(), "in the crown's outer half, where it is seen");
+        }
+        assertEquals(hung.size(), hung.stream().map(h -> CrownMotion.cellKey(h[0], h[1], h[2])).distinct().count(),
+            "never two on one cell");
+    }
+
+    @Test
+    void aSmallCrownCarriesNoLanternAndTheSwingIsBounded() {
+        assertEquals(0, CrownMotion.lanternCount(2.5f));
+        assertEquals(6, CrownMotion.lanternCount(40f));
+        float peak = 0;
+        for (double t = 0; t < 30; t += 0.05) {
+            float a = CrownMotion.lanternSwing(1, 5, t, 0.3);
+            peak = Math.max(peak, Math.abs(a));
+            assertTrue(Math.abs(a) <= CrownMotion.LANTERN_MAX_DEG + 1e-4, "at most the max swing: " + a);
+        }
+        assertTrue(peak > 0.8f * CrownMotion.LANTERN_MAX_DEG, "the strongest wind swings them nearly fully: " + peak);
+        assertEquals(0f, CrownMotion.lanternSwing(1, 0, 3, 0), 1e-6, "still with no wind");
+        // two lanterns with different phases are not in lockstep
+        assertTrue(Math.abs(CrownMotion.lanternSwing(0.3, 1, 2, 0) - CrownMotion.lanternSwing(0.3, 1, 2, 2)) > 0.5f);
+    }
+
+    @Test
+    void aLanternSwingsDownwindFromItsHangPoint() {
+        // one lantern hung at (0, 10, 0) from a crown of sway 0.2 (lean share 0, at the crown's base); one vertex 2 below
+        float[] hang = { 0, 10, 0 };
+        LanternMesh m = new LanternMesh(hang, new int[] { 0 }, new float[] { 0 }, new float[] { 0 },
+            new float[] { 0, 8, 0 }, new float[2], new int[1], new int[1], new int[1], new int[] { 0 },
+            new int[] { 0 }, new int[] { 1 });
+        float[] out = new float[3];
+        m.pose(0, 0, 0, 0.55, 1.7, 0, new float[] { 1f }, new float[] { 0.2f }, out);   // wind toward +x, a full gust
+        assertTrue(out[0] > 0.1f, "swung downwind: " + out[0]);
+        assertEquals(0f, out[2], 1e-6, "only in the wind's plane");
+        float len = (float) Math.sqrt(out[0] * out[0] + (out[1] - 10) * (out[1] - 10));
+        assertEquals(2f, len, 1e-4, "the chain keeps its length");
+        m.pose(0, 0, 0, 0.55, 0, 0, new float[] { 1f }, new float[] { 0.2f }, out);
+        assertEquals(0f, out[0], 1e-6, "still with no wind");
+        assertEquals(8f, out[1], 1e-6);
+    }
+
     // ---------------------------------------------------------------- the pilot and the frame budget
 
     @Test
@@ -220,8 +282,8 @@ class CrownMotionTest {
         return CrownMotion.push(big.sway(), 1, 1, 1, 0);
     }
 
-    /** A structure's leaf cells, and its wood (logs, wood) to find the trunk by. */
-    private record Leaves(int[] xs, int[] ys, int[] zs, Map<Long, Boolean> wood) {
+    /** A structure's leaf cells, its wood (logs, wood) to find the trunk by, and every non-air cell (CrownMotion.cellKey). */
+    private record Leaves(int[] xs, int[] ys, int[] zs, Map<Long, Boolean> wood, java.util.Set<Long> solid) {
         int woodNear(float x, float z, int y0, int y1, float r) {
             int n = 0;
             for (int y = y0; y <= y1; y++)
@@ -250,11 +312,14 @@ class CrownMotionTest {
         ListTag blocks = root.getList("blocks", Tag.TAG_COMPOUND);
         List<int[]> leaves = new ArrayList<>();
         Map<Long, Boolean> wood = new HashMap<>();
+        java.util.Set<Long> solid = new java.util.HashSet<>();
         for (int i = 0; i < blocks.size(); i++) {
             CompoundTag b = blocks.getCompound(i);
             ListTag pos = b.getList("pos", Tag.TAG_INT);
             int x = pos.getInt(0), y = pos.getInt(1), z = pos.getInt(2);
             String name = palette.getCompound(b.getInt("state")).getString("Name");
+            if (!name.endsWith(":air") && !name.endsWith("structure_void"))
+                solid.add(CrownMotion.cellKey(x, y, z));
             if (name.endsWith("_leaves"))
                 leaves.add(new int[] { x, y, z });
             else if (name.endsWith("_log") || name.endsWith("_wood"))
@@ -266,6 +331,6 @@ class CrownMotionTest {
             ys[i] = leaves.get(i)[1];
             zs[i] = leaves.get(i)[2];
         }
-        return new Leaves(xs, ys, zs, wood);
+        return new Leaves(xs, ys, zs, wood, solid);
     }
 }
