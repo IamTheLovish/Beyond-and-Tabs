@@ -20,10 +20,12 @@ uniform vec3 shadowLightPosition;
 uniform vec3 upPosition;
 uniform float rainStrength;
 
-// high sun: warm light, near-neutral sky fill (Oct 28: a blue fill tinted the whole lawn - #326's lawn fix). Sun 0.68 at
-// ~60 degrees up plus fill 0.41 keeps open ground at its albedo; the fill alone is 40% of that
-const vec3 SUN_HIGH = vec3(1.00, 0.94, 0.84) * 0.68;
-const vec3 SKY_HIGH = vec3(0.92, 0.96, 1.04) * 0.41;
+// high sun: a faintly warm sun, a faintly cool sky fill (Oct 28: a blue fill tinted the whole lawn - #326's lawn fix).
+// Sun 0.68 at ~60 degrees up plus fill 0.41 keeps open ground at its albedo, in colour too: the two sum to white
+// (tools/test_shader_pack.py). The old warm sun (1.00, 0.94, 0.84) summed to (1.00, 0.98, 0.95) and turned the whole
+// field toward yellow - the lawn read olive (Itachi 1, Nov 4). The fill alone is 40% of that
+const vec3 SUN_HIGH = vec3(1.00, 0.965, 0.91) * 0.68;
+const vec3 SKY_HIGH = vec3(0.92, 0.97, 1.055) * 0.41;
 // low sun: golden light raking across, a dim warm-violet fill
 const vec3 SUN_LOW = vec3(1.00, 0.62, 0.34) * 1.50;
 const vec3 SKY_LOW = vec3(0.74, 0.70, 0.80) * 0.17;
