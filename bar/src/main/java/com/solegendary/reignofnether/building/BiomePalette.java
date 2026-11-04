@@ -583,8 +583,9 @@ public final class BiomePalette {
         // sandstone apron is the local shore.
         TABLES.put(FactionTraits.TIDEWROUGHT, new Table()
             .rule(SMOOTH_SANDSTONE, SHORE).rule(SANDSTONE, ROUGH_SHORE).rule(CUT_SANDSTONE, SHORE)
-            // the Tide-Pool Pump's striped pump house (Oct 19) carries a chiseled sandstone band: it stays a carving
-            .keep(SPRUCE, MANGROVE, DARK_OAK, row(Blocks.CHISELED_SANDSTONE)));
+            // the Tide-Pool Pump's striped pump house (Oct 19) carries a chiseled sandstone band: it stays a carving;
+            // the Slipway's hull frames are bleached driftwood (birch, the Nov 2026 palette pass): they stay birch
+            .keep(SPRUCE, MANGROVE, DARK_OAK, BIRCH, row(Blocks.CHISELED_SANDSTONE)));
         // Stormcallers: red lacquer, jade roofs, gold and green glaze are the dynasty; the grey plinths and courts are
         // local stone (white marble under snow), the sheds' spruce local timber. Cherry and dark oak stay.
         // The Pagoda of a Thousand Storms (Oct 19) adds red-lacquer mangrove posts (they stay lacquer everywhere), a moss
