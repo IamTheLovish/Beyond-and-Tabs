@@ -2352,7 +2352,7 @@ public class HudClientEvents {
         if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
             return;
         // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W same type, Ctrl+C commander, Ctrl+Tab / Ctrl+Shift+Tab idle builders,
-        // Ctrl+E all units) win over every button on the letter
+        // Ctrl+E all units, Ctrl+S stop) win over every button on the letter
         if (OrthoviewClientEvents.isEnabled() && com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
                 com.solegendary.reignofnether.keybinds.ChordKeys.of(key, Keybindings.ctrlMod.isDown(),
                     net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())))

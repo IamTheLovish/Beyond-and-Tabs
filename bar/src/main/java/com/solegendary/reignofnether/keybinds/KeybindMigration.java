@@ -29,7 +29,7 @@ import java.util.function.ToIntFunction;
 public final class KeybindMigration {
 
     /** The key layout the saved bindings are moved to; stored in the client config as keybind_layout. */
-    public static final int LAYOUT_VERSION = 4;
+    public static final int LAYOUT_VERSION = 5;
 
     /** What {@code savedKey} returns for a binding that must not move: a modifier combo, a mouse button, not found. */
     public static final int CUSTOM = Integer.MIN_VALUE;
@@ -45,7 +45,7 @@ public final class KeybindMigration {
 
     static final List<Stale> STALE = List.of(
         // Oct 23 to Oct 26: the commander and idle T2 builder buttons shipped on End / Home, which the production
-        // monitor (Home) and pause unit production (End) now use. Their chords are Ctrl+C / Ctrl+Shift+Tab (ChordKeys; Ctrl+Shift+B before layout 4).
+        // monitor (Home) and pause unit production (End) now use. Their chords are Ctrl+C / Ctrl+Shift+Tab (ChordKeys).
         new Stale(2, "key.reignofnether.select_commander", GLFW.GLFW_KEY_END, "Select commander End -> Ctrl+C"),
         new Stale(2, "key.reignofnether.idle_t2_builder", GLFW.GLFW_KEY_HOME, "Idle T2 builder Home -> Ctrl+Shift+Tab"),
         // Oct 8 to Oct 11: the first WASD builds. Stop sat on Space, Patrol on Y and Guard on P; c4d0b47 moved them to
@@ -62,23 +62,29 @@ public final class KeybindMigration {
         new Stale(1, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_Z, "Build slot 8 Z -> . (Z is ability slot 2)"),
         new Stale(1, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_X, "Build slot 9 X -> , (X is Attack)"),
         new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)"),
-        // Layout 3 (BAC-007b): BAR's Grid order and selection keys, WASD pan gone. The camera overview stays on Tab (it
-        // needs Shift now), so it has no row. The last row of a binding is the text history() shows.
-        new Stale(3, "key.reignofnether.attack", GLFW.GLFW_KEY_X, "Attack X -> A (BAR Grid)"),
-        new Stale(3, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> G (BAR Grid)"),
-        new Stale(3, "key.reignofnether.patrol", GLFW.GLFW_KEY_P, "Patrol P -> H (BAR Grid)"),
-        new Stale(3, "key.reignofnether.guard", GLFW.GLFW_KEY_G, "Guard G -> O (BAR Grid)"),
-        new Stale(3, "key.reignofnether.hold", GLFW.GLFW_KEY_H, "Hold H -> ; (BAR movestate 2)"),
-        new Stale(3, "key.reignofnether.move", GLFW.GLFW_KEY_M, "Move M -> unbound (BAR has no move key)"),
-        new Stale(3, "key.reignofnether.select_commander", -1, "Select commander unbound -> Tab (BAR selectcomm)"),
-        // Layout 4 (BAC-007b 2a): BAR's F5 last alert and "." / "," selection cycle. The keys they take are freed: the idle
+        // Oct 11 (c4d0b47) to Nov 3: Stop was S, sharing the key with pan-down by the tap/hold rule. Nick: a short tap
+        // of S while panning stopped the selected workers. Shipped as layout 3: Stop is the Ctrl+S chord, its own key
+        // unbound. Layout 4 moves it on to G (below), so a binding with two rows here is moved by each row in turn.
+        new Stale(3, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> Ctrl+S (a tap of S while panning stopped workers)"),
+        // Layout 4 (BAC-007b): BAR's Grid order and selection keys, WASD pan gone. The camera overview stays on Tab (it
+        // needs Shift now), so it has no row. The newest layout's row of a binding is the text history() shows.
+        new Stale(4, "key.reignofnether.attack", GLFW.GLFW_KEY_X, "Attack X -> A (BAR Grid)"),
+        new Stale(4, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> G (BAR Grid)"),
+        new Stale(4, "key.reignofnether.patrol", GLFW.GLFW_KEY_P, "Patrol P -> H (BAR Grid)"),
+        new Stale(4, "key.reignofnether.guard", GLFW.GLFW_KEY_G, "Guard G -> O (BAR Grid)"),
+        new Stale(4, "key.reignofnether.hold", GLFW.GLFW_KEY_H, "Hold H -> ; (BAR movestate 2)"),
+        new Stale(4, "key.reignofnether.move", GLFW.GLFW_KEY_M, "Move M -> unbound (BAR has no move key)"),
+        new Stale(4, "key.reignofnether.select_commander", -1, "Select commander unbound -> Tab (BAR selectcomm)"),
+        // installs that ran layout 3 (Stop on Ctrl+S, its own key unbound) take Stop to G too
+        new Stale(4, "key.reignofnether.stop", -1, "Stop unbound -> G (BAR Grid; Ctrl+S still stops)"),
+        // Layout 5 (BAC-007b 2a): BAR's F5 last alert and "." / "," selection cycle. The keys they take are freed: the idle
         // worker button, the observer toggle (hotkey 8) and Mass Burial (hotkey 9) start unbound, F5 is no function slot.
-        new Stale(4, "key.reignofnether.last_alert", GLFW.GLFW_KEY_SPACE, "Last alert Space -> F5 (BAR lastmsgpos)"),
-        new Stale(4, "key.reignofnether.fn_5", GLFW.GLFW_KEY_F5, "Function slot F5 -> unbound (F5 is the last alert)"),
-        new Stale(4, "key.reignofnether.idle_worker", GLFW.GLFW_KEY_PERIOD, "Idle worker . -> Ctrl+Tab (. is the selection cycle)"),
-        new Stale(4, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_PERIOD, "Build slot 8 . -> unbound (. is the selection cycle)"),
-        new Stale(4, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_COMMA, "Build slot 9 , -> unbound (, is the backwards selection cycle)"),
-        new Stale(4, "key.reignofnether.tab", GLFW.GLFW_KEY_TAB, "Selection cycle Tab -> . (BAR cycleselected)")
+        new Stale(5, "key.reignofnether.last_alert", GLFW.GLFW_KEY_SPACE, "Last alert Space -> F5 (BAR lastmsgpos)"),
+        new Stale(5, "key.reignofnether.fn_5", GLFW.GLFW_KEY_F5, "Function slot F5 -> unbound (F5 is the last alert)"),
+        new Stale(5, "key.reignofnether.idle_worker", GLFW.GLFW_KEY_PERIOD, "Idle worker . -> Ctrl+Tab (. is the selection cycle)"),
+        new Stale(5, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_PERIOD, "Build slot 8 . -> unbound (. is the selection cycle)"),
+        new Stale(5, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_COMMA, "Build slot 9 , -> unbound (, is the backwards selection cycle)"),
+        new Stale(5, "key.reignofnether.tab", GLFW.GLFW_KEY_TAB, "Selection cycle Tab -> . (BAR cycleselected)")
     );
 
     private KeybindMigration() { }
@@ -115,12 +121,15 @@ public final class KeybindMigration {
         return moves;
     }
 
-    /** The one-line history of a move, for the log and the toast ("Attack X -> A, ..."): the binding's latest row. */
+    /**
+     * The one-line history of a binding's newest move, for the log and the toast ("Attack A -> X, ..."). A binding that
+     * moved twice (Stop: Space -> S -> unbound -> G) has a row per layout; the highest layout is the move being applied.
+     */
     public static String history(String binding) {
-        String out = binding;
+        Stale newest = null;
         for (Stale row : STALE)
-            if (row.binding().equals(binding))
-                out = row.history();
-        return out;
+            if (row.binding().equals(binding) && (newest == null || row.version() > newest.version()))
+                newest = row;
+        return newest == null ? binding : newest.history();
     }
 }

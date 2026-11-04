@@ -148,7 +148,7 @@ BAC-007b, the user 2026-10-29: "copy bars hotkeys then build whatever else you n
   key in options.txt, so a moved default does not reach an old install by itself: `KeybindMigration` moves a saved binding still on an old default to the new one once
   (client config `keybind_layout`, toast "Controls updated"); a key the player chose is never touched. Moving a default
   later = bump `LAYOUT_VERSION` and add the old key to `KeybindMigration.STALE`. Controls marks a card key a player put
-  on a pan key (an arrow) red (`KeyConflicts`).
+  on a pan key (an arrow) red (`KeyConflicts`). Ctrl+S also stops the selected units (the Stop chord, since Nov 3).
 - **Space** looks at the last alert (`Keybindings.lastAlert`), so Stop lost its Space default.
 - **Card keys win**: a key used by the selected card's own buttons (`HudClientEvents.cardButtons`: orders, abilities,
   build menu, production) never also fires a HUD-wide button - the minimap toggle on M, the idle-worker cycler on
@@ -179,7 +179,7 @@ the item shop). Alert lines with a place ("Base under attack", "Units under atta
 
 From the reference clip of another Minecraft RTS mod: with nothing selected the unit-info corner shows a small,
 localised **controls cheat-sheet** (Left-drag select, Right-click move/attack, Right-drag line formation, A
-attack-move, S stop, H hold, B build, . idle worker, Space last alert, Ctrl+right-drag area command; keys read from
+attack-move, Ctrl+S stop, H hold, B build, . idle worker, Space last alert, Ctrl+right-drag area command; keys read from
 the live bindings), hidden as soon as anything is selected or hovered. **Hovering a building** instead shows its card
 (`HoverCards`): name, owner swatch, health or build progress, and "Producing <item> 45% +N". Your own and allied
 queues are on the client already; for anyone else the client asks the server (`BuildingHoverServerboundPacket`,

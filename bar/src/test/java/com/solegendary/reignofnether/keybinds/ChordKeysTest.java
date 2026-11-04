@@ -32,6 +32,18 @@ class ChordKeysTest {
     }
 
     @Test
+    void ctrlSIsStop() {
+        // Nov 3 (Nick): Stop came off the bare S (a tap while panning stopped workers) onto Ctrl+S - S for Stop as in
+        // BAR, and the camera never pans while Ctrl is held. Shift+Ctrl+S stops too (Shift only queues).
+        assertEquals(Chord.STOP, ChordKeys.of(GLFW.GLFW_KEY_S, true, false, false));
+        assertEquals(Chord.STOP, ChordKeys.of(GLFW.GLFW_KEY_S, true, true, false));
+        assertEquals(Chord.NONE, ChordKeys.of(GLFW.GLFW_KEY_S, false, false, false), "a bare S is pan-down only");
+        assertEquals(Chord.STOP, Keybindings.stop.getChord());
+        assertEquals("Ctrl + S", ChordKeys.label(Chord.STOP));
+        assertEquals("^S", ChordKeys.shortLabel(Chord.STOP));
+    }
+
+    @Test
     void noCtrlOrAltMeansNoChord() {
         for (ChordKeys.Def d : ChordKeys.ALL) {
             assertEquals(Chord.NONE, ChordKeys.of(d.key(), false, false, false), d.label());

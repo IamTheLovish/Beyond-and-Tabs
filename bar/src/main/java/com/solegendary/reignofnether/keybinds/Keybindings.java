@@ -129,12 +129,13 @@ public class Keybindings {
     public static final Keybinding returnResources = new Keybinding("key.reignofnether.return_resources", GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY_RTS, "]");
     // BAR Grid's order keys on the command card (BarGridDefaults, BAC-007b; user 10-29 "copy bars hotkeys"): A attack,
     // F fight, G stop, H patrol, O guard, ; hold (BAR's movestate 2), L fire state. BAR has no move key. Installs that
-    // saved the old keys were moved once (KeybindMigration, layout 3). F5 jumps to the last alert (lastAlert), as in BAR.
+    // saved the old keys were moved once (KeybindMigration, layout 4). F5 jumps to the last alert (lastAlert), as in BAR.
+    // Stop also runs on the fixed chord Ctrl+S (ChordKeys, since Nov 3: the bare S is camera pan-down only).
     public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_A,             CATEGORY_RTS, RtsConflictContext.COMMAND, "A");
     // BAR's Fight (F): attack-move, armed - a click fights to the spot, a drag lays a fight line (lovish, Oct 14 02:38:
     // "add a fight command on F"). Fighters only: a worker's F is its build menu slot (hotkey3) and the commander is both.
     public static final Keybinding fight       = new Keybinding("key.reignofnether.fight",        GLFW.GLFW_KEY_F,             CATEGORY_RTS, RtsConflictContext.COMMAND, "F");
-    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_G,             CATEGORY_RTS, RtsConflictContext.COMMAND, "G");
+    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_G,             CATEGORY_RTS, RtsConflictContext.COMMAND, "G").withChord(ChordKeys.Chord.STOP);
     public static final Keybinding move        = new Keybinding("key.reignofnether.move",         GLFW.GLFW_KEY_UNKNOWN,       CATEGORY_RTS, RtsConflictContext.COMMAND, "");
     public static final Keybinding hold        = new Keybinding("key.reignofnether.hold",         GLFW.GLFW_KEY_SEMICOLON,     CATEGORY_RTS, RtsConflictContext.COMMAND, ";");
     // BAR's firestate: a press cycles the stance like a click on the stance button (StanceButton)
