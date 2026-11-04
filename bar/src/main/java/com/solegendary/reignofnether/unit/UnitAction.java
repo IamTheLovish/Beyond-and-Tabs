@@ -247,15 +247,5 @@ public enum UnitAction {
     // the Horde's Voodoo Shaman, after main's Thornweaver so their ordinals (saved autocast state) stay put
     HEX,                    // 5 essence: an enemy T1-T2 unit can neither attack nor cast for 4 s
     BLOOD_TOTEM,            // 10 essence: a 15 s totem, allies within 8 attack 25% faster, enemies move 15% slower
-    SPIRIT_PUPPET;          // 20 essence: an enemy T1 unit is the caster's owner's for 15 s
-
-    /**
-     * Orders aimed at an entity the sender must be able to SEE (UnitActionServerboundPacket.accept refuses them
-     * otherwise). A player's client is never sent an enemy its fog hides (TrackedEntityMixin), so an honest client
-     * cannot click one; a modified one could send any entity id, and the units walking off towards it told the player
-     * where it was (Mode A review on #35, Oct 28, "Fog leaks").
-     */
-    public boolean needsASeenTarget() {
-        return this == ATTACK || this == FOLLOW;
-    }
+    SPIRIT_PUPPET           // 20 essence: an enemy T1 unit is the caster's owner's for 15 s
 }

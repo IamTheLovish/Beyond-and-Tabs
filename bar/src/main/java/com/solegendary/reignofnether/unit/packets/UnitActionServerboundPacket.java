@@ -150,17 +150,34 @@ public class UnitActionServerboundPacket {
      */
     public static boolean accept(ServerPlayer player, String ownerName, UnitAction action, int unitId, int[] unitIds,
                                  BlockPos preselectedBlockPos, BlockPos selectedBuildingPos, QueueMode queueMode) {
+        return accept(player, ownerName, action, unitId, unitIds, preselectedBlockPos, selectedBuildingPos, queueMode,
+            com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents::isEntityVisibleTo);
+    }
+
+    /**
+     * {@link #accept(ServerPlayer, String, UnitAction, int, int[], BlockPos, BlockPos, QueueMode)} with the rule for
+     * "the sender can see this entity" passed in: every packet uses FogOfWarServerEvents.isEntityVisibleTo (the
+     * entity-tracking rule). The test server runs with fog off for everyone, so UnitActionFogGameTests passes its own
+     * rule to drive this real path - the queues, the refusal, the return value - with a target the sender cannot see.
+     */
+    public static boolean accept(ServerPlayer player, String ownerName, UnitAction action, int unitId, int[] unitIds,
+                                 BlockPos preselectedBlockPos, BlockPos selectedBuildingPos, QueueMode queueMode,
+                                 java.util.function.BiPredicate<ServerPlayer, net.minecraft.world.entity.Entity> seenBySender) {
         if (player == null || !PacketAuth.mayActFor(player, ownerName)) {
             ReignOfNether.LOGGER.warn("UnitActionServerboundPacket: Tried to process packet from " +
                 (player == null ? "null" : player.getName().getString()) + " for " + ownerName);
             return false;
         }
-        // an attack or follow order on an entity the sender's fog hides: only a modified client can name one (it was
-        // never sent; TrackedEntityMixin), and the units walking towards it would show where it is (Mode A review on
-        // #35, Oct 28). An honest click on a target that left view in the meantime is dropped the same way.
-        if (action != null && action.needsASeenTarget() && unitId >= 0) {
+        // an order that names an entity the sender's fog hides (an attack or follow target, a unit to guard, a wreck to
+        // reclaim, an ability's target, a healer's charge): only a modified client can name one - it was never sent
+        // it (TrackedEntityMixin) - and the units walking towards it would show where it is (Mode A review on #35, Oct
+        // 28, "Fog leaks"). Own and allied units always count as seen, so no honest order changes; a click on a target
+        // that left view in the meantime is dropped the same way. ATTACK_BUILDING names a block position, not an
+        // entity, and is not checked: the server keeps no record of which buildings a player has seen (fog memory is
+        // client side), so a modified client can still name a building it never saw - a known gap, in the PR body.
+        if (unitId >= 0) {
             net.minecraft.world.entity.Entity target = player.serverLevel().getEntity(unitId);
-            if (target != null && !com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isEntityVisibleTo(player, target)) {
+            if (target != null && !seenBySender.test(player, target)) {
                 ReignOfNether.LOGGER.debug("UnitActionServerboundPacket: {} order from {} on entity {} its fog hides - dropped",
                     action, player.getName().getString(), unitId);
                 return false;
