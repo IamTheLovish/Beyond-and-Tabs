@@ -352,7 +352,21 @@ public class WalkLineGameTests {
             // MC yaw: 0 = south (+z), -90 = east (+x)
             float bearing = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90f;
             float off = Mth.wrapDegrees(m.yBodyRot - bearing);
-            if (t % 4 == 0)
+            if (t <= 24) {
+                // The RTS-pathing walk fails about half its runs on the first steps alone: the body turns ~10 deg
+                // AWAY from the line (yaw -90 -> -100 at t16, then -78 = the bearing for the rest; run 41823559236),
+                // so something it aims at for a moment lies off the line. Every tick of the start, then: where it
+                // stands, on the ground or not, and the path's next node (index of count, and which Path object).
+                net.minecraft.world.level.pathfinder.Path path = m.getNavigation().getPath();
+                String node = "none";
+                if (path != null && !path.isDone()) {
+                    var n = path.getNextNode();
+                    node = String.format(Locale.ROOT, "%d/%d@%d,%d#%x", path.getNextNodeIndex(), path.getNodeCount(),
+                        n.x - pad.x0, n.z - pad.z0, System.identityHashCode(path) & 0xffff);
+                }
+                trace.append(String.format(Locale.ROOT, " t%d:%.0f/%.0f[%.2f,%.2f%s %s]", t, m.yBodyRot, bearing,
+                    m.getX() - pad.x0, m.getZ() - pad.z0, m.onGround() ? "" : " air", node));
+            } else if (t % 4 == 0)
                 trace.append(String.format(Locale.ROOT, " t%d:%.0f/%.0f", t, m.yBodyRot, bearing));
             AABB body = m.getBoundingBox();
             for (AABB k : pad.keepOff)
