@@ -116,8 +116,21 @@ public class DisplaySettingsScreen extends Screen {
             .setTooltip(Tooltip.create(Component.literal(
                 "How strongly far ground fades into the sky colour (100% = default, 0% = no haze, the grade stays)")));
 
+        // N1 graphics presets (GraphicsPresets): one press sets every switch above; a mix reads as Custom
+        addRenderableWidget(ReignOfNetherConfigScreen.button(left, this.height - 29, colW, 20, presetLabel(), b -> {
+            if (GraphicsPresets.apply(GraphicsPresets.next(GraphicsPresets.match(GraphicsPresets.current())))
+                    && this.minecraft != null && this.minecraft.level != null)
+                this.minecraft.levelRenderer.allChanged();   // path edges are built into the terrain mesh
+            this.rebuildWidgets();   // every switch label above shows its new value
+        })).setTooltip(Tooltip.create(Component.literal(
+            "Graphics preset: sets world look, valley mist, path edges, building ambience, building animation and branch wind together. Low for weak PCs; High is the default look.")));
         addRenderableWidget(ReignOfNetherConfigScreen.button(right, this.height - 29, colW, 20,
             CommonComponents.GUI_DONE, b -> this.minecraft.setScreen(this.parent)));
+    }
+
+    private static Component presetLabel() {
+        GraphicsPresets.Preset p = GraphicsPresets.match(GraphicsPresets.current());
+        return Component.literal("Graphics: " + (p == null ? "Custom" : GraphicsPresets.NAMES[p.ordinal()]));
     }
 
     private static Component iconModeLabel() {
