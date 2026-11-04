@@ -21,9 +21,13 @@ These checks sit beside test_lawn_r61/r62/r63's, which all stay (the r62/r63 ban
   >= 100 is out of reach under the biome tint's ceiling (albedo white = L 0.58) with near-black under 1%
 - the painted light comes from the EAST: LAWN_SUN = (1, 0), and round the darkest 10% the luma 2 px WEST minus 2 px
   EAST >= 0.02 (test_lawn_r62's method, the direction fixed here)
+- test_lawn_r62/r63's bands re-stated on the pack's 8 x 8 sheet at 32 texels per block (those files mip to a
+  fixed 128 px - 32 texels per block of the 4-block sheet they were written for - so lawn_sheet keeps a 4-block
+  default cut of the same recipe for them; their mechanical fix, box_mip(alb, 32 * LAWN_SHEET_BLOCKS), is not this
+  lane's to make)
 - the flower layer: grass_flower_layer_1..8, 128 x 128 RGBA, 1-6% opaque, 6-12 heads of 0.05-0.11 block, value
   0.75+ everywhere (untinted: real daisy white, buttercup yellow, clover pink), clear of the sprite's edges; and the
-  build writes them (SHEET_JOBS) with the sheet variants' sprite names grass_block_top[_v<k>]_g<cell>
+  build writes them (SHEET_JOBS) with the sheet variants' sprite names grass_block_top[_k<k>]_g<cell>
 
 Run: python3 -m unittest tools/test_lawn_r64.py
 """
@@ -38,6 +42,7 @@ import gen_blocks  # noqa: E402
 import texture_camera_sim as sim  # noqa: E402
 
 TINT = sim.hex_rgb(sim.LAWN_TINT)
+LAWN_GAIN = np.array([1.025, 0.827, 0.827])     # our shader on the tinted lawn (test_lawn_r63)
 _C = {}
 
 
@@ -66,7 +71,8 @@ def variants(res):
     """(H, alb) of every variant at `res` texels per block."""
     key = ("v", res)
     if key not in _C:
-        _C[key] = [gen_blocks.lawn_sheet(res, variant=k) for k in range(1, gen_blocks.LAWN_VARIANTS + 1)]
+        _C[key] = [gen_blocks.lawn_sheet(res, gen_blocks.LAWN_SHEET_BLOCKS, variant=k)
+                   for k in range(1, gen_blocks.LAWN_VARIANTS + 1)]
     return _C[key]
 
 
@@ -91,6 +97,33 @@ def hashed_field(res, cells=3):
                 out[cz * px:(cz + 1) * px, cx * px:(cx + 1) * px] = mips[hash_pick(cx, cz, len(mips))]
         _C[key] = np.clip(out * TINT, 0, 1)
     return _C[key]
+
+
+def sheet_mip(gain=False):
+    """variant 1 of the pack's 8 x 8 sheet at 32 texels per block, tinted (and under our shader's lawn gain)."""
+    key = ("mip", gain)
+    if key not in _C:
+        _H, alb = variants(256)[0]
+        f = sim.box_mip(alb, gen_blocks.LAWN_SHEET_BLOCKS * 32) * TINT
+        _C[key] = np.clip(f * LAWN_GAIN if gain else f, 0, 1)
+    return _C[key]
+
+
+def band_share(L, lo, hi, wavelength=False):
+    """test_lawn_r62's measure: the share of the luma variance in features lo..hi px across (half-wavelength; or the
+    full wavelength), from the power spectrum."""
+    P = np.abs(np.fft.fft2(L - L.mean())) ** 2
+    f = np.sqrt(np.add.outer(np.fft.fftfreq(L.shape[0]) ** 2, np.fft.fftfreq(L.shape[1]) ** 2))
+    size = (1.0 if wavelength else 0.5) / np.maximum(f, 1e-9)
+    return float(P[(size >= lo) & (size <= hi) & (f > 0)].sum() / P[f > 0].sum())
+
+
+def hue_deg(rgb):
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    mx, mn = rgb.max(-1), rgb.min(-1)
+    d = np.maximum(mx - mn, 1e-9)
+    h = np.where(mx == r, (g - b) / d % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4))
+    return h * 60
 
 
 def autocorr(L, lag):
@@ -141,27 +174,72 @@ class LawnSheetRound64Test(unittest.TestCase):
 
     def test_luma_range_at_the_camera(self):
         """p5-p95 of the plain lane's luma (one sheet at 32 texels per block, tinted) >= 0.31."""
-        _H, alb = gen_blocks.lawn_sheet(256)
-        L = sim.luma(np.clip(sim.box_mip(alb, 256) * TINT, 0, 1))
+        L = sim.luma(sheet_mip())
         self.assertGreaterEqual(float(np.percentile(L, 95) - np.percentile(L, 5)), 0.31)
 
     def test_lit_from_the_east(self):
         """the engine's sun at t5000 is east (+u): LAWN_SUN says so, and round the darkest 10% of the mip the luma
         2 px west (away from the sun) minus 2 px east (toward it) >= 0.02."""
         self.assertEqual(tuple(gen_blocks.LAWN_SUN), (1.0, 0.0))
-        _H, alb = gen_blocks.lawn_sheet(256)
-        L = sim.luma(np.clip(sim.box_mip(alb, 256) * TINT, 0, 1))
+        L = sim.luma(sheet_mip())
         dark = L <= np.percentile(L, 10)
         west, east = np.roll(L, 2, 1), np.roll(L, -2, 1)
         self.assertGreaterEqual(float(west[dark].mean() - east[dark].mean()), 0.02)
 
+    def test_rounds_62_63_bands_on_the_8x8_sheet(self):
+        """test_lawn_r62/r63 mip the sheet to a fixed 128 px (32 texels per block of the 4-block sheet they were
+        written for), so they keep measuring lawn_sheet's default 4-block cut of the same recipe; the pack's 8 x 8
+        sheet is held to the SAME bands here at 32 texels per block (3 x 3 sheets, as they tile): near-black
+        < 0.5% under our gain, speckle 0.40-0.50, 2+ block share 0.15-0.30, fine grain (under 0.2 block over
+        0.25-0.6 block), saturation >= 0.58 and L >= 0.34 under our gain, worn soil 1-8% in pieces of 32-4096 px,
+        the brightest 0.5% in 8+ specks of 2+ px (4+ of 5+ px, none over 30), and the sheet wraps."""
+        f3 = np.tile(sheet_mip(), (3, 3, 1))
+        g3 = np.tile(sheet_mip(gain=True), (3, 3, 1))
+        L, Lg = sim.luma(f3), sim.luma(g3)
+        with self.subTest("no holes under our shader"):
+            self.assertLess(float((Lg < 0.15).mean()), 0.005)
+        with self.subTest("speckle band"):
+            self.assertGreaterEqual(band_share(Lg, 2, 8), 0.40)
+            self.assertLess(band_share(Lg, 2, 8), 0.50)
+        with self.subTest("block-scale band"):
+            share = band_share(L, 64, 1e9, wavelength=True)
+            self.assertGreaterEqual(share, 0.15)
+            self.assertLessEqual(share, 0.30)
+        with self.subTest("fine grain"):
+            self.assertGreater(band_share(Lg, 1.5, 6.4), band_share(Lg, 8, 20))
+        with self.subTest("saturated and bright"):
+            m = sim.measure(g3)
+            self.assertGreaterEqual(m["sat"], 0.58)
+            self.assertGreaterEqual(m["L"], 0.34)
+        with self.subTest("worn soil patches"):
+            soil = (hue_deg(f3) < 80) & (L < 0.35)
+            self.assertGreaterEqual(float(soil.mean()), 0.01)
+            self.assertLessEqual(float(soil.mean()), 0.08)
+            sizes = components(soil)
+            self.assertGreaterEqual(max(sizes), 32)
+            self.assertLessEqual(max(sizes), 4096)
+        with self.subTest("flower specks"):
+            L1 = sim.luma(sheet_mip())
+            sizes = [s for s in components(L1 > np.percentile(L1, 99.5)) if s >= 2]
+            self.assertGreaterEqual(len(sizes), 8)
+            self.assertGreaterEqual(sum(1 for s in sizes if s >= 5), 4)
+            self.assertLessEqual(max(sizes), 30)
+        with self.subTest("wraps"):
+            _H, alb = variants(256)[0]
+            Lb = alb @ gen_blocks.LUMA
+            cols = np.abs(np.diff(Lb, axis=1)).mean(0)
+            rows = np.abs(np.diff(Lb, axis=0)).mean(1)
+            self.assertLessEqual(np.abs(Lb[:, -1] - Lb[:, 0]).mean(), cols.max() * 1.15)
+            self.assertLessEqual(np.abs(Lb[-1, :] - Lb[0, :]).mean(), rows.max() * 1.15)
+
     def test_sprite_names_and_jobs(self):
-        """variant 1 keeps the round 62 names (grass_block_top_g1..64); variant k >= 2 is grass_block_top_v<k>_g<cell>;
-        the build runs the sheet variants and the flower layer."""
+        """variant 1 keeps the round 62 names (grass_block_top_g1..64); variant k >= 2 is grass_block_top_k<k>_g<cell>
+        - GroundSheetRules.variantSprite's spelling (PR #504 c0674be9; the red-first commit guessed _v<k> before the
+        Java side had pushed); the build runs the sheet variants and the flower layer."""
         self.assertEqual(gen_blocks.lawn_sheet_sprite(1, 1), "grass_block_top_g1")
         self.assertEqual(gen_blocks.lawn_sheet_sprite(1, 64), "grass_block_top_g64")
-        self.assertEqual(gen_blocks.lawn_sheet_sprite(2, 1), "grass_block_top_v2_g1")
-        self.assertEqual(gen_blocks.lawn_sheet_sprite(3, 64), "grass_block_top_v3_g64")
+        self.assertEqual(gen_blocks.lawn_sheet_sprite(2, 1), "grass_block_top_k2_g1")
+        self.assertEqual(gen_blocks.lawn_sheet_sprite(3, 64), "grass_block_top_k3_g64")
         self.assertIn("grass_block_top_sheet", gen_blocks.SHEET_JOBS)
         self.assertIn("grass_flower_layer", gen_blocks.SHEET_JOBS)
         self.assertIn("grass_clover_layer", gen_blocks.SHEET_JOBS)
@@ -200,7 +278,8 @@ class FlowerLayerTest(unittest.TestCase):
     def test_real_flower_colours(self):
         """untinted, so the colours are the flowers' own: value (max channel) 0.75+ on every visible texel, and the
         drift holds white heads (daisies, max - min under 0.15), yellow ones (buttercups: R, G over 0.85, B under
-        0.55) and a pinkish one (R over G over B, R - B 0.08-0.3) somewhere in the eight."""
+        0.55) and a pinkish one (pink = red first, GREEN last: R over B over G, R - G 0.08-0.3; the red-first
+        commit had R over G over B, which is peach) somewhere in the eight."""
         kinds = set()
         for k, (_H, alb, alpha) in enumerate(self.layers(), 1):
             vis = alpha > 0.5
@@ -211,7 +290,7 @@ class FlowerLayerTest(unittest.TestCase):
                 kinds.add("white")
             if ((px[:, 0] > 0.85) & (px[:, 1] > 0.85) & (px[:, 2] < 0.55)).mean() > 0.05:
                 kinds.add("yellow")
-            pink = (px[:, 0] > px[:, 1]) & (px[:, 1] > px[:, 2]) & (px[:, 0] - px[:, 2] > 0.08) & (px[:, 0] - px[:, 2] < 0.3)
+            pink = (px[:, 0] > px[:, 2]) & (px[:, 2] > px[:, 1]) & (px[:, 0] - px[:, 1] > 0.08) & (px[:, 0] - px[:, 1] < 0.3)
             if pink.mean() > 0.05:
                 kinds.add("pink")
         self.assertEqual(kinds, {"white", "yellow", "pink"})

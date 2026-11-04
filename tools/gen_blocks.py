@@ -5900,11 +5900,12 @@ def m_blade_top(F, n):
 # would put it on the dirt sides too). Round 62 drew it at a clump scale (0.26-0.52 block) that read as tree canopy
 # from the RTS camera; round 63 (below) keeps the sheet and redraws it as a clover carpet at 61b's fine grain.
 
-LAWN_SHEET_BLOCKS = 4
-# where the painted light comes from, in top-face texture space (u = east, v = south): our shader's sun at day time
-# 5000 with sunPathRotation +30 stands high in the NORTH, a little east (lessons-itachi1-oct30-day.md; the flip to -30
-# waits on lovish - if it lands, the sun is in the south and this becomes (0.45, 0.89))
-LAWN_SUN = (0.45, -0.89)
+LAWN_SHEET_BLOCKS = 8          # r64: 8 x 8 blocks (r62-r63 were 4 x 4; lovish Nov 4 ~15:30 ET: "8x8 sheet + hashed pick")
+# where the painted light comes from, in top-face texture space (u = east, v = south). Rounds 62-63 painted it from
+# the north ((0.45, -0.89), read off lessons-itachi1-oct30-day.md and never re-measured); the round 62 critic
+# measured the engine's sun at t5000 in the EAST (screen upper-right on the RTS camera, cast shadows falling
+# lower-left: /home/claude/r62/ref/r61b_bat_eyes_15_ground_sampler_rts.png), so the baked light comes from +u
+LAWN_SUN = (1.0, 0.0)
 
 
 def _hsv(h, s, v):
@@ -5970,9 +5971,10 @@ def _disc(dx, dy, r, soft=1.5):
     return np.clip((r - np.sqrt(dx * dx + dy * dy)) / soft + 0.5, 0, 1)
 
 
-def lawn_sheet(res, blocks=LAWN_SHEET_BLOCKS, seed=None, knobs=None):
-    """The sheet: (H, alb), (res * blocks)^2 texels, seamless (everything toroidal over the sheet). `knobs` as
-    LAWN_R63 (the candidates); blocks=1 gives one toroidal block of the same carpet (the single tile)."""
+def lawn_carpet_r63(res, blocks=4, seed=None, knobs=None):
+    """Round 63's sheet, kept for comparison (round 64's lawn_sheet below is the pack's lawn): (H, alb),
+    (res * blocks)^2 texels, seamless (everything toroidal over the sheet). `knobs` as LAWN_R63 (the candidates);
+    blocks=1 gives one toroidal block of the same carpet (the single tile)."""
     K = dict(LAWN_R63, **(knobs or {}))
     n = res * blocks
     F = Field(n, SEEDS["grass_block_top"] + 62 if seed is None else seed)
@@ -6191,28 +6193,355 @@ def write_clover_layers(res, preview_dir=None):
     return {"sprites": CLOVER_LAYERS, "cover": cover}
 
 
-def write_lawn_sheet(res, preview_dir=None):
-    """grass_block_top_g1.._g16 (+ _n, _s): the sheet cut per block, row-major from its top left (1 + x + z * N, as
-    Athena's giant; GiantLawnBakedModel picks cell 1 + floorMod(x, N) + floorMod(z, N) * N). No blockstate: the
-    grass block keeps its own model and variants - the wrapper only swaps the top face's sprite."""
+# ------------------------------------------------------------------ round 64: 8 x 8 turf sheets in variants (Nov 4) --
+# Round 63's blind critic (3.5/10 against 61b's 3): "no knob moved the result the player sees"; the 4-block repeat
+# "severe" (autocorrelation 0.99 at exactly 4 blocks - diagonal bands, the soil blotch at the same offset); no
+# discrete leaves, no highlight, no white or yellow specks; luma p5-p95 range 57 levels against 136 in the clover
+# photo. lovish (~15:30 ET): "61b looks better" than r62's clumps (fine even grain is the scale), the meso band set
+# where 61b is, and "8x8 sheet + hashed pick" for the repeat: the sheet spans 8 x 8 blocks and the Java side (PR
+# #504's lane) picks one of LAWN_VARIANTS sheets per 8 x 8 cell by a position hash, never turning them (a turned
+# sheet spins its baked sun - claude/inbox-research-nov4-tiling.md), and draws an UNTINTED flower layer.
+# The art is the round 62 critic's TURF recipe at 61b's grain:
+#   - fine ANISOTROPIC blade stipple (across 0.05-0.11 block, 3 x longer than wide) whose lay direction drifts over
+#     1.5-4 blocks - "wind lay", lovish's "intricate lines"; tuft clumps of 0.16-0.42 block streaked the same way
+#   - the forms are broad rounded tops over narrow V creases (H -> -exp(-cH)): the deep shade BETWEEN the tufts is
+#     a line, the lit top a patch - with the light from the EAST (+u, weak: the flank falling toward the sun goes
+#     toward LAWN64_LEAF, the flank facing away and a short shadow at the west foot toward LAWN64_UNDER, never below
+#     it) that is what puts the luma 2 px west of a dark crease above the luma 2 px east (test_lawn_r62's lit side)
+#   - FLAT clover / broadleaf patches (0.15-0.35 block, bluer, a little darker, no dome), warm bare scuffs
+#     (0.1-0.2 block, lighter), a little worn dark soil (0.5-1.5 block, the r63 soil band), buttercup specks
+#   - 2-6 block tonal patches (luma +-, hue +-6 deg: yellow-green worn, blue-green lush) - the calm-patches share
+#     without a lattice now that the sheet is 8 blocks and varied
+# VARIANTS that join: every detail layer is this variant's own noise blended (variance-preserving) into one COMMON
+# noise over a band along the sheet's edges (0.35 block for the fine grain, wider for the patch masks and the macro
+# fields), so the border texels of every variant are the same and any two variants meet seamlessly in any order;
+# the flowers keep clear of the band (a cut flower would be a seam tell). What two cells at the 8-block step share is
+# the pick's own 1/K chance of the same variant - the texture adds only its bands (test_lawn_r64).
+# Measured on tools/texture_camera_sim.py (variant 1 at 32 texels per block, tinted; r63 base in brackets): plain
+# lane L 0.41 (0.40), p5 0.24 (0.25), p95 0.55 (0.55), range 80 levels (77), near-black 0.2% under our gain (0.0),
+# west-minus-east asymmetry 0.024 (0.024 along its north sun), speckle 0.45 (0.46), 2+ block share 0.25 (0.19),
+# saturation 0.75; the critic's 100-level range is beyond the biome tint's ceiling (a white albedo is L 0.58 in the
+# plain lane) once near-black stays under 1%.
+
+LAWN_VARIANTS = 3
+LAWN_R64 = dict(
+    lay_drift=0.8,                   # rad (std) the wind-lay direction drifts by, over 1.5-4 blocks
+    blade=(0.05, 0.11),              # blade stipple: across-wavelength, blocks (1.6-3.5 texels at the RTS mip)
+    tuft=(0.16, 0.42),               # tuft clumps: wavelength, blocks
+    tuft_elong=1.5,                  # the clumps streak along the lay, x longer than wide (1 = round)
+    crease=1.3,                      # valley sharpening (0 = the raw noise, symmetric, no lit side at the camera)
+    relief=0.16,                     # luma swing of the forms (the lit flank vs the body)
+    slope_k=8.0,                     # H units per block that count as a fully lit flank
+    selfshade=0.6,                   # how far a flank facing away from the sun goes into shade (x its slope)
+    sun_k=6.0,                       # the sun ray's slope, H units per block: lower = longer shadows at the west feet
+    shadow_len=0.10,                 # blocks: the longest shadow sampled (short: a line of shade, not a pool)
+    shadow=1.0,                      # how far full shade goes toward LAWN64_UNDER (1 = all the way; that is the floor)
+    patch=0.24,                      # the 2-6 block tonal patches: luma x (1 +- patch/2 at one std)
+    undul=0.06,                      # the 0.6-2.5 block undulation: luma x (1 +- undul/2)
+    clover=0.14,                     # share of flat clover / broadleaf patches
+    scuff=0.035,                     # share of warm bare scuffs
+    soil=0.025,                      # share of worn dark soil (test_lawn_r63: 1-8% at the mip, in patches)
+    flowers=0.25,                    # buttercup specks per block, baked (test_lawn_r63's specks; the real flowers
+                                     # are the untinted layer below)
+    band=0.35,                       # blocks: the edge band where every variant shows the common fine detail
+)
+
+# albedo colours (the game multiplies the biome tint #6FA64A; our shader then pulls R 1.025, G 0.827, B 0.827)
+LAWN64_LEAF = np.array([0.90, 0.99, 0.50])     # a lit blade top: yellow-green, G at the tint's ceiling
+LAWN64_MID = np.array([0.64, 0.84, 0.40])      # the turf's body
+LAWN64_UNDER = np.array([0.26, 0.42, 0.38])    # the shade in the creases: cool deep green, the floor (never black)
+LAWN64_CLOVER = np.array([0.50, 0.75, 0.50])   # clover / broadleaf: bluer, a little darker, flat
+LAWN64_SCUFF = np.array([0.92, 0.82, 0.55])    # a warm bare scuff: lighter, sandy
+LAWN64_SOIL = np.array([0.55, 0.40, 0.21])     # worn dark soil
+LAWN64_FLOWER = np.array([1.00, 1.00, 0.60])   # a buttercup speck (the brightest thing the tint allows)
+LAWN64_HEAD = np.array([0.98, 0.86, 0.80])     # a clover head: pale, a little pink
+
+
+def _r64_band(F, blocks, lo, hi, rng):
+    """Unit-std isotropic noise with wavelengths lo..hi BLOCKS, seamless over the sheet, from `rng`."""
+    r = np.sqrt(F.fx ** 2 + F.fy ** 2) / blocks
+    keep = (r >= 1.0 / hi) & (r <= 1.0 / lo)
+    w = np.real(np.fft.ifft2(np.fft.fft2(rng.standard_normal((F.n, F.n))) * keep))
+    return w / (w.std() + 1e-9)
+
+
+def _r64_oriented(F, blocks, lo, hi, phi, elong, rng):
+    """Unit-std noise of streaks ALONG direction phi: across-wavelengths lo..hi blocks, along-frequencies within
+    1/elong of the across one (each streak ~elong times longer than wide)."""
+    c, s = math.cos(phi), math.sin(phi)
+    fa = (F.fx * c + F.fy * s) / blocks
+    fc = (-F.fx * s + F.fy * c) / blocks
+    r = np.abs(fc)
+    amp = ((r >= 1.0 / hi) & (r <= 1.0 / lo)) * np.exp(-(fa * elong) ** 2 / np.maximum(r, 1e-6) ** 2)
+    w = np.real(np.fft.ifft2(np.fft.fft2(rng.standard_normal((F.n, F.n))) * amp))
+    return w / (w.std() + 1e-9)
+
+
+def _r64_lay(F, blocks, theta, lo, hi, elong, rng):
+    """Streaks whose direction follows the field theta (radians): four oriented noises blended by direction,
+    variance-preserving (unit variance everywhere, whatever the direction)."""
+    out = np.zeros((F.n, F.n))
+    wsq = np.zeros((F.n, F.n))
+    for k in range(4):
+        phi = k * math.pi / 4
+        w = np.cos(theta - phi) ** 4
+        out += w * _r64_oriented(F, blocks, lo, hi, phi, elong, rng)
+        wsq += w * w
+    return out / np.sqrt(wsq + 1e-9)
+
+
+def _r64_edge_weight(n, res, width_blocks):
+    """1 in the sheet's interior, 0 on its border, a raised cosine over width_blocks from each edge."""
+    x = np.arange(n) + 0.5
+    d = np.minimum(x, n - x) / res
+    t = np.clip(d / width_blocks, 0, 1)
+    w1 = 0.5 - 0.5 * np.cos(math.pi * t)
+    return np.minimum(w1[None, :], w1[:, None])
+
+
+def _r64_vp_blend(own, common, w):
+    """Variance-preserving blend of two unit-variance fields (the research note's rule: a plain average flattens
+    the contrast): w = 1 own, w = 0 common."""
+    return (w * own + (1 - w) * common) / np.sqrt(w * w + (1 - w) ** 2)
+
+
+def lawn_turf(res, blocks=LAWN_SHEET_BLOCKS, variant=1, knobs=None, seed=None):
+    """One variant of the turf sheet: (H, alb), (res * blocks)^2 texels, seamless with itself and with every other
+    variant along its edges (see the section note). `knobs` as LAWN_R64."""
+    K = dict(LAWN_R64, **(knobs or {}))
+    n = res * blocks
+    base_seed = SEEDS["grass_block_top"] + 64 if seed is None else seed
+    F = Field(n, base_seed)                                   # F.rng: the few draws every variant shares
+    rc = np.random.default_rng(base_seed + 11)                # the common detail (the edge bands)
+    rv = np.random.default_rng(base_seed + 101 * variant)     # this variant's detail
+    su, sv = LAWN_SUN
+    bb = blocks * blocks
+    wf = _r64_edge_weight(n, res, K["band"])                  # the fine grain: own inside, common on the band
+    wm = _r64_edge_weight(n, res, K["band"] * 1.6)            # the patch masks: a wider band
+    wM = _r64_edge_weight(n, res, K["band"] * 2.4)            # the macro fields
+
+    def dual(fn, w=wf):
+        return _r64_vp_blend(fn(rv), fn(rc), w)
+
+    # macro: tonal patches, undulation, the lay direction's drift round one shared heading
+    theta0 = F.rng.uniform(0, math.pi)
+    P = dual(lambda r: _r64_band(F, blocks, 2.0, 6.0, r), wM)
+    U = dual(lambda r: _r64_band(F, blocks, 0.6, 2.5, r), wM)
+    theta = theta0 + K["lay_drift"] * dual(lambda r: _r64_band(F, blocks, 1.5, 4.0, r), wM)
+    # detail
+    blade = dual(lambda r: _r64_lay(F, blocks, theta, K["blade"][0], K["blade"][1], 3.0, r))
+    if K["tuft_elong"] > 1.0:
+        tuft = dual(lambda r: _r64_lay(F, blocks, theta, K["tuft"][0], K["tuft"][1], K["tuft_elong"], r))
+    else:
+        tuft = dual(lambda r: _r64_band(F, blocks, K["tuft"][0], K["tuft"][1], r))
+    fine = dual(lambda r: _r64_band(F, blocks, 0.03, 0.08, r))
+    cl_n = dual(lambda r: _r64_band(F, blocks, 0.3, 0.9, r) + 0.35 * _r64_band(F, blocks, 0.08, 0.3, r), wm)
+    sc_n = dual(lambda r: _r64_band(F, blocks, 0.12, 0.3, r) + 0.3 * _r64_band(F, blocks, 0.05, 0.12, r), wm)
+    so_n = dual(lambda r: _r64_band(F, blocks, 0.6, 1.8, r) + 0.35 * _r64_band(F, blocks, 0.1, 0.4, r), wm)
+
+    def mask(noise, share, soft):
+        if share <= 0:
+            return np.zeros((n, n))
+        thr = np.percentile(noise, 100 * (1 - share))
+        return np.clip((noise - thr) / soft + 0.5, 0, 1)
+    clover = mask(cl_n, K["clover"], 0.3)
+    scuff = mask(sc_n, K["scuff"], 0.25) * (1 - clover)
+    soil = mask(so_n, K["soil"], 0.3)
+    flat = np.clip(clover + scuff + soil, 0, 1)
+    # height: tufts and blades, flattened on the patches, then the valleys sharpened into creases
+    H = 0.62 * tuft + 0.30 * blade + 0.18 * fine + 0.25 * U
+    H = H * (1 - 0.8 * flat) + 0.15 * fine * clover - 0.9 * soil - 0.5 * scuff
+    H = H / (H.std() + 1e-9)
+    if K["crease"] > 0:
+        H = -np.exp(-K["crease"] * H) / K["crease"]
+        H = (H - H.mean()) / (H.std() + 1e-9)
+    Hs = F.blur(H, 0.012 * res)
+    # light from the east: the flank falling toward +u faces the sun; the flank facing away is in shade; a short
+    # cast shadow where the ground toward the sun stands above the sun's ray (a horizon test over shadow_len)
+    dx = (np.roll(Hs, -1, 1) - np.roll(Hs, 1, 1)) * res / 2 / K["slope_k"]
+    slope = np.tanh(-dx)                                      # + where the ground faces the sun
+    sh = np.zeros((n, n))
+    for d in np.linspace(0.02, K["shadow_len"], 6) * res:
+        sh = np.maximum(sh, F.warp(Hs, su * d / n, sv * d / n) - Hs - K["sun_k"] * d / res)
+    shade = np.clip(F.blur(np.clip(sh / 0.5, 0, 1), 0.005 * res), 0, 1)
+    shade = np.clip(shade + np.clip(-slope, 0, 1) * K["selfshade"], 0, 1) * (1 - 0.6 * flat)
+    lit = np.clip(slope, 0, 1) * (1 - shade)
+    # colour
+    rel = K["relief"] / 0.16
+    col = LAWN64_MID[None, None] * (1 + 0.05 * rel * H + 0.06 * rel * blade)[..., None]
+    col = col + (LAWN64_LEAF[None, None] - col) * (lit * 0.9 * rel)[..., None]
+    col = col + (LAWN64_UNDER[None, None] - col) * np.clip(shade * K["shadow"], 0, 1)[..., None]
+    cl_col = LAWN64_CLOVER[None, None] * (1 + 0.12 * fine + 0.04 * slope)[..., None]       # flat, its own speckle
+    col = col * (1 - clover)[..., None] + cl_col * clover[..., None]
+    sc_col = LAWN64_SCUFF[None, None] * (1 + 0.08 * fine)[..., None]
+    col = col * (1 - scuff)[..., None] + sc_col * scuff[..., None]
+    crumbs = np.clip(1 + 0.12 * fine + 0.25 * slope, 0.8, 1.4)                             # lit crumbs, never black
+    col = col * (1 - soil)[..., None] + (LAWN64_SOIL[None, None] * crumbs[..., None]) * soil[..., None]
+    pv = np.clip(P, -2, 2) / 2 * (1 - 0.5 * soil)                                           # the tonal patches
+    col = col * (1 + K["patch"] * pv)[..., None] * np.stack([1 + 0.05 * pv, np.ones_like(pv), 1 - 0.06 * pv], -1)
+    col = col * (1 + K["undul"] * np.clip(U, -2, 2) / 2)[..., None]
+    # buttercup specks and clover heads: this variant's own, clear of the edge band, each with a short west shadow
+    Hf = H.copy()
+    for count, rad, fc, centre in ((int(K["flowers"] * bb), 0.066, LAWN64_FLOWER, None),
+                                   (int(K["flowers"] * bb * 0.5), 0.055, LAWN64_HEAD, LAWN64_LEAF * 0.85)):
+        for _ in range(count):
+            cx, cy = rv.uniform(K["band"] * res, n - K["band"] * res, 2)
+            if soil[int(cy), int(cx)] > 0.5:
+                continue
+            r = rad * res
+            k = int(math.ceil(1.4 * r)) + 3
+            ix, ddx, ddy = _lawn_window(n, cx, cy, k)
+            cov = _disc(ddx, ddy, r, 1.5)
+            shd = _disc(ddx + su * 0.7 * r, ddy + sv * 0.7 * r, r, 2.0) * 0.5
+            c = fc[None, None] * (1 + 0.06 * np.clip((ddx * su + ddy * sv) / r, -1, 1))[..., None]
+            if centre is not None:
+                c = np.where(_disc(ddx, ddy, 0.3 * r, 1.0)[..., None] > 0.5, centre[None, None], c)
+            col[ix] = col[ix] * (1 - shd * (1 - cov))[..., None] * (1 - cov[..., None]) + c * cov[..., None]
+            Hf[ix] = np.where(cov > 0.5, Hf[ix].max() + 0.5, Hf[ix])
+    return Hf, np.clip(col, 0, 1)
+
+
+_LAWN_CACHE = {}
+
+
+def lawn_sheet(res, blocks=4, seed=None, knobs=None, variant=1):
+    """The lawn's turf sheet: (H, alb) of `variant` (1..LAWN_VARIANTS) over `blocks` x `blocks`. The pack writes
+    LAWN_SHEET_BLOCKS = 8 (write_lawn_sheet; test_lawn_r64 measures those). `blocks` defaults to 4 for
+    test_lawn_r62/r63, written for the 4-block sheet: they mip the sheet to a fixed 128 px (= 32 texels per block of a
+    4-block sheet - the RTS camera), so on the 8-block sheet they would measure a 16-texel camera nobody plays at;
+    the same recipe at 4 blocks has the same statistics, and test_lawn_r64 re-states their bands on the 8 x 8 sheet
+    at 32 texels per block. (Their mechanical fix is box_mip(alb, 32 * LAWN_SHEET_BLOCKS) - not this lane's to make.)
+    The default sheets are cached in the process."""
+    if knobs:
+        return lawn_turf(res, blocks, variant, knobs, seed)
+    key = (res, blocks, seed, variant)
+    if key not in _LAWN_CACHE:
+        _LAWN_CACHE[key] = lawn_turf(res, blocks, variant, None, seed)
+    return _LAWN_CACHE[key]
+
+
+def lawn_sheet_sprite(variant, cell):
+    """The sprite name of a sheet cell, as GroundSheetRules.variantSprite (PR #504, c0674be9) reads them: variant 1
+    keeps round 62's grass_block_top_g<cell> (its count sizes the sheet); variant k = 2..4 is
+    grass_block_top_k<k>_g<cell> (_k, not the pack's _v: a _v<digits> name is a per-block variant of the top itself,
+    which the sheet replaces). A variant counts only when all 64 of its cells are present."""
+    return "grass_block_top_g%d" % cell if variant == 1 else "grass_block_top_k%d_g%d" % (variant, cell)
+
+
+def write_lawn_sheet(res, preview_dir=None, variant=1):
+    """One variant's 64 sprites (+ _n, _s): the sheet cut per block, row-major from its top left (1 + x + z * N, as
+    Athena's giant; GroundSheetRules.cell = 1 + floorMod(x, N) + floorMod(z, N) * N). No blockstate: the grass
+    block keeps its own model and variants - the wrapper only swaps the top face's sprite."""
     blocks = LAWN_SHEET_BLOCKS
     t = targets_for("grass_block_top")
     big = res * blocks
-    F = Field(big, SEEDS["grass_block_top"] + 63)
-    H, alb = lawn_sheet(res, blocks)
+    F = Field(big, SEEDS["grass_block_top"] + 63 + variant)
+    H, alb = lawn_sheet(res, blocks, variant=variant)
     n_img, s_img, k = maps(F, H, t)
     for z in range(blocks):
         for x in range(blocks):
-            i = 1 + x + z * blocks
+            name = lawn_sheet_sprite(variant, 1 + x + z * blocks)
             sl = (slice(z * res, (z + 1) * res), slice(x * res, (x + 1) * res))
-            to_png(alb[sl]).save(os.path.join(BLOCK_DIR, "grass_block_top_g%d.png" % i), **PNG_OPTS)
-            Image.fromarray(n_img[sl], "RGBA").save(os.path.join(BLOCK_DIR, "grass_block_top_g%d_n.png" % i), **PNG_OPTS)
-            Image.fromarray(s_img[sl], "RGBA").save(os.path.join(BLOCK_DIR, "grass_block_top_g%d_s.png" % i), **PNG_OPTS)
-    if preview_dir:
+            to_png(alb[sl]).save(os.path.join(BLOCK_DIR, name + ".png"), **PNG_OPTS)
+            Image.fromarray(n_img[sl], "RGBA").save(os.path.join(BLOCK_DIR, name + "_n.png"), **PNG_OPTS)
+            Image.fromarray(s_img[sl], "RGBA").save(os.path.join(BLOCK_DIR, name + "_s.png"), **PNG_OPTS)
+    if preview_dir and variant == 1:
         img = lit_preview(np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1), n_img)
         Image.fromarray((img * 255).astype(np.uint8), "RGB").resize((512, 512), Image.LANCZOS).save(
             os.path.join(preview_dir, "grass_block_top_sheet_lit.png"))
-    return {"normal_strength": round(k, 2), "blocks": blocks}
+    return {"normal_strength": round(k, 2), "blocks": blocks, "variant": variant}
+
+
+# The untinted flower layer (r64): the biome tint turns anything on the lawn green, so a white daisy on the sheet
+# is impossible - the Java side draws one more floating cutout plane, UNTINTED, over ~6% of the grass blocks in
+# clusters (picked by a position hash), from these sprites. Each is a small drift of 6-12 heads of 2-3 px at the RTS
+# camera (0.05-0.11 block), in the flowers' own colours: white daisies with yellow centres, pale-yellow buttercups, a
+# few pinkish-white clover heads; value 0.75+ everywhere (the meadow photo's daisies read as white dots); nothing
+# within 3 texels of the edge (a head cut at the block edge would draw the block grid).
+FLOWER_LAYERS = 8
+FLOWER_DAISY = np.array([0.97, 0.97, 0.93])
+FLOWER_DAISY_EYE = np.array([1.00, 0.84, 0.22])
+FLOWER_BUTTERCUP = np.array([1.00, 0.93, 0.36])
+FLOWER_CLOVER = np.array([0.97, 0.83, 0.88])
+
+
+def flower_layer(res, k):
+    """grass_flower_layer_<k>: (H, alb, alpha) at res x res."""
+    n = res
+    F = Field(n, SEEDS["grass_block_top"] + 660 + k)
+    rng = F.rng
+    alb = np.zeros((n, n, 3))
+    alpha = np.zeros((n, n))
+    H = np.zeros((n, n))
+    count = int(rng.integers(6, 12))
+    # a loose drift: the heads scatter along a band through the block (so neighbouring flower blocks can read as one
+    # drift), kept clear of the edges
+    ang = rng.uniform(0, math.pi)
+    cx0, cy0 = rng.uniform(0.35, 0.65, 2) * n
+    margin = 0.09 * n
+    placed = 0
+    tries = 0
+    while placed < count and tries < 200:
+        tries += 1
+        along = rng.normal(0, 0.28) * n
+        across = rng.normal(0, 0.12) * n
+        cx = cx0 + math.cos(ang) * along - math.sin(ang) * across
+        cy = cy0 + math.sin(ang) * along + math.cos(ang) * across
+        if not (margin <= cx < n - margin and margin <= cy < n - margin):
+            continue
+        kind = rng.random()
+        if kind < 0.5:                                              # daisy: white disc, yellow eye
+            r = rng.uniform(0.036, 0.048) * n
+            col, eye = FLOWER_DAISY, FLOWER_DAISY_EYE
+        elif kind < 0.85:                                           # buttercup
+            r = rng.uniform(0.030, 0.042) * n
+            col, eye = FLOWER_BUTTERCUP, FLOWER_BUTTERCUP * np.array([0.98, 0.90, 0.70])
+        else:                                                       # clover head
+            r = rng.uniform(0.032, 0.044) * n
+            col, eye = FLOWER_CLOVER, FLOWER_CLOVER * 0.96
+        kk = int(math.ceil(r)) + 2
+        ix, dx, dy = _lawn_window(n, cx, cy, kk)
+        if (alpha[ix] > 0.3).any():                                 # heads do not overlap
+            continue
+        cov = _disc(dx, dy, r, 1.0)
+        # a touch of form: a little lighter toward the east rim (weak; FlowerLayerRules never turns the sprite), the eye
+        tone = 1 - 0.06 * np.clip(-(dx * LAWN_SUN[0] + dy * LAWN_SUN[1]) / r, 0, 1)
+        c = col[None, None] * tone[..., None]
+        c = np.where(_disc(dx, dy, 0.33 * r, 0.8)[..., None] > 0.5, eye[None, None], c)
+        on = cov > alpha[ix]
+        alb[ix] = np.where(on[..., None], c, alb[ix])
+        alpha[ix] = np.maximum(alpha[ix], cov)
+        dome = np.clip(1 - (dx * dx + dy * dy) / (r * r * 1.1), 0, 1) ** 0.5
+        H[ix] = np.where(on, 0.5 + 0.5 * dome, H[ix])
+        placed += 1
+    return H, np.clip(alb, 0, 1), np.clip(alpha, 0, 1)
+
+
+def write_flower_layers(res, preview_dir=None):
+    """The FLOWER_LAYERS sprites (+ _n, _s) at `res` (128 in the pack, as the clover layer). No model or blockstate:
+    the Java layer looks the sprites up by name and skips the layer when they are missing."""
+    t = dict(targets_for("grass_block_top"), hspan=SHALLOW_HEIGHT)
+    cover = []
+    for k in range(1, FLOWER_LAYERS + 1):
+        F = Field(res, SEEDS["grass_block_top"] + 670 + k)
+        H, alb, alpha = flower_layer(res, k)
+        n_img, s_img, _k = maps(F, H, t, alpha)
+        name = "grass_flower_layer_%d" % k
+        to_png(alb, alpha).save(os.path.join(BLOCK_DIR, name + ".png"), **PNG_OPTS)
+        Image.fromarray(n_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_n.png"), **PNG_OPTS)
+        Image.fromarray(s_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_s.png"), **PNG_OPTS)
+        cover.append(round(float((alpha > 0.5).mean()), 3))
+        if preview_dir and k == 1:
+            shown = np.where(alpha[..., None] > 0.5, alb, 0.06)
+            Image.fromarray((lit_preview(shown, n_img) * 255).astype(np.uint8), "RGB").resize(
+                (256, 256), Image.LANCZOS).save(os.path.join(preview_dir, name + "_lit.png"))
+    return {"sprites": FLOWER_LAYERS, "cover": cover}
+
+
+# the jobs beside TARGETS and GIANT: the water strips (longest, first), the lawn sheet variants, the two layers
+SHEET_JOBS = (["water_flow", "water_still"]
+              + ["grass_block_top_sheet" + ("" if v == 1 else "_v%d" % v) for v in range(1, LAWN_VARIANTS + 1)]
+              + ["grass_clover_layer", "grass_flower_layer"])
 
 
 def r60_raise(L, n, k, centre):
@@ -7588,10 +7917,14 @@ def _job(args):
         res *= 2
     if name.endswith("_giant"):
         return name, write_giant(name[:-6], res, preview_dir)
-    if name == "grass_block_top_sheet":                # r62: the lawn's 4 x 4 sheet (GiantLawnBakedModel)
-        return name, write_lawn_sheet(res * 2 if hires else res, preview_dir)   # 256 per block, as the top
+    if name.startswith("grass_block_top_sheet"):       # r62-r64: the lawn's sheet, one job per variant (r64)
+        tail = name[len("grass_block_top_sheet"):]
+        return name, write_lawn_sheet(res * 2 if hires else res, preview_dir,       # 256 per block, as the top
+                                      int(tail[2:]) if tail.startswith("_v") else 1)
     if name == "grass_clover_layer":                   # r63: the floating clover plane's sprites
         return name, write_clover_layers(res, preview_dir)
+    if name == "grass_flower_layer":                   # r64: the floating UNTINTED flower plane's sprites
+        return name, write_flower_layers(res, preview_dir)
     if name == "water_still":
         return name, write_water(res, preview_dir)
     if name == "water_flow":
@@ -7610,7 +7943,7 @@ def build(res, preview_dir=None, jobs=None, hires=True):
     if preview_dir:
         os.makedirs(preview_dir, exist_ok=True)
     # the two water strips are the longest jobs: first, so no worker is left finishing them alone
-    names = ["water_flow", "water_still", "grass_block_top_sheet", "grass_clover_layer"] + [g + "_giant" for g in GIANT] + list(TARGETS)
+    names = SHEET_JOBS + [g + "_giant" for g in GIANT] + list(TARGETS)
     jobs = max(1, jobs or os.cpu_count() or 1)
     work = [(n, res, preview_dir, hires) for n in names]
     if jobs == 1:
@@ -7619,8 +7952,7 @@ def build(res, preview_dir=None, jobs=None, hires=True):
         from concurrent.futures import ProcessPoolExecutor
         with ProcessPoolExecutor(max_workers=jobs) as ex:
             done = dict(ex.map(_job, work))
-    report = {n: done[n] for n in list(TARGETS) + ["water_still", "water_flow", "grass_block_top_sheet",
-                                                   "grass_clover_layer"] + [g + "_giant" for g in GIANT]}
+    report = {n: done[n] for n in list(TARGETS) + SHEET_JOBS + [g + "_giant" for g in GIANT]}
     write_models()
     # LabPBR format declaration: Iris / Oculus read assets/minecraft/optifine/texture.properties and give shader packs
     # MC_TEXTURE_FORMAT_LAB_PBR(_1_3) - without it a pack can't tell our _n / _s maps are LabPBR 1.3 (study notes,
