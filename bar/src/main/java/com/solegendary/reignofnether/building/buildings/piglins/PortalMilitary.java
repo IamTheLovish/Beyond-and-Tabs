@@ -34,6 +34,8 @@ public class PortalMilitary extends AbstractPortal {
         productions.add(ProductionItems.HORDE_WARCHIEF, Keybindings.abilitySlot8);
         productions.add(ProductionItems.HORDE_WARCHIEF_REVIVE, Keybindings.abilitySlot8);
         productions.add(ProductionItems.BOULDER_CHUCKER, Keybindings.abilitySlot5);   // T1 siege lobber (design/siege_t1.md)
+        // the essence caster (design/essence_casters.md): T1, "like rez bots" (lovish, Oct 29)
+        productions.add(ProductionItems.VOODOO_SHAMAN, Keybindings.abilitySlot6);
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
         maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);

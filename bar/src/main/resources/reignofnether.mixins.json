@@ -91,6 +91,7 @@
     "MobRendererMixin",
     "MusicManagerMixin",
     "OrthoViewMixin",
+    "EmbeddiumOrthoFaceCullingMixin",
     "PossessionParticleMixin",
     "PossessionPredictionMixin",
     "RenderChunkRegionMixin",
