@@ -198,6 +198,70 @@ public class ExtractorFootprintGameTests {
     }
 
     /**
+     * A patch stamped where a tree stands (CI 41930006194, the bots' T2 test, Nov 4: "no build progress for 45 s at 1606,
+     * 82, -325 ... builders in range 0 of 8 ordered, nearest worker 3.8 blocks away at 1606, 75, -320" - every builder
+     * stood at y 75 within 1.5 blocks of the site's approach cell at y 83, under it). solidTop walks down to the first
+     * solid-render block and a log is one, so the patch was recorded on the trunk's top log; the pad is levelled there
+     * with 4 blocks of fill under it - a platform floating above the workers' ground. A log is not ground: the patch
+     * must sit on the grass the tree grows from, and every faction's extractor must fit on it.
+     */
+    @GameTest(template = ARENA)
+    public static void a_patch_stamped_on_a_tree_sits_on_the_ground_under_it(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 220;
+        int cx = base.getX(), cz = base.getZ();
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 8, y - 1, cz - 8), new BlockPos(cx + 8, y + 12, cz + 8));
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        // an oak on the patch centre: a 6-log trunk under a crown of leaves (persistent, so they do not decay mid-test)
+        net.minecraft.world.level.block.state.BlockState leaf = net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+        for (int k = 1; k <= 6; k++)
+            level.setBlock(new BlockPos(cx, y + k, cz), net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState(), 2);
+        for (int dx = -2; dx <= 2; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                for (int k = 5; k <= 8; k++)
+                    if ((dx != 0 || dz != 0 || k > 6) && Math.abs(dx) + Math.abs(dz) <= (k == 8 ? 1 : 3))
+                        level.setBlock(new BlockPos(cx + dx, y + k, cz + dz), leaf, 2);
+        MetalPatches.forgetAll();
+        try {
+            int top = MetalPatches.solidTop(level, cx, cz);
+            if (top != y) {
+                helper.fail("solidTop under an oak read y " + top + " (the trunk's top log is y " + (y + 6)
+                    + "); the ground is the grass at y " + y);
+                return;
+            }
+            MetalPatches.stamp(level, cx, cz);
+            BlockPos centre = new BlockPos(cx, y, cz);
+            if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK)) {
+                helper.fail("stamp() under an oak left no patch block on the ground at " + centre);
+                return;
+            }
+            List<String> refused = new ArrayList<>();
+            for (ResourceLocation key : new ArrayList<>(Factions.PLAYABLE_FACTIONS)) {
+                Faction f = Factions.getFaction(key);
+                Building e = Factions.isLive(f) ? FactionTraits.of(f).metalExtractor.get() : null;
+                if (e == null)
+                    continue;
+                String err = BuildingValidators.getPlacementValidityError(level, e, centre.offset(-2, 0, -2), "gametest_footprint",
+                    Rotation.NONE, false, false, true);
+                if (err != null)
+                    refused.add(e.structureName + " " + err);
+            }
+            if (refused.isEmpty())
+                helper.succeed();
+            else
+                helper.fail("a patch stamped under an oak refuses: " + refused + " (pad " + obstructions(level, centre) + ")");
+        } finally {
+            MetalPatches.forgetAll();
+        }
+    }
+
+    /**
      * A patch cut into a hillside (flake-stress 40609781800: "pad dry (rim +9)", every obstruction "+9 grass_block" or
      * "+9 dirt_path"): the pad clears 8 up, the hill's top stays as a roof over the footprint and the extractor clips it.
      * A platform high above the terrain with a mound 12 tall over two rows of the pad, then the player's origin.
