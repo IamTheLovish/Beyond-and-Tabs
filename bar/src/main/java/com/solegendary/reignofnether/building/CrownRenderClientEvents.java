@@ -65,8 +65,8 @@ import java.util.WeakHashMap;
  *       asynchronous, so for a frame or two both copies draw (at rest they coincide) - the branch wind's trade.</li>
  *   <li><b>Lanterns</b> (lovish's Verdant reference, Nov 4: a tower grown inside a great tree, lanterns on long chains
  *       from its branches, a purple-pink glow): {@link CrownMotion#lanterns} hangs a few under each big crown's open
- *       underside; drawn ({@link LanternMesh}: a vanilla chain and hanging lantern, tinted and fullbright - they light
- *       nothing), they swing with the same wind and ride the crown's lean, once the building stands.</li>
+ *       underside; drawn ({@link LanternMesh}: a small pearlescent froglight, fullbright, on a two-link vanilla chain -
+ *       they light nothing), they swing with the same wind and ride the crown's lean, once the building stands.</li>
  *   <li><b>Fog:</b> a crown out of sight keeps the pose it was last seen in.</li>
  *   <li><b>Shaders:</b> Oculus fires the render stages again for its shadow map (ShaderPacks.skipOverlays): the crown
  *       draws there too, unculled, so it keeps its shadow.</li>
@@ -494,12 +494,13 @@ public class CrownRenderClientEvents {
             completedLogged = log(t, "built crown captured:", completedLogged);
     }
 
-    // the lanterns' look: a vanilla hanging lantern on a chain, its light purple-pink and fullbright (the reference's
-    // glow; drawn, so it lights nothing round it)
+    // the lanterns' look: a small pearlescent froglight (the reference's purple-pink glow, and the Court's own light -
+    // Heartwood Hall is lit by froglights) hung fullbright on a chain; drawn, so it lights nothing round it. A vanilla
+    // lantern tinted pink read orange-red (shader eyes run 41818390477): a tint only multiplies its orange texture.
     private static final BlockState CHAIN = net.minecraft.world.level.block.Blocks.CHAIN.defaultBlockState();
-    private static final BlockState LANTERN = net.minecraft.world.level.block.Blocks.LANTERN.defaultBlockState()
-        .setValue(net.minecraft.world.level.block.LanternBlock.HANGING, true);
-    private static final float GLOW_R = 1.0f, GLOW_G = 0.62f, GLOW_B = 0.92f;
+    private static final BlockState LANTERN = net.minecraft.world.level.block.Blocks.PEARLESCENT_FROGLIGHT.defaultBlockState();
+    /** The light's size (a block's fraction) and where it hangs: its top at the chain's end. */
+    private static final float LANTERN_SIZE = 0.42f;
     private static final int FULLBRIGHT = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
 
     /** The chain and lantern under each hang cell that stands, tessellated where they hang (their light, their AO). */
@@ -536,12 +537,17 @@ public class CrownRenderClientEvents {
                     int from = r.n;
                     CAPTURE_POSE.pushPose();
                     CAPTURE_POSE.translate(h[0] - t.anchor[0], h[1] - k - t.anchor[1], h[2] - t.anchor[2]);
+                    if (state == LANTERN) {             // a small light hung from the chain's end (the cell's top)
+                        CAPTURE_POSE.translate(0.5f, 1f - LANTERN_SIZE / 2, 0.5f);
+                        CAPTURE_POSE.scale(LANTERN_SIZE, LANTERN_SIZE, LANTERN_SIZE);
+                        CAPTURE_POSE.translate(-0.5f, -0.5f, -0.5f);
+                    }
                     RANDOM.setSeed(seed);
                     dispatcher.getModelRenderer().tesselateBlock(level, model, state, pos, CAPTURE_POSE, r, false, RANDOM,
                         seed, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, rt);
                     CAPTURE_POSE.popPose();
                     if (state == LANTERN)
-                        r.glow(from, GLOW_R, GLOW_G, GLOW_B, FULLBRIGHT);
+                        r.glow(from, FULLBRIGHT);
                 }
             }
         }
@@ -607,12 +613,10 @@ public class CrownRenderClientEvents {
             n = 0;
         }
 
-        /** Tints the vertices from {@code from} on and lights them fully (a lantern's glow). */
-        void glow(int from, float r, float g, float b, int lightmap) {
+        /** Lights the vertices from {@code from} on fully, unshaded (a lantern's glow: no face shade, no AO). */
+        void glow(int from, int lightmap) {
             for (int v = from; v < n; v++) {
-                int c = color[v];
-                color[v] = packColor((c & 255) / 255f * r, (c >> 8 & 255) / 255f * g, (c >> 16 & 255) / 255f * b,
-                    (c >>> 24) / 255f);
+                color[v] = 0xFFFFFFFF;
                 light[v] = lightmap;
             }
         }
