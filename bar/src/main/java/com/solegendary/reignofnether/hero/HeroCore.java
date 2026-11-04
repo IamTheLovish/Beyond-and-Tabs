@@ -46,6 +46,10 @@ public final class HeroCore {
     public int experience = 0;
     public int skillPoints = 1;   // the first point comes with the hero (Reign of Nether's heroes do the same)
     public boolean rankUpMenuOpen = false;
+    // auto-learn (HeroBot.autoLearn; server only): the game time each unspent point was first seen, oldest first - each
+    // point waits its own 20 s - and the owner's rank-up menu hold, which lapses unless the client refreshes it
+    final java.util.ArrayDeque<Long> pointArrivals = new java.util.ArrayDeque<>();
+    long rankMenuHeldUntil = -1;
     public boolean needsStatSync = false;
     boolean clientSynced = false; // the first experience sync on a client is a load, not a boon
     public float mana;
@@ -59,6 +63,8 @@ public final class HeroCore {
     // the one aimed cast in flight (FactionHeroAbility.use -> startCast)
     GenericTargetedSpellGoal castGoal;
     @Nullable FactionHeroAbility castGoalAbility;
+    /** Casts handed to the cast goal so far: the v2 brain notes the ones it started (HeroBot.everyTick). */
+    int castSeq = 0;
     int castChannel = 0;
 
     // timed effects
@@ -83,6 +89,20 @@ public final class HeroCore {
     // temporary summons (Raise Dead): entity + game time it crumbles
     final List<Entity> summons = new ArrayList<>();
     final List<Long> summonEnds = new ArrayList<>();
+
+    /** The owner's rank-up menu is open (HeroServerboundPacket RANK_MENU_OPEN): auto-learn waits until {@code until}. */
+    public void holdRankMenu(long until) {
+        rankMenuHeldUntil = until;
+    }
+
+    /** The menu closed, or its player left (HeroServerEvents.onPlayerLogout): auto-learn may go on. */
+    public void releaseRankMenu() {
+        rankMenuHeldUntil = -1;
+    }
+
+    public boolean rankMenuHeld(long now) {
+        return rankMenuHeldUntil > now;
+    }
 
     public HeroCore(HeroKit kit, Mob mob) {
         this.kit = kit;
@@ -110,6 +130,17 @@ public final class HeroCore {
             castGoal = new GenericTargetedSpellGoal(mob, 0, 8, null, null, null) {
                 @Override
                 public int getChannelTicksMax() { return castChannel; }
+
+                // the wind-up starts where the hero stands: the move control drops whatever it was still walking to
+                // (setTarget asks for a path before the goal sees the aim is in range, and navigation.stop() leaves
+                // the move control's wanted spot), or the hero slides there while it channels - review r3 on PR 416:
+                // held heroes drifted 0.57-0.66 blocks during the cast with the navigation done and no path
+                @Override
+                public void startCasting() {
+                    super.startCasting();
+                    mob.getNavigation().stop();
+                    mob.getMoveControl().setWantedPosition(mob.getX(), mob.getY(), mob.getZ(), 0);
+                }
             };
         }
         return castGoal;
@@ -120,6 +151,7 @@ public final class HeroCore {
         GenericTargetedSpellGoal g = castGoal();
         g.stopExceptAnimations();
         castGoalAbility = ability;
+        castSeq++;
         castChannel = ability.spec.channelTicks;
         g.range = Math.max(1.5f, ability.range);
         g.setAbility(null);   // FactionHeroAbility.castNow pays the cooldown/mana, and only when the effect worked

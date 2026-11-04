@@ -296,9 +296,11 @@ class AnimationCostBench {
     void livingArmyTick() throws IOException {
         float[] slab = new float[UNITS * com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE];
         int stride = com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE;
-        for (int i = 0; i < UNITS; i++)
+        for (int i = 0; i < UNITS; i++) {
             com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, i * stride, 0f, 0f, 0f, 0f, 20f,
                 20f, false, true);
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.turn(slab, i * stride, i * 13f, true);
+        }
         // best of ROUNDS medians, not one: a single 30-frame median (~20 ms) on a shared runner read 1.41 us/unit
         // against the 1.0 budget on #146's build (Oct 27); a real regression slows every round (BenchRounds)
         BenchRounds.Result tick = BenchRounds.measure(ROUNDS, ROUND_WARMUP, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
@@ -314,6 +316,8 @@ class AnimationCostBench {
                     (i % 7) * 3f, (i % 4) == 0, false);
                 if ((t + i) % 97 == 0)
                     com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, (i % 8) * 0.785f);
+                // smooth turning: a new heading every 40 ticks, 90 degrees round
+                com.solegendary.reignofnether.unit.modelling.motion.Kinematics.turn(slab, b, i * 13f + ((t + i) / 40) * 90f, false);
                 com.solegendary.reignofnether.unit.modelling.motion.Idle.step(slab, b, i, t, walking, false);
             }
             long t1 = System.nanoTime();
@@ -362,6 +366,8 @@ class AnimationCostBench {
             for (int t = 0; t < 10; t++)
                 com.solegendary.reignofnether.unit.modelling.motion.Kinematics.look(slab, b, i * 7f, 10f, (i % 3) == 0,
                     t == 0);
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.turn(slab, b, i * 7f, true);
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.turn(slab, b, i * 7f + 90f, false);   // mid-turn
         }
         float[] sliders = {1, 1, 1, 1, 1, 1, 1};
         // the look solver too, as MotionPass gives it a vanilla body: the chest's share, the head's rest, the arms' aim
@@ -369,12 +375,16 @@ class AnimationCostBench {
         float[] out = com.solegendary.reignofnether.unit.modelling.motion.MotionPass.scratch();
         PoseStack pose = new PoseStack();
         float before = body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot;
+        float[] drawnYaw = new float[1];   // the body yaw reads land here, so they are not optimised away
         // best of ROUNDS medians, as in livingArmyTick (BenchRounds)
         BenchRounds.Result pass = BenchRounds.measure(ROUNDS, ROUND_WARMUP, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
             float time = 1000f + round * FRAMES + frame;
             long t0 = System.nanoTime();
             for (int i = 0; i < UNITS; i++) {
                 look[1] = i * 3f;
+                // smooth turning: the drawn body yaw, read twice a frame (LivingEntityRendererMixin, MotionPass's look)
+                for (int k = 0; k < 2; k++)
+                    drawnYaw[0] += com.solegendary.reignofnether.unit.modelling.motion.Kinematics.bodyYawAt(slab, i * stride, i * 7f, i * 7f + 90f, 0.5f);
                 com.solegendary.reignofnether.unit.modelling.motion.Motion.pose(slab, i * stride, i, time + i,
                     0.5f, 40f, sliders, false, look, out);
                 com.solegendary.reignofnether.unit.modelling.motion.MotionPass.place(map, pose);

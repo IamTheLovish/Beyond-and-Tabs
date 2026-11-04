@@ -5,11 +5,15 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.motion.AnimState;
+import com.solegendary.reignofnether.unit.modelling.motion.AnimStates;
 import com.solegendary.reignofnether.unit.modelling.motion.Corpses;
 import com.solegendary.reignofnether.unit.modelling.motion.DeathFall;
+import com.solegendary.reignofnether.unit.modelling.motion.HitFlash;
 import com.solegendary.reignofnether.unit.modelling.motion.MotionPass;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipRenderTypes;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -93,14 +97,30 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
         model.renderToBuffer(poseStack, buffer, packedLight, packedOverlay, red, green, blue, finalAlpha);
     }
 
-    // a body that falls by itself (DeathFall) is red only while hurt, as in life - not for its whole death. Here, at
-    // vanilla's one overlay rule, so the body and every layer that asks for the overlay (team cloth, profession,
-    // armour) agree, on the dying unit and on the body Corpses holds
+    // a hit on a unit flashes white, as strong as the blow's share of its health, then shows a short red (HitFlash) -
+    // not vanilla's 10 ticks of the same red. A body that falls by itself (DeathFall) is red only while hurt, as in
+    // life - not for its whole death. Here, at vanilla's one overlay rule, so the body and every layer that asks for
+    // the overlay (team cloth, profession, armour) agree, on the dying unit and on the body Corpses holds
     @Inject(method = "getOverlayCoords", at = @At("HEAD"), cancellable = true)
-    private static void bat$deathPoseNoRed(LivingEntity entity, float white, CallbackInfoReturnable<Integer> cir) {
-        if (entity.deathTime > 0 && MotionPass.ownsDeath(entity) != null)
-            cir.setReturnValue(OverlayTexture.pack(OverlayTexture.u(white),
-                OverlayTexture.v(DeathFall.red(entity.hurtTime, entity.deathTime, true))));
+    private static void bat$hitOverlay(LivingEntity entity, float white, CallbackInfoReturnable<Integer> cir) {
+        boolean owned = entity.deathTime > 0 && MotionPass.ownsDeath(entity) != null;
+        boolean red = DeathFall.red(entity.hurtTime, entity.deathTime, owned);
+        if (entity instanceof Unit && entity.hurtTime > 0 && (entity.deathTime == 0 || owned)) {
+            float partial = Minecraft.getInstance().getFrameTime();
+            white = Math.max(white, HitFlash.white(entity.hurtTime, partial, bat$blowShare(entity)));
+            red = HitFlash.red(entity.hurtTime, partial);
+        } else if (!owned)
+            return;   // vanilla's own rule
+        cir.setReturnValue(OverlayTexture.pack(OverlayTexture.u(white), OverlayTexture.v(red)));
+    }
+
+    // the last blow's share of the unit's max health: the health it had as the damage event came (its living-army
+    // slot stamps it, AnimStates.onDamage) less the health the server has synced since
+    @Unique
+    private static float bat$blowShare(LivingEntity entity) {
+        int b = AnimStates.base(entity.getId());
+        float max = entity.getMaxHealth();
+        return b < 0 || !(max > 0f) ? 0f : (AnimStates.slab()[b + AnimState.HIT_HEALTH0] - entity.getHealth()) / max;
     }
 
     // the death-pose contract (unit/modelling/motion/DeathFall): a body that falls by itself is not flipped as well
@@ -135,6 +155,20 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
     private void bat$livingArmyClear(T entity, float entityYaw, float partialTicks, PoseStack poseStack,
                                      MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
         MotionPass.restore();
+        bat$turning = entity;
+    }
+
+    // smooth turning (Kinematics.turn): the body yaw this render draws - its body, the head's net yaw and every layer
+    // all take it - from MotionPass.bodyYaw instead of vanilla's lerp. Ordinal 0 is the body's own rotLerp (a rider's
+    // vehicle yaw comes after it); the unit is the one render's HEAD saw
+    @Unique private LivingEntity bat$turning = null;
+
+    @Redirect(
+            method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;rotLerp(FFF)F", ordinal = 0)
+    )
+    private float bat$smoothTurn(float partial, float from, float to) {
+        return MotionPass.bodyYaw(bat$turning, partial, from, to);
     }
 
     @Inject(

@@ -69,7 +69,6 @@ public class JadePagoda extends ProductionBuilding {
             () -> true,
             List.of(Component.translatable("buildings.reignofnether.jade_pagoda").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPop(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("buildings.reignofnether.jade_pagoda.tooltip1").getVisualOrderText(),
                 Component.translatable("buildings.reignofnether.jade_pagoda.tooltip2").getVisualOrderText()

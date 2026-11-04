@@ -304,6 +304,10 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         boolean canTarget(LivingEntity le) {
             if (!isFoe(le) || Concealment.isHiddenFrom(le, ownerName) || le.isInvisible())
                 return false;
+            // a low flyer (Unit.meleeReachableHeight: the Seraph Archer, lovish Oct 29: "melee units and ground towers
+            // can hit it") is in reach of every tower, ground and air alike
+            if (le instanceof Unit lu && lu.isFlyingUnit() && lu.meleeReachableHeight() > 0)
+                return true;
             boolean flyer = le instanceof Unit u && u.isFlyingUnit();
             if (flyer)
                 return tower.kind.hitsAir;

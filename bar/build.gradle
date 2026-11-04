@@ -226,6 +226,16 @@ dependencies {
     runtimeOnly fg.deobf('maven.modrinth:macaws-lights-and-lamps:H1a9Tx4h')
     runtimeOnly fg.deobf('maven.modrinth:macaws-paths-and-pavings:yHkcTSFb')
     runtimeOnly fg.deobf('maven.modrinth:decorative-blocks:nGmyeiug')
+    // Framed and skinned building blocks (lovish, Oct 29 2026: buildings look "blocky and toy"; he approved both as
+    // REQUIRED mods). Same rules: required (mods.toml), never bundled, assets never copied. Their look comes from block-
+    // entity data the .nbt carries (FramedBlocks "camo" = any block's texture; Domum "textureData" = material skins),
+    // which BuildingPlacement.restoreBlockEntity puts down. Neither needs a library (FramedBlocks jar-in-jars its own).
+    // FramedBlocks 9.4.3 (LGPL-3.0; Modrinth lSiHA1qU, Forge 1.20.1): slopes, prisms, half pillars - domes, hips, pilasters.
+    runtimeOnly fg.deobf('maven.modrinth:framedblocks:lSiHA1qU')
+    // Domum Ornamentum 1.20.1-1.0.304-snapshot (GPL-3.0; CurseForge project 527361 file 8765962, Aug 30 2026): shingles,
+    // half-timber frames, pillars for the Brassworks. CurseForge-only (not on Modrinth), and 1.20.1 has only "snapshot"
+    // builds since 1.0.296 - this is the newest. Resolved through cursemaven (the repository above).
+    runtimeOnly fg.deobf('curse.maven:domum-ornamentum-527361:8765962')
 }
 
 mixin {

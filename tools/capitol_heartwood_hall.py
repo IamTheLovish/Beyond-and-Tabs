@@ -32,9 +32,11 @@ overgrown air temple; ref 106 organic arches):
     MOONWELL (a water cauldron between bare calcite kerbs) to plant its foot in the garden corner;
   - the STAG-DRYAD FACE is carved in the trunk on every side over the arch (birch mask and muzzle, glowing eyes, dark
     brows), its ANTLERS branch out of the brow into the canopy as the tree's own boughs;
-  - a VAST LAYERED CANOPY: a wide skirt, a middle tier and an upper tier on spreading boughs, gaps between them so they
-    read as layers from the RTS camera, notched over each face so the stag looks out; glowing fruit (ochre / verdant
-    froglights, shroomlight) set in the tier edges, a cherry-blossom crown on top - blossom as leaves, nothing hanging;
+  - a BLOSSOM CROWN of uneven lobes (Nov 2026, after two blind massing rounds: the round tiered canopy read as "a
+    green mound" and "a bullseye from above"): cherry leaves with a flowering azalea leaf in every few cells, each lobe
+    on its own bough, leaning north-east away from the RTS camera so the temple's south and west faces show under it,
+    the trunk seen in the gap over the parapet; glowing fruit (ochre / verdant froglights, shroomlight) in the lobes'
+    undersides - blossom as leaves, nothing hanging;
   - the GARDEN: the paving breaks up into moss and rooted dirt, stepping stones, ferns, carpets and flowers.
 
 WHAT THE SIZE TOUCHES IN THE GAME (the coordinator applies these; this file edits nothing):
@@ -82,8 +84,8 @@ FLOWERS = ("allium", "azure_bluet", "oxeye_daisy", "lily_of_the_valley", "cornfl
 
 STARTING_TYPES = {"moss_block", "mossy_stone_bricks"}       # HeartwoodHall.startingBlockTypes
 # BuildingAmbienceClientEvents.CAPITOL_SPOTS["heartwood_hall"], Fx.PETAL (structure coordinates, block x spans x..x+1):
-# under the canopy skirt's four corner lobes, and over the blossom crown
-PETAL_SPOTS = ((2.5, 11.5, 4.5), (12.5, 11.5, 10.5), (4.5, 11.5, 12.5), (10.5, 11.5, 2.5), (7.5, 21.5, 7.5))
+# under the crown's four low lobes (LOBES), and over its top
+PETAL_SPOTS = ((10.5, 11.5, 4.5), (4.5, 10.5, 4.5), (10.5, 10.5, 10.5), (3.5, 14.5, 7.5), (7.5, 21.5, 7.5))
 
 
 def leaf(c, dx, y, dz, name="azalea_leaves"):
@@ -106,12 +108,12 @@ def garden(c):
             if ring <= 1:
                 name = CHB if (dx, dz) == (0, 0) else MSB
         elif ring == 6:
-            name = (MSB, "moss_block", MC, "moss_block", MSB, "rooted_dirt")[h % 6]
+            name = (MSB, CSB, MSB, CSB, MSB, "moss_block")[h % 6]   # a stone kerb: the plot's edge reads
         else:
             name = ("moss_block", "grass_block", "moss_block", "rooted_dirt", "podzol", "grass_block", MC)[h % 7]
         props = {"snowy": "false"} if name in ("grass_block", "podzol") else {}
         c.set(dx, 0, dz, name, **props)
-        if ring >= 6 and name not in (MSB, MC):
+        if ring >= 6 and name in SOIL:
             k = (h // 7) % 11
             if k < len(FLOWERS):
                 c.set(dx, 1, dz, FLOWERS[k])
@@ -172,16 +174,19 @@ def hall(c):
             c.put(o, 5, 2 * s, 3, MSB)
             c.put(o, 5, 2 * s, 4, MSW)
             c.put(o, 5, 2 * s, 5, "lantern", **LANTERN)
-        # the ruined parapet on y7: crenels on the even cells, some fallen; leaves draped where they are gone
+        # the ruined parapet on y7: an irregular ruin (a wall stump, a fallen slab, leaves, a gap - by hash, never an
+        # every-other-cell merlon rhythm: critic a, massing r2, "a dotted necklace of tiny targets")
         for t in range(-3, 4):
-            if t % 2 == 0:
-                if hsh(*c.side(o, 4, t)) % 3:
-                    c.put(o, 4, t, 7, MSW)
-                else:
-                    x, z = c.side(o, 4, t)
-                    leaf(c, x, 7, z, gs.leaf_for(x, 7, z, 3))
-            else:
+            x, z = c.side(o, 4, t)
+            k = hsh(x * 7 + 3, z * 5 + 1) % 7
+            if k in (0, 1, 2):
+                c.put(o, 4, t, 7, MSW)
+                if k == 0:
+                    c.put(o, 4, t, 8, MSW)                        # a taller stump
+            elif k in (3, 4):
                 c.put(o, 4, t, 7, MSSL, type="bottom", **DRY)
+            elif k == 5:
+                leaf(c, x, 7, z, gs.leaf_for(x, 7, z, 3))
     # the corner piers (where the roots burst through), chiseled at the foot, cracked higher up
     for (sx, sz) in CORNERS:
         x, z = 4 * sx, 4 * sz
@@ -287,42 +292,41 @@ def in_face_zone(dx, y, dz):
             return True
         if a >= 5 and abs(t) <= 1 and 12 <= y <= 13:
             return True                                          # a V notch in the skirt: the stag looks out
-        if 4 <= a <= 5 and abs(t) <= 1 and 15 <= y <= 16:
-            return True                                          # the mid tier notched too: the face seen from above
-        if 2 <= a <= 3 and abs(t) <= 4 and 15 <= y <= 20 and not (abs(t) <= 1 and y >= 18):
-            return True
     return False
 
 
+# The crown as LOBES (x, y, z, rx, ry, rz) - not tiers. Massing rounds 1-2 (eyes 41283644479, 41284750886; two blind
+# critics each): a round tiered canopy is "a bullseye / soft ziggurat from above, a lollipop in 3/4" and hides the
+# temple; the winners were a temple you can see under an uneven blossom crown. The crown leans north-east, away from
+# the RTS camera (it looks north-east from the south-west), so the temple's south and west faces show under it; the
+# trunk shows in the gap between the parapet (y7-8) and the lobes' undersides (y11+).
+LOBES = ((3, 14, -3, 3.8, 2.2, 3.8), (-3, 14, -3, 3.1, 2.0, 3.1), (3, 14, 3, 3.1, 2.0, 3.1),
+         (-4, 16, 0, 2.6, 1.8, 2.6), (1, 17, -1, 4.0, 2.6, 4.0), (0, 20, 0, 2.2, 1.4, 2.2))
+
+
 def canopy(c):
-    """The layered canopy: a wide skirt (y12-13, out to the footprint's edge, round), a middle tier (y15-16), an upper
-    tier (y18-19) and a cherry-blossom crown (y20-21), with a gap between tiers so each reads as a layer. Glowing fruit
-    (ochre and verdant froglights, shroomlight) sits in the tiers' undersides and edges, never hanging."""
-    tiers = [(12, 7.3, "skirt"), (13, 6.4, "skirt"), (15, 5.6, "mid"), (16, 4.7, "mid"), (18, 3.9, "up"),
-             (19, 3.0, "up"), (20, 2.2, "crown"), (21, 1.2, "crown")]
-    for y, r, tier in tiers:
+    """The blossom crown: overlapping lobes of cherry leaves (a flowering azalea leaf in every few cells so the pink is
+    a blossom, not a paint), each lobe carried on its own bough from the trunk. Glowing fruit (ochre and verdant
+    froglights, shroomlight) sits in the lobes' undersides, never hanging."""
+    for lx, ly, lz, rx, ry, rz in LOBES[:5]:
+        n = max(abs(lx), abs(ly - 12), abs(lz))
+        for i in range(n + 1):                                   # the bough: trunk (y12) to the lobe's heart
+            x, y, z = (round(a + (b - a) * i / n) for a, b in ((0, lx), (12, ly - 1), (0, lz)))
+            if c.get(x, y, z)[0] == "air":
+                c.set(x, y, z, WOOD, axis="y")
+    for lx, ly, lz, rx, ry, rz in LOBES:
         for dx, dz in c.cells(R):
-            d = (dx * dx + dz * dz) ** 0.5
-            h = hsh(dx * 3 + y, dz - y)
-            rr = r - (0.6 if h % 5 == 0 else 0)                  # a ragged edge, not a disc
-            if d > rr or in_face_zone(dx, y, dz):
-                continue
-            if tier == "skirt" and d < 4.3:
-                continue                                         # the skirt is a ring: the trunk and faces show
-            if tier == "crown":
-                name = "cherry_leaves" if h % 3 else "flowering_azalea_leaves"
-            elif tier == "up":
-                name = "flowering_azalea_leaves" if h % 3 == 0 else ("cherry_leaves" if h % 7 == 0 else "azalea_leaves")
-            else:
-                name = gs.leaf_for(dx, y, dz, 4)
-            edge = d > rr - 1.1
-            lower = tier in ("skirt", "mid") and y in (12, 15)
-            if edge and lower and h % 9 == 0 and c.get(dx, y, dz)[0] == "air":
-                c.set(dx, y, dz, ("ochre_froglight", "shroomlight", "verdant_froglight")[h % 3],
-                      **({} if h % 3 == 1 else {"axis": "y"}))   # glowing fruit in the edge
-                continue
-            leaf(c, dx, y, dz, name)
-    c.set(0, 21, 0, "shroomlight")                               # the crown's heart
+            for y in range(max(11, int(ly - ry - 1)), min(H - 1, int(ly + ry + 1)) + 1):
+                e = ((dx - lx) / (rx + .4)) ** 2 + ((y - ly) / (ry + .4)) ** 2 + ((dz - lz) / (rz + .4)) ** 2
+                h = hsh(dx * 3 + y, dz - y)
+                if e > 1 - (0.25 if h % 5 == 0 else 0) or in_face_zone(dx, y, dz):
+                    continue                                     # a ragged edge, not a ball
+                if y < ly and e > 0.55 and h % 9 == 0 and c.get(dx, y, dz)[0] == "air":
+                    c.set(dx, y, dz, ("ochre_froglight", "shroomlight", "verdant_froglight")[h % 3],
+                          **({} if h % 3 == 1 else {"axis": "y"}))   # glowing fruit in the underside
+                    continue
+                belly = y < ly - 0.5 * ry                         # the lobe's shaded underside: the green, grouped
+                leaf(c, dx, y, dz, ("flowering_azalea_leaves" if h % 2 else "azalea_leaves") if belly else "cherry_leaves")
 
 
 def roots(c):
@@ -335,7 +339,10 @@ def roots(c):
            (7, 7, 2), (7, 7, 1))
     for (sx, sz) in CORNERS:
         for (k, j, y) in ARC:
-            c.set(sx * k, y, sz * j, WOOD, axis="y")
+            if y <= 4 and (k, j) != (7, 7):                    # the arc frays into a root mat as it lands: a solid
+                c.set(sx * k, y, sz * j, "mangrove_roots", **DRY)   # column read as "a zipper / spine" (critics, r3)
+            else:
+                c.set(sx * k, y, sz * j, WOOD, axis="y")
         c.set(sx * 7, 0, sz * 7, "rooted_dirt")
         # bark stairs on the arc's back so its top line slopes rather than steps
         c.stair(sx * 5, 8, sz * 5, "east" if sx < 0 else "west", name="oak_stairs")
