@@ -65,7 +65,16 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
             }
 
             int bound = nonAirBlocks.size();
-            if (bound > 0) {
+            if (bound > 0 && this.mob instanceof com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit) {
+                // the siege lobber shells the nearest block: a random far-side one would walk it into a tower's reach
+                // (it out-reaches the anti-raid tower by one block; design/siege_t1.md), and its splash dents the whole
+                // building wherever it lands on it
+                BuildingBlock nearest = nonAirBlocks.get(0);
+                for (BuildingBlock b : nonAirBlocks)
+                    if (b.getBlockPos().distToCenterSqr(mob.position()) < nearest.getBlockPos().distToCenterSqr(mob.position()))
+                        nearest = b;
+                this.blockTarget = nearest.getBlockPos();
+            } else if (bound > 0) {
                 int randIndex = rand.nextInt(bound);
                 BuildingBlock block = nonAirBlocks.get(randIndex);
                 this.blockTarget = block.getBlockPos();

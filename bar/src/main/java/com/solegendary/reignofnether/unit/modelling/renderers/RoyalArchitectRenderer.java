@@ -1,42 +1,50 @@
 package com.solegendary.reignofnether.unit.modelling.renderers;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.solegendary.reignofnether.unit.modelling.models.VillagerUnitModel;
+import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
+import com.solegendary.reignofnether.unit.modelling.models.RoyalArchitectUnitModel;
+import com.solegendary.reignofnether.unit.modelling.models.gen.RoyalArchitectModel;
 import com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
- * The Sunforged T2 constructor: the worker illager body in white-and-gold architect robes with a gold circlet, a
- * plumb-bob and a blueprint satchel (tools/gen_t2t3_skins.py). Its own renderer rather than VillagerUnitRenderer
- * because that one adds the biome/profession overlay layer, which would paint the villager's work clothes over
- * the robes.
+ * The Sunforged Royal Architect (royal_architect_unit, the T2 constructor) on the human body - an oat-linen coat, a
+ * short shoulder cape and a soft cap in the owner's colour, a satchel of plans, a rolled plan in hand and a mallet that
+ * comes from his belt to his hand when he builds (tools/gen_architect.py -> tools/dsl_to_game.py). Until Oct 21 the
+ * villager body in a skin (lovish 21:20: every human unit moves onto the human body). The back banner and the held
+ * tool layers went with the villager model: the cape and cap carry the owner's colour on him, the mallet is his own.
  */
 @OnlyIn(Dist.CLIENT)
-public class RoyalArchitectRenderer extends AbstractVillagerUnitRenderer<RoyalArchitectUnit> {
-    private static final ResourceLocation ROYAL_ARCHITECT_UNIT = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/royal_architect_unit.png");
+public class RoyalArchitectRenderer extends MobRenderer<RoyalArchitectUnit, RoyalArchitectUnitModel> {
+    private static final String NAME = "royal_architect_body_unit";
+    private static final ResourceLocation TEXTURE = GeneratedBodies.texture(NAME);
+    static final float SCALE = 1.0f;
 
     public RoyalArchitectRenderer(EntityRendererProvider.Context context) {
-        super(context, new VillagerUnitModel<>(context.bakeLayer(VillagerUnitModel.LAYER_LOCATION)), 0.5F);
-        // the T2 constructor's back banner in the owner's colour: found at a glance among the T1 workers
-        this.addLayer(new com.solegendary.reignofnether.unit.modelling.layers.BackBannerLayer<>(this));
-        this.addLayer(new ItemInHandLayer<RoyalArchitectUnit, VillagerUnitModel<RoyalArchitectUnit>>(this, context.getItemInHandRenderer()) {
-            public void render(PoseStack pose, MultiBufferSource mbs, int light, RoyalArchitectUnit unit, float a, float b, float c, float d, float e, float f) {
-                // tools only while working or fighting, like the T1 villager worker
-                if ((unit.getBuildRepairGoal() != null && unit.getBuildRepairGoal().isBuilding()) ||
-                    (unit.getGatherResourceGoal() != null && unit.getGatherResourceGoal().isGathering()) ||
-                    (unit.getTargetGoal() != null && unit.getTargetGoal().getTarget() != null)) {
-                    super.render(pose, mbs, light, unit, a, b, c, d, e, f);
-                }
-            }
-        });
+        super(context, new RoyalArchitectUnitModel(context.bakeLayer(RoyalArchitectModel.LAYER_LOCATION)), 0.5f);
+        this.addLayer(new TeamColourLayer<>(this));
+        this.addLayer(GeneratedBodies.glow(this, NAME));
     }
 
-    public ResourceLocation getTextureLocation(RoyalArchitectUnit unit) {
-        return ROYAL_ARCHITECT_UNIT;
+    @Override
+    public ResourceLocation getTextureLocation(RoyalArchitectUnit entity) {
+        return TEXTURE;
+    }
+
+    @Override
+    protected void scale(RoyalArchitectUnit entity, PoseStack poseStack, float partialTick) {
+        poseStack.scale(SCALE, SCALE, SCALE);
+    }
+
+    @Override
+    public void render(RoyalArchitectUnit entity, float yaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers,
+                       int light) {
+        this.model.setDetail(GeneratedBodies.wantsDetail(entity));
+        super.render(entity, yaw, partialTick, poseStack, buffers, light);
     }
 }

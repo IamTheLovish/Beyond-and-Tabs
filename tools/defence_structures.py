@@ -18,6 +18,8 @@ Footprints are shared so the mechanics read the same for every faction (only the
   flak_<s>             4 x 6 x 4   a low battery: 2-high plinth, fence-like ring, four barrels pointing up
   wall_fortified_<s>   2 x 3 x 2   the wall's footprint (so it mixes into a plain line): plinth, a chiseled course, cap
   trap_*_enhanced_<s>  3 x 1 x 3   the trap's patch with its two covers swapped, so a player tells the enhanced one apart
+  Oct 29 (lovish: an HLT-like anti-siege tower, design/siege_t1.md):
+  siege_guard_<s>      3 x 7 x 3   the tallest tower: two accent bands, a core block under one heavy weapon
 
 Pocket-free (the structures_have_no_unit_pockets GameTest): nothing a ground unit can walk into has a way in without a
 way out - the walls and towers are solid, the traps flat, the gate a straight 2-wide passage. Nothing changes by itself
@@ -233,6 +235,25 @@ def sky_watch_heavy(Structure, P):
     return s
 
 
+def siege_guard(Structure, P):
+    s = Structure(3, 7, 3)
+    for x in range(3):
+        for z in range(3):
+            corner = x != 1 and z != 1
+            _put(s, x, 0, z, P["plinth"])
+            _put(s, x, 1, z, P["plinth"])
+            _put(s, x, 2, z, P["accent"] if corner else P["tbody"])
+            _put(s, x, 3, z, P["tbody"])
+            _put(s, x, 4, z, P["accent"] if corner else P["tbody"])
+            _put(s, x, 5, z, P["cap"] if corner else (P["core"] if (x, z) == (1, 1) else P["top"]))
+    _put(s, 1, 6, 1, P["weapon"])
+    for x in range(3):
+        for z in range(3):
+            if (x, z) != (1, 1):
+                s.set(x, 6, z, "air")
+    return s
+
+
 def flak(Structure, P):
     s = Structure(4, 6, 4)
     for x in range(4):
@@ -277,6 +298,7 @@ def write_all(out, Structure):
         sky_watch(Structure, P).write(f"{out}/sky_watch_{suffix}.nbt")
         sky_watch_heavy(Structure, P).write(f"{out}/sky_watch_heavy_{suffix}.nbt")
         flak(Structure, P).write(f"{out}/flak_{suffix}.nbt")
+        siege_guard(Structure, P).write(f"{out}/siege_guard_{suffix}.nbt")
         wall_fortified(Structure, P).write(f"{out}/wall_fortified_{suffix}.nbt")
         for kind in TRAPS[suffix]:
             trap_enhanced(Structure, P, kind).write(f"{out}/trap_{kind}_enhanced_{suffix}.nbt")

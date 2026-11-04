@@ -6,18 +6,29 @@ import com.solegendary.reignofnether.building.buildings.placements.ProductionPla
 import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionBuilding;
 import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.hero.ai.DecisionLog.Why;
+import com.solegendary.reignofnether.hero.ai.FightEval;
+import com.solegendary.reignofnether.hero.ai.HeroBrain;
+import com.solegendary.reignofnether.hero.ai.OrderLock;
+import com.solegendary.reignofnether.hero.ai.Perception;
 import com.solegendary.reignofnether.player.CommanderServerEvents;
+import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
+import com.solegendary.reignofnether.unit.UnitActionItem;
+import com.solegendary.reignofnether.unit.command.CommandQueues;
+import com.solegendary.reignofnether.unit.command.UnitCommand;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,6 +40,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * ability is usable) and fights with them ({@link #useAbilities}). The same fight brain drives a human player's hero
  * while nobody possesses it and the player's Hero AI switch is on (points stay manual for players); possessing the
  * hero hands it straight to the player, and letting go hands it back.
+ * <p>
+ * v2 (hero/ai, design/hero_mode.md "Hero AI"), for the kits in HeroBrain.ROLLED_OUT: the same fight, run behind the
+ * OrderLock (the player's order first; D030 for a near-death hero), on what Perception saw (only what the hero's side
+ * sees), with FightEval's reading (power ratio, enemy towers, near death) and the combo rule, every decision logged
+ * (DecisionLog). See the v2 section at the end.
  */
 public final class HeroBot {
     private HeroBot() { }
@@ -88,8 +104,84 @@ public final class HeroBot {
     }
 
     /**
+     * The players who switched "Auto-learn hero abilities" off (lovish, Oct 30: "Auto after 20 s", with a setting to
+     * turn it off). On by default, so only the off switches are kept, as for the Hero AI; the client sends its setting
+     * (ReignOfNetherClientConfigs.HERO_AUTO_LEARN) when it logs in and when it changes.
+     */
+    private static final Set<String> AUTO_LEARN_OFF = ConcurrentHashMap.newKeySet();
+
+    /** Ticks a spendable point waits for the player's own pick before auto-learn spends it. */
+    public static final int AUTO_LEARN_TICKS = 20 * 20;
+    /**
+     * Ticks one RANK_MENU_OPEN holds auto-learn back. The client refreshes it every 5 s while the menu is up on the
+     * selected hero (HeroRankMenuClient), so a hold the client never closed - a lost packet, a crash - lapses by itself.
+     */
+    public static final int RANK_MENU_HOLD_TICKS = 15 * 20;
+
+    public static void setAutoLearn(String player, boolean on) {
+        if (player == null)
+            return;
+        if (on)
+            AUTO_LEARN_OFF.remove(player);
+        else
+            AUTO_LEARN_OFF.add(player);
+    }
+
+    public static boolean isAutoLearn(String player) {
+        return player != null && !AUTO_LEARN_OFF.contains(player);
+    }
+
+    /** A point the hero could spend now: one left, and an ability below its top rank whose level is reached. */
+    static boolean canSpend(FactionHero hero) {
+        if (hero.getSkillPoints() <= 0)
+            return false;
+        for (FactionHeroAbility a : hero.heroCore().abilities)
+            if (a.getRank(hero) < a.maxRank && hero.getHeroLevel() >= a.getLevelRequirement(hero))
+                return true;
+        return false;
+    }
+
+    /**
+     * Every second, for every player's hero (possessed or not, Hero AI on or off): each point the player leaves unspent
+     * for {@link #AUTO_LEARN_TICKS} from when it came is spent, one point at a time, as a bot's hero spends it
+     * ({@link #spendPoints}) - so a hero never stays a plain unit with its abilities greyed out (design-draft-heroes-better
+     * #1). A point the player spends inside its window takes the oldest waiting one off the clock. While the owner's
+     * rank-up menu is open every waiting point's 20 s start again (they run from when the menu closes). Bots spend at
+     * once in {@link #tickHero}.
+     */
+    static void autoLearn(Mob mob, FactionHero hero) {
+        String owner = hero.getOwnerName();
+        if (owner == null || owner.isBlank() || BotServerEvents.brains.containsKey(owner))
+            return;
+        HeroCore core = hero.heroCore();
+        java.util.ArrayDeque<Long> arrivals = core.pointArrivals;
+        if (!isAutoLearn(owner) || !canSpend(hero)) {
+            arrivals.clear();
+            return;
+        }
+        long now = mob.level().getGameTime();
+        int points = hero.getSkillPoints();
+        while (arrivals.size() > points)
+            arrivals.pollFirst();   // the player spent some: the oldest waiting points were theirs
+        while (arrivals.size() < points)
+            arrivals.addLast(now);  // new points: their 20 s start now
+        if (core.rankMenuHeld(now)) {
+            int n = arrivals.size();
+            arrivals.clear();
+            for (int i = 0; i < n; i++)
+                arrivals.addLast(now);
+            return;
+        }
+        Long oldest = arrivals.peekFirst();
+        if (oldest != null && now - oldest >= AUTO_LEARN_TICKS) {
+            arrivals.pollFirst();
+            spendPoints(hero, 1);
+        }
+    }
+
+    /**
      * Every second, for a hero nobody possesses: a bot's hero spends its points and fights; a player's hero fights while
-     * its owner's Hero AI is on, and its points stay the player's to spend (the rank-up choice is part of playing a hero).
+     * its owner's Hero AI is on (its points are the player's to spend, or auto-learn's after the player's 20 s).
      */
     static void tickHero(Mob mob, FactionHero hero) {
         String owner = hero.getOwnerName();
@@ -99,12 +191,23 @@ public final class HeroBot {
             spendPoints(hero);
         else if (!isAiEnabled(owner))
             return;
-        useAbilities(mob, hero);
+        if (HeroBrain.drives(hero)) {
+            int seq = hero.heroCore().castSeq;
+            think(mob, hero);
+            if (hero.heroCore().castSeq != seq)
+                hero.heroCore().brain().aiCastSeq = hero.heroCore().castSeq;
+        } else
+            useAbilities(mob, hero);
     }
 
     /** The utility fourth as soon as it may be ranked, then the lowest-ranked learnable of the other three. */
     public static void spendPoints(FactionHero hero) {
-        for (int guard = 0; guard < 12 && hero.getSkillPoints() > 0; guard++) {
+        spendPoints(hero, 12);
+    }
+
+    /** As {@link #spendPoints(FactionHero)}, at most {@code max} points. */
+    public static void spendPoints(FactionHero hero, int max) {
+        for (int guard = 0; guard < max && hero.getSkillPoints() > 0; guard++) {
             FactionHeroAbility best = null;
             for (FactionHeroAbility a : hero.heroCore().abilities) {
                 if (a.getRank(hero) >= a.maxRank || hero.getHeroLevel() < a.getLevelRequirement(hero))
@@ -188,7 +291,7 @@ public final class HeroBot {
             return;
         if (f.hp < LOW_HP && !f.enemies.isEmpty() && saveItself(f, ready))
             return;
-        if (heal(f, ready))
+        if (heal(f, ready, 2))
             return;
         if (f.enemies.isEmpty())
             return;
@@ -201,14 +304,14 @@ public final class HeroBot {
         for (FactionHeroAbility a : ready) {
             if (isEscape(a) || (reserve > 0 && hero.getMana() - a.manaCost < reserve))
                 continue;
-            if (fight(f, a))
+            if (fight(f, a, false))
                 return;
         }
     }
 
-    /** Ground-aimed movers with no fight use of their own: the hero's way out. */
+    /** Movers with no fight use of their own, marked so in the kit (AbilitySpec.escape): the hero's way out. */
     static boolean isEscape(FactionHeroAbility a) {
-        return a.spec.ai == HeroKit.Ai.NONE && a.spec.target == HeroKit.Target.GROUND;
+        return a.spec.escape;
     }
 
     static boolean isHeal(FactionHeroAbility a) {
@@ -245,8 +348,11 @@ public final class HeroBot {
         return false;
     }
 
-    /** Heals where they mend the most: the spot among hurt friends (the hero too) with the most of them. */
-    static boolean heal(Fight f, List<FactionHeroAbility> ready) {
+    /**
+     * Heals where they mend the most: the spot among hurt friends (the hero too) with the most of them, up to
+     * {@code slack} blocks past the heal's range (v1 walks 2 blocks to cast; v2 never walks, so -0.5).
+     */
+    static boolean heal(Fight f, List<FactionHeroAbility> ready, double slack) {
         for (FactionHeroAbility a : ready) {
             if (!isHeal(a))
                 continue;
@@ -256,18 +362,23 @@ public final class HeroBot {
                     return true;
                 continue;
             }
-            LivingEntity best = null;
+            BlockPos best = null;
             int bestN = 0;
             for (LivingEntity fr : f.friends) {
-                if (fraction(fr) >= HURT_HP || fr.distanceTo(f.mob) > a.range + 2)
+                if (fraction(fr) >= HURT_HP || fr.distanceTo(f.mob) > a.range + slack)
+                    continue;
+                // v2 never walks to cast: aimed where the cast goal reaches and the heal still takes in that friend
+                // (review r2/r3 on PR 416: the friend's own block can be out of the goal's reach)
+                BlockPos aim = slack < 0 ? reachableAim(f, a, fr) : fr.getOnPos();
+                if (aim == null)
                     continue;
                 int n = f.hurtFriendsWithin(fr.position(), Math.max(3, a.spec.radius));
                 if (n > bestN) {
-                    best = fr;
+                    best = aim;
                     bestN = n;
                 }
             }
-            if (best != null && use(f, a, best.getOnPos()))
+            if (best != null && use(f, a, best))
                 return true;
         }
         return false;
@@ -278,8 +389,106 @@ public final class HeroBot {
         return true;
     }
 
-    /** One fighting ability against what is round the hero now; false to look at the next one. */
-    static boolean fight(Fight f, FactionHeroAbility a) {
+    /**
+     * Does the hero's cast goal reach {@code bp} from where the hero stands now? Measured exactly as
+     * GenericTargetedSpellGoal.isInRange measures it - flat, from the hero to the block's lowest corner - against the
+     * range HeroCore.startCast gives it (at least 1.5). A cast aimed at a block it doesn't reach walks the hero there, so
+     * v2 (which never walks to cast; review r1/r2 on PR 416, lovish: "Hold truly holds") only aims at blocks it reaches.
+     * An entity cast follows the target's {@code getOnPos()}.
+     */
+    static boolean castReaches(Mob mob, BlockPos bp, FactionHeroAbility a) {
+        return com.solegendary.reignofnether.util.MyMath.distance(mob.getX(), mob.getZ(), bp.getX(), bp.getZ())
+            <= Math.max(1.5f, a.range);
+    }
+
+    /** The enemies the hero's cast goal reaches with {@code a} from where it stands (castReaches on their getOnPos()). */
+    static Fight reachableBy(Fight f, FactionHeroAbility a) {
+        List<LivingEntity> in = new ArrayList<>(f.enemies().size());
+        for (LivingEntity e : f.enemies())
+            if (castReaches(f.mob(), e.getOnPos(), a))
+                in.add(e);
+        return new Fight(f.level(), f.mob(), f.hero(), in, f.friends(), f.hp(), f.melee());
+    }
+
+    /**
+     * Where to aim a ground cast {@code a} at {@code t} without a step (review r3 on PR 416): {@code t}'s own block if the
+     * cast goal reaches it, else the furthest spot toward {@code t} on the line from the hero that it reaches and from
+     * which the effect still takes {@code t} in - within the radius (less 0.75 for the block's rounding), or for a line
+     * (radius 0: Bone Spear) a spot the line through {@code t} passes. On solid ground near {@code t}'s height. Null if
+     * none does.
+     */
+    @Nullable
+    static BlockPos reachableAim(Fight f, FactionHeroAbility a, LivingEntity t) {
+        Mob mob = f.mob;
+        BlockPos own = t.getOnPos();
+        if (castReaches(mob, own, a))
+            return own;
+        double dx = t.getX() - mob.getX(), dz = t.getZ() - mob.getZ(), d = Math.sqrt(dx * dx + dz * dz);
+        if (d < 1e-3)
+            return null;
+        dx /= d;
+        dz /= d;
+        boolean line = a.spec.radius <= 0;
+        double within = a.spec.radius - 0.75;
+        for (double reach = Math.min(d, Math.max(1.5f, a.range)); reach > 0.5; reach -= 0.25) {
+            int bx = (int) Math.floor(mob.getX() + dx * reach), bz = (int) Math.floor(mob.getZ() + dz * reach);
+            BlockPos ground = groundNear(f.level, bx, bz, own.getY());
+            BlockPos aim = ground != null ? ground : new BlockPos(bx, own.getY(), bz);
+            if (!castReaches(mob, aim, a))
+                continue;
+            double cx = bx + 0.5 - mob.getX(), cz = bz + 0.5 - mob.getZ();
+            if (line) {
+                // the line runs from the hero through the spot's centre, its full range long: t must lie on it
+                double len = Math.sqrt(cx * cx + cz * cz);
+                if (len < 1e-3)
+                    continue;
+                double along = ((t.getX() - mob.getX()) * cx + (t.getZ() - mob.getZ()) * cz) / len;
+                double off = Math.abs((t.getX() - mob.getX()) * cz - (t.getZ() - mob.getZ()) * cx) / len;
+                if (along <= a.range && off <= 0.4)
+                    return aim;
+            } else if (Math.hypot(bx + 0.5 - t.getX(), bz + 0.5 - t.getZ()) <= within)
+                return aim;
+        }
+        return null;
+    }
+
+    /**
+     * The solid, dry ground block nearest height {@code y} (within 3) at column ({@code x}, {@code z}): its top is
+     * sturdy, and the space above it is free of water, lava and anything solid. Not the heightmap's top, which can be a
+     * roof, an overhang or the surface of water (review r3 on PR 416). Null if there is none.
+     */
+    @Nullable
+    static BlockPos groundNear(net.minecraft.world.level.Level level, int x, int z, int y) {
+        for (int i = 0; i <= 6; i++) {
+            int dy = (i % 2 == 0 ? 1 : -1) * ((i + 1) / 2);   // 0, -1, 1, -2, 2, -3, 3
+            BlockPos bp = new BlockPos(x, y + dy, z), up = bp.above();
+            if (level.getBlockState(bp).isFaceSturdy(level, bp, net.minecraft.core.Direction.UP)
+                    && level.getFluidState(bp).isEmpty() && level.getFluidState(up).isEmpty()
+                    && !level.getBlockState(up).blocksMotion())
+                return bp;
+        }
+        return null;
+    }
+
+    /**
+     * Is the block the cast goal is aimed at still in its reach from where the hero stands? An entity cast re-aims at
+     * its target's block every tick (GenericTargetedSpellGoal.tick), so a target that walks off takes the aim with it.
+     */
+    static boolean castStillReaches(Mob mob, HeroCore core) {
+        com.solegendary.reignofnether.unit.goals.GenericTargetedSpellGoal g = core.castGoal;
+        if (g == null || core.castGoalAbility == null)
+            return true;
+        LivingEntity te = g.getTargetEntity();
+        BlockPos aim = te != null ? te.getOnPos() : g.getMoveTarget() != null ? g.getMoveTarget() : g.getCastTarget();
+        return aim == null || castReaches(mob, aim, core.castGoalAbility);
+    }
+
+    /**
+     * One fighting ability against what is round the hero now; false to look at the next one. {@code stay}: the hero
+     * must cast from where it stands (v2, behind the player's order) - a forward ground cast is then aimed well inside
+     * its range, toward the target, instead of at a target the hero would have to walk to.
+     */
+    static boolean fight(Fight f, FactionHeroAbility a, boolean stay) {
         Mob mob = f.mob;
         if (isHeal(a))
             return false;   // heal() decided already
@@ -337,6 +546,24 @@ public final class HeroBot {
                 double d = t.distanceTo(mob);
                 // summons and turrets go toward the enemy, cover and pools at the hero's own feet
                 boolean forward = a.spec.id.equals("raise_the_fallen") || a.spec.id.equals("deploy_turret");
+                if (forward && stay) {
+                    if (d <= a.range && castReaches(mob, t.getOnPos(), a))
+                        return use(f, a, t.getOnPos());
+                    // toward the target, as far as the cast goal reaches without a step, on solid dry ground there near
+                    // the hero's height (a slope must not leave the spot in the air or under the turf; nor on water, lava
+                    // or a roof - review r3)
+                    Vec3 dir = t.position().subtract(mob.position()).multiply(1, 0, 1);
+                    if (dir.lengthSqr() < 1e-4)
+                        return use(f, a, mob.getOnPos());
+                    dir = dir.normalize();
+                    for (double reach = Math.min(d, a.range) - 0.75; reach > 0.5; reach -= 0.5) {
+                        Vec3 to = mob.position().add(dir.scale(reach));
+                        BlockPos ground = groundNear(f.level, (int) Math.floor(to.x), (int) Math.floor(to.z), mob.getOnPos().getY());
+                        if (ground != null && castReaches(mob, ground, a))
+                            return use(f, a, ground);
+                    }
+                    return use(f, a, mob.getOnPos());
+                }
                 return use(f, a, forward && d <= a.range ? t.getOnPos() : mob.getOnPos());
             }
             default -> {
@@ -362,6 +589,16 @@ public final class HeroBot {
      */
     @Nullable
     static LivingEntity bestTarget(Fight f, double range, float damage, float splash) {
+        return bestTarget(f, range, damage, splash, false, -1);
+    }
+
+    /**
+     * v2 adds what its brain knows ({@code v2} true): the enemy the player ordered the hero to attack
+     * ({@code focusId}) comes first, and an enemy already stunned, rooted or slowed is worth more - the damage lands
+     * while it cannot answer (the combo's second half).
+     */
+    @Nullable
+    static LivingEntity bestTarget(Fight f, double range, float damage, float splash, boolean v2, int focusId) {
         LivingEntity best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (LivingEntity e : f.enemies) {
@@ -376,11 +613,475 @@ public final class HeroBot {
             s += 30 * (1 - fraction(e));
             if (splash > 0)
                 s += 8 * (f.enemiesWithin(e.position(), splash) - 1);
+            if (v2) {
+                if (e.getId() == focusId)
+                    s += 80;
+                if (e.hasEffect(MobEffectRegistrar.STUN.get()) || e.hasEffect(MobEffects.MOVEMENT_SLOWDOWN))
+                    s += 40;
+            }
             if (s > bestScore) {
                 bestScore = s;
                 best = e;
             }
         }
         return best;
+    }
+
+    // ================================================================================================ v2 (hero/ai)
+    // For the kits in HeroBrain.ROLLED_OUT: v1's fight above, run behind the OrderLock (the player's order first), on
+    // what Perception saw (only what the hero's side sees), with FightEval's reading (who is winning, where the enemy
+    // towers reach, when the hero is near death) and the combo rule; every decision goes to the hero's DecisionLog.
+    //
+    // Cost per hero per tick: everyTick is a possession lookup, a set lookup and the command queue's two fields (plus,
+    // only while a combo is armed, a few field reads); think runs once a second per hero, staggered by its tick count:
+    // one UnitGrid query of 16 blocks, one BuildingGrid query, a pass over what they return, and at most one cast.
+
+    /** Blocks a flight runs from the threats (v1's ESCAPE_DISTANCE). */
+    static final double FLEE_DISTANCE = ESCAPE_DISTANCE;
+    /** Ticks a bot's hero rests out of reach, still near death, before it goes back to its order by itself. */
+    static final int BOT_REST_TICKS = 20 * 20;
+    /** Ticks a gap closer's follow-up stays armed: the charge's wind-up and flight fit well inside it. */
+    static final int FOLLOW_UP_TICKS = 40;
+
+    /** Does the AI drive this hero now: nobody possesses it, and it is a bot's hero or its player's AI switch is on? */
+    static boolean aiDrives(Mob mob, FactionHero hero) {
+        String owner = hero.getOwnerName();
+        if (owner == null || owner.isBlank() || PossessionServer.isPossessed(mob))
+            return false;
+        return BotServerEvents.brains.containsKey(owner) || isAiEnabled(owner);
+    }
+
+    /**
+     * Every server tick for a hero v2 drives: the player's order first - a fresh command ends a flight and a pending
+     * combo at once (D030) - then a gap closer's follow-up goes off the tick the hero lands.
+     */
+    static void everyTick(Mob mob, FactionHero hero) {
+        HeroBrain b = hero.heroCore().brain();
+        if (!aiDrives(mob, hero)) {
+            if (b.active())
+                b.off();
+            return;
+        }
+        long now = mob.level().getGameTime();
+        boolean bot = BotServerEvents.brains.containsKey(hero.getOwnerName());
+        boolean fresh = b.lock.refresh(mob, (Unit) mob, now, !bot);
+        if (b.state == HeroBrain.State.OFF) {
+            // handed back by the player (possession released, the AI switched on): what they saw stands, danger included
+            b.lock.acknowledge();
+            b.state = HeroBrain.State.IDLE;
+            // off() forgot the last scan and the next think is up to a second away: look now, so the hero's own idle
+            // targeting knows the enemy towers from the first tick (mayAutoTarget)
+            if (mob.level() instanceof ServerLevel sl)
+                Perception.scan(sl, mob, hero.getOwnerName(), b.seen);
+        } else if (fresh && bot && b.state == HeroBrain.State.FLEE) {
+            // a bot's army order swept the fleeing hero along: the flight stands (D030 is the player's word, and the
+            // hero's own brain knows its life better than the bot's sweep); the order waits until the run is over.
+            // A resting hero is out of reach: the bot's next order takes it back (a hero with no heal would rest forever)
+            Unit.fullResetBehaviours((Unit) mob);
+            if (b.state == HeroBrain.State.FLEE && b.fleeTo != null)
+                ((Unit) mob).setMoveTarget(b.fleeTo);
+        } else if (fresh) {
+            if (b.fleeing()) {
+                b.state = HeroBrain.State.OBEY;
+                b.lock.takeSuspended();   // the fresh order replaces the one the flight broke off
+            }
+            if (!b.lock.mode().mayMove)
+                b.clearCombo();   // a move, attack or hold: no follow-up after the gap closer's target (Fight keeps it)
+            b.record(now, Why.COMMAND, -1, -1);
+        }
+        // a cast under an order stops the hero's legs for its wind-up (the cast goal and the move share the navigator):
+        // the moment it is done, the order's walk picks up again at once instead of after the move goal's re-path wait
+        boolean casting = busy(hero.heroCore());
+        if (b.wasCasting && !casting && b.lock.mode() != OrderLock.Mode.NONE) {
+            var move = ((Unit) mob).getMoveGoal();
+            if (move != null && move.getMoveTarget() != null && mob.getNavigation().isDone())
+                move.forceRepath();
+        }
+        b.wasCasting = casting;
+        // Hold truly holds (review r3 on PR 416, lovish): a cast the brain started under an order that keeps the hero
+        // where it is is let go the moment its aim leaves the cast goal's reach - the goal would walk after a target
+        // that walks off. Nothing is paid before the effect lands. Not a gap closer or an escape (they are the moving),
+        // not in a flight, and never a cast the player gave.
+        HeroCore core = hero.heroCore();
+        if (casting && !b.lock.mode().mayMove && !b.fleeing() && core.castSeq == b.aiCastSeq && core.castGoalAbility != null
+                && core.castGoalAbility.spec.ai != HeroKit.Ai.ENGAGE && !isEscape(core.castGoalAbility)
+                && !castStillReaches(mob, core)) {
+            core.stopCast();
+            b.wasCasting = false;
+        }
+        int seq = core.castSeq;
+        continueCombo(mob, hero, b, now);
+        if (core.castSeq != seq)
+            b.aiCastSeq = core.castSeq;
+    }
+
+    /** Once a second: look, read the fight, then the most urgent of flee, rest, obey and fight. */
+    static void think(Mob mob, FactionHero hero) {
+        if (!(mob.level() instanceof ServerLevel sl))
+            return;
+        HeroBrain b = hero.heroCore().brain();
+        if (!b.active())
+            return;
+        long now = sl.getGameTime();
+        Perception.scan(sl, mob, hero.getOwnerName(), b.seen);
+        FightEval.Reading before = b.reading;
+        FightEval.Reading r = FightEval.evaluate(mob, b.seen, before);
+        b.reading = r;
+        if (r.nearDeath() && !before.nearDeath())
+            b.lock.newDanger();
+        if (b.fleeing() && !r.nearDeath()) {
+            // healed: back to what the player had ordered
+            resume(sl, mob, b);
+            b.state = HeroBrain.State.IDLE;
+            b.record(now, Why.RESUME, -1, -1);
+        }
+        if (r.nearDeath() && r.threatened() && b.lock.fleeAllowed()) {
+            if (!b.fleeing())
+                b.lock.suspend();
+            b.state = HeroBrain.State.FLEE;
+            flee(sl, mob, hero, b, now);
+            return;
+        }
+        if (b.state == HeroBrain.State.FLEE) {
+            // out of reach and still near death: the run stops here (no further than it had to go, still near its
+            // side) and it waits for a heal or the player's word - it never walks back in by itself
+            ((Unit) mob).getMoveGoal().stopMoving();
+            b.state = HeroBrain.State.REST;
+            b.restSince = now;
+            b.record(now, Why.REST, -1, -1);
+        }
+        if (b.state == HeroBrain.State.REST && now - b.restSince >= BOT_REST_TICKS
+                && BotServerEvents.brains.containsKey(hero.getOwnerName())) {
+            // a bot's hero has no player to give the word: after a while out of reach it goes back to its order
+            // (a hero with no heal would otherwise rest for the rest of the match); a threat seen again starts a new run
+            resume(sl, mob, b);
+            b.state = HeroBrain.State.IDLE;
+            b.record(now, Why.RESUME, -1, -1);
+            return;
+        }
+        if (b.state == HeroBrain.State.REST) {
+            Fight f = new Fight(sl, mob, hero, b.seen.enemies, b.seen.friends, r.hp(), isMelee(hero));
+            if (heal(f, ready(hero), -0.5))
+                b.record(now, Why.CAST, -1, -1);
+            return;
+        }
+        OrderLock.Mode mode = b.lock.mode();
+        b.state = mode != OrderLock.Mode.NONE ? HeroBrain.State.OBEY
+            : b.seen.enemies.isEmpty() ? HeroBrain.State.IDLE : HeroBrain.State.FIGHT;
+        fightV2(sl, mob, hero, b, mode, now);
+    }
+
+    static boolean isMelee(FactionHero hero) {
+        return hero.kit().role == HeroKit.Role.VANGUARD || hero.kit().role == HeroKit.Role.RAIDER;
+    }
+
+    /** The abilities the hero could cast this moment (learnt, off cooldown, paid for), in kit order. */
+    static List<FactionHeroAbility> ready(FactionHero hero) {
+        List<FactionHeroAbility> ready = new ArrayList<>(4);
+        for (FactionHeroAbility a : hero.heroCore().abilities)
+            if (a.getRank(hero) > 0 && a.isOffCooldown(hero) && hero.getMana() >= a.manaCost)
+                ready.add(a);
+        return ready;
+    }
+
+    static boolean busy(HeroCore core) {
+        return core.inMotion() || (core.castGoal != null && (core.castGoal.isCasting() || core.castGoal.getMoveTarget() != null));
+    }
+
+    /**
+     * v1's fight under the OrderLock: aimed casts only at what is in reach from where the hero stands (the brain never
+     * walks to cast, so it never drags the hero off an order); a gap closer only when the order lets the hero move (or
+     * is an attack order, and then only onto its target), the fight is not lost (FightEval), it would not land under an
+     * enemy tower, and its follow-up is ready; abilities that stun, root or slow go before the rest, so the damage lands
+     * on a target that cannot answer.
+     */
+    static void fightV2(ServerLevel sl, Mob mob, FactionHero hero, HeroBrain b, OrderLock.Mode mode, long now) {
+        if (b.followUp != null || busy(hero.heroCore()))
+            return;   // one thing at a time
+        Fight f = new Fight(sl, mob, hero, b.seen.enemies, b.seen.friends, b.reading.hp(), isMelee(hero));
+        List<FactionHeroAbility> ready = ready(hero);
+        HeroBrain.State s = b.state;
+        if (!ready.isEmpty()) {
+            // an acknowledged danger (the player sent it on): it may still shield or heal where it stands
+            if (b.reading.nearDeath() && b.reading.threatened() && defendInPlace(f, ready)) {
+                b.record(now, Why.CAST, -1, -1);
+                return;
+            }
+            if (heal(f, ready, -0.5)) {
+                b.record(now, Why.CAST, -1, -1);
+                return;
+            }
+            if (!f.enemies.isEmpty()) {
+                float reserve = 0;
+                if (f.hp < 0.6)
+                    for (FactionHeroAbility a : hero.heroCore().abilities)
+                        if (isEscape(a) && a.getRank(hero) > 0)
+                            reserve = Math.max(reserve, a.manaCost);
+                ready.sort(Comparator.comparing(a -> !a.spec.cc));   // stable: kit order within each group
+                for (FactionHeroAbility a : ready) {
+                    if (isEscape(a) || (reserve > 0 && hero.getMana() - a.manaCost < reserve))
+                        continue;
+                    if (fightV2(f, b, a, mode, now))
+                        return;
+                }
+            }
+        }
+        b.record(now, s == HeroBrain.State.OBEY ? Why.OBEY : s == HeroBrain.State.FIGHT ? Why.FIGHT : Why.IDLE, -1, -1);
+    }
+
+    /** One fighting ability under v2's rules; false to look at the next one. */
+    static boolean fightV2(Fight f, HeroBrain b, FactionHeroAbility a, OrderLock.Mode mode, long now) {
+        Mob mob = f.mob;
+        if (isHeal(a) || (a.slot == 3 && !realFight(f, a)))
+            return false;
+        int focus = b.lock.focusId();
+        switch (a.spec.ai) {
+            case STRIKE -> {
+                int rank = a.getRank(f.hero);
+                float dmg = a.spec.a[Math.max(0, Math.min(rank, a.spec.a.length) - 1)];
+                // only what the cast goal reaches from where the hero stands: it measures to the aimed block's corner,
+                // up to 1.4 blocks further than the centre (review r2 on PR 416: a held hero stepped ~0.6 to strike). An
+                // enemy-target strike follows its target's block; a ground strike may aim short of it (reachableAim,
+                // review r3) as long as its area or line still takes the target in
+                boolean enemyTarget = a.spec.target == HeroKit.Target.ENEMY;
+                LivingEntity t = bestTarget(enemyTarget ? reachableBy(f, a) : f, a.range - 0.5, dmg, a.spec.radius, true, focus);
+                if (t == null)
+                    return false;
+                if (enemyTarget)
+                    a.use(f.level, f.hero, t);
+                else {
+                    BlockPos aim = reachableAim(f, a, t);
+                    if (aim == null)
+                        return false;
+                    a.use(f.level, f.hero, aim);
+                }
+                b.record(now, Why.CAST, a.slot, t.getId());
+                return true;
+            }
+            case ENGAGE -> {
+                // an attack order lets the gap closer go onto the target the player chose, and onto nothing else
+                boolean ordered = mode == OrderLock.Mode.ATTACK && focus >= 0;
+                if (!(mode.mayMove || ordered) || !f.melee || f.hp < 0.5 || b.reading.stance() == FightEval.Stance.DISENGAGE)
+                    return false;
+                LivingEntity t = ordered ? seenWithin(f, focus, a.range) : bestTarget(f, a.range, 0, 0, true, focus);
+                if (t == null || t.distanceTo(mob) < 4)
+                    return false;
+                int around = f.enemiesWithin(t.position(), 5);
+                if (around > 3 && around > f.friends.size())
+                    return false;
+                Vec3 land = HeroFx.landingSpot(f.level, mob, t.position(), a.range);
+                if (b.seen.landsUnderTower(mob, land.x, land.z)) {
+                    b.record(now, Why.TOWER, a.slot, t.getId());
+                    return false;
+                }
+                FactionHeroAbility next = followUpFor(f, a);
+                if (next == null) {
+                    b.record(now, Why.NO_FOLLOW_UP, a.slot, t.getId());
+                    return false;
+                }
+                use(f, a, t.getOnPos());
+                b.followUp = next;
+                b.followUpTarget = t;
+                b.followUpUntil = now + FOLLOW_UP_TICKS;
+                b.record(now, Why.GAP_CLOSER, a.slot, t.getId());
+                return true;
+            }
+            default -> {
+                // area bursts round the hero and ground casts at its own feet or at a target in reach: v1's rules,
+                // none of which walks the hero anywhere
+                if (!fight(f, a, true))
+                    return false;
+                b.record(now, Why.CAST, a.slot, -1);
+                return true;
+            }
+        }
+    }
+
+    /** The enemy with this id, if the hero's side sees it within {@code range}; else null. */
+    @Nullable
+    static LivingEntity seenWithin(Fight f, int id, double range) {
+        for (LivingEntity e : f.enemies)
+            if (e.getId() == id)
+                return e.distanceTo(f.mob) <= range ? e : null;
+        return null;
+    }
+
+    /**
+     * What finishes what a gap closer starts: a strike, or a burst round the hero (not a shield, a heal or the
+     * fourth), ready now, with mana for both. Null: the gap closer waits (lovish's requirement 1: "gap-closer only when
+     * follow-up is ready").
+     */
+    @Nullable
+    static FactionHeroAbility followUpFor(Fight f, FactionHeroAbility gap) {
+        for (FactionHeroAbility a : f.hero.heroCore().abilities) {
+            if (a == gap || a.slot == 3 || a.getRank(f.hero) <= 0 || !a.isOffCooldown(f.hero)
+                    || f.hero.getMana() < gap.manaCost + a.manaCost || isShield(a) || isHeal(a))
+                continue;
+            if (a.spec.ai == HeroKit.Ai.STRIKE || (a.spec.ai == HeroKit.Ai.FIGHT_SELF && a.spec.radius >= 3))
+                return a;
+        }
+        return null;
+    }
+
+    /** The combo's second half, the tick the gap closer has landed (and only while it is still worth it). */
+    static void continueCombo(Mob mob, FactionHero hero, HeroBrain b, long now) {
+        FactionHeroAbility next = b.followUp;
+        if (next == null)
+            return;
+        LivingEntity t = b.followUpTarget;
+        if (now > b.followUpUntil || t == null || !t.isAlive() || !(mob.level() instanceof ServerLevel sl)) {
+            b.clearCombo();
+            return;
+        }
+        if (busy(hero.heroCore()))
+            return;   // the gap closer is still winding up or in the air
+        if (!next.isOffCooldown(hero) || hero.getMana() < next.manaCost) {
+            b.clearCombo();
+            return;
+        }
+        boolean self = next.spec.target == HeroKit.Target.SELF;
+        double reach = self ? Math.max(3, next.spec.radius) : next.range - 0.5;
+        if (t.distanceTo(mob) > reach)
+            return;   // not in reach yet: the window may still bring it
+        BlockPos aim = null;
+        if (!self && next.spec.target != HeroKit.Target.ENEMY) {
+            aim = reachableAim(new Fight(sl, mob, hero, List.of(t), List.of(), 1, isMelee(hero)), next, t);
+            if (aim == null)
+                return;   // the goal would walk to it: the window may still bring it
+        } else if (!self && !castReaches(mob, t.getOnPos(), next))
+            return;
+        b.clearCombo();
+        if (self)
+            next.castNow(hero, null, mob.position());
+        else if (next.spec.target == HeroKit.Target.ENEMY)
+            next.use(sl, hero, t);
+        else
+            next.use(sl, hero, aim);
+        b.record(now, Why.COMBO, next.slot, t.getId());
+    }
+
+    /** Shields, heals and novas where the hero stands: v1's saveItself without the escape or the step back. */
+    static boolean defendInPlace(Fight f, List<FactionHeroAbility> ready) {
+        for (FactionHeroAbility a : ready)
+            if (isShield(a) || isHeal(a))
+                if (a.spec.target == HeroKit.Target.SELF ? a.castNow(f.hero, null, f.mob.position()) : use(f, a, f.mob.getOnPos()))
+                    return true;
+        for (FactionHeroAbility a : ready)
+            if (a.spec.ai == HeroKit.Ai.FIGHT_SELF && a.spec.radius >= 3 && !a.spec.id.equals("frenzy")
+                    && f.enemiesWithin(f.mob.position(), a.spec.radius + 1) > 0 && a.castNow(f.hero, null, f.mob.position()))
+                return true;
+        return false;
+    }
+
+    /**
+     * Escape by any means (lovish: "escape by any means with any tool it has"): an escape mover away from the threats,
+     * else a shield, heal or nova where it stands (v1's saveItself), and the run itself - away from the enemies it sees
+     * and the enemy towers whose reach it is in. D030: this may break the player's order (OrderLock.suspend keeps it).
+     */
+    static void flee(ServerLevel sl, Mob mob, FactionHero hero, HeroBrain b, long now) {
+        b.clearCombo();
+        Fight f = new Fight(sl, mob, hero, b.seen.enemies, b.seen.friends, b.reading.hp(), isMelee(hero));
+        HeroCore core = hero.heroCore();
+        if (busy(core))
+            return;   // an escape already under way
+        List<FactionHeroAbility> ready = ready(hero);
+        for (FactionHeroAbility a : ready)
+            if (isEscape(a)) {
+                Vec3 to = awayFromThreats(mob, b.seen, Math.min(a.range, FLEE_DISTANCE));
+                a.use(sl, hero, BlockPos.containing(to.x, mob.getY(), to.z));
+                b.record(now, Why.FLEE, a.slot, -1);
+                return;
+            }
+        boolean cast = defendInPlace(f, ready);
+        if (busy(core))
+            return;   // an aimed heal at its feet is winding up: the run waits a second
+        Unit u = (Unit) mob;
+        Vec3 away = awayFromThreats(mob, b.seen, FLEE_DISTANCE);
+        BlockPos to = BlockPos.containing(away.x, mob.getY(), away.z);
+        BlockPos going = u.getMoveGoal().getMoveTarget();
+        if (going == null || going.distSqr(to) > 9) {
+            Unit.fullResetBehaviours(u);   // drops the order's target, hold and attack-move: the run is the order now
+            u.setMoveTarget(to);
+            b.fleeTo = to;
+        }
+        b.record(now, Why.FLEE, cast ? -2 : -1, -1);
+    }
+
+    /** {@code dist} blocks from the hero, away from the enemies it sees and the towers whose reach it is in. */
+    static Vec3 awayFromThreats(Mob mob, Perception.Snapshot s, double dist) {
+        double cx = 0, cz = 0;
+        int n = 0;
+        for (LivingEntity e : s.enemies)
+            if (e.isAlive()) {
+                cx += e.getX();
+                cz += e.getZ();
+                n++;
+            }
+        for (Perception.Tower t : s.towers)
+            if (t.reaches(mob.getX(), mob.getZ(), 2)) {
+                cx += t.x();
+                cz += t.z();
+                n++;
+            }
+        Vec3 dir = n == 0 ? Vec3.directionFromRotation(0, mob.getYRot() + 180)
+            : new Vec3(mob.getX() - cx / n, 0, mob.getZ() - cz / n);
+        if (dir.horizontalDistanceSqr() < 1e-4)
+            dir = new Vec3(1, 0, 0);
+        return mob.position().add(new Vec3(dir.x, 0, dir.z).normalize().scale(dist));
+    }
+
+    /** Back to the order a flight broke off (unless its target is gone); with none, the run stops where it is. */
+    static void resume(ServerLevel sl, Mob mob, HeroBrain b) {
+        UnitCommand c = b.lock.takeSuspended();
+        if (c == null || CommandQueues.targetGone(sl, c)) {
+            ((Unit) mob).getMoveGoal().stopMoving();
+            return;
+        }
+        new UnitActionItem(c.owner(), c.action(), c.targetId(), new int[] { mob.getId() }, c.pos(), BlockPos.ZERO).action(sl);
+    }
+
+    /**
+     * The player selected the hero (HeroServerboundPacket HERO_SELECTED; D030: "once the player selects or commands it
+     * again, the player's order wins"): the danger so far is acknowledged, and a flight the brain started ends - the
+     * hero goes back to the order it had.
+     */
+    public static void onPlayerSelect(Mob mob) {
+        if (!(mob instanceof FactionHero hero) || !(mob.level() instanceof ServerLevel sl))
+            return;
+        HeroBrain b = hero.heroCore().brainIfAny();
+        if (b == null || !b.active())
+            return;
+        b.lock.acknowledge();
+        if (b.fleeing()) {
+            resume(sl, mob, b);
+            b.state = HeroBrain.State.OBEY;
+        }
+        b.record(sl.getGameTime(), Why.SELECTED, -1, -1);
+    }
+
+    /** Is the v2 AI running this hero away (or resting it out of reach)? Then it does not stop to answer a blow. */
+    public static boolean fleeing(Mob mob) {
+        if (!(mob instanceof FactionHero hero))
+            return false;
+        HeroBrain b = hero.heroCore().brainIfAny();
+        return b != null && b.active() && b.fleeing();
+    }
+
+    /**
+     * Asked by MiscUtil.isIdleOrMoveAttackable for every target a hero's own targeting looks at (idle aggression, the
+     * melee retarget, Fight-move pick-ups). A hero v2 drives, with no order of the player's, does not walk under an
+     * enemy tower's guns after a target standing there, and picks no fights while it flees or rests near death (it
+     * still hits back: retaliation does not ask). Under a player's order the unit's own rules stand. No brain (a v1
+     * hero, the client side): no say.
+     */
+    public static boolean mayAutoTarget(FactionHero hero, Mob mob, LivingEntity target) {
+        HeroBrain b = hero.heroCore().brainIfAny();
+        if (b == null || !b.active())
+            return true;
+        if (b.fleeing())
+            return false;
+        if (b.lock.mode() != OrderLock.Mode.NONE)
+            return true;
+        return !b.seen.chaseIntoTower(mob, target, 1.0);
     }
 }

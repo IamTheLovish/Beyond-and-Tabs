@@ -10,6 +10,7 @@ import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.sounds.SoundAction;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.EngagementStance;
+import com.solegendary.reignofnether.unit.HeldBlow;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.TargetScan;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
@@ -362,6 +363,8 @@ public interface AttackerUnit {
         Mob unitMob = (Mob) attackerUnit;
         Unit unit = (Unit) attackerUnit;
 
+        if (!unitMob.level().isClientSide)
+            HeldBlow.tickHeld(unitMob);   // a blow held to its weapon's strike (BlowTiming) lands on its tick
         if (!unitMob.level().isClientSide && !unit.isEatingFood()) {
             if (attackerUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal meleeAttackUnitGoal) {
                 meleeAttackUnitGoal.tickAttackCooldown();
@@ -460,8 +463,10 @@ public interface AttackerUnit {
             boolean forced3 = attackBuildingGoal instanceof MeleeAttackBuildingGoal mabg && mabg.forced;
             boolean forced = forced1 || forced2 || forced3;
 
-            // a plain move that ran into something and stopped getting closer (the contact rule, blockedOnMove)
-            boolean blocked = !isCasting && blockedOnMove(attackerUnit);
+            // a plain move that ran into something and stopped getting closer (the contact rule, blockedOnMove); a
+            // hero the v2 AI is running away is never "blocked": it would stop, fight and start the run again
+            boolean blocked = !isCasting && blockedOnMove(attackerUnit)
+                && !com.solegendary.reignofnether.hero.HeroBot.fleeing(unitMob);
 
             // retaliate against a mob that damaged us UNLESS already on another command - and a command waiting in the
             // unit's queue counts: see ordersWaiting. A move order that is blocked does not count (the contact rule)
@@ -474,7 +479,7 @@ public interface AttackerUnit {
 
                 boolean isMeleeAttackedByFlyingOrGarrisoned = false;
                 if (lastDSEntity instanceof Unit unitDS &&
-                    (unitDS.isFlyingUnit() ||
+                    (unitDS.isFlyingOutOfMelee() ||
                         GarrisonableBuildingAddon.getGarrison(unitDS) != null ||
                         unitDS instanceof PhantomSummon ||
                         unitDS instanceof Vex) &&
@@ -483,7 +488,9 @@ public interface AttackerUnit {
                 }
                 Relationship rs = UnitServerEvents.getUnitToEntityRelationship(unit, lastDSEntity);
 
-                if (!isMeleeAttackedByFlyingOrGarrisoned &&
+                // artillery cannot hit a flyer: no retaliation on it, so a blocked move is not stopped for a target
+                // it would refuse (it stood with no order and no target and died, issue #35 on #222)
+                if (!isMeleeAttackedByFlyingOrGarrisoned && !refusesTarget(attackerUnit, lastDSEntity) &&
                     lastDSEntity instanceof LivingEntity &&
                     !(lastDSEntity instanceof Player player && player.isCreative()) &&
                     (rs == Relationship.NEUTRAL || rs == Relationship.HOSTILE)) {

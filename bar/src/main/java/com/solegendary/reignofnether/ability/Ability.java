@@ -43,6 +43,11 @@ public class Ability {
      * plus the AutoCaster's energy reserve, so a line of casters never eats the commander's D-gun or spams refusals.
      */
     public float autocastEnergy = 0;
+    /**
+     * Essence the cast spends from the caster itself (essence/Essence; 0 = none). The AutoCaster only casts when the
+     * caster holds at least this, so an essence spell never orders a cast it would refuse.
+     */
+    public int autocastEssence = 0;
     public void setAutocast(boolean value, Unit unit) { AutocastState.set(unit, this, value); }
     public void setAutocast(boolean value, BuildingPlacement placement) { placement.setAutocast(value ? this : null); }
     public boolean isAutocasting(Unit unit) { return unit.hasAutocast(this); }
@@ -104,6 +109,15 @@ public class Ability {
 
     public int summonCap() {
         return 1;
+    }
+
+    /**
+     * For SUMMON_WHEN_FREE: also cast when a friendly unit within this many blocks is fighting, not only when the
+     * caster itself is - for a summoner that stays behind its army and never fights (the Angel Caller). 0 (the
+     * default): only the caster's own fight counts, as before.
+     */
+    public double summonForFightsWithin() {
+        return 0;
     }
 
     /**

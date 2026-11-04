@@ -1,0 +1,222 @@
+# Publishes the FAST (untested) tester pack: minutes after each merge, before the GameTests.
+#
+# Testers asked (Oct 26, launcher buttons "Faster pack (CI)" + "Pre-release channel"): a pack right after the jar
+# compiles and the unit tests pass (~5 min after a merge) instead of only after all GameTests (~25 min). The launcher's
+# Version dropdown offers it as "Newest - untested"; "Latest - tested" (publish-pack.yml) stays the default and is
+# NOT touched by this workflow in any way:
+#   - tested pack: branch `main` of PACK_REPO, windows/ + mac/, game files on release `files`   (publish-pack.yml)
+#   - fast pack:   branch `fast` of PACK_REPO, windows/ + mac/, game files on release `fast-files` (this file)
+#   so the fast pack URL is https://raw.githubusercontent.com/<PACK_REPO>/fast/windows/pack.toml (Mac: fast/mac/).
+#   A separate BRANCH, not a folder on main: the two workflows never push to the same branch (no rejected push or
+#   rebase race between them), and the tested flow's `rm -rf windows mac` + README never see fast files. A separate
+#   RELEASE: publish-pack.yml keeps only the last three versions on `files` and would delete the fast jars.
+#   The `test-pack` release (modpack.yml) is not touched either.
+#
+# Trigger: every push to main except documentation-only changes (the same doc set tools/ci_plan.py skips GameTests
+# for: *.md, docs/**, design/*.png - nothing new to play). Manual run: Actions -> publish-fast-pack -> Run workflow.
+# What it runs before publishing: `./gradlew build` in bar/ = compile + the JUnit suite (bar/src/test), the same build
+# step as build.yml's job `bar`, plus the same generated inputs (dev-time count, mesh bodies, the realistic block
+# pack). The GameTests are NOT run here - that is the point; the tested channel waits for them.
+# Concurrency: newest merge wins. A newer push cancels a running or pending fast publish (cancel-in-progress), so a
+# batch of quick merges publishes only the last one. A cancel mid-run is safe: the branch `fast` is only moved by the
+# final `git push` (atomic), and game files uploaded by a cancelled run are removed by the next run's clean-up.
+# Runner: GitHub's hosted ubuntu-latest, not vars.RUNNER (pc-1): on pc-1 it would queue behind main's own build jobs
+# and lose the minutes it exists to save.
+# Same secret as publish-pack.yml: PACK_TOKEN (Contents: Read and write on the download repo; creating the `fast`
+# branch and the `fast-files` release needs nothing more). No new secrets.
+# To switch the fast channel off: delete the `push` trigger below (the launcher then shows the fast pack as it was).
+name: publish-fast-pack
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**', 'design/*.png']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: publish-fast-pack
+  cancel-in-progress: true
+env:
+  PACK_REPO: IamTheLovish/beyond-and-tabs-pack   # the download repo (the launcher's packRepoSlug)
+  PACK_BRANCH: fast
+  FILES_RELEASE: fast-files
+  # packwiz-installer-bootstrap, pinned: release v0.0.3 (the newest, 2020-07-12), asset packwiz-installer-bootstrap.jar.
+  # The hash is the sha256 of that exact asset, downloaded once and hashed on 2026-10-27 (not copied from a web page).
+  # To upgrade: download the new release's asset, run sha256sum on it, change both lines.
+  BOOTSTRAP_VERSION: v0.0.3
+  BOOTSTRAP_SHA256: a8fbb24dc604278e97f4688e82d3d91a318b98efc08d5dbfcbcbcab6443d116c
+jobs:
+  publish:
+    # Only main publishes: a manual run on any other branch would hand that branch's unreviewed jar to every tester
+    # on the untested channel, with PACK_TOKEN (PR #267 review, blocker).
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check the publish key
+        env:
+          PACK_TOKEN: ${{ secrets.PACK_TOKEN }}
+        run: |
+          if [ -z "$PACK_TOKEN" ]; then
+            echo "::error::Repository secret PACK_TOKEN is missing (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
+
+      # the whole history, treeless: the dev-time count (title screen, hud/DevTime) needs every commit's time, exactly
+      # as build.yml's job `changes` counts it, so the fast jar shows the same number as the tested one
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, filter: 'tree:0' }
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            bar/*.gradle
+            bar/gradle.properties
+            bar/gradle/wrapper/gradle-wrapper.properties
+
+      - name: The development time (same count as build.yml job changes)
+        run: |
+          git log --format=%ct | sort -n | python3 -c "
+          import sys, json
+          t = [int(x) for x in sys.stdin if x.strip()]
+          s = sum(b - a if b - a <= 1800 else 900 for a, b in zip(t, t[1:])) + 900 if t else 0
+          print(json.dumps({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0}))
+          " > bar/src/main/resources/assets/reignofnether/devtime.json
+          cat bar/src/main/resources/assets/reignofnether/devtime.json
+
+      - name: Mesh bodies (tools/mesh_export.py)
+        run: |
+          python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
+          python3 tools/mesh_export.py --from-dsl design/models/sunforged_paladin_radiant_winged.json
+
+      - name: Compile + unit tests (./gradlew build in bar/, no GameTests)
+        working-directory: bar
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew build --stacktrace --no-daemon 2>&1 | tee build.log || {
+            grep -E "\.java:[0-9]+: error:" build.log | head -40 | sed 's/^/::error::/'
+            grep -E "FAILURE|What went wrong|> " build.log | head -20 | sed 's/^/::warning::/'
+            exit 1
+          }
+      - name: JUnit summary (count and time, as a notice)
+        if: always()
+        run: python3 tools/junit_summary.py bar/build/test-results/test
+
+      - name: Our realistic block pack as a zip (tools/gen_blocks.py, as in build.yml job bar-publish)
+        run: |
+          set -euo pipefail
+          python3 tools/gen_blocks.py > /dev/null
+          mkdir -p dist
+          (cd resourcepacks/BeyondAndTabs-Realistic && zip -q -r -X ../../dist/BeyondAndTabs-Realistic.zip pack.mcmeta README.md assets)
+          n=$(unzip -l dist/BeyondAndTabs-Realistic.zip | grep -c '\.png$')
+          [ "$n" -ge 30 ] || { echo "::error::the block pack zip has only $n textures"; exit 1; }
+
+      - name: Name this build
+        run: |
+          ls -l bar/build/libs
+          jar=""
+          for f in bar/build/libs/*.jar; do
+            case "$f" in *-sources.jar) ;; *) [ -n "$jar" ] || jar="$f" ;; esac
+          done
+          test -n "$jar" || { echo "::error::no jar in bar/build/libs"; exit 1; }
+          unzip -tq "$jar"
+          # <utc date-time>-<main commit>: the launcher reads the commit from the jar's name and the pack commit
+          version="$(date -u +%Y.%m.%d-%H%M)-${GITHUB_SHA::7}"
+          {
+            echo "JAR=$jar"
+            echo "VERSION=$version"
+            echo "JAR_NAME=beyondandtabs-$version.jar"
+            echo "RP_NAME=BeyondAndTabs-Realistic-$version.zip"
+          } >> "$GITHUB_ENV"
+          echo "fast pack $version"
+
+      - name: Upload the game files to the download repo (release fast-files)
+        env:
+          GH_TOKEN: ${{ secrets.PACK_TOKEN }}
+        run: |
+          mkdir -p up
+          cp "$JAR" "up/$JAR_NAME"
+          cp dist/BeyondAndTabs-Realistic.zip "up/$RP_NAME"
+          if ! gh release view "$FILES_RELEASE" --repo "$PACK_REPO" >/dev/null 2>&1; then
+            gh release create "$FILES_RELEASE" --repo "$PACK_REPO" --prerelease --title "Fast pack game files (untested, used by the auto-updater)" \
+              --notes "Do not download these by hand. Untested builds for the launcher's 'Newest - untested' channel."
+          fi
+          gh release upload "$FILES_RELEASE" "up/$JAR_NAME" "up/$RP_NAME" --repo "$PACK_REPO" --clobber
+          base="https://github.com/$PACK_REPO/releases/download/$FILES_RELEASE"
+          echo "JAR_URL=$base/$JAR_NAME" >> "$GITHUB_ENV"
+          echo "RP_URL=$base/$RP_NAME" >> "$GITHUB_ENV"
+
+      - name: Build the packwiz pack (Windows + Mac)
+        run: |
+          python3 pack/build_packwiz.py "up/$JAR_NAME" "up/$RP_NAME" "$JAR_URL" "$RP_URL" "$VERSION" out
+          # nothing Complementary in either pack, checked before anything is pushed (author refused permission, Oct 29)
+          if find out -iname '*complementary*' | grep -q . || grep -rIqi complementary out; then
+            echo "::error::the built pack contains Complementary Reimagined"; exit 1
+          fi
+
+      - name: Push the pack to the download repo (branch fast only)
+        env:
+          PACK_TOKEN: ${{ secrets.PACK_TOKEN }}
+        run: |
+          set -e
+          remote="https://x-access-token:${PACK_TOKEN}@github.com/$PACK_REPO.git"
+          if git ls-remote --exit-code --heads "$remote" "$PACK_BRANCH" >/dev/null; then
+            git clone --depth 1 --branch "$PACK_BRANCH" "$remote" packrepo
+          else
+            # first run: a new branch with no history of main (so it can never be merged into the tested pack by mistake)
+            git init -q packrepo && git -C packrepo checkout -q --orphan "$PACK_BRANCH" && git -C packrepo remote add origin "$remote"
+          fi
+          rm -rf packrepo/windows packrepo/mac
+          cp -r out/windows out/mac packrepo/
+          cat > packrepo/README.md <<EOF
+          # Beyond and Tabs - FAST pack (untested)
+
+          Built minutes after each merge to main: the jar compiled and its unit tests passed, the in-game tests did not
+          run yet. The tested pack is on branch main. The launcher's Version menu picks between the two.
+
+          Current version: \`$VERSION\` (main commit $GITHUB_SHA)
+          EOF
+          cd packrepo
+          git add -A windows mac README.md
+          # "Fast pack <version>": the launcher reads the channel's newest pack from this commit message
+          git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q -m "Fast pack $VERSION" -m "untested: compile + unit tests of main $GITHUB_SHA" || echo "nothing changed"
+          git push origin "HEAD:refs/heads/$PACK_BRANCH"
+          # the token must not stay in packrepo/.git/config for the steps after this one (PR #267 review, finding 2)
+          git remote set-url origin "https://github.com/$PACK_REPO.git"
+          echo "PACK_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      # Windows only: the launcher (the only way to pick the fast channel) is Windows-only; the Mac files are published
+      # for parity but no Mac import link points at them.
+      - name: Test - a fresh install of the fast pack gets this exact build
+        run: |
+          set -e
+          curl -fsSL -o packwiz-installer-bootstrap.jar \
+            "https://github.com/packwiz/packwiz-installer-bootstrap/releases/download/$BOOTSTRAP_VERSION/packwiz-installer-bootstrap.jar"
+          echo "$BOOTSTRAP_SHA256  packwiz-installer-bootstrap.jar" | sha256sum -c - \
+            || { echo "::error::packwiz-installer-bootstrap $BOOTSTRAP_VERSION does not match the pinned sha256"; exit 1; }
+          expect=$(sha512sum "$JAR" | cut -d' ' -f1)
+          rm -rf t-fast && mkdir -p t-fast && cp packwiz-installer-bootstrap.jar t-fast/
+          cd t-fast
+          # the commit URL, not the branch: raw.githubusercontent.com may cache a branch for a few minutes
+          java -jar packwiz-installer-bootstrap.jar -g -s client \
+            "https://raw.githubusercontent.com/$PACK_REPO/$PACK_COMMIT/windows/pack.toml"
+          got=$(sha512sum "mods/$JAR_NAME" | cut -d' ' -f1)
+          [ "$got" = "$expect" ] || { echo "::error::installed jar hash differs"; exit 1; }
+          n=0; for f in mods/beyondandtabs-*.jar; do [ -e "$f" ] && n=$((n + 1)); done
+          [ "$n" = 1 ] || { echo "::error::$n game jars in mods"; exit 1; }
+          test -f "resourcepacks/BeyondAndTabs-Realistic.zip"
+
+      - name: Keep only the last three versions of the fast game files
+        env:
+          GH_TOKEN: ${{ secrets.PACK_TOKEN }}
+        run: |
+          keep=$(gh api "repos/$PACK_REPO/releases/tags/$FILES_RELEASE" --jq '[.assets[] | select(.name|startswith("beyondandtabs-"))] | sort_by(.created_at) | reverse | .[0:3] | map(.name | sub("^beyondandtabs-";"") | sub("\\.jar$";"")) | join(" ")')
+          for a in $(gh api "repos/$PACK_REPO/releases/tags/$FILES_RELEASE" --jq '.assets[].name'); do
+            v=$(echo "$a" | sed -E 's/^beyondandtabs-//; s/^BeyondAndTabs-Realistic-//; s/\.(jar|zip)$//')
+            case " $keep " in *" $v "*) ;; *) gh release delete-asset "$FILES_RELEASE" "$a" --repo "$PACK_REPO" -y ;; esac
+          done
+          echo "### Fast pack $VERSION published (untested)" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://raw.githubusercontent.com/$PACK_REPO/$PACK_BRANCH/windows/pack.toml" >> "$GITHUB_STEP_SUMMARY"

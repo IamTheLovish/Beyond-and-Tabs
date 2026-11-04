@@ -62,6 +62,8 @@ public class VeterancyServerEvents {
                 || !(evt.getSource().getEntity() instanceof LivingEntity killer) || !(killer instanceof Unit k)
                 || !killer.isAlive())
             return;
+        if (Summons.isSummoned(victim))
+            return;   // killing a summon earns nothing (design/essence_casters.md Revision 1: no farming free units)
         String ko = k.getOwnerName(), vo = v.getOwnerName();
         if (ko == null || ko.equals(vo) || AlliancesServerEvents.isAllied(ko, vo))
             return;

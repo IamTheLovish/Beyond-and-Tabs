@@ -255,7 +255,10 @@ public class HeroGameTests {
             helper.succeed();
     }
 
-    /** A kill near the hero drops XP orbs that fly to it: its experience rises (Reign of Nether's orbs, unchanged). */
+    /**
+     * A kill near the hero pays it XP: its experience rises (paid at the kill since PR 419; the orbs that fly to it are
+     * the look of it - HeroXpGameTests holds the exact amount and the orbs).
+     */
     @GameTest(template = ARENA, timeoutTicks = 300)
     public static void hero_gains_xp_from_a_kill(GameTestHelper helper) {
         String me = owner(helper, "killer"), them = owner(helper, "victim");
@@ -265,8 +268,8 @@ public class HeroGameTests {
             helper.fail("could not spawn the hero or its victim");
             return;
         }
-        hero.setNoAi(true);   // stands still: the orbs come to it
-        // kill() (generic damage): any death near an enemy hero drops orbs for it - who struck the blow doesn't matter
+        hero.setNoAi(true);   // stands still
+        // kill() (generic damage): any death near an enemy hero pays it - who struck the blow doesn't matter
         helper.runAfterDelay(3, victim::kill);
         helper.runAfterDelay(6, () -> {
             if (victim.isAlive())
@@ -449,6 +452,61 @@ public class HeroGameTests {
             else
                 helper.fail(String.join("; ", problems));
         });
+    }
+
+    /**
+     * The medium hero stat buff (design: hero-buff option B): each kit's health and one ability's cooldown carry the
+     * new numbers, the Storm Witch's Cloud Ride is left alone, and the six Reign of Nether heroes got +10% health.
+     * Reads the kit directly (no runtime multiplier), so it runs in the tick it starts.
+     */
+    @GameTest(template = ARENA)
+    public static void heroes_get_the_medium_stat_buff(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        // kit, new health, slot of the checked ability, its rank 1/2/3 cooldown in seconds
+        Object[][] expect = {
+            { HeroKits.DAWN_PALADIN, 220f, 0, new int[] { 13, 11, 9 } },
+            { HeroKits.GRAVECALLER, 205f, 2, new int[] { 36, 32, 27 } },
+            { HeroKits.HORDE_WARCHIEF, 205f, 1, new int[] { 22, 18, 14 } },
+            { HeroKits.THORNHEART_DRUID, 180f, 3, new int[] { 54, 45, 36 } },
+            { HeroKits.CORSAIR_CAPTAIN, 215f, 0, new int[] { 6, 5, 4 } },
+            { HeroKits.STORM_WITCH, 160f, 0, new int[] { 8, 7, 6 } },
+            { HeroKits.ARCH_ENGINEER, 155f, 2, new int[] { 32, 27, 23 } },
+            { HeroKits.ASH_SHAMAN, 180f, 1, new int[] { 13, 11, 9 } },
+        };
+        for (Object[] e : expect) {
+            HeroKit kit = (HeroKit) e[0];
+            if (kit.health != (float) e[1])
+                problems.add(kit.id + ": health " + kit.health + " is not " + e[1]);
+            if (!java.util.Arrays.equals(kit.abilities[(int) e[2]].cooldownSeconds, (int[]) e[3]))
+                problems.add(kit.id + ": slot " + e[2] + " cooldown "
+                    + java.util.Arrays.toString(kit.abilities[(int) e[2]].cooldownSeconds) + " is not "
+                    + java.util.Arrays.toString((int[]) e[3]));
+        }
+        if (!java.util.Arrays.equals(HeroKits.STORM_WITCH.abilities[1].cooldownSeconds, new int[] { 8, 6, 4 }))
+            problems.add("Cloud Ride's cooldown should be unchanged (8/6/4)");
+        // Reign of Nether heroes: base health and per-level growth (+10%)
+        float[][] ron = {
+            { com.solegendary.reignofnether.unit.units.villagers.RoyalGuardUnit.maxHealth, 140f,
+                com.solegendary.reignofnether.unit.units.villagers.RoyalGuardUnit.maxHealthBonusPerLevel, 16.5f },
+            { com.solegendary.reignofnether.unit.units.villagers.EnchanterUnit.maxHealth, 110f,
+                com.solegendary.reignofnether.unit.units.villagers.EnchanterUnit.maxHealthBonusPerLevel, 11f },
+            { com.solegendary.reignofnether.unit.units.monsters.NecromancerUnit.maxHealth, 110f,
+                com.solegendary.reignofnether.unit.units.monsters.NecromancerUnit.maxHealthBonusPerLevel, 13f },
+            { com.solegendary.reignofnether.unit.units.monsters.WretchedWraithUnit.maxHealth, 155f,
+                com.solegendary.reignofnether.unit.units.monsters.WretchedWraithUnit.maxHealthBonusPerLevel, 18.5f },
+            { com.solegendary.reignofnether.unit.units.piglins.PiglinMerchantUnit.maxHealth, 165f,
+                com.solegendary.reignofnether.unit.units.piglins.PiglinMerchantUnit.maxHealthBonusPerLevel, 11f },
+            { com.solegendary.reignofnether.unit.units.piglins.WildfireUnit.maxHealth, 130f,
+                com.solegendary.reignofnether.unit.units.piglins.WildfireUnit.maxHealthBonusPerLevel, 13f },
+        };
+        for (int i = 0; i < ron.length; i++)
+            if (ron[i][0] != ron[i][1] || ron[i][2] != ron[i][3])
+                problems.add("Reign of Nether hero #" + i + ": health " + ron[i][0] + " +" + ron[i][2] + "/level, expected "
+                    + ron[i][1] + " +" + ron[i][3]);
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
     }
 
     /**

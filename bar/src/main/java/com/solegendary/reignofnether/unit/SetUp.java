@@ -46,6 +46,11 @@ public final class SetUp {
         return e instanceof FieldArtillery f ? f.getSetUpTicks() : 0;
     }
 
+    /** Whether this unit has a set-up time at all (the field artillery). */
+    public static boolean needsSetUp(Entity e) {
+        return setUpTicks(e) > 0;
+    }
+
     /** Records whether the unit moved this tick. Server side, once per tick (Unit.tick). */
     public static void tick(Mob mob) {
         if (mob.level().isClientSide() || setUpTicks(mob) <= 0)

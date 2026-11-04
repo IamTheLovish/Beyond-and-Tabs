@@ -118,6 +118,9 @@ public class MobEffectRegistrar {
     // and expires it, and cleanses remove it like any harmful effect; mana/SealServerEvents.isSealed is the one check
     public static final RegistryObject<MobEffect> SEALED = MOB_EFFECTS.register("sealed", () -> new InstantenousMobEffect(MobEffectCategory.HARMFUL, 0x2A2140));
 
+    // Verdant Rooted Treant's spike line: a stacking slow and damage over time (unit/units/verdant/RootboundEffect)
+    public static final RegistryObject<MobEffect> ROOTBOUND = MOB_EFFECTS.register("rootbound", com.solegendary.reignofnether.unit.units.verdant.RootboundEffect::new);
+
     public static boolean isInterrupt(MobEffect mobEffect) {
         return mobEffect == STUN.get() ||
                 mobEffect == UNCONTROLLABLE.get();

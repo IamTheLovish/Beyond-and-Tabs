@@ -78,12 +78,15 @@ public class ClientEventRegistrar {
 
     public void registerClientEvents() {
         vanillaEventBus.register(OrthoviewClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.orthoview.SpectatorFreeFly.class);   // watchers: free flight
         // the frame-time profile (inbox/spec-5 section 3): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameProfile.class);
         // the animation profile ([Anim]: the Life layer's share of a unit's render, per frame): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.AnimProfile.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.time.ClientTicks.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.AnimStates.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.Corpses.class);   // bodies held
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.LivingArmyToggle.class);
         // the client's own systems per frame ([FrameParts]), the automatic client profile ([FrameAuto]) and GC pauses ([GC])
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameWindow.class);
@@ -143,8 +146,11 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(CameraFadeClientEvents.class);
         vanillaEventBus.register(ItemClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hero.HeroMarkerClientEvents.class);   // the hero ring and crest
         // the world look: haze + grade + vignette after the world, before the hand and HUD (postfx/WorldLookPass)
         vanillaEventBus.register(com.solegendary.reignofnether.postfx.WorldLookClientEvents.class);
+        // frame times over a fixed number of frames: the shader pack's cost (eyes, /rts-shaderbench)
+        vanillaEventBus.register(com.solegendary.reignofnether.postfx.ShaderBench.class);
         vanillaEventBus.register(com.solegendary.reignofnether.commands.lang.CommandBarClientEvents.class);
 
         // to allow singleplayer integrated server to work
@@ -193,6 +199,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for S and any order on W/A/S/D
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeybindsClientEvents.class);   // saved keys -> new defaults, once
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ambient.mist.MistClientEvents.class);   // valley mist
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PartRenderClientEvents.class);   // drawn extractor rigs
@@ -225,6 +232,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(StartPosServerEvents.class);
         vanillaEventBus.register(AlliancesServerEvents.class);
         vanillaEventBus.register(HeroServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hero.HeroRankMenuClient.class);   // keeps the rank-up menu hold alive
         vanillaEventBus.register(NonUnitServerEvents.class);
         vanillaEventBus.register(TimeServerEvents.class);
         vanillaEventBus.register(CustomBuildingServerEvents.class);

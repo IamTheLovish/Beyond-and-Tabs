@@ -551,6 +551,10 @@ public class DuelGameTests {
         for (LivingEntity le : mine) {
             if (!(le instanceof com.solegendary.reignofnether.hero.FactionHero fh) || !(le instanceof Mob mob))
                 continue;
+            // a hero v2 drives (every faction hero since PR 416) fights by its own tick (the duel owner's Hero AI is
+            // on): calling v1 as well would have it decide twice a second
+            if (com.solegendary.reignofnether.hero.ai.HeroBrain.drives(fh))
+                continue;
             try {
                 if (heroAbilities == null) {
                     heroAbilities = com.solegendary.reignofnether.hero.HeroBot.class.getDeclaredMethod("useAbilities",

@@ -203,6 +203,8 @@ public class HelperButtons {
                 u -> u.getMaxHealth() <= 0 ? 1.0 : u.getHealth() / u.getMaxHealth()));
             case CYCLE_SELECTED_NEXT -> cycleSelected(1);
             case CYCLE_SELECTED_PREV -> cycleSelected(-1);
+            // Ctrl+S: the card's Stop for the selected units (the bare S is camera pan-down only since Nov 3)
+            case STOP -> UnitClientEvents.sendUnitCommand(com.solegendary.reignofnether.unit.UnitAction.STOP);
             default -> {
                 return false;
             }

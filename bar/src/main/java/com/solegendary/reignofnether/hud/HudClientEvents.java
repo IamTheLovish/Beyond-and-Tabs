@@ -760,12 +760,6 @@ public class HudClientEvents {
                     float percentageDoneInv = firstProdItem.ticksLeft / firstProdItem.item.getCost(true, selProdBuilding.ownerName).ticks;
 
                     int colour = 0xFFFFFF;
-                    if (!firstProdItem.item.isBelowPopulationSupply(selProdBuilding)) {
-                        colour = 0xFF0000;
-                        if (percentageDoneInv <= 0) {
-                            percentageDoneInv = 0.01f;
-                        }
-                    }
                     evt.getGuiGraphics().drawString(
                         MC.font,
                         Math.round(100 - (percentageDoneInv * 100f)) + "% " + productionButtons.get(0).name,  // TODO: translatable
@@ -2336,13 +2330,13 @@ public class HudClientEvents {
         if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
             return;
         // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W army, Ctrl+C commander, Ctrl+B / Ctrl+Shift+B idle builders,
-        // Ctrl+A all units, Ctrl+Z same type) win over every button on the letter. Before the tap/hold rule: with Ctrl
+        // Ctrl+A all units, Ctrl+Z same type, Ctrl+S stop) win over every button on the letter. Before the tap/hold rule: with Ctrl
         // held the camera never pans (OrthoviewClientEvents), so a slow Ctrl+A is still the chord
         if (OrthoviewClientEvents.isEnabled() && com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
                 com.solegendary.reignofnether.keybinds.ChordKeys.of(key, Keybindings.ctrlMod.isDown(),
                     net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())))
             return;
-        // S is WASD panning as well as Stop (and so is any order a player puts on W/A/S/D): a press
+        // any order a player puts on W/A/S/D shares the key with WASD panning (none ship there; Stop is Ctrl+S): a press
         // the camera panned for, or one held past a tap once frame lag is allowed for, was a pan, not an order
         // (keybinds/KeyTapTracker)
         if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.isHold(key))
@@ -2547,8 +2541,13 @@ public class HudClientEvents {
     @SubscribeEvent
     // hudSelectedEntity and portraitRendererUnit should be assigned in the same event to avoid desyncs
     public static void onRenderLivingEntity(RenderLivingEvent.Post<? extends LivingEntity, ? extends Model> evt) {
+        if (com.solegendary.reignofnether.unit.modelling.motion.Corpses.drawing())
+            return;   // a dead unit's body the client holds (Corpses): not a unit any more
         ControlGroupNumbers.queue(evt.getEntity());
-        if (hudSelectedEntity != null && (hudSelectedEntity.isRemoved() || hudSelectedEntity.isDeadOrDying()))
+        // the same rule as the selection (SelectionKeep): a unit kept selected past tracking range stays the HUD
+        // focus. Dropping it here (isRemoved) re-picked it straight away, every rendered entity, every frame, and
+        // each switch cleared the pending left-click order (attack-move, abilities): no queuing from afar.
+        if (hudSelectedEntity != null && UnitClientEvents.isDeadForSelection(hudSelectedEntity))
             setHudSelectedEntity(null);
 
         ArrayList<LivingEntity> units = UnitClientEvents.getSortedSelectedUnits();

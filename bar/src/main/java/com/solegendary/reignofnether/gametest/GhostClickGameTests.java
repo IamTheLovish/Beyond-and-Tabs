@@ -2,11 +2,14 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.Blueprints;
+import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.defence.Defences;
 import com.solegendary.reignofnether.gametest.BuilderAssistGameTests.Site;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.UnitAction;
+import com.solegendary.reignofnether.unit.command.CommandQueue;
 import com.solegendary.reignofnether.unit.command.CommandQueues;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.command.QueueMode;
 import com.solegendary.reignofnether.unit.command.UnitCommand;
 
@@ -91,7 +94,16 @@ public class GhostClickGameTests {
             helper.fail("A's build order was refused");
             return;
         }
-        BlockPos step = b.blockPosition().offset(3, 0, 0);
+        // 3 blocks toward the pad's centre: B stands 11 out on a pad of radius 12, so +3 went past the edge (the Oct 27-28
+        // flake). The move B is queued behind must be one it can finish: the queue starts the Shift order only once B is
+        // idle, so a move to the void beyond the edge left the test waiting on how the move goal gives up
+        BlockPos step = b.blockPosition().offset(-3, 0, 0);
+        if (s.level.getBlockState(step.below()).isAir()) {
+            problems.add("(setup) B's move goes off the pad: no ground under " + step.toShortString() + " (pad radius "
+                + BuilderAssistGameTests.PAD_R + " around " + s.cx + ", " + s.cz + "; B at " + b.blockPosition().toShortString() + ")");
+            finish(helper, s, problems);
+            return;
+        }
         CommandQueues.issue(s.level, s.owner, UnitAction.MOVE, -1, new int[] { b.getId() }, step, BlockPos.ZERO,
             QueueMode.REPLACE);
         CommandQueues.issue(s.level, s.owner, UnitAction.BUILD_REPAIR, -1, new int[] { b.getId() }, s.bp.centrePos,
@@ -108,13 +120,51 @@ public class GhostClickGameTests {
             finish(helper, s, problems);
             return;
         }
+        // a miss says where it stopped: did B's move ever end, did the queue start the Shift order, and was A's ghost
+        // still a ghost by then (Oct 27-28 flake, "B never took the queued ghost order ... target none": #120's rerun
+        // 40621212302 shard 1, #271, #198, #216); a pass logs its margin to the 560-tick wait
+        long start = s.level.getGameTime();
+        long[] seen = { -1, -1, -1 };   // ticks after the orders: B first idle, queued BUILD_REPAIR started, ghost left
         BlueprintGameTests.poll(helper, 0, 560,
-            () -> targetOf(b) == s.bp || building(s.bp, b),
-            () -> finish(helper, s, problems),
             () -> {
-                problems.add("B never took the queued ghost order: " + where(b));
+                long t = s.level.getGameTime() - start;
+                CommandQueue q = CommandQueues.get(b.getId());
+                UnitCommand cur = q != null ? q.current() : null;
+                if (seen[0] < 0 && ((Unit) b).isIdle())
+                    seen[0] = t;
+                if (seen[1] < 0 && cur != null && cur.action() == UnitAction.BUILD_REPAIR)
+                    seen[1] = t;
+                if (seen[2] < 0 && !Blueprints.isPending(s.bp))
+                    seen[2] = t;
+                return targetOf(b) == s.bp || building(s.bp, b);
+            },
+            () -> {
+                ReignOfNether.LOGGER.info("[GhostShift] B took the queued ghost order {} ticks after the orders, of 560 "
+                    + "(B idle at {}, Shift order started at {}, A's site stopped being a ghost at {})",
+                    s.level.getGameTime() - start, seen[0], seen[1], seen[2]);
+                finish(helper, s, problems);
+            },
+            () -> {
+                problems.add("B never took the queued ghost order: " + where(b) + "; " + shiftMissState(s, a, b, seen));
                 finish(helper, s, problems);
             });
+    }
+
+    /** What a Shift-queue miss looked like at the timeout: B's queue, A's site and A (ticks after the orders; -1 never). */
+    private static String shiftMissState(Site s, Mob a, Mob b, long[] seen) {
+        CommandQueue q = CommandQueues.get(b.getId());
+        BuildingPlacement bp = s.bp;
+        boolean aBuilds = building(bp, a);
+        return "B first idle at " + seen[0] + ", Shift order started at " + seen[1]
+            + ", A's site stopped being a ghost at " + seen[2]
+            + "; B idle " + ((Unit) b).isIdle() + ", move target " + ((Unit) b).getMoveGoal().getMoveTarget()
+            + ", queue current " + (q != null ? q.current() : null) + " waiting " + CommandQueues.queued(b.getId())
+            + "; A's site: ghost " + Blueprints.isPending(bp) + ", built " + bp.isBuilt
+            + ", destroyed " + bp.isDestroyedServerside
+            + ", placed " + String.format(java.util.Locale.ROOT, "%.0f%%", bp.getBlocksPlacedPercent() * 100)
+            + ", " + bp.getBuilders().size() + " builder(s), A among them " + aBuilds
+            + ", the ghost at its centre " + (Blueprints.findAt(bp.centrePos) == bp ? "is this site" : "is not this site")
+            + "; A: " + where(a);
     }
 
     /** Most ticks to wait for the builders to be in the level before the orders (timeoutTicks adds this to the old 600). */

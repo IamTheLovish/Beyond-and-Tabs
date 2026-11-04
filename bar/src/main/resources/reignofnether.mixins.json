@@ -66,6 +66,7 @@
     "fogofwar.WorldBorderMixin",
     "goals.MobMixin",
     "goals.RandomStrollGoalMixin",
+    "goals.GoalSelectorMixin",
     "ConfigValueReloadRaceMixin",
     "ForgeConfigSpecAccessor"
   ],
@@ -77,6 +78,7 @@
     "CameraMixin",
     "ChatComponentMixin",
     "ClientLevelMixin",
+    "ClientLevelCorpseMixin",
     "ClientPacketMixin",
     "CycleButtonMixin",
     "DownloadPackSourceAccessor",
@@ -88,6 +90,7 @@
     "MobRendererMixin",
     "MusicManagerMixin",
     "OrthoViewMixin",
+    "EmbeddiumOrthoFaceCullingMixin",
     "PossessionParticleMixin",
     "PossessionPredictionMixin",
     "RenderChunkRegionMixin",
@@ -101,6 +104,8 @@
     "fogofwar.BlockColorsAccessor",
     "fogofwar.ClientChunkCacheMixin",
     "fogofwar.ClientPacketListenerLightMixin",
+    "fogofwar.EmbeddiumBlendFogWrappedMixin",
+    "fogofwar.EmbeddiumFogOnlyQuadsMixin",
     "fogofwar.CompiledChunkMixin",
     "fogofwar.EntityRenderDispatcherMixin",
     "fogofwar.EntityShadowMixin",
@@ -116,6 +121,7 @@
     "LoadingOverlayAccessor",
     "LoadingOverlayMixin",
     "ForgeLoadingOverlayMixin",
-    "WaitingScreenBackdropMixin"
+    "WaitingScreenBackdropMixin",
+    "fire.CampfireBlockEntityMixin"
   ]
 }

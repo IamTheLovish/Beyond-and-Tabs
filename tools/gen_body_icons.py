@@ -12,6 +12,7 @@ other framed icons.
     python3 tools/gen_body_icons.py            # writes the five icons
     python3 tools/gen_body_icons.py --check    # exit 1 if a committed icon differs from what this draws
     python3 tools/gen_body_icons.py --sheet OUT.png   # the five side by side at 2x, for a look first
+    python3 tools/gen_body_icons.py cleric mason      # only these bodies (a substring of the texture name)
 """
 import argparse
 import os
@@ -30,7 +31,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HEADS = os.path.join(ROOT, "bar", "src", "main", "resources", "assets", "reignofnether", "textures", "mobheads")
 # body texture -> the icon the game looks up (MiscUtil.getEntityIconName: the entity type id without "_unit")
 ICON = {"radiant_paladin_unit": "iron_golem", "field_medic_unit": "witch", "halberdier_unit": "vindicator",
-        "crossbow_levy_unit": "pillager", "squire_runner_unit": "militia"}
+        "crossbow_levy_unit": "pillager", "squire_runner_unit": "militia",
+        # Oct 21: the four Sunforged men off the villager body (tools/human_kit.py)
+        "dome_cleric_unit": "evoker", "royal_architect_body_unit": "royal_architect",
+        "field_mason_body_unit": "field_mason", "dawn_paladin_body_unit": "dawn_paladin"}
 TEAM = (58 / 255, 96 / 255, 190 / 255)              # the HUD shows the owner's blue
 BG_TOP, BG_BOTTOM, FRAME = (88, 118, 170), (30, 40, 70), (226, 186, 80)   # the framed icons' house colours
 CROP = 1.4                                            # the square crop's side, in head sizes (the house icons: head ~70%)
@@ -82,16 +86,18 @@ def portrait(crop):
     return c.resize((64, 64), Image.NEAREST)
 
 
-def icons():
-    return {ICON[tex]: portrait(bust(model, team)) for model, _cls, tex, team in export_bodies.BODIES}
+def icons(only=()):
+    return {ICON[tex]: portrait(bust(model, team)) for model, _cls, tex, team, *_ in export_bodies.BODIES
+            if not only or any(o in tex for o in only)}
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--sheet")
+    ap.add_argument("only", nargs="*", help="bodies to draw (a substring of the texture name); default all")
     a = ap.parse_args()
-    out = icons()
+    out = icons(a.only)
     if a.sheet:
         sheet = Image.new("RGBA", (len(out) * 136 + 4, 136), (60, 60, 60, 255))
         for i, (name, im) in enumerate(out.items()):

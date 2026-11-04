@@ -35,5 +35,7 @@ public enum PlayerAction {
     RESIGN_VOTE,
     RESIGN_VOTE_YES,
     RESIGN_VOTE_NO,
-    RESIGN_VOTE_SYNC
+    RESIGN_VOTE_SYNC,
+    // a watcher with no side leaves the RTS view for vanilla spectator flight (x = 1) or comes back (x = 0): Spectators.setFreeFly
+    SPECTATOR_FREE_FLY
 }

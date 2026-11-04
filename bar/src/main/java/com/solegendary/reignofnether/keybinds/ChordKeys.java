@@ -12,7 +12,7 @@ import java.util.function.ToDoubleFunction;
 /**
  * BAR's Ctrl selection keys (keybind_defaults.json, profile "Legacy"): Ctrl+W army, Ctrl+C commander (selectcomm focus),
  * Ctrl+B next idle builder, Ctrl+A every unit, Ctrl+Z every unit of the selected types. Ctrl+Shift+B is ours: the next
- * idle T2 builder. Fixed chords, not rebindable, like the Ctrl+W that came first; HudClientEvents.onKeyRelease runs them
+ * idle T2 builder; Ctrl+S is ours too: Stop (Nov 3, Nick - the bare S is camera pan-down only). Fixed chords, not rebindable, like the Ctrl+W that came first; HudClientEvents.onKeyRelease runs them
  * before anything else on the key, so the order, ability, build-tab and build-slot buttons on W / C / B / A / Z stay
  * quiet while Ctrl is held. Ctrl + a digit stays the control groups (no digit here). No Minecraft types:
  * IntuitiveKeysGameTests and ChordKeysTest check the table and the selection rule headless.
@@ -27,7 +27,7 @@ public final class ChordKeys {
     private ChordKeys() { }
 
     public enum Chord { NONE, SELECT_ARMY, SELECT_COMMANDER, IDLE_BUILDER, IDLE_T2_BUILDER, SELECT_ALL_UNITS, SELECT_SAME_TYPE,
-        SELECT_HALF, SELECT_DAMAGED, CYCLE_SELECTED_NEXT, CYCLE_SELECTED_PREV }
+        SELECT_HALF, SELECT_DAMAGED, CYCLE_SELECTED_NEXT, CYCLE_SELECTED_PREV, STOP }
 
     /** BAR's damaged-units filter: a unit below this share of its max health counts as damaged. */
     public static final double DAMAGED_BELOW = 0.6;
@@ -44,7 +44,8 @@ public final class ChordKeys {
         new Def(Chord.SELECT_SAME_TYPE, GLFW.GLFW_KEY_Z, null,          "Ctrl + Z"),
         new Def(Chord.SELECT_HALF,      GLFW.GLFW_KEY_Q, null,          "Ctrl + Q"),
         new Def(Chord.CYCLE_SELECTED_NEXT, GLFW.GLFW_KEY_PERIOD, null,  "Ctrl + ."),
-        new Def(Chord.CYCLE_SELECTED_PREV, GLFW.GLFW_KEY_COMMA,  null,  "Ctrl + ,")
+        new Def(Chord.CYCLE_SELECTED_PREV, GLFW.GLFW_KEY_COMMA,  null,  "Ctrl + ,"),
+        new Def(Chord.STOP,             GLFW.GLFW_KEY_S, null,          "Ctrl + S")
     );
 
     /** The Alt chords (Alt + key, Ctrl not held): BAR's Alt+Q damaged-units filter. Alt + a pan key stays rotate / tilt. */
