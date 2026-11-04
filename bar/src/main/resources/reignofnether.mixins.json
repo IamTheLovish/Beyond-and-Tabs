@@ -61,6 +61,7 @@
     "fogofwar.ChunkMapMixin",
     "fogofwar.ServerLevelParticleMixin",
     "fogofwar.ServerLevelSoundMixin",
+    "fogofwar.ServerLevelEffectFogMixin",
     "fogofwar.TrackedEntityInvoker",
     "fogofwar.TrackedEntityMixin",
     "fogofwar.WorldBorderMixin",

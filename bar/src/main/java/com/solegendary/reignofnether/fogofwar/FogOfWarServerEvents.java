@@ -821,6 +821,28 @@ public class FogOfWarServerEvents {
         return isBlockVisibleFor(player, (int) Math.floor(x), (int) Math.floor(z));
     }
 
+    /**
+     * {@code PlayerList.broadcast} with the fog rule: the same range, dimension and "except" tests, and a player under
+     * fog only gets the packet when (x, z) is inside their vision. The world-effect mixins (ServerLevelSoundMixin,
+     * ServerLevelEffectFogMixin) redirect vanilla's broadcasts here; with fog off it is vanilla's call.
+     */
+    public static void broadcastSeen(net.minecraft.server.players.PlayerList list, @javax.annotation.Nullable
+            net.minecraft.world.entity.player.Player except, double x, double y, double z, double radius,
+            net.minecraft.resources.ResourceKey<Level> dimension, Packet<?> packet) {
+        if (!isEnabled()) {
+            list.broadcast(except, x, y, z, radius, dimension, packet);
+            return;
+        }
+        double r2 = radius * radius;
+        for (ServerPlayer sp : list.getPlayers()) {
+            if (sp == except || sp.level().dimension() != dimension)
+                continue;
+            double dx = x - sp.getX(), dy = y - sp.getY(), dz = z - sp.getZ();
+            if (dx * dx + dy * dy + dz * dz < r2 && canHearAt(sp, x, z))
+                sp.connection.send(packet);
+        }
+    }
+
     private static long blockLong(int x, int z) {
         return ((long) x << 32) | (z & 0xFFFFFFFFL);
     }
