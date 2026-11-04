@@ -69,7 +69,7 @@ public class HeroProd extends HeroProductionItem {
             Component.translatable(key).append(Component.literal(" (")).append(Component.translatable("hud.units.reignofnether.hero"))
                 .append(Component.literal(")")).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
             ResourceCosts.getFormattedCost(defaultCost),
-            ResourceCosts.getFormattedPopAndTime(defaultCost),
+            ResourceCosts.getFormattedTime(defaultCost),
             FormattedCharSequence.forward("", Style.EMPTY),
             Component.translatable(key + ".tooltip1").getVisualOrderText(),
             Component.translatable(key + ".tooltip2").getVisualOrderText()

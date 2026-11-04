@@ -132,6 +132,11 @@ public final class Sys {
         TIMER.end(token);
     }
 
+    /** True while sections are timed and this is the server thread (GoalTimes, per goal call). */
+    static boolean measuringHere() {
+        return on && Thread.currentThread() == serverThread;
+    }
+
     /** True while sections are being timed (the lag capture and the tests ask). */
     public static boolean isMeasuring() {
         return on;
@@ -164,6 +169,7 @@ public final class Sys {
         boolean now = forced || captureRefs > 0 || slow;
         if (now && !on) {
             TIMER.reset();
+            GoalTimes.newWindow();
             windowTickMs = 0;
         }
         on = now;
@@ -174,6 +180,7 @@ public final class Sys {
         serverThread = Thread.currentThread();
         if (on) {
             TIMER.tickEnd();
+            GoalTimes.tickEnd();
             windowTickMs += lastTickMs;
         }
         if (server.getTickCount() % EVALUATE_EVERY_TICKS != 0)
@@ -202,6 +209,7 @@ public final class Sys {
         }
         TIMER.reset();
         windowTickMs = 0;
+        GoalTimes.report();   // the [Goals] line: which goals the aiGoals time goes to
         return line;
     }
 
@@ -250,5 +258,6 @@ public final class Sys {
         Arrays.fill(PUSHED, null);
         TickGates.onServerStopping();
         TIMER.reset();
+        GoalTimes.onServerStopping();
     }
 }

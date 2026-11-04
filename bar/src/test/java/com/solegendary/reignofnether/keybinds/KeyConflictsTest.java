@@ -23,8 +23,9 @@ class KeyConflictsTest {
 
     @Test
     void theShippedDefaultsHaveNoWarning() {
-        // Stop is on S by design (tap = Stop, hold = pan), so a fresh install shows no red key
-        assertEquals(GLFW.GLFW_KEY_S, Keybindings.stop.getDefaultKey());
+        // Stop's own key ships unbound, Ctrl+S runs it (Nov 3, Nick: a short tap of S while panning stopped the selected
+        // workers), so S is pure pan-down and a fresh install shows no red key
+        assertEquals(GLFW.GLFW_KEY_UNKNOWN, Keybindings.stop.getDefaultKey());
         assertEquals(List.of(), overlaps(Map.of()));
     }
 

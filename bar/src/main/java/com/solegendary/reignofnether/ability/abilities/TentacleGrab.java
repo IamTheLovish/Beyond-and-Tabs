@@ -90,7 +90,7 @@ public class TentacleGrab extends Ability {
                 FormattedCharSequence.forward("Tentacle Grab  (" + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
                 FormattedCharSequence.forward("A tentacle seizes an enemy up to " + RANGE + " blocks away: drags it "
                     + (int) DRAG_BLOCKS + " blocks closer and roots it for " + ROOT_TICKS / 20 + " s.", Style.EMPTY),
-                FormattedCharSequence.forward("In water or on a tidepool: " + (int) WET_DRAG_BLOCKS + " blocks, "
+                FormattedCharSequence.forward("If either side is on the grid: " + (int) WET_DRAG_BLOCKS + " blocks, "
                     + WET_ROOT_TICKS / 20.0 + " s and double damage. Big beasts are only rooted.", Style.EMPTY),
                 FormattedCharSequence.forward("Cast automatically on the caller's target when ready.", Style.EMPTY.withItalic(true))
             ),

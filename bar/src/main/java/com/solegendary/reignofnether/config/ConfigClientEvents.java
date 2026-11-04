@@ -77,7 +77,6 @@ public class ConfigClientEvents {
             int foodDiff = msg.getFood() - rescost.food;
             int oreDiff = msg.getOre() - rescost.ore;
             int ticksDiff = msg.getTicks() - rescost.ticks;
-            int popDiff = msg.getPopulation() - rescost.population;
 
             rescost.wood = msg.getWood();
             rescost.food = msg.getFood();
@@ -88,8 +87,7 @@ public class ConfigClientEvents {
             if (foodDiff != 0 ||
                 woodDiff != 0 ||
                 oreDiff != 0 ||
-                ticksDiff != 0 ||
-                popDiff != 0) {
+                ticksDiff != 0) {   // (a unit's population is a size weight, not shown: lovish, Oct 29)
 
                 String text = rescost.id.replace("reignofnether.", "")
                         .replace("_","    ")
@@ -105,8 +103,6 @@ public class ConfigClientEvents {
                     text += (oreDiff > 0 ? "    +" : "    ") + oreDiff + " \uE002";
                 if (ticksDiff != 0)
                     text += (ticksDiff > 0 ? "    +" : "    ") + (ticksDiff / 20) + " \uE004";
-                if (popDiff != 0)
-                    text += (popDiff > 0 ? "    +" : "    ") +  popDiff + " \uE003";
 
                 showDiffsButton = true;
 

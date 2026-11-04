@@ -86,6 +86,8 @@ public final class UnitInfoCard {
         Map.entry("WispChoirUnit", Role.SKIRMISHER), Map.entry("BloomPriestessUnit", Role.SUPPORT),
         // the Sunforged essence caster does not fight (its angels do); its Mender Angel is a healer
         Map.entry("AngelCallerUnit", Role.SUPPORT), Map.entry("MenderAngelUnit", Role.SUPPORT),
+        // the essence caster: roots, a healing sapling and a summoned treant, never a weapon of its own
+        Map.entry("ThornweaverUnit", Role.SUPPORT),
         // Tidewrought: the Reef Guard (80 HP, shield) holds the line, the Bombard Crew is splash artillery, the Tide
         // Priest a non-fighting support, the Cutlass Raider and the Gull Spotter raiders; the Shipwright is a worker
         Map.entry("ReefGuardUnit", Role.TANK), Map.entry("BombardCrewUnit", Role.ARTILLERY),

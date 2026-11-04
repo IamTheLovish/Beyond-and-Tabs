@@ -27,7 +27,7 @@ public class HauntedHouse extends Building {
 
     public HauntedHouse() {
         super(structureName, cost, false);
-        // BAR economy: population buildings double as small energy generators
+        // BAR economy: a small energy generator (it gave population once; no supply now - lovish, Oct 29)
         this.energyIncome = 5f;
         this.name = buildingName;
         this.portraitBlock = Blocks.DARK_OAK_LOG;
@@ -55,9 +55,8 @@ public class HauntedHouse extends Building {
             List.of(
                     Component.translatable("buildings.reignofnether.haunted_house").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                     ResourceCosts.getFormattedCost(cost),
-                    ResourceCosts.getFormattedPop(cost),
                     FormattedCharSequence.forward("", Style.EMPTY),
-                    Component.translatable("buildings.reignofnether.haunted_house.tooltip1").getVisualOrderText()
+                    Component.translatable("buildings.reignofnether.haunted_house.tooltip_energy").getVisualOrderText()
             ),
             this
         );

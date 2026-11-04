@@ -20,34 +20,26 @@ THE VERDANT STYLE KIT (the capitol's and the extractor's, the same on every Verd
   - edge: moss, grass, rooted dirt and podzol with ferns and flowers on the open sides.
 
 THE PLAN (9 x 8, the shipped footprint: x 0..8 west -> east, z 0..7 north -> south). The RTS camera looks from the
-south-west: it sees the tops, the west face (x = 0) and the south face (z = 7). So the masses stand along the NORTH
-(z 0..1) and face south over the GLADE (z 2..7) toward the camera, and the glade is open to the west and the south -
-the way units leave (grove_frees_its_units sends them to the far -x / +z corner).
-  L1 THE STAG GLADE - the Mother Tree stands between two ruined piers of an old shrine (2 x 2, chiseled feet, mossy
-     and cracked courses, a cornice and a stepped buttress on the glade side, a colonnette lancet in the west face, moss
-     on top, a lantern on a wall post; the arch they carried is gone but for springer stones the tree swallowed). Its
-     trunk is the STAG-DRYAD's head looking south down the glade: an oak skull with heavy jowls, the birch mask, the
-     eyes under dark-oak brows that jut out over the glade with the snout and the blaze, leafy ears, the moss crown and
-     its glowing bud. The antlers branch out of the burrs over the piers in front of a LEAF CLOAK on the boughs behind
-     (the Root Spring's T2 trick: the pale antlers and mask read against green, and the Grove reads as a tree, not a
-     totem). Buttress roots claw along the north band. In the glade: a froglight heart where the trained units step
-     out, a calcite sparring ring (the Court's silver) round it, a moonwell (a water cauldron between bare calcite
-     kerbs) on the west for the Moonwell Bearers, the Thornbows' butts (hay and targets) on the east, ferns and flowers.
-  L2 THE ROOTED COURT - the piers rise into towers (pilasters, the lancet carried up, a jutting cornice, moss caps): the
-     OWLS' PERCH on the west (a silver birch post with a fork and a lamp) and the HIVE on the east (a honey-glowing
-     heart under a flowering crown); great ROOTS arch out of the towers over the moonwell and the butts and plant their
-     feet in the fringe (headroom 3 under them); the leader climbs and throws out a course of bare boughs carrying the
-     first CANOPY TIER, wide and flat over the towers, notched in front of the stag, with glowing fruit in its
-     under-edge; the antlers grow a second knuckle and pierce the tier; lantern posts on the glade's front corners.
-  L3 THE ELDER GROVE - the Mother Tree becomes the elder: the leader thickens into a 3-wide trunk, a second course of
-     boughs carries an UPPER TIER and a CHERRY-BLOSSOM CROWN with a shroomlight heart, bare trunk between the tiers so
-     they read as layers (the World-Tree's canopy at the lab's scale); the middle tier spreads out over the glade's
-     sides; the antlers climb to a third knuckle and a crown of tines standing outside the upper tiers - the landmark an
-     opponent spots; the shrine wakes (the west tower's lancets glow green), the roots grow second roots and flower,
-     moss creeps over the flagstones and pink petals fall on the fringe.
+south-west: it sees the tops, the west face (x = 0) and the south face (z = 7). Redrawn Nov 2026 by blind massing
+rounds (PR #481; baseline critics 4 / 4: "a mossy garden lost in grass", "a leaf clump"; the old tree was a leaf
+curtain two cells deep on the north edge, a strip from above): ONE CHERRY CROWN on a dark trunk standing on the
+NORTH-WEST (where the camera sees its trunk, roots and face), the old shrine's stones on the EAST, the glade open to
+the west and the south - the way units leave (grove_frees_its_units sends them to the far -x / +z corner).
+  L1 THE STAG GLADE - the Mother Tree (stripped dark oak, one dark-mid value; x 1..3, z 0..2) with buttress roots flaring down the west
+     fringe, toward the camera over a podzol root bed and along the north band; its crown three unequal lobes - the
+     high one over the trunk, a lower one out east resting on the shrine's pier, a small one leaning to the camera -
+     every leaf open to the sky or a side is cherry (the capitol's crown), the underside a dark oak-leaf hem.
+     The STAG-DRYAD looks south from the trunk: a birch snout and mask, dark eye sockets, dark-oak brows, birch
+     burrs and antlers rising into the leaning lobe. The shrine: a broken pier (chiseled foot, mossy / cracked courses,
+     a jagged top with a lantern) and a wall fragment stepping down the east edge. Floor: quiet mossy flagstones in a
+     stone kerb (the plot owns its edge), chiseled stones on the two spawn cells; one light, the pier's lantern.
+  L2 THE ROOTED COURT - the trunk climbs into an upper tier over the crown (the high point 16), the pier rises into the
+     shrine tower (a lancet, a jutting cornice, a lantern), the antlers climb through the leaning lobe.
+  L3 THE ELDER GROVE - the trunk climbs again into a cherry crown (the high point 21), the tower's lancet glows and a
+     second lantern stands on a wall post, the antlers climb to y 16 with tines.
 
 GAME RULES (asserted in check_levels; the coordinator wires the levels, this file edits nothing):
-  - every level keeps the 9 x 8 footprint (BuildingLevels has no larger footprint); a level grows taller (14, 18, 24);
+  - every level keeps the 9 x 8 footprint (BuildingLevels has no larger footprint); a level grows taller (14, 17, 22);
   - the chain: every non-air cell of L1 is non-air in L2, and of L2 in L3 (changeStructure only adds or replaces):
     L2 is drawn over L1 and L3 over L2, and that is asserted;
   - Grove.startingBlockTypes = moss_block, mossy_stone_bricks: both in layer 0 (only layer 0 is the foundation);
@@ -154,424 +146,220 @@ class Rig(gs._SunRig):
 
 
 # ======================================================================================================== L1
+TOP_L1, TOP_L2, TOP_L3 = 13, 17, 23     # each level's highest row (box heights 14, 18, 24)
+BARK, BARK_W, BARK_S = "stripped_dark_oak_log", "stripped_dark_oak_wood", "dark_oak_stairs"   # one dark-mid value
+# (oak bark read as a chequer, dark oak bark as a black lattice: critics, rounds 2 and 3)
+HEM = "dark_oak_leaves"                  # the crown's underside
+TRUNK = ((1, 0), (2, 0), (1, 1), (2, 1), (1, 2), (2, 2), (3, 0), (3, 1))   # the tree stands on the north-west
+ROOT_BED = ((0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (0, 4), (1, 4), (2, 3))  # podzol / moss under the west roots
+LOBES_L1 = ((2.4, 1.3, 10.6, 3.6, 2.7, 2.9),   # the main crown over the trunk, the high point
+            (6.7, 2.0, 9.3, 2.3, 2.4, 1.8),    # a lower lobe out east over the shrine
+            (1.0, 4.0, 8.6, 1.5, 1.4, 1.2))    # a small lobe leaning to the camera (south-west) over the mask
+
+
 def ground_l1(r):
-    """y0: the shrine's floor on the north band, the glade's flagstones with a calcite ring round a froglight heart (the
-    spawn cells: where the trained units step out), and a garden fringe on the open sides - moss, grass, rooted dirt and
-    podzol under ferns and flowers. The foundation types (moss, mossy bricks) are in this layer."""
+    """y0: a stone kerb on the plot's edge (chiseled corners, mossy and cracked bricks between: the plot owns its edge
+    against the lawn), quiet mossy flagstones inside with verdant froglight on the two spawn cells (where the trained
+    units step out), and the root bed of podzol, rooted dirt and moss under the west roots. The foundation types (moss,
+    mossy bricks) are in this layer."""
     for x in range(SX):
         for z in range(SZ):
             h = hsh(x, z)
-            fringe = x in (0, SX - 1) and z >= 2 or z == SZ - 1
-            if z <= 1:
-                name = MSB if h % 4 else CSB
-            elif fringe:
-                name = ("moss_block", "grass_block", "moss_block", "rooted_dirt", "podzol", "grass_block", MC)[h % 7]
+            edge = x in (0, SX - 1) or z in (0, SZ - 1)
+            if (x, z) in CENTRE:
+                r.set(x, 0, z, CHB)                          # the spawn stones (a lit tile read as a skylight)
+            elif (x, z) in ROOT_BED:
+                name = ("podzol", "rooted_dirt", "podzol", "moss_block")[h % (2 if edge else 4)]
+                r.set(x, 0, z, name, **({"snowy": "false"} if name == "podzol" else {}))
+            elif edge:
+                r.set(x, 0, z, CHB if x in (0, SX - 1) and z in (0, SZ - 1) else (CSB if h % 3 == 0 else MSB))
             else:
-                d = ((x - 4) ** 2 + (z - 3.5) ** 2) ** 0.5
-                if (x, z) in CENTRE:
-                    name = GLOW
-                elif 1.4 <= d <= 2.2:
-                    name = "calcite" if h % 3 else MSB      # the sparring ring: silver stones, a few lost to moss
-                else:
-                    name = MSB if h % 3 else "moss_block"
-            props = {"snowy": "false"} if name in ("grass_block", "podzol") else {}
-            if name == GLOW:
-                props = {"axis": "y"}
-            r.set(x, 0, z, name, **props)
-    r.set(2, 0, 6, "moss_block")              # the foundation types stay in layer 0 whatever the scatter does
-    r.set(6, 0, 6, MSB)
+                r.set(x, 0, z, CSB if h % 5 == 0 else MSB)
+    r.set(1, 0, 3, "moss_block")              # the foundation types stay in layer 0 whatever the scatter does
 
 
 def plants_l1(r):
-    """Ferns and flowers on the fringe soil (a unit walks through them), never on stone, never on a way-out step."""
-    for x in range(SX):
-        for z in range(2, SZ):
-            if r.get(x, 0, z)[0] in SOIL and r.free(x, 1, z):
-                k = hsh(x * 3 + 1, z + 5) % 9
-                if k < len(FLOWERS):
-                    r.set(x, 1, z, FLOWERS[k])
+    """Ferns and flowers on the root bed's soil (a unit walks through them), never on the flagstones."""
+    for (x, z) in ROOT_BED:
+        if r.get(x, 0, z)[0] in SOIL and r.free(x, 1, z):
+            k = hsh(x * 3 + 1, z + 5) % 9
+            if k < len(FLOWERS):
+                r.set(x, 1, z, FLOWERS[k])
 
 
-PIER_TOP = 6                     # the corner piers (x 0..1 and 7..8, z 0..1): y 1..5, a cornice at 6
-HEAD = 4                         # the stag's jaw course; the head runs HEAD..HEAD+4, the burrs at HEAD+4
-PIERS = ((0, 1), (7, 8))         # the piers' x pairs
+def trunk(r, top):
+    """The Mother Tree's trunk on the north-west (dark oak, one value), tapering: the north-east column stops two short,
+    the south pair one short."""
+    for (x, z) in TRUNK:
+        t = top - (2 if x == 3 else 1 if z == 2 else 0)
+        for y in range(1, t + 1):
+            r.log(x, y, z, name=BARK)
 
 
-def pier_l1(r, x0, x1, top=PIER_TOP):
-    """A corner pier of the old shrine (2 x 2 on z 0..1): a chiseled foot, mossy and cracked courses, a cornice of
-    upside-down stairs jutting out on the glade side, a wall post with a lantern on its front corner."""
-    for x in (x0, x1):
-        for z in (0, 1):
+def roots_l1(r):
+    """Buttress roots flaring out of the trunk's feet: down the west fringe, toward the camera over the root bed and
+    along the north band to the east (bark blocks, then stairs sloping down away from the trunk)."""
+    for (x, y, z) in ((0, 1, 0), (0, 2, 0), (0, 1, 1), (0, 1, 2), (4, 1, 0), (1, 1, 3), (0, 1, 4), (2, 1, 4)):
+        r.log(x, y, z, name=BARK_W)
+    for (x, y, z, f) in ((0, 3, 0, "east"), (0, 2, 1, "east"), (0, 2, 2, "east"), (0, 1, 3, "north"),
+                         (2, 1, 3, "north"), (1, 2, 3, "north"), (1, 1, 4, "north"), (4, 2, 0, "west"),
+                         (5, 1, 0, "west"), (4, 1, 1, "west")):
+        r.st(x, y, z, f, name=BARK_S)
+
+
+def boughs(r, y0):
+    """A bough climbing out east from the trunk into the shrine's lobe."""
+    for k in range(3):
+        for dx in (0, 1):
+            x = 3 + 2 * k + dx
+            if x < SX:
+                r.log(x, y0 + k, 1, axis="x", name=BARK)
+
+
+def mask_l1(r, y0=4):
+    """The STAG-DRYAD on the trunk's south face (z 3, where the camera looks): a birch snout hollowed under, the pale
+    mask with verdant froglight eyes, dark-oak brows, and birch antlers rising either side into the leaning lobe."""
+    for x in (1, 2):
+        r.st(x, y0, 3, "north", "top", name=BIRCH_S)       # the snout, hollowed under
+        r.log(x, y0 + 1, 3, name=BIRCH_W)                  # the muzzle
+        r.log(x, y0 + 2, 3, name=BARK)                     # the eyes, dark sockets (lit, the mask read as a lamp)
+        r.st(x, y0 + 3, 3, "north", "top", name=DOS)       # the brows
+        r.log(x, y0 + 4, 3, name=BIRCH)                    # the burrs
+    for (x, y) in ((0, y0 + 4), (0, y0 + 5), (3, y0 + 4), (3, y0 + 5)):   # the antlers' beams
+        r.set(x, y, 3, BIRCH_F)
+
+
+def antlers_up(r, y0, y1):
+    """The antlers climb as the tree grows: birch beams at x 0 and 3 (z 3), a knuckle every third row."""
+    for y in range(y0, y1 + 1):
+        for x in (0, 3):
+            if (y - y0) % 3 == 2:
+                r.log(x, y, 3, name=BIRCH)
+            else:
+                r.set(x, y, 3, BIRCH_F)
+
+
+def lobes(r, specs, y_lo, y_hi):
+    for (cx, cz, cy, rx, rz, ry) in specs:
+        for x in range(SX):
+            for z in range(SZ):
+                if (x, z) in CENTRE:
+                    continue
+                for y in range(y_lo, y_hi + 1):
+                    if ((x - cx) / rx) ** 2 + ((z - cz) / rz) ** 2 + ((y - cy) / ry) ** 2 <= 1.0:
+                        r.leaf(x, y, z)
+
+
+def shell(r):
+    """The crown's colours by exposure: a leaf open to the sky or to a side is CHERRY (the capitol's crown, the lab's
+    read against the lawn); one open only below is the dark HEM (the underside in shadow, a dark line under the pink
+    in 3/4); the inside stays azalea. No fruit: a lit row under the lobe read as "teeth" / "windows" (round 3)."""
+    leaves = [p for p, (n, _) in r.b.items() if n.endswith("_leaves")]
+
+    def air(q):
+        return not (0 <= q[0] < SX and 0 <= q[2] < SZ) or q not in r.b
+
+    for (x, y, z) in leaves:
+        up = air((x, y + 1, z))
+        side = any(air(q) for q in ((x + 1, y, z), (x - 1, y, z), (x, y, z + 1), (x, y, z - 1)))
+        down = air((x, y - 1, z))
+        if up or (side and not down):
+            name = CHERRY
+        elif down:
+            name = HEM
+        else:
+            name = FLEAF if hsh(x + y, z) % 4 == 0 else LEAF
+        r.set(x, y, z, name, persistent="true", distance="7", waterlogged="false")
+
+
+def shrine_l1(r):
+    """The old shrine east of the tree, two unequal masses: a broken pier (x 7..8, z 3..4) under the east lobe - the
+    crown rests on it, tree and shrine one gate over the glade - with a chiseled foot, mossy and cracked courses, a
+    jagged top and a lantern on its front corner; and a wall fragment down the east edge (x 8, z 5..7) stepping down
+    4, 3, 2 with stair copings."""
+    for x in (7, 8):
+        for z in (3, 4):
             r.set(x, 1, z, CHB)
-            for y in range(2, top):
+            for y in range(2, 8):
                 r.set(x, y, z, MSB if hsh(x * 5 + y, z + y) % 3 else CSB)
-            r.set(x, top, z, "moss_block")               # the moss has the pier's top (green from the camera)
-    for x in (x0, x1):
-        r.st(x, top, 2, "north", "top")                  # the cornice over the glade
-    out = x0 if x0 == 0 else x1
-    # a stepped buttress on the outer column's glade side (the pier's third depth): a chiseled block, a brick, a
-    # set-off stair sloping back into the pier
-    r.set(out, 1, 2, CHB)
-    r.set(out, 2, 2, MSB)
-    r.st(out, 3, 2, "north")
-    # a lancet on the outer face (x 0 is the camera's west face): a thin colonnette in a slot of the wall
-    for y in (3, 4):
-        r.set(out, y, 0, MSW)
-    r.st(out, 5, 0, "south", "top")
-    r.set(out, top + 1, 1, MSW)                          # the lantern post on the front corner
-    r.lantern(out, top + 2, 1)
-
-
-def arch_l1(r):
-    """The ruined shrine: two corner piers, and of the pointed arch they once carried across the north edge (z 0) only
-    springer stones the tree has swallowed - the west one and a voussoir against the jowl, the east one snapped short,
-    leaves spilling off the broken ends."""
-    pier_l1(r, *PIERS[0])
-    pier_l1(r, *PIERS[1])
-    r.st(2, PIER_TOP, 0, "west", "top")                  # the west springer
-    r.set(2, PIER_TOP + 1, 0, CSB)
-    r.st(6, PIER_TOP, 0, "east", "top")                  # the east springer, all that stands of that half
-    # moss and leaves spilling off the broken ends
-    r.leaf(2, PIER_TOP + 2, 0, LEAF)
-    r.leaf(6, PIER_TOP + 1, 0, FLEAF)
-
-
-def tree_l1(r):
-    """The Mother Tree: a 3-wide trunk (x 3..5, z 0..1) from the roots to the head, buttress roots clawing out along the
-    north band (bark stairs rising toward the trunk, mangrove roots between) - never into the glade's spawn room (x 3..5
-    stays clear at z 2) - and the leader rising behind the head into a small crown."""
-    for y in range(1, HEAD):
-        for x in (3, 4, 5):
-            for z in (0, 1):
-                r.log(x, y, z)
-    for z in (0, 1):
-        r.st(2, 1, z, "east", name=OST)
-        r.st(6, 1, z, "west", name=OST)
-    r.log(2, 2, 0, name=WOOD)                            # the back buttresses climb higher than the front
-    r.log(6, 2, 0, name=WOOD)
-    r.st(2, 3, 0, "east", name=OST)
-    r.st(6, 3, 0, "west", name=OST)
-    r.st(2, 1, 2, "east", name=OST)                      # root toes creeping into the glade beside the spawn room
-    r.st(6, 1, 2, "west", name=OST)
-    for y in range(HEAD + 5, HEAD + 9):                  # the leader, behind the moss crown
-        r.log(4, y, 0)
-    r.log(3, HEAD + 7, 0, axis="x")                      # boughs into the cloak
-    r.log(5, HEAD + 7, 0, axis="x")
-
-
-def head_l1(r, y0=HEAD):
-    """The STAG-DRYAD's head on the trunk, looking south down the glade: an oak skull (z 0) with heavy jowls, a pale
-    birch mask (z 1), the snout and the dark-oak brows jutting out over the glade (z 2), verdant froglight eyes set in
-    the mask under them, leafy ears, a moss crown between the burrs and a glowing bud - the Root Spring's spirit at the
-    lab's scale."""
-    for y in range(y0, y0 + 5):
-        for x in (3, 4, 5):
-            r.log(x, y, 0, name=WOOD)
-    for y in (y0 + 1, y0 + 2, y0 + 3):                  # the jowls: the skull is wider than the mask
-        r.log(2, y, 0, name=WOOD)
-        r.log(6, y, 0, name=WOOD)
-    r.st(2, y0, 0, "east", "top", name=OST)              # rounded under the jowls
-    r.st(6, y0, 0, "west", "top", name=OST)
-    # the mask, bottom to top
-    r.st(3, y0, 1, "east", "top", name=OST)              # the jaw line, hollowed under
-    r.st(5, y0, 1, "west", "top", name=OST)
-    r.log(4, y0, 1, name=BIRCH_W)                        # the muzzle
-    r.st(3, y0 + 1, 1, "east", "top", name=BIRCH_S)      # the cheeks
-    r.st(5, y0 + 1, 1, "west", "top", name=BIRCH_S)
-    r.log(4, y0 + 1, 1, name=BIRCH_W)
-    r.st(4, y0 + 1, 2, "north", name=BIRCH_S)            # the snout over the glade, sloping down to the nose
-    r.set(3, y0 + 2, 1, GLOW, axis="y")                  # the eyes
-    r.set(5, y0 + 2, 1, GLOW, axis="y")
-    r.log(4, y0 + 2, 1, name=BIRCH_W)                    # the bridge of the nose
-    r.log(4, y0 + 2, 2, name=BIRCH_W)                    # the blaze standing proud between the eyes
-    r.st(3, y0 + 3, 2, "north", "top", name=DOS)         # the brows, jutting out over the eyes
-    r.st(5, y0 + 3, 2, "north", "top", name=DOS)
-    r.log(3, y0 + 3, 1, name=WOOD)
-    r.log(5, y0 + 3, 1, name=WOOD)
-    r.log(4, y0 + 3, 1, name=BIRCH_W)                    # the forehead
-    r.log(3, y0 + 4, 1, name=BIRCH)                      # the burrs
-    r.log(5, y0 + 4, 1, name=BIRCH)
-    r.set(4, y0 + 4, 1, "moss_block")                    # the moss crown
-    r.set(4, y0 + 5, 1, GLOW, axis="y")                  # the glowing bud: the dryad's jewel
-    r.leaf(2, y0 + 3, 1, FLEAF)                          # leafy ears flicked out behind the brows
-    r.leaf(6, y0 + 3, 1, LEAF)
-
-
-ANTLER = (  # one antler from the burr (bx), as (dx outward, dy over the burr, dz, part): the beam leaves the burr,
-            # sweeps out and up to a knuckle over the pier, tines fork up, out and toward the camera
-    (0, 1, 0, "F"), (1, 1, 0, "Sb"), (1, 2, 0, "F"), (2, 2, 0, "F"), (2, 3, 0, "K"), (2, 4, 0, "F"), (2, 3, 1, "F"),
-    (3, 3, 0, "F"), (3, 4, 0, "F"),
-)
-
-
-def antler(r, bx, s, y0, parts=ANTLER, z0=1):
-    """One antler (s = -1 west, +1 east) from the burr at (bx, y0, z0): birch fence for the beam and tines, birch stairs
-    where the beam bends, stripped birch at the knuckles - an open, branching pale line against the leaf cloak."""
-    for (dx, dy, dz, k) in parts:
-        x, y, z = bx + s * dx, y0 + dy, z0 + dz
-        if not (0 <= x < SX):
-            continue
-        if k == "F":
-            r.set(x, y, z, BIRCH_F)
-        elif k == "K":
-            r.log(x, y, z, name=BIRCH)
-        elif k == "Sb":
-            r.st(x, y, z, "east" if s < 0 else "west", "top", name=BIRCH_S)
-
-
-def fruit(r, cells, name=FRUIT):
-    """Glowing fruit (the kit's light): set only where a leaf is and a leaf covers it, so it glows out of the foliage's
-    side and under-edge - a bare top face reads as a light bulb stuck on the canopy."""
-    for (x, y, z) in cells:
-        if r.get(x, y, z)[0].endswith("_leaves") and r.get(x, y + 1, z)[0].endswith("_leaves"):
-            r.set(x, y, z, name, **({} if name == SHROOM else {"axis": "y"}))
-
-
-def cloak_l1(r):
-    """The leaf cloak the stag wears behind its antlers (the Root Spring's T2 trick): azalea on the boughs at the back
-    (z 0) and round the leader, a hood over the crown, flowering here and there and one glowing fruit - the pale
-    antlers and the mask read against it, and from the RTS camera the Grove is a tree, not a totem."""
-    for y in range(HEAD + 5, HEAD + 10):
-        for x in range(0, SX):
-            for z in (0, 1):
-                d = ((x - 4) / 4.3) ** 2 + ((y - (HEAD + 7)) / 2.6) ** 2 + (z * 0.45 if y < HEAD + 8 else 0)
-                if d <= 1.0:
-                    r.leaf(x, y, z, gs.leaf_for(x, y, z, 4))
-    r.leaf(4, HEAD + 9, 2, FLEAF)                        # the hood's lip over the moss crown
-    r.leaf(3, HEAD + 9, 2, LEAF)
-    r.leaf(5, HEAD + 9, 2, LEAF)
-    fruit(r, ((1, HEAD + 6, 1), (7, HEAD + 7, 1)))
-
-
-def antlers_l1(r):
-    for s in (-1, 1):
-        antler(r, 4 + s, s, HEAD + 4)
-
-
-def glade_l1(r):
-    """The glade's furniture: the moonwell on the west (a still basin - a water cauldron, no flowing water - between
-    calcite kerbs: no candles on them) and the Thornbows' butts on the east (hay bales and targets on a birch post)."""
-    r.set(1, 1, 3, "water_cauldron", level="3")
-    r.set(1, 1, 2, "calcite")
-    r.set(2, 1, 3, "calcite")
-    for z in (3, 4):
-        r.set(SX - 1, 1, z, "hay_block", axis="y")
-    r.set(SX - 1, 2, 4, "target", power="0")
-    r.log(SX - 1, 2, 3, name=BIRCH)
-    r.set(SX - 1, 3, 3, "target", power="0")
+    r.set(8, 8, 4, CSB)                                  # the jagged top
+    r.lantern(7, 8, 4)
+    for z, h in ((5, 4), (6, 3), (7, 2)):
+        for y in range(1, h):
+            r.set(8, y, z, MSB if (y + z) % 3 else CSB)
+        r.st(8, h, z, "north", name=MSS)
+    r.set(7, 1, 6, MC)                                   # a fallen block at the wall's foot
 
 
 def draw_l1(r):
     ground_l1(r)
-    arch_l1(r)
-    tree_l1(r)
-    head_l1(r)
-    antlers_l1(r)
-    cloak_l1(r)
-    glade_l1(r)
+    trunk(r, 9)
+    roots_l1(r)
+    boughs(r, 7)
+    mask_l1(r)
+    shrine_l1(r)
+    lobes(r, LOBES_L1, 6, TOP_L1)
     for p in CLEAR:                           # the spawn room stays clear whatever a step above drew
         r.b.pop(p, None)
     plants_l1(r)
 
 
 # ======================================================================================================== L2
-TOWER_TOP = 10                   # L2: the piers rise into towers to here (a cornice on top), their lanterns over it
-
-
-def tower_l2(r, x0, x1, owl):
-    """A corner pier rises into a tower (2 x 2): the L1 cap and lantern post are walled in, more courses with the lancet
-    carried up the outer face, a jutting cornice of upside-down stairs, a mossy cap - and on top the OWL'S PERCH (west:
-    a stripped-birch owl with froglight eyes and dark-oak ear tufts on a birch post, beside a lantern) or the HIVE
-    (east: a flowering crown round a honey-glowing heart)."""
-    for x in (x0, x1):
-        for z in (0, 1):
-            for y in range(PIER_TOP + 1, TOWER_TOP):
-                r.set(x, y, z, MSB if hsh(x + y * 3, z * 7 + y) % 4 else CSB)
-            r.set(x, TOWER_TOP, z, "moss_block")
-    out = x0 if x0 == 0 else x1
-    for y in (PIER_TOP + 1, PIER_TOP + 2):
-        r.set(out, y, 0, MSW)                            # the lancet carried up the outer face
-    r.st(out, PIER_TOP + 3, 0, "south", "top")
-    for x in (x0, x1):                                   # the cornice, lip out over the glade
-        r.st(x, TOWER_TOP, 2, "north", "top")
-    for y in range(PIER_TOP + 1, TOWER_TOP):             # a pilaster on the outer column's glade face (the third
-        r.set(out, y, 2, MSB if y % 3 else CHB)          # depth: pilaster, wall, lancet slot)
-    if owl:
-        r.set(x1, TOWER_TOP + 1, 1, MSW)
-        r.lantern(x1, TOWER_TOP + 2, 1)
-        r.log(x0, TOWER_TOP + 1, 0, name=BIRCH)          # the owls' perch: a silver post with a fork and a lamp
-        r.log(x0, TOWER_TOP + 2, 0, name=BIRCH)
-        r.set(x0, TOWER_TOP + 3, 0, BIRCH_F)
-        r.set(x1, TOWER_TOP + 2, 0, BIRCH_F)
-        r.lantern(x0, TOWER_TOP + 4, 0)
-        r.leaf(x1, TOWER_TOP + 1, 0, LEAF)
-        r.leaf(x0, TOWER_TOP + 1, 1, FLEAF)
-    else:
-        r.set(x0, TOWER_TOP + 1, 1, MSW)
-        r.lantern(x0, TOWER_TOP + 2, 1)
-        r.set(x1, TOWER_TOP + 1, 0, FRUIT, axis="y")     # the hive's honey glow under a flowering crown
-        for (x, y, z) in ((x1, TOWER_TOP + 2, 0), (x0, TOWER_TOP + 1, 0), (x1, TOWER_TOP + 1, 1),
-                          (x1, TOWER_TOP + 3, 0), (x0, TOWER_TOP + 2, 0)):
-            r.leaf(x, y, z, FLEAF if (x + y) % 2 else LEAF)
-
-
-ANTLER_L2 = (  # the antlers grow: the top tines rise to a second knuckle, through the new tier, forking out and
-               # toward the camera, the tips standing over the leaves
-    (2, 5, 0, "F"), (2, 6, 0, "K"), (2, 7, 0, "F"), (2, 8, 0, "F"), (2, 9, 0, "F"), (3, 6, 0, "F"), (3, 7, 0, "F"),
-    (2, 6, 1, "F"),
-)
-
-
-def canopy_l2(r):
-    """The first tier of a real canopy, lifted clear of the cloak: the leader climbs and throws out a course of bare
-    boughs (y14: brown spokes seen under the tier), and on them a wide, flat tier (y15-16, over the towers, out to z 3)
-    with a smaller cap (y17) - a layer with air under its edge, not a taller bush. The antlers pierce it."""
-    for y in range(HEAD + 9, 17):
-        r.log(4, y, 0)
-    for (x, z, ax) in ((3, 0, "x"), (2, 0, "x"), (1, 0, "x"), (5, 0, "x"), (6, 0, "x"), (7, 0, "x"),
-                       (4, 1, "z"), (4, 2, "z")):
-        r.log(x, 14, z, axis=ax)
-    for y, rad in ((15, 4.9), (16, 3.9)):
-        for x in range(SX):
-            for z in range(0, 4):
-                if (x, z) in CENTRE or (z >= 3 and abs(x - 4) <= 1):
-                    continue                             # the notch in front of the stag: it looks out under it
-                d = (((x - 4) ** 2) + ((z - 0.5) * 1.5) ** 2) ** 0.5
-                if d <= rad - (0.7 if hsh(x * 3 + y, z) % 4 == 0 else 0):
-                    r.leaf(x, y, z, gs.leaf_for(x, y, z, 3))
-    fruit(r, ((2, 15, 2), (6, 15, 3), (1, 15, 1)))
-    for (x, z) in ((4, 0), (3, 0), (5, 0), (4, 1)):     # a leafy cap over the leader (its cut top read as a stump)
-        r.leaf(x, 17, z, gs.leaf_for(x, 17, z, 3))
-
-
-def roots_l2(r):
-    """Roots arch over the glade's sides: on the west over the moonwell, on the east over the butts - each springs from
-    the tower's front, arcs over (headroom 3 under it, so a Sentinel Treant walks under) and plants a foot of bark in
-    the fringe with a mangrove root beside it."""
-    for (x, s) in ((1, -1), (7, 1)):
-        r.log(x, 4, 2, name=WOOD)
-        r.log(x, 5, 3, name=WOOD)
-        r.st(x, 5, 2, "south", name=OST)
-        r.log(x, 4, 4, name=WOOD)
-        r.st(x, 5, 4, "north", name=OST)
-        r.log(x, 3, 5, name=WOOD)
-        r.st(x, 4, 5, "north", name=OST)
-        r.log(x, 2, 5, name=WOOD)
-        r.log(x, 1, 5, name=WOOD)
-        r.set(x + s, 1, 5, "mangrove_roots", **DRY) if 0 <= x + s < SX else None
-        r.set(x, 1, 6, "mangrove_roots", **DRY)
-
-
-def glade_l2(r):
-    """Lantern posts on the glade's front corners."""
-    for x in (0, SX - 1):
-        r.set(x, 1, SZ - 1, MSW)
-        r.lantern(x, 2, SZ - 1)
+def tower_l2(r):
+    """The pier rises into a tower (x 7..8, z 4..5) to y 10: courses, a lancet slot on the south face, a jutting cornice
+    of upside-down stairs and a lantern on the top."""
+    for x in (7, 8):
+        for z in (3, 4, 5):
+            for y in range(1, 10):
+                r.set(x, y, z, CHB if y == 1 else (MSB if hsh(x * 5 + y, z + y) % 3 else CSB))
+    for y in (4, 5, 6):
+        r.set(7, y, 5, MSW)                              # the lancet
+    for x in (7, 8):
+        r.st(x, 10, 5, "north", "top")
+    r.set(7, 10, 4, MSB)
+    r.set(8, 10, 4, "moss_block")
+    r.lantern(7, 11, 4)
 
 
 def draw_l2(r):
+    """L2 THE ROOTED COURT: L1 grown - the trunk climbs to y 13 into an upper tier over the main crown (the high point
+    16-17), the east pier rises into the shrine tower, the antlers climb through the leaning lobe."""
     draw_l1(r)
-    tower_l2(r, *PIERS[0], owl=True)
-    tower_l2(r, *PIERS[1], owl=False)
-    for s in (-1, 1):
-        antler(r, 4 + s, s, HEAD + 4, ANTLER_L2)
-    canopy_l2(r)
-    roots_l2(r)
-    glade_l2(r)
+    trunk(r, 13)
+    tower_l2(r)
+    antlers_up(r, 10, 11)
+    lobes(r, ((2.0, 1.2, 14.4, 2.7, 2.1, 2.3),), 12, TOP_L2)
+    for p in CLEAR:
+        r.b.pop(p, None)
 
 
 # ======================================================================================================== L3
-ANTLER_L3 = (  # the elder's antlers: from the second knuckle up through the middle tier to a third knuckle, then a
-               # crown of tines standing outside the upper tiers (x 0 / 8) and over them (x 1 / 7) - the landmark
-    (2, 10, 0, "K"), (3, 10, 0, "F"), (3, 11, 0, "K"), (3, 12, 0, "F"), (3, 13, 0, "F"), (3, 11, 1, "F"),
-    (2, 11, 0, "F"), (2, 12, 0, "F"), (2, 12, 1, "F"),
-)
-
-
-def elder_l3(r):
-    """The Mother Tree becomes the elder: the leader thickens into a 3-wide trunk (bark, x 3..5 z 0..1) from the cloak
-    to the crown, and a second course of boughs (y18) carries the upper tiers; the leader alone
-    climbs on to the crown, bare between the tiers so each reads as a layer."""
-    for y in range(HEAD + 9, 22):
-        for x in (3, 4, 5):
-            for z in (0, 1):
-                if y >= 19 and (x != 4 or z == 1 and y >= 20):
-                    continue
-                if (x, y, z) in r.b and not r.b[(x, y, z)][0].endswith("_leaves") and y < 15:
-                    continue
-                r.log(x, y, z, name=LOG if x == 4 else WOOD)
-    for (x, z, ax) in ((2, 0, "x"), (6, 0, "x"), (2, 1, "x"), (6, 1, "x"), (4, 2, "z")):
-        r.log(x, 18, z, axis=ax)
-
-
-def canopy_l3(r):
-    """The World-Tree's layered canopy on the Grove (capitol_heartwood_hall.canopy at the lab's scale): the L2 tier
-    becomes the wide middle, an upper tier (y19-20) and a cherry-blossom crown (y21-22) with a shroomlight heart, a gap
-    of bare boughs between each - notched over the glade in front of the stag, so its face still looks out and the
-    spawn's columns stay open to the sky."""
-    for y, rad, z1 in ((19, 3.7, 2), (20, 2.8, 2), (22, 2.1, 1), (23, 1.1, 1)):
-        for x in range(SX):
-            for z in range(0, z1 + 1):
-                if (x, z) in CENTRE or (z >= 3 and abs(x - 4) <= 1):
-                    continue
-                d = (((x - 4) ** 2) + ((z - 0.7) * 1.5) ** 2) ** 0.5
-                if d > rad - (0.6 if hsh(x * 5 + y, z + y) % 5 == 0 else 0):
-                    continue
-                if y >= 22:
-                    name = CHERRY if hsh(x + y, z) % 3 else FLEAF
-                else:
-                    name = FLEAF if hsh(x * 7, z + y) % 3 == 0 else (CHERRY if hsh(x, z * 5 + y) % 7 == 0 else LEAF)
-                r.leaf(x, y, z, name)
-    r.set(4, 22, 1, SHROOM)                             # the crown's heart, glowing through the blossom
-    # the middle tier spreads wider still at the elder: its edge reaches the glade's sides
-    for x in range(SX):
-        for z in range(0, 5):
-            if (x, z) in CENTRE or (z >= 3 and abs(x - 4) <= 1):
-                continue
-            d = (((x - 4) ** 2) + ((z - 0.5) * 1.3) ** 2) ** 0.5
-            if 4.0 <= d <= 5.6 - (0.6 if hsh(x * 3, z) % 4 == 0 else 0):
-                r.leaf(x, 15, z, gs.leaf_for(x, 15, z, 3))
-    fruit(r, ((2, 19, 2), (6, 19, 1)), GLOW)
-    fruit(r, ((3, 22, 1),), SHROOM)
-
-
-def roots_l3(r):
-    """The elder's ground: the root arches grow a second root beside their feet (bark on the glade side, gripping the
-    fringe) and flower on their crowns, the moss creeps over the glade's flagstones (the froglight heart and the calcite
-    ring stay), pink petals fall on the fringe, and the shrine wakes - the west tower's lancets glow green."""
-    for (x, s) in ((2, -1), (6, 1)):
-        r.st(x, 1, 5, "east" if s < 0 else "west", name=OST)
-        r.set(x, 1, 6, "mangrove_roots", **DRY)
-    r.leaf(1, 6, 3, FLEAF)
-    r.leaf(7, 6, 3, LEAF)
-    for x in range(1, SX - 1):
-        for z in range(2, SZ - 1):
-            if r.get(x, 0, z)[0] == MSB and hsh(x + 7, z * 3) % 3 == 0:
-                r.set(x, 0, z, "moss_block")
-    for x in range(SX):
-        for z in range(2, SZ):
-            if r.get(x, 0, z)[0] in SOIL and r.free(x, 1, z) and hsh(x * 5, z + 2) % 3 == 0:
-                r.set(x, 1, z, "pink_petals", facing="north", flower_amount=str(1 + hsh(x, z) % 4))
-    for y in (4, PIER_TOP + 2):
-        r.set(0, y, 0, GLOW, axis="y")                   # the lancets' upper lights (the slot's colonnette below)
-
-
 def draw_l3(r):
+    """L3 THE ELDER GROVE: the elder - the trunk to y 19 into a cherry crown (high point 22-23), the tower's lancet
+    glows and a second lantern stands on its wall post, the antlers climb to y 16 with tines leaning out."""
     draw_l2(r)
-    elder_l3(r)
-    for s in (-1, 1):
-        antler(r, 4 + s, s, HEAD + 4, ANTLER_L3)
-    canopy_l3(r)
-    roots_l3(r)
+    trunk(r, 19)
+    lobes(r, ((2.2, 1.4, 19.6, 2.4, 1.9, 2.4),), 17, TOP_L3)
+    for y in (4, 5, 6):
+        r.set(7, y, 5, GLOW, axis="y")                   # the lancet wakes
+    r.set(8, 11, 4, MSW)
+    r.set(8, 12, 4, MSW)
+    r.lantern(8, 13, 4)
+    antlers_up(r, 12, 15)
+    r.set(0, 16, 3, BIRCH_F)                             # the tines
+    r.set(3, 16, 3, BIRCH_F)
+    for p in CLEAR:
+        r.b.pop(p, None)
 
 
-# ======================================================================================================== build
+
 YMAX = 24                       # drawing room; each level's box is cropped to its top block
 
 
 def build(draw, tier):
     r = Rig(YMAX)
     draw(r)
+    shell(r)
     mv._leaf_distances(r)
     r.bury_grass()   # no grass under the hay bales: it would die to dirt and stall the build
     r.settle()
