@@ -62,14 +62,15 @@ public enum Sfx {
     DESTROYED_TIDE("destroyed_tide", Category.BUILDINGS, 1.0f, 8),
     DESTROYED_STORM("destroyed_storm", Category.BUILDINGS, 1.0f, 8),
     DESTROYED_BRASS("destroyed_brass", Category.BUILDINGS, 1.0f, 8),
-    // construction "loop": one quiet granule per gap near busy builders (BarFx NANO tint = faction)
-    NANO_SUNFORGED("nano_sunforged", Category.BUILDINGS, 0.3f, 10),
-    NANO_GRAVEBOUND("nano_gravebound", Category.BUILDINGS, 0.3f, 10),
-    NANO_HORDE("nano_horde", Category.BUILDINGS, 0.3f, 10),
-    NANO_VERDANT("nano_verdant", Category.BUILDINGS, 0.3f, 10),
-    NANO_TIDE("nano_tide", Category.BUILDINGS, 0.3f, 10),
-    NANO_STORM("nano_storm", Category.BUILDINGS, 0.3f, 10),
-    NANO_BRASS("nano_brass", Category.BUILDINGS, 0.3f, 10),
+    // construction "loop": one quiet granule now and then near busy builders (BarFx NANO tint = faction); the cadence
+    // is NanoCadence's, the volume 0.3 -> 0.2 (Oct 29: "workers buzzing as they build")
+    NANO_SUNFORGED("nano_sunforged", Category.BUILDINGS, 0.2f, 10),
+    NANO_GRAVEBOUND("nano_gravebound", Category.BUILDINGS, 0.2f, 10),
+    NANO_HORDE("nano_horde", Category.BUILDINGS, 0.2f, 10),
+    NANO_VERDANT("nano_verdant", Category.BUILDINGS, 0.2f, 10),
+    NANO_TIDE("nano_tide", Category.BUILDINGS, 0.2f, 10),
+    NANO_STORM("nano_storm", Category.BUILDINGS, 0.2f, 10),
+    NANO_BRASS("nano_brass", Category.BUILDINGS, 0.2f, 10),
     RECLAIM_TICK("reclaim_tick", Category.BUILDINGS, 0.35f, 12),
     RECLAIM_DONE("reclaim_done", Category.BUILDINGS, 0.6f, 6),
     GATE_OPEN("gate_open", Category.BUILDINGS, 0.8f, 10),
