@@ -155,6 +155,17 @@ public class UnitActionServerboundPacket {
                 (player == null ? "null" : player.getName().getString()) + " for " + ownerName);
             return false;
         }
+        // an attack or follow order on an entity the sender's fog hides: only a modified client can name one (it was
+        // never sent; TrackedEntityMixin), and the units walking towards it would show where it is (Mode A review on
+        // #35, Oct 28). An honest click on a target that left view in the meantime is dropped the same way.
+        if (action != null && action.needsASeenTarget() && unitId >= 0) {
+            net.minecraft.world.entity.Entity target = player.serverLevel().getEntity(unitId);
+            if (target != null && !com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isEntityVisibleTo(player, target)) {
+                ReignOfNether.LOGGER.debug("UnitActionServerboundPacket: {} order from {} on entity {} its fog hides - dropped",
+                    action, player.getName().getString(), unitId);
+                return false;
+            }
+        }
         // (an order whose units were all someone else's still goes through with none: a building ability rides on
         // selectedBuildingPos, and UnitActionItem checks that building's owner itself)
         int[] ids = PacketAuth.controllableIds(player.serverLevel(), player.getName().getString(), unitIds);

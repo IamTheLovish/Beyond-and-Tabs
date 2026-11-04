@@ -256,6 +256,6 @@ public enum UnitAction {
      * where it was (Mode A review on #35, Oct 28, "Fog leaks").
      */
     public boolean needsASeenTarget() {
-        return false;   // STUB (tests first): no order is fog-checked yet
+        return this == ATTACK || this == FOLLOW;
     }
 }
