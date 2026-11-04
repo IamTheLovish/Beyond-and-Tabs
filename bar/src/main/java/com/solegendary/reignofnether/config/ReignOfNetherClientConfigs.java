@@ -90,12 +90,15 @@ public class ReignOfNetherClientConfigs {
     // chosen yet (follows BUILDING_AMBIENCE), 0 Off, 1 Low, 2 Full
     public static final ForgeConfigSpec.ConfigValue<Integer> BUILDING_ANIMATION;
     public static final ForgeConfigSpec.ConfigValue<Boolean> GROUND_SCARS;
+    // ragged grass fringe over path / dirt / sand / gravel tops beside grass (environment/edge)
+    public static final ForgeConfigSpec.ConfigValue<Boolean> PATH_EDGES;
     // tree limbs swaying in the wind (environment/wind, design/branch_wind.md): 0 Off, 1 Near (within 60 blocks of the camera), 2 All
     public static final ForgeConfigSpec.ConfigValue<Integer> BRANCH_WIND;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
     // onboarding (onboarding/, design/onboarding.md): first-time tips, which were seen, the First Battle world
     public static final ForgeConfigSpec.ConfigValue<Boolean> ONBOARDING_TIPS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_AI;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_AUTO_LEARN;
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_SEEN_TIPS;
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_WORLD;
 
@@ -234,12 +237,16 @@ public class ReignOfNetherClientConfigs {
         ONBOARDING_TIPS = BUILDER.define("onboarding_tips", true);
         BUILDER.comment("Hero AI: while you are not possessing your hero it fights by itself with its abilities (HeroBot). Off = it only casts what you order.");
         HERO_AI = BUILDER.define("hero_ai", true);
+        BUILDER.comment("Auto-learn hero abilities: an ability point you leave unspent for 20 s is spent for you (never while the rank-up menu is open). Off = every point waits for you.");
+        HERO_AUTO_LEARN = BUILDER.define("hero_auto_learn", true);
         BUILDER.comment("Tips already shown (comma-separated ids); clear it to see them again");
         ONBOARDING_SEEN_TIPS = BUILDER.define("onboarding_seen_tips", "");
         BUILDER.comment("The saves folder of the last First Battle tutorial, for Resume (empty = none or finished)");
         ONBOARDING_WORLD = BUILDER.define("onboarding_world", "");
         BUILDER.comment("Ground scars: the scorch and craters blasts leave stay on the ground for the match (a world that remembers); false = the old 12-second marks");
         GROUND_SCARS = BUILDER.define("ground_scars", true);
+        BUILDER.comment("Path edges: a ragged grass fringe spills over paths, dirt, sand and gravel where they meet grass, so the border is not a straight tile line from the RTS camera. Built with the terrain (no per-frame cost); false = the plain square edges");
+        PATH_EDGES = BUILDER.define("path_edges", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
         BUILDER.comment("Living army (design/living_army.md): units breathe, shift their weight, fidget, lean into turns, rock on starts and stops and flinch from where a blow came from - realistic up close, a little larger from the RTS camera. false = the old motion. Client only.");

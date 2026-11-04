@@ -249,6 +249,78 @@ public class ExtractorFootprintGameTests {
     }
 
     /**
+     * Review r1 on PR 408: a pad that overlaps an earlier, lower pad is levelled to that pad's height (PadHeight), but
+     * drySpot checked the water only at the patch's own ground - and the leveller leaves a cell with water at the pad's
+     * height alone. A river bank: own ground at G, an earlier pad 6 off at G - 1 (it still overlaps: one shared column,
+     * outside the extractor's 5x5), and a pond cell at G - 1 inside this patch's footprint. Snapped down to G - 1 the pond
+     * stayed in the footprint and every faction's extractor was refused; the pad must keep G (dry) and fill the pond.
+     * A platform high above the terrain, as the bamboo and hill tests.
+     */
+    @GameTest(template = ARENA)
+    public static void a_stamped_patch_beside_a_lower_pad_keeps_a_pond_out_of_its_footprint(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 250;
+        int cx = base.getX(), cz = base.getZ(), ax = cx - 6;   // the earlier pad's centre, 6 off: they share column cx - 3
+        var dirt = net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState();
+        var grass = net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState();
+        var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+        // put back when the test ends, pass or fail (the other platforms at this slot sit at 220 and 230)
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 10, y - 5, cz - 8), new BlockPos(cx + 8, y + 10, cz + 8));
+        for (int dx = -10; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                boolean low = dx <= -3;   // the earlier pad's ground, one lower
+                for (int k = 4; k >= 1; k--)
+                    level.setBlock(new BlockPos(cx + dx, y - k, cz + dz), dirt, 3);
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), low ? grass : dirt, 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), low ? air : grass, 3);
+            }
+        BlockPos pond = new BlockPos(cx + 2, y - 1, cz + 2);   // in the footprint (cx - 2 .. cx + 2), one below the ground
+        level.setBlock(pond.above(), air, 3);
+        level.setBlock(pond, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
+        MetalPatches.forgetAll();
+        try {
+            MetalPatches.stamp(level, ax, cz);
+            MetalPatches.stamp(level, cx, cz);
+            int padY = Integer.MIN_VALUE;
+            for (int k = y + 2; k >= y - 3; k--)
+                if (level.getBlockState(new BlockPos(cx, k, cz)).is(MetalPatches.PATCH_BLOCK)) {
+                    padY = k;
+                    break;
+                }
+            if (padY == Integer.MIN_VALUE) {
+                helper.fail("stamp() left no patch block at [" + cx + ", " + cz + "] between " + (y - 3) + " and " + (y + 2));
+                return;
+            }
+            BlockPos centre = new BlockPos(cx, padY, cz);
+            List<String> wet = new ArrayList<>();
+            for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                    for (int k = padY; k <= padY + 1; k++)
+                        if (!level.getBlockState(new BlockPos(cx + dx, k, cz + dz)).getFluidState().isEmpty())
+                            wet.add(dx + "," + dz + " at " + k);
+            List<String> refused = new ArrayList<>();
+            for (ResourceLocation key : new ArrayList<>(Factions.PLAYABLE_FACTIONS)) {
+                Faction f = Factions.getFaction(key);
+                Building e = Factions.isLive(f) ? FactionTraits.of(f).metalExtractor.get() : null;
+                if (e == null)
+                    continue;
+                String err = BuildingValidators.getPlacementValidityError(level, e, centre.offset(-2, 0, -2), "gametest_footprint",
+                    Rotation.NONE, false, false, true);
+                if (err != null)
+                    refused.add(e.structureName + " " + err);
+            }
+            if (wet.isEmpty() && refused.isEmpty())
+                helper.succeed();
+            else
+                helper.fail("a patch at ground " + y + " beside a pad at " + (y - 1) + " was levelled to " + padY
+                    + " with water in its footprint " + wet + "; refused: " + refused + " (pad " + obstructions(level, centre) + ")");
+        } finally {
+            MetalPatches.forgetAll();
+        }
+    }
+
+    /**
      * MultiplayerLobby.siteOk had solidTop's bug: Level.getHeight of an unloaded chunk is the min build height, so a site
      * whose chunks no one had loaded read "dry and flat" at y -64 wherever it was. Once solidTop loaded the centre chunk the
      * lobby tests' probes mixed real ground with -64 and found "no dry ground" (CI 40614999963). A pond on the site, the

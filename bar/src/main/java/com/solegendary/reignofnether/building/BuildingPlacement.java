@@ -947,15 +947,21 @@ public class BuildingPlacement {
         Collections.shuffle(placedBlocks);
         Collections.shuffle(poolBlocks);
         placedBlocks.addAll(poolBlocks);
-        for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
-            BlockPos bp = placedBlocks.get(i).getBlockPos();
-            com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
-            if (!getLevel().getBlockState(bp).getFluidState().isEmpty()) {
-                getLevel().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
-            } else {
-                getLevel().destroyBlock(bp, false);
+        // a lantern, ladder, banner or door that loses its support breaks without an item (BuildingDrops)
+        BuildingPlacement dropsWere = BuildingDrops.begin(this);
+        try {
+            for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
+                BlockPos bp = placedBlocks.get(i).getBlockPos();
+                com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
+                if (!getLevel().getBlockState(bp).getFluidState().isEmpty()) {
+                    getLevel().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
+                } else {
+                    getLevel().destroyBlock(bp, false);
+                }
+                this.onBlockBreak((ServerLevel) getLevel(), bp, false);
             }
-            this.onBlockBreak((ServerLevel) getLevel(), bp, false);
+        } finally {
+            BuildingDrops.end(dropsWere);
         }
         if (intAmount > 0) {
             // rate-limited per owner (was one packet to everyone per hit); centrePos instead of re-scanning blocks
@@ -1027,6 +1033,8 @@ public class BuildingPlacement {
                 placedCount++;
         final int blastEvery = Math.max(1, placedCount / MAX_COLLAPSE_BLASTS);
         final int[] seen = { 0 };
+        // its pieces (lanterns, ladders, banners, doors) break without items as their supports go (BuildingDrops)
+        BuildingPlacement dropsWere = BuildingDrops.begin(this);
         try {
         this.blocks.forEach((BuildingBlock block) -> {
             if ((!block.getBlockState().getFluidState().isEmpty() ||
@@ -1051,6 +1059,7 @@ public class BuildingPlacement {
         });
         } finally {
             com.solegendary.reignofnether.barfx.BarFx.muteExplosions(false);
+            BuildingDrops.end(dropsWere);
         }
 
         this.scaffoldBlocks.forEach((BuildingBlock block) -> {
@@ -1563,6 +1572,13 @@ public class BuildingPlacement {
 
     /** A placed block's sound while a building rises (vanilla's block place is 1.0). */
     static final float CONSTRUCTION_VOLUME = 0.22f;
+    /**
+     * Fewest game ticks between two place sounds of one building: several builders on a fast build laid a block (and a
+     * sound) every tick or two - a steady patter on top of the nano loop (Oct 29: "workers buzzing as they build").
+     * The blocks still appear one by one; only every few get a sound.
+     */
+    static final int PLACE_SOUND_GAP = 6;
+    private long lastPlaceSound = Long.MIN_VALUE / 2;
     /** At most this many blasts when a building is destroyed (it set one off on a quarter of its blocks - dozens). */
     static final int MAX_COLLAPSE_BLASTS = 4;
 
@@ -1622,8 +1638,12 @@ public class BuildingPlacement {
             // burst of debris (LevelEvent.PARTICLES_DESTROY_BLOCK), the steady ticking lovish heard all match (Oct 21:
             // "a constant ticking or binging ... it might be the workers building sound"); a second call passed a sound's
             // hashCode as a level event id. Quiet and slightly varied; the nano beams show the work
-            level.playSound(null, bp, bs.getSoundType().getPlaceSound(), net.minecraft.sounds.SoundSource.BLOCKS,
-                CONSTRUCTION_VOLUME, 0.85f + level.getRandom().nextFloat() * 0.2f);
+            long now = level.getGameTime();
+            if (now - lastPlaceSound >= PLACE_SOUND_GAP) {
+                lastPlaceSound = now;
+                level.playSound(null, bp, bs.getSoundType().getPlaceSound(), net.minecraft.sounds.SoundSource.BLOCKS,
+                    CONSTRUCTION_VOLUME, 0.85f + level.getRandom().nextFloat() * 0.2f);
+            }
             blockPlaceQueue.removeIf(i -> i.equals(nextBlock));
             onBlockBuilt(bp, bs);
             if (this.getBlocksPlaced() > highestBlockCountReached) {

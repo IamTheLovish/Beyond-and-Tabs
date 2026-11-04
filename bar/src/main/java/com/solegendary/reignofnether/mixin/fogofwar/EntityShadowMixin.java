@@ -3,10 +3,10 @@ package com.solegendary.reignofnether.mixin.fogofwar;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.perf.FrameParts;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.LevelReader;
 import org.spongepowered.asm.mixin.Mixin;
@@ -38,6 +38,9 @@ public abstract class EntityShadowMixin {
         return self.distanceToSqr(x, y, z);
     }
 
+    // when the shadow being drawn started (0: none open); renderShadow runs on the render thread only
+    private static long reignofnether$shadowStart = 0;
+
     @Inject(
             method = "renderShadow",
             at = @At("HEAD"),
@@ -49,13 +52,22 @@ public abstract class EntityShadowMixin {
             ci.cancel();
             return;
         }
+        long start = System.nanoTime();
 
-        if (!FogOfWarClientEvents.isEnabled())
-            return;
-
-        BlockPos bp = pEntity.getOnPos();
-
-        if (!FogOfWarClientEvents.isInBrightChunk(pEntity))
+        if (FogOfWarClientEvents.isEnabled() && !FogOfWarClientEvents.isInBrightChunk(pEntity)) {
+            FrameParts.add(FrameParts.ENTITY_SHADOWS, System.nanoTime() - start);
             ci.cancel();
+            return;
+        }
+        reignofnether$shadowStart = start;
+    }
+
+    /** The shadow's block box walked and its quads emitted: its time goes to the [FrameParts] entityShadows section. */
+    @Inject(method = "renderShadow", at = @At("RETURN"))
+    private static void onRenderShadowEnd(PoseStack pMatrixStack, MultiBufferSource pBuffer, Entity pEntity, float pWeight, float pPartialTicks, LevelReader pLevel, float pSize, CallbackInfo ci) {
+        if (reignofnether$shadowStart != 0) {
+            FrameParts.add(FrameParts.ENTITY_SHADOWS, System.nanoTime() - reignofnether$shadowStart);
+            reignofnether$shadowStart = 0;
+        }
     }
 }

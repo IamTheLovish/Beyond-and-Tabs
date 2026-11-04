@@ -7,7 +7,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseFireBlock;
@@ -20,16 +19,16 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Tidewrought <b>tidepool</b> cell (design/tidewrought_plan.md section 3): a 2/16-high sheet of teal, water-looking
- * surface. It is deliberately NOT vanilla water - no fluid state, so it never spreads, never makes units swim or drown,
- * never turns lava to obsidian or hydrates farmland, and can't be picked up with a bucket.
+ * Tidewrought <b>tidepool</b> cell (design/tidewrought_plan.md section 3), drawn since slice 1a as a <b>Light Grid</b>
+ * tile (design/ai_faction.md): a 1.5/16-high dark glass panel whose grid lines glow (emissive render, no light level,
+ * so no lighting updates). It is deliberately NOT vanilla water - no fluid state, so it never spreads, never makes
+ * units swim or drown, never turns lava to obsidian or hydrates farmland, and can't be picked up with a bucket.
  * <ul>
  *   <li>No collision, no occlusion, replaceable: everyone walks through it and any building or placed block simply
  *       overwrites it (BuildingValidators.isSoftBlock accepts it; levelFootprint clears it).</li>
  *   <li>Only ever placed by {@link TidepoolServerEvents} (no block item, no loot), which owns lifetime, caps and the
  *       wet buff. The block itself only knows two things: fire/lava next to it evaporates it, and a scheduled
  *       fail-safe tick (saved with the chunk) removes it even if the server restarted and forgot the pool.</li>
- *   <li>Burning entities that wade in are put out (the "wet" effect fire has to beat).</li>
  * </ul>
  * Costs nothing per tick: everything rides vanilla callbacks (neighbour update, scheduled tick, entity-inside).
  */
@@ -107,19 +106,15 @@ public class TidepoolBlock extends Block {
         level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
     }
 
-    // ---------------------------------------------------------------- wet
+    // ---------------------------------------------------------------- look
 
-    @Override
-    public void entityInside(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Entity entity) {
-        if (!level.isClientSide() && entity.isOnFire())
-            entity.clearFire();
-    }
+    // light never douses fire (slice 1a): no entityInside, a burning unit on the grid keeps burning
 
     @Override
     public void animateTick(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull RandomSource random) {
-        // a bubble now and then (client only, no random ticks): reads as water from the RTS camera
-        if (random.nextInt(14) == 0)
-            level.addParticle(ParticleTypes.BUBBLE_POP, pos.getX() + random.nextDouble(), pos.getY() + 0.14,
-                    pos.getZ() + random.nextDouble(), 0, 0.01, 0);
+        // a mote of light rising off a grid node now and then (client only, no random ticks)
+        if (random.nextInt(40) == 0)
+            level.addParticle(ParticleTypes.END_ROD, pos.getX() + (random.nextBoolean() ? 0.03 : 0.97), pos.getY() + 0.12,
+                    pos.getZ() + (random.nextBoolean() ? 0.03 : 0.97), 0, 0.02, 0);
     }
 }

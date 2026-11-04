@@ -672,7 +672,7 @@ public class OrthoviewClientEvents {
         int key = pan.getKey();
         if (!HudClientEvents.isCardKey(key))
             return true;
-        // a WASD key that is also an order on the selected card (S stop, or one the player moved onto W/A/S/D) waits
+        // a WASD key that is also an order on the selected card (one the player bound onto W/A/S/D; none ship there) waits
         // out a tap before it pans; once it pans, that press is a hold and fires no order (KeyTaps.isHold), however
         // short lag made it measure
         if (KeyTaps.inTapWindow(key))
