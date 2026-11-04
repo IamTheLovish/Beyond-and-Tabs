@@ -3,7 +3,8 @@
 
 The camera test fails on the Slipway that shipped until Nov 2026 (critics 5 / 5 in the buildings lane: the red mangrove
 hull frames read like a team colour). It casts the eyes stills' real rays (tools/building_gates.shoot) into the shipped
-structures: red mangrove wood is 13.0 / 4.6 / 2.5 % of the RTS pixels at L1 / L2 / L3.
+structures: red mangrove wood is 13.0 / 4.6 / 2.5 % of the RTS pixels at L1 / L2 / L3. The palette pass (birch driftwood,
+build 41712771034 red) brings it to 0 %; BiomePalette keeps the birch for Tidewrought in every biome.
 """
 import os
 import sys
