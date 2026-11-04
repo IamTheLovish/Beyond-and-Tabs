@@ -51,7 +51,6 @@ public class LogFellingGameTests {
         level.setBlock(spruce.above(), Blocks.SPRUCE_LOG.defaultBlockState(), 2);
         // a log BELOW the cut (the walk never goes down) and a log two blocks away: both stay
         BlockPos below = base.below();
-        level.setBlock(below, Blocks.DIRT.defaultBlockState(), 2);
         level.setBlock(below, oak, 2);
         BlockPos far = base.offset(3, 0, 0);
         level.setBlock(far, oak, 2);
