@@ -7,8 +7,12 @@
 #include "/lib/settings.glsl"
 #include "/lib/shadowfit.glsl"
 #include "/lib/pbrswitch.glsl"
+#include "/lib/wind.glsl"
 
 attribute vec4 mc_Entity;
+#if defined LIT_TERRAIN && WIND == 1
+attribute vec2 mc_midTexCoord;         // the centre of this quad's sprite in the atlas (the loader's)
+#endif
 #ifdef LIT_PBR
 attribute vec4 at_tangent;             // the loader's tangent along +u, w the handedness (OptiFine / Iris format)
 #endif
@@ -26,9 +30,38 @@ varying vec3 vT;                       // the tangent frame for the _n map (lib/
 varying vec3 vB;
 #endif
 
+#if defined LIT_TERRAIN && WIND == 1
+// how much of the wind's sway this terrain vertex takes (lib/wind.glsl): x the plant's share, y the leaves'
+vec2 windShare() {
+    float id = mc_Entity.x;
+    if (abs(id - ID_LEAVES) < 0.5)
+        return vec2(0.0, 1.0);
+    bool lower = abs(id - ID_FOLIAGE) < 0.5;
+    if (!lower && abs(id - ID_FOLIAGE_UPPER) >= 0.5)
+        return vec2(0.0);
+    // the foot stays put: a vertex on the sprite's top half (v above the sprite's centre; v runs down the texture) is
+    // the top of the plane. A two-block plant's upper half starts where the lower half's top is and bends further.
+    // A sprite lying flat on the ground (pink petals) does not sway: its "top" is just one side
+    float top = gl_MultiTexCoord0.y < mc_midTexCoord.y ? 1.0 : 0.0;
+    float plant = lower ? top : 1.0 + 0.7 * top;
+    return vec2(plant * (1.0 - abs(gl_Normal.y)), 0.0);
+}
+#endif
+
 void main() {
     gl_Position = ftransform();
     viewPos = (gl_ModelViewMatrix * gl_Vertex).xyz;
+#if defined LIT_TERRAIN && WIND == 1
+    // terrain's model space has the world's axes, offset per chunk: an offset in blocks adds to the vertex as it is.
+    // The moved position is the one lit and shadowed, so a swaying tuft is shaded where it is drawn
+    vec2 share = windShare();
+    if (share.x + share.y > 0.0) {
+        vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
+        vec4 moved = gl_Vertex + vec4(windOffset(playerPos + cameraPosition, share.x, share.y), 0.0);
+        gl_Position = gl_ModelViewProjectionMatrix * moved;
+        viewPos = (gl_ModelViewMatrix * moved).xyz;
+    }
+#endif
     viewNormal = gl_NormalMatrix * gl_Normal;   // normalised in lit.fsh, after its zero-normal guard
 #ifdef LIT_PBR
     // the bitangent along +v, down the texture, where our maps point green (tools/materials.py): cross(N, T) times
@@ -50,7 +83,7 @@ void main() {
     asDrawn = 0.0;
 #endif
 #ifdef LIT_TERRAIN
-    foliage = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? 1.0 : 0.0;
+    foliage = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 || abs(mc_Entity.x - ID_FOLIAGE_UPPER) < 0.5 ? 1.0 : 0.0;
 #else
     foliage = 0.0;
 #endif
