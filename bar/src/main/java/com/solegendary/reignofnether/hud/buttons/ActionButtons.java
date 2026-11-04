@@ -20,12 +20,11 @@ import java.util.List;
 
 import static com.solegendary.reignofnether.unit.UnitClientEvents.sendUnitCommand;
 
-// static list of generic unit actions (build, attack, move, stop, etc.)
+// static list of generic unit actions (build, fight, move, stop, etc.)
 public class ActionButtons {
 
     public static Button buildRepair;
     public static Button gather;
-    public static Button attack;
     public static Button fight;
     public static Button move;
     public static Button stop;
@@ -78,26 +77,10 @@ public class ActionButtons {
                 null,
                 null
         );
-        // BAR's Attack (A, X still works): armed, a left click on a target attacks it and on the ground attack-moves;
-        // a left- or right-DRAG lays an attack-move line formation (UnitClientEvents), Shift keeps it armed to queue.
-        // Lit while armed so it reads as a state, not a one-shot.
-        attack = new Button(
-                "Attack",
-                Button.itemIconSize,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/sword.png"),
-                Keybindings.attack,
-                () -> CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK,
-                () -> false,
-                () -> true,
-                () -> CursorClientEvents.setLeftClickAction(
-                        CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK ? null : UnitAction.ATTACK),
-                null,
-                List.of(FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.attack"), Style.EMPTY),
-                        FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.attack.tooltip"), Style.EMPTY))
-        );
-        attack.isActive = attack.isSelected;
-        // BAR's Fight (F): attack-move, armed. A click fights to the spot (the units advance engaging everything on the
-        // way), a drag lays a fight line; the plain click now spreads the group in a formation too (UnitActionItem).
+        // Fight / Attack-move (F), the one attack order (lovish, Oct 22: "we dont need f and x, only f"): armed, a left
+        // click on an enemy unit or building attacks it, a click on the ground fights to the spot (the units advance
+        // engaging everything on the way, spread in a formation), a left- or right-drag lays a fight line
+        // (UnitClientEvents), Shift keeps it armed to queue. A second F (or a click on the button) disarms it.
         fight = new Button(
                 "Fight",
                 Button.itemIconSize,
@@ -107,7 +90,7 @@ public class ActionButtons {
                 () -> false,
                 () -> true,
                 () -> CursorClientEvents.setLeftClickAction(
-                        CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK_MOVE ? null : UnitAction.ATTACK_MOVE),
+                        com.solegendary.reignofnether.keybinds.FightArm.press(CursorClientEvents.getLeftClickAction())),
                 null,
                 List.of(FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.fight"), Style.EMPTY),
                         FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.fight.tooltip"), Style.EMPTY))

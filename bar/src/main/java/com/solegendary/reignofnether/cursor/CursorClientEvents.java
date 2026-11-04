@@ -676,7 +676,7 @@ public class CursorClientEvents {
                     preSelBuilding != null &&
                     CursorClientEvents.getLeftClickAction() != UnitAction.MOVE &&
                     (BuildingClientEvents.getPlayerToBuildingRelationship(preSelBuilding) != Relationship.OWNED ||
-                            CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK));
+                            CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK_MOVE));
 
             // do we own any of the selected buildings or entities?
             // will be false if there are none selected in the first place

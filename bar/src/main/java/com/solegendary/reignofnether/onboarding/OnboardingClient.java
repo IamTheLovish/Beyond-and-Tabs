@@ -357,7 +357,7 @@ public class OnboardingClient {
             case EXTRACTOR -> new Object[] { kit != null ? buildingName(kit.extractor()) : "Metal Extractor" };
             case ENERGY -> new Object[] { kit != null ? buildingName(kit.wind()) : "Wind Generator" };
             case LAB, TRAIN -> new Object[] { kit != null ? buildingName(kit.armyBuilding()) : "lab" };
-            case ATTACK_MOVE -> new Object[] { Keybindings.attack.getDisplayName() };
+            case ATTACK_MOVE -> new Object[] { Keybindings.fight.getDisplayName() };
             case KILL_COMMANDER -> new Object[] { enemyName };
             case DONE -> new Object[] { Keybindings.statsTable.getDisplayName(), Keybindings.toggleCamera.getDisplayName() };
             default -> new Object[0];
