@@ -62,6 +62,34 @@ class FoundryHallTest(unittest.TestCase):
                     rings.append((y, k))
         self.assertEqual(rings, [])
 
+    def test_roof_is_the_fifth_facade(self):
+        """design/architecture_rules.md 9 ("the roof is the fifth facade") and G1 (eaves oversail >= 1): at the RTS
+        camera 55 % of the Works' pixels are up-faces and the roof zone is 38 % of them, yet round 3's roof is two
+        stair courses flush with the pier faces (G1 20 / 84 - no eave shadow band) under a pale monitor box. So on
+        each slope face (+z / -z) between the towers: an EAVE course of roof stairs one block outside the piers
+        (ring 6, over every hall column |x| <= 3) and at least four climbing courses from the eave to the monitor;
+        the slope in two tones of verdigris (a wet darker course at the eave, no orange); and on both gables a VERGE
+        one proud of the gable wall (x = +-5) where the slope's top course meets it."""
+        R = 7
+        names = {q: v[0].split(":")[-1] for q, v in self.b.blocks.items() if v[0] not in S.AIR}
+        props = {q: dict(v[1] or {}) for q, v in self.b.blocks.items()}
+
+        def climbing(q):
+            return names.get(q, "").endswith("_stairs") and props[q].get("half") != "top"
+        for s in (-1, 1):
+            eave = [(R + x, y, R + 6 * s) for x in range(-3, 4) for y in range(9, 12) if climbing((R + x, y, R + 6 * s))]
+            self.assertEqual(len(eave), 7, "the %s eave: %s" % ("south" if s > 0 else "north", eave))
+            courses = {r for r in range(3, 7) for y in range(9, 14)
+                       if sum(1 for x in range(-3, 4) if climbing((R + x, y, R + r * s))) >= 6}
+            self.assertGreaterEqual(len(courses), 4, courses)
+            slope = {names[(R + x, y, R + r * s)] for r in range(3, 7) for x in range(-3, 4) for y in range(9, 14)
+                     if climbing((R + x, y, R + r * s))}
+            self.assertEqual(slope, {"waxed_oxidized_cut_copper_stairs", "waxed_weathered_cut_copper_stairs"}, slope)
+        for sx in (-1, 1):
+            verge = [(R + 5 * sx, y, R + 3 * sz) for sz in (-1, 1) for y in range(9, 14)
+                     if climbing((R + 5 * sx, y, R + 3 * sz))]
+            self.assertEqual(len(verge), 2, "the %s verge: %s" % ("east" if sx > 0 else "west", verge))
+
     def test_shipped_is_the_generator_and_keeps_the_game_rules(self):
         """foundry_hall.nbt (data and assets) is what tools/capitol_foundry_hall.py draws, and its check() passes."""
         import capitol_foundry_hall as F

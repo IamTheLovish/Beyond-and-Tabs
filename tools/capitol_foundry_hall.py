@@ -432,7 +432,7 @@ def build():
     andesite towers / gables / panels, orange copper only as the east towers' pipes and the brass keystones. The
     Grand Foundry stays drawable as build_grand() (the massing rounds' base and control)."""
     import foundry_hall_massing as M
-    return M.round3()
+    return M.round3(deep=True)   # round 4: the deep eaved roof (M.deep_roof); round3() is the blind rounds' Works
 
 
 def build_grand():
