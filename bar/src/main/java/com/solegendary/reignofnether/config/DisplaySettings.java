@@ -98,6 +98,16 @@ public class DisplaySettings {
         }
     }
 
+    /** Path edges (environment/edge/EdgeOverlayBakedModel): the grass fringe over path / dirt / sand / gravel tops.
+     * Read by the chunk mesher's threads; a change takes effect when the terrain is rebuilt (the screen does that). */
+    public static boolean pathEdges() {
+        try {
+            return ReignOfNetherClientConfigs.PATH_EDGES.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
     /** Building ambience (design/lively_buildings.md): the idle particles round capitols, energy buildings and labs. */
     public static boolean buildingAmbience() {
         try {
