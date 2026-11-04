@@ -115,14 +115,14 @@ public class SecondT3Prod extends ProductionItem implements IUnitProductionItem 
                 ? List.of(
                     Component.translatable(langKey).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                     ResourceCosts.getFormattedCost(unitCost),
-                    ResourceCosts.getFormattedPopAndTime(unitCost),
+                    ResourceCosts.getFormattedTime(unitCost),
                     FormattedCharSequence.EMPTY,
                     Component.translatable(langKey + ".tooltip1").getVisualOrderText(),
                     Component.translatable(langKey + ".tooltip2").getVisualOrderText())
                 : List.of(
                     Component.literal(name).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                     ResourceCosts.getFormattedCost(unitCost),
-                    ResourceCosts.getFormattedPopAndTime(unitCost),
+                    ResourceCosts.getFormattedTime(unitCost),
                     FormattedCharSequence.EMPTY,
                     Component.translatable("entity.reignofnether.second_t3_placeholder").getVisualOrderText()),
             this);
