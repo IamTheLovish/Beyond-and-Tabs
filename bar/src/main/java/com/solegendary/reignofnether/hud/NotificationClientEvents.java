@@ -93,7 +93,15 @@ public class NotificationClientEvents {
         GAME_ENDER_AIMED("game_ender_aimed", 10_000, -1, 98),
         GAME_ENDER_INTERCEPTED("game_ender_intercepted", 5_000, -1, 85),
         HERO_BOON("hero_boon", 10_000, -1, 40),
-        START_POSITIONS("start_positions", 0, -1, 105);
+        START_POSITIONS("start_positions", 0, -1, 105),
+        // one of our heroes died (FallenHeroClientboundPacket, which reaches the owner however far away it fell):
+        // above an ally's call, below an attack on the base. No voice line yet, so it is a text line + its chord.
+        HERO_FALLEN("hero_fallen", 5_000, 0xFFB040, 75);
+
+        /** The line for one of our units dying: null for a hero, whose death the fallen-hero packet announces. */
+        static Alert forDeath(boolean commander, boolean hero) {
+            return commander ? COMMANDER_KILLED : UNIT_LOST;   // STUB (tests first): heroes still say "Unit lost"
+        }
 
         public final String key;
         public final long cooldownMs;
