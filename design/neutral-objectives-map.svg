@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360" font-family="sans-serif" font-size="12">
+  <rect width="480" height="360" fill="#e7efe0"/>
+  <rect x="20" y="140" width="70" height="80" fill="#3a6fd8" opacity="0.35" stroke="#3a6fd8"/><text x="55" y="185" text-anchor="middle">Base A</text>
+  <rect x="390" y="140" width="70" height="80" fill="#d84a3a" opacity="0.35" stroke="#d84a3a"/><text x="425" y="185" text-anchor="middle">Base B</text>
+  <circle cx="150" cy="70" r="14" fill="#a59c89"/><text x="150" y="100" text-anchor="middle">Mine</text>
+  <circle cx="330" cy="290" r="14" fill="#a59c89"/><text x="330" y="320" text-anchor="middle">Mine</text>
+  <circle cx="150" cy="290" r="14" fill="#a59c89"/><text x="150" y="320" text-anchor="middle">Shrine</text>
+  <circle cx="330" cy="70" r="14" fill="#a59c89"/><text x="330" y="100" text-anchor="middle">Shrine</text>
+  <rect x="226" y="40" width="28" height="20" fill="#c9a24a"/><text x="240" y="30" text-anchor="middle">Merchant post (B)</text>
+  <polygon points="240,300 228,320 252,320" fill="#6b5a3a"/><text x="240" y="340" text-anchor="middle">Hero camp (C)</text>
+  <path d="M215,150 h25 v60 h-25 z" fill="#f6f1df" stroke="#3b362d"/><path d="M240,150 h25 v60 h-25 z" fill="#2c2a33" stroke="#3b362d"/>
+  <text x="240" y="232" text-anchor="middle">Central site (question 4)</text>
+</svg>
