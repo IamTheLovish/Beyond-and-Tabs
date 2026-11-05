@@ -189,10 +189,10 @@ public class HeroAutoLearnGameTests {
         if (!(witch instanceof FactionHero w))
             return;
         var owner = player(helper, me);
-        whenHeroTicks(helper, witch, () -> {
+        whenHeroTicks(helper, witch, line -> {
             for (int t = 2; t < 460; t += 100)
-                helper.runAfterDelay(t, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
-            helper.runAfterDelay(460, () -> {
+                line.at(t, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
+            line.at(460, () -> {
                 List<String> problems = new ArrayList<>();
                 if (ranks(w) != 0 || w.getSkillPoints() != 1)
                     problems.add("auto-learn spent the point while the owner's rank-up menu was open (" + state(w) + ")");
@@ -212,14 +212,14 @@ public class HeroAutoLearnGameTests {
         if (!(witch instanceof FactionHero w))
             return;
         var owner = player(helper, me);
-        whenHeroTicks(helper, witch, () -> {
+        whenHeroTicks(helper, witch, line -> {
             List<String> problems = new ArrayList<>();
-            helper.runAfterDelay(2, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
-            helper.runAfterDelay(300, () -> {
+            line.at(2, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
+            line.at(300, () -> {
                 if (ranks(w) != 0)
                     problems.add("the point was spent while the menu hold still stood (" + state(w) + " at 15 s)");
             });
-            helper.runAfterDelay(800, () -> {
+            line.at(800, () -> {
                 if (ranks(w) != 1 || w.getSkillPoints() != 0)
                     problems.add("the menu hold never lapsed: the point was still unspent at 40 s (" + state(w) + ")");
                 finish(helper, problems, witch, me);
@@ -253,16 +253,16 @@ public class HeroAutoLearnGameTests {
         if (!(witch instanceof FactionHero w))
             return;
         var owner = player(helper, me);
-        whenHeroTicks(helper, witch, () -> {
+        whenHeroTicks(helper, witch, line -> {
             List<String> problems = new ArrayList<>();
-            helper.runAfterDelay(2, () -> {
+            line.at(2, () -> {
                 HeroServerboundPacket.onRankMenu(owner, witch.getId(), true);
                 if (!w.heroCore().rankMenuHeld(witch.level().getGameTime()))
                     problems.add("the owner's RANK_MENU_OPEN held nothing (the hero not in the level?): nothing tested");
             });
-            helper.runAfterDelay(40, () -> HeroServerEvents.onPlayerLogout(
+            line.at(40, () -> HeroServerEvents.onPlayerLogout(
                 new net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent(owner)));
-            helper.runAfterDelay(500, () -> {
+            line.at(500, () -> {
                 if (ranks(w) != 1 || w.getSkillPoints() != 0)
                     problems.add("after the owner logged out the menu hold stood on: the point was unspent at 25 s (" + state(w) + ")");
                 finish(helper, problems, witch, me);
@@ -270,7 +270,7 @@ public class HeroAutoLearnGameTests {
         });
     }
 
-    /** A Storm Witch for {@code owner} that joins the level {@code after} ticks from now (watched from then), or null. */
+    /** A Storm Witch for {@code owner} that joins the level {@code after} ticks from now, or null. */
     static Mob lateWitch(GameTestHelper helper, String owner, int after) {
         var type = com.solegendary.reignofnether.hero.HeroTypes.typeOf(HeroKits.STORM_WITCH);
         Mob m = type == null ? null : type.create(helper.getLevel());
@@ -281,11 +281,10 @@ public class HeroAutoLearnGameTests {
         net.minecraft.core.BlockPos at = helper.absolutePos(new net.minecraft.core.BlockPos(3, 2, 3));
         m.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
         ((com.solegendary.reignofnether.unit.interfaces.Unit) m).setOwnerName(owner);
-        helper.runAfterDelay(after, () -> {
-            helper.getLevel().addFreshEntity(m);
-            if (m instanceof FactionHero h)
-                watchPoints(helper, h);
-        });
+        // watched from now (its own onEachTick, booked here at setup: never from inside a running callback)
+        if (m instanceof FactionHero h)
+            watchPoints(helper, h);
+        helper.runAfterDelay(after, () -> helper.getLevel().addFreshEntity(m));
         return m;
     }
 
@@ -293,10 +292,42 @@ public class HeroAutoLearnGameTests {
      * Runs a test's timeline once the hero has run ArenaReady.TICKS ticks of its own (it is in the level, its chunk is
      * entity-ticking): auto-learn's 20 s run from the hero's ticks, and RANK_MENU_OPEN finds the hero only once it is
      * in the level, so a clock started at the test's start checked a hero whose chunk came up late before its 20 s
-     * had run (#488's green 42010140175). Fails the test if the hero is not ticking by test tick 200.
+     * had run (#488's green 42010140175). Fails the test if the hero is not ticking by test tick 200. Steps run from
+     * the one per-tick step, never booked from inside a callback (see below).
      */
-    static void whenHeroTicks(GameTestHelper helper, Mob hero, Runnable timeline) {
-        ArenaReady.whenTicking(helper, List.of(hero), 200, tick -> timeline.run());
+    static void whenHeroTicks(GameTestHelper helper, Mob hero, java.util.function.Consumer<Timeline> build) {
+        Timeline line = new Timeline();
+        build.accept(line);   // at setup: every step is known before the first tick runs
+        long[] start = { -1 };
+        // one per-tick step that runs the timeline's steps itself: a helper.runAfterDelay booked from inside a running
+        // test callback adds to GameTestInfo's tick map while it is being walked, and crashed the server ("this.wrapped
+        // is null" in GameTestInfo.tickInternal, green 42039043638, 7 of 8 runners)
+        helper.onEachTick(() -> {
+            long now = helper.getTick();
+            if (start[0] < 0) {
+                if (!hero.isRemoved() && hero.tickCount >= ArenaReady.TICKS) {
+                    start[0] = now;
+                } else {
+                    if (now >= 200)
+                        throw new net.minecraft.gametest.framework.GameTestAssertException(
+                            "the hero was not ticking after 200 test ticks: " + ArenaReady.describe(helper.getLevel(), List.of(hero)));
+                    return;
+                }
+            }
+            List<Runnable> due = line.steps.get((int) (now - start[0]));
+            if (due != null)
+                for (Runnable r : due)
+                    r.run();
+        });
+    }
+
+    /** A test's steps, by ticks after the hero started ticking (whenHeroTicks). */
+    static final class Timeline {
+        final java.util.Map<Integer, List<Runnable>> steps = new java.util.HashMap<>();
+
+        void at(int ticks, Runnable step) {
+            steps.computeIfAbsent(ticks, k -> new ArrayList<>()).add(step);
+        }
     }
 
     /** Only the owner's menu holds auto-learn back: another player's RANK_MENU_OPEN on this hero changes nothing. */
@@ -307,10 +338,10 @@ public class HeroAutoLearnGameTests {
         if (!(witch instanceof FactionHero w))
             return;
         var other = player(helper, me + "_ally");
-        whenHeroTicks(helper, witch, () -> {
+        whenHeroTicks(helper, witch, line -> {
             for (int t = 2; t < 460; t += 100)
-                helper.runAfterDelay(t, () -> HeroServerboundPacket.onRankMenu(other, witch.getId(), true));
-            helper.runAfterDelay(460, () -> {
+                line.at(t, () -> HeroServerboundPacket.onRankMenu(other, witch.getId(), true));
+            line.at(460, () -> {
                 List<String> problems = new ArrayList<>();
                 if (ranks(w) != 1 || w.getSkillPoints() != 0)
                     problems.add("another player's open menu held back the owner's auto-learn (" + state(w) + " at 23 s)");
