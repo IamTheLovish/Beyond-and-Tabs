@@ -1,0 +1,200 @@
+[10:44:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 71, -43)]
+[10:44:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-182, 71, -54)]
+[10:44:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-182, 71, -52)]
+[10:44:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-162, 71, -54)]
+[10:44:54] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-162, 71, -52)]
+[10:44:54] [IO-Worker-10/INFO]: [Eyes] 15_central_portal_fix_golden_rts: Saved screenshot as bat_eyes_15_central_portal_fix_golden_rts.png
+[10:44:55] [Render thread/INFO]: [Frame] p50 87.7 ms (11 fps), p95 119.5 ms, max 153.4 ms over 240 frames; RTS view, zoom 30, 13 units known
+[10:44:55] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 6.8 ms, p95 19.2 ms; per unit 30.6 us anim, 1247.7 us render (anim 2%); RTS view, zoom 30, detail on, over 17 frames
+[10:44:55] [Render thread/INFO]: [FrameParts] 145 frames, mean 69.0 ms/frame; ours 2.5 ms (4%): unitBodies 1.22 (max 19.4, 1.0/f) | markersWreck 0.90 (max 4.1, 1.0/f) | entityShadows 0.18 (max 6.6, 12/f) | markersMapWorld 0.06 (max 0.8, 0.7/f) | unitOverlays 0.06 (max 1.8, 11/f) | markersRange 0.03 (max 0.1, 1.0/f) | worldMarkers 0.03 (max 3.0, 12/f) (+17 smaller); elsewhere 66.5 ms; 0 section re-mesh requests/s
+[10:44:55] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:44:58] [Server thread/INFO]: [Tick] p50 6.1 ms, p95 12.1 ms, max 31.6 ms over the last 100 ticks; 37 units, 21 buildings, 1 players
+[10:44:58] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:44:59] [Render thread/INFO]: [Eyes] clip-mark 15_central_portal_fix_rts_army 1793875499613
+[10:44:59] [Server thread/INFO]: [Offline: Killed 8 entities]
+[10:44:59] [Render thread/INFO]: [Sfx] 276 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 2
+[10:44:59] [Server thread/INFO]: [Eyes] 15_mausoleum_before: pad x -187..-157, z -68..-38 keeps 81.4 blocks from the arena wall's ring (centre 3, -9, radius 280)
+[10:44:59] [Render thread/INFO]: [System] [CHAT] 
+[10:44:59] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[10:44:59] [Render thread/INFO]: [System] [CHAT] 
+[10:44:59] [Render thread/INFO]: [Eyes] 15_mausoleum_before: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/mausoleum_before.nbt' 15x22x15 placed at -179, 71, -60 (pad centre -172, 71, -53)
+[10:44:59] [IO-Worker-10/INFO]: [Eyes] 15_central_portal_fix_rts_army: Saved screenshot as bat_eyes_15_central_portal_fix_rts_army.png
+[10:45:01] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[10:45:04] [Render thread/INFO]: [Eyes] 15_mausoleum_before_rts: aimed at -172, 78, -53 - the camera at -178, 96, -46 looks at -172, -52 (79 frames, 5.0 s in the phase)
+[10:45:04] [Render thread/INFO]: [Eyes] 15_mausoleum_before_rts: the structure's box holds 783 non-air blocks on the client
+[10:45:04] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_before_rts 1793875504809
+[10:45:04] [Server thread/INFO]: [Eyes] 15_mausoleum_before_rts: ... and 783 on the server
+[10:45:05] [IO-Worker-4/INFO]: [Eyes] 15_mausoleum_before_rts: Saved screenshot as bat_eyes_15_mausoleum_before_rts.png
+[10:45:05] [Render thread/INFO]: [Frame] p50 58.3 ms (17 fps), p95 82.7 ms, max 108.3 ms over 240 frames; RTS view, zoom 30, 5 units known
+[10:45:05] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 7.8 ms, p95 21.8 ms; per unit 8.8 us anim, 1264.5 us render (anim 1%); RTS view, zoom 30, detail on, over 105 frames
+[10:45:05] [Render thread/INFO]: [FrameParts] 160 frames, mean 62.5 ms/frame; ours 9.1 ms (15%): unitBodies 6.60 (max 28.6, 5.2/f) | markersWreck 1.53 (max 7.2, 1.0/f) | entityShadows 0.58 (max 6.5, 20/f) | worldFx 0.13 (max 0.7, 11/f) | unitOverlays 0.08 (max 0.2, 11/f) | markersMapWorld 0.07 (max 0.6, 1.0/f) | buildingBoxes 0.02 (max 0.1, 1.0/f) | bars 0.02 (max 0.3, 22/f) (+16 smaller); elsewhere 53.4 ms; 0 section re-mesh requests/s
+[10:45:05] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:45:08] [Server thread/INFO]: [Tick] p50 6.1 ms, p95 11.3 ms, max 23.3 ms over the last 100 ticks; 30 units, 22 buildings, 1 players
+[10:45:08] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:45:10] [Render thread/INFO]: [ShaderBench] 15_mausoleum_before_rts: 60 frames, p50 55.03 ms, p95 59.94 ms, mean 55.40 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[10:45:14] [Render thread/INFO]: [Eyes] 15_mausoleum_before_rts_close: aimed at -172, 78, -53 - the camera at -178, 96, -46 looks at -172, -52 (72 frames, 4.0 s in the phase)
+[10:45:14] [Render thread/INFO]: [Eyes] 15_mausoleum_before_rts_close: the structure's box holds 783 non-air blocks on the client
+[10:45:14] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_before_rts_close 1793875514265
+[10:45:14] [Server thread/INFO]: [Eyes] 15_mausoleum_before_rts_close: ... and 783 on the server
+[10:45:14] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[10:45:14] [IO-Worker-11/INFO]: [Eyes] 15_mausoleum_before_rts_close: Saved screenshot as bat_eyes_15_mausoleum_before_rts_close.png
+[10:45:15] [Render thread/INFO]: [Frame] p50 55.6 ms (18 fps), p95 93.2 ms, max 164.8 ms over 240 frames; first-person view, zoom 26, 6 units known
+[10:45:15] [Render thread/INFO]: [FrameParts] 167 frames, mean 59.8 ms/frame; ours 1.8 ms (3%): markersWreck 1.53 (max 6.7, 1.0/f) | entityShadows 0.08 (max 6.0, 13/f) | markersMapWorld 0.08 (max 2.0, 0.9/f) | unitOverlays 0.05 (max 0.2, 11/f) | markersRange 0.02 (max 0.2, 1.0/f) (+18 smaller); elsewhere 57.9 ms; 0 section re-mesh requests/s
+[10:45:15] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:45:16] [Render thread/INFO]: [Sfx] 344 ticks, played/asked: units 1/8 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[10:45:18] [Server thread/INFO]: [Tick] p50 7.8 ms, p95 15.1 ms, max 43.7 ms over the last 100 ticks; 31 units, 23 buildings, 1 players
+[10:45:18] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:45:19] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_before_34 1793875519283
+[10:45:19] [IO-Worker-4/INFO]: [Eyes] 15_mausoleum_before_34: Saved screenshot as bat_eyes_15_mausoleum_before_34.png
+[10:45:24] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_before_front 1793875524292
+[10:45:24] [Render thread/INFO]: [Eyes] 15_mausoleum_before_close: standing at -175.0, 94.0, -49.0 (direction -1, 1 from the middle), eye 1.00 over the aim, pitch 11 down
+[10:45:24] [IO-Worker-9/INFO]: [Eyes] 15_mausoleum_before_front: Saved screenshot as bat_eyes_15_mausoleum_before_front.png
+[10:45:25] [Render thread/INFO]: [Frame] p50 81.4 ms (12 fps), p95 111.9 ms, max 164.8 ms over 240 frames; first-person view, zoom 26, 6 units known
+[10:45:25] [Render thread/INFO]: [FrameParts] 103 frames, mean 96.7 ms/frame; ours 0.2 ms (0%): unitOverlays 0.08 (max 0.2, 11/f) | markersRange 0.05 (max 0.1, 1.0/f) (+17 smaller); elsewhere 96.5 ms; 0 section re-mesh requests/s
+[10:45:25] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:45:28] [Server thread/INFO]: [Tick] p50 7.9 ms, p95 18.4 ms, max 28.6 ms over the last 100 ticks; 32 units, 23 buildings, 1 players
+[10:45:28] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:45:29] [Render thread/INFO]: [Eyes] 15_mausoleum_before_close: aimed at -172, 93, -53 - the camera at -175, 94, -49 looks at -172, -52 (45 frames, 5.1 s in the phase)
+[10:45:29] [Render thread/INFO]: [Eyes] 15_mausoleum_before_close: the structure's box holds 783 non-air blocks on the client
+[10:45:29] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_before_close 1793875529375
+[10:45:29] [Server thread/INFO]: [Eyes] 15_mausoleum_before_close: ... and 783 on the server
+[10:45:29] [Render thread/INFO]: [System] [CHAT] 
+[10:45:29] [Render thread/INFO]: [System] [CHAT] Night falls...
+[10:45:29] [Render thread/INFO]: [System] [CHAT] 
+[10:45:29] [IO-Worker-9/INFO]: [Eyes] 15_mausoleum_before_close: Saved screenshot as bat_eyes_15_mausoleum_before_close.png
+[10:45:31] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[10:45:33] [Render thread/INFO]: [Eyes] 15_mausoleum_before_dusk: the last drawn frame saw day time 13000
+[10:45:33] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_before_dusk 1793875533585
+[10:45:33] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[10:45:33] [IO-Worker-12/INFO]: [Eyes] 15_mausoleum_before_dusk: Saved screenshot as bat_eyes_15_mausoleum_before_dusk.png
+[10:45:34] [Render thread/INFO]: [Sfx] 359 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 1
+[10:45:35] [Render thread/INFO]: [Frame] p50 93.4 ms (11 fps), p95 128.2 ms, max 164.8 ms over 240 frames; RTS view, zoom 30, 6 units known
+[10:45:35] [Render thread/INFO]: [FrameParts] 111 frames, mean 90.5 ms/frame; ours 1.0 ms (1%): markersWreck 0.79 (max 10.5, 1.0/f) | unitOverlays 0.07 (max 0.4, 11/f) | markersRange 0.07 (max 0.2, 1.0/f) | markersMapWorld 0.03 (max 0.1, 0.3/f) (+19 smaller); elsewhere 89.5 ms; 0 section re-mesh requests/s
+[10:45:35] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:45:38] [Render thread/INFO]: [Eyes] 15_mausoleum_before_golden_rts: aimed at -172, 78, -53 - the camera at -178, 96, -46 looks at -172, -52 (86 frames, 5.0 s in the phase)
+[10:45:38] [Render thread/INFO]: [Eyes] 15_mausoleum_before_golden_rts: the structure's box holds 783 non-air blocks on the client
+[10:45:38] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_before_golden_rts 1793875538637
+[10:45:38] [Server thread/INFO]: [Eyes] 15_mausoleum_before_golden_rts: ... and 783 on the server
+[10:45:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-173, 71, -63)]
+[10:45:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 71, -63)]
+[10:45:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-173, 71, -43)]
+[10:45:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 71, -43)]
+[10:45:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-182, 71, -54)]
+[10:45:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-182, 71, -52)]
+[10:45:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-162, 71, -54)]
+[10:45:38] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-162, 71, -52)]
+[10:45:38] [Server thread/INFO]: [Tick] p50 6.9 ms, p95 17.9 ms, max 45.9 ms over the last 100 ticks; 41 units, 23 buildings, 1 players
+[10:45:38] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:45:38] [IO-Worker-11/INFO]: [Eyes] 15_mausoleum_before_golden_rts: Saved screenshot as bat_eyes_15_mausoleum_before_golden_rts.png
+[10:45:40] [Render thread/INFO]: [Clock] tick 7214: 60 frames over 3555 ms; old clock (game time) advanced -5799.90 with 27 steps back, new clock advanced 71.10 with 0 steps back
+[10:45:40] [Render thread/INFO]: [Clock] frames (ms,old,new): 0,11800.500,7214.500 57,11800.640,7215.640 117,11800.820,7216.820 169,11800.880,7217.880 235,11800.120,7219.120 294,11800.380,7220.380 359,11800.680,7221.680 433,11800.120,7223.120 485,11800.200,7224.200 541,11800.320,7225.320 592,11800.340,7226.340 648,11800.440,7227.440 699,11800.480,7228.480 756,11800.620,7229.620 811,11800.700,7230.700 862,11800.740,7231.740 918,11800.860,7232.860 979,11800.040,7234.040 1035,11800.220,7235.220 1087,11800.240,7236.240 1145,11800.400,7237.400 1198,11800.460,7238.460 1253,11800.580,7239.580 1307,11800.640,7240.640 1360,11800.700,7241.700 1418,11800.860,7242.860 1470,11800.900,7243.900 1531,11800.080,7245.080 1584,11800.180,7246.180 1639,11800.280,7247.280 1691,11800.320,7248.320 1746,11800.420,7249.420 1796,11800.420,7250.420 1855,11800.580,7251.580 1919,11800.820,7252.820 1995,11800.280,7254.280 2082,11800.040,7256.040 2169,11700.860,7257.860 2249,11500.440,7259.440 2318,11400.860,7260.860 2374,11300.980,7261.980 2437,11100.180,7263.180 2492,11000.340,7264.340 2554,10900.580,7265.580 2614,10800.780,7266.780 2669,10700.880,7267.880 2732,10500.080,7269.080 2788,10400.260,7270.260 2850,10300.500,7271.500 2923,10200.940,7272.940 3000,10000.400,7274.400 3069,9500.880,7275.880 3131,8500.060,7277.060 3187,8000.240,7278.240 3253,7500.480,7279.480 3310,7000.660,7280.660 3372,6500.940,7281.940 3437,6000.180,7283.180 3493,6000.360,7284.360 3555,6000.600,7285.600
+[10:45:43] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_before_rts_army 1793875543679
+[10:45:43] [Server thread/INFO]: [Offline: Killed 8 entities]
+[10:45:43] [Server thread/INFO]: [Eyes] 15_mausoleum_fix: pad x -187..-157, z -68..-38 keeps 81.4 blocks from the arena wall's ring (centre 3, -9, radius 280)
+[10:45:43] [Render thread/INFO]: [System] [CHAT] 
+[10:45:43] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[10:45:43] [Render thread/INFO]: [System] [CHAT] 
+[10:45:43] [Render thread/INFO]: [Eyes] 15_mausoleum_fix: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/mausoleum_fix.nbt' 15x22x15 placed at -179, 71, -60 (pad centre -172, 71, -53)
+[10:45:44] [IO-Worker-4/INFO]: [Eyes] 15_mausoleum_before_rts_army: Saved screenshot as bat_eyes_15_mausoleum_before_rts_army.png
+[10:45:45] [Render thread/INFO]: [Frame] p50 61.3 ms (16 fps), p95 99.6 ms, max 137.8 ms over 240 frames; RTS view, zoom 30, 6 units known
+[10:45:45] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 6.9 ms, p95 19.9 ms; per unit 9.8 us anim, 1248.2 us render (anim 1%); RTS view, zoom 30, detail on, over 108 frames
+[10:45:45] [Render thread/INFO]: [FrameParts] 159 frames, mean 62.9 ms/frame; ours 9.3 ms (15%): unitBodies 6.83 (max 29.9, 5.5/f) | markersWreck 1.47 (max 7.1, 1.0/f) | entityShadows 0.53 (max 17.9, 16/f) | unitOverlays 0.11 (max 1.0, 11/f) | markersMapWorld 0.07 (max 0.1, 1.0/f) | worldFx 0.06 (max 0.7, 11/f) | bars 0.05 (max 5.3, 22/f) | buildingBoxes 0.04 (max 3.0, 1.0/f) | worldMarkers 0.03 (max 3.2, 12/f) (+15 smaller); elsewhere 53.6 ms; 0 section re-mesh requests/s
+[10:45:45] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.1, 11/t)
+[10:45:48] [Server thread/INFO]: [Tick] p50 6.4 ms, p95 10.6 ms, max 18.7 ms over the last 100 ticks; 33 units, 23 buildings, 1 players
+[10:45:48] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:45:48] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_rts: aimed at -172, 78, -53 - the camera at -178, 96, -46 looks at -172, -52 (82 frames, 5.0 s in the phase)
+[10:45:48] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_rts: the structure's box holds 863 non-air blocks on the client
+[10:45:48] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_fix_rts 1793875548904
+[10:45:48] [Server thread/INFO]: [Eyes] 15_mausoleum_fix_rts: ... and 863 on the server
+[10:45:49] [IO-Worker-4/INFO]: [Eyes] 15_mausoleum_fix_rts: Saved screenshot as bat_eyes_15_mausoleum_fix_rts.png
+[10:45:54] [Render thread/INFO]: [ShaderBench] 15_mausoleum_fix_rts: 60 frames, p50 55.65 ms, p95 59.48 ms, mean 55.11 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[10:45:55] [Render thread/INFO]: [Frame] p50 56.8 ms (18 fps), p95 73.2 ms, max 119.3 ms over 240 frames; RTS view, zoom 26, 6 units known
+[10:45:55] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 7.9 ms, p95 15.1 ms; per unit 7.2 us anim, 1197.6 us render (anim 1%); RTS view, zoom 26, detail on, over 14 frames
+[10:45:55] [Render thread/INFO]: [FrameParts] 177 frames, mean 56.5 ms/frame; ours 2.5 ms (5%): markersWreck 1.47 (max 10.3, 1.0/f) | unitBodies 0.71 (max 21.1, 0.6/f) | entityShadows 0.09 (max 3.1, 15/f) | markersMapWorld 0.07 (max 0.1, 1.0/f) | worldFx 0.07 (max 0.5, 11/f) | buildingBoxes 0.04 (max 3.1, 1.0/f) | unitOverlays 0.03 (max 0.1, 11/f) | worldMarkers 0.02 (max 3.0, 12/f) (+16 smaller); elsewhere 53.9 ms; 0 section re-mesh requests/s
+[10:45:55] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:45:58] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_rts_close: aimed at -172, 78, -53 - the camera at -178, 96, -46 looks at -172, -52 (77 frames, 4.1 s in the phase)
+[10:45:58] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_rts_close: the structure's box holds 863 non-air blocks on the client
+[10:45:58] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_fix_rts_close 1793875558324
+[10:45:58] [Server thread/INFO]: [Eyes] 15_mausoleum_fix_rts_close: ... and 863 on the server
+[10:45:58] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[10:45:58] [IO-Worker-11/INFO]: [Eyes] 15_mausoleum_fix_rts_close: Saved screenshot as bat_eyes_15_mausoleum_fix_rts_close.png
+[10:45:58] [Server thread/INFO]: [Tick] p50 6.5 ms, p95 10.3 ms, max 14.1 ms over the last 100 ticks; 34 units, 25 buildings, 1 players
+[10:45:58] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:46:00] [Render thread/INFO]: [Sfx] 520 ticks, played/asked: units 1/8 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 1
+[10:46:01] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[10:46:03] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_fix_34 1793875563349
+[10:46:03] [IO-Worker-11/INFO]: [Eyes] 15_mausoleum_fix_34: Saved screenshot as bat_eyes_15_mausoleum_fix_34.png
+[10:46:05] [Render thread/INFO]: [Frame] p50 56.0 ms (18 fps), p95 102.0 ms, max 126.6 ms over 240 frames; first-person view, zoom 26, 6 units known
+[10:46:05] [Render thread/INFO]: [FrameParts] 126 frames, mean 79.5 ms/frame; ours 0.8 ms (1%): markersWreck 0.59 (max 5.2, 1.0/f) | markersRange 0.05 (max 0.6, 1.0/f) | unitOverlays 0.03 (max 0.0, 11/f) | markersMapWorld 0.03 (max 0.1, 0.4/f) (+19 smaller); elsewhere 78.7 ms; 0 section re-mesh requests/s
+[10:46:05] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:46:08] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_fix_front 1793875568386
+[10:46:08] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_close: standing at -175.0, 94.0, -49.0 (direction -1, 1 from the middle), eye 1.00 over the aim, pitch 11 down
+[10:46:08] [IO-Worker-12/INFO]: [Eyes] 15_mausoleum_fix_front: Saved screenshot as bat_eyes_15_mausoleum_fix_front.png
+[10:46:08] [Server thread/INFO]: [Tick] p50 7.3 ms, p95 15.9 ms, max 24.8 ms over the last 100 ticks; 34 units, 26 buildings, 1 players
+[10:46:08] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:46:13] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_close: aimed at -172, 93, -53 - the camera at -175, 94, -49 looks at -172, -52 (47 frames, 5.0 s in the phase)
+[10:46:13] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_close: the structure's box holds 863 non-air blocks on the client
+[10:46:13] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_fix_close 1793875573430
+[10:46:13] [Server thread/INFO]: [Eyes] 15_mausoleum_fix_close: ... and 863 on the server
+[10:46:13] [Render thread/INFO]: [System] [CHAT] 
+[10:46:13] [Render thread/INFO]: [System] [CHAT] Night falls...
+[10:46:13] [Render thread/INFO]: [System] [CHAT] 
+[10:46:13] [IO-Worker-12/INFO]: [Eyes] 15_mausoleum_fix_close: Saved screenshot as bat_eyes_15_mausoleum_fix_close.png
+[10:46:15] [Render thread/INFO]: [Frame] p50 92.2 ms (11 fps), p95 122.3 ms, max 156.3 ms over 240 frames; first-person view, zoom 26, 6 units known
+[10:46:15] [Render thread/INFO]: [FrameParts] 97 frames, mean 103.2 ms/frame; ours 0.2 ms (0%): markersRange 0.07 (max 0.2, 1.0/f) | unitOverlays 0.03 (max 0.1, 11/f) (+18 smaller); elsewhere 103.1 ms; 0 section re-mesh requests/s
+[10:46:15] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:46:17] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_dusk: the last drawn frame saw day time 13000
+[10:46:17] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_fix_dusk 1793875577607
+[10:46:17] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[10:46:17] [IO-Worker-12/INFO]: [Eyes] 15_mausoleum_fix_dusk: Saved screenshot as bat_eyes_15_mausoleum_fix_dusk.png
+[10:46:18] [Server thread/INFO]: [Tick] p50 8.8 ms, p95 19.2 ms, max 31.6 ms over the last 100 ticks; 36 units, 26 buildings, 1 players
+[10:46:18] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:46:22] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_golden_rts: aimed at -172, 78, -53 - the camera at -178, 96, -46 looks at -172, -52 (84 frames, 5.1 s in the phase)
+[10:46:22] [Render thread/INFO]: [Eyes] 15_mausoleum_fix_golden_rts: the structure's box holds 863 non-air blocks on the client
+[10:46:22] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_fix_golden_rts 1793875582660
+[10:46:22] [Server thread/INFO]: [Eyes] 15_mausoleum_fix_golden_rts: ... and 863 on the server
+[10:46:22] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-173, 71, -63)]
+[10:46:22] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 71, -63)]
+[10:46:22] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-173, 71, -43)]
+[10:46:22] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 71, -43)]
+[10:46:22] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-182, 71, -54)]
+[10:46:22] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-182, 71, -52)]
+[10:46:22] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-162, 71, -54)]
+[10:46:22] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-162, 71, -52)]
+[10:46:23] [IO-Worker-12/INFO]: [Eyes] 15_mausoleum_fix_golden_rts: Saved screenshot as bat_eyes_15_mausoleum_fix_golden_rts.png
+[10:46:23] [Server thread/INFO]: [Sys] the server is slow (tick p95 37.5 ms): per-system timing on
+[10:46:25] [Render thread/INFO]: [Frame] p50 87.8 ms (11 fps), p95 122.3 ms, max 156.3 ms over 240 frames; RTS view, zoom 30, 14 units known
+[10:46:25] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 12.2 ms, p95 18.9 ms; per unit 7.9 us anim, 1511.2 us render (anim 1%); RTS view, zoom 30, detail on, over 38 frames
+[10:46:25] [Render thread/INFO]: [FrameParts] 140 frames, mean 71.3 ms/frame; ours 5.4 ms (8%): unitBodies 3.33 (max 20.0, 2.2/f) | markersWreck 1.47 (max 7.5, 1.0/f) | entityShadows 0.41 (max 9.8, 15/f) | markersMapWorld 0.08 (max 2.0, 0.9/f) | unitOverlays 0.07 (max 0.3, 11/f) | markersRange 0.02 (max 0.1, 1.0/f) | buildingBoxes 0.02 (max 0.0, 0.9/f) (+17 smaller); elsewhere 65.8 ms; 0 section re-mesh requests/s
+[10:46:25] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:46:26] [Render thread/INFO]: [Sfx] 520 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[10:46:27] [Render thread/INFO]: [Eyes] clip-mark 15_mausoleum_fix_rts_army 1793875587739
+[10:46:27] [Server thread/INFO]: [Offline: Killed 8 entities]
+[10:46:28] [IO-Worker-11/INFO]: [Eyes] 15_mausoleum_fix_rts_army: Saved screenshot as bat_eyes_15_mausoleum_fix_rts_army.png
+[10:46:28] [Server thread/INFO]: [Tick] p50 10.9 ms, p95 51.6 ms, max 80.8 ms over the last 100 ticks; 37 units, 26 buildings, 1 players
+[10:46:28] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:46:28] [Server thread/INFO]: [Sys] 100 ticks, mean 20.7 ms/tick; ours 13.5 ms (65%): pathfinder 12.05 (max 76.8, 2.0/t) | unit 0.61 (max 7.0, 45/t) | unstick 0.22 (max 19.5, 45/t) | buildings 0.22 (max 4.3, 1.0/t) | attacker 0.12 (max 6.1, 44/t) | separation 0.04 (max 2.0, 45/t) | unitSync 0.04 (max 2.9, 0.1/t) | pushScan 0.04 (max 0.2, 44/t) | bots 0.03 (max 1.2, 0.1/t) | attacker/entityScan 0.03 (max 2.3, 6.0/t) | targetGrid 0.03 (max 0.9, 0.5/t) (+13 smaller); vanilla 6.4 ms (31%): chunks 2.42 (max 9.6, 3.0/t) | unitTick 0.94 (max 7.6, 45/t) | travel 0.85 (max 5.7, 72/t) | aiGoals 0.83 (max 5.6, 64/t) | otherEntities 0.63 (max 5.4, 107/t) | baseTick 0.61 (max 5.4, 88/t) | levelRest 0.17 (max 5.2, 3.0/t); elsewhere 0.7 ms; gc 14 ms
+[10:46:28] [Server thread/INFO]: [Goals] 100 ticks, 0.17 ms/tick in 25 goal classes: BuildRepairGoal 0.13 ms (start 0.12; 15 calls/t, 8.8 us/call) (+24 smaller)
+[10:46:29] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[10:46:29] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[10:46:29] [Render thread/INFO]: [Eyes] tour complete
+[10:46:29] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[10:46:29] [Render thread/INFO]: Stopping!
+[10:46:30] [Server thread/INFO]: Offline lost connection: Disconnected
+[10:46:30] [Server thread/INFO]: Offline left the game
+[10:46:30] [Server thread/INFO]: Player logged out: Offline, id: 2
+[10:46:30] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[10:46:30] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:46:30] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1500|0
+[10:46:30] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|3883|1261|0
+[10:46:30] [Server thread/INFO]: Stopping server
+[10:46:30] [Server thread/INFO]: Saving players
+[10:46:30] [Server thread/INFO]: Saving worlds
+[10:46:30] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[10:46:30] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[10:46:30] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[10:46:30] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[10:46:30] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[10:46:30] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[10:46:30] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[10:46:30] [Render thread/INFO]: Stopping worker threads
