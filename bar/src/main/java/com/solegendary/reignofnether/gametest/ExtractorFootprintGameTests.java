@@ -529,4 +529,74 @@ public class ExtractorFootprintGameTests {
                 }
         return cells.toString();
     }
+
+    /**
+     * The second mode of bots_reach_tier_2 (Overseer round 15 on #513; diag 41947369685): the three bots of that test
+     * are allies, and every "no valid footprint over the patch" was {overlaps_blueprint=27} on a dry, flat, free
+     * patch - an ALLY's pending extractor reserves it (Blueprints.reserves counts the side). freePatch skipped only the
+     * bot's own blueprints, so it kept picking the patch, each refusal counted toward PATCH_GIVE_UP, and after three the
+     * patch was given up for the match - also when the ally's site was then cancelled - and the bot sat on 3 extractors
+     * (8 metal/s) from minute 2 to 17. A patch an ally has ordered is taken, and refusing it is not the patch's fault.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void a_patch_an_ally_has_ordered_is_skipped_and_never_given_up(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 220;
+        int cx = base.getX(), cz = base.getZ();
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 8, y - 1, cz - 8), new BlockPos(cx + 8, y + 12, cz + 8));
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                for (int k = 1; k <= 12; k++)
+                    level.setBlock(new BlockPos(cx + dx, y + k, cz + dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
+        long tag = helper.absolutePos(BlockPos.ZERO).asLong();
+        String me = "gametest_patch_me_" + tag, ally = "gametest_patch_ally_" + tag;
+        Building extractor = FactionTraits.of(Factions.VILLAGERS).metalExtractor.get();
+        MetalPatches.forgetAll();
+        com.solegendary.reignofnether.building.BuildingPlacement order = null;
+        net.minecraft.world.entity.Mob worker = null;
+        try {
+            MetalPatches.stamp(level, cx, cz);
+            BlockPos centre = new BlockPos(cx, y, cz);
+            if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK)) {
+                helper.fail("stamp() left no patch block at " + centre.toShortString());
+                return;
+            }
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally);
+            order = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(extractor, level,
+                centre.offset(-2, 0, -2), Rotation.NONE, ally, false);
+            if (order == null) {
+                helper.fail("could not make the ally's extractor placement");
+                return;
+            }
+            com.solegendary.reignofnether.building.Blueprints.add(order);   // the ally's worker is on its way
+            BotPlayer bot = new BotPlayer(me, Factions.VILLAGERS, BotPlayer.Difficulty.HARD, centre.offset(20, 1, 0));
+            worker = helper.spawn(net.minecraft.world.entity.EntityType.PIG, new BlockPos(8, 2, 8));
+            List<String> problems = new ArrayList<>();
+            if (!bot.patchTakenBySide(centre))
+                problems.add("a patch with an ally's pending extractor on it is not taken (freePatch picks it)");
+            for (int i = 0; i < BotPlayer.PATCH_GIVE_UP + 1; i++)
+                bot.placeExtractor(level, centre, new ArrayList<>(List.of(worker)));
+            if (bot.patchFailureCount(centre) > 0)
+                problems.add("refused " + (BotPlayer.PATCH_GIVE_UP + 1) + " times for the ally's reservation, the patch has "
+                    + bot.patchFailureCount(centre) + " failures (" + BotPlayer.PATCH_GIVE_UP + " give it up for the match)");
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+            if (bot.patchTakenBySide(centre))
+                problems.add("a non-ally's pending extractor counts as taken (it reserves nothing for this bot)");
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            if (order != null)
+                com.solegendary.reignofnether.building.Blueprints.cancel(order, null);
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+            if (worker != null)
+                worker.discard();
+            MetalPatches.forgetAll();
+        }
+    }
 }
