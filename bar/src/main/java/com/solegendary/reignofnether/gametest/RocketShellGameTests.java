@@ -100,6 +100,32 @@ public class RocketShellGameTests {
                 e.discard();
     }
 
+    /**
+     * A unit added to the level only ticks once its chunk is entity-ticking, and a shell added in a chunk that is not yet
+     * visible is not found by an entity query (the last arena of a batch on a cold CI server: the guard test found "no
+     * shell" from all four of its guns in 3 of 8 stress jobs, run 42114941995, after the suite's arenas moved further
+     * apart). These tests count their ticks from the moment their units are ticking (see ArenaReady), so they measure
+     * the code, not the server's chunk loading. True while a unit still has to tick; fails with where the units are
+     * if they never do.
+     */
+    static boolean notTicking(GameTestHelper helper, Entity... units) {
+        boolean ready = true;
+        for (Entity e : units)
+            if (e.isRemoved() || e.tickCount < ArenaReady.TICKS) {
+                ready = false;
+                break;
+            }
+        if (ready)
+            return false;
+        if (helper.getTick() >= READY_WAIT)
+            throw new GameTestAssertException("the units were not ticking after " + READY_WAIT + " test ticks: "
+                + ArenaReady.describe(helper.getLevel(), List.of(units)));
+        return true;
+    }
+
+    /** Most test ticks a test waits for its units to start ticking (every test here has at least 60). */
+    static final int READY_WAIT = 30;
+
     static String fmt(double d) {
         return String.format(Locale.ROOT, "%.2f", d);
     }
@@ -125,6 +151,8 @@ public class RocketShellGameTests {
         Map<UUID, BombardShell> seen = new LinkedHashMap<>();
         int[] tick = { 0 };
         helper.onEachTick(() -> {
+            if (notTicking(helper, b))
+                return;
             tick[0]++;
             if (tick[0] == 3 && !b.fireVolley(tx, ty, tz)) {
                 b.discard();
@@ -182,7 +210,7 @@ public class RocketShellGameTests {
             helper.fail("could not create the four shell units and the target");
             return;
         }
-        helper.runAfterDelay(3, () -> {
+        ArenaReady.whenTicking(helper, made, READY_WAIT, tickNow -> {
             List<String> problems = new ArrayList<>();
             try {
                 double tx = o.getX() + 15.5, ty = o.getY();
@@ -278,7 +306,7 @@ public class RocketShellGameTests {
             helper.fail("could not create the battery, the target and the two buildings");
             return;
         }
-        helper.runAfterDelay(3, () -> {
+        ArenaReady.whenTicking(helper, made, READY_WAIT, tickNow -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (b.getUnitAttackDamage() != 5f)
@@ -410,6 +438,8 @@ public class RocketShellGameTests {
         double[] aimZ = { b.getZ(), crew.getZ() };
         int[] tick = { 0 };
         helper.onEachTick(() -> {
+            if (notTicking(helper, b, crew))
+                return;
             tick[0]++;
             if (tick[0] == 3) {
                 b.fireRocket(tx, ty, aimZ[0], true);
@@ -488,6 +518,8 @@ public class RocketShellGameTests {
         int[] tick = { 0 };
         int[] launchedAt = { -1 };
         helper.onEachTick(() -> {
+            if (notTicking(helper, b))
+                return;
             tick[0]++;
             int total = RocketLaunchPose.TOTAL_TICKS;
             if (tick[0] == 3) {
