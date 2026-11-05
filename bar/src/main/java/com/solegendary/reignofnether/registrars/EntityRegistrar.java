@@ -1134,7 +1134,8 @@ public class EntityRegistrar {
     // the Soul Pyre (design/defences_tiers.md): Gravebound's T2 siege unit, on the siege lobber's frame (placeholder body)
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.SoulPyreUnit>> SOUL_PYRE_UNIT = ENTITIES.register("soul_pyre_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.SoulPyreUnit::new, MobCategory.CREATURE)
-                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    // a low, wide pit: wider and lower than the illager it borrows, still through a 2-wide gate or gap
+                    .sized(1.4f, 1.6f)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_pyre_unit").toString()));
     // Alex's Mobs' bison (RenderBison) drawn x1.3

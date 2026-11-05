@@ -7,7 +7,8 @@ package com.solegendary.reignofnether.unit.units.monsters;
  * T1 gauntlet, and it is weak against units. First numbers for the sim; lovish tunes them.
  * <p>
  * Its designed weakness: slow, a long set-up after moving, blind inside {@link #MIN_RANGE}, sees only
- * {@link #SIGHT_RANGE} (it needs a spotter), never shoots air, and it shells the nearest target - chaff eats its souls.
+ * {@link #SIGHT_RANGE} (it needs a spotter), never shoots air, a soul gathers for {@link #CONJURE_TICKS} ticks before it
+ * is thrown (a telegraph), and it shells the nearest target - chaff eats its souls.
  * Building health is the number the HUD shows: a shell's building damage A takes 2 A off.
  */
 public final class SoulPyreTuning {
@@ -26,6 +27,11 @@ public final class SoulPyreTuning {
     public static final float ATTACKS_PER_SECOND = 0.22f;   // a conjured soul about every 4.5 s
     /** 1.5 s set-up after moving (the long artillery's is 2 s, the lobber's 1 s). */
     public static final int SET_UP_TICKS = 30;
+    /**
+     * The telegraph: a soul gathers over the pit for 1 s before it is thrown, at where the target stands then; moving
+     * (or the target dying) mid-conjure lets it fizzle. Inside the cooldown, so the cycle is unchanged.
+     */
+    public static final int CONJURE_TICKS = 20;
 
     // ---------------------------------------------------------------- the soul it throws
     /** Against units, at the centre of the splash. */
