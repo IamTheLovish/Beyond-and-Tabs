@@ -90,6 +90,81 @@ class HeartwoodHallTest(unittest.TestCase):
                 best = max(best, run)
             self.assertLess(best, 5, (side, cells))
 
+    # ------------------------------------------------------------------ the tall tree (lovish, Nov 5)
+    # After the living-crowns still (#502): "the pink tree could be taller and stick out of the building so its more
+    # define" and "with branches coming out of the roof". The shipped crown sat on the parapet as a mound as wide as the
+    # plot (crown underside y13 over a y8 roofline, leaves to the plot's edge), so from the RTS camera the tree and the
+    # hall read as one pink lump. These hold the tall tree: a trunk seen above the roof, a crown standing clear of it
+    # and inside the hall's outline, and boughs breaking out through a roof.
+
+    def _solid(self):
+        return {q: n for q, n in self.names.items() if n not in S.AIR}
+
+    def _roofline(self):
+        """The top of the hall: the highest stone over its footprint (ring <= 5)."""
+        return max(q[1] for q, n in self._solid().items() if _ring(q) <= 5 and any(k in n for k in STONE))
+
+    def _underside(self):
+        """The crown's underside: the height of its lowest 5 % of cherry leaves."""
+        ys = sorted(q[1] for q, n in self._solid().items() if n == "cherry_leaves")
+        return ys[len(ys) // 20], ys[-1]
+
+    def test_crown_stands_clear_above_the_roof(self):
+        """The crown's underside stands at least 7 blocks over the roofline, so the trunk shows between them, and its
+        top at least 18 over it. Shipped: roofline 8, underside 13, top 21."""
+        roof = self._roofline()
+        under, top = self._underside()
+        self.assertGreaterEqual(under - roof, 7, (roof, under))
+        self.assertGreaterEqual(top - roof, 18, (roof, top))
+
+    def test_crown_keeps_inside_the_hall_outline(self):
+        """The crown stands over the hall, not over the garden: at most 5 % of its cherry leaves stand beyond ring 5
+        (the cornice), so from above the roofline and the garden frame the tree. Shipped: the lobes ran to the plot's
+        edge (ring 7)."""
+        crown = [q for q, n in self._solid().items() if n == "cherry_leaves"]
+        out = sum(1 for q in crown if _ring(q) > 5) / max(1, len(crown))
+        self.assertLessEqual(out, 0.05, out)
+
+    def test_trunk_shows_between_roof_and_crown(self):
+        """From the RTS camera the tree has a trunk: at least 4 % of the rays land on its bark (oak, the birch mask and
+        antlers) between the roofline and the crown's underside. Shipped: 2.5 % (the crown sat on the parapet)."""
+        roof = self._roofline()
+        under, _ = self._underside()
+        share = self._share(lambda h: roof < h[0][1] < under and ("oak" in h[1] or "birch" in h[1]))
+        self.assertGreaterEqual(share, 0.04, share)
+
+    def test_boughs_break_out_through_the_roof(self):
+        """The hall has a roof (stone inside the parapet, ring <= 3, y >= 7) and boughs come out through it on at
+        least three sides: a bark cell in the roof with roof stone on two sides, not on a leg that stands on the floor,
+        whose bough (outside the trunk, ring >= 3, once over the roof) climbs at least 4 over the roofline. Shipped: no
+        roof (the hall was open to the crown)."""
+        solid = self._solid()
+        roof = {q for q, n in solid.items() if _ring(q) <= 3 and q[1] >= 7 and any(k in n for k in STONE)}
+        self.assertTrue(roof, "the hall has no roof")
+        line = self._roofline()
+        bark = {q for q, n in solid.items() if n in ("oak_log", "oak_wood")}
+        legs = {(q[0], q[2]) for q in bark if q[1] == 2}
+        sides = set()
+        for q in bark:
+            if (q[0], q[2]) in legs:
+                continue
+            if sum((q[0] + dx, q[1], q[2] + dz) in roof for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1))) < 2:
+                continue
+            seen, todo, top = {q}, [q], q[1]
+            while todo:
+                p = todo.pop()
+                for d in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)):
+                    n = (p[0] + d[0], p[1] + d[1], p[2] + d[2])
+                    if n in bark and n not in seen and n[1] >= q[1] and (n[1] <= line or _ring(n) >= 3) \
+                            and (n[0], n[2]) not in legs:
+                        seen.add(n)
+                        todo.append(n)
+                        top = max(top, n[1])
+            if top >= line + 4:
+                dx, dz = q[0] - C, q[2] - C
+                sides.add(("x+" if dx > 0 else "x-") if abs(dx) >= abs(dz) else ("z+" if dz > 0 else "z-"))
+        self.assertGreaterEqual(len(sides), 3, sides)
+
     def test_data_and_assets_copies_match(self):
         with open(NBT, "rb") as f, open(NBT_ASSETS, "rb") as g:
             self.assertEqual(f.read(), g.read())
