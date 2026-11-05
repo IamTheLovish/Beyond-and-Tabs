@@ -12605,6 +12605,16 @@ public class SkirmishGameTests {
      * after joining the level" (#488's CI 42003290917 attempt 2, defaultBatch, 69 tests side by side), which cannot tell a
      * death from a chunk that was not loading entities (removal reason UNLOADED_TO_CHUNK) from a discard.
      */
+    /** How many unit types shard {@code shard} of {@code total} holds. */
+    static int reloadShardSize(int total, int shard) {
+        return total <= shard ? 0 : (total - 1 - shard) / RELOAD_SHARDS + 1;
+    }
+
+    /** Where the reload test stands unit {@code slot} of a shard of {@code count}, arena-relative (y 2: on the floor). */
+    static BlockPos reloadSlot(int slot, int count) {
+        return new BlockPos(2 + (slot % 4) * 4, 2, 2 + (slot / 4) * 4);
+    }
+
     static String goneWhy(ServerLevel level, net.minecraft.world.entity.Entity e) {
         BlockPos at = e.blockPosition();
         long chunk = net.minecraft.world.level.ChunkPos.asLong(at);
@@ -12632,6 +12642,7 @@ public class SkirmishGameTests {
         List<String> gaps = new ArrayList<>();
         List<net.minecraft.world.entity.Entity> added = new ArrayList<>();
         int slot = 0;
+        int inShard = reloadShardSize(all.size(), shard);
         for (int i = shard; i < all.size(); i += RELOAD_SHARDS) {
             var type = all.get(i);
             String id = String.valueOf(net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(type));
@@ -12642,7 +12653,7 @@ public class SkirmishGameTests {
                     gaps.add(id + ": not a Mob unit");
                     continue;
                 }
-                BlockPos at = helper.absolutePos(new BlockPos(2 + (slot % 4) * 4, 2, 2 + (slot / 4) * 4));
+                BlockPos at = helper.absolutePos(reloadSlot(slot, inShard));
                 slot++;
                 mob.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
                 unit.setOwnerName(owner);
