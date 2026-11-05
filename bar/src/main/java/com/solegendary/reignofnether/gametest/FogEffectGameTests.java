@@ -8,7 +8,9 @@ import com.solegendary.reignofnether.player.PlayerServerEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.Connection;
 import net.minecraft.network.PacketSendListener;
+import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
 import net.minecraft.network.protocol.game.ClientboundExplodePacket;
@@ -16,6 +18,7 @@ import net.minecraft.network.protocol.game.ClientboundLevelEventPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
@@ -23,7 +26,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.common.util.FakePlayerFactory;
-import net.minecraftforge.common.util.FakePlayerNetHandler;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -49,12 +51,16 @@ import java.util.UUID;
 @PrefixGameTestTemplate(false)
 public class FogEffectGameTests {
 
-    /** A fake player's connection that keeps what it is sent. */
-    static final class Recorder extends FakePlayerNetHandler {
+    /**
+     * A fake player's connection that keeps what it is sent. A plain ServerGamePacketListenerImpl on a channel-less
+     * Connection (Forge 1.20.1 has no public FakePlayerNetHandler); its constructor makes itself the player's connection,
+     * and the test puts the old one back. Never ticked: it is not in the server's connection list.
+     */
+    static final class Recorder extends ServerGamePacketListenerImpl {
         final List<Packet<?>> sent = new ArrayList<>();
 
         Recorder(ServerPlayer player) {
-            super(player.getServer(), player);
+            super(player.getServer(), new Connection(PacketFlow.CLIENTBOUND), player);
         }
 
         @Override
