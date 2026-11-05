@@ -243,6 +243,7 @@ public class WorldbreakerGameTests {
             Vec3[] before = { in1.position(), in2.position(), off.position() };
             float[] hp = { in1.getHealth(), in2.getHealth(), off.getHealth() };
             rampage.use(wb.level(), wb, helper.absolutePos(new BlockPos(13, 2, 8)));
+            helper.onEachTick(() -> wb.setHoldPosition(true));   // startRampage -> Unit.fullResetBehaviours clears hold (Unit.java:852); keep wb planted after the charge so AC-6 reads the charge, not an idle swing at the off-lane foe
             if (!wb.isRampaging())
                 problems.add("Rampage did not start a charge");
             if (rampage.isOffCooldown(wb))
