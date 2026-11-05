@@ -249,10 +249,13 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
     private double hookDirX, hookDirZ, hookDistance;
     // the last hook's drag: blocks asked of move() and blocks it really moved (the test prints both when a drag falls short)
     private double hookAsked, hookMoved;
+    private int hookFallbacks;
+    private String hookTrailNote;
 
-    /** "asked A, moved M" for the last Grave Hook drag or pull (for the game test's failure message). */
+    /** "asked A, moved M, ..." for the last Grave Hook drag or pull (for the game test's failure message). */
     public String lastHookTrail() {
-        return String.format(java.util.Locale.ROOT, "asked %.2f, moved %.2f", hookAsked, hookMoved);
+        return String.format(java.util.Locale.ROOT, "asked %.2f, moved %.2f, %d steps placed directly; %s",
+            hookAsked, hookMoved, hookFallbacks, hookTrailNote);
     }
 
     /**
@@ -539,6 +542,8 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
         hookMover = null;
         hookAsked = 0;
         hookMoved = 0;
+        hookFallbacks = 0;
+        hookTrailNote = null;
         return null;
     }
 
@@ -599,10 +604,24 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
             // as LeafDash / SunriseSortie: a small downward y keeps onGround true so the move can step up a lip (a flat
             // y = 0 move clears onGround and the next step stops at the first lip); walls still stop it
             double x0 = hookMover.getX(), z0 = hookMover.getZ();
-            hookMover.move(MoverType.SELF, new Vec3(hookDirX * step, hookMover.onGround() ? -0.08 : -0.4, hookDirZ * step));
+            double dx = hookDirX * step, dz = hookDirZ * step;
+            boolean onGround0 = hookMover.onGround();
+            hookMover.move(MoverType.SELF, new Vec3(dx, onGround0 ? -0.08 : -0.4, dz));
+            double moved = Math.sqrt((hookMover.getX() - x0) * (hookMover.getX() - x0) + (hookMover.getZ() - z0) * (hookMover.getZ() - z0));
+            if (hookTrailNote == null)   // the first step's state, so a short drag names its cause in one run
+                hookTrailNote = String.format(java.util.Locale.ROOT, "step1 asked %.3f moved %.3f onGround %b hcol %b feet %s",
+                    step, moved, onGround0, hookMover.horizontalCollision,
+                    sl.getBlockState(hookMover.blockPosition()).getBlock().getDescriptionId());
+            if (moved < step * 0.5 && sl.noCollision(hookMover, hookMover.getBoundingBox().move(x0 + dx - hookMover.getX(), 0, z0 + dz - hookMover.getZ()))) {
+                // as LeafDash: when move() falls short in open space, place the mover on the step directly (a wall still
+                // stops it: noCollision fails there)
+                hookMover.setPos(x0 + dx, hookMover.getY(), z0 + dz);
+                moved = step;
+                hookFallbacks++;
+            }
             hookMover.setDeltaMovement(0, Math.min(0, hookMover.getDeltaMovement().y), 0);
             hookAsked += step;
-            hookMoved += Math.sqrt((hookMover.getX() - x0) * (hookMover.getX() - x0) + (hookMover.getZ() - z0) * (hookMover.getZ() - z0));
+            hookMoved += moved;
             if (hookMover == target && i % 2 == 0)
                 sl.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY() + 0.1, target.getZ(), 2, 0.2, 0.05, 0.2, 0.0);
         }
