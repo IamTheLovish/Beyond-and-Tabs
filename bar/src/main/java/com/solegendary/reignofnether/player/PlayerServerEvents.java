@@ -1289,7 +1289,15 @@ public class PlayerServerEvents {
         })));
     }
 
-    public static int resetRTS(boolean hardReset) {
+    /** RED STUB (throwaway only): the reset's kill as on 0f9c8fa7 - a plain entity.kill(), bursts on. */
+    public static void killForReset(Iterable<? extends LivingEntity> units,
+                                    java.util.function.Predicate<LivingEntity> which) {
+        for (LivingEntity entity : units)
+            if (which.test(entity))
+                entity.kill();
+    }
+
+        public static int resetRTS(boolean hardReset) {
         return resetRTS(hardReset, false);
     }
 
