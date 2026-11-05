@@ -7,9 +7,12 @@
 // dark stars under every tuft, Itachi 1; #350); lovish, Nov 5: "Try faint shadow + lit side". Each caster carries how
 // much of the sun it takes (PLANT_SHADOW for a plant, all of it otherwise) into shadowcolor0 (shadow.fsh), and the
 // lookup (lib/shadow.glsl) lets the rest through. Our overlays already skip this pass (ShaderPacks.skipOverlays).
+// A plant's shadow fades out as the sun sinks (PLANT_SHADOW_SUN_LOW / _HIGH): long low-sun streaks striped the lawn.
 
 #include "/lib/settings.glsl"
 #include "/lib/shadowfit.glsl"
+
+uniform mat4 shadowModelViewInverse;
 
 attribute vec4 mc_Entity;
 
@@ -18,7 +21,11 @@ varying float casterOpacity;
 
 void main() {
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
-    casterOpacity = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? PLANT_SHADOW : 1.0;
+    // the light looks down its view's -z: +z back into player space points at the sun (or moon); its y is the sine of
+    // the light's height above the horizon
+    float sunUp = normalize(mat3(shadowModelViewInverse) * vec3(0.0, 0.0, 1.0)).y;
+    float plantShadow = PLANT_SHADOW * smoothstep(PLANT_SHADOW_SUN_LOW, PLANT_SHADOW_SUN_HIGH, sunUp);
+    casterOpacity = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? plantShadow : 1.0;
     gl_Position = ftransform();
     gl_Position.xy = shadowRemap(gl_Position.xy, shadowFit());
 }

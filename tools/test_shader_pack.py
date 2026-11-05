@@ -111,13 +111,42 @@ class ShaderPack(unittest.TestCase):
         self.assertTrue(0.80 <= under <= 0.92, "ground under a tuft at %.3f of the open lawn" % under)
         # the shadow pass draws the plants with that opacity, and the lookup lets the rest of the sun through (the code
         # itself, comments stripped: a comment quoting a line does not run)
-        self.assertIn("casterOpacity = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? PLANT_SHADOW : 1.0;", code("shadow.vsh"))
+        vsh = code("shadow.vsh")
+        self.assertIn("float sunUp = normalize(mat3(shadowModelViewInverse) * vec3(0.0, 0.0, 1.0)).y;", vsh)
+        self.assertIn("float plantShadow = PLANT_SHADOW * smoothstep(PLANT_SHADOW_SUN_LOW, PLANT_SHADOW_SUN_HIGH, sunUp);",
+                      vsh)
+        self.assertIn("casterOpacity = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? plantShadow : 1.0;", vsh)
         self.assertIn("gl_FragData[0] = vec4(casterOpacity, casterOpacity, casterOpacity, 1.0);", code("shadow.fsh"))
         lookup = code("lib", "shadow.glsl")
-        self.assertIn("return 1.0 - texture2D(shadowcolor0, uv).r;", lookup)
-        self.assertIn("? 1.0 : casterThrough(uv);", lookup)
-        self.assertIn("through += casterThrough(", lookup)
+        self.assertIn("float o = texture2D(shadowcolor0, uv).r; "
+                      "return plantReceiver > 0.5 && o < SOLID_CASTER ? 1.0 : 1.0 - o;", lookup)
+        self.assertIn("? 1.0 : casterThrough(uv, plantReceiver);", lookup)
+        self.assertIn("through += casterThrough(s.xy + o, plantReceiver);", lookup)
         self.assertIn("return through / blockers;", lookup)
+        # solid casters write 1 (shadow.fsh), and a plant's opacity never reaches the solid mark
+        self.assertLess(k, spc.float_const(lookup, "SOLID_CASTER"))
+        self.assertLessEqual(spc.float_const(lookup, "SOLID_CASTER"), 1.0)
+
+    def test_plant_shadows_fade_with_a_low_sun_and_skip_plants(self):
+        # Fable critic (wind round 1, Nov 5): at golden hour each tuft dragged a 1.5-2 block streak that striped the
+        # lawn darker than the units on it, and at noon tufts read ~0.5 of the lawn (eyes 42063595099) where the
+        # lit-side model gives 0.81-1.05 - each tuft took its own planes' faint shadow. The plants' shadow is
+        # lovish's PLANT_SHADOW from 40 degrees of sun up (noon ~60: his band above is unchanged), none from 20 down,
+        # and a plant takes no plant's shadow (only a solid caster's)
+        settings = read("lib", "settings.glsl")
+        low, high = spc.float_const(settings, "PLANT_SHADOW_SUN_LOW"), spc.float_const(settings, "PLANT_SHADOW_SUN_HIGH")
+
+        def fade(deg):                   # shadow.vsh's smoothstep on the sine of the sun's height
+            return spc._smoothstep(low, high, math.sin(math.radians(deg)))
+
+        self.assertEqual(fade(60.0), 1.0)                 # noon: all of PLANT_SHADOW
+        self.assertAlmostEqual(fade(40.0), 1.0, delta=1e-3)   # a 1-block tuft's shadow <= 1.2 blocks long
+        self.assertAlmostEqual(fade(20.0), 0.0, delta=1e-3)   # golden hour: no streak (it would be 2.7 blocks)
+        self.assertTrue(all(fade(a) <= fade(a + 1.0) for a in range(0, 90)))   # never darker as the sun sinks
+        # lit.fsh hands the lookup whether the pixel is a plant; the water's bed never is
+        fsh = spc.code_of(read("program", "lit.fsh"))
+        self.assertIn("shadow = sunShadow(playerPos, worldNormal, fit, foliage);", fsh)
+        self.assertIn("float bedShadow = sunShadow(bedPlayer, vec3(0.0, 1.0, 0.0), fit, 0.0);", fsh)
 
     def test_plants_have_a_lit_and_a_shaded_side(self):
         # the same answer: a plant's planes take a normal PLANT_SIDE of the way from up toward the face the camera sees

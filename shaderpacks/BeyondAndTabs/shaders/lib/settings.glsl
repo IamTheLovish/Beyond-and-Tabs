@@ -25,6 +25,12 @@ const bool shadowHardwareFiltering = false;
 // lit side"; from Oct 28 they cast none, as hard shadows read as dark stars under every tuft. 0.30 leaves the ground
 // under a tuft at ~0.82 of the open lawn at noon (tools/test_shader_pack.py holds 0.80-0.92)
 const float PLANT_SHADOW = 0.30;
+// ...for a high sun: as it sinks, a tuft's shadow stretches into a long streak (1.5-2 blocks at golden hour striped
+// the lawn darker than the units on it, Fable critic, Nov 5), so the plants' shadow fades out between these sun
+// heights (the sine of its angle above the horizon): all of PLANT_SHADOW from 40 degrees up - noon is ~60 - none at
+// 20 and below (shadow.vsh). Plants never shade plants (lib/shadow.glsl)
+const float PLANT_SHADOW_SUN_LOW = 0.342;      // sin 20 degrees
+const float PLANT_SHADOW_SUN_HIGH = 0.643;     // sin 40 degrees
 // vanilla's per-vertex ambient occlusion, kept (it arrives in the vertex colour's alpha: separateAo)
 const float ambientOcclusionLevel = 1.0;
 // screen-space ambient occlusion (slice 3: deferred.fsh, deferred1.fsh, applied in composite.fsh): building bases,

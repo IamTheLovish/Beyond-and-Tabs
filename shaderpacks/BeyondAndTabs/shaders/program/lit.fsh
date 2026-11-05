@@ -143,7 +143,7 @@ void main() {
     if (facing > 0.0) {
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
         vec3 worldNormal = mat3(gbufferModelViewInverse) * geomN;
-        shadow = sunShadow(playerPos, worldNormal, fit);
+        shadow = sunShadow(playerPos, worldNormal, fit, foliage);   // a plant takes no plant's shadow
     }
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
@@ -235,7 +235,7 @@ void main() {
         if (bed && lw.y > 0.05 && below > 0.02) {
             vec2 atSurface = bedPlayer.xz + cameraPosition.xz + lw.xz * (below / lw.y);
             // the bed's own sun shadow (a bank's shadow puts the caustics out on the bed under it too)
-            float bedShadow = sunShadow(bedPlayer, vec3(0.0, 1.0, 0.0), fit);
+            float bedShadow = sunShadow(bedPlayer, vec3(0.0, 1.0, 0.0), fit, 0.0);
             float bedSun = dot(sunArriving(bedShadow, levels, sunColour), LUMA) * sunFacing(normalize(upPosition), l);
             float bedLight = bedSun + dot(skyColour, LUMA) + 1e-3;
             // a share of the bed's light, seen through what is left of the water's opacity; none right at the shore
