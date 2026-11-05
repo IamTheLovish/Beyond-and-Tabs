@@ -24,7 +24,13 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.PolarBear;
 import net.minecraft.world.entity.monster.Slime;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.function.Predicate;
 
 // Move towards a building to attack it
 // will continually try to move towards the building if too far away as long as this goal is being enacted
@@ -55,6 +61,29 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
     private BlockPos moveTargetFrom = null;
     private BlockPos cachedMoveTarget = null;
     private long moveTargetAt = Long.MIN_VALUE;
+
+    // The ground cells round each building its melee attackers head for (server side). A party sent at a building from
+    // one side all took the cell nearest themselves - the same few cells on the near face - and big units queued behind
+    // the front ones: six Marauders (iron-golem wide) on a converter came into reach at ticks 50-63 and the back pair at
+    // 72-112, and the raid timing test failed in CI (flake-stress 41708076632). Each attacker now takes the nearest cell
+    // at least the two units' width from every other attacker's cell, so a party spreads round the building; with no
+    // such cell left it takes the nearest, as before. Keyed by entity id, so a dead attacker or a destroyed building is
+    // not held here. A unit keeps its cell until it gives it up (below): re-picking it from where the unit stood every
+    // move-target refresh swapped cells mid-attack, and a Marauder sent round the corner left reach for 20 ticks (its
+    // blow timer stops out of reach) - the converter still read 4.2 s (flake-stress 41738191824; 41739474107). The
+    // spacing binds the newcomer only, so one unit's new claim never moves another's (41803713392: it did, in a chain).
+    private static final Map<BuildingPlacement, Map<Integer, BlockPos>> ATTACK_CELLS = new WeakHashMap<>();
+    // Cells of this target this unit could not reach. A cell is picked by distance only, so one behind bodies (other
+    // units round the building, which paths do not see) or a wall was kept while the unit stood: one Marauder of six
+    // never came in reach of a converter in 194 ticks (flake-stress 41742015436). A unit out of reach that gets no
+    // closer to its cell for NO_PROGRESS_TICKS gives it up, with the ring cells within 2 of it (what blocked it blocks
+    // those as well), and claims the next nearest. Its navigation is no sign: a unit pressing on bodies never finishes
+    // its path. Cleared with a new order; bounded by the ring round the building.
+    private final Set<BlockPos> unreachableCells = new HashSet<>();
+    private int cellsGivenUp = 0;
+    private static final int NO_PROGRESS_TICKS = 60;
+    private double closestToCell = Double.MAX_VALUE;
+    private int ticksWithoutProgress = 0;
 
     public MeleeAttackBuildingGoal(Mob mob) {
         super(mob, true, 0);
@@ -107,6 +136,7 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
                 return;
             }
             calcMoveTarget();
+            watchProgress();
             if (buildingTarget.getBlocksPlaced() <= 0) {
                 stopAttacking();
             }
@@ -176,12 +206,91 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
         long now = mob.level().getGameTime();
         if (cachedMoveTarget == null || moveTargetFor != buildingTarget || !from.equals(moveTargetFrom)
                 || now - moveTargetAt >= MOVE_TARGET_REFRESH || now < moveTargetAt) {
-            cachedMoveTarget = this.buildingTarget.getClosestGroundPos(from, 1);
+            cachedMoveTarget = mob.level().isClientSide() ? this.buildingTarget.getClosestGroundPos(from, 1) : claimCell(from);
             moveTargetFor = buildingTarget;
             moveTargetFrom = from;
             moveTargetAt = now;
         }
         this.moveTarget = cachedMoveTarget;
+    }
+
+    private BlockPos claimCell(BlockPos from) {
+        BuildingPlacement target = buildingTarget;
+        Map<Integer, BlockPos> cells = ATTACK_CELLS.computeIfAbsent(target, b -> new HashMap<>());
+        BlockPos mine = cells.remove(mob.getId());
+        Map<Mob, BlockPos> others = new HashMap<>();
+        cells.entrySet().removeIf(e -> {
+            if (mob.level().getEntity(e.getKey()) instanceof Mob m && m.isAlive() && m instanceof AttackerUnit au
+                    && au.getAttackBuildingGoal() instanceof MeleeAttackBuildingGoal g && g.buildingTarget == target) {
+                others.put(m, e.getValue());
+                return false;
+            }
+            return true;
+        });
+        Predicate<BlockPos> clear = p -> {
+            for (Map.Entry<Mob, BlockPos> e : others.entrySet()) {
+                int need = Math.max(1, (int) Math.ceil((mob.getBbWidth() + e.getKey().getBbWidth()) / 2));
+                if (Math.max(Math.abs(e.getValue().getX() - p.getX()), Math.abs(e.getValue().getZ() - p.getZ())) < need)
+                    return false;
+            }
+            return !unreachableCells.contains(p);
+        };
+        BlockPos cell = mine != null && !unreachableCells.contains(mine) ? mine
+            : others.isEmpty() && unreachableCells.isEmpty() ? null : target.getClosestGroundPos(from, 1, false, clear);
+        if (cell == null && !unreachableCells.isEmpty())
+            cell = target.getClosestGroundPos(from, 1, false, p -> !unreachableCells.contains(p));
+        if (cell == null)
+            cell = target.getClosestGroundPos(from, 1);
+        cells.put(mob.getId(), cell);
+        return cell;
+    }
+
+    /** Server side, each tick: a unit out of reach that gets no closer to its cell for NO_PROGRESS_TICKS gives it up. */
+    private void watchProgress() {
+        if (mob.level().isClientSide() || buildingTarget == null || cachedMoveTarget == null || pathPending || isAttacking()) {
+            ticksWithoutProgress = 0;
+            closestToCell = Double.MAX_VALUE;
+            return;
+        }
+        double d = Math.sqrt(mob.position().distanceToSqr(cachedMoveTarget.getX() + .5, mob.getY(), cachedMoveTarget.getZ() + .5));
+        if (d < closestToCell - .5) {
+            closestToCell = d;
+            ticksWithoutProgress = 0;
+        } else if (++ticksWithoutProgress >= NO_PROGRESS_TICKS) {
+            giveUpCell();
+        }
+    }
+
+    /** Gives up the cell this unit could not reach, claims the next and heads for it. */
+    private void giveUpCell() {
+        ticksWithoutProgress = 0;
+        closestToCell = Double.MAX_VALUE;
+        if (mob.level().isClientSide() || buildingTarget == null || cachedMoveTarget == null)
+            return;
+        BlockPos lost = cachedMoveTarget;
+        for (int dx = -2; dx <= 2; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                unreachableCells.add(lost.offset(dx, 0, dz));
+        releaseCell();
+        cachedMoveTarget = null;
+        calcMoveTarget();
+        if (moveTarget == null)
+            return;
+        cellsGivenUp++;
+        this.start();
+    }
+
+    /** How many cells this unit has given up as unreachable since its last order (for the tests). */
+    public int getCellsGivenUp() {
+        return cellsGivenUp;
+    }
+
+    private void releaseCell() {
+        if (buildingTarget != null && !mob.level().isClientSide()) {
+            Map<Integer, BlockPos> cells = ATTACK_CELLS.get(buildingTarget);
+            if (cells != null)
+                cells.remove(mob.getId());
+        }
     }
 
     // only count as building if in range of the target - building is actioned in Building.tick()
@@ -195,6 +304,9 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
         if (blockPos != null) {
             currentMeleeRecalcCooldown = MELEE_RECALC_COOLDOWN_MAX;
             cachedMoveTarget = null;   // a new order always takes a fresh ground cell
+            releaseCell();
+            unreachableCells.clear();
+            cellsGivenUp = 0;
             if (this.mob.level().isClientSide()) {
                 BuildingPlacement b = BuildingUtils.findBuilding(this.mob.level().isClientSide(), blockPos);
                 if (b != null && b.isAttackable()) {
@@ -225,6 +337,7 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
 
     // if we override stop() it for some reason is called after start() and we can never begin this goal...
     public void stopAttacking() {
+        releaseCell();
         buildingTarget = null;
         super.stopMoving();
         forced = false;

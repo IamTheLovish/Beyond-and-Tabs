@@ -577,12 +577,19 @@ public class BuildingPlacement {
         return getClosestGroundPos(bpTarget, radiusOffset, false);
     }
     public BlockPos getClosestGroundPos(BlockPos bpTarget, int radiusOffset, boolean avoidAllBuildings) {
+        BlockPos pos = getClosestGroundPos(bpTarget, radiusOffset, avoidAllBuildings, null);
+        return pos != null ? pos : this.minCorner;
+    }
+    /** As above, over the cells {@code allowed} accepts only; null when it accepts none. */
+    @javax.annotation.Nullable
+    public BlockPos getClosestGroundPos(BlockPos bpTarget, int radiusOffset, boolean avoidAllBuildings,
+                                        @javax.annotation.Nullable java.util.function.Predicate<BlockPos> allowed) {
         radiusOffset = Math.max(1, radiusOffset);
         float minDist = 999999;
-        BlockPos minPos = this.minCorner;
-        int minX = minPos.getX() - radiusOffset;
-        int minY = minPos.getY();
-        int minZ = minPos.getZ() - radiusOffset;
+        BlockPos minPos = null;
+        int minX = this.minCorner.getX() - radiusOffset;
+        int minY = this.minCorner.getY();
+        int minZ = this.minCorner.getZ() - radiusOffset;
         BlockPos maxPos = this.maxCorner;
         int maxX = maxPos.getX() + radiusOffset + 1;
         int maxZ = maxPos.getZ() + radiusOffset + 1;
@@ -591,6 +598,8 @@ public class BuildingPlacement {
             for (int z = minZ; z < maxZ; z++) {
                 BlockPos bp = new BlockPos(x, minY, z);
                 if (!(getBuilding() instanceof AbstractBridge) && avoidAllBuildings ? BuildingUtils.isPosInsideAnyBuilding(level.isClientSide(), bp) : isPosInsideBuilding(bp))
+                    continue;
+                if (allowed != null && !allowed.test(bp))
                     continue;
 
                 float dist = (float) bpTarget.distToCenterSqr(bp.getX(), bp.getY(), bp.getZ());

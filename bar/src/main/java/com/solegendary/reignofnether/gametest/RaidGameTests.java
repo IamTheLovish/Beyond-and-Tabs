@@ -225,7 +225,68 @@ public class RaidGameTests {
             this.foe = foe;
         }
 
+        // diagnostic: per attacker the tick its path came back and the tick it first stood in reach; the ticks blocks fell
+        int[] pathAt, arriveAt;
+        int lastBlocks = -1;
+        final List<String> blows = new ArrayList<>();
+        // per attacker: reach in/out, move-target changes and blows (a Marauder's big-hit counter steps on each blow)
+        final List<StringBuilder> events = new ArrayList<>();
+        boolean[] inReach; int[] hitCount; BlockPos[] lastMove;
+
+        void watch(int t) {
+            if (target == null)
+                return;
+            if (pathAt == null) {
+                pathAt = new int[attackers.size()];
+                arriveAt = new int[attackers.size()];
+                java.util.Arrays.fill(pathAt, -1);
+                java.util.Arrays.fill(arriveAt, -1);
+                inReach = new boolean[attackers.size()];
+                hitCount = new int[attackers.size()];
+                java.util.Arrays.fill(hitCount, -1);
+                lastMove = new BlockPos[attackers.size()];
+                for (int i = 0; i < attackers.size(); i++)
+                    events.add(new StringBuilder());
+            }
+            for (int i = 0; i < attackers.size(); i++)
+                if (attackers.get(i) instanceof AttackerUnit au
+                        && au.getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal g) {
+                    if (pathAt[i] < 0 && !g.isPathPending())
+                        pathAt[i] = t;
+                    if (arriveAt[i] < 0 && g.isAttacking())
+                        arriveAt[i] = t;
+                    Mob m = attackers.get(i);
+                    StringBuilder ev = events.get(i);
+                    if (g.isAttacking() != inReach[i]) {
+                        inReach[i] = g.isAttacking();
+                        ev.append(' ').append(t).append(inReach[i] ? "in@" : "out@").append(m.getBlockX()).append(',').append(m.getBlockZ());
+                    }
+                    BlockPos mt = g.getMoveTarget();
+                    if (mt != null && !mt.equals(lastMove[i])) {
+                        lastMove[i] = mt;
+                        ev.append(' ').append(t).append("mt").append(mt.getX()).append(',').append(mt.getZ());
+                    }
+                    if (m instanceof com.solegendary.reignofnether.unit.units.piglins.MarauderUnit mu && mu.attacksToNextBigHit != hitCount[i]) {
+                        if (hitCount[i] >= 0)
+                            ev.append(' ').append(t).append("HIT@").append(m.getBlockX()).append(',').append(m.getBlockZ())
+                                .append(m.getNavigation().isDone() ? "/still" : "/walking");
+                        hitCount[i] = mu.attacksToNextBigHit;
+                    }
+                }
+            int placed = target.getBlocksPlaced();
+            if (lastBlocks >= 0 && placed < lastBlocks)
+                blows.add(t + ":-" + (lastBlocks - placed));
+            lastBlocks = placed;
+        }
+
+        String timing() {
+            return "contact " + contact + " done " + done + " path " + java.util.Arrays.toString(pathAt) + " arrive "
+                + java.util.Arrays.toString(arriveAt) + " blows " + blows + " per-attacker " + events;
+        }
+
         void observe(int t) {
+            if (done < 0)
+                watch(t);
             if (target != null) {
                 if (contact < 0 && startBlocks >= 0 && target.getBlocksPlaced() < startBlocks)
                     contact = t;
@@ -456,6 +517,8 @@ public class RaidGameTests {
                 ReignOfNether.LOGGER.info("[Raid] infantry {} {} x6: converter {}s windmill {}s extractor {}s extractor2 {}s (HP {}/{}/{}/{})",
                     f.name(), f.raiderName(), fmt(conv.pure()), fmt(wind.pure()), fmt(ext.pure()), fmt(ext2.pure()),
                     conv.target.getMaxHealth(), wind.target.getMaxHealth(), ext.target.getMaxHealth(), ext2.target.getMaxHealth());
+                for (Sim s : new Sim[] { conv, wind })
+                    ReignOfNether.LOGGER.info("[Raid] GameTest timing {} {}: {}", s.group, s.kind, s.timing());
                 window(problems, f.name() + " converter", conv.pure(), CONV_MIN, CONV_MAX);
                 window(problems, f.name() + " windmill", wind.pure(), WIND_INF_MIN, WIND_INF_MAX);
                 window(problems, f.name() + " T1 extractor", ext.pure(), EXT_INF_MIN, EXT_INF_MAX);
@@ -475,6 +538,151 @@ public class RaidGameTests {
             problems.add(what + ": never finished");
         else if (s < min || s > max)
             problems.add(what + ": " + fmt(s) + " s outside " + min + "-" + max + " s");
+    }
+
+    /**
+     * A party sent at a building from one side spreads round it instead of queueing behind the front units. Every melee
+     * attacker used to head for the ground cell nearest itself, so the whole party took the same few cells on the near
+     * face: six Marauders (iron-golem wide) on a 3x3 converter reached it at ticks 50, 51, 60, 63 and then 72-112, the
+     * back pair pushing round the front four, and the converter's time (first blow to death) ran from 3.3 s (one swing
+     * period, everyone in reach) to 4.3 s against the 4.0 s ceiling (raid_infantry_party_times_against_eco_buildings,
+     * CI shard 8 on #481 and #485; flake-stress 41708076632's per-attacker ticks). The move targets of any two attackers
+     * of the building must stand at least their width apart (Chebyshev, cells); the in-reach ticks are logged.
+     * Each attacker must also keep its cell while the building stands: the 20-tick move-target refresh used to re-pick
+     * the cell from where the unit stood, so cells swapped mid-attack and a Marauder sent round the corner left reach
+     * for 20 ticks (its blow timer stops out of reach), and the converter still read 4.2 s (flake-stress 41738191824;
+     * per-attacker cells and blows in 41739474107 and 41740568219). The one change allowed is giving up a cell the
+     * unit could not reach, and every attacker must come within reach while the converter stands.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 900)
+    public static void raid_a_party_spreads_round_the_building_it_attacks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<Fac> facs = facs();
+        Fac horde = facs.get(2);
+        Pads pads = new Pads(level, 14, 1);
+        int[] checkAt = { -1 };
+        List<String> problems = new ArrayList<>();
+        List<Mob> watched = new ArrayList<>();
+        List<BlockPos> held = new ArrayList<>();
+        List<String> moves = new ArrayList<>();
+        List<Integer> givenUp = new ArrayList<>();
+        drive(helper, pads, 300, () -> {
+            Sim s = new Sim(horde.name(), "spread", pads.cells.get(0), "gametest_raid_spread_a", "gametest_raid_spread_b");
+            raiders(level, s, horde.raider(), 6);
+            siege(level, s, horde.conv(), false);
+            Runnable order = s.order;
+            s.order = () -> {
+                if (order != null)
+                    order.run();
+                checkAt[0] = (int) helper.getTick() + 5;
+            };
+            return List.of(s);
+        }, sims -> {
+            Sim s = sims.get(0);
+            ReignOfNether.LOGGER.info("[Raid] GameTest spread {}: {}", s.group, s.timing());
+            if (!moves.isEmpty())
+                problems.add(moves.size() + " cell changes while the converter stood: " + moves);
+            for (int i = 0; s.arriveAt != null && i < s.arriveAt.length; i++)
+                if (s.arriveAt[i] < 0)
+                    problems.add("attacker " + i + " never came within reach while the converter stood");
+            if (!problems.isEmpty())
+                throw new net.minecraft.gametest.framework.GameTestAssertException(String.join("; ", problems)
+                    + " (in reach at " + java.util.Arrays.toString(s.arriveAt) + ")");
+            helper.succeed();
+        });
+        helper.onEachTick(() -> {
+            if (checkAt[0] >= 0 && helper.getTick() > checkAt[0])
+                for (int i = 0; i < watched.size(); i++)
+                    if (watched.get(i).isAlive() && ((AttackerUnit) watched.get(i)).getAttackBuildingGoal()
+                            instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal g
+                            && g.getBuildingTarget() != null && g.getMoveTarget() != null && !g.getMoveTarget().equals(held.get(i))) {
+                        // a cell the unit gave up as unreachable is the one change it may make
+                        if (g.getCellsGivenUp() > givenUp.get(i))
+                            givenUp.set(i, g.getCellsGivenUp());
+                        else
+                            moves.add("attacker " + i + " at " + helper.getTick() + ": " + held.get(i).toShortString() + " -> "
+                                + g.getMoveTarget().toShortString());
+                        held.set(i, g.getMoveTarget());
+                    }
+            if (checkAt[0] < 0 || helper.getTick() != checkAt[0])
+                return;
+            List<Mob> party = new ArrayList<>();
+            List<BlockPos> cells = new ArrayList<>();
+            Cell c = pads.cells.get(0);
+            for (Mob m : level.getEntitiesOfClass(Mob.class, new net.minecraft.world.phys.AABB(c.x0(), PAD_Y - 2, c.z0(), c.x0() + 32, PAD_Y + 8, c.z0() + 16)))
+                if (m instanceof AttackerUnit au
+                        && au.getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal g
+                        && g.getBuildingTarget() != null && g.getMoveTarget() != null) {
+                    party.add(m);
+                    cells.add(g.getMoveTarget());
+                }
+            if (party.size() != 6)
+                problems.add(party.size() + " of 6 Marauders have the converter as their target 5 ticks after the order");
+            for (int i = 0; i < party.size(); i++)
+                for (int j = i + 1; j < party.size(); j++) {
+                    BlockPos a = cells.get(i), b = cells.get(j);
+                    int apart = Math.max(Math.abs(a.getX() - b.getX()), Math.abs(a.getZ() - b.getZ()));
+                    int need = Math.max(1, (int) Math.ceil((party.get(i).getBbWidth() + party.get(j).getBbWidth()) / 2));
+                    if (apart < need)
+                        problems.add("two attackers head for cells " + apart + " apart (" + a.toShortString() + ", " + b.toShortString()
+                            + "; they are " + party.get(i).getBbWidth() + " wide, need " + need + ")");
+                }
+            watched.addAll(party);
+            held.addAll(cells);
+            for (Mob m : party)
+                givenUp.add(((com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal) ((AttackerUnit) m).getAttackBuildingGoal()).getCellsGivenUp());
+            ReignOfNether.LOGGER.info("[Raid] GameTest spread cells: {}", cells);
+        });
+    }
+
+    /**
+     * A raider blocked on its way to the cell it picked round a building tries another cell instead of standing idle.
+     * Paths are planned over blocks only, so a unit held back by bodies (other units round the building) keeps getting
+     * the same path, walks into the same bodies and stops; it re-asked with a growing back-off (to 5 s) and kept the
+     * cell, so one Marauder of six never came in reach of a converter in 194 ticks (green flake-stress 41742015436,
+     * runner 1, arrive [-1, ...]). Here a two-high fence of shulkers (solid bodies, no AI) stands 3 off the converter's
+     * near face across the whole face, between the Marauder and every near-face cell; it must stand in reach in time.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 1300)
+    public static void raid_a_raider_blocked_on_its_way_tries_another_cell(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Fac horde = facs().get(2);
+        Pads pads = new Pads(level, 15, 1);
+        Cell c = pads.cells.get(0);
+        List<Mob> fence = new ArrayList<>();
+        drive(helper, pads, 600, () -> {
+            Sim s = new Sim(horde.name(), "blocked", c, "gametest_raid_blocked_a", "gametest_raid_blocked_b");
+            raiders(level, s, horde.raider(), 1);
+            siege(level, s, horde.conv(), false);
+            if (s.target != null) {
+                int minX = s.target.minCorner.getX(), minZ = s.target.minCorner.getZ(), maxZ = s.target.maxCorner.getZ();
+                for (int z = minZ - 1; z <= maxZ + 1; z++)
+                    for (int y = 1; y <= 2; y++) {
+                        Mob sh = EntityType.SHULKER.create(level);
+                        if (sh == null)
+                            continue;
+                        sh.setNoAi(true);
+                        sh.moveTo(minX - 3 + .5, PAD_Y + y, z + .5, 0, 0);
+                        if (level.addFreshEntity(sh))
+                            fence.add(sh);
+                    }
+                if (fence.size() != 2 * (maxZ - minZ + 3))
+                    s.errors.add("placed " + fence.size() + " fence shulkers");
+            }
+            return List.of(s);
+        }, sims -> {
+            Sim s = sims.get(0);
+            for (Mob sh : fence)
+                sh.discard();
+            ReignOfNether.LOGGER.info("[Raid] GameTest blocked {}: {}", s.group, s.timing());
+            if (s.arriveAt == null || s.arriveAt[0] < 0)
+                throw new net.minecraft.gametest.framework.GameTestAssertException("the Marauder never came within reach of the"
+                    + " converter in 600 ticks; it stood at " + (s.attackers.isEmpty() ? "?" : s.attackers.get(0).blockPosition().toShortString())
+                    + " heading for " + (s.attackers.isEmpty() || !(s.attackers.get(0) instanceof AttackerUnit au)
+                        || !(au.getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal g)
+                        || g.getMoveTarget() == null ? "?" : g.getMoveTarget().toShortString()));
+            helper.succeed();
+        });
     }
 
     // ---------------------------------------------------------------------------------------------------------------
