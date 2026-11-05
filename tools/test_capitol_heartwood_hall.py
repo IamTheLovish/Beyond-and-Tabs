@@ -123,13 +123,22 @@ class HeartwoodHallTest(unittest.TestCase):
         self.assertGreaterEqual(under - roof, 7, (roof, under))
         self.assertGreaterEqual(top - roof, 18, (roof, top))
 
-    def test_crown_keeps_inside_the_hall_outline(self):
-        """The crown stands over the hall, not over the garden: at most 5 % of its cherry leaves stand beyond ring 5
-        (the cornice), so from above the roofline and the garden frame the tree. Shipped: the lobes ran to the plot's
-        edge (ring 7)."""
+    def test_crown_spreads_past_the_hall_only_high_over_it(self):
+        """The crown may be wider than the hall only because it stands high over it (lovish's references, Nov 5
+        ~22:52Z: a crown "lifted HIGH above the roof on the trunk" that "spreads wider than the house", sky between roof
+        and crown). Every cherry leaf beyond ring 5 (the cornice) stands at least 14 blocks over the roofline, and 10-35
+        % of the crown's cherry leaves stand there: wider than the hall, still a round crown over it, not a plot-wide
+        lid. Band re-set from "at most 5 % beyond ring 5" (Nov 5, when the crown stood 7-10 over the roof and a wide
+        crown would have hidden the temple). The crown kept inside the cornice (round 11): 0 % - too narrow for the
+        references."""
+        roof = self._roofline()
         crown = [q for q, n in self._solid().items() if n == "cherry_leaves"]
-        out = sum(1 for q in crown if _ring(q) > 5) / max(1, len(crown))
-        self.assertLessEqual(out, 0.05, out)
+        out = [q for q in crown if _ring(q) > 5]
+        share = len(out) / max(1, len(crown))
+        self.assertGreaterEqual(share, 0.10, share)
+        self.assertLessEqual(share, 0.35, share)
+        low = min((q[1] for q in out), default=99)
+        self.assertGreaterEqual(low - roof, 14, (roof, low))
 
     def test_trunk_shows_between_roof_and_crown(self):
         """From the RTS camera the tree has a trunk: at least 4 % of the rays land on its bark (oak, the birch mask and
