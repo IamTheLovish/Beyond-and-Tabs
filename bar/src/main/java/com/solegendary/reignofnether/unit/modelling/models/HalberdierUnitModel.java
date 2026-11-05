@@ -233,7 +233,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         if (attack > 0f) {
             THRUST.sample(attack, rotB, movB);
             HumanBase.actOver(rotA, movA, rotB, movB, READY_ROT, READY_MOVE, LOWER,
-                1f - smooth(Math.min(1f, Math.min(attack / IDLE_FADE, (1f - attack) / IDLE_FADE))), wk);
+                smooth(Math.min(1f, Math.min(attack / IDLE_FADE, (1f - attack) / IDLE_FADE))), wk);   // 1 - drift
         }
         for (int i = 0; i < BONES.length; i++) {
             dsl(parts[i], rotA[i][0], rotA[i][1], rotA[i][2], 1f);
