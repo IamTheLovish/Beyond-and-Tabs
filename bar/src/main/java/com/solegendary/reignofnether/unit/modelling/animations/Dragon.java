@@ -476,6 +476,18 @@ public final class Dragon {
      */
     public static void animate(Rig r, Params P, LivingEntity e, float age, float netHeadYaw, float headPitch,
                                float attackTime, float shotPeriod) {
+        animate(r, P, e, age, netHeadYaw, headPitch, attackTime, shotPeriod, false);
+    }
+
+    /** The bite's hold key's moment (ticks from the swing): a held bite stays here - jaw open, nose up - until let go. */
+    static final float HOLD_T = 6f;
+
+    /**
+     * As above; while {@code holdOpen} a bite that has reached its hold ({@link #HOLD_T}) stays there - a breather
+     * keeps its jaw open through a breath of fire (the Bone Dragon, Nov 5) - and plays its snap once let go.
+     */
+    public static void animate(Rig r, Params P, LivingEntity e, float age, float netHeadYaw, float headPitch,
+                               float attackTime, float shotPeriod, boolean holdOpen) {
         int id = e.getId();
         float[] st = STATE.get(e);
         if (st == null) {
@@ -522,6 +534,8 @@ public final class Dragon {
             st[7] = 1f;
         }
         st[4] = attackTime;
+        if (holdOpen && age - st[3] > HOLD_T && age - st[3] < P.attackTicks)
+            st[3] = age - HOLD_T;
 
         st[ST_BREATH] = breathPhase(st[ST_BREATH], age, dt, id, P, glide);
         pose(r, P, id, st[ST_PHASE], age, glide, idle, bank, st[ST_TAIL_A], st[ST_TAIL_B], climb, st[ST_FLARE], takeoff,

@@ -1,19 +1,25 @@
 package com.solegendary.reignofnether.unit.units.monsters;
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.building.BuildingDamage;
+import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientboundPacket;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
+import com.solegendary.reignofnether.sounds.Sfx;
 import com.solegendary.reignofnether.time.NightUtils;
 import com.solegendary.reignofnether.time.TimeUtils;
+import com.solegendary.reignofnether.unit.FireBreath;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.ability.abilities.DragonDive;
 import com.solegendary.reignofnether.unit.controls.DragonMoveControl;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.piglins.GhastUnit;
 
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -21,9 +27,12 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
@@ -35,10 +44,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.NotNull;
+import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
 /**
  * Gravebound T3 experimental - the <b>Bone Dragon</b>: the <b>Air striker</b> (claude/t3-roles.md, section 4). A
@@ -47,10 +59,14 @@ import java.util.List;
  * commander. The enemy's moment: "where will it strike next" - spread anti-air or lose the back line.
  * <ul>
  *   <li><b>Fast</b> ({@link #movementSpeed}): the fastest T3 in the air; raids and leaves before the army turns.</li>
- *   <li><b>Soul breath</b> ({@link #breathe}): its attack on units is a cone of soul-fire {@link #BREATH_LENGTH} blocks
- *   long and {@link #BREATH_HALF_ANGLE_DEG} degrees to each side - every enemy in it takes the dragon's attack damage
- *   and withers ({@link #WITHER_TICKS}). Its hits land on groups; a spread army takes one unit's worth. Buildings it
- *   still cracks with the ghast's fireball (3x to buildings), so a raid on an economy is real.</li>
+ *   <li><b>Blue fire breath</b> ({@link #startBreath}, the rules in {@link FireBreath}; lovish, Nov 5: "the bone dragon
+ *   should get a blue fire breath attack from the air not the current ghast sound effects and projectiles", "bone
+ *   dragon can use this fire breath on the ground as well"): every attack - on a unit, a building or the ground - is a
+ *   breath of {@link FireBreath#TICKS} ticks that burns every {@link FireBreath#PULSE_TICKS}
+ *   ({@link #breathPulse}): every enemy unit and building in its cone takes its attack damage per SECOND of breath
+ *   (buildings by BuildingDamage's unit rate) and withers ({@link #WITHER_TICKS}). From the air the cone runs from the
+ *   jaws down onto a line of fire it strafes across the target; landed, it is a forward cone along the ground. Its
+ *   hits land on groups; a spread army takes one unit's worth. No ghast fireball, no ghast sound.</li>
  *   <li><b>Night play</b>: at night (or near a Gravebound night source) the breath does x{@link #NIGHT_DAMAGE_MULT}.
  *   A Gravebound player times the strike.</li>
  *   <li><b>Withering Fog</b> (the faction power): a lingering line of grave-fog, area denial for a unit that holds
@@ -69,13 +85,14 @@ public class BoneDragonUnit extends GhastUnit {
     final static public float aggroRange = 18;        // 22 -> 18: engages what it sees, keeps the sky-bolt dragon's habit of picking fights
     public static final float SCALE = 3.5f;
 
-    /** The breath cone: length, half-angle, the wither it leaves, and the night bonus. */
-    public static final double BREATH_LENGTH = 12.0;
-    public static final double BREATH_HALF_ANGLE_DEG = 32.0;
+    /** The wither a burn leaves, and the night bonus. */
     public static final int WITHER_TICKS = 3 * 20;
     public static final float NIGHT_DAMAGE_MULT = 1.3f;
-    /** The breath reaches the ground from the dragon's altitude: how far below (and above) it the cone counts. */
-    static final double BREATH_HEIGHT_WINDOW = 20.0;
+    /** Where the jaws are, from the feet: ahead and up (the rest pose of BoneDragonModel at the renderer's 1.4x). The
+     *  server's cone starts here; the client draws from the real jaw bone (BoneDragonRenderer). */
+    public static final double JAWS_AHEAD = 5.0, JAWS_UP = 2.8;
+    /** A breath whose aim gets this much farther from the jaws than the cone reaches stops (its target got away). */
+    static final double BREATH_LOST = 4.0;
     static final String KEY_ANNOUNCED = "bt_t3_announced";
 
     /**
@@ -100,10 +117,62 @@ public class BoneDragonUnit extends GhastUnit {
     private int diveTicks = 0;
     private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results, reused (server thread)
 
+    /**
+     * The running breath, told to the clients so they draw the very cone the server burns (FireBreath): its target
+     * (entity id, -1 for a building or the ground), the aim's base point (the target's spot, kept up to date each burn),
+     * the sweep's offset, whether it is the landed cone, and the breath's number - set LAST, so a client reads the
+     * others first: a new number starts the client's breath, 0 ends it.
+     */
+    public static final EntityDataAccessor<Integer> breathTargetAccessor =
+        SynchedEntityData.defineId(BoneDragonUnit.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Vector3f> breathAimAccessor =
+        SynchedEntityData.defineId(BoneDragonUnit.class, EntityDataSerializers.VECTOR3);
+    public static final EntityDataAccessor<Vector3f> breathOffsetAccessor =
+        SynchedEntityData.defineId(BoneDragonUnit.class, EntityDataSerializers.VECTOR3);
+    public static final EntityDataAccessor<Boolean> breathLandedAccessor =
+        SynchedEntityData.defineId(BoneDragonUnit.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> breathSeqAccessor =
+        SynchedEntityData.defineId(BoneDragonUnit.class, EntityDataSerializers.INT);
+
+    // the breath, server side: its tick (-1 = none), its target (null: a building or the ground), aim base and offset
+    private int breathTick = -1;
+    private LivingEntity breathTarget = null;
+    private Vec3 breathBase = Vec3.ZERO, breathOffset = Vec3.ZERO;
+    private boolean breathLanded = false;
+    private int breathSeq = 0;
+    private static final List<BuildingPlacement> burnt = new ArrayList<>();   // buildings a burn reached (server thread)
+
+    /** Client: the breath's own tick (counted in client ticks by BreathFx; -1 = not breathing). */
+    public int clientBreathTick = -1;
+    /** Client: the jaws (x, y, z) and their forward direction, from the posed model (BoneDragonRenderer), and when. */
+    public final double[] clientJaws = new double[6];
+    public long clientJawsAt = Long.MIN_VALUE;
+    /** Client: the dragons breathing now (BreathFx draws them; entries leave when the breath ends or the entity goes). */
+    public static final java.util.Set<BoneDragonUnit> CLIENT_BREATHING =
+        java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(landedAtAccessor, -1);
+        this.entityData.define(breathTargetAccessor, -1);
+        this.entityData.define(breathAimAccessor, new Vector3f());
+        this.entityData.define(breathOffsetAccessor, new Vector3f());
+        this.entityData.define(breathLandedAccessor, false);
+        this.entityData.define(breathSeqAccessor, 0);
+    }
+
+    @Override
+    public void onSyncedDataUpdated(@NotNull EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (breathSeqAccessor.equals(key) && level() != null && level().isClientSide()) {
+            if (this.entityData.get(breathSeqAccessor) != 0) {
+                clientBreathTick = 0;
+                CLIENT_BREATHING.add(this);
+            } else {
+                clientBreathTick = -1;
+            }
+        }
     }
 
     public BoneDragonUnit(EntityType<? extends Ghast> entityType, Level level) {
@@ -406,88 +475,246 @@ public class BoneDragonUnit extends GhastUnit {
         return isNightFor() ? base * NIGHT_DAMAGE_MULT : base;
     }
 
-    /** On a unit the dragon breathes; the fireball (GhastUnit) is kept for buildings and attack-ground. */
+    /** On a unit: a breath at it (it follows the unit for the breath's length). */
     @Override
     public void performUnitRangedAttack(LivingEntity target, float velocity) {
         if (target == null || level().isClientSide() || this.hasEffect(MobEffectRegistrar.DISARM.get()))
             return;
-        if (!(level() instanceof ServerLevel sl))
-            return;
-        breathe(sl, new Vec3(target.getX() - getX(), 0, target.getZ() - getZ()));
-        if (target instanceof Unit unit)
+        if (startBreath(target, aimOf(target)) && target instanceof Unit unit)
             FogOfWarClientboundPacket.revealRangedUnit(unit.getOwnerName(), this.getId());
-        showShootingFace();
+    }
+
+    /** On a building or the ground: a breath at the point - never the ghast's fireball (lovish: no ghast projectiles). */
+    @Override
+    public void performUnitRangedAttack(double x, double y, double z, float velocity) {
+        if (level().isClientSide() || this.hasEffect(MobEffectRegistrar.DISARM.get()))
+            return;
+        startBreath(null, new Vec3(x, y, z));
+    }
+
+    /** Where a breath at this entity aims: its feet on the ground (the fire lands there), its middle in the air. */
+    private static Vec3 aimOf(LivingEntity e) {
+        boolean flyer = e instanceof Unit u ? u.isFlyingUnit() : !e.onGround();
+        return flyer ? e.position().add(0, e.getBbHeight() * 0.5, 0) : e.position();
+    }
+
+    /** Breathing now (server side). */
+    public boolean isBreathing() {
+        return breathTick >= 0;
+    }
+
+    /** Breathing now, as the client knows it (the model holds the jaw open, BreathFx draws the fire). */
+    public boolean isBreathingClient() {
+        return clientBreathTick >= 0 && clientBreathTick < FireBreath.TICKS;
     }
 
     /**
-     * One breath along the flat direction {@code dir} (from the dragon's position): every hostile unit within
-     * {@link #BREATH_LENGTH} and {@link #BREATH_HALF_ANGLE_DEG} of it takes {@link #getUnitAttackDamage} as soul-fire
-     * (indirect magic from the dragon, so its kills still rise) and withers. Returns how many it hit. Public for the
-     * game test.
+     * The jaws, server side, for a breath toward {@code aim}: ahead of the body toward it (it turns to what it burns),
+     * never past an aim closer than its neck is long (a foe under its chin: the head ducks to it).
      */
-    public int breathe(ServerLevel sl, Vec3 dir) {
+    Vec3 jaws(Vec3 aim) {
+        double dx = aim.x - getX(), dz = aim.z - getZ(), l = Math.sqrt(dx * dx + dz * dz);
+        double ahead = jawsAhead(l);
+        if (l < 0.5) {
+            Vec3 f = Vec3.directionFromRotation(0, yBodyRot);
+            dx = f.x;
+            dz = f.z;
+            l = Math.sqrt(dx * dx + dz * dz);
+        }
+        return new Vec3(getX() + dx / l * ahead, getY() + JAWS_UP, getZ() + dz / l * ahead);
+    }
+
+    /** How far ahead of the body the jaws are for an aim {@code flat} blocks away (flat): JAWS_AHEAD, less up close. */
+    public static double jawsAhead(double flat) {
+        return Math.min(JAWS_AHEAD, Math.max(1.0, flat - 1.0));
+    }
+
+    /**
+     * Starts a breath at {@code aim} (following {@code target} while it lives; null for a building or the ground):
+     * the landed cone if the dragon is down, else the airborne one strafing along its heading. False if one is already
+     * running, or it has no owner. Public for the game test; the attack goals call it through performUnitRangedAttack.
+     */
+    public boolean startBreath(@Nullable LivingEntity target, Vec3 aim) {
+        if (!(level() instanceof ServerLevel sl) || !isAlive() || isBreathing() || getOwnerName() == null
+                || getOwnerName().isEmpty())
+            return false;
+        breathTarget = target;
+        breathBase = aim;
+        breathLanded = isLanded();
+        Vec3 j = jaws(aim);
+        double[] off = new double[3];
+        if (breathLanded) {
+            FireBreath.groundOffset(j.x, j.z, aim.x, aim.z, off);
+        } else {
+            Vec3 h = Vec3.directionFromRotation(0, yBodyRot);
+            FireBreath.airOffset(h.x, h.z, off);
+        }
+        breathOffset = new Vec3(off[0], off[1], off[2]);
+        breathTick = 0;
+        this.entityData.set(breathTargetAccessor, target == null ? -1 : target.getId());
+        this.entityData.set(breathAimAccessor, new Vector3f((float) aim.x, (float) aim.y, (float) aim.z));
+        this.entityData.set(breathOffsetAccessor, new Vector3f((float) off[0], (float) off[1], (float) off[2]));
+        this.entityData.set(breathLandedAccessor, breathLanded);
+        breathSeq = breathSeq == Integer.MAX_VALUE ? 1 : breathSeq + 1;
+        this.entityData.set(breathSeqAccessor, breathSeq);   // last: the client reads the rest before this
+        // our own sound (sounds/Sfx, generated from maths), pitched down to a dragon's roar of flame; no ghast
+        Sfx.SHOT_FIRE.play(sl, j.x, j.y, j.z, 1.4f, 0.5f);
+        return true;
+    }
+
+    /** Ends the breath (both sides learn it from the breath number going to 0). */
+    public void stopBreath() {
+        if (breathTick < 0)
+            return;
+        breathTick = -1;
+        breathTarget = null;
+        this.entityData.set(breathSeqAccessor, 0);
+    }
+
+    /** The breath's aim at its tick t: the base (the target where it is now) swept by the offset. */
+    private Vec3 breathAim(int t) {
+        double s = FireBreath.sweep(t);
+        return new Vec3(FireBreath.along(breathBase.x, breathOffset.x, s), FireBreath.along(breathBase.y, breathOffset.y, s),
+            FireBreath.along(breathBase.z, breathOffset.z, s));
+    }
+
+    /** One server tick of the breath: follow the target, burn on the pulse ticks, stop at the end or when it is lost. */
+    private void tickBreath(ServerLevel sl) {
+        if (!isAlive() || this.hasEffect(MobEffectRegistrar.DISARM.get())) {
+            stopBreath();
+            return;
+        }
+        if (breathTarget != null && breathTarget.isAlive() && breathTarget.level() == sl)
+            breathBase = aimOf(breathTarget);
+        else
+            breathTarget = null;   // dead or gone: the fire plays out where it last was
+        Vec3 aim = breathAim(breathTick);
+        if (aim.distanceTo(jaws(aim)) > (breathLanded ? FireBreath.GROUND_LENGTH : FireBreath.AIR_MAX) + BREATH_LOST) {
+            stopBreath();
+            return;
+        }
+        if (FireBreath.pulse(breathTick)) {
+            if (breathTick > 0) {
+                this.entityData.set(breathAimAccessor, new Vector3f((float) breathBase.x, (float) breathBase.y, (float) breathBase.z));
+                Sfx.SHOT_FIRE.play(sl, aim.x, aim.y, aim.z, 1.0f, 0.55f + getRandom().nextFloat() * 0.15f);
+            }
+            breathPulse(sl, aim, breathLanded);
+        }
+        if (++breathTick >= FireBreath.TICKS)
+            stopBreath();
+    }
+
+    /** {@link #breathPulse(ServerLevel, Vec3, boolean)} in the dragon's own mode (landed or in the air). */
+    public int breathPulse(ServerLevel sl, Vec3 aim) {
+        return breathPulse(sl, aim, isLanded());
+    }
+
+    /**
+     * One burn of the breath - THE shared entry, landed and airborne: the cone from the jaws toward {@code aim}
+     * (FireBreath.reaches) burns every enemy unit in it for its attack damage per second of breath (x1.3 at night) as
+     * soul-fire - indirect magic from the dragon, so its kills still rise - and withers it; every enemy building it
+     * reaches loses that, at BuildingDamage's unit rate. One grid query and one pass over the buildings per burn, never
+     * one per flame drawn. Returns how many units it burnt. Public for the game test.
+     */
+    public int breathPulse(ServerLevel sl, Vec3 aim, boolean landed) {
         String owner = getOwnerName();
         if (owner == null || owner.isEmpty())
             return 0;
-        Vec3 flat = new Vec3(dir.x, 0, dir.z);
-        if (flat.lengthSqr() < 1.0e-4)
-            flat = Vec3.directionFromRotation(0, getYRot());
-        Vec3 d = flat.normalize();
-        double cosHalf = Math.cos(Math.toRadians(BREATH_HALF_ANGLE_DEG));
-        float dmg = getUnitAttackDamage();
+        Vec3 j = jaws(aim);
+        Vec3 axis = aim.subtract(j);
+        double dist = axis.length();
+        if (dist < 1.0e-4) {
+            axis = Vec3.directionFromRotation(0, yBodyRot);
+            dist = 1;
+        } else {
+            axis = axis.scale(1 / dist);
+        }
+        double len = FireBreath.length(landed, dist), tan = FireBreath.tanHalf(landed);
+        float dmg = getUnitAttackDamage() * FireBreath.PULSE_TICKS / 20f;
+        Vec3 mid = j.add(axis.scale(len / 2));
+        double reach = len / 2 + len * tan + 2;
         List<LivingEntity> hit = new ArrayList<>();
         // UnitGrid hands back a shared candidate list; copy the hits out before hurting anything (a death can rebucket)
-        for (LivingEntity le : UnitGrid.near(sl, getX(), getZ(), BREATH_LENGTH + 2, scratch)) {
+        for (LivingEntity le : UnitGrid.near(sl, mid.x, mid.z, reach, scratch)) {
             if (le == this || !le.isAlive() || le.level() != sl || !(le instanceof Unit u))
                 continue;
             String o = u.getOwnerName();
             if (o == null || o.isEmpty() || o.equals(owner) || AlliancesServerEvents.isAllied(owner, o))
                 continue;
-            if (Math.abs(le.getY() - getY()) > BREATH_HEIGHT_WINDOW)
-                continue;
-            double ex = le.getX() - getX(), ez = le.getZ() - getZ();
-            double dist = Math.sqrt(ex * ex + ez * ez);
-            if (dist - le.getBbWidth() / 2 > BREATH_LENGTH)
-                continue;
-            // straight under the jaws counts whichever way it faces; past that, inside the cone
-            if (dist > 1.5 && (ex * d.x + ez * d.z) / dist < cosHalf)
-                continue;
-            hit.add(le);
+            double r = Math.max(le.getBbWidth(), le.getBbHeight()) / 2;
+            if (FireBreath.reaches(j.x, j.y, j.z, axis.x, axis.y, axis.z, len, tan,
+                    le.getX(), le.getY() + le.getBbHeight() / 2, le.getZ(), r))
+                hit.add(le);
         }
         scratch.clear();
         for (LivingEntity le : hit) {
             le.hurt(sl.damageSources().indirectMagic(this, this), dmg);
             if (le.isAlive())
                 le.addEffect(new MobEffectInstance(MobEffects.WITHER, WITHER_TICKS, 0));
-            sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, le.getX(), le.getY() + le.getBbHeight() * 0.5, le.getZ(), 6, 0.3, 0.3, 0.3, 0.02);
         }
-        // the breath itself: a sheet of soul-fire from the jaws down the cone (a few rays, not one per block)
-        Vec3 mouth = position().add(0, getBbHeight() * 0.4, 0);
-        double half = Math.toRadians(BREATH_HALF_ANGLE_DEG);
-        double base = Math.atan2(d.z, d.x);
-        for (int ray = -2; ray <= 2; ray++) {
-            double a = base + half * ray / 2.0;
-            for (int i = 2; i <= (int) BREATH_LENGTH; i += 2) {
-                double t = i / BREATH_LENGTH;
-                sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, mouth.x + Math.cos(a) * i, mouth.y - (mouth.y - getY()) * t - t * 2.0,
-                    mouth.z + Math.sin(a) * i, 2, 0.3, 0.3, 0.3, 0.01);
-            }
+        // buildings: collected first, then burnt (a building that falls leaves the list)
+        burnt.clear();
+        for (BuildingPlacement bp : BuildingServerEvents.getBuildings()) {
+            if (bp.getLevel() != sl || bp.ownerName == null || bp.ownerName.isEmpty() || bp.isFriendlyTo(owner)
+                    || !bp.isAttackable())
+                continue;
+            BlockPos lo = bp.minCorner, hi = bp.maxCorner;
+            if (hi.getX() + 1 < mid.x - reach || lo.getX() > mid.x + reach || hi.getZ() + 1 < mid.z - reach
+                    || lo.getZ() > mid.z + reach)
+                continue;
+            if (FireBreath.reachesBox(j.x, j.y, j.z, axis.x, axis.y, axis.z, len, tan, lo.getX(), lo.getY(), lo.getZ(),
+                    hi.getX() + 1, hi.getY() + 1, hi.getZ() + 1))
+                burnt.add(bp);
         }
-        sl.playSound(null, blockPosition(), SoundEvents.ENDER_DRAGON_SHOOT, SoundSource.HOSTILE, 3f, 0.7f);
+        for (BuildingPlacement bp : burnt)
+            bp.destroyRandomBlocks(BuildingDamage.unit(dmg), this);
+        burnt.clear();
         return hit.size();
     }
 
-    /**
-     * SIGNATURE STUB for the red run (tests first): one burn of the breath aimed at {@code aim}. Here it is the old
-     * one-tick breath along the flat direction to the aim; the next commit makes it the cone from the jaws.
-     */
-    public int breathPulse(ServerLevel sl, Vec3 aim) {
-        return breathe(sl, new Vec3(aim.x - getX(), 0, aim.z - getZ()));
+    // ---- its voice: bone, not a ghast (lovish: no ghast sounds) ------------------------------------------------------
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return null;
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(@NotNull DamageSource source) {
+        return SoundEvents.SKELETON_HURT;
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return SoundEvents.SKELETON_DEATH;
+    }
+
+    /** A big body: deep (the ghast's sounds were pitched for a ghast). */
+    @Override
+    public float getVoicePitch() {
+        return 0.55f + getRandom().nextFloat() * 0.1f;
+    }
+
+    /** The Ghast plays its sounds at 5 (heard map-wide); a dragon's bones at a big unit's 1.5. */
+    @Override
+    protected float getSoundVolume() {
+        return 1.5f;
+    }
+
+    /** Its damage stat: the breath's damage per second, and buildings at BuildingDamage's unit rate (not 300%). */
+    @Override
+    public List<FormattedCharSequence> getAttackDamageStatTooltip() {
+        return List.of(
+            fcs(I18n.get("unitstats.reignofnether.attack_damage"), true),
+            fcs(I18n.get("unitstats.reignofnether.attack_damage_bonus_buildings", Math.round(BuildingDamage.GLOBAL_MULT * 100) + "%"))
+        );
     }
 
     @Override
     public void tick() {
         super.tick();
+        if (breathTick >= 0 && level() instanceof ServerLevel bl)
+            tickBreath(bl);
         if (level() instanceof ServerLevel sl && isAlive()) {
             if (resendDiveCooldown && dive != null) {
                 resendDiveCooldown = false;

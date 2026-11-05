@@ -42,7 +42,8 @@ public final class BarFxClient {
 
     // particle kinds
     static final int FLASH = 0, SMOKE = 1, SPARK = 2, DEBRIS = 3, FIRE = 4, RING = 5, BEAM = 6, DECAL = 7, EMITTER = 8,
-            DELAY = 9;   // invisible timer: a building collapse's secondary pop, fired when it expires
+            DELAY = 9,   // invisible timer: a building collapse's secondary pop, fired when it expires
+            BREATH = 10; // a flame of a dragon's breath (BreathFx): color -> color2 over its life, lands on `ground`
 
     /**
      * Per-packet (= per server tick) budget of full unit-death effects. A big 8v8 trade can kill dozens of units in
@@ -1157,6 +1158,18 @@ public final class BarFxClient {
             }
             case SMOKE -> { p.vx *= 1 - .6f * dt; p.vz *= 1 - .6f * dt; p.vy *= 1 - .3f * dt; p.vx += .25f * dt; }
             case FIRE -> { p.vx *= 1 - 3 * dt; p.vz *= 1 - 3 * dt; p.vy *= 1 - 1.5f * dt; }
+            case BREATH -> {
+                // flies straight from the jaws to the ground it was aimed at (FireBreath.flame), then spills over it -
+                // slower, rising, a little wider - as fire does on what it hits; a flame with no ground just drifts up
+                if (!Float.isNaN(p.ground) && p.vy < 0 && p.y + p.vy * dt <= p.ground + .15f) {
+                    p.y = p.ground + .15f;
+                    p.vx *= .45f; p.vz *= .45f; p.vy = rnd(.3f, .9f);
+                    p.grow *= 1.3f;
+                    p.ground = Float.NaN;
+                } else if (p.vy >= 0) {
+                    p.vx *= 1 - 2.5f * dt; p.vz *= 1 - 2.5f * dt;
+                }
+            }
             case EMITTER -> {
                 p.acc += dt;
                 if (p.acc >= p.rate && live.size() < MAX * 3 / 4) {
@@ -1249,6 +1262,12 @@ public final class BarFxClient {
                 float r = p.size * (1 + (p.grow - 1) * k);
                 int c = mix(p.color, 0x802010, k * .7f);
                 softDisc(p.x, p.y, p.z, r, c, (1 - k) * .9f, c, 0, 8, p.born * 7, .25f);
+            }
+            case BREATH -> {
+                float r = p.size * (1 + (p.grow - 1) * Math.min(1, k * 1.5f));
+                int c = mix(p.color, p.color2, k);
+                float a = p.alpha * (k < .06f ? k / .06f : 1) * (1 - k) * (1 - k * .35f);
+                softDisc(p.x, p.y, p.z, r, c, a, c, 0, 8, p.born * 7 + k * 1.5f, .3f);
             }
             case SPARK -> {
                 float sp = (float) Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
