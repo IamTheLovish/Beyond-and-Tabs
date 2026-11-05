@@ -269,19 +269,19 @@ def boughs(c):
 
 # The boughs that break out through the roof (lovish, Nov 5: "with branches coming out of the roof"), as waypoints
 # (a, t, y) on a side o: from the trunk inside the hall, up through the roof's top step (ring 3, y9, between two
-# roof stairs), climbing a step out for a step up past the eaves (ring 6), or up into the crown's rim. The tips stand
+# roof stairs), climbing steeply to over the eaves (ring 5), or up into the crown's rim. The tips stand
 # off the stag-dryad's faces from the RTS camera; two arms alike at one height read as "a T-cross / scarecrow"
 # (Fable critic round 4) and a post with a square elbow as "a candelabra" (round 5), so each climbs its own diagonal.
 # Four, each its own shape (four alike read as a chapel's ribs). Fable critic round 1: limbs "poking out over the hall
 # walls" are what delivers "branches coming out of the roof" - the roof that now shows keeps the temple's stone share.
-ROOF_BOUGHS = (("south", ((2, -1, 6), (2, -1, 8), (3, -2, 8), (3, -2, 9), (4, -2, 10), (5, -3, 11), (6, -3, 12),
-                          (6, -3, 13))),
-               ("west", ((2, 1, 6), (2, 1, 8), (3, 2, 8), (3, 2, 9), (4, 2, 10), (4, 3, 11), (5, 3, 12), (6, 3, 13),
-                         (6, 4, 14))),
-               ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (4, -1, 10), (5, -1, 11), (6, -2, 12),
-                         (6, -2, 14))),
+ROOF_BOUGHS = (("south", ((2, -1, 6), (2, -1, 8), (3, -2, 9), (3, -2, 10), (4, -2, 12), (5, -3, 13), (5, -3, 14))),
+               ("west", ((2, 1, 6), (2, 1, 8), (3, 2, 9), (3, 2, 10), (4, 3, 12), (4, 3, 13), (5, 3, 15))),
+               ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 9), (3, -1, 10), (4, -1, 12), (5, -2, 13), (5, -2, 14))),
                ("north", ((2, -1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (3, 0, 11), (4, -1, 13), (4, -1, 16),
                           (4, -2, 18))))
+# Steep (about two up for a step out) and stopping over the eaves (ring 5): limbs climbing a step out for a step up to
+# ring 6 read from the RTS camera as "four flat, 1-thick horizontal dark-oak arms ... a dark belt as wide as the roof"
+# (Fable critic round 8, and "a flat jumble ... a crab" in round 7).
 
 
 def _limb(c, cells):
