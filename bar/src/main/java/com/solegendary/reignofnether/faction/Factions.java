@@ -242,6 +242,7 @@ public class Factions {
 		registerEntity(VERDANT_COURT, EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), ProductionItems.WORLD_TREE_WALKER);   // T3 (Heart of the Wild)
 		registerEntity(VERDANT_COURT, EntityRegistrar.WISP_CHOIR_UNIT.get(), ProductionItems.WISP_CHOIR);
 		registerEntity(VERDANT_COURT, EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), ProductionItems.BLOOM_PRIESTESS);
+		registerEntity(VERDANT_COURT, EntityRegistrar.THORNWEAVER_UNIT.get(), ProductionItems.THORNWEAVER);   // essence caster
 
 		// Tidewrought (slice 1: T1 only)
 		registerWorkerEntity(TIDEWROUGHT, EntityRegistrar.SHIPWRIGHT_UNIT.get(), ProductionItems.SHIPWRIGHT);
@@ -320,6 +321,7 @@ public class Factions {
 		registerEntity(VILLAGERS, EntityRegistrar.FIELD_MASON_UNIT.get(), ProductionItems.FIELD_MASON);
 		registerEntity(MONSTERS, EntityRegistrar.BONESETTER_UNIT.get(), ProductionItems.BONESETTER);
 		registerEntity(PIGLINS, EntityRegistrar.WRECKER_UNIT.get(), ProductionItems.WRECKER);
+		registerEntity(PIGLINS, EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), ProductionItems.VOODOO_SHAMAN);   // essence caster
 		registerEntity(VERDANT_COURT, EntityRegistrar.ROOTWARDEN_UNIT.get(), ProductionItems.ROOTWARDEN);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.SALVAGER_UNIT.get(), ProductionItems.SALVAGER);
 		registerEntity(STORMCALLERS, EntityRegistrar.JADE_MENDER_UNIT.get(), ProductionItems.JADE_MENDER);

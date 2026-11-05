@@ -66,6 +66,7 @@
     "fogofwar.WorldBorderMixin",
     "goals.MobMixin",
     "goals.RandomStrollGoalMixin",
+    "goals.GoalSelectorMixin",
     "ConfigValueReloadRaceMixin",
     "ForgeConfigSpecAccessor"
   ],
@@ -89,6 +90,7 @@
     "MobRendererMixin",
     "MusicManagerMixin",
     "OrthoViewMixin",
+    "EmbeddiumOrthoFaceCullingMixin",
     "PossessionParticleMixin",
     "PossessionPredictionMixin",
     "RenderChunkRegionMixin",

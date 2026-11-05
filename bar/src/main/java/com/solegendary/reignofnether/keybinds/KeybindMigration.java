@@ -29,7 +29,7 @@ import java.util.function.ToIntFunction;
 public final class KeybindMigration {
 
     /** The key layout the saved bindings are moved to; stored in the client config as keybind_layout. */
-    public static final int LAYOUT_VERSION = 2;
+    public static final int LAYOUT_VERSION = 3;
 
     /** What {@code savedKey} returns for a binding that must not move: a modifier combo, a mouse button, not found. */
     public static final int CUSTOM = Integer.MIN_VALUE;
@@ -63,7 +63,11 @@ public final class KeybindMigration {
         new Stale(1, "key.reignofnether.hotkey_5", GLFW.GLFW_KEY_D, "Return resources D -> ; (D pans right)"),
         new Stale(1, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_Z, "Build slot 8 Z -> . (Z is ability slot 2)"),
         new Stale(1, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_X, "Build slot 9 X -> , (X is Attack)"),
-        new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)")
+        new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)"),
+        // Oct 11 (c4d0b47) to Nov 3: Stop was S, sharing the key with pan-down by the tap/hold rule. Nick: a short tap
+        // of S while panning stopped the selected workers. Stop is now the Ctrl+S chord, its own key unbound; listed after its layout-1 row so
+        // history() names this, the newest move.
+        new Stale(3, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> Ctrl+S (a tap of S while panning stopped workers)")
     );
 
     private KeybindMigration() { }
@@ -100,11 +104,15 @@ public final class KeybindMigration {
         return moves;
     }
 
-    /** The one-line history of a move, for the log and the toast ("Attack A -> X, ..."). */
+    /**
+     * The one-line history of a binding's newest move, for the log and the toast ("Attack A -> X, ..."). A binding that
+     * moved twice (Stop: Space -> S -> unbound) has a row per layout; the highest layout is the move being applied.
+     */
     public static String history(String binding) {
+        Stale newest = null;
         for (Stale row : STALE)
-            if (row.binding().equals(binding))
-                return row.history();
-        return binding;
+            if (row.binding().equals(binding) && (newest == null || row.version() > newest.version()))
+                newest = row;
+        return newest == null ? binding : newest.history();
     }
 }

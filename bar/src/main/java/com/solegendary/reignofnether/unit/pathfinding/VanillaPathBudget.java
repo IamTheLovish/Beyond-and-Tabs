@@ -28,8 +28,30 @@ public final class VanillaPathBudget {
 
     /** Counters since the last [Paths] line: unit createPath calls, how many took the short search, how many fell back. */
     public static int calls = 0, shortSearches = 0, fallbacks = 0;
-    /** Fallbacks a wide unit skipped since the last [Paths] line: the same search failed a moment ago (WidePathMemo). */
+    /** Fallbacks a unit skipped since the last [Paths] line: the same full search failed a moment ago (WidePathMemo). */
     public static int wideRepeats = 0;
+    /** Searches skipped since the last [Paths] line: the same search failed under a second ago (WidePathMemo.repeatOf). */
+    public static int repeats = 0;
+    /**
+     * Full-range fallbacks since the last [Paths] line, by unit type: the [Paths] line names the types that search the
+     * whole range most, so a unit that starts repeating failed searches shows by name in the next log (Oct 31: it took
+     * a profile to find the headhunters).
+     */
+    static final java.util.Map<String, Integer> FALLBACKS_BY_TYPE = new java.util.HashMap<>();
+
+    public static void fellBack(String unitType) {
+        fallbacks++;
+        fallbacksTotal++;
+        FALLBACKS_BY_TYPE.merge(unitType, 1, Integer::sum);
+    }
+
+    /** The {@code n} types with the most fallbacks, "headhunter_unit 158, grunt_unit 12" (empty when none). */
+    static String topFallbacks(int n) {
+        return FALLBACKS_BY_TYPE.entrySet().stream()
+            .sorted((a, b) -> b.getValue() - a.getValue() != 0 ? b.getValue() - a.getValue() : a.getKey().compareTo(b.getKey()))
+            .limit(n).map(e -> e.getKey() + " " + e.getValue())
+            .collect(java.util.stream.Collectors.joining(", "));
+    }
     /** Every fallback since the server started (never reset: tests compare it before and after). */
     public static long fallbacksTotal = 0;
 
@@ -65,9 +87,12 @@ public final class VanillaPathBudget {
 
     public static String report() {
         String s = "[Paths] last 10 s: " + calls + " unit vanilla createPath, " + shortSearches + " short searches, "
-            + fallbacks + " full-range fallbacks, " + wideRepeats + " wide-body repeats skipped";
+            + fallbacks + " full-range fallbacks" + (FALLBACKS_BY_TYPE.isEmpty() ? "" : " (" + topFallbacks(3) + ")")
+            + ", " + wideRepeats + " failed full searches not repeated, " + repeats + " failed searches not repeated";
         calls = 0;
         wideRepeats = 0;
+        repeats = 0;
+        FALLBACKS_BY_TYPE.clear();
         shortSearches = 0;
         fallbacks = 0;
         return s;

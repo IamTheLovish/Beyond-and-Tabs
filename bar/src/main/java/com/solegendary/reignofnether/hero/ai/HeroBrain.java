@@ -19,10 +19,21 @@ import java.util.Set;
 public final class HeroBrain {
 
     /**
-     * The heroes v2 drives; every other hero keeps v1 until lovish has played this one (lesson L005: build it for one
-     * hero and prove it in game before rolling it out). Rolling out = adding the kit's id here.
+     * The heroes v2 drives: every faction hero (design-draft-heroes-better-2026-10-30 #2, lovish Oct 30: "fix what
+     * exists first"). v2 was proven on the Dawn Paladin first (lesson L005); v1 left the other seven fog-blind, firing
+     * gap closers off move orders and chasing under towers (HeroAiV2RolloutGameTests). v1's fight rules stay, run behind
+     * the OrderLock (HeroBot.fightV2).
      */
-    public static final Set<String> ROLLED_OUT = Set.of(HeroKits.DAWN_PALADIN.id);
+    public static final Set<String> ROLLED_OUT = rolledOut();
+
+    private static Set<String> rolledOut() {
+        Set<String> ids = new java.util.HashSet<>();
+        for (var kit : HeroKits.ALL)
+            ids.add(kit.id);
+        for (var kit : HeroKits.T2_LAB)
+            ids.add(kit.id);
+        return Set.copyOf(ids);
+    }
 
     public static boolean drives(FactionHero hero) {
         return ROLLED_OUT.contains(hero.kit().id);
@@ -46,6 +57,8 @@ public final class HeroBrain {
     public long followUpUntil;
     /** The hero's cast goal was busy last tick (HeroBot.everyTick: the order's walk resumes the tick a cast is done). */
     public boolean wasCasting;
+    /** The cast goal's cast the brain started itself (HeroCore's cast count then); a player's cast is never its own. */
+    public int aiCastSeq = -1;
     /** Where the current flight runs to (a bot's order that sweeps the hero along mid-flight is turned back to it). */
     @Nullable public net.minecraft.core.BlockPos fleeTo;
     /** The game tick the hero went to REST (a bot's hero goes back to its order after HeroBot.BOT_REST_TICKS). */

@@ -64,6 +64,7 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.verdant.ElderTreantProd ELDER_TREANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "elder_treant"), new com.solegendary.reignofnether.unit.units.verdant.ElderTreantProd());
     public static final com.solegendary.reignofnether.unit.units.verdant.WispChoirProd WISP_CHOIR = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wisp_choir"), new com.solegendary.reignofnether.unit.units.verdant.WispChoirProd());
     public static final com.solegendary.reignofnether.unit.units.verdant.BloomPriestessProd BLOOM_PRIESTESS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bloom_priestess"), new com.solegendary.reignofnether.unit.units.verdant.BloomPriestessProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.ThornweaverProd THORNWEAVER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornweaver"), new com.solegendary.reignofnether.unit.units.verdant.ThornweaverProd());
     public static final RavagerProd RAVAGER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ravager"), new RavagerProd());
     public static final com.solegendary.reignofnether.unit.units.piglins.WarMammothProd WAR_MAMMOTH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "war_mammoth"), new com.solegendary.reignofnether.unit.units.piglins.WarMammothProd());
 
@@ -268,6 +269,8 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.engineers.PioneerProd PIONEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pioneer"), new com.solegendary.reignofnether.unit.units.engineers.PioneerProd());
     // the Brassworks essence caster (design/essence_casters.md; appended last so no existing item's id moves)
     public static final com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd SOUL_ENGINEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_engineer"), new com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd());
+    // the Horde essence caster (design/essence_casters.md): appended last too, so no existing item's id moves
+    public static final com.solegendary.reignofnether.unit.units.piglins.VoodooShamanProd VOODOO_SHAMAN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "voodoo_shaman"), new com.solegendary.reignofnether.unit.units.piglins.VoodooShamanProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -312,6 +315,7 @@ public class ProductionItems {
         ELDER_TREANT,
         WISP_CHOIR,
         BLOOM_PRIESTESS,
+        THORNWEAVER,
         WAR_MAMMOTH,
         SUN_COLOSSUS,
         WORLD_TREE_WALKER,
@@ -441,7 +445,8 @@ public class ProductionItems {
         ROOTWARDEN,
         SALVAGER,
         JADE_MENDER,
-        PIONEER
+        PIONEER,
+        VOODOO_SHAMAN
     );
 
     @Nullable

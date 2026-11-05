@@ -52,6 +52,7 @@ public class ResourceCosts {
     public static final ResourceCost ELDER_TREANT = new ResourceCost(ID, "ELDER_TREANT");
     public static final ResourceCost WISP_CHOIR = new ResourceCost(ID, "WISP_CHOIR");
     public static final ResourceCost BLOOM_PRIESTESS = new ResourceCost(ID, "BLOOM_PRIESTESS");
+    public static final ResourceCost THORNWEAVER = new ResourceCost(ID, "THORNWEAVER");
     public static final ResourceCost CIRCLE_OF_ELDERS = new ResourceCost(ID, "CIRCLE_OF_ELDERS");
     public static final ResourceCost SUN_COLOSSUS = new ResourceCost(ID, "SUN_COLOSSUS");
     // Verdant Court T3: the Heart of the Wild and the World Tree Walker
@@ -319,6 +320,7 @@ public class ResourceCosts {
     public static final ResourceCost FIELD_MASON = new ResourceCost(ID, "FIELD_MASON");
     public static final ResourceCost BONESETTER = new ResourceCost(ID, "BONESETTER");
     public static final ResourceCost WRECKER = new ResourceCost(ID, "WRECKER");
+    public static final ResourceCost VOODOO_SHAMAN = new ResourceCost(ID, "VOODOO_SHAMAN");
     public static final ResourceCost ROOTWARDEN = new ResourceCost(ID, "ROOTWARDEN");
     public static final ResourceCost SALVAGER = new ResourceCost(ID, "SALVAGER");
     public static final ResourceCost JADE_MENDER = new ResourceCost(ID, "JADE_MENDER");
@@ -407,6 +409,7 @@ public class ResourceCosts {
         ELDER_TREANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ELDER_TREANT);
         WISP_CHOIR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WISP_CHOIR);
         BLOOM_PRIESTESS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BLOOM_PRIESTESS);
+        THORNWEAVER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.THORNWEAVER);
         CIRCLE_OF_ELDERS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CIRCLE_OF_ELDERS);
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
         WORLD_TREE_WALKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WORLD_TREE_WALKER);
@@ -651,6 +654,7 @@ public class ResourceCosts {
         FIELD_MASON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FIELD_MASON);
         BONESETTER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONESETTER);
         WRECKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WRECKER);
+        VOODOO_SHAMAN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.VOODOO_SHAMAN);
         ROOTWARDEN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROOTWARDEN);
         SALVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SALVAGER);
         JADE_MENDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.JADE_MENDER);
