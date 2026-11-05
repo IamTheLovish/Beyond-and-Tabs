@@ -670,7 +670,9 @@ public class BoneDragonUnit extends GhastUnit {
         for (LivingEntity le : hit) {
             le.hurt(sl.damageSources().indirectMagic(this, this), dmg);
             if (le.isAlive())
-                le.addEffect(new MobEffectInstance(MobEffects.WITHER, WITHER_TICKS, 0));
+                // no vanilla swirls: at the RTS camera they drew as black pixel blots beside the fire (eyes 42047299879);
+                // the burn shows in BreathFx's licks and hit flash, the effect's icon stays
+                le.addEffect(new MobEffectInstance(MobEffects.WITHER, WITHER_TICKS, 0, false, false, true));
         }
         // buildings: collected first, then burnt (a building that falls leaves the list)
         burnt.clear();
