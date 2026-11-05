@@ -4,6 +4,7 @@ The pack (shaderpacks/BeyondAndTabs, design/own_shader_pack.md) is only ever run
 PCs; a GLSL typo there costs a ten-minute eyes run and shows as "no shader pack" in the stills. CI installs glslang
 (build.yml, job ruff); without it the compile test is skipped and only the header checks run.
 """
+import math
 import os
 import re
 import sys
@@ -53,6 +54,40 @@ class ShaderPack(unittest.TestCase):
         m = re.search(r"const float BLOOM_THRESHOLD = ([\d.]+);", comp)
         self.assertIsNotNone(m)
         self.assertGreaterEqual(float(m.group(1)), 1.0)
+
+    def test_plants_cast_a_faint_shadow_never_a_dark_star(self):
+        # lovish (Nov 5, buttons): "Try faint shadow + lit side". Grass, flowers and crops cast no shadow since Oct 28
+        # (hard shadows read as dark stars under every tuft). Now they cast PLANT_SHADOW of the sun's light; no constant
+        # = the old pack, nothing cast. Two-sided at noon on open ground: the ground under a tuft keeps at least 0.80 of
+        # the open lawn (design/own_shader_pack.md: "luma under a tuft at least 0.8x the open lawn beside it") and is at
+        # least 8% darker, or the shadow does not show
+        settings = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+        light = open(os.path.join(spc.SHADERS, "lib", "light.glsl"), encoding="utf-8").read()
+        k = spc.float_const(settings, "PLANT_SHADOW", 0.0)
+        ndl = math.sin(math.radians(60.0))
+        under = spc.noon_light(light, 1.0, ndl, 1.0 - k) / spc.noon_light(light, 1.0, ndl)
+        self.assertTrue(0.80 <= under <= 0.92, "ground under a tuft at %.3f of the open lawn" % under)
+        # the shadow pass draws the plants with that opacity, and the lookup lets the rest of the sun through
+        self.assertIn("PLANT_SHADOW", open(os.path.join(spc.SHADERS, "shadow.vsh"), encoding="utf-8").read())
+        self.assertIn("shadowcolor0", open(os.path.join(spc.SHADERS, "lib", "shadow.glsl"), encoding="utf-8").read())
+
+    def test_plants_have_a_lit_and_a_shaded_side(self):
+        # the same answer: a plant's planes take a normal PLANT_SIDE of the way from up toward the face the camera sees
+        # (0 = lit as the ground, the old pack). At noon (sun ~60 degrees up) a plane facing the sun reads 1.00-1.10 of
+        # the open lawn and one facing away 0.75-0.90: a lit side and a shaded side, never a dark plane
+        fsh = open(os.path.join(spc.SHADERS, "program", "lit.fsh"), encoding="utf-8").read()
+        light = open(os.path.join(spc.SHADERS, "lib", "light.glsl"), encoding="utf-8").read()
+        s = spc.float_const(fsh, "PLANT_SIDE", 0.0)
+        sun = (math.cos(math.radians(60.0)), math.sin(math.radians(60.0)))      # (toward the sun's azimuth, up)
+        lawn = spc.noon_light(light, 1.0, sun[1])
+        sides = []
+        for facing in (1.0, -1.0):
+            n = (s * facing, 1.0 - s)
+            length = math.hypot(*n)
+            n = (n[0] / length, n[1] / length)
+            sides.append(spc.noon_light(light, n[1], n[0] * sun[0] + n[1] * sun[1]) / lawn)
+        self.assertTrue(1.00 <= sides[0] <= 1.10, "sunlit side at %.3f of the lawn" % sides[0])
+        self.assertTrue(0.75 <= sides[1] <= 0.90, "shaded side at %.3f of the lawn" % sides[1])
 
     def test_grade_matches_the_mods_enchanted_look(self):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's

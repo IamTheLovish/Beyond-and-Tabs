@@ -117,6 +117,45 @@ def enchanted_pairs(java, fsh):
     return pairs
 
 
+def vec3_const(source, name):
+    """A `const vec3 NAME = vec3(r, g, b) [* k];` (or `vec3(x)`) from a shader's source, as three floats."""
+    m = re.search(r"const vec3 %s = vec3\(([^)]*)\)\s*(?:\*\s*(-?\d+(?:\.\d+)?))?\s*;" % name, source)
+    if not m:
+        raise ValueError("no const vec3 %s" % name)
+    xs = _numbers(m.group(1))
+    xs = xs * 3 if len(xs) == 1 else xs
+    k = float(m.group(2)) if m.group(2) else 1.0
+    return [x * k for x in xs]
+
+
+def float_const(source, name, default=None):
+    """A `const float NAME = x;` from a shader's source; `default` when the source has none."""
+    m = re.search(r"const float %s = (-?\d+(?:\.\d+)?);" % name, source)
+    if not m:
+        if default is None:
+            raise ValueError("no const float %s" % name)
+        return default
+    return float(m.group(1))
+
+
+LUMA = (0.2126, 0.7152, 0.0722)
+
+
+def noon_light(light_source, upness, ndl, sun_through=1.0):
+    """Luma of lib/light.glsl's surfaceLight at the lobby's noon (the high-sun row) for a face in full sky light with
+    no ambient occlusion: `upness` its normal's dot with up, `ndl` with the sun, `sun_through` the shadow (1 = lit).
+    Mirrors sunFacing (Lambert eased halfway to its square root), the fill's (0.75 + 0.25 x upness), the ground bounce
+    on faces that look sideways and MIN_LIGHT."""
+    def lum(v):
+        return sum(a * b for a, b in zip(v, LUMA))
+    sun, sky = lum(vec3_const(light_source, "SUN_HIGH")), lum(vec3_const(light_source, "SKY_HIGH"))
+    bounce = float_const(light_source, "GROUND_BOUNCE", 0.0)
+    ndl = max(ndl, 0.0)
+    facing = 0.5 * (ndl + ndl ** 0.5)
+    return (sun * facing * sun_through + sky * (0.75 + 0.25 * upness)
+            + sun * bounce * min(max(1.0 - upness, 0.0), 1.0) + lum(vec3_const(light_source, "MIN_LIGHT")))
+
+
 def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 
