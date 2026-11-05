@@ -73,6 +73,8 @@ public final class BarFxClient {
         boolean crater;
         boolean steady;                // beams: hold full brightness, fade only at the very end (nano beams)
         boolean blend;                 // BREATH: drawn alpha-blended with the smoke (a body of colour), not added as light
+        float drag;                    // BREATH: slows in flight (per second), so a flame leaves the jaws fast, lands slow
+        float stretch;                 // BREATH: drawn up to this many times longer along its motion (a tongue, not a ball)
     }
 
     static final List<P> live = new ArrayList<>(), decals = new ArrayList<>();
@@ -117,7 +119,7 @@ public final class BarFxClient {
     private static void init(P p, int kind, float x, float y, float z, float life, float size, int color) {
         p.kind = kind; p.x = x; p.y = y; p.z = z; p.born = clock; p.life = Math.max(.01f, life); p.size = size; p.color = color;
         p.vx = p.vy = p.vz = 0; p.grow = 1; p.spin = 0; p.alpha = 1; p.ground = Float.NaN; p.groundKey = Integer.MIN_VALUE;
-        p.steady = false; p.crater = false; p.blend = false; p.x2 = p.y2 = p.z2 = 0;
+        p.steady = false; p.crater = false; p.blend = false; p.drag = 0; p.stretch = 1; p.x2 = p.y2 = p.z2 = 0;
     }
 
     /**
@@ -1172,6 +1174,9 @@ public final class BarFxClient {
                     p.ground = Float.NaN;
                 } else if (p.vy >= 0) {
                     p.vx *= 1 - 2.5f * dt; p.vz *= 1 - 2.5f * dt;
+                } else if (p.drag > 0) {
+                    float f = Math.max(0, 1 - p.drag * dt);
+                    p.vx *= f; p.vy *= f; p.vz *= f;
                 }
             }
             case EMITTER -> {
@@ -1224,6 +1229,38 @@ public final class BarFxClient {
         }
     }
 
+    /**
+     * A flame tongue: a soft camera-facing ellipse, {@code len} times longer along the particle's motion as the camera
+     * sees it (its velocity on the screen plane), its trailing half a little longer than its head.
+     */
+    static void tongue(P p, float r, float len, float sp, int c, float a) {
+        float ux = (p.vx * leftX + p.vy * leftY + p.vz * leftZ) / sp, uy = (p.vx * upX + p.vy * upY + p.vz * upZ) / sp;
+        float ul = (float) Math.sqrt(ux * ux + uy * uy);
+        if (ul < .2f) {
+            softDisc(p.x, p.y, p.z, r, c, a, c, 0, 8, p.spin, .3f);
+            return;
+        }
+        ux /= ul; uy /= ul;
+        // the long axis on screen (along the motion), and the short one square to it
+        float mx = leftX * ux + upX * uy, my = leftY * ux + upY * uy, mz = leftZ * ux + upZ * uy;
+        float nx = -leftX * uy + upX * ux, ny = -leftY * uy + upY * ux, nz = -leftZ * uy + upZ * ux;
+        int seg = 10;
+        float px = 0, py = 0, pz = 0;
+        for (int i = 0; i <= seg; i++) {
+            double ang = i * Math.PI * 2 / seg;
+            float cs = (float) Math.cos(ang), sn = (float) Math.sin(ang);
+            float along = cs * r * (cs < 0 ? len * 1.2f : len * .8f), side = sn * r * (1 - .25f * (float) Math.abs(Math.sin(p.spin * 5 + i * 2.3)));
+            float qx = p.x + mx * along + nx * side, qy = p.y + my * along + ny * side, qz = p.z + mz * along + nz * side;
+            if (i > 0) {
+                v(p.x, p.y, p.z, c, a);
+                v(px, py, pz, c, 0);
+                v(qx, qy, qz, c, 0);
+                v(p.x, p.y, p.z, c, a);
+            }
+            px = qx; py = qy; pz = qz;
+        }
+    }
+
     /** Soft camera-facing ribbon from p1 to p2: bright along its middle, fading to nothing at the sides. */
     static void streak(float x1, float y1, float z1, float x2, float y2, float z2, float w, int c, float a1, float a2) {
         float dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
@@ -1271,7 +1308,11 @@ public final class BarFxClient {
                 float r = p.size * (1 + (p.grow - 1) * Math.min(1, k * 1.5f));
                 int c = mix(p.color, p.color2, k);
                 float a = p.alpha * (k < .06f ? k / .06f : 1) * (1 - k) * (1 - k * .35f);
-                softDisc(p.x, p.y, p.z, r, c, a, c, 0, 8, p.spin + p.born * 7 + k * 1.5f, .3f);
+                float sp = (float) Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+                if (p.stretch > 1 && sp > .5f)
+                    tongue(p, r, Math.min(p.stretch, 1 + sp / 8), sp, c, a);
+                else
+                    softDisc(p.x, p.y, p.z, r, c, a, c, 0, 8, p.spin + p.born * 7 + k * 1.5f, .3f);
             }
             case SPARK -> {
                 float sp = (float) Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
