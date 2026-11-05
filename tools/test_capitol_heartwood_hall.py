@@ -82,8 +82,9 @@ class HeartwoodHallTest(unittest.TestCase):
         self.assertGreaterEqual(share, 0.75, share)
 
     def test_parapet_has_no_merlon_rhythm(self):
-        """The ruined parapet (y7 on ring 4) never alternates wall / not-wall over five cells in a row: an every-other-
-        cell rhythm reads as "a dotted necklace of tiny targets" at RTS zoom (critic a, massing r2)."""
+        """The wall top (y7 on ring 4: a ruined parapet until the hip roof) never alternates wall / not-wall over five
+        cells in a row: an every-other-cell rhythm reads as "a dotted necklace of tiny targets" at RTS zoom (critic a,
+        massing r2)."""
         for side in range(4):
             cells = []
             for t in range(-3, 4):

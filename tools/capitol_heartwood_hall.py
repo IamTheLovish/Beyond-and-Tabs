@@ -24,16 +24,16 @@ over carved stone; ref 61 the ruined gothic tower with broken arches; refs 23 / 
 overgrown air temple; ref 106 organic arches):
   - an old TEMPLE HALL of mossy stone, the same on all four sides: a stylobate whose stair rim steps up all round, on
     each face pier - lancet - pilaster - POINTED ARCH - pilaster - lancet - pier, three depths on every face (the
-    pilasters and cornice stand out, the wall, the lancets recessed into the hall's dark); the
-    parapet is broken (ruined crenels, leaves spilling over it);
-  - the WORLD TREE grew up through it: one 3 x 3 trunk stands in the hall's middle and rises through its ROOF (mossy
-    cobble stepping up to it, the trunk's foot flaring over the top step); its hollow heart is the centre spawn's
+    pilasters and cornice stand out, the wall, the lancets recessed into the hall's dark); a HIP ROOF of mossy cobble
+    overhangs the cornice and climbs a step a ring to the trunk, a lantern on each eave corner;
+  - the WORLD TREE grew up through it: one 3 x 3 trunk stands in the hall's middle and rises through its ROOF (the
+    trunk's foot flaring over the top step); its hollow heart is the centre spawn's
     column (a verdant froglight glows in its roof), and the spawn walks out by doorways on the axes and out of any of
     the four arches; four BOUGHS break out through the roof, one on each side, each its own shape;
   - SURFACE ROOTS: low mats of mangrove roots round each garden corner by a MOONWELL (a water cauldron between bare
     calcite kerbs);
-  - the STAG-DRYAD FACE is carved in the trunk just over the roof on the two sides the RTS camera sees (birch mask and
-    muzzle, glowing eyes, dark brows), its ANTLERS branch out of the brow toward the crown as the tree's own boughs;
+  - the STAG-DRYAD FACE is carved in the trunk just over the roof on the two sides the RTS camera sees (a birch blaze
+    and snout, glowing eyes in the bark, dark brows), its ANTLERS branch out of the brow toward the crown as the tree's own boughs;
   - a BLOSSOM CROWN of uneven lobes (Nov 2026, after two blind massing rounds: the round tiered canopy read as "a
     green mound" and "a bullseye from above"): cherry leaves with a flowering azalea leaf in every few cells, each lobe
     on its own bough, leaning north-east away from the RTS camera so the temple's south and west faces show under it,
@@ -43,7 +43,9 @@ overgrown air temple; ref 106 organic arches):
     trunk stands 10 blocks clear of the roof under a crown kept inside the cornice (ring 5), y19-29. Fable critic
     round 1 (blind, Nov 5) on the eyes stills: four legs over a 5 x 5 base read as "a wide brown ring" and "a
     treehouse room", the oak bark as crates, the corner root arcs as "crate stacks", and no roof read - so one trunk,
-    one dark bark, a roof you see, low roots, a broader crown;
+    one dark bark, a roof you see, low roots, a broader crown. Round 2: the roof inside the parapet still read as "a
+    paved courtyard", the five-wide mask as "a crate hut" and the bough tips as "four pink crosses" floating - so a
+    hip roof over the whole hall, a face carved in the bark, round blossoms on the bough tips;
   - the GARDEN: the paving breaks up into moss and rooted dirt, stepping stones, ferns, carpets and flowers.
 
 WHAT THE SIZE TOUCHES IN THE GAME (the coordinator applies these; this file edits nothing):
@@ -72,13 +74,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import capitol_town_centre as tc   # noqa: E402  - the Cap canvas (a _SunRig addressed from the centre, 4-fold sides)
-import gen_structures as gs        # noqa: E402
 import mex_verdant as mv           # noqa: E402  - the leaf-distance pass shared with the Root Spring
 
 R, H = 7, 30                       # 15 x 30 x 15: the tall tree (lovish, Nov 5) - was 22
 BASE = 14                          # the hollow heart's top: the trunk is solid from here up (the box centre, y14)
-LIFT = 1                           # what the stag-dryad and its antlers rose by (the mask sits just over the roof)
-ROOF = 9                           # the roof's ridge, round the trunk
+LIFT = 0                           # what the stag-dryad and its antlers rose by (the mask sits on the trunk's flare)
+ROOF = 10                          # the roof's top step, round the trunk (the trunk's foot flares over it)
 O4 = tc.O4
 CORNERS = tc.CORNERS
 inward, outward, along, hsh = tc.inward, tc.outward, tc.along, tc.hsh
@@ -98,7 +99,7 @@ FLOWERS = ("allium", "azure_bluet", "oxeye_daisy", "lily_of_the_valley", "cornfl
 STARTING_TYPES = {"moss_block", "mossy_stone_bricks"}       # HeartwoodHall.startingBlockTypes
 # BuildingAmbienceClientEvents.CAPITOL_SPOTS["heartwood_hall"], Fx.PETAL (structure coordinates, block x spans x..x+1):
 # under three of the crown's low lobes (LOBES), under the blossom at the east roof bough's tip, and over the crown's top
-PETAL_SPOTS = ((11.5, 19.5, 3.5), (6.5, 19.5, 10.5), (10.5, 18.5, 11.5), (13.5, 11.5, 7.5), (8.5, 29.5, 6.5))
+PETAL_SPOTS = ((11.5, 19.5, 3.5), (6.5, 19.5, 10.5), (10.5, 18.5, 11.5), (13.5, 11.5, 5.5), (8.5, 29.5, 6.5))
 
 
 def leaf(c, dx, y, dz, name="azalea_leaves"):
@@ -158,10 +159,10 @@ def stylobate(c):
 
 # ====================================================================================================== hall
 def hall(c):
-    """The ruined temple on ring 4, y2..7: on each face corner pier - lancet - pilaster - pointed arch - pilaster -
-    lancet - corner pier. The pilasters stand on ring 5 (the outer plane) with a lantern on a wall cap, the lancets are
-    open slots into the hall's dark (the recess), the cornice of upside-down stairs juts over the
-    wall and the parapet above it is ruined - crenels missing, leaves spilling over."""
+    """The temple on ring 4, y2..7: on each face corner pier - lancet - pilaster - pointed arch - pilaster - lancet -
+    corner pier. The pilasters stand on ring 5 (the outer plane) with a lantern on a wall cap, the lancets are open
+    slots into the hall's dark (the recess), the cornice of upside-down stairs juts over the wall, and the wall top
+    over it carries the roof's eaves."""
     for o in O4.values():
         for t in range(-3, 4):
             for y in range(2, 7):
@@ -187,19 +188,10 @@ def hall(c):
             c.put(o, 5, 2 * s, 3, MSB)
             c.put(o, 5, 2 * s, 4, MSW)
             c.put(o, 5, 2 * s, 5, "lantern", **LANTERN)
-        # the ruined parapet on y7: an irregular ruin (a wall stump, a fallen slab, leaves, a gap - by hash, never an
-        # every-other-cell merlon rhythm: critic a, massing r2, "a dotted necklace of tiny targets")
+        # the wall top on y7 that carries the roof (it was a ruined parapet, and the roof hid behind it: from the RTS
+        # camera the hall read as "a paved courtyard with four corner posts", Fable critic round 2)
         for t in range(-3, 4):
-            x, z = c.side(o, 4, t)
-            k = hsh(x * 7 + 3, z * 5 + 1) % 7
-            if k in (0, 1, 2):
-                c.put(o, 4, t, 7, MSW)
-                if k == 0:
-                    c.put(o, 4, t, 8, MSW)                        # a taller stump
-            elif k in (3, 4):
-                c.put(o, 4, t, 7, MSSL, type="bottom", **DRY)
-            elif k == 5:
-                leaf(c, x, 7, z, gs.leaf_for(x, 7, z, 3))
+            c.put(o, 4, t, 7, MSB if hsh(t * 5 + 1, o[0] * 3 + o[1]) % 4 else CSB)
     # the corner piers (where the roots burst through), chiseled at the foot, cracked higher up
     for (sx, sz) in CORNERS:
         x, z = 4 * sx, 4 * sz
@@ -207,6 +199,7 @@ def hall(c):
         for y in (3, 4, 5):
             c.set(x, y, z, MSB if y != 4 else CSB)
         c.set(x, 6, z, MC)
+        c.set(x, 7, z, MC)
 
 
 # ====================================================================================================== tree
@@ -235,41 +228,35 @@ def legs_and_trunk(c):
 
 
 def face(c, o):
-    """The stag-dryad on the trunk's face o (the Root Spring's spirit at the capitol's scale), on ring 2, y12-16
-    just over the roof (y11-15 + LIFT): a pale birch mask, a muzzle and snout over the arch, verdant froglight eyes
-    under overhanging dark-oak brows, a moss crown between the burrs - and the antlers rising out of the burrs as the
-    tree's own birch boughs, toward the crown."""
-    # three depths: the muzzle and brows stand out on ring 3, the mask on ring 2, the eyes sunk under the brows
-    c.put(o, 3, 0, 11 + LIFT, BIRCH_W, axis="y")                 # the muzzle, pushed out over the arch's keystone
-    c.st(o, 3, 0, 12 + LIFT, inward(o), name=BIRCH_S)                   # the snout sloping up into the blaze
-    c.put(o, 2, 0, 11 + LIFT, BIRCH_W, axis="y")                        # the jaw behind it
-    c.put(o, 2, 0, 12 + LIFT, BIRCH_W, axis="y")
+    """The stag-dryad carved on the trunk's face o (the Root Spring's spirit at the capitol's scale), three wide on
+    ring 2, y11-15 (+ LIFT) sitting on the trunk's flare over the roof: a pale birch blaze and snout down the middle,
+    verdant froglight eyes in the bark under jutting dark-oak brows, a moss crown between the burrs - and the antlers
+    rising out of the burrs as the tree's own birch boughs, toward the crown. Fable critic round 2: the five-wide mask
+    (cheeks, brow sweeps, leafy ears) read as "an oak-plank and dark-oak-stair ring", "a crate hut" round the trunk,
+    so the face is the trunk's own bark with only the blaze, the eyes and the brows on it."""
+    c.st(o, 3, 0, 11 + LIFT, inward(o), name=BIRCH_S)                   # the snout, sloping up into the blaze
+    for y in (11, 12, 13):
+        c.put(o, 2, 0, y + LIFT, BIRCH_W, axis="y")                     # the blaze: muzzle, nose, forehead
     for s in (-1, 1):
-        c.st(o, 3, s, 11 + LIFT, along(o, -s), "top", name=BIRCH_S)     # the cheeks, hollowed under
-        c.st(o, 2, s, 12 + LIFT, along(o, -s), "top", name=BIRCH_S)
-        c.put(o, 2, s, 13 + LIFT, "verdant_froglight", axis="y")        # the eyes, sunk in the mask
-        c.st(o, 3, s, 14 + LIFT, inward(o), "top", name="dark_oak_stairs")   # the brows, jutting over the eyes
-        c.st(o, 2, 2 * s, 14 + LIFT, along(o, -s), "top", name="dark_oak_stairs")   # the brow's outer sweep
-        c.put(o, 2, s, 14 + LIFT, BIRCH_W, axis="y")
-        c.put(o, 2, s, 15 + LIFT, BIRCH, axis="y")                      # the burrs
-        leaf(c, *_xyz(c, o, 2, 2 * s, 13 + LIFT), name="flowering_azalea_leaves")   # leafy ears flicked out
-    c.put(o, 2, 0, 13 + LIFT, BIRCH_W, axis="y")                        # the bridge of the nose
-    c.put(o, 3, 0, 13 + LIFT, BIRCH_W, axis="y")                        # the blaze, standing proud between the eyes
-    c.put(o, 2, 0, 14 + LIFT, BIRCH_W, axis="y")                        # the forehead
-    c.put(o, 2, 0, 15 + LIFT, "moss_block")                             # the moss crown between the burrs
+        c.put(o, 2, s, 11 + LIFT, WOOD, axis="y")                       # the cheeks: the trunk's bark
+        c.put(o, 2, s, 12 + LIFT, "verdant_froglight", axis="y")        # the eyes, in the bark
+        c.st(o, 3, s, 13 + LIFT, inward(o), "top", name=BARK_S)         # the brows, jutting over the eyes
+        c.put(o, 2, s, 13 + LIFT, WOOD, axis="y")
+        c.put(o, 2, s, 14 + LIFT, BIRCH, axis="y")                      # the burrs
+    c.put(o, 2, 0, 14 + LIFT, "moss_block")                             # the moss crown between the burrs
     # the antlers: burr -> a brow tine straight up, the beam sweeping out to a knuckle, tines forking up, out and
     # toward the viewer - solid birch only at the knuckles, fence between (an open, branching line, not a pillar)
     for s in (-1, 1):
-        c.put(o, 2, s, 16 + LIFT, BIRCH_F)                              # the brow tine
-        c.st(o, 2, 2 * s, 16 + LIFT, along(o, -s), "top", name=BIRCH_S) # the beam leaving the burr
-        c.put(o, 2, 2 * s, 17 + LIFT, BIRCH_F)
-        c.put(o, 2, 3 * s, 17 + LIFT, BIRCH_F)
-        c.put(o, 2, 3 * s, 18 + LIFT, BIRCH, axis="y")                  # the knuckle
-        c.put(o, 2, 3 * s, 19 + LIFT, BIRCH_F)                          # the top tine
+        c.put(o, 2, s, 15 + LIFT, BIRCH_F)                              # the brow tine
+        c.st(o, 2, 2 * s, 15 + LIFT, along(o, -s), "top", name=BIRCH_S) # the beam leaving the burr
+        c.put(o, 2, 2 * s, 16 + LIFT, BIRCH_F)
+        c.put(o, 2, 3 * s, 16 + LIFT, BIRCH_F)
+        c.put(o, 2, 3 * s, 17 + LIFT, BIRCH, axis="y")                  # the knuckle
+        c.put(o, 2, 3 * s, 18 + LIFT, BIRCH_F)                          # the top tine
         if s == 1:
-            c.put(o, 2, 3 * s, 20 + LIFT, BIRCH_F)               # one tine taller: the pair reads alive, not cast
-        c.put(o, 3, 3 * s, 18 + LIFT, BIRCH_F)                          # a tine forking toward the viewer
-        c.put(o, 2, 4 * s, 18 + LIFT, BIRCH_F)                   # and one sweeping out (a stub: fewer sticks read
+            c.put(o, 2, 3 * s, 19 + LIFT, BIRCH_F)               # one tine taller: the pair reads alive, not cast
+        c.put(o, 3, 3 * s, 17 + LIFT, BIRCH_F)                          # a tine forking toward the viewer
+        c.put(o, 2, 4 * s, 17 + LIFT, BIRCH_F)                   # and one sweeping out (a stub: fewer sticks read
                                                                  # as antlers, a forest of them as scaffolding)
 
 
@@ -285,15 +272,14 @@ def boughs(c):
 
 
 # The boughs that break out through the roof (lovish, Nov 5: "with branches coming out of the roof"), as waypoints
-# (a, t, y) on a side o: from the trunk inside the hall, up through the roof's middle step (ring 2, y8, between two
-# roof stairs), out over the roof and on out over the walls with a blossom at the tip, or up into the crown's rim.
+# (a, t, y) on a side o: from the trunk inside the hall, up through the roof's third step (ring 3, y9, between two
+# roof stairs), out over the roof to a blossom over the eaves (ring 5), or up into the crown's rim. The tips stand off
+# the stag-dryad's faces from the RTS camera (a blossom in front of the west face hid it).
 # Four, each its own shape (four alike read as a chapel's ribs). Fable critic round 1: limbs "poking out over the hall
 # walls" are what delivers "branches coming out of the roof" - the roof that now shows keeps the temple's stone share.
-ROOF_BOUGHS = (("south", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (4, -1, 10), (5, -1, 11),
-                          (6, -2, 13))),
-               ("west", ((2, -1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (3, 1, 11), (4, 1, 12), (5, 2, 14),
-                         (6, 2, 15))),
-               ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (4, 1, 10), (5, 1, 11), (6, 0, 12))),
+ROOF_BOUGHS = (("south", ((2, -1, 6), (2, -1, 8), (3, -2, 8), (3, -2, 9), (4, -2, 11), (5, -3, 14))),
+               ("west", ((2, 1, 6), (2, 1, 8), (3, 2, 8), (3, 2, 9), (4, 2, 11), (4, 3, 13), (5, 3, 15))),
+               ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (4, -1, 11), (5, -2, 14))),
                ("north", ((2, -1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (3, 0, 11), (4, -1, 13), (4, -1, 16),
                           (4, -2, 18))))
 
@@ -321,9 +307,12 @@ def _limb(c, cells):
 
 
 def roof(c):
-    """The hall's roof (it was open to the crown): mossy cobble stairs stepping up from inside the parapet (ring 3,
-    y7) to the trunk (ring 1, y9: the trunk fills it), the boughs breaking out through its middle step."""
-    for k, y in ((3, 7), (2, 8), (1, ROOF)):
+    """The hall's hip roof: mossy cobble stairs from the eaves (ring 5, y7, overhanging the cornice so the walls sit
+    in its shadow) one step a ring up to the trunk (ring 2, y10), mossy cobble on the four hips, and a lantern standing
+    on each eave corner (the footprint's corners at dusk). A roof inside the parapet three steps deep read from the
+    RTS camera as "a paved courtyard" (Fable critic round 2), so it now covers the whole hall and climbs to the
+    trunk. The roof boughs break out through its third step (ring 3)."""
+    for k, y in ((5, 7), (4, 8), (3, 9), (2, ROOF)):
         for o in O4.values():
             for t in range(-k + 1, k):
                 x, z = c.side(o, k, t)
@@ -332,6 +321,8 @@ def roof(c):
         for (sx, sz) in CORNERS:
             if c.get(sx * k, y, sz * k)[0] == "air":
                 c.set(sx * k, y, sz * k, MC)
+    for (sx, sz) in CORNERS:
+        c.set(sx * 5, 8, sz * 5, "lantern", **LANTERN)
 
 
 def roof_boughs(c):
@@ -341,12 +332,18 @@ def roof_boughs(c):
         cells = [(c.side(o, a, t)[0], y, c.side(o, a, t)[1]) for a, t, y in way]
         path = _limb(c, cells)
         tx, ty, tz = path[-1]
-        if max(abs(tx), abs(tz)) > 5:
+        if max(abs(tx), abs(tz)) >= 5:
+            # a round blossom: a cap over the tip, a full 3 x 3 round it, a ring under it - pink on top and the edges,
+            # the shaded corners and underside green like the crown's belly (a plus over a plus read as "four pink
+            # crosses" floating off the tree, Fable critic round 2)
             for dx in (-1, 0, 1):
                 for dz in (-1, 0, 1):
-                    for dy in (0, 1):
-                        if abs(dx) + abs(dz) + dy <= 2:
+                    for dy in (-1, 0, 1):
+                        edge = abs(dx) + abs(dz) == 1
+                        if dy == 1 and (edge or (dx, dz) == (0, 0)) or dy == 0 and edge:
                             leaf(c, tx + dx, ty + dy, tz + dz, "cherry_leaves")
+                        elif dy == 0 or edge:
+                            leaf(c, tx + dx, ty + dy, tz + dz, "flowering_azalea_leaves")
 
 
 FACES = ("south", "west")         # the stag-dryad looks out where the RTS camera sees it; four masks round the trunk
