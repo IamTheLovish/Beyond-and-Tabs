@@ -31,7 +31,11 @@ public final class BarFx {
 
     // ---- event types
     public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6,
-            SCORCH = 7, SFX = 8, DOME = 9;
+            SCORCH = 7, SFX = 8, DOME = 9, FORMING = 10;
+
+    // ---- FORMING (a portal-type moment: barfx/PortalForming sends it, FormingTimeline + FormingFx play it): kind = style,
+    // flags low 3 bits = the owner's faction (F_*); a = the footprint's horizontal half size, b = its height
+    public static final byte FS_PORTAL = 0, FS_ENDER = 1;
 
     // ---- DOME (a barrier drawn as geometry, barfx/DomeFx): flags low 2 bits = what happened, bit 4 = it follows the
     // entity whose id is the dome id; kind = style; a = radius, b = lifetime in ticks, c = the dome id (float-exact)
@@ -163,7 +167,7 @@ public final class BarFx {
         if (!Float.isFinite(e.x) || !Float.isFinite(e.y) || !Float.isFinite(e.z))
             return;
         List<Event> q = QUEUE.computeIfAbsent(sl.dimension(), k -> new ArrayList<>());
-        if (q.size() >= MAX_PER_TICK) {
+        if (q.size() >= MAX_PER_TICK && e.type != FORMING) {   // a forming is one per activation: never dropped
             // when flooded, keep the big stuff and drop small shots/hits/nano beams
             if (isMinor(e.type))
                 return;
@@ -225,6 +229,16 @@ public final class BarFx {
     /** The barrier goes down: {@code broken} = shattered by damage (a flash), else it simply fades. */
     public static void domeEnd(Level level, int id, Vec3 centre, byte style, boolean broken) {
         emit(level, new Event(DOME, style, broken ? DOME_BROKEN : DOME_END, (float) centre.x, (float) centre.y, (float) centre.z, 0, 0, id));
+    }
+
+    /**
+     * A portal-type building forms (PortalForming, once per activation): {@code base} = the footprint's centre at its
+     * floor, {@code halfSize} its horizontal half size, {@code height} its height; style FS_*, faction F_* (the tint).
+     */
+    public static void forming(Level level, Vec3 base, float halfSize, float height, byte style, byte faction) {
+        if (level == null || level.isClientSide() || base == null) return;
+        emit(level, new Event(FORMING, style, (byte) (faction & FACTION_MASK), (float) base.x, (float) base.y, (float) base.z,
+            Math.max(1, halfSize), Math.max(1, height), 0));
     }
 
     /** A weapon fires from 'from' towards 'to'. */
@@ -511,14 +525,39 @@ public final class BarFx {
      * building. Like a vanilla particle (ServerLevelParticleMixin), never through the fog.
      */
     static boolean seenBy(ServerPlayer player, Event e) {
-        if (Audience.canSee(player, e.x, e.z))
+        return visibleTo((x, z) -> Audience.canSee(player, x, z), e);
+    }
+
+    /** What a viewer's fog shows, by block x / z (a game test passes its own). */
+    public interface Sight {
+        boolean canSee(double x, double z);
+    }
+
+    /** {@link #seenBy(ServerPlayer, Event)}'s rule over any sight. */
+    public static boolean visibleTo(Sight sight, Event e) {
+        if (sight.canSee(e.x, e.z))
             return true;
         return switch (e.type) {
-            case SHOT, NANO -> Audience.canSee(player, e.a, e.c);   // a, c = the far end's x, z
-            case COLLAPSE -> Audience.canSee(player, e.x - e.a, e.z - e.a) || Audience.canSee(player, e.x + e.a, e.z - e.a)
-                || Audience.canSee(player, e.x - e.a, e.z + e.a) || Audience.canSee(player, e.x + e.a, e.z + e.a);
+            case SHOT, NANO -> sight.canSee(e.a, e.c);   // a, c = the far end's x, z
+            case COLLAPSE -> sight.canSee(e.x - e.a, e.z - e.a) || sight.canSee(e.x + e.a, e.z - e.a)
+                || sight.canSee(e.x - e.a, e.z + e.a) || sight.canSee(e.x + e.a, e.z + e.a);
             default -> false;
         };
+    }
+
+    /** The events of one type queued this tick within {@code r} blocks (horizontally) of x / z (the game tests read it). */
+    public static List<Event> queuedAt(Level level, byte type, double x, double z, double r) {
+        List<Event> out = new ArrayList<>();
+        if (!(level instanceof ServerLevel sl))
+            return out;
+        List<Event> q = QUEUE.get(sl.dimension());
+        if (q != null)
+            for (Event e : q) {
+                double dx = e.x - x, dz = e.z - z;
+                if (e.type == type && dx * dx + dz * dz <= r * r)
+                    out.add(e);
+            }
+        return out;
     }
 
     static void clearAll() {
