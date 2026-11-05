@@ -24,6 +24,7 @@ public final class HeroTypes {
             case "corsair_captain" -> EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get();
             case "storm_witch" -> EntityRegistrar.STORM_WITCH_UNIT.get();
             case "arch_engineer" -> EntityRegistrar.ARCH_ENGINEER_UNIT.get();
+            case "ash_shaman" -> EntityRegistrar.ASH_SHAMAN_UNIT.get();
             default -> null;
         };
     }
@@ -39,6 +40,9 @@ public final class HeroTypes {
         if (itemName == null)
             return null;
         for (HeroKit kit : HeroKits.ALL)
+            if (kit.itemName.equals(itemName))
+                return typeOf(kit);
+        for (HeroKit kit : HeroKits.T2_LAB)
             if (kit.itemName.equals(itemName))
                 return typeOf(kit);
         return null;

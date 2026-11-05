@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.ExperimentalAbilityText;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -49,6 +50,16 @@ public class GrowGrove extends Ability {
         return WorldTreeWalkerUnit.TREANT_CAP;
     }
 
+    /** Tooltip body. Public for the tooltip game test. */
+    public String description() {
+        return WorldTreeWalkerUnit.TREANTS_PER_GROVE + " treants grow out of the ground round the walker and fight for " + WorldTreeWalkerUnit.TREANT_LIFETIME_TICKS / 20 + " s (at most " + WorldTreeWalkerUnit.TREANT_CAP + " at once); the bloom heals friends in its shade by " + (int) WorldTreeWalkerUnit.BLOOM_HEAL + ".";
+    }
+
+    /** Tooltip range line, from the ability's own values. Public for the tooltip game test. */
+    public String rangeLine() {
+        return ExperimentalAbilityText.selfLine(radius);
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Grow Grove",
@@ -61,9 +72,8 @@ public class GrowGrove extends Ability {
             null,
             List.of(
                 FormattedCharSequence.forward("Grow Grove  (" + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward(WorldTreeWalkerUnit.TREANTS_PER_GROVE + " treants grow out of the ground round the walker and fight for "
-                    + WorldTreeWalkerUnit.TREANT_LIFETIME_TICKS / 20 + " s (at most " + WorldTreeWalkerUnit.TREANT_CAP
-                    + " at once); the bloom heals friends in its shade by " + (int) WorldTreeWalkerUnit.BLOOM_HEAL + ".", Style.EMPTY),
+                FormattedCharSequence.forward(rangeLine(), Style.EMPTY),
+                FormattedCharSequence.forward(description(), Style.EMPTY),
                 FormattedCharSequence.forward("The grove withers with the walker: kill the tree, not the trees.", Style.EMPTY.withItalic(true))
             ),
             this,

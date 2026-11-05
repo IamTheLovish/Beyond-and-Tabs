@@ -8,8 +8,9 @@ eyes tour log and the CI game-test log; nothing here changes what the game does.
 | line | where | when | says |
 |---|---|---|---|
 | `[Tick]` | server | every 10 s while units exist | p50 / p95 / max of the last 100 server ticks (vanilla's own ring) |
-| `[Paths]` | server | with every `[Tick]` line | the units' vanilla `createPath` calls in the last 10 s, how many took the distance-scaled short search (`VanillaPathBudget`), how many of those found no complete path and re-ran at full range, and the chase cell memo's hit rate (`Terrain.classify`). Fallbacks near the short-search count mean the short range is too tight |
+| `[Paths]` | server | with every `[Tick]` line | the units' vanilla `createPath` calls in the last 10 s, how many took the distance-scaled short search (`VanillaPathBudget`), how many of those found no complete path and re-ran at full range ("full-range fallbacks", with the three unit types that fell back most in brackets, e.g. `(headhunter_unit 12, husk_unit 3, ...)`), and what the path memo (`WidePathMemo`, every unit since Oct 31 #468; wide bodies only before) saved: "failed full searches not repeated" = full-range re-runs skipped because the same full search failed under 5 s ago, "failed searches not repeated" = whole searches skipped because the same search (same targets, unit within 3 blocks) found no complete path under 1 s ago and its path was handed back. Also the chase cell memo's hit rate (`Terrain.classify`). Fallbacks near the short-search count mean the short range is too tight; a unit type high in the fallback list is chasing something it cannot reach |
 | `[Sys]` | server | every 10 s **while the server is slow** (p95 of the last 100 ticks >= 25 ms; off again below 18) | milliseconds per tick each of our systems spent (self time), the worst tick, calls per tick, and how much of the whole tick the timed systems are. `elsewhere` is vanilla, other mods and GC |
+| `[Goals]` | server | right after each `[Sys]` line, **only while [Sys] measures** (slow server, lag capture, `/rts-perf`, a test forcing it) | which GOALS the units' AI time goes to: per goal class (summed over every unit and mob that runs it, vanilla and other mods' mobs too), ms per tick split into the calls GoalSelector makes - tick, canUse, canContinue, start - with calls per tick and microseconds per call; heaviest first, the top 12, the rest counted as "(+N smaller)", e.g. `[Goals] 200 ticks, 7.90 ms/tick in 31 goal classes: MeleeAttackUnitGoal 2.10 ms (tick 1.62, canUse 0.31, canContinue 0.12, start 0.05; 410 calls/t, 5.1 us/call) | ...`. Times are inclusive: [Sys] sections a goal calls into (an attacker's entity scan) count in its row too - [Goals] says which goal, [Sys] says on what. Blind spot: goals ticked directly by unit code instead of their GoalSelector (~46 `goal.tick()` sites: AttackerUnit's melee-on-vehicle and attack-building goals, WorkerUnit's build/repair and gather, casters' ability goals...) are missing from or understated in their rows; most of that time is inside the `attacker` / `unit` [Sys] sections. Cost: off, one volatile read per goal call, no allocation (GoalSelectorMixin redirects); on, under 0.1 us per goal call (under 0.5 ms a tick at 700 units), which shows in [Sys]'s `aiGoals`. Source: perf/GoalTimes, perf/GoalTimer |
 | `[PerfAuto]` | server | p95 >= 50 ms with 60+ units, at most every 5 min | a 10 s run of vanilla's metrics recorder (what `/perf start` runs), our `bat:` sections summed by name, the heaviest leaves, `logs/perf-auto-*.txt`, and the recorder's own zip under `debug/profiling/` |
 | `[Frame]` | client | every 10 s in a world | p50 / p95 / max frame, zoom, units known |
 | `[FrameParts]` | client | every 10 s in a world | milliseconds per frame in our render handlers (unit outlines, building boxes, strategic icons, minimap, HUD, unit bodies), per client tick in `Unit.tick`, and section re-mesh requests per second |
@@ -28,7 +29,7 @@ also counted in `attacker`, so the rows add up and `ours` can be set against the
 Sections (`perf/Sys.java`): `unit`, `attacker`, `attacker/attackMove`, `attacker/idleAggro`, `attacker/retarget`,
 `attacker/entityScan`, `attacker/buildingScan`, `separation`, `stuckNudge`, `unstick`, `reactions`, `pathfinder`
 (main-thread half), `buildings`, `bots`, `unitSync`, `commandQueues`, `autoCaster`, `unitGrid` (rebuild),
-`chunkLoader`, `economy`, `fogOfWar`.
+`chunkLoader`, `economy`, `fogOfWar`, `targetGrid` (rebuild of the target scan's grid, perf plan PR 5).
 
 Each is also a `bat:<name>` section in vanilla's profiler. Vanilla files a unit's tick under its entity type, so the
 raw tree has `bat:attacker` once per unit type; `[PerfAuto]` and `[FrameAuto]` add them up by name.
@@ -53,3 +54,22 @@ client profile without a build: **F3+L** while it lags, then send `debug/profili
 Until Oct 21 the lag capture ran the time profiler behind `/debug start`, which only times the tick rate: its profile
 was empty ("heaviest:  0.0%") and its game test passed on an empty profile. `PerfProfileGameTests` now fails on an
 empty profile or one that does not name `bat:unit` and `bat:attacker`.
+
+## Late-game frame rate (Oct 23, lovish's log)
+
+120 fps below 60 units, 55-75 fps at 450-575, p95 frame 9 -> 40-45 ms, server tick fine. At ~570 units a frame is 14-19 ms:
+ours 7-8 ms, "elsewhere" (vanilla/Embeddium entity and world draw) 5 -> 10.6 ms. What changed (branch claude/perf-late-game):
+
+- **Unit models.** The icon switch (zoom 70) now comes in as the crowd grows: `UnitLodRules.iconEnterZoom` scales it by the
+  known-unit count, 1.0 up to 200 units, down to 0.7 (zoom 49) at 600, in steps of 0.05 so a jittering count never
+  flips the view (a step is 3.5 zoom, the hysteresis band 8); never closer than 48 and never touching the detail zoom
+  (36). `unit_render_lod = false` turns it off with the rest of the unit LOD. The model skip also moved in front of the
+  renderer: `EntityRenderDispatcherMixin.shouldRender` returns false for a unit whose model is skipped (same rule as the
+  render event - `UnitLodRules.skipUnitModel`), so no light lookup, renderer, pose or event is paid per unit.
+- **worldMarkers / buildingDecor "calls".** 165 calls a frame were not draw calls: Forge fires every level stage at every
+  handler (~10 a frame) and our handlers opened their timer and asked the shader pack (a reflective call) before checking
+  the stage. All 14 handlers now test the stage first (`RenderStageGateTest` guards it), so the `calls` column of the
+  next [FrameParts] line drops to about the handler count. Metal patch rings and gems, banners and mill parts are also
+  frustum-culled (they were built for every patch within 260 blocks, on screen or not).
+- **buildingDecor spikes.** `BannerRenderClientEvents.computeMount` walks every block of a placement; a base coming into
+  view or a fog reveal handed it dozens in one frame. `FrameBudget` allows one a frame.

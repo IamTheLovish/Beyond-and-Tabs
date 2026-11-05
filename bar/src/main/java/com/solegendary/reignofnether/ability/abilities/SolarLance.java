@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.ExperimentalAbilityText;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -47,6 +48,16 @@ public class SolarLance extends Ability {
         this.showRangeCircle = true;
     }
 
+    /** Tooltip body. Public for the tooltip game test. */
+    public String description() {
+        return "After a 1.5 s charge, a beam deals " + (int) DAMAGE + " to every enemy in its lane.";
+    }
+
+    /** Tooltip range line, from the ability's own values. Public for the tooltip game test. */
+    public String rangeLine() {
+        return ExperimentalAbilityText.rangeLine(range);
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Solar Lance",
@@ -59,8 +70,8 @@ public class SolarLance extends Ability {
             null,
             List.of(
                 FormattedCharSequence.forward("Solar Lance  (" + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("After a 1.5 s charge, a " + LENGTH + "-block beam deals " + (int) DAMAGE
-                    + " to every enemy in its lane.", Style.EMPTY),
+                FormattedCharSequence.forward(rangeLine(), Style.EMPTY),
+                FormattedCharSequence.forward(description(), Style.EMPTY),
                 FormattedCharSequence.forward("The charge is visible - nimble enemies can dodge it.", Style.EMPTY.withItalic(true))
             ),
             this,

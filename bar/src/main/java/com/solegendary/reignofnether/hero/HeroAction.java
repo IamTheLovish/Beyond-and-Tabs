@@ -9,5 +9,18 @@ public enum HeroAction {
     SET_MAX_MANA,
     ACTIVATE_ABILITY_CLIENTSIDE,
     DEACTIVATE_ABILITY_CLIENTSIDE,
-    REQUEST_SYNC
+    REQUEST_SYNC,
+    // the sender's Hero AI switch (ReignOfNetherClientConfigs.HERO_AI): unitId unused
+    HERO_AI_ON,
+    HERO_AI_OFF,
+    // the sender selected their hero (D030: a select hands a fleeing hero back to the player's order): unitId = the hero
+    HERO_SELECTED,
+    // the sender's "Auto-learn hero abilities" setting (ReignOfNetherClientConfigs.HERO_AUTO_LEARN): unitId unused
+    AUTO_LEARN_ON,
+    AUTO_LEARN_OFF,
+    // the sender opened / closed their hero's rank-up menu (auto-learn waits while it is open): unitId = the hero
+    RANK_MENU_OPEN,
+    RANK_MENU_CLOSED,
+    // kill XP the hero just earned, for the owner's "+N XP" float: value = the XP
+    XP_GAINED
 }

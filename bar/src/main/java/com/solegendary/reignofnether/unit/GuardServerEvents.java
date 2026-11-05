@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.unit;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
@@ -35,6 +36,8 @@ public class GuardServerEvents {
 
     private static final double PROTECT_RANGE_SQR = 18 * 18;  // engage enemies this close to the ward
     private static final double ESCORT_GAP_SQR = 7 * 7;       // close back up when further than this
+    /** A builder guarding a factory assists its production from at most this many blocks off its footprint. */
+    public static final int ASSIST_REACH = 6;
 
     public static void setGuardUnit(Unit guard, LivingEntity target) {
         LivingEntity le = (LivingEntity) guard;
@@ -48,6 +51,25 @@ public class GuardServerEvents {
         LivingEntity le = (LivingEntity) guard;
         guards.put(le.getId(), new GuardTarget(-1, building.originPos));
         guard.setMoveTarget(building.centrePos);
+    }
+
+    /**
+     * The right-click rule (UnitClientEvents.doResolveMoveAction; playtest: "right click the constructor with other
+     * constructors to assist the worker until otherwise selected"): with at least one builder selected, a right-click on
+     * a friendly builder (worker, T2 constructor, commander, combat engineer) is a guard order - BAR's assist - instead
+     * of a plain follow. A builder right-clicking itself alone is no guard, and anything else follows as before.
+     *
+     * @param selected the selection the order goes to
+     * @param target   the unit under the cursor
+     * @param friendly whether {@code target} is the player's own or an ally's
+     */
+    public static boolean rightClickGuards(java.util.List<LivingEntity> selected, LivingEntity target, boolean friendly) {
+        if (!friendly || !(target instanceof WorkerUnit) || selected == null)
+            return false;
+        for (LivingEntity le : selected)
+            if (le instanceof WorkerUnit && le.getId() != target.getId())
+                return true;
+        return false;
     }
 
     public static void clear(int unitId) {
@@ -125,10 +147,29 @@ public class GuardServerEvents {
                     job = wardWorker.getBuildRepairGoal().getBuildingTarget();
                 }
                 if (job != null && !job.isDestroyedServerside) {
+                    // the job takes over from the escort: a follow target re-aims the move goal at the ward every 20
+                    // ticks, which pulled the guard off its own approach cell onto the ward's spot - often inside the
+                    // footprint, in the way of the blocks. The escort below picks up again once the guard is idle.
+                    if (guard.getFollowTarget() != null) {
+                        guard.setFollowTarget(null);
+                        guard.getMoveGoal().stopMoving();   // and the last spot the follow aimed at
+                    }
                     if (worker.getBuildRepairGoal().getBuildingTarget() != job)
                         worker.getBuildRepairGoal().setBuildingTarget(job);
                     continue;
                 }
+            }
+
+            // workers guarding a factory (by hand or by its factory guard toggle): BAR's assist - beside the factory,
+            // a builder lends its build power to the factory's current production. With nothing in production it
+            // waits beside the factory (it never wanders off); a new order from the player ends the guard.
+            if (guard instanceof WorkerUnit worker && wardBuilding instanceof ProductionPlacement factory) {
+                boolean inReach = footprintGap(factory, guardLe.blockPosition()) <= ASSIST_REACH;
+                if (inReach && factory.isBuilt && !factory.productionQueue.isEmpty())
+                    factory.addGuardAssist(worker.getBuildPower(), level.getGameTime());
+                else if (!inReach && guard.isIdle())
+                    guard.setMoveTarget(factory.getClosestGroundPos(guardLe.blockPosition(), 2, true));
+                continue;
             }
 
             // escort: close the gap back up when idle and drifting
@@ -139,6 +180,19 @@ public class GuardServerEvents {
                     guard.setMoveTarget(anchor);
             }
         }
+    }
+
+    /** Blocks (x/z) from {@code pos} to the edge of the building's footprint; 0 inside it. */
+    public static int footprintGap(BuildingPlacement b, BlockPos pos) {
+        int dx = Math.max(0, Math.max(b.minCorner.getX() - pos.getX(), pos.getX() - b.maxCorner.getX()));
+        int dz = Math.max(0, Math.max(b.minCorner.getZ() - pos.getZ(), pos.getZ() - b.maxCorner.getZ()));
+        return Math.max(dx, dz);
+    }
+
+    /** The guarded building's origin for a unit guarding a building, else null (FactoryGuardGameTests). */
+    public static BlockPos guardedBuilding(int unitId) {
+        GuardTarget t = guards.get(unitId);
+        return t == null ? null : t.buildingPos();
     }
 
     /** The closest hostile unit within protecting range of the anchor. */

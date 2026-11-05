@@ -433,7 +433,7 @@ def main():
     ap.add_argument("--views", default="side,quarter,front", help="views for --play / --blend (game_preview.VIEWS)")
     a = ap.parse_args()
     data = load(a.data)
-    data["_rel"] = os.path.relpath(os.path.abspath(a.data), ROOT)
+    data["_rel"] = os.path.relpath(os.path.abspath(a.data), ROOT).replace(os.sep, "/")  # the generated header is the same on Windows
     java_path = os.path.join(GEN_DIR, data["java_class"] + ".java")
     rc = 0
     if a.gen_java:

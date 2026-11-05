@@ -55,7 +55,7 @@ func TestExistingInstanceGetsTheCatIcon(t *testing.T) {
 }
 
 func TestShortcutIsNamedLovishWithTheCat(t *testing.T) {
-	ps := shortcutScript(`C:\P\prismlauncher.exe`, `C:\P`, `C:\P\lovish.ico`)
+	ps := shortcutScript(`C:\L\launcher.exe`, `C:\P\prismlauncher.exe`, `C:\P`, `C:\P\lovish.ico`)
 	if !strings.Contains(ps, "'"+shortcutName+".lnk'") {
 		t.Fatalf("shortcut is not named %q:\n%s", shortcutName, ps)
 	}
@@ -77,7 +77,7 @@ func TestShortcutIsNamedLovishWithTheCat(t *testing.T) {
 func TestShortcutNeverReplacesSomeoneElsesLovishShortcut(t *testing.T) {
 	// lovish's own desktop "lovish" shortcut starts his server - only a "lovish" shortcut that opens THIS Prism is
 	// rewritten, and the old "Beyond and Tabs" one goes only when it opens this Prism
-	ps := shortcutScript(`C:\P\prismlauncher.exe`, `C:\P`, `C:\P\lovish.ico`)
+	ps := shortcutScript(`C:\L\launcher.exe`, `C:\P\prismlauncher.exe`, `C:\P`, `C:\P\lovish.ico`)
 	if !strings.Contains(ps, "(-not (Test-Path -LiteralPath $lnk)) -or ($ws.CreateShortcut($lnk).TargetPath -eq $exe)") {
 		t.Fatalf("an existing lovish shortcut could be overwritten:\n%s", ps)
 	}

@@ -22,6 +22,9 @@ public class Keybinding {
     // a fixed second key that also triggers this binding (not rebindable, never drawn): the 60%-keyboard alias a
     // binding kept when its primary key moved to the BAR default (attack: A, with X still working)
     private int aliasKey = -1;
+    // a fixed Ctrl chord that runs this binding (ChordKeys; HudClientEvents.onKeyRelease): shown as the label while the
+    // rebindable key is unbound (the commander's Ctrl+C, the idle T2 builder's Ctrl+Shift+B)
+    private ChordKeys.Chord chord = null;
 
     // Forge-backed binding: appears in vanilla Controls UI, persisted via options.txt
     public Keybinding(String translationKey, int defaultKey, String category,
@@ -57,7 +60,7 @@ public class Keybinding {
         }
         InputConstants.Key key = mapping.getKey();
         if (key.equals(InputConstants.UNKNOWN)) {
-            return "";
+            return chord != null ? ChordKeys.shortLabel(chord) : "";
         }
         String full = key.getDisplayName().getString();
         // the button corner fits three characters: "Spa" meant nothing on the HUD (lovish's clip)
@@ -72,7 +75,7 @@ public class Keybinding {
             return description;
         InputConstants.Key key = getMapping().getKey();
         if (key.equals(InputConstants.UNKNOWN))
-            return buttonLabel;
+            return chord != null ? ChordKeys.label(chord) : buttonLabel;
         return key.getDisplayName().getString();
     }
 
@@ -111,6 +114,16 @@ public class Keybinding {
     public Keybinding withAlias(int glfwKey) {
         this.aliasKey = glfwKey;
         return this;
+    }
+
+    /** Adds the fixed Ctrl chord (ChordKeys) that also runs this binding; drawn while the key itself is unbound. */
+    public Keybinding withChord(ChordKeys.Chord chord) {
+        this.chord = chord;
+        return this;
+    }
+
+    public ChordKeys.Chord getChord() {
+        return chord;
     }
 
     /** Translation key of a Forge-backed binding (null for raw GLFW ones); category and default key likewise. */

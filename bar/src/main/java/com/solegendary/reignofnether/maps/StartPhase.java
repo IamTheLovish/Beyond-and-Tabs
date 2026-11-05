@@ -9,10 +9,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -25,8 +27,16 @@ import java.util.function.Predicate;
  * BAR's start-position mode (design/maps.md section 5). Every human clicks inside their team's start box to place
  * their commander; the spot snaps clear of metal patches and capture sites and can be moved until the phase ends.
  * Bots are placed at their slot at once. Simultaneous rather than turn order (16 players taking turns would cost
- * minutes, and every slot owns its own metal so stacking only hurts the staller). Ends {@link #EARLY_END_TICKS}
- * after the last human placed, or when the clock runs out - then everyone still unplaced goes to their slot.
+ * minutes, and every slot owns its own metal so stacking only hurts the staller).
+ * <p>
+ * Ready (tester Joisco, Oct 26: "there should be a ready button that all players should have to press when placing
+ * down their spawn location"; BAR does the same): placing no longer starts anything. Each human places, then presses
+ * Ready ({@link #setReady}, refused while unplaced); a ready human must un-ready to move. Bots are always ready. The
+ * phase ends {@link #EARLY_END_TICKS} after every human still in it is placed and ready - an un-ready during those
+ * ticks stops it again. A human who logs out drops out of the count ({@link #leave}; everyone is told) and is back
+ * in it, unready, on a rejoin. The host can {@link #forceStart} (the client warns first, naming who is not ready).
+ * The clock stays as the AFK guard, now {@link #SECONDS} long: when it runs out, everyone still unplaced goes to
+ * their slot and the match starts, with a chat line naming who was not ready.
  *
  * An instance holds one phase; {@link #begin} makes it the live one that the server ticks and syncs to clients
  * (MapStateClientboundPacket). The game test drives its own instance, so it never touches the live phase.
@@ -40,7 +50,8 @@ import java.util.function.Predicate;
  */
 public final class StartPhase {
 
-    public static final int SECONDS = 45;
+    /** The AFK guard (was 45 s before Ready existed: a ready check needs time for a team to talk its starts over). */
+    public static final int SECONDS = 120;
     public static final int EARLY_END_TICKS = 60;
     /** A resumed phase runs at least this long once a human is back, whatever was left at the save. */
     public static final int RESUME_FLOOR_SECONDS = 20;
@@ -57,6 +68,10 @@ public final class StartPhase {
         public final Object seat;
         public int x, z;
         public boolean placed;
+        /** Pressed Ready (bots always are). Not saved: a reloaded phase asks every human again. */
+        public boolean ready;
+        /** Logged out during the phase: out of the ready count until they log back in. */
+        public boolean left;
 
         public Pick(String name, boolean bot, int team, int slot, int colourHex, Object seat) {
             this.name = name;
@@ -65,6 +80,12 @@ public final class StartPhase {
             this.slot = slot;
             this.colourHex = colourHex;
             this.seat = seat;
+            this.ready = bot;
+        }
+
+        /** Placed and ready, or a bot, or gone: nothing to wait for. */
+        public boolean isSettled() {
+            return bot || left || (placed && ready);
         }
     }
 
@@ -79,6 +100,8 @@ public final class StartPhase {
     // restored from a save: the clock is held until a human is online, and an early end needs every human back
     boolean resumed = false;
     boolean holding = false;
+    /** Who was not ready when the clock ran out (told in chat by the live phase); empty otherwise. */
+    List<String> timedOutWaitingFor = List.of();
     private Predicate<String> online = null;   // null: the server's player list (the game tests pass their own)
 
     public StartPhase(ServerLevel level, int cx, int cz, MapLayout layout, List<Pick> picks, int seconds,
@@ -159,14 +182,76 @@ public final class StartPhase {
      */
     public boolean place(String name, int x, int z) {
         Pick p = pickOf(name);
-        if (finished || p == null || p.bot || !inBox(p.team, x, z))
-            return false;
+        if (finished || p == null || p.bot || p.ready || !inBox(p.team, x, z))
+            return false;   // a ready human un-readies first to move (their start is what the others agreed to)
         int[] spot = clearSpot(p.team, x, z);
         if (spot == null)
             return false;
         p.x = spot[0];
         p.z = spot[1];
         p.placed = true;
+        return true;
+    }
+
+    /**
+     * A human presses Ready ({@code ready}) or un-readies. Ready is refused until they placed; un-ready always works
+     * and stops a countdown that everyone-ready began. Returns whether it changed anything.
+     */
+    public boolean setReady(String name, boolean ready) {
+        Pick p = pickOf(name);
+        if (finished || p == null || p.bot || p.left || p.ready == ready)
+            return false;
+        if (ready && !p.placed)
+            return false;
+        p.ready = ready;
+        return true;
+    }
+
+    /** Every human still in the phase has placed and pressed Ready (bots always have; one who left is out). */
+    public boolean allReady() {
+        for (Pick p : picks)
+            if (!p.isSettled())
+                return false;
+        return true;
+    }
+
+    /** The humans the phase is waiting for, in lineup order. */
+    public List<String> notReady() {
+        List<String> names = new ArrayList<>();
+        for (Pick p : picks)
+            if (!p.isSettled())
+                names.add(p.name);
+        return names;
+    }
+
+    /** A human logged out: out of the ready count (and unready). False when they have no pick or already left. */
+    public boolean leave(String name) {
+        Pick p = pickOf(name);
+        if (finished || p == null || p.bot || p.left)
+            return false;
+        p.left = true;
+        p.ready = false;
+        return true;
+    }
+
+    /** A human who left logged back in: back in the count, unready. */
+    public boolean rejoin(String name) {
+        Pick p = pickOf(name);
+        if (finished || p == null || p.bot || !p.left)
+            return false;
+        p.left = false;
+        p.ready = false;
+        return true;
+    }
+
+    /**
+     * The host's override: ends the phase now whoever is not ready (they start where they stand, or at their slot if
+     * unplaced). Refused for anyone but the host ({@code byHost}: PacketAuth.isHost). Returns whether it started.
+     */
+    public boolean forceStart(boolean byHost) {
+        if (finished || !byHost)
+            return false;
+        finish();
         return true;
     }
 
@@ -239,14 +324,18 @@ public final class StartPhase {
             earlyEnd = -1;
         }
         ticksLeft--;
-        boolean allPlaced = true;
-        for (Pick p : picks)
-            if (!p.placed || (resumed && !p.bot && !isOnline(p.name)))
-                allPlaced = false;   // after a reload "everyone placed" also needs everyone back
-        if (allPlaced && earlyEnd < 0)
+        // after a reload the ready flags start cleared, so "everyone ready" also means everyone came back
+        boolean ready = allReady();
+        if (!ready)
+            earlyEnd = -1;   // an un-ready (or a rejoin) during the last ticks stops the start again
+        else if (earlyEnd < 0)
             earlyEnd = EARLY_END_TICKS;
-        if ((earlyEnd >= 0 && --earlyEnd <= 0) || ticksLeft <= 0)
+        if (earlyEnd >= 0 && --earlyEnd <= 0) {
             finish();
+        } else if (ticksLeft <= 0) {
+            timedOutWaitingFor = notReady();
+            finish();
+        }
     }
 
     /** Ends the phase now: anyone unplaced takes their slot, then the match starts. Public for the game test. */
@@ -377,6 +466,78 @@ public final class StartPhase {
             MapStateClientboundPacket.broadcast();
     }
 
+    /** Ready / un-ready from a client (StartPhaseServerboundPacket). Refusals are told to the sender, never silent. */
+    public static void handleReady(ServerPlayer sp, boolean ready) {
+        StartPhase phase = live;
+        if (phase == null || sp == null)
+            return;
+        if (!com.solegendary.reignofnether.network.PacketAuth.allow(sp, "startpos_ready", 4, 8))
+            return;
+        String name = sp.getName().getString();
+        Pick p = phase.pickOf(name);
+        if (phase.setReady(name, ready)) {
+            MapStateClientboundPacket.broadcast();
+        } else if (ready && p != null && !p.bot && !p.placed) {
+            sp.sendSystemMessage(Component.translatable("maps.reignofnether.startphase_ready_needs_place"));
+        }
+    }
+
+    /**
+     * Force start from a client: the host only (PacketAuth.isHost - the singleplayer owner, or an op on a dedicated
+     * server). Everyone is told who forced it and who was not ready. Returns whether it started (the game test).
+     */
+    public static boolean handleForceStart(StartPhase phase, ServerPlayer sp) {
+        if (phase == null || sp == null || phase.isFinished())
+            return false;
+        boolean host = com.solegendary.reignofnether.network.PacketAuth.isHost(sp);
+        if (!host) {
+            sp.sendSystemMessage(Component.translatable("maps.reignofnether.startphase_force_refused"));
+            return false;
+        }
+        List<String> waiting = phase.notReady();
+        if (!phase.forceStart(true))
+            return false;
+        String by = sp.getName().getString();
+        ReignOfNether.LOGGER.info("[StartPhase] {} forced the start; not ready: {}", by, waiting);
+        tellAll(phase, waiting.isEmpty()
+            ? Component.translatable("maps.reignofnether.startphase_forced_all_ready", by)
+            : Component.translatable("maps.reignofnether.startphase_forced", by, String.join(", ", waiting)));
+        return true;
+    }
+
+    private static void tellAll(StartPhase phase, Component msg) {
+        if (phase.level.getServer() == null)
+            return;
+        for (ServerPlayer sp : phase.level.getServer().getPlayerList().getPlayers())
+            sp.sendSystemMessage(msg);
+    }
+
+    /** A player left during the live phase: out of the ready count, and everyone is told (fail loud). */
+    @SubscribeEvent
+    public static void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent evt) {
+        StartPhase phase = live;
+        if (phase == null || !(evt.getEntity() instanceof ServerPlayer sp))
+            return;
+        String name = sp.getName().getString();
+        if (!phase.leave(name))
+            return;
+        ReignOfNether.LOGGER.info("[StartPhase] {} left during start positions; out of the ready count", name);
+        tellAll(phase, Component.translatable("maps.reignofnether.startphase_left", name));
+        MapStateClientboundPacket.broadcast();
+    }
+
+    @SubscribeEvent
+    public static void onPlayerBack(PlayerEvent.PlayerLoggedInEvent evt) {
+        StartPhase phase = live;
+        if (phase == null || !(evt.getEntity() instanceof ServerPlayer sp))
+            return;
+        String name = sp.getName().getString();
+        if (!phase.rejoin(name))
+            return;
+        tellAll(phase, Component.translatable("maps.reignofnether.startphase_rejoined", name));
+        MapStateClientboundPacket.broadcast();
+    }
+
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END || live == null)
@@ -389,6 +550,9 @@ public final class StartPhase {
             phase.finish();
         }
         if (phase.finished) {
+            if (!phase.timedOutWaitingFor.isEmpty())
+                tellAll(phase, Component.translatable("maps.reignofnether.startphase_timed_out",
+                    String.join(", ", phase.timedOutWaitingFor)));
             if (live == phase)
                 live = null;
             MapStateClientboundPacket.broadcast();

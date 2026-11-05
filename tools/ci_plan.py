@@ -13,8 +13,9 @@ What was changed is read from the compare API (no history needed):
                      a quick batch of merges makes builds queue and a pending one is replaced (concurrency group), a
                      docs-only push right after a replaced code push must still test that code;
   workflow_dispatch  always code.
-Anything unsure (API error, no base, 300+ files, an empty diff) counts as code. Docs = *.md anywhere, docs/**, and the
-design sheets design/*.png. Everything else (java, json, py, gradle, workflows, resources, design/*.json, nbt ...) is
+Anything unsure (API error, no base, 300+ files, an empty diff) counts as code. Docs = *.md anywhere, docs/**, the
+design sheets design/*.png, and the Windows installer (installer/** + its workflow: own build and Go tests in
+installer.yml, nothing in the game jar). Everything else (java, json, py, gradle, workflows, resources, design/*.json, nbt ...) is
 code.
 """
 import fnmatch
@@ -26,8 +27,11 @@ import sys
 
 
 def is_doc(path):
+    """Changes that cannot affect the game jar, so the GameTests skip. The installer counts (lovish Oct 23): it has
+    its own build and Go tests in installer.yml."""
     return (path.lower().endswith(".md") or path.startswith("docs/")
-            or (fnmatch.fnmatch(path, "design/*.png") and path.count("/") == 1))
+            or (fnmatch.fnmatch(path, "design/*.png") and path.count("/") == 1)
+            or path.startswith("installer/") or path == ".github/workflows/installer.yml")
 
 
 def changed_files(repo, base, head):

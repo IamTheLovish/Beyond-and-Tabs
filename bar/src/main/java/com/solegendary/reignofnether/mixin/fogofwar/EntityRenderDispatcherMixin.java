@@ -22,6 +22,9 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import net.minecraft.client.renderer.culling.Frustum;
+import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 
 @Mixin(EntityRenderDispatcher.class)
 public abstract class EntityRenderDispatcherMixin {
@@ -47,6 +50,19 @@ public abstract class EntityRenderDispatcherMixin {
             return le.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get());
         }
         return false;
+    }
+
+    /**
+     * Strategic view draws units as icons, so their models are dropped here, before the level renderer looks up the
+     * light, the renderer, the pose and fires the render events for them (StrategicViewClientEvents.onRenderLiving
+     * stays as the net for anything that reaches render another way). The same rule, so nothing new disappears; with
+     * 450-575 units this was the "elsewhere" of lovish's Oct 23 frame, paid per unit even when the draw was cancelled.
+     */
+    @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
+    private void bat$skipIconUnits(Entity entity, Frustum frustum, double x, double y, double z,
+                                   CallbackInfoReturnable<Boolean> cir) {
+        if (StrategicViewClientEvents.skipsModel(entity))
+            cir.setReturnValue(false);
     }
 
     @Inject(

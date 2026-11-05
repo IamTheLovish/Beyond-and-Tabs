@@ -10,7 +10,10 @@ import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
@@ -18,6 +21,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -36,6 +40,15 @@ public class Button {
     public int iconSelectedFrameSize;
     public static int DEFAULT_ICON_SIZE = 14;
     public static int DEFAULT_ICON_FRAME_SIZE = 22;
+    /**
+     * Compact command-panel tiles (HudLayout.TILE: 18 px frame, 12 px icon instead of 22 / 14). HudClientEvents turns
+     * this on around the bottom-left panel only and every Button.render applies it to that button, so the top bar,
+     * minimap and helper buttons keep the full size. The frame shrinks 4 px and the icon 2 px; icon, badges and hit
+     * box all follow iconFrameSize, so nothing else needs to know.
+     */
+    public static boolean compactTiles = false;
+    public static final int COMPACT_SHRINK = 4;
+    private boolean compactApplied = false;
     public int tooltipOffsetY = 0;
     public int imageSize = DEFAULT_ICON_SIZE;
     public static final int itemIconSize = DEFAULT_ICON_SIZE;
@@ -183,9 +196,21 @@ public class Button {
         }
     }
 
+    /** Switches the frame between full and compact size; idempotent, so it is cheap to call every render. */
+    public void applyCompact() {
+        if (compactTiles == compactApplied)
+            return;
+        int d = compactTiles ? -COMPACT_SHRINK : COMPACT_SHRINK;
+        iconFrameSize += d;
+        iconSelectedFrameSize += d;
+        imageSize += d / 2;
+        compactApplied = compactTiles;
+    }
+
     public void render(GuiGraphics guiGraphics, int x, int y, int mouseX, int mouseY) {
         this.x = x;
         this.y = y;
+        applyCompact();
 
         int xyDiff = (DEFAULT_ICON_SIZE - iconSize) / 2;
 
@@ -199,8 +224,8 @@ public class Button {
             MyRenderer.renderPlayerHead(guiGraphics, playerNameForHeadIcon, x + 5, y + 5, 12, bgIconResource);
         } else if (bgIconResource != null) {
             guiGraphics.pose().translate(0,0,1);
-            int iconX = x+4 + (7 - xyDiff - iconSize/2);
-            int iconY = y+4 + (7 - xyDiff - iconSize/2);
+            int iconX = x + (iconFrameSize - iconSize) / 2 + (7 - xyDiff - iconSize/2);
+            int iconY = y + (iconFrameSize - iconSize) / 2 + (7 - xyDiff - iconSize/2);
             iconX += ((DEFAULT_ICON_SIZE - imageSize) / 2) - innerIconSizeModifier;
             iconY += ((DEFAULT_ICON_SIZE - imageSize) / 2) - innerIconSizeModifier;
             MyRenderer.renderIcon(
@@ -214,8 +239,8 @@ public class Button {
 
         // item/unit icon
         if (iconResource != null) {
-            int iconX = x+4 + (7 - xyDiff - iconSize/2);
-            int iconY = y+4 + (7 - xyDiff - iconSize/2);
+            int iconX = x + (iconFrameSize - iconSize) / 2 + (7 - xyDiff - iconSize/2);
+            int iconY = y + (iconFrameSize - iconSize) / 2 + (7 - xyDiff - iconSize/2);
             iconX += ((DEFAULT_ICON_SIZE - imageSize) / 2) - innerIconSizeModifier;
             iconY += ((DEFAULT_ICON_SIZE - imageSize) / 2) - innerIconSizeModifier;
             guiGraphics.pose().translate(0,0,1);
@@ -228,8 +253,10 @@ public class Button {
         }
         if (iconItem != null) {
             guiGraphics.pose().translate(0,0,1);
-            int offset = 2 + Math.round((1.0f - iconItemScale) * 8f);
-            MyRenderer.renderItem(guiGraphics, iconItem, x+offset + (7 - xyDiff - iconSize/2), y+offset + (7 - xyDiff - iconSize/2), iconItemScale);
+            float itemScale = compactApplied ? iconItemScale * 0.75f : iconItemScale;
+            int offset = compactApplied ? Math.round((iconFrameSize - 16 * itemScale) / 2f)
+                : 2 + Math.round((1.0f - iconItemScale) * 8f);
+            MyRenderer.renderItem(guiGraphics, iconItem, x+offset + (7 - xyDiff - iconSize/2), y+offset + (7 - xyDiff - iconSize/2), itemScale);
         }
 
         // user is holding click or hotkey down over the button and render frame if so
@@ -304,7 +331,43 @@ public class Button {
 
     public void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         if (tooltipLines != null)
-            MyRenderer.renderTooltip(guiGraphics, tooltipLines, mouseX, mouseY + tooltipOffsetY);
+            MyRenderer.renderTooltip(guiGraphics, withHotkeyLine(tooltipLines), mouseX, mouseY + tooltipOffsetY);
+    }
+
+    /** The tooltip plus a last gray "Hotkey: Q" line; a new list, the button's own lines are never changed. */
+    protected List<FormattedCharSequence> withHotkeyLine(List<FormattedCharSequence> lines) {
+        if (hotkey == null)
+            return lines;
+        List<String> plain = new ArrayList<>();
+        for (FormattedCharSequence line : lines) {
+            StringBuilder sb = new StringBuilder();
+            line.accept((i, style, cp) -> { sb.appendCodePoint(cp); return true; });
+            plain.add(sb.toString());
+        }
+        // the RAW pattern: I18n.get(key) with no args runs String.format on "Hotkey: %s" with nothing to fill it and
+        // returns "Format error: Hotkey: %s", which hotkeyLineText then formatted again into "Format error: Hotkey: ."
+        String text = hotkeyLineText(hotkey.getCurrentLabel(),
+            net.minecraft.locale.Language.getInstance().getOrDefault("hud.reignofnether.tooltip_hotkey"), plain);
+        if (text == null)
+            return lines;
+        List<FormattedCharSequence> out = new ArrayList<>(lines);
+        out.add(FormattedCharSequence.forward(text, Style.EMPTY.withColor(ChatFormatting.GRAY)));
+        return out;
+    }
+
+    /**
+     * The hotkey line's text ("Hotkey: Q"), or null for no line: no key bound, or the tooltip already names it
+     * ("[Q]" or an earlier hotkey line). pattern has one %s for the label.
+     */
+    public static String hotkeyLineText(String label, String pattern, List<String> existingLines) {
+        if (label == null || label.isBlank())
+            return null;
+        String text = String.format(pattern, label);
+        for (String line : existingLines) {
+            if (line.contains("[" + label + "]") || line.equals(text))
+                return null;
+        }
+        return text;
     }
 
     public boolean isMouseOver(int mouseX, int mouseY) {

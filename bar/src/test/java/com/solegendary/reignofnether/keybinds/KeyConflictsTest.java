@@ -23,8 +23,9 @@ class KeyConflictsTest {
 
     @Test
     void theShippedDefaultsHaveNoWarning() {
-        // Stop is on S by design (tap = Stop, hold = pan), so a fresh install shows no red key
-        assertEquals(GLFW.GLFW_KEY_S, Keybindings.stop.getDefaultKey());
+        // Stop's own key ships unbound, Ctrl+S runs it (Nov 3, Nick: a short tap of S while panning stopped the selected
+        // workers), so S is pure pan-down and a fresh install shows no red key
+        assertEquals(GLFW.GLFW_KEY_UNKNOWN, Keybindings.stop.getDefaultKey());
         assertEquals(List.of(), overlaps(Map.of()));
     }
 
@@ -41,9 +42,16 @@ class KeyConflictsTest {
 
     @Test
     void aPanKeyMovedOntoAnOrderKeyIsFlaggedToo() {
-        // pan-up moved to X, where Attack ships: Attack did not move, the pan key did - still one key, two jobs
+        // pan-up moved to X, where Attack, the Military tab key and grid cell 10 ship: they did not move, the pan key did -
+        // one key, four jobs, all three flagged
         List<KeyConflicts.Overlap> o = overlaps(Map.of("key.reignofnether.pan_up", GLFW.GLFW_KEY_X));
-        assertEquals(List.of(new KeyConflicts.Overlap("key.reignofnether.attack", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o);
+        assertEquals(3, o.size(), o.toString());
+        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.attack", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_tab_military", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_grid_10", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        // pan-up moved to F, where the order Fight ships: an order key under a moved pan key is flagged too
+        List<KeyConflicts.Overlap> f = overlaps(Map.of("key.reignofnether.pan_up", GLFW.GLFW_KEY_F));
+        assertTrue(f.contains(new KeyConflicts.Overlap("key.reignofnether.fight", "key.reignofnether.pan_up", GLFW.GLFW_KEY_F)), f.toString());
     }
 
     @Test

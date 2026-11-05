@@ -28,8 +28,19 @@ public class FirstLaunchClientEvents {
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || !(MC.screen instanceof TitleScreen)
-                || ReignOfNetherClientConfigs.FIRST_LAUNCH_DONE.get())
+        if (evt.phase != TickEvent.Phase.END || !(MC.screen instanceof TitleScreen))
+            return;
+        // GUI scale 3, once per install (existing installs have FIRST_LAUNCH_DONE already, so it has its own flag)
+        if (!ReignOfNetherClientConfigs.GUI_SCALE_DEFAULT_DONE.get()) {
+            if (FirstLaunch.setDefaultGuiScale(FMLEnvironment.production, false, MC.options.guiScale().get())) {
+                MC.options.guiScale().set(FirstLaunch.DEFAULT_GUI_SCALE);
+                MC.options.save();
+                MC.resizeDisplay();
+            }
+            if (FMLEnvironment.production)
+                ReignOfNetherClientConfigs.GUI_SCALE_DEFAULT_DONE.set(true);
+        }
+        if (ReignOfNetherClientConfigs.FIRST_LAUNCH_DONE.get())
             return;
         if (FirstLaunch.goFullscreen(FMLEnvironment.production, false, MC.getWindow().isFullscreen())) {
             MC.options.fullscreen().set(true);

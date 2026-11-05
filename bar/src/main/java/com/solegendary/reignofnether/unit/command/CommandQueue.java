@@ -41,6 +41,11 @@ public final class CommandQueue {
         return current;
     }
 
+    /** The game tick {@link #current} was started on (a newer command has a later one): hero/ai/OrderLock reads it. */
+    public long currentStartedAt() {
+        return currentTick;
+    }
+
     /** Waiting orders (the current one not counted). */
     public int size() {
         return size;
@@ -79,6 +84,18 @@ public final class CommandQueue {
         UnitCommand c = ring[head];
         ring[head] = null;
         head = (head + 1) & (ring.length - 1);
+        size--;
+        return c;
+    }
+
+    /** Removes the newest waiting order (BAR's command_cancel_last); null if none is waiting. */
+    @Nullable
+    UnitCommand pollLast() {
+        if (size == 0)
+            return null;
+        int i = (head + size - 1) & (ring.length - 1);
+        UnitCommand c = ring[i];
+        ring[i] = null;
         size--;
         return c;
     }

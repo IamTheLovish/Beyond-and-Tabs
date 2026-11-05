@@ -42,10 +42,17 @@ import java.util.List;
  * <li>225 of the units selected (half the centre squad and four more squads): outlines and opaque underlines.</li>
  * </ul>
  * Stills at a mid zoom (45) with the units selected, then with one of our houses selected; and at strategic zoom. Then
- * the measurement: eight 8-second slices alternating normal zoom (30) and strategic zoom (200) ABBA-wise, each after a
- * 3-second settle. Per slice: the frame times (vanilla's frame timer, p50 / p95 / max) and our handlers' milliseconds per
- * frame (FrameParts' lifetime counters: unitOverlays, buildingBoxes, strategicIcons, unitRings, minimap, hud, unitBodies); the
- * summary line gives each zoom's medians. The same scene on two builds (eyes.yml build_run) is a before / after.
+ * the measurement: twelve 8-second slices over normal zoom (30), crowd zoom (60) and strategic zoom (200) ABCCBA-wise,
+ * each after a 3-second settle. Crowd zoom is the band just under the fixed icon switch (70) where a late-game army drew
+ * every model (lovish's Oct 23 log). Per slice: the frame times (vanilla's frame timer, p50 / p95 / max) and our handlers'
+ * milliseconds per frame (FrameParts' lifetime counters: unitOverlays, buildingBoxes, strategicIcons, unitRings, minimap,
+ * hud, unitBodies, buildingDecor, worldMarkers); the summary line gives each zoom's medians. The same scene on two builds
+ * (eyes.yml build_run) is a before / after.
+ * <p>
+ * eyes.yml input {@code overlay_mix} (-Dbat.eyes.overlays.mix=type:count, e.g. bone_dragon_unit:12) makes the first
+ * count of the 500 units that type instead, summoned {@link #MIX_LIFT} blocks up (a flyer hovers there): a model's
+ * frame cost weighed on the same scene before and after it changes (lovish, Oct 30: a rounder Bone Dragon on "a small
+ * frame-rate cost, measured before merge").
  * <p>
  * Wall-clock timeline, like scenes 16 and 17 (a shader-lane client runs a few ticks a second).
  */
@@ -55,12 +62,35 @@ final class EyesOverlaysScene {
     private static final int SQUADS = 10, PER_SQUAD = 50, SQUAD_COLS = 10, RING = 70;
     private static final int HOUSES = 1700;
     private static final String[] TYPES = { "militia_unit", "pillager_unit", "vindicator_unit" };
-    private static final int ZOOM_NORMAL = 30, ZOOM_MID = 45, ZOOM_STRATEGIC = 200;
-    private static final int[] ORDER = { ZOOM_NORMAL, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_NORMAL,
-            ZOOM_NORMAL, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_NORMAL };
+    /** The overlay_mix input: the type the first MIX_COUNT units are instead (none: ""), and how high they start. */
+    private static final String MIX_TYPE;
+    private static final int MIX_COUNT, MIX_LIFT = 12;
+    static {
+        String mix = System.getProperty("bat.eyes.overlays.mix", "");
+        int colon = mix.indexOf(':');
+        String type = "";
+        int count = 0;
+        if (colon > 0 && mix.substring(0, colon).matches("[a-z_]+")) {
+            try {
+                count = Math.max(0, Math.min(SQUADS * PER_SQUAD, Integer.parseInt(mix.substring(colon + 1))));
+                type = mix.substring(0, colon);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        MIX_TYPE = count > 0 ? type : "";
+        MIX_COUNT = MIX_TYPE.isEmpty() ? 0 : count;
+    }
+    private static final int ZOOM_NORMAL = 30, ZOOM_MID = 45, ZOOM_CROWD = 60, ZOOM_STRATEGIC = 200;
+    private static final int[] ZOOMS = { ZOOM_NORMAL, ZOOM_CROWD, ZOOM_STRATEGIC };
+    private static final int[] ORDER = { ZOOM_NORMAL, ZOOM_CROWD, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_CROWD, ZOOM_NORMAL,
+            ZOOM_NORMAL, ZOOM_CROWD, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_CROWD, ZOOM_NORMAL };
     private static final double SETTLE_S = 3, SLICE_S = 8;
     private static final int[] SECTIONS = { FrameParts.UNIT_OVERLAYS, FrameParts.BUILDING_BOXES,
-            FrameParts.STRATEGIC_ICONS, FrameParts.UNIT_RINGS, FrameParts.MINIMAP, FrameParts.HUD, FrameParts.UNIT_BODIES };
+            FrameParts.STRATEGIC_ICONS, FrameParts.UNIT_RINGS, FrameParts.MINIMAP, FrameParts.HUD, FrameParts.UNIT_BODIES,
+            FrameParts.BUILDING_DECOR, FrameParts.WORLD_MARKERS, FrameParts.MARKERS_RANGE, FrameParts.MARKERS_METAL,
+            FrameParts.MARKERS_LINE, FrameParts.MARKERS_GRID, FrameParts.MARKERS_CHUNKS, FrameParts.MARKERS_MAP, FrameParts.MARKERS_DRAW, FrameParts.MARKERS_FLOATTEXT, FrameParts.MARKERS_WRECK, FrameParts.MARKERS_STARTPOS,
+            FrameParts.MARKERS_GATE, FrameParts.MARKERS_MAPWORLD, FrameParts.MARKERS_RANGE_REFRESH, FrameParts.MARKERS_RANGE_UNITS,
+            FrameParts.ENTITY_SHADOWS };
     private static final int SUMMONS_PER_TICK = 25, HOUSES_PER_TICK = 100;
 
     private static int phase = 0;
@@ -229,8 +259,9 @@ final class EyesOverlaysScene {
         int y = EyesDirector.surfaceY(mc, x, z);
         if (y == Integer.MIN_VALUE)
             y = (int) c.y;
+        boolean mixed = k < MIX_COUNT;
         EyesDirector.runCommand(mc, String.format("rtsapi-summon \"%s\" %s:%s %d %d %d", me.replace("\"", ""),
-                ReignOfNether.MOD_ID, TYPES[k % TYPES.length], x, y, z));
+                ReignOfNether.MOD_ID, mixed ? MIX_TYPE : TYPES[k % TYPES.length], x, y + (mixed ? MIX_LIFT : 0), z));
     }
 
     private static int ownedFighters() {
@@ -417,7 +448,7 @@ final class EyesOverlaysScene {
 
     /** Each zoom's medians over its slices: one line per zoom, the before / after numbers. */
     private static void summary() {
-        for (int zoom : new int[] { ZOOM_NORMAL, ZOOM_STRATEGIC }) {
+        for (int zoom : ZOOMS) {
             List<double[]> rows = new ArrayList<>();
             for (double[] r : results)
                 if ((int) r[0] == zoom)
@@ -428,8 +459,11 @@ final class EyesOverlaysScene {
             double ours = 0;
             for (int k = 0; k < SECTIONS.length; k++) {
                 double m = median(rows, 7 + k);
-                if (SECTIONS[k] != FrameParts.UNIT_BODIES)
-                    ours += m;
+                if (SECTIONS[k] != FrameParts.UNIT_BODIES && SECTIONS[k] != FrameParts.BUILDING_DECOR
+                        && SECTIONS[k] != FrameParts.WORLD_MARKERS && SECTIONS[k] != FrameParts.MARKERS_RANGE
+                        && SECTIONS[k] != FrameParts.MARKERS_METAL && SECTIONS[k] != FrameParts.ENTITY_SHADOWS
+                        && !FrameParts.name(SECTIONS[k]).startsWith("markers"))
+                    ours += m;   // the overlays+HUD total stays comparable with the runs before Oct 23
                 parts.append(k == 0 ? "" : ", ").append(FrameParts.name(SECTIONS[k])).append(' ').append(f2(m));
             }
             ReignOfNether.LOGGER.info("[Eyes] 18_overlays zoom {} (medians of {} slices; {}): frame p50 {} ms, p95 {} ms | "

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.ExperimentalAbilityText;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -81,6 +82,17 @@ public class WitheringFog extends Ability {
         this.showRangeCircle = true;
     }
 
+    /** Tooltip body. Public for the tooltip game test. */
+    public String description() {
+        return "Breathes a " + LENGTH + "-block line of grave-fog that lingers " + DURATION_TICKS / 20
+            + " s: enemies inside take " + (int) DAMAGE_PER_SECOND + " damage per second and are weakened.";
+    }
+
+    /** Tooltip range line, from the ability's own range. Public for the tooltip game test. */
+    public String rangeLine() {
+        return ExperimentalAbilityText.rangeLine(range);
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Withering Fog",
@@ -93,9 +105,8 @@ public class WitheringFog extends Ability {
             null,
             List.of(
                 FormattedCharSequence.forward("Withering Fog  (" + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("Breathes a " + LENGTH + "-block line of grave-fog that lingers "
-                    + DURATION_TICKS / 20 + " s: enemies inside take " + (int) DAMAGE_PER_SECOND
-                    + " damage per second and are weakened.", Style.EMPTY),
+                FormattedCharSequence.forward(rangeLine(), Style.EMPTY),
+                FormattedCharSequence.forward(description(), Style.EMPTY),
                 FormattedCharSequence.forward("Walk out of the fog to escape it.", Style.EMPTY.withItalic(true))
             ),
             this,

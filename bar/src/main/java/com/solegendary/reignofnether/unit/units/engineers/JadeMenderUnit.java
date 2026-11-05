@@ -1,8 +1,5 @@
 package com.solegendary.reignofnether.unit.units.engineers;
 
-import com.solegendary.reignofnether.ability.Abilities;
-import com.solegendary.reignofnether.ability.abilities.MendingRite;
-import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 
@@ -22,21 +19,11 @@ import javax.annotation.Nullable;
  */
 public class JadeMenderUnit extends CombatEngineerUnit {
 
-    public static final Abilities ABILITIES = new Abilities();
-    static {
-        ABILITIES.add(new MendingRite(), Keybindings.hotkey1);   // V: free on the Stormcallers' build menu
-    }
-
     final static public float maxHealth = 90.0f;
     final static public float movementSpeed = 0.30f;
 
     public JadeMenderUnit(EntityType<? extends Vindicator> entityType, Level level) {
         super(entityType, level);
-    }
-
-    @Override
-    protected Abilities engineerAbilities() {
-        return ABILITIES;
     }
 
     @Nullable

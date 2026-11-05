@@ -120,8 +120,7 @@ public class CustomBuildingServerEvents {
                     b.commandsNbt
             ));
         });
-        customBuildingData.save();
-        level.getDataStorage().save();
+        customBuildingData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     public static void loadCustomBuildings(ServerLevel level) {

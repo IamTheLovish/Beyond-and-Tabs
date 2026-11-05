@@ -60,18 +60,25 @@
     "fogofwar.ChunkMapInitialSendMixin",
     "fogofwar.ChunkMapMixin",
     "fogofwar.ServerLevelParticleMixin",
+    "fogofwar.ServerLevelSoundMixin",
+    "fogofwar.TrackedEntityInvoker",
     "fogofwar.TrackedEntityMixin",
     "fogofwar.WorldBorderMixin",
     "goals.MobMixin",
-    "goals.RandomStrollGoalMixin"
+    "goals.RandomStrollGoalMixin",
+    "goals.GoalSelectorMixin",
+    "ConfigValueReloadRaceMixin",
+    "ForgeConfigSpecAccessor"
   ],
   "minVersion": "0.8",
   "client": [
     "AnimProfileRendererMixin",
+    "LivingEntityDamageMotionMixin",
     "UnitLodEyesLayerMixin",
     "CameraMixin",
     "ChatComponentMixin",
     "ClientLevelMixin",
+    "ClientLevelCorpseMixin",
     "ClientPacketMixin",
     "CycleButtonMixin",
     "DownloadPackSourceAccessor",
@@ -83,6 +90,7 @@
     "MobRendererMixin",
     "MusicManagerMixin",
     "OrthoViewMixin",
+    "EmbeddiumOrthoFaceCullingMixin",
     "PossessionParticleMixin",
     "PossessionPredictionMixin",
     "RenderChunkRegionMixin",
@@ -96,6 +104,8 @@
     "fogofwar.BlockColorsAccessor",
     "fogofwar.ClientChunkCacheMixin",
     "fogofwar.ClientPacketListenerLightMixin",
+    "fogofwar.EmbeddiumBlendFogWrappedMixin",
+    "fogofwar.EmbeddiumFogOnlyQuadsMixin",
     "fogofwar.CompiledChunkMixin",
     "fogofwar.EntityRenderDispatcherMixin",
     "fogofwar.EntityShadowMixin",
@@ -111,6 +121,7 @@
     "LoadingOverlayAccessor",
     "LoadingOverlayMixin",
     "ForgeLoadingOverlayMixin",
-    "WaitingScreenBackdropMixin"
+    "WaitingScreenBackdropMixin",
+    "fire.CampfireBlockEntityMixin"
   ]
 }

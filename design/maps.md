@@ -57,7 +57,7 @@ look for none of that risk. (Vanilla's sky colour cannot be overridden without a
 ## 2. Metal values
 
 `MetalPatches` now stores a value per patch (saved with the world, synced to clients). An extractor's income is
-`base * value` (T1 2.0/s, T2 7.0/s). Rich patches show it in the ground: **1.0x** raw iron plus; **1.5x** raw
+`base * value` (T1 2.0/s, T2 4.5/s - 7.0 until Oct 24). Rich patches show it in the ground: **1.0x** raw iron plus; **1.5x** raw
 iron plus with a raw-gold heart; **2.0x** a gold-block heart. The minimap draws 1.5x patches gold, 2.0x bright
 gold. Typical layout per slot: a home ring at 1.0x (safe, slow), forward/contested patches at 1.5x (take ground
 to earn more), and the centre cluster at 2.0x (one per slot, the prize everyone fights over - chess's control of
@@ -327,7 +327,7 @@ generic capture kinds. Lobby option `Map: Random terrain`.
 
 ## 5. Start-position phase (BAR's "start position mode")
 
-After Start (and after a pre-made map has finished rising), a **45 s** phase:
+After Start (and after a pre-made map has finished rising), a phase with a **120 s** AFK clock (45 s before Ready):
 
 * Each team's **start box** is an annular sector round its slots (teams' boxes separated by a gap), drawn on the
   minimap (team-coloured outline + hatching) and in the world (a coloured outline on the ground).
@@ -339,7 +339,15 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
   only to stop teammates stacking - here every slot owns its own mexes, so stacking only hurts the staller.
   Simultaneous is quicker and nobody waits; the "await their turn" feel is kept by the countdown banner.
 * **Bots** auto-place at their slot instantly. When the clock runs out, anyone unplaced is placed at their slot
-  (equally fair). If every human has placed, the phase ends 3 s later.
+  (equally fair) and the match starts, with a chat line naming who was not ready.
+* **Ready** (tester Joisco, Oct 26; BAR's own ready check): placing starts nothing. Each human places, then presses
+  **Ready** in the panel on the right (refused until placed); the panel lists every side as placing / placed /
+  READY / bot / left with "Ready n/m" on top, so everyone sees who the match waits for. A ready player un-readies
+  to move. When every human still in the phase is placed and ready (bots always are), the phase ends 3 s later; an
+  un-ready in those 3 s stops it. A player who logs out drops out of the count and everyone is told (back in,
+  unready, on a rejoin). The host (singleplayer owner / op on a dedicated server) has **Force start**: the first
+  click warns, naming who is not ready, the second starts; non-hosts are refused. Ready is not saved: a reloaded
+  phase asks every human again. Tests: gametest/SpawnReadyGameTests.java (batch spawn_ready).
 * Then the match starts exactly as before (capitol, commander, workers, alliances), the battlefield forms
   (base clearing, wall at the map's radius in the map's material) - a pre-made map skips the procedural patch
   and capture stamping because the map already placed its own.
@@ -349,7 +357,7 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
   while the map rises or starts are placed **resumes** on reload. The map build runs again from the saved setup (it
   only writes blocks that differ; an economy already stamped is not stamped twice); the phase comes back with every
   pick and its clock, held until a player is back and then at least 20 s, and ends early only once every human has
-  returned. Rejoining players get the RTS view and their camera on their pick. A setup that can't resume is cancelled
+  returned and pressed Ready again. Rejoining players get the RTS view and their camera on their pick. A setup that can't resume is cancelled
   cleanly. Details: design/ron_rewrite_plan.md "Rewrite 5", design/persistence.md.
 
 ## 6. Tests (gametest/SkirmishGameTests.java, end of file)
@@ -360,7 +368,8 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
 * `map_capture_sites_spawn_with_their_effect`: every map's site kinds are the ones it advertises; a captured
   Lava Vent pays energy, a captured Ancient Forge discounts research, an Oasis heals.
 * `start_phase_places_everyone_in_their_box`: a click outside the box is refused, a click inside is kept,
-  bots are placed at once, and the timeout places the rest inside their boxes and fires the start.
+  bots are placed at once, and the timeout places the rest inside their boxes and fires the start; placing alone
+  does not end the phase, placing and Ready does.
 
 Realm maps and the garrison (gametest/RealmMapGameTests.java; MapLayout was also checked offline with a harness that
 renders every map to PNG):
@@ -379,3 +388,37 @@ renders every map to PNG):
   old holder nothing once neutralized; a recruit saved and loaded counts once.
 * `realm_maps_and_the_garrison_have_their_names`: every map has its lang name and blurb, every capture kind its
   long and short name.
+
+## 7. A new match on a running server (issue #35, Joisco)
+
+"An option to reset the map, or move to a new location, so a server can keep hosting new games." The arena is not
+regenerated and the world is not reloaded: `maps.NewMatch` moves the next match to **fresh ground one slot further out**
+and everything anchored to the arena moves with it.
+
+* **Slots** (`maps.ArenaSlots`, pure arithmetic, JUnit `ArenaSlotsTest`): a square grid, one arena per cell, slot 0 the
+  arena the first match was played on, then a square spiral outwards (nearest unused ground first). The pitch is the
+  widest arena a lobby can build (half-extent 1024: the 560 wall, a random-size wall, a full 16-seat ring) plus a 512
+  margin, so two arenas never touch. The cursor is saved with the world (`maps.ArenaOrigins`, overworld data
+  `bt-arena-origins`) the moment a slot is taken, so a restart or a crash never hands the same ground out twice.
+* **The move** (`NewMatch.start(server, hint, force)`, one tick): refuse while a battlefield is being prepared (and
+  while a match is in play unless forced); reset like `/rts-hard-reset`, but the old units and buildings are
+  unregistered at once, the units removed at once (one left queued in a chunk that unloaded came back ownerless) and the
+  buildings demolished in their own level over the next ticks (`maps.ArenaRetirement`, the defeat cleanup's rate - no
+  wrecks, no effects, buildings ownerless first so a demolition can never defeat a player of the next match); take the next
+  slot; move every player to it; recentre the world border (size and "unbounded" borders untouched); set the world
+  spawn (where people land and join, i.e. the lobby's return point); forget the fog of war's view of the old arena (the
+  fog snapshot went with the reset; the first side to start captures the new one, so nothing hidden is ever served);
+  abandon the battlefield formation and navmesh warming meant for the old arena; generate the lobby's surroundings in
+  the background.
+* **The next match** needs no map code: the multiplayer lobby and the skirmish start take their centre from
+  `ArenaOrigins.centreFor(level, hostPosition)` (the slot once a world has moved, the host's ground before), and the
+  layout, start slots, wall, bot seats and capitol sites are all built round that centre already.
+* **Callers**: `/rts-newmatch` (op level 2; `/rts-newmatch force` also during a match) for hosts, and for the lobby's
+  end-of-match button (Lane C): `NewMatch.start(server, null, false)` on the server after the host check; show the
+  result's message. `hint` only anchors the grid the first time (null finds the arena from its metal patches, the map in
+  play or the world spawn).
+* **Not moved**: hand-placed classic start blocks (`StartPosServerEvents.startPoses`) and authored map data stay where
+  their author put them (hand-made data stays hand-made); nothing generated by a lobby uses them.
+* **Tests**: `NewMatchRefusalTest`, `ArenaSlotsTest` (JUnit); `NewMatchGameTests` (`new_match_*`): the whole move
+  (border, spawn, map and start slots at the new origin, old match gone, fog forgotten, a second new match = another
+  slot), slots surviving a save, the op command.

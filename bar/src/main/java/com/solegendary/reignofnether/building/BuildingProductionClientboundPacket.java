@@ -116,6 +116,12 @@ public class BuildingProductionClientboundPacket {
         );
     }
 
+    public static void toggleFactoryGuard(String ownerName, BlockPos buildingPos, boolean on) {
+        sendFiltered(ownerName, buildingPos,
+                new BuildingProductionClientboundPacket(BuildingAction.TOGGLE_FACTORY_GUARD, on ? "on" : "off", buildingPos)
+        );
+    }
+
     public static void completeProduction(String ownerName, BlockPos buildingPos, String itemName) {
         sendFiltered(ownerName, buildingPos,
                 new BuildingProductionClientboundPacket(BuildingAction.COMPLETE_PRODUCTION, itemName, buildingPos)
@@ -204,6 +210,10 @@ public class BuildingProductionClientboundPacket {
                         if (building instanceof ProductionPlacement pBuilding)
                             pBuilding.stewardPaused = "paused".equals(this.itemName);
                     }
+                    case TOGGLE_FACTORY_GUARD -> {
+                        if (building instanceof ProductionPlacement pBuilding)
+                            pBuilding.factoryGuard = "on".equals(this.itemName);
+                    }
                     case CLEAR_PRODUCTION -> {
                         if (building instanceof ProductionPlacement pBuilding) {
                             pBuilding.productionQueue.clear();
@@ -220,6 +230,7 @@ public class BuildingProductionClientboundPacket {
                                 }
                                 pBuilding.productionQueue.removeIf(pItem -> pItem.completed);
                             }
+                            BuildingWork.noteRelease(pBuilding);   // the stacks' chuff as the unit leaves
                         }
                     }
                     default -> { }

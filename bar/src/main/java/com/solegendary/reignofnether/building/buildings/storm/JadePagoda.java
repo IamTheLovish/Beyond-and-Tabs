@@ -54,7 +54,6 @@ public class JadePagoda extends ProductionBuilding {
 
         this.productions.add(ProductionItems.GEOMANCER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.PAPER_CRANE, Keybindings.abilitySlot2);
-        this.productions.add(ProductionItems.RESEARCH_STEWARD, Keybindings.abilitySlot8);   // auto-trains workers (StewardServerEvents)
         this.productions.add(ProductionItems.RESEARCH_TIER_2, Keybindings.abilitySlot9);   // the Observatory and the extractor refit
         this.productions.add(ProductionItems.RESEARCH_TIER_3, Keybindings.abilitySlot10);  // Heaven's Gate (slice 4)
     }
@@ -70,7 +69,6 @@ public class JadePagoda extends ProductionBuilding {
             () -> true,
             List.of(Component.translatable("buildings.reignofnether.jade_pagoda").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPop(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("buildings.reignofnether.jade_pagoda.tooltip1").getVisualOrderText(),
                 Component.translatable("buildings.reignofnether.jade_pagoda.tooltip2").getVisualOrderText()

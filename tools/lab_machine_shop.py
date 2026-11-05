@@ -81,6 +81,7 @@ START_TYPES = ("polished_blackstone", "deepslate_bricks")   # MachineShop.starti
 CU, CU_E, CU_W, CU_O = ("waxed_cut_copper", "waxed_exposed_cut_copper", "waxed_weathered_cut_copper",
                         "waxed_oxidized_cut_copper")
 CUB = "waxed_copper_block"
+OX, PA = CU_O, "polished_andesite"     # the palette pass (Nov 2026): verdigris, the pale light group
 DO, DOL, DOS, DOF, DOSL = "dark_oak_planks", "stripped_dark_oak_log", "dark_oak_stairs", "dark_oak_fence", "dark_oak_slab"
 SB, SBS, SBW = "polished_blackstone_bricks", "polished_blackstone_brick_stairs", "polished_blackstone_wall"
 CPB = "chiseled_polished_blackstone"
@@ -183,6 +184,10 @@ BAYS = (1, 4)        # the shop's furnace bays on the yard face
 GOLEM = (1, 6)       # the assembly stand
 
 
+YARD_APRON = True         # Nov 2026 round 3: the yard's open half polished andesite (critic: "a dark well")
+HUB = "iron_block"        # the turntable's hub (was bright copper: a salmon tile in the yard)
+
+
 def pad_l1(r):
     """Layer 0: the instant foundation. The yard is polished blackstone with a deepslate-brick kerb on its two open
     sides (both starting types); the ranges stand on deepslate-brick footings round deepslate tiles; a copper
@@ -193,9 +198,14 @@ def pad_l1(r):
             edge = x in (0, SX - 1) or z in (0, SZ - 1)
             r.set(x, 0, z, ("deepslate_bricks" if edge else "polished_blackstone") if yard else
                   ("deepslate_bricks" if edge else DT))
+    if YARD_APRON:     # the palette pass, round 3: a pale apron where the yard opens; the soot stays at the ranges' feet
+        for x in range(1, 6):
+            for z in range(3, 8):
+                if (x, z) not in CLEAR and not (z <= 4 or x == 5):
+                    r.set(x, 0, z, PA)
     for (x, z) in CLEAR:
         r.set(x, 0, z, CU_O)
-    r.set(4, 0, 4, CUB)
+    r.set(4, 0, 4, HUB)
 
 
 def shop_l1(r):
@@ -227,11 +237,15 @@ def shop_l1(r):
         r.st(x, EAVE + 1, 0, "south", name=st(CU_W))
         r.st(x, EAVE + 1, 2, "north", name=st(CU_W))
         r.set(x, EAVE + 1, 1, CU_E)
-        r.slab(x, EAVE + 2, 1, sl(CU))
+        r.slab(x, EAVE + 2, 1, sl(CU_E))       # one material per roof plane (Nov 2026: no stripes)
     r.set(0, EAVE + 1, 1, "orange_stained_glass")
     r.set(1, EAVE + 1, 1, "shroomlight")
     for x in (2, 4):
         r.rod(x, EAVE + 3, 1)
+
+
+GEAR_HUB = CPB        # Nov 2026 round 4: a dark hub (the lit cream hub read as "a square eye") ...
+GEAR_DISC = SB        # ... on a soot disc behind the brass rim and the iron spokes (was verdigris)
 
 
 def gear(r, gz, gy):
@@ -247,8 +261,11 @@ def gear(r, gz, gy):
             else:
                 r.b.pop((6, gy + dy, gz + dz), None)      # the recess (and the cut corners) stay open
             if not border:
-                r.set(7, gy + dy, gz + dz, CU_O)
-    r.set(6, gy, gz, "ochre_froglight", axis="x")
+                r.set(7, gy + dy, gz + dz, GEAR_DISC)
+    if GEAR_HUB == "ochre_froglight":
+        r.set(6, gy, gz, GEAR_HUB, axis="x")
+    else:
+        r.set(6, gy, gz, GEAR_HUB)
     r.set(6, gy + 1, gz, "iron_bars")
     r.set(6, gy, gz + 1, "iron_bars")
     r.set(6, gy - 3, gz, "iron_block")               # the teeth
@@ -287,7 +304,7 @@ def engine_l1(r):
     for z in range(1, 8):
         r.set(7, EH + 1, z, CU_E)
         r.slab(7, EH + 2, z, sl(CU))
-    stack(r, 8, 0, EH + 1, EH + 4)
+    stack(r, 8, 0, EH + 1, EH + 7)                   # the tallest thing on the plot (Nov 2026: +3, 'factory')
 
 
 def golem_l1(r):
@@ -296,7 +313,7 @@ def golem_l1(r):
     hanging from stair shoulders."""
     x, z = GOLEM
     r.set(x, 1, z, "polished_basalt", axis="y")
-    r.set(x, 2, z, "blast_furnace", facing="south", lit="true")
+    r.set(x, 2, z, "blast_furnace", facing="south", lit="false")   # unlit: the gear's hub is the glow (Nov 2026)
     r.set(x, 3, z, CU)
     r.set(x, 4, z, "shroomlight")
     r.slab(x, 5, z, sl(CU_E))
@@ -352,10 +369,14 @@ def stacks_l2(r):
     x, z = STACK_W
     stack(r, x, z, EAVE + 1, 12)
     x, z = STACK_E
-    stack(r, x, z, EH + 1, 14)
+    stack(r, x, z, EH + 1, 16)
     for xx in (6, 7):
         r.set(xx, 10, 0, SBW)
     r.slab(6, 11, 0, sl(CU_E))
+
+
+BOILER = OX                                   # the drum's body (the palette pass: verdigris, see PALETTE)
+BOILER_STRAP = (SB, SBS)                      # its two straps (block, stairs)
 
 
 def boiler_l2(r):
@@ -363,13 +384,13 @@ def boiler_l2(r):
     verdigris straps, a pressure dome with a gauge valve; a soot pipe feeds the stack."""
     for z in range(2, 7):
         strap = z in (2, 6)
-        side = st(CU_E) if strap else st(CU)
+        side = BOILER_STRAP[1] if strap else st(CU)
         r.st(6, EH + 2, z, "east", "top", side)
         r.st(8, EH + 2, z, "west", "top", side)
         r.st(6, EH + 3, z, "east", "bottom", side)
         r.st(8, EH + 3, z, "west", "bottom", side)
-        r.set(7, EH + 2, z, CU_E if strap else CUB)
-        r.set(7, EH + 3, z, CU_E if strap else CUB)
+        r.set(7, EH + 2, z, BOILER_STRAP[0] if strap else BOILER)
+        r.set(7, EH + 3, z, BOILER_STRAP[0] if strap else BOILER)
     r.set(7, EH + 4, 4, CUB)
     r.slab(7, EH + 5, 4, sl(CU_O))
     r.rod(7, EH + 6, 4)
@@ -412,6 +433,9 @@ TW = 16          # the clock tower's cornice course
 DIAL = 12        # the dial's hub height
 
 
+DIAL_CORNER = "iron_block"       # the dials' four corners (the palette pass: iron, so the brass rim reads round)
+
+
 def tower_l3(r):
     """The CLOCK TOWER on the shop's west end (x 0..2, z 0..2), the corner the camera meets first: a soot foot, an
     exposed-copper band with lit windows, an oxidized-copper shaft between dark-oak quoins, then the clock stage - a
@@ -435,14 +459,14 @@ def tower_l3(r):
     # the west dial, in the face (x 0)
     for k in (-1, 0, 1):
         for dy in (-1, 0, 1):
-            r.set(0, DIAL + dy, 1 + k, CUB)
+            r.set(0, DIAL + dy, 1 + k, DIAL_CORNER if k and dy else CUB)
     r.set(0, DIAL, 1, "ochre_froglight", axis="x")
     r.set(0, DIAL - 2, 1, "iron_block")
     r.set(0, DIAL + 2, 1, "iron_block")
     # the south dial, proud of the face (z 3, over the yard's west side - never over the spawn's 3 x 3)
     for k in (-1, 0, 1):
         for dy in (-1, 0, 1):
-            r.set(1 + k, DIAL + dy, 3, CUB)
+            r.set(1 + k, DIAL + dy, 3, DIAL_CORNER if k and dy else CUB)
     r.set(1, DIAL, 3, "ochre_froglight", axis="z")
     r.set(1, DIAL + 1, 3, "iron_bars")                # the hand, at twelve
     r.set(1, DIAL - 2, 3, "iron_block")
@@ -500,14 +524,29 @@ def draw_l3(r):
 
 
 # ======================================================================================================== build
-L1_SY = EH + 6
-L2_SY = 17
+L1_SY = EH + 9
+L2_SY = 18
 L3_SY = 23
+
+
+# THE PALETTE PASS (Nov 2026): block -> block swaps applied to every level after drawing (the massing is unchanged).
+# Empty = the Oct 19 colours; tools/lab_machine_shop_palette.py holds the options the critics compared.
+PALETTE = {    # the critics' pick (eyes 41625784092, 6.5 / 6.5): verdigris body, the engine house's hip pale andesite
+    CU: OX, st(CU): PA + "_stairs", sl(CU): PA + "_slab",
+    CU_E: OX, st(CU_E): OX + "_stairs", sl(CU_E): OX + "_slab",
+    CU_W: OX, st(CU_W): OX + "_stairs", sl(CU_W): OX + "_slab"}
+
+
+def recolour(r, palette):
+    for pos, (n, p) in list(r.b.items()):
+        if n in palette:
+            r.b[pos] = (palette[n], p)
 
 
 def build(draw, sy, tier):
     r = Rig(sy)
     draw(r)
+    recolour(r, PALETTE)
     r.settle()
     r.check_support(tier)
     s = r.structure()
@@ -572,7 +611,7 @@ def check_levels(s1, s2, s3, paths=None):
         # campfires (they burn units) only on stack tops: high up, on the stack's copper cap
         for (x, y, z), nm in n.items():
             if nm == "campfire":
-                assert y >= 9 and n.get((x, y - 1, z)) == CU, "%s: a campfire at %s is not on a stack top" % (
+                assert y >= 9 and n.get((x, y - 1, z)) == PALETTE.get(CU, CU), "%s: a campfire at %s is not on a stack top" % (
                     tag, (x, y, z))
     # the chain: an upgrade only adds or replaces (BuildingPlacement.changeStructure / refreshBlocks)
     for (ta, a), (tb, b) in ((levels[0], levels[1]), (levels[1], levels[2])):

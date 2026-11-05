@@ -12,7 +12,10 @@ import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.support.SupportBrain;
+import com.solegendary.reignofnether.unit.support.SupportState;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -64,7 +67,7 @@ import java.util.List;
  * either: SeedshaperUnit is a worker and attacker, and the bot finds Moonwell Bearers by class. Cost at 8v8: one grid
  * query every 4 s per priestess, staggered by entity id; healing and cleansing send no packets of their own.
  */
-public class BloomPriestessUnit extends Vindicator implements Unit {
+public class BloomPriestessUnit extends Vindicator implements Unit, SupportUnit {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new Bloom(), Keybindings.abilitySlot1);
@@ -146,6 +149,13 @@ public class BloomPriestessUnit extends Vindicator implements Unit {
 
     public void setFollowTarget(@Nullable LivingEntity target) { this.followTarget = target; }
 
+    // the support brain (unit/support/SupportBrain, claude/healer-ai-oct21.md): attack orders hold a standoff behind
+    // the fighters instead of following the enemy into melee, Fight takes the rear rank, it steps out of melee
+    private final SupportState supportState = new SupportState();
+    @Override public SupportState getSupportState() { return supportState; }
+    // her pulse is her support: the standoff behind a fight keeps the front inside it
+    @Override public double getSupportReach() { return RADIUS; }
+
     // endregion
 
     final static public float maxHealth = 45.0f;
@@ -215,6 +225,7 @@ public class BloomPriestessUnit extends Vindicator implements Unit {
         this.setCanPickUpLoot(false);
         super.tick();
         Unit.tick(this);
+        SupportBrain.tick(this, this);
         if (this.level() instanceof ServerLevel sl && isAlive() && (tickCount + getId()) % PULSE_TICKS == 0)
             pulse(sl);
     }

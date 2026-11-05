@@ -48,6 +48,17 @@ public class UnitSyncClientboundPacket {
         );
     }
 
+    /**
+     * One player's client forgets a unit that went into their fog (FogOfWarServerEvents.onHiddenByFog): its sticky
+     * allUnits entry would otherwise sit on the minimap at the spot it was last seen. It comes back on re-tracking.
+     */
+    public static void sendLeavePacketTo(ServerPlayer player, int entityId) {
+        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                new UnitSyncClientboundPacket(UnitSyncAction.LEAVE_LEVEL,
+                        entityId,0,0,0,0,0,0,0,0,0,0,0, "")
+        );
+    }
+
     public static void sendSyncOwnerNamePacket(Unit unit) {
         PacketHandler.INSTANCE.send(Audience.all(), // rare (sandbox, commands): sticky lists drop the old owner
                 new UnitSyncClientboundPacket(UnitSyncAction.SYNC_OWNERNAME,

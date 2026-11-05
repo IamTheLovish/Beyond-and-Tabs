@@ -87,12 +87,24 @@ public class BotServerEvents {
                 evt.getSource().getMsgId());
     }
 
+    /** The /bot add and lobby difficulty word; "medium" and "far" (and anything unknown) land on medium. */
+    public static BotPlayer.Difficulty difficultyFromArg(String difficultyName) {
+        return switch (difficultyName.toLowerCase()) {
+            case "easy" -> BotPlayer.Difficulty.EASY;
+            case "passive" -> BotPlayer.Difficulty.PASSIVE;
+            case "hard" -> BotPlayer.Difficulty.HARD;
+            default -> BotPlayer.Difficulty.MEDIUM;
+        };
+    }
+
     /** The difficulty in a bot's name ("Bot3 (hard)"); medium when the name carries none (older saves, tests). */
-    static BotPlayer.Difficulty difficultyFromName(String name) {
+    public static BotPlayer.Difficulty difficultyFromName(String name) {
         if (name == null)
             return BotPlayer.Difficulty.MEDIUM;
         if (name.endsWith("(hard)"))
             return BotPlayer.Difficulty.HARD;
+        if (name.endsWith("(passive)"))
+            return BotPlayer.Difficulty.PASSIVE;
         if (name.endsWith("(easy)"))
             return BotPlayer.Difficulty.EASY;
         return BotPlayer.Difficulty.MEDIUM;
@@ -113,9 +125,21 @@ public class BotServerEvents {
         brains.clear();
     }
 
+    /**
+     * /bot changes the match for everyone: the host (the singleplayer / Open-to-LAN owner, or an op on a dedicated
+     * server - PacketAuth.isHost, the lobby's rule) or an op at level 2 may run it; a command block or the console at
+     * level 2. It had no requirement, so a joined player could remove every bot - which defeats them - or add bots
+     * mid-match (security audit, Oct 26).
+     */
+    static boolean mayCommandBots(net.minecraft.commands.CommandSourceStack source) {
+        return source.getEntity() instanceof ServerPlayer sp
+            ? com.solegendary.reignofnether.network.PacketAuth.isHostOrOp(sp, 2)
+            : source.hasPermission(2);
+    }
+
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
-        event.getDispatcher().register(Commands.literal("bot")
+        event.getDispatcher().register(Commands.literal("bot").requires(BotServerEvents::mayCommandBots)
             .then(Commands.literal("add")
                 .then(Commands.argument("faction", StringArgumentType.word())
                     .executes(c -> addBot(c.getSource().getPlayerOrException(), StringArgumentType.getString(c, "faction"), "medium"))
@@ -158,11 +182,7 @@ public class BotServerEvents {
             caller.sendSystemMessage(Component.literal("Bots can play villagers, monsters, piglins, verdant_court, tidewrought, stormcallers or brassworks."));
             return 0;
         }
-        BotPlayer.Difficulty difficulty = switch (difficultyName.toLowerCase()) {
-            case "easy" -> BotPlayer.Difficulty.EASY;
-            case "hard" -> BotPlayer.Difficulty.HARD;
-            default -> BotPlayer.Difficulty.MEDIUM;   // "medium" and "far" both land here
-        };
+        BotPlayer.Difficulty difficulty = difficultyFromArg(difficultyName);
         String name = "Bot" + botNumber++ + " (" + difficulty.name().toLowerCase() + ")";
         lastBotName = name;
         Vec3 pos = findBotStart(caller, minR, maxR);

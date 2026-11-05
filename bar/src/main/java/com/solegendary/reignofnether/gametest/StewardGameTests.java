@@ -39,9 +39,9 @@ public class StewardGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
 
-    /** Every capitol keeps its worker on abilitySlot1 - the Steward's lookup - and it is the worker the bots train. */
+    /** Every capitol keeps its worker on abilitySlot1 (the bots train it) and no longer offers the Steward (Joseph, Oct 22: "Remove the steward ability from all faction town halls"). */
     @GameTest(template = ARENA)
-    public static void every_capitol_offers_the_steward_and_its_worker_on_slot_1(GameTestHelper helper) {
+    public static void every_capitol_has_its_worker_on_slot_1_and_no_steward(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Object[][] capitols = {
             { Buildings.TOWN_CENTRE, Factions.VILLAGERS }, { Buildings.MAUSOLEUM, Factions.MONSTERS },
@@ -55,8 +55,8 @@ public class StewardGameTests {
             if (!b.isCapitol)
                 problems.add(b.name + " is not a capitol");
             if (!(b instanceof com.solegendary.reignofnether.building.production.ProductionBuilding pb)
-                    || !pb.productions.get().contains(ProductionItems.RESEARCH_STEWARD))
-                problems.add(b.name + " does not offer the Steward");
+                    || pb.productions.get().contains(ProductionItems.RESEARCH_STEWARD))
+                problems.add(b.name + " still offers the Steward (or is not a production building)");
             var bp = BuildingUtils.getNewBuildingPlacement(b, level, helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, "gametest_steward_slots", false);
             ProductionItem worker = bp instanceof ProductionPlacement pp ? StewardServerEvents.workerItem(pp) : null;
             var kit = BotPlayer.kitFor(f);
