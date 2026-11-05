@@ -189,6 +189,13 @@ public final class UnitPlayback {
             add(t, x[l], y[l], z[l], yaw[l], phead, pitch[l]);
         }
 
+        /**
+         * A velocity packet (ClientboundSetEntityMotionPacket, blocks a tick) stamped with server tick {@code t}. Today's
+         * rule: not used - a move past the blink limit is a blink however fast the server says the unit goes.
+         */
+        public void motion(long t, double vx, double vy, double vz) {
+        }
+
         /** A position packet stamped with server tick {@code t} (yaw: the packet's, or NaN for a position-only one). */
         public void moved(long t, double px, double py, double pz, float pyaw) {
             moved(t, px, py, pz, pyaw, Float.NaN);
