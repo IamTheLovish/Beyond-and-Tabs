@@ -41,9 +41,12 @@ public final class UnitPlayback {
     /**
      * The buffer grows with the clock's typical error ({@code spread}, an average of how far the newest tick heard sits
      * from where the playback expects it): a jittery server is drawn a little further behind instead of stop-go, a
-     * steady one keeps {@link #MARGIN}. At most {@link #MAX_EXTRA} ticks more.
+     * steady one keeps {@link #MARGIN}. At most {@link #MAX_EXTRA} ticks more, so a unit is drawn at most its interval
+     * + 1 + 3 ticks behind the newest tick heard (7 ticks, 350 ms, for the usual interval 3). The spread rises fast
+     * ({@link #SPREAD_RISE}: one long tick deepens the buffer for the next) and falls slowly ({@link #SPREAD_GAIN}) - a
+     * jitter buffer's usual attack and release; gains tuned on UnitPlaybackTest's clocks 1-200 (r1 of #539).
      */
-    static final double SPREAD_GAIN = 0.02, SPREAD_WEIGHT = 1.0, MAX_EXTRA = 3.0;
+    static final double SPREAD_GAIN = 0.005, SPREAD_RISE = 0.1, SPREAD_WEIGHT = 1.0, MAX_EXTRA = 3.0;
     /**
      * Client ticks without a new server tick after which the server counts as standing still (a hitch, not a late tick):
      * {@link #STALL}, or {@link #STALL_TICKS} of the server's own measured tick length on a slow server (at 5 TPS a
@@ -77,15 +80,18 @@ public final class UnitPlayback {
             }
             quiet = newest > prev ? 0 : quiet + 1;
             if (quiet >= Math.max(STALL, STALL_TICKS / rate)) {
-                // the server has stood still for longer than a late tick takes (a hitch): the units stand with it, and
-                // the clock neither runs on (to leap when the missed ticks arrive) nor learns a slower rate from it
+                // the server has stood still for longer than a late tick takes (a hitch): the clock learns no slower
+                // rate from it, and draws on at its rate only through the ticks already buffered (to the newest tick
+                // heard, plus the margin) - then the units stand with the server, never running ahead of what has
+                // arrived (to leap when the missed ticks come)
                 prev = newest;
+                play = Math.max(play, Math.min(play + rate, newest + margin()));
                 return;
             }
             rate = Mth.clamp(rate + RATE_GAIN * (Math.min(newest - prev, MAX_HEARD) - rate), 0.2, MAX_STEP);
             prev = newest;
             double err = newest - (play + rate);
-            spread += SPREAD_GAIN * (Math.abs(err) - spread);
+            spread += (Math.abs(err) > spread ? SPREAD_RISE : SPREAD_GAIN) * (Math.abs(err) - spread);
             play = Math.abs(err) > JUMP ? newest : play + Mth.clamp(rate + PULL * err, 0.0, MAX_STEP);
         }
 
@@ -119,12 +125,24 @@ public final class UnitPlayback {
         }
     }
 
-    /** One unit's stamped positions (a short ring) and where it is drawn. */
+    /**
+     * A move between two samples is a blink (drawn as a jump, never a slide across) past {@link #BLINK_BLOCKS} - the
+     * most one tracker move packet can carry (a short of 4096ths: ServerEntity sends a teleport packet for more) - or,
+     * for a unit whose packets are further apart, past the fastest it can go in the ticks between them: {@link #MAX_RUN}
+     * blocks a tick across the ground (a Leaf Dash is 1.33), {@link #MAX_FALL} down or up (vanilla's falling speed
+     * tops out at 3.92). Kinematics.TELEPORT_BLOCKS (4) is a per-client-tick limit and was wrongly used here per packet
+     * (r1 of #539: a Leaf Dash, 4 blocks a packet, was drawn held then popped).
+     */
+    static final double BLINK_BLOCKS = 8.0, MAX_RUN = 2.0, MAX_FALL = 4.0;
+
+    /** One unit's stamped positions and rotations (a short ring) and where it is drawn. */
     public static final class Track {
         static final int SIZE = 16;
+        /** What a move packet carries (ClientboundMoveEntityPacket.hasPosition / hasRotation; a teleport: both). */
+        public static final int POS = 1, ROT = 2;
         private final int interval;
         private final double[] tick = new double[SIZE], x = new double[SIZE], y = new double[SIZE], z = new double[SIZE];
-        private final float[] yaw = new float[SIZE];
+        private final float[] yaw = new float[SIZE], headYaw = new float[SIZE], pitch = new float[SIZE];
         private int head = -1, count = 0;
 
         /** @param interval the unit type's tracker update interval (EntityType.updateInterval) */
@@ -134,83 +152,101 @@ public final class UnitPlayback {
 
         /** Where the unit stands when it starts being tracked (its spawn packet), at server tick {@code tick}. */
         public void seed(long t, double px, double py, double pz, float pyaw) {
+            seed(t, px, py, pz, pyaw, pyaw, 0f);
+        }
+
+        public void seed(long t, double px, double py, double pz, float pyaw, float phead, float ppitch) {
             head = -1;
             count = 0;
-            add(t, px, py, pz, pyaw);
-            drawn[0] = px; drawn[1] = py; drawn[2] = pz; drawn[3] = pyaw;
+            add(t, px, py, pz, pyaw, phead, ppitch);
         }
 
         public boolean seeded() {
             return count > 0;
         }
 
-        /** What a move packet carries (ClientboundMoveEntityPacket.hasPosition / hasRotation; a teleport: both). */
-        public static final int POS = 1, ROT = 2;
-        // today's rule: where the unit was drawn last (the entity's own position and yaw), the newest head yaw and pitch
-        private final double[] drawn = new double[4];
-        private float headNow = Float.NaN, pitchNow = 0f;
-
         /**
          * One move or teleport packet as the client glue hands it over, stamped with server tick {@code t}; {@code kind}
-         * says what it carries ({@link #POS} | {@link #ROT}). ClientPacketListener fills in what a packet lacks from the
-         * entity: a rotation-only packet comes with the drawn position, a position-only one with the drawn yaw and pitch.
-         * Today's rule (UnitPlaybackMixin's, here so a test can run it): the kind is guessed from equal values - the
-         * drawn position means a turn, the drawn yaw a position-only move; head yaw and pitch follow the newest packet.
+         * says what it carries ({@link #POS} | {@link #ROT}), read from the packet itself (r1 of #539: guessing it from
+         * values equal to the drawn ones - which run 4-7 ticks behind - filed a real turn as none after a hitch). What a
+         * packet lacks (ClientPacketListener fills it in from the entity) is ignored: a position-only packet keeps the
+         * stamped yaw and pitch, a rotation-only one the stamped position.
          */
         public void packet(long t, int kind, double px, double py, double pz, float pyaw, float ppitch) {
-            pitchNow = ppitch;
-            if (px == drawn[0] && py == drawn[1] && pz == drawn[2])
-                turned(t, pyaw);
-            else
-                moved(t, px, py, pz, pyaw == (float) drawn[3] ? Float.NaN : pyaw);
+            boolean pos = (kind & POS) != 0, rot = (kind & ROT) != 0;
+            if (pos)
+                moved(t, px, py, pz, rot ? pyaw : Float.NaN, rot ? ppitch : Float.NaN);
+            else if (rot)
+                turned(t, pyaw, ppitch);
         }
 
-        /** A head-rotation packet (ClientboundRotateHeadPacket) stamped with server tick {@code t}. */
-        public void head(long t, float headYaw) {
-            headNow = headYaw;
+        /** A head-rotation packet (ClientboundRotateHeadPacket) stamped with server tick {@code t}: drawn with the body. */
+        public void head(long t, float phead) {
+            if (!seeded())
+                return;
+            int l = head;
+            hold(t, l);
+            add(t, x[l], y[l], z[l], yaw[l], phead, pitch[l]);
         }
 
         /** A position packet stamped with server tick {@code t} (yaw: the packet's, or NaN for a position-only one). */
         public void moved(long t, double px, double py, double pz, float pyaw) {
+            moved(t, px, py, pz, pyaw, Float.NaN);
+        }
+
+        /** As {@link #moved(long, double, double, double, float)}, with the packet's pitch (NaN: none). */
+        public void moved(long t, double px, double py, double pz, float pyaw, float ppitch) {
             if (!seeded()) {
                 if (Float.isFinite(pyaw))
-                    seed(t, px, py, pz, pyaw);
+                    seed(t, px, py, pz, pyaw, pyaw, Float.isFinite(ppitch) ? ppitch : 0f);
                 return;
             }
             int l = head;
             if (!Float.isFinite(pyaw))
                 pyaw = yaw[l];   // a position-only packet: the unit still faces where its last stamp said
-            double jump = Math.max(Math.hypot(px - x[l], pz - z[l]), Math.abs(py - y[l]));
-            if (jump > Kinematics.TELEPORT_BLOCKS) {
+            if (!Float.isFinite(ppitch))
+                ppitch = pitch[l];
+            double ticks = Mth.clamp(t - tick[l], 1.0, interval);
+            if (Math.hypot(px - x[l], pz - z[l]) > Math.max(BLINK_BLOCKS, MAX_RUN * ticks)
+                    || Math.abs(py - y[l]) > Math.max(BLINK_BLOCKS, MAX_FALL * ticks)) {
                 // a blink: held where it was until the tick it jumped, never drawn sliding across
-                add(Math.max(tick[l], t - 1e-3), x[l], y[l], z[l], yaw[l]);
-            } else if (t - tick[l] > interval) {
-                // it stood still since its last packet (none is sent while nothing changes): it set off no earlier
-                // than one interval ago - without this it would be drawn creeping off from its last packet's tick
-                add(t - interval, x[l], y[l], z[l], yaw[l]);
+                add(Math.max(tick[l], t - 1e-3), x[l], y[l], z[l], yaw[l], headYaw[l], pitch[l]);
+            } else {
+                hold(t, l);
             }
-            add(t, px, py, pz, pyaw);
+            add(t, px, py, pz, pyaw, headYaw[l], ppitch);
         }
 
         /** A rotation-only packet stamped with server tick {@code t}: the unit turned where it stands. */
         public void turned(long t, float pyaw) {
+            turned(t, pyaw, Float.NaN);
+        }
+
+        public void turned(long t, float pyaw, float ppitch) {
             if (!seeded())
                 return;
             int l = head;
-            if (t - tick[l] > interval)
-                add(t - interval, x[l], y[l], z[l], yaw[l]);
-            add(t, x[l], y[l], z[l], pyaw);
+            hold(t, l);
+            add(t, x[l], y[l], z[l], pyaw, headYaw[l], Float.isFinite(ppitch) ? ppitch : pitch[l]);
         }
 
-        private void add(double t, double px, double py, double pz, float pyaw) {
-            if (count > 0 && t <= tick[head]) {
-                // the same tick again (or older): the newer packet wins
-                x[head] = px; y[head] = py; z[head] = pz; yaw[head] = pyaw;
-                return;
+        /**
+         * It stood still since sample {@code l} (none is sent while nothing changes): it set off no earlier than one
+         * interval before {@code t} - without this it would be drawn creeping off from its last packet's tick.
+         */
+        private void hold(long t, int l) {
+            if (t - tick[l] > interval)
+                add(t - interval, x[l], y[l], z[l], yaw[l], headYaw[l], pitch[l]);
+        }
+
+        private void add(double t, double px, double py, double pz, float pyaw, float phead, float ppitch) {
+            if (count == 0 || t > tick[head]) {
+                head = (head + 1) % SIZE;
+                count = Math.min(count + 1, SIZE);
+                tick[head] = t;
             }
-            head = (head + 1) % SIZE;
-            tick[head] = t; x[head] = px; y[head] = py; z[head] = pz; yaw[head] = pyaw;
-            count = Math.min(count + 1, SIZE);
+            // (the same tick again, or older: the newer packet wins)
+            x[head] = px; y[head] = py; z[head] = pz; yaw[head] = pyaw; headYaw[head] = phead; pitch[head] = ppitch;
         }
 
         /** Once a client tick: where to draw the unit, into {@code out} = x, y, z, yaw, head yaw, pitch. */
@@ -235,9 +271,8 @@ public final class UnitPlayback {
             out[1] = y[a] + (y[b] - y[a]) * f;
             out[2] = z[a] + (z[b] - z[a]) * f;
             out[3] = yaw[a] + Mth.wrapDegrees(yaw[b] - yaw[a]) * (float) f;
-            out[4] = Float.isNaN(headNow) ? out[3] : headNow;
-            out[5] = pitchNow;
-            drawn[0] = out[0]; drawn[1] = out[1]; drawn[2] = out[2]; drawn[3] = (float) out[3];
+            out[4] = headYaw[a] + Mth.wrapDegrees(headYaw[b] - headYaw[a]) * (float) f;
+            out[5] = pitch[a] + (pitch[b] - pitch[a]) * f;
         }
     }
 }

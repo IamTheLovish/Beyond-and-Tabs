@@ -74,6 +74,7 @@
   "client": [
     "AnimProfileRendererMixin",
     "UnitPlaybackMixin",
+    "UnitPlaybackPacketMixin",
     "LivingEntityDamageMotionMixin",
     "UnitLodEyesLayerMixin",
     "CameraMixin",

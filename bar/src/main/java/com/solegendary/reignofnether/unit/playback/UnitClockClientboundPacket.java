@@ -14,7 +14,8 @@ import java.util.function.Supplier;
  * ticks and its entity trackers send their packets, so the client knows that the move packets it reads after this
  * stamp belong to this tick (one connection keeps the order). The client draws units from those stamped positions on a
  * steady playback clock (UnitPlayback) instead of vanilla's 3-tick lerp, which stalls whenever a tick runs late.
- * A var-int a tick per player: a few bytes.
+ * One packet a tick per player (only while players are on): a var-int in a custom payload - with the channel name and
+ * the frame about 25-30 bytes, roughly 0.5-1.5 KB/s per player with TCP overhead, no per-unit cost.
  */
 public class UnitClockClientboundPacket {
 
