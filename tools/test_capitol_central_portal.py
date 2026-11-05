@@ -142,6 +142,61 @@ class CentralPortalTest(unittest.TestCase):
         sub = sum(1 for h in self.rts.values() if S.glyph(h[1]) not in FULL_GLYPHS)
         self.assertGreaterEqual(sub / max(1, len(self.rts)), 0.15)
 
+    # ---- the Fable critics' fixes (Nov 4, eyes 41792408905: 5 / 10; critic-a.md, critic-c.md F5) ----
+    def test_crater_glow_is_one_patch_not_a_plus(self):
+        """The crater's top glow layer is ONE 4-connected patch of at least 6 cells in the 3 x 3 that fills at least
+        one corner: a vent, not a sign (critic A fix 1: the shipped plus of 5 read as "an orange X / team mark";
+        critic C F5: one irregular patch so the Ashborn and the Gravebound capitols stop being dusk twins)."""
+        glow = {q for q, n in self.solid.items() if n == "shroomlight"}
+        top = max(q[1] for q in glow)
+        layer = {(q[0], q[2]) for q in glow if q[1] == top}
+        self.assertGreaterEqual(len(layer), 6, sorted(layer))
+        self.assertTrue(any((7 + a, 7 + b) in layer for a in (-1, 1) for b in (-1, 1)), sorted(layer))
+        seen, stack = {min(layer)}, [min(layer)]
+        while stack:
+            x, z = stack.pop()
+            for v in ((x + 1, z), (x - 1, z), (x, z + 1), (x, z - 1)):
+                if v in layer and v not in seen:
+                    seen.add(v)
+                    stack.append(v)
+        self.assertEqual(seen, layer)
+
+    def test_bronze_on_the_crown_gate_and_rails(self):
+        """The Ashborn kit's accent (tools/ashborn_lab_parts.py: bronze = waxed cut copper, worn = waxed exposed cut
+        copper) on the crown, the gate's pylons and the stair rails, 1-10 % of the RTS pixels (an accent that reads,
+        not a main block): the capitol is "the grey one with bronze", not the Gravebound capitol's grey twin (critic
+        A fix 2). No oxidized or weathered copper: that teal is the Stormcallers' jade (critic C)."""
+        def bronze(n):
+            return n.startswith(("waxed_cut_copper", "waxed_exposed_cut_copper"))
+        parts = {"crown": [q for q, n in self.solid.items() if bronze(n) and q[1] >= 13],
+                 "gate": [q for q, n in self.solid.items() if bronze(n) and q[0] == 0],
+                 "rails": [q for q, n in self.solid.items() if bronze(n) and 4 <= q[1] <= 12 and q[0] < 7
+                           and abs(q[2] - 7) == 2]}
+        for part, cells in parts.items():
+            self.assertTrue(cells, "no bronze on the %s" % part)
+        share = sum(1 for h in self.rts.values() if bronze(h[1])) / max(1, len(self.rts))
+        self.assertTrue(0.01 <= share <= 0.10, share)
+        teal = sorted({n for n in self.solid.values() if "oxidized" in n or "weathered" in n})
+        self.assertEqual(teal, [])
+
+    def test_gate_mouth_open_to_the_rts_camera(self):
+        """lovish, Nov 4 ("Ashborn: open gate mouth"): the mouth's outer two cells (x 0..1, z 6..8) are open to the
+        sky, so the RTS camera looks down into the dark mouth - at least 2 % of the building's RTS pixels land in it
+        (x <= 2, z 6..8, y <= 3; shipped 1.6 %, the open mouth 2.7 %). Shipped: the lintel and the T2 batter roofed it,
+        "invisible from the RTS camera" (critic A)."""
+        roofed = sorted(q for q in self.solid if q[0] in (0, 1) and 6 <= q[2] <= 8 and q[1] >= 1)
+        self.assertEqual(roofed, [])
+        seen = sum(1 for h in self.rts.values() if h[0][0] <= 2 and 6 <= h[0][2] <= 8 and h[0][1] <= 3)
+        self.assertGreaterEqual(seen / max(1, len(self.rts)), 0.02, seen)
+
+    def test_basalt_column_foot(self):
+        """The plinth's piers on the two camera faces (west x 0, south z 14; y 1..3) are the kit's basalt columns (axis
+        y) with a polished basalt joint at y 2 - at least 12 cells (critic A fix 5: the Ashborn lab's ground storey is a
+        basalt column wall; the capitol's foot was blackstone brick, the Gravebound's block list)."""
+        cols = [q for q in self.solid if (q[0] == 0 or q[2] == 14) and 1 <= q[1] <= 3
+                and self.solid[q] == ("polished_basalt" if q[1] == 2 else "basalt")]
+        self.assertGreaterEqual(len(cols), 12, len(cols))
+
     def test_occupies_a_capitol_share_of_the_rts_view(self):
         """The capitol is the centrepiece: >= 12 % of the RTS still (the other capitols 15-18 %; RoN's portal 7 %)."""
         share = len(self.rts) / ((G.SCREEN[0] // 4) * (G.SCREEN[1] // 4))

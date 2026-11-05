@@ -20,10 +20,12 @@ uniform vec3 shadowLightPosition;
 uniform vec3 upPosition;
 uniform float rainStrength;
 
-// high sun: warm light, near-neutral sky fill (Oct 28: a blue fill tinted the whole lawn - #326's lawn fix). Sun 0.68 at
-// ~60 degrees up plus fill 0.41 keeps open ground at its albedo; the fill alone is 40% of that
-const vec3 SUN_HIGH = vec3(1.00, 0.94, 0.84) * 0.68;
-const vec3 SKY_HIGH = vec3(0.92, 0.96, 1.04) * 0.41;
+// high sun: a faintly warm sun, a faintly cool sky fill (Oct 28: a blue fill tinted the whole lawn - #326's lawn fix).
+// Sun 0.68 at ~60 degrees up plus fill 0.41 keeps open ground at its albedo, in colour too: the two sum to white
+// (tools/test_shader_pack.py). The old warm sun (1.00, 0.94, 0.84) summed to (1.00, 0.98, 0.95) and turned the whole
+// field toward yellow - the lawn read olive (Itachi 1, Nov 4). The fill alone is 40% of that
+const vec3 SUN_HIGH = vec3(1.00, 0.965, 0.91) * 0.68;
+const vec3 SKY_HIGH = vec3(0.92, 0.97, 1.055) * 0.41;
 // low sun: golden light raking across, a dim warm-violet fill
 const vec3 SUN_LOW = vec3(1.00, 0.62, 0.34) * 1.50;
 const vec3 SKY_LOW = vec3(0.74, 0.70, 0.80) * 0.17;
@@ -38,6 +40,8 @@ const vec3 MIN_LIGHT = vec3(0.012);
 // from 1 to this, never to nothing. The light engine can leave open ground with a stale low sky light (the eyes
 // structure pads: freshly laid ground read 1/3 of its sky light), which the sun hides but a shadow showed as black
 const float SKY_FILL_FLOOR = 0.35;
+// the sky's fill on a wall as a share of its fill on open ground: a face looking straight up sees the whole sky
+const float SKY_FILL_SIDE = 0.75;
 
 // sine of the sun's height above the horizon
 float sunHeight() {
@@ -63,11 +67,13 @@ vec2 lightLevels(vec2 lm) {
     return clamp((lm - 1.0 / 32.0) * (16.0 / 15.0), 0.0, 1.0);
 }
 
-// Lambert, eased toward a square root: a low sun still rakes the open ground (Dusk's long shadows read as shade, not
-// as nothing), and the terminator on round shapes is softer
+// Lambert, eased SUN_FACING_EASE of the way toward a square root: a low sun still rakes the open ground (Dusk's long
+// shadows read as shade, not as nothing), and the terminator on round shapes is softer
+const float SUN_FACING_EASE = 0.5;
+
 float sunFacing(vec3 n, vec3 l) {
     float ndl = max(dot(n, l), 0.0);
-    return mix(ndl, sqrt(ndl), 0.5);
+    return mix(ndl, sqrt(ndl), SUN_FACING_EASE);
 }
 
 // the sun's light reaching a surface before its facing: the colour, the shadow, and the fade where the sky light says
@@ -76,17 +82,21 @@ vec3 sunArriving(float shadow, vec2 levels, vec3 sunColour) {
     return sunColour * (shadow * smoothstep(0.05, 0.45, levels.y));
 }
 
+// the sky's fill: the part of a surface's light that ambient occlusion takes (slice 3; lit.fsh records its share,
+// composite.fsh applies the occlusion to that share only). surfaceLight adds this very term, so the two never drift
+vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 skyColour) {
+    float upness = dot(n, normalize(upPosition));
+    return skyColour * ((SKY_FILL_SIDE + (1.0 - SKY_FILL_SIDE) * upness) * mix(SKY_FILL_FLOOR, 1.0, levels.y) * ao * texAo);
+}
+
 // the light falling on a surface with view-space normal n: shadow (0..1) from lib/shadow.glsl, levels from lightLevels,
 // ao the vertex ambient occlusion (1 = open), texAo the material's own (the _n map's blue, slice 2; 1 = open): it
 // darkens the sky's fill fully and the sun at half strength - a crevice still catches some of a direct sun
 vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, float texAo, vec3 sunColour,
                   vec3 skyColour) {
-    vec3 up = normalize(upPosition);
-    float sky = levels.y;
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
     vec3 light = sunArriving(shadow, levels, sunColour) * (facing * mix(1.0, texAo, 0.5));
-    float upness = dot(n, up);
-    light += skyColour * ((0.75 + 0.25 * upness) * mix(SKY_FILL_FLOOR, 1.0, sky) * ao * texAo);
+    light += skyFill(n, levels, ao, texAo, skyColour);
     // no light bounced off the ground onto walls: slice 2 tried 0.20 of the sun (block critic, Oct 30) and the
     // wall-to-roof step fell from slice 1's 1.73 to 1.42 (eyes 41962082358 / 41962085182); lovish, Nov 5: "Keep the
     // strong step" - walls stay at ~58% of the roofs, so a building reads its shape from the RTS camera

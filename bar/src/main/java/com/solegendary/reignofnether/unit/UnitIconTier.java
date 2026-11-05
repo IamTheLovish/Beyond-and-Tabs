@@ -92,6 +92,28 @@ public final class UnitIconTier {
         return tier == T3 || tier == HERO || entity.getBbWidth() >= BIG_BB_WIDTH;
     }
 
+    /**
+     * Tier pips drawn outside a unit's icon, under its shape (role icons, backlog 12): 2 for a T2 unit, 3 for a T3.
+     * T1 is the baseline and has none, so a field of T1 chaff carries no extra marks; workers, heroes and the
+     * commander have shapes of their own. Pure.
+     */
+    public static int pips(int tier) {
+        return tier == T2 ? 2 : tier == T3 ? 3 : 0;
+    }
+
+    /**
+     * A flyer: its move control flies. Every flying unit sets a FlyingUnitMoveControl (the dragons' DragonMoveControl
+     * is one) in its constructor, so the client knows it too; Unit.isFlyingUnit reads the move goal, which only the
+     * server registers. The Windcaller is the exception: it swaps controls as it takes off and lands, on the server
+     * and its owner's client only, so every other client would see it grounded - its synced isFlying() decides.
+     */
+    public static boolean isFlyer(LivingEntity entity) {
+        if (entity instanceof com.solegendary.reignofnether.unit.units.villagers.WindcallerUnit windcaller)
+            return windcaller.isFlying();
+        return entity instanceof net.minecraft.world.entity.Mob mob
+            && mob.getMoveControl() instanceof com.solegendary.reignofnether.unit.controls.FlyingUnitMoveControl;
+    }
+
     private static int metalOf(Unit unit) {
         ResourceCost cost = unit.getCost();
         return cost == null ? 0 : cost.ore;   // after ResourceCost.bakeValues the ore field is Metal

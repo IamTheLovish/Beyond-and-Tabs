@@ -161,6 +161,90 @@ def enchanted_pairs(java, fsh):
     return pairs
 
 
+def vec3_const(source, name):
+    """A `const vec3 NAME = vec3(r, g, b) [* k];` (or `vec3(x)`) from a shader's source, as three floats."""
+    m = re.search(r"const vec3 %s = vec3\(([^)]*)\)\s*(?:\*\s*(-?\d+(?:\.\d+)?))?\s*;" % name, source)
+    if not m:
+        raise ValueError("no const vec3 %s" % name)
+    xs = _numbers(m.group(1))
+    xs = xs * 3 if len(xs) == 1 else xs
+    k = float(m.group(2)) if m.group(2) else 1.0
+    return [x * k for x in xs]
+
+
+def float_const(source, name, default=None):
+    """A `const float NAME = x;` from a shader's source; `default` when the source has none."""
+    m = re.search(r"const float %s = (-?\d+(?:\.\d+)?);" % name, source)
+    if not m:
+        if default is None:
+            raise ValueError("no const float %s" % name)
+        return default
+    return float(m.group(1))
+
+
+LUMA = (0.2126, 0.7152, 0.0722)
+
+
+def code_of(source):
+    """A shader's source without its comments, every run of whitespace one space: the lines the GPU runs, so a test that
+    looks for a statement is not satisfied by a comment quoting it."""
+    source = re.sub(r"/\*.*?\*/", " ", source, flags=re.S)
+    source = re.sub(r"//[^\n]*", " ", source)
+    return re.sub(r"\s+", " ", source)
+
+
+def noon_light(light_source, upness, ndl, sun_through=1.0):
+    """Luma of lib/light.glsl's surfaceLight at the lobby's noon (the high-sun row) for a face in full sky light with
+    no ambient occlusion: `upness` its normal's dot with up, `ndl` with the sun, `sun_through` the shadow (1 = lit).
+    Mirrors sunFacing (Lambert eased SUN_FACING_EASE of the way to its square root), skyFill's (SKY_FILL_SIDE +
+    (1 - SKY_FILL_SIDE) x upness) and MIN_LIGHT, with the constants read from the source (test_noon_light_leaves_open_
+    ground_its_colour pins the two expressions themselves)."""
+    def lum(v):
+        return sum(a * b for a, b in zip(v, LUMA))
+    sun, sky = lum(vec3_const(light_source, "SUN_HIGH")), lum(vec3_const(light_source, "SKY_HIGH"))
+    ease, side = float_const(light_source, "SUN_FACING_EASE"), float_const(light_source, "SKY_FILL_SIDE")
+    ndl = max(ndl, 0.0)
+    facing = ndl + (ndl ** 0.5 - ndl) * ease
+    return (sun * facing * sun_through + sky * (side + (1.0 - side) * upness)
+            + lum(vec3_const(light_source, "MIN_LIGHT")))
+
+
+def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_height=1080.0):
+    """lib/ao.glsl's aoDepthTolerance in blocks, evaluated from the GLSL itself: the `return` under its
+    `if (aoOrtho(projection))` (the RTS view) or the one after it (first person), with the file's float constants filled
+    in and the RTS view's projection[1][1] = 2 / zoom (zoom = blocks of view height)."""
+    m = re.search(r"float aoDepthTolerance\([^)]*\) \{\s*if \(aoOrtho\(projection\)\)\s*return ([^;]*);\s*return ([^;]*);"
+                  r"\s*\}", ao_source)
+    if not m:
+        raise ValueError("lib/ao.glsl's aoDepthTolerance is not `if (aoOrtho(projection)) return ...; return ...;`")
+    expr = (m.group(1) if ortho else m.group(2)).replace("projection[1][1]", "p11")
+    consts = dict(re.findall(r"const float (\w+) = (-?\d+(?:\.\d+)?);", ao_source))
+    expr = re.sub(r"\b[A-Z][A-Z0-9_]*\b", lambda c: consts[c.group(0)], expr)
+    if re.search(r"[^\w\s.,()+\-*/]", expr) or set(re.findall(r"[A-Za-z_]\w*", expr)) - {
+            "max", "base", "viewDepth", "viewHeight", "p11"}:
+        raise ValueError("cannot evaluate %r" % expr)
+    return eval(expr, {"__builtins__": {}}, {"max": max, "base": base, "viewDepth": view_depth,
+                                            "viewHeight": view_height, "p11": 2.0 / zoom})
+
+
+def _smoothstep(a, b, x):
+    t = min(max((x - a) / (b - a), 0.0), 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def split_tone_shadows(source, lc):
+    """final.fsh's split-tone shadow weight at luma lc: its own `float shadows = ...;` line, with the file's float
+    constants filled in, evaluated as GLSL would (smoothstep only)."""
+    m = re.search(r"float shadows = ([^;]*);", source)
+    if not m:
+        raise ValueError("final.fsh has no `float shadows = ...;` line")
+    consts = {k: v for k, v in re.findall(r"const float (\w+) = (-?\d+(?:\.\d+)?);", source)}
+    expr = re.sub(r"\b[A-Z][A-Z0-9_]*\b", lambda c: consts[c.group(0)], m.group(1))
+    if re.search(r"[^\w\s.,()+\-*]", expr) or set(re.findall(r"[A-Za-z_]\w*", expr)) - {"smoothstep", "lc"}:
+        raise ValueError("cannot evaluate %r" % expr)
+    return eval(expr, {"__builtins__": {}}, {"smoothstep": _smoothstep, "lc": lc})
+
+
 def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 
