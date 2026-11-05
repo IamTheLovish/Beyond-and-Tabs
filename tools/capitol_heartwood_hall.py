@@ -58,7 +58,7 @@ WHAT THE SIZE TOUCHES IN THE GAME (the coordinator applies these; this file edit
   - BiomeBaseGameTests.capitol_details_keep_box_build_time_and_anchors: the row
     { Buildings.HEARTWOOD_HALL, 498, new int[] { 14, 29, 14 } } (14, 21, 14 before the tall tree);
   - BuildingAmbienceClientEvents.CAPITOL_SPOTS: "heartwood_hall" -> PETAL_SPOTS below (petals falling from under the
-    crown's low lobes, the east roof bough's blossom, and off the crown's top);
+    crown's low lobes and off the crown's top);
   - CrownMotionTest (the #502 living crowns): the great crown's base is y19 (CROWN_FOOT; y12 before);
   - CapitolLife: none. SkirmishGameTests.heartwood_hall_frees_its_seedshapers: the 15-wide footprint fits its 16-wide
     column (it stamps from x+1); it clears 22 high, and the tree's top 8 stand in the arena's open sky.
@@ -100,8 +100,8 @@ FLOWERS = ("allium", "azure_bluet", "oxeye_daisy", "lily_of_the_valley", "cornfl
 
 STARTING_TYPES = {"moss_block", "mossy_stone_bricks"}       # HeartwoodHall.startingBlockTypes
 # BuildingAmbienceClientEvents.CAPITOL_SPOTS["heartwood_hall"], Fx.PETAL (structure coordinates, block x spans x..x+1):
-# under three of the crown's low lobes (LOBES), under the blossom at the east roof bough's tip, and over the crown's top
-PETAL_SPOTS = ((11.5, 19.5, 3.5), (6.5, 19.5, 10.5), (10.5, 18.5, 11.5), (13.5, 12.5, 5.5), (8.5, 29.5, 6.5))
+# under four of the crown's low lobes (LOBES) and over the crown's top
+PETAL_SPOTS = ((11.5, 19.5, 3.5), (6.5, 22.5, 8.5), (10.5, 18.5, 11.5), (4.5, 18.5, 4.5), (8.5, 29.5, 6.5))
 
 
 def leaf(c, dx, y, dz, name="azalea_leaves"):
@@ -211,7 +211,8 @@ def legs_and_trunk(c):
     is a single column - four legs leaning together over a 5 x 5 base read as "a wide brown ring" and "a treehouse
     room" (Fable critic, round 1). Its centre is the hollow heart up to y13, where the centre spawn (the box centre,
     y14, walked down) lands on the floor, and it walks out by the 3-high doorways on the axes. A verdant froglight in
-    the heart's roof is its light; bark stairs flare the trunk's foot over the roof."""
+    the heart's roof is its light. The roof's stone runs up to the bark (a flare of dark stairs round its foot read
+    as "a dark-oak plate at the roof apex", Fable critic round 6)."""
     top = H - 4
     for y in range(2, top + 1):
         for dx, dz in c.cells(1):
@@ -224,9 +225,6 @@ def legs_and_trunk(c):
             c.set(dx, y, dz, LOG, axis="y")
     c.set(0, BASE, 0, "verdant_froglight", axis="y")
     c.set(0, top + 1, 0, LOG, axis="y")                         # the leader, into the crown's top lobe
-    for o in O4.values():
-        for t in (-1, 0, 1):
-            c.st(o, 2, t, ROOF, inward(o), name=BARK_S)         # the trunk's foot flaring over the roof
 
 
 def face(c, o):
@@ -270,18 +268,17 @@ def boughs(c):
 
 # The boughs that break out through the roof (lovish, Nov 5: "with branches coming out of the roof"), as waypoints
 # (a, t, y) on a side o: from the trunk inside the hall, up through the roof's top step (ring 3, y9, between two
-# roof stairs), along the roof and past the eaves to a blossom over the garden (ring 6), or up into the crown's rim.
-# The tips stand off the stag-dryad's faces from the RTS camera (a blossom in front of the west face hid it);
-# blossoms over the eaves read as "shrubs resting on the roof" (Fable critic round 3), and two arms alike at one
-# height as "a T-cross / scarecrow" (round 4) - so the south bough crawls out along the roof (lying on its second step)
-# and rises low, the west one climbs on a diagonal (a post with a square elbow read as "a candelabra", round 5),
-# and each blossom is its own size (BLOSSOMS).
+# roof stairs), climbing a step out for a step up past the eaves (ring 6), or up into the crown's rim. The tips stand
+# off the stag-dryad's faces from the RTS camera; two arms alike at one height read as "a T-cross / scarecrow"
+# (Fable critic round 4) and a post with a square elbow as "a candelabra" (round 5), so each climbs its own diagonal.
 # Four, each its own shape (four alike read as a chapel's ribs). Fable critic round 1: limbs "poking out over the hall
 # walls" are what delivers "branches coming out of the roof" - the roof that now shows keeps the temple's stone share.
-ROOF_BOUGHS = (("south", ((2, -1, 6), (2, -1, 8), (3, -2, 8), (3, -2, 9), (4, -2, 9), (5, -3, 11), (6, -3, 13))),
+ROOF_BOUGHS = (("south", ((2, -1, 6), (2, -1, 8), (3, -2, 8), (3, -2, 9), (4, -2, 10), (5, -3, 11), (6, -3, 12),
+                          (6, -3, 13))),
                ("west", ((2, 1, 6), (2, 1, 8), (3, 2, 8), (3, 2, 9), (4, 2, 10), (4, 3, 11), (5, 3, 12), (6, 3, 13),
                          (6, 4, 14))),
-               ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (4, -1, 10), (5, -2, 12), (6, -2, 14))),
+               ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (4, -1, 10), (5, -1, 11), (6, -2, 12),
+                         (6, -2, 14))),
                ("north", ((2, -1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (3, 0, 11), (4, -1, 13), (4, -1, 16),
                           (4, -2, 18))))
 
@@ -309,49 +306,32 @@ def _limb(c, cells):
 
 
 def roof(c):
-    """The hall's hip roof: mossy stone brick stairs from the eaves (ring 5, y7, overhanging the cornice so the walls
-    sit in its shadow) one step a ring up to ring 3 (y9), mossy bricks on the four hips and round the trunk's flare,
+    """The hall's hip roof: stone brick stairs from the eaves (ring 5, y7, overhanging the cornice so the walls sit in
+    its shadow) one step a ring up to ring 3 (y9) and on to the trunk's bark (ring 2), stone bricks on the four hips,
     and a lantern standing on each eave corner (the footprint's corners at dusk). A roof inside the parapet read from
     the RTS camera as "a paved courtyard" (Fable critic round 2); a mossy cobble pyramid climbing to y10 as "a second
-    mass" the tree "perches on", "rubble" (round 3) - so the roof is the hall's own bricks, a step lower. The roof
-    boughs break out through its top step (ring 3)."""
-    for k, y in ((5, 7), (4, 8), (3, ROOF)):
+    mass" the tree "perches on", "rubble" (round 3); mossy brick steps as "mossy stripes ... a textured crate" (round
+    6) - so the roof is plain stone brick, low, under the mossy walls. The roof boughs break out through ring 3."""
+    for k, y in ((5, 7), (4, 8), (3, ROOF), (2, ROOF)):
         for o in O4.values():
             for t in range(-k + 1, k):
                 x, z = c.side(o, k, t)
                 if c.get(x, y, z)[0] == "air":
-                    c.st(o, k, t, y, inward(o), name=MSS)
+                    c.st(o, k, t, y, inward(o), name="stone_brick_stairs")
         for (sx, sz) in CORNERS:
             if c.get(sx * k, y, sz * k)[0] == "air":
-                c.set(sx * k, y, sz * k, MSB)
+                c.set(sx * k, y, sz * k, "stone_bricks")
     for (sx, sz) in CORNERS:
-        c.set(sx * 2, ROOF, sz * 2, MSB)                        # round the trunk's flare
         c.set(sx * 5, 8, sz * 5, "lantern", **LANTERN)
 
 
-BLOSSOMS = {"south": "big", "west": "small", "east": "mid"}   # 10, 8 and 9 cherry leaves
-
-
 def roof_boughs(c):
-    """The ROOF_BOUGHS, each ending where it meets the crown or, out over the garden, in a blossom."""
+    """The ROOF_BOUGHS: bare limbs climbing out of the roof on a diagonal, or up into the crown's rim. The blossoms
+    that ended them read, round after round, as "four pink crosses", "shrubs resting on the roof", "a T-cross /
+    scarecrow" and "floating blobs" (Fable critics, rounds 2-6): the blossom is the crown's alone."""
     for side, way in ROOF_BOUGHS:
         o = O4[side]
-        cells = [(c.side(o, a, t)[0], y, c.side(o, a, t)[1]) for a, t, y in way]
-        path = _limb(c, cells)
-        tx, ty, tz = path[-1]
-        if max(abs(tx), abs(tz)) >= 5:
-            # a blossom: a 3 x 3 round the tip and a cap over it (pluses read as "four pink crosses", Fable critic
-            # round 2; a green underside as "shrubs resting on the roof", round 3); the big one reaches a leaf further
-            # along, the small one drops its two corners toward the trunk
-            size = BLOSSOMS[side]
-            for dx in (-1, 0, 1):
-                for dz in (-1, 0, 1):
-                    if size == "small" and dx * o[0] + dz * o[1] == -1 and dx and dz:
-                        continue
-                    leaf(c, tx + dx, ty, tz + dz, "cherry_leaves")
-            leaf(c, tx, ty + 1, tz, "cherry_leaves")
-            if size == "big":
-                leaf(c, tx + 2 * o[1], ty, tz + 2 * o[0], "cherry_leaves")     # (along the side: ring 8 is off the plot)
+        _limb(c, [(c.side(o, a, t)[0], y, c.side(o, a, t)[1]) for a, t, y in way])
 
 
 FACES = ("south", "west")         # the stag-dryad looks out where the RTS camera sees it; four masks round the trunk
@@ -380,9 +360,12 @@ def in_face_zone(dx, y, dz):
 # crown stands clear over the roof (ridge y9) on a trunk seen from the RTS camera, and the hall's roofline and the
 # garden frame it from above.
 CROWN_FOOT = 19                    # the crown's lowest boughs (its underside's green belly hangs to ~y18)
-LOBES = ((3, 22, -3, 3.8, 2.6, 3.8), (-1, 21, 1, 2.7, 1.9, 2.7), (3, 21, 3, 3.2, 2.0, 3.2),
-         (-3, 22, -3, 3.2, 2.2, 3.2), (2, 25, -2, 4.0, 2.2, 4.0), (1, 27, -1, 2.6, 2.2, 2.6),
-         (-1, 25, 1, 2.4, 1.8, 2.4))      # wraps the trunk's camera side, which showed bare through the crown
+# No low lobe on the trunk's camera side (south-west): from the RTS camera it hid the trunk, and the crown read as
+# sitting "on the roof like a hat" (Fable critic round 6); the trunk shows under the crown there, and no leaf stands
+# within two of it under CROWN_FOOT + 2.
+LOBES = ((3, 22, -3, 3.8, 2.6, 3.8), (3, 21, 3, 3.2, 2.0, 3.2), (-3, 22, -3, 3.2, 2.2, 3.2),
+         (2, 25, -2, 4.0, 2.2, 4.0), (1, 27, -1, 2.6, 2.2, 2.6),
+         (-1, 25, 1, 2.4, 1.8, 2.4))      # wraps the trunk's camera side up in the crown
 
 
 def in_hull(x, y, z):
@@ -414,6 +397,8 @@ def canopy(c):
                 h = hsh(dx * 3 + y, dz - y)
                 if e > 1 - (0.25 if h % 5 == 0 else 0) or in_face_zone(dx, y, dz):
                     continue                                     # a ragged edge, not a ball
+                if max(abs(dx), abs(dz)) <= 2 and y < CROWN_FOOT + 2:
+                    continue                                     # the trunk shows under the crown
                 belly = y < ly - 0.5 * ry                         # the lobe's shaded underside
                 if belly and e > 0.55 and h % 9 == 0 and hidden(dx, y, dz) and c.get(dx, y, dz)[0] == "air":
                     c.set(dx, y, dz, ("ochre_froglight", "shroomlight", "verdant_froglight")[h % 3],

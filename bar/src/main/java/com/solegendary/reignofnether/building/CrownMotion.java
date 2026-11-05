@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * Living crowns, the rules (lovish, Nov 4: "ardent [Verdant] buildings can have trees growing out of them with
  * animations"; he picked "Living crowns" with a "Gentle" sway). Every Verdant building already carries a leaf crown
- * as plain blocks (Heartwood Hall 564 cells, the Grove 50-135, Heart of the Wild 569...). CrownRenderClientEvents
+ * as plain blocks (Heartwood Hall 529 cells, the Grove 50-135, Heart of the Wild 569...). CrownRenderClientEvents
  * takes those leaf cells out of the chunk mesh near the camera and draws them itself, moved by these functions:
  * <ul>
  *   <li><b>crowns</b>: the leaf cells of a building fall into crowns, each a 26-connected group, with a pivot at the
