@@ -52,6 +52,7 @@ public class Dungeon extends ProductionBuilding {
         this.productions.add(ProductionItems.EMBALMER, Keybindings.abilitySlot4);   // T2 constructor
         this.productions.add(ProductionItems.OSSUARY_BEHEMOTH, Keybindings.abilitySlot5);   // T2 beast (design/big_units.md)
         this.productions.add(ProductionItems.BONESETTER, Keybindings.abilitySlot6);   // combat engineer (design/combat_engineers.md)
+        this.productions.add(ProductionItems.SOUL_PYRE, Keybindings.abilitySlot7);   // T2 siege (design/defences_tiers.md)
 
         this.maxHealth = 120d;
     }

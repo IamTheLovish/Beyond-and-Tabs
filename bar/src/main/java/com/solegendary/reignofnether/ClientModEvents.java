@@ -301,6 +301,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.OriflammeElephantRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GOREHORN_RHINO_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GorehornRhinoRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.OssuaryBehemothRenderer::new);
+        // the Soul Pyre: the lobber's illager body and its own skin until the animation lane draws the pit
+        evt.registerEntityRenderer(EntityRegistrar.SOUL_PYRE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SiegeLobberRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MOSSBACK_BISON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MossbackBisonRenderer::new);
         // beasts-2: the other three T2 beasts
         evt.registerEntityRenderer(EntityRegistrar.SHELLBACK_TURTLE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ShellbackTurtleRenderer::new);

@@ -254,6 +254,7 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd ORIFLAMME_ELEPHANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "oriflamme_elephant"), new com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd());
     public static final com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd GOREHORN_RHINO = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gorehorn_rhino"), new com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd());
     public static final com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd OSSUARY_BEHEMOTH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ossuary_behemoth"), new com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd());
+    public static final com.solegendary.reignofnether.unit.units.monsters.SoulPyreProd SOUL_PYRE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_pyre"), new com.solegendary.reignofnether.unit.units.monsters.SoulPyreProd());
     public static final com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd MOSSBACK_BISON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mossback_bison"), new com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd());
     // beasts-2 (design/big_units.md): the other three T2 beasts
     public static final com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleProd SHELLBACK_TURTLE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shellback_turtle"), new com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleProd());
@@ -435,6 +436,7 @@ public class ProductionItems {
         ORIFLAMME_ELEPHANT,
         GOREHORN_RHINO,
         OSSUARY_BEHEMOTH,
+        SOUL_PYRE,
         MOSSBACK_BISON,
         SHELLBACK_TURTLE,
         JADE_QILIN,
