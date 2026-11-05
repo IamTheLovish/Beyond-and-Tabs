@@ -194,8 +194,10 @@ public final class Sys {
         if (on) {
             TIMER.tickEnd();
             GoalTimes.tickEnd();
-            lastTickCounted = true;
         }
+        // owed only for a tick that was measured: once measuring stops (a hold released without a snapshot) the ticks
+        // after it are not the window's (review round 3 on #490: they diluted the live [Sys] line's mean)
+        lastTickCounted = on;
         if (server.getTickCount() % EVALUATE_EVERY_TICKS != 0)
             return;
         double[] sorted = ServerTickProfile.sortedMs(server.tickTimes);
