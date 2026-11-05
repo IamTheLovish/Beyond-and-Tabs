@@ -61,15 +61,16 @@ class ShaderPack(unittest.TestCase):
         self.assertNotIn("uniform sampler2D specular;", water)
 
     def test_materials_off_is_slice_one(self):
-        # the option screen promises MATERIALS Off = slice 1's look (review of #434, Nov 5): no material maps, slice 1's
-        # exposure 0.95 and no ground bounce onto walls. Only the near-neutral highlight tint (lovish, Oct 30) stays
+        # the option screen promises MATERIALS Off = slice 1's look (review of #434, Nov 5): no material maps and slice 1's
+        # exposure 0.95. Only the near-neutral highlight tint (lovish, Oct 30) stays. Neither setting bounces the sun
+        # onto walls: lovish, Nov 5, "Keep the strong step" (slice 1's wall-to-roof step, 1.73 on the block sampler)
         def program(name, materials):
             src = spc.expand(os.path.join(spc.SHADERS, name))
             return spc.preprocess(src.replace("#define MATERIALS 1 ", "#define MATERIALS %d " % materials))
-        for materials, exposure, bounce in ((1, "1.05", "0.20"), (0, "0.95", "0.0")):
+        for materials, exposure in ((1, "1.05"), (0, "0.95")):
             final, terrain = program("final.fsh", materials), program("gbuffers_terrain.fsh", materials)
             self.assertIn("const float EXPOSURE = %s;" % exposure, final, materials)
-            self.assertIn("const float GROUND_BOUNCE = %s;" % bounce, terrain, materials)
+            self.assertNotIn("BOUNCE", terrain, materials)
             self.assertEqual("uniform sampler2D normals;" in terrain, materials == 1)
 
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
