@@ -450,6 +450,22 @@ public class MoveToTargetBlockGoal extends Goal {
         }
     }
 
+    /**
+     * While the async RTS path is being computed (pathPending) the unit stands still - and vanilla's body control,
+     * with the mob not moving, swings the body round to wherever the head last looked: an idle glance
+     * (RandomLookAroundUnitGoal) from before the order, or a new one. So a unit sent somewhere turned AWAY from it for
+     * a moment, then snapped onto its heading when the path came (WalkLineGameTests
+     * a_unit_walks_an_off_axis_line_without_rocking_on_rts_pathing, ~1 run in 3: yaw -90 -> -100 before the path in
+     * run 41823559236, -70 -> +10 in 41934014001, then the bearing -78 for the whole walk; vanilla pathing has its path
+     * at once and never failed). Looking at the move target while the path is pending turns the unit towards where it
+     * was sent, as FlyingMoveToTargetGoal already does.
+     */
+    @Override
+    public void tick() {
+        if (pathPending && moveTarget != null)
+            this.mob.getLookControl().setLookAt(moveTarget.getX() + 0.5, this.mob.getEyeY(), moveTarget.getZ() + 0.5);
+    }
+
     // Callback for the async RTS pathfinder. Runs on the server thread once a path is ready.
     protected void onPathReady(@Nullable Path path, boolean busy, int seq) {
         // A newer order/stop superseded this request - drop the result. Leave pathPending alone; the newer
