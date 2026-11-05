@@ -574,9 +574,10 @@ public final class BiomePalette {
         // Verdant Court: the azalea canopy, moss, mossy stone, calcite moonwells, silver birch and the spirit tree's
         // cherry are the Court; its living trunks grow the local species. The Root Spring extractor's ruined well
         // (Oct 19) is old stone the tree took over - its chiseled and cracked bricks stay ruins in every biome, as its
-        // mossy bricks do.
+        // mossy bricks do. The Heartwood Hall's hip roof (tools/capitol_heartwood_hall.py, Nov 2026) is plain stone brick
+        // under the mossy walls: generic masonry, so it takes the local stone as the other factions' brickwork does.
         TABLES.put(FactionTraits.VERDANT, new Table()
-            .rule(OAK, LIVING_WOOD)
+            .rule(OAK, LIVING_WOOD).rule(STONE_BRICKS, BRICKWORK)
             .keep(AZALEA_LEAVES, MOSS, ROOTED_DIRT, MOSSY_STONE_BRICKS, MOSSY_COBBLE, BIRCH, CHERRY, DARK_OAK, GRASS, PODZOL,
                 CHISELED_STONE_BRICKS, CRACKED_STONE_BRICKS));
         // Tidewrought: prismarine, waxed copper and the wreck timber (spruce, mangrove, dark oak) are the fleet; the
