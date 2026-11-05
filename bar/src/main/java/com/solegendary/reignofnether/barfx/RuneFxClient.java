@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
@@ -62,10 +63,11 @@ public final class RuneFxClient {
     static final float RING_SPIN = 0.17f;
     static final int RING_SEG = 32, SIGIL_SEG = 16, TIER_SEG = 24, STROKE_SEG = 32, DARK_SEG = 24;
     /**
-     * A ring's slices are sized on screen ({@link #segs}): one per SEG_PX pixels of its rim, at least SEG_MIN, never more
-     * than asked (the chord sags under half a pixel). A circle 7 px across at zoom 200 needs 12, not 32.
+     * A ring's slices are sized on screen ({@link #segs}): as few as keep each chord within SAG_PX pixels of the true
+     * circle, at least SEG_MIN, never more than asked. A circle 7 px across at zoom 200 needs 12, not 32; one 70 px
+     * across (zoom 30 at a 900 px window) needs 21.
      */
-    static final float SEG_PX = 8;
+    static final float SAG_PX = 0.4f;
     static final int SEG_MIN = 12;
     /** Slices over which the sweep's leading edge fades in. */
     static final int FEATHER = 2;
@@ -88,7 +90,7 @@ public final class RuneFxClient {
      * The rim core's half width: at least CORE_W blocks and CORE_PX screen pixels (RTS camera). The halo is HALO_K times
      * as wide, the dark line DARK_K times.
      */
-    static final float CORE_W = 0.05f, CORE_PX = 1.5f, HALO_K = 2.4f, DARK_K = 2.2f;
+    static final float CORE_W = 0.05f, CORE_PX = 1.5f, HALO_K = 2.7f, DARK_K = 2.2f;
     static final float CORE_A = 0.95f, HALO_A = 0.35f, DARK_A = 0.55f;
     /** The rim's core settles by SETTLE over the hold, from SETTLE_FROM s to SETTLE_TO s. */
     static final float SETTLE = 0.3f, SETTLE_FROM = 0.5f, SETTLE_TO = 1.3f;
@@ -102,6 +104,11 @@ public final class RuneFxClient {
     static final float SIGIL_RING_A = 0.6f;
     /** Blocks the ground layer is drawn toward the RTS camera (its orthographic view: only the depth changes). */
     static final float PULL = 1.0f;
+    /**
+     * On a hillside the ground under a circle rises above the caster's feet and hid its far side (round 10: half rings on
+     * terraced ground). Each circle's pull grows by how far the ground under it rises ({@link #lift}), up to LIFT_MAX.
+     */
+    static final float LIFT_MAX = 3.0f;
     /** RTS zoom: the details fade out from LOD_FROM to LOD_TO. */
     static final float LOD_FROM = 24, LOD_TO = 36;
     /** Past zoom 30 the circle grows with the zoom, up to this. */
@@ -143,9 +150,10 @@ public final class RuneFxClient {
     private static final BlockPos.MutableBlockPos POS = new BlockPos.MutableBlockPos();
     private static final boolean[] SHOWN = new boolean[RunePool.MAX];
     private static final float[] RADIUS = new float[RunePool.MAX], CROWD = new float[RunePool.MAX];
+    private static final float[] PULLD = new float[RunePool.MAX];   // each circle's pull toward the camera, blocks
     private static float flashScale = 1, sweepStart = (float) (-Math.PI / 2);
-    // this frame's: detail (1 close .. 0 far), the rim core's half width, the ground layer's pull toward the camera
-    private static float near = 1, wc = CORE_W, bpp, px, py, pz;
+    // this frame's: detail (1 close .. 0 far), the rim core's half width, blocks per screen pixel
+    private static float near = 1, wc = CORE_W, bpp;
     private static float mx, my, mz, ma;   // mote()'s answer
     private static long renderNanos = 0, renderFrames = 0;
     private static int peak = 0;
@@ -204,10 +212,6 @@ public final class RuneFxClient {
         near = ortho ? Math.max(0, Math.min(1, (LOD_TO - BarFxClient.zoom) / (LOD_TO - LOD_FROM))) : 1;
         bpp = ortho ? BarFxClient.zoom / Math.max(1, mc.getWindow().getHeight()) : 0;   // blocks per pixel
         wc = Math.max(CORE_W, CORE_PX * bpp);
-        float pull = ortho ? PULL : 0;
-        px = -BarFxClient.lookX * pull;
-        py = -BarFxClient.lookY * pull;
-        pz = -BarFxClient.lookZ * pull;
         int flashing = 0;
         for (int i = 0; i < POOL.count; i++) {
             SHOWN[i] = false;
@@ -226,6 +230,7 @@ public final class RuneFxClient {
                 continue;
             SHOWN[i] = true;
             shown++;
+            PULLD[i] = ortho ? PULL + lift(mc, POOL.x[i], POOL.y[i], POOL.z[i], R) : 0;
             float rel = clock - POOL.born[i] - DRAW_IN;
             if (rel >= 0 && rel < FLASH_T)
                 flashing++;
@@ -311,6 +316,22 @@ public final class RuneFxClient {
         renderFrames++;
     }
 
+    /**
+     * How far the ground under a circle of radius {@code r} at (x, y, z) rises above y (the caster's feet): the top of
+     * the motion-blocking column at the centre and eight points round the rim, at most {@link #LIFT_MAX}.
+     */
+    static float lift(Minecraft mc, float x, float y, float z, float r) {
+        if (mc.level == null)
+            return 0;
+        int top = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) Math.floor(x), (int) Math.floor(z));
+        for (int k = 0; k < 8; k++) {
+            double a = Math.PI / 4 * k;
+            top = Math.max(top, mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING,
+                (int) Math.floor(x + r * Math.cos(a)), (int) Math.floor(z + r * Math.sin(a))));
+        }
+        return Math.max(0, Math.min(LIFT_MAX, top - y));
+    }
+
     private static boolean lit(float x, float y, float z) {
         try {
             return FogOfWarClientEvents.isInBrightChunk(POS.set(x, y, z));
@@ -344,10 +365,12 @@ public final class RuneFxClient {
             return;
         float rr = R * (1 + 0.12f * ending(i, clock, s));
         float reveal = Math.min(1, (clock - POOL.born[i]) / DRAW_IN);
-        int d = DARK[f];
-        float gx = POOL.x[i] + px, gy = POOL.y[i] + 0.04f + py, gz = POOL.z[i] + pz;
+        int dk = DARK[f];
+        float d = PULLD[i];
+        float gx = POOL.x[i] - BarFxClient.lookX * d, gy = POOL.y[i] + 0.04f - BarFxClient.lookY * d,
+            gz = POOL.z[i] - BarFxClient.lookZ * d;
         fan(vc, m, gx, gy, gz, rr * UNDER_R, 16, reveal, sweepStart, FEATHER, 0, f * CELL_U + 3.5f * GLYPH_U, V_FX + 1.5f * GLYPH_V,
-            GLYPH_U / 2 - EU, GLYPH_V / 2 - EV, ((d >> 16) & 255) / 255f, ((d >> 8) & 255) / 255f, (d & 255) / 255f,
+            GLYPH_U / 2 - EU, GLYPH_V / 2 - EV, ((dk >> 16) & 255) / 255f, ((dk >> 8) & 255) / 255f, (dk & 255) / 255f,
             UNDER_A * s);
         stroke(vc, m, gx, gy + 0.01f, gz, rr, wc * DARK_K, DARK_SEG, reveal, DARK[f], DARK_A * s);
     }
@@ -369,7 +392,8 @@ public final class RuneFxClient {
         float tau = 6.2831855f;
         // the ground layer, pulled toward the RTS camera: the atlas ring (close only), the rim's halo and core
         float rr = R * grow, reveal = Math.min(1, t / DRAW_IN);
-        float gx = cx + px, gy = cy + py, gz = cz + pz;
+        float d = PULLD[i];
+        float gx = cx - BarFxClient.lookX * d, gy = cy - BarFxClient.lookY * d, gz = cz - BarFxClient.lookZ * d;
         if (near > 0.01f)
             fan(vc, m, gx, gy, gz, rr / RIM_IN_CELL, RING_SEG, reveal, sweepStart, FEATHER, t * RING_SPIN * tau,
                 u0 + CELL_U / 2, CELL_V / 2, CELL_U / 2, CELL_V / 2, 1, 1, 1, RING_A * sl * breath * near);
@@ -543,18 +567,21 @@ public final class RuneFxClient {
         float litF = reveal * (seg + feather);
         int lit = Math.max(1, Math.min(seg, (int) Math.ceil(litF)));
         double step = Math.PI * 2 / seg;
+        double cs = Math.cos(step), sn = Math.sin(step), cp = Math.cos(spin), sp = Math.sin(spin);
+        double c0 = Math.cos(start), s0 = Math.sin(start);   // turned by one slice each step: no trig per slice
         for (int j = 0; j < lit; j++) {
+            double c1 = c0 * cs - s0 * sn, s1 = s0 * cs + c0 * sn;
             float aj = feather > 0 ? a * Math.max(0, Math.min(1, (litF - j) / feather)) : a;
-            if (aj <= 0.004f)
-                continue;
-            double t0 = start + j * step, t1 = t0 + step;
-            float c0 = (float) Math.cos(t0), s0 = (float) Math.sin(t0), c1 = (float) Math.cos(t1), s1 = (float) Math.sin(t1);
-            float k0 = (float) Math.cos(t0 - spin), l0 = (float) Math.sin(t0 - spin);
-            float k1 = (float) Math.cos(t1 - spin), l1 = (float) Math.sin(t1 - spin);
-            tv(vc, m, cx, cy, cz, cr, cg, cb, aj, uc, vc0);
-            tv(vc, m, cx + r * c0, cy, cz + r * s0, cr, cg, cb, aj, uc + hu * k0, vc0 + hv * l0);
-            tv(vc, m, cx + r * c1, cy, cz + r * s1, cr, cg, cb, aj, uc + hu * k1, vc0 + hv * l1);
-            tv(vc, m, cx, cy, cz, cr, cg, cb, aj, uc, vc0);
+            if (aj > 0.004f) {   // (t - spin) by the angle-difference identities
+                float k0 = (float) (c0 * cp + s0 * sp), l0 = (float) (s0 * cp - c0 * sp);
+                float k1 = (float) (c1 * cp + s1 * sp), l1 = (float) (s1 * cp - c1 * sp);
+                tv(vc, m, cx, cy, cz, cr, cg, cb, aj, uc, vc0);
+                tv(vc, m, cx + r * (float) c0, cy, cz + r * (float) s0, cr, cg, cb, aj, uc + hu * k0, vc0 + hv * l0);
+                tv(vc, m, cx + r * (float) c1, cy, cz + r * (float) s1, cr, cg, cb, aj, uc + hu * k1, vc0 + hv * l1);
+                tv(vc, m, cx, cy, cz, cr, cg, cb, aj, uc, vc0);
+            }
+            c0 = c1;
+            s0 = s1;
         }
     }
 
@@ -573,23 +600,34 @@ public final class RuneFxClient {
         float litF = reveal * (seg + FEATHER);
         int lit = Math.max(1, Math.min(seg, (int) Math.ceil(litF)));
         double step = Math.PI * 2 / seg;
+        double cs = Math.cos(step), sn = Math.sin(step);
+        double c0 = Math.cos(sweepStart), s0 = Math.sin(sweepStart);   // turned by one slice each step, as fan()
         for (int j = 0; j < lit; j++) {
+            double c1 = c0 * cs - s0 * sn, s1 = s0 * cs + c0 * sn;
             float aj = a * Math.max(0, Math.min(1, (litF - j) / FEATHER));
-            if (aj <= 0.004f)
-                continue;
-            double t0 = sweepStart + j * step, t1 = t0 + step;
-            float c0 = (float) Math.cos(t0), s0 = (float) Math.sin(t0), c1 = (float) Math.cos(t1), s1 = (float) Math.sin(t1);
-            strip(vc, m, cx, cy, cz, c0, s0, c1, s1, r0, 0, r1, aj, cr, cg, cb);
-            strip(vc, m, cx, cy, cz, c0, s0, c1, s1, r1, aj, r2, aj, cr, cg, cb);
-            strip(vc, m, cx, cy, cz, c0, s0, c1, s1, r2, aj, r3, 0, cr, cg, cb);
+            if (aj > 0.004f) {
+                float a0 = (float) c0, b0 = (float) s0, a1 = (float) c1, b1 = (float) s1;
+                strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r0, 0, r1, aj, cr, cg, cb);
+                strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r1, aj, r2, aj, cr, cg, cb);
+                strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r2, aj, r3, 0, cr, cg, cb);
+            }
+            c0 = c1;
+            s0 = s1;
         }
     }
 
-    /** The slices for a ring of radius {@code r} (blocks): {@code seg} at most, fewer when it is small on screen. */
+    /**
+     * The slices for a ring of radius {@code r} (blocks): {@code seg} at most, fewer when it is small on screen. A chord
+     * of a slice of angle 2 pi / n sags r (1 - cos(pi / n)) inside the circle; n is the least that keeps that within
+     * {@link #SAG_PX}.
+     */
     static int segs(float r, int seg) {
-        if (bpp <= 0)
+        if (bpp <= 0 || r <= 0)
             return seg;
-        int want = (int) Math.ceil(6.2831855f * r / (bpp * SEG_PX));
+        float sag = SAG_PX * bpp / r;   // the sag allowed, as a share of the radius
+        if (sag >= 1)
+            return Math.min(seg, SEG_MIN);
+        int want = (int) Math.ceil(Math.PI / Math.acos(1 - sag));
         return Math.min(seg, Math.max(SEG_MIN, want));
     }
 
@@ -640,9 +678,16 @@ public final class RuneFxClient {
         tv(vc, m, x, y, z, c, c, c, a, u, v);
     }
 
+    /**
+     * One vertex, camera-relative, through the pose {@code m} by hand: {@code vertex(Matrix4f, ...)} makes a Vector4f
+     * per vertex, and a dense army of circles is tens of thousands of vertices a frame.
+     */
     private static void tv(VertexConsumer vc, Matrix4f m, float x, float y, float z, float r, float g, float b, float a,
                            float u, float v) {
-        vc.vertex(m, x - BarFxClient.camX, y - BarFxClient.camY, z - BarFxClient.camZ)
+        float lx = x - BarFxClient.camX, ly = y - BarFxClient.camY, lz = z - BarFxClient.camZ;
+        vc.vertex(m.m00() * lx + m.m10() * ly + m.m20() * lz + m.m30(),
+                m.m01() * lx + m.m11() * ly + m.m21() * lz + m.m31(),
+                m.m02() * lx + m.m12() * ly + m.m22() * lz + m.m32())
             .color(r, g, b, Math.max(0, Math.min(1, a))).uv(u, v).endVertex();
     }
 }
