@@ -344,7 +344,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
     public void performUnitRangedAttack(LivingEntity pTarget, float velocity) {
         // lead part of the way (the Bombard Crew's rule): the rockets fly 1-2 s
         net.minecraft.world.phys.Vec3 v = pTarget.getDeltaMovement();
-        double lead = RocketFlight.flightTicks(Math.sqrt(distanceToSqr(pTarget))) * 0.6;
+        double lead = (RocketFlight.flightTicks(Math.sqrt(distanceToSqr(pTarget))) + RocketLaunchPose.WINDUP) * 0.6;
         if (fireVolley(pTarget.getX() + v.x * lead, pTarget.getY(), pTarget.getZ() + v.z * lead)
                 && !level().isClientSide() && pTarget instanceof Unit unit)
             FogOfWarClientboundPacket.revealRangedUnit(unit.getOwnerName(), this.getId());
@@ -356,10 +356,14 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         fireVolley(x, y, z);
     }
 
+    /** Where a rocket leaves: this far in front of the crew's centre and this high above its feet (the rack's mouth swung up). */
+    private static final double MOUTH_FORWARD = 0.2, MOUTH_HEIGHT = 1.55;
+
     /**
-     * Fires a volley at (x, y, z) unless it is inside {@link #MIN_RANGE} or still setting up (unit/SetUp): the first
-     * rocket now, the rest a few ticks apart (scheduled tasks, nothing per tick), each at its own spot within
-     * {@link #VOLLEY_SPREAD} of the aim. Returns whether it fired. Public for the game test.
+     * Fires a volley at (x, y, z) unless it is inside {@link #MIN_RANGE} or still setting up (unit/SetUp): the launch
+     * animation starts now, the first rocket leaves after its {@link RocketLaunchPose#WINDUP} (the rack swings up and
+     * the crew leans into the shot) and the rest a few ticks apart (scheduled tasks, nothing per tick), each at its own
+     * spot within {@link #VOLLEY_SPREAD} of the aim. Returns whether it fired. Public for the game test.
      */
     public boolean fireVolley(double x, double y, double z) {
         if (level().isClientSide())
@@ -370,13 +374,10 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         if (dx * dx + dz * dz < MIN_RANGE * MIN_RANGE)
             return false;
         for (int i = 0; i < VOLLEY_ROCKETS; i++) {
-            if (i == 0)
-                fireRocket(x, y, z, true);
-            else
-                com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(i * VOLLEY_GAP_TICKS,
-                    () -> fireRocket(x, y, z, false));
+            final boolean first = i == 0;
+            com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(RocketLaunchPose.WINDUP + i * VOLLEY_GAP_TICKS,
+                () -> fireRocket(x, y, z, first));
         }
-        this.playSound(SoundEvents.FIREWORK_ROCKET_LAUNCH, 1.4F, 0.8F + getRandom().nextFloat() * 0.2F);
         this.entityData.set(launchDataAccessor, RocketLaunchPose.TOTAL_TICKS);
         getMainHandItem().setDamageValue(0);
         return true;
@@ -394,13 +395,19 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         }
         // the rocket is the projectile: BarFx follows it (it classes a RocketShell K_ROCKET) with the muzzle flash on
         // launch, a smoke trail in flight and a flash on impact, so nothing is drawn beside it
+        // it leaves the rack's mouth - in front of the chest at shoulder height with the rack swung up - not the top of the hat
+        // (the first look at it, runs 42056293582 / 42056297739, had the rocket spring from above the head)
+        double yaw = Math.toRadians(this.yBodyRot);
+        double mx = getX() - Math.sin(yaw) * MOUTH_FORWARD, my = getY() + MOUTH_HEIGHT, mz = getZ() + Math.cos(yaw) * MOUTH_FORWARD;
         RocketShell shell = new RocketShell(sl, this, getUnitAttackDamage());
-        shell.setPos(getX(), getEyeY() + 0.5, getZ());
+        shell.setPos(mx, my, mz);
         shell.aimAt(tx, y, tz);
         sl.addFreshEntity(shell);
-        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.FIREWORK, getX(), getEyeY() + 0.6, getZ(), 5, 0.15, 0.15, 0.15, 0.03);
-        if (!first)
-            sl.playSound(null, blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.NEUTRAL, 1.0F, 0.9F + getRandom().nextFloat() * 0.3F);
+        // an orange muzzle blast and a puff of smoke at the mouth (the firework's white star burst read as "levelled up")
+        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, mx, my, mz, 7, 0.08, 0.08, 0.08, 0.06);
+        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, mx, my, mz, 2, 0.1, 0.1, 0.1, 0.02);
+        sl.playSound(null, blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.NEUTRAL, first ? 1.4F : 1.0F,
+            (first ? 0.8F : 0.9F) + getRandom().nextFloat() * (first ? 0.2F : 0.3F));
     }
 
     // a gunner, not an illager: healing heals and raid/bad-omen logic leaves it alone

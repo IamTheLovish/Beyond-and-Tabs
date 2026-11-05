@@ -107,7 +107,7 @@ public class RocketShellGameTests {
     // ------------------------------------------------------------------------------------------------ 1. which entity
 
     /**
-     * A volley from a Rocket Battery is four rockets, three ticks apart, and every one is a RocketShell of the rocket
+     * A volley from a Rocket Battery is four rockets, three ticks apart after the wind-up, and every one is a RocketShell of the rocket
      * entity type - none a BombardShell.
      */
     @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
@@ -134,7 +134,7 @@ public class RocketShellGameTests {
                 return;
             for (BombardShell s : shellsOf(b))
                 seen.putIfAbsent(s.getUUID(), s);
-            if (tick[0] < 3 + 3 * RocketLaunchPose.GAP + 8)
+            if (tick[0] < 3 + RocketLaunchPose.WINDUP + 3 * RocketLaunchPose.GAP + 8)
                 return;
             List<String> problems = new ArrayList<>();
             if (seen.size() != 4)

@@ -22,8 +22,13 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class RocketBatteryRenderer extends AbstractVillagerUnitRenderer<RocketBatteryUnit> {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/rocket_battery_unit.png");
-    /** How far a full recoil leans the whole crew back, degrees. */
-    private static final float LEAN_BACK_DEG = 5.0F;
+    /**
+     * How far a full recoil leans the whole crew back, and how far the wind-up leans it forward into the shot, degrees. The
+     * first version leaned 5 degrees the wrong way for a kick, which a 1600x900 frame of the old tour could not show
+     * (runs 42056293582 / 42056297739: "the crew is a statue"). A positive turn about X leans the crew FORWARD, as with
+     * every vanilla pitching mob (dolphin, phantom).
+     */
+    private static final float LEAN_BACK_DEG = 14.0F, LEAN_FORWARD_DEG = 7.0F;
 
     public RocketBatteryRenderer(EntityRendererProvider.Context context) {
         super(context, new RocketBatteryModel(context.bakeLayer(VillagerUnitModel.LAYER_LOCATION)), 0.5F);
@@ -34,8 +39,10 @@ public class RocketBatteryRenderer extends AbstractVillagerUnitRenderer<RocketBa
     protected void setupRotations(RocketBatteryUnit unit, PoseStack pose, float ageInTicks, float rotationYaw, float partialTicks) {
         super.setupRotations(unit, pose, ageInTicks, rotationYaw, partialTicks);
         int left = unit.getLaunchTicks();
-        if (left > 0)
-            pose.mulPose(Axis.XP.rotationDegrees(LEAN_BACK_DEG * RocketLaunchPose.recoil(RocketLaunchPose.age(left, partialTicks))));
+        if (left > 0) {
+            float age = RocketLaunchPose.age(left, partialTicks);
+            pose.mulPose(Axis.XP.rotationDegrees(LEAN_FORWARD_DEG * RocketLaunchPose.windup(age) - LEAN_BACK_DEG * RocketLaunchPose.recoil(age)));
+        }
     }
 
     public ResourceLocation getTextureLocation(RocketBatteryUnit unit) {
