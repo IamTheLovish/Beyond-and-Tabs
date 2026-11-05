@@ -95,8 +95,10 @@ public class NotificationClientEvents {
         HERO_BOON("hero_boon", 10_000, -1, 40),
         START_POSITIONS("start_positions", 0, -1, 105),
         // one of our heroes died (FallenHeroClientboundPacket, which reaches the owner however far away it fell):
-        // above an ally's call, below an attack on the base. No voice line yet, so it is a text line + its chord.
-        HERO_FALLEN("hero_fallen", 5_000, 0xFFB040, 75);
+        // above an ally's call, below an attack on the base. No voice line yet, so it is a text line + its chord. No
+        // alert-wide cooldown: HeroFallenNews keeps one per HERO, so two heroes falling in one fight are both heard
+        // (review round 1 on #508). Periwinkle: clearly apart from the ambers of the attack and ally lines.
+        HERO_FALLEN("hero_fallen", 0, 0x8C9EFF, 75);
 
         /** The line for one of our units dying: null for a hero, whose death the fallen-hero packet announces. */
         static Alert forDeath(boolean commander, boolean hero) {
@@ -339,10 +341,14 @@ public class NotificationClientEvents {
      * From FallenHeroClientboundPacket: one of our heroes died. The same packet re-sends every fallen hero when a
      * player joins; canAlert()'s RTS warm-up keeps that resync quiet, so only a death during play is news.
      */
-    public static void onHeroFallen(String ownerName, String heroDescriptionId) {
-        if (canAlert() && myName.equals(ownerName))
+    public static void onHeroFallen(String ownerName, String heroDescriptionId, String heroUuid) {
+        if (canAlert() && HERO_NEWS.admit(myName, ownerName, heroUuid, System.currentTimeMillis()))
             fire(Alert.HERO_FALLEN, I18n.get(heroDescriptionId));
     }
+
+    /** Which fallen-hero packets are news: our own heroes, once per hero per HeroFallenNews.SAME_HERO_MS. */
+    private static final com.solegendary.reignofnether.hero.HeroFallenNews HERO_NEWS =
+        new com.solegendary.reignofnether.hero.HeroFallenNews();
 
     // The T3 announcement is a plain translatable chat line; reading its key avoids adding a packet for it.
     @SubscribeEvent

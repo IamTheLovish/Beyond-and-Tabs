@@ -34,7 +34,22 @@ class HeroFallenAlertTest {
         assertTrue(a.color >= 0, "a text line, not voice only: there is no voice line for it yet");
         assertTrue(a.priority > Alert.UNIT_LOST.priority, "it must not lose its slot to a unit lost");
         assertTrue(a.priority < Alert.COMMANDER_KILLED.priority, "the commander outranks it");
-        assertTrue(a.cooldownMs > 0 && a.cooldownMs <= 5_000,
-            "two heroes falling in one fight are both news, but not one line per tick");
+        // review round 1 on #508: an alert-wide cooldown silenced a second hero falling within it, line and chord.
+        // The rate limit is per hero (HeroFallenNews, HeroFallenAlertGameTests), so the alert itself has none
+        assertEquals(0, a.cooldownMs, "two heroes falling in one fight are both news");
+    }
+
+    @Test
+    void heroFallenIsNotTheAmberOfTheAttackAndAllyLines() {
+        // 0xFFB040 against ALLY_NEEDS_HELP's 0xFFA040 read as the same line (review round 1, non-blocking)
+        for (Alert other : new Alert[] { Alert.ALLY_NEEDS_HELP, Alert.UNITS_ATTACKED, Alert.BASE_ATTACKED,
+                Alert.COMMANDER_ATTACKED, Alert.IDLE_CONSTRUCTOR })   // the warm lines; UNIT_LOST is grey
+            assertTrue(distance(Alert.HERO_FALLEN.color, other.color) > 120,
+                "HERO_FALLEN's colour is too close to " + other.name() + "'s");
+    }
+
+    private static double distance(int a, int b) {
+        int dr = ((a >> 16) & 255) - ((b >> 16) & 255), dg = ((a >> 8) & 255) - ((b >> 8) & 255), db = (a & 255) - (b & 255);
+        return Math.sqrt(dr * dr + dg * dg + db * db);
     }
 }
