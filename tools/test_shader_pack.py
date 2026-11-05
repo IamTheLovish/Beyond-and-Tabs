@@ -103,7 +103,7 @@ class ShaderPack(unittest.TestCase):
         # the open lawn (slice 1's judged band for grass tufts, design/own_shader_pack.md in PR #385: "luma under a tuft
         # at least 0.8x the open lawn beside it (no dark stars)") and is at least 8% darker, or the shadow does not show
         def code(*path):
-            return spc.code_of(open(os.path.join(spc.SHADERS, *path), encoding="utf-8").read())
+            return spc.code_of(read(*path))
         light = code("lib", "light.glsl")
         k = spc.float_const(code("lib", "settings.glsl"), "PLANT_SHADOW", 0.0)
         ndl = math.sin(math.radians(60.0))
@@ -123,8 +123,8 @@ class ShaderPack(unittest.TestCase):
         # the same answer: a plant's planes take a normal PLANT_SIDE of the way from up toward the face the camera sees
         # (0 = lit as the ground, the old pack). At noon (sun ~60 degrees up) a plane facing the sun reads 1.00-1.10 of
         # the open lawn and one facing away 0.75-0.90: a lit side and a shaded side, never a dark plane
-        fsh = spc.code_of(open(os.path.join(spc.SHADERS, "program", "lit.fsh"), encoding="utf-8").read())
-        light = spc.code_of(open(os.path.join(spc.SHADERS, "lib", "light.glsl"), encoding="utf-8").read())
+        fsh = spc.code_of(read("program", "lit.fsh"))
+        light = spc.code_of(read("lib", "light.glsl"))
         s = spc.float_const(fsh, "PLANT_SIDE", 0.0)
         self.assertIn("n = normalize(mix(geomN, face, PLANT_SIDE));", fsh)
         sun = (math.cos(math.radians(60.0)), math.sin(math.radians(60.0)))      # (toward the sun's azimuth, up)
