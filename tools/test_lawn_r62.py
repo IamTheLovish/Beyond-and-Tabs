@@ -28,14 +28,14 @@ _C = {}
 
 def sheet():
     if "s" not in _C:
-        _C["s"] = gen_blocks.lawn_sheet(256)          # (H, alb) of the whole 4 x 4 sheet, 1024 x 1024
+        _C["s"] = gen_blocks.lawn_sheet(256, blocks=gen_blocks.LAWN_SHEET_BLOCKS)  # the sheet the pack ships (8 x 8 since r64)
     return _C["s"]
 
 
 def field():
     if "f" not in _C:
         _H, alb = sheet()
-        m = sim.box_mip(alb, 128)                    # 32 texels per block
+        m = sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS)                    # 32 texels per block
         _C["f"] = np.clip(np.tile(m, (3, 3, 1)) * sim.hex_rgb(sim.LAWN_TINT), 0, 1)
     return _C["f"]
 
