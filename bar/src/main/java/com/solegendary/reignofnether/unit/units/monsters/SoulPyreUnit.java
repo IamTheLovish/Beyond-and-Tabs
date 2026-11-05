@@ -45,6 +45,9 @@ public class SoulPyreUnit extends SiegeLobberUnit {
     @Nullable
     public ResourceCost getCost() { return ResourceCosts.SOUL_PYRE; }
 
+    // NEVER MERGE: the red-proof stub - the Pyre never fires (SoulPyreGameTests must fail on this)
+    @Override public boolean fireShell(double x, double y, double z) { return false; }
+
     @Override public float getMinRange() { return SoulPyreTuning.MIN_RANGE; }
     @Override public int getSetUpTicks() { return SoulPyreTuning.SET_UP_TICKS; }
     @Override protected float shellSplash() { return SoulPyreTuning.SPLASH_RADIUS; }
