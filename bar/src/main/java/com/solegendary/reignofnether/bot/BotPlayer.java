@@ -1141,28 +1141,56 @@ public class BotPlayer {
      * a patch that fails this often is given up for the match rather than tried every two minutes forever.
      */
     final java.util.Map<BlockPos, Integer> patchFailures = new java.util.HashMap<>();
-    static final int PATCH_GIVE_UP = 3;
+    public static final int PATCH_GIVE_UP = 3;
 
     /**
      * An extractor over a patch: the 5x5 footprint may sit anywhere that still covers the patch block, and the
      * ground may be a block off the recorded centre (terrain edits, a stamp next to a river), so try those first.
      */
-    boolean placeExtractor(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
+    public boolean placeExtractor(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
         // (counted like placeNear: a soak run where every extractor failed used to read "placeFailures 0")
+        reservedBySide = false;
         boolean ok = placeExtractorImpl(level, patch, workers);
         if (ok) {
             placed(level.getGameTime());
             patchFailures.remove(patch);
         } else {
-            int n = workers.isEmpty() ? 0 : patchFailures.merge(patch, 1, Integer::sum);   // no worker = not the patch's fault
+            // no worker, or a site our side has ordered there (an ally's, the 3-bot T2 test: diag 41947369685 read
+            // {overlaps_blueprint=27} on a free, flat, dry patch): not the patch's fault, so never toward giving it up
+            boolean notThePatch = workers.isEmpty() || reservedBySide;
+            int n = notThePatch ? 0 : patchFailures.merge(patch, 1, Integer::sum);
             placeFailed(level.getGameTime(), kit.extractor(), "no valid footprint over the patch at " + patch.toShortString()
-                + (workers.isEmpty() ? " (no workers)" : "") + (n >= PATCH_GIVE_UP ? " - given up" : ""));
+                + (workers.isEmpty() ? " (no workers)" : reservedBySide ? " (our side has a site ordered there)" : "")
+                + (n >= PATCH_GIVE_UP ? " - given up" : ""));
         }
         return ok;
     }
 
+    /** Set by placeExtractorImpl: an origin over the patch was refused for a pending site of this bot's side. */
+    private boolean reservedBySide = false;
+
+    /** How often the patch was refused for its own sake (PATCH_GIVE_UP gives it up for the match). Public for the game test. */
+    public int patchFailureCount(BlockPos patch) {
+        return patchFailures.getOrDefault(patch, 0);
+    }
+
+    /**
+     * Has this bot's side ordered a site over the patch - its own or an ally's pending blueprint within 10 blocks?
+     * Then the patch is taken: Blueprints.reserves keeps it for the side, so any extractor of ours there is refused.
+     * Public for the game test.
+     */
+    public boolean patchTakenBySide(BlockPos patch) {
+        for (BuildingPlacement bp : com.solegendary.reignofnether.building.Blueprints.all())
+            if ((bp.ownerName.equals(name) || com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(name, bp.ownerName))
+                    && bp.originPos.distSqr(patch) < 10 * 10)
+                return true;
+        return false;
+    }
+
     /** The origins placeExtractorImpl tries over a patch centre, in order (public: the footprint game test walks the same list). */
     public static final int[] EXTRACTOR_DY = { 0, -1, 1 };
+    /** BuildingValidators' refusal for a placement over a pending site of the owner's side. */
+    static final String OVERLAPS_BLUEPRINT = "building.reignofnether.overlaps_blueprint";
     public static final int[][] EXTRACTOR_OFFSETS = { {-2, -2}, {-1, -2}, {-2, -1}, {-3, -2}, {-2, -3}, {-1, -1}, {-3, -3}, {-1, -3}, {-3, -1} };
 
     boolean placeExtractorImpl(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
@@ -1172,8 +1200,12 @@ public class BotPlayer {
         for (int dy : EXTRACTOR_DY)
             for (int[] o : EXTRACTOR_OFFSETS) {
                 BlockPos origin = new BlockPos(patch.getX() + o[0], patch.getY() + dy, patch.getZ() + o[1]);
-                if (!BuildingValidators.isPlacementValid(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true))
+                String refused = BuildingValidators.getPlacementValidityError(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true);
+                if (refused != null) {
+                    if (refused.equals(OVERLAPS_BLUEPRINT))
+                        reservedBySide = true;
                     continue;
+                }
                 workers.sort(java.util.Comparator.<LivingEntity>comparingInt(u -> buildsTech(u, kit.extractor()) ? 1 : 0)
                     .thenComparingDouble(u -> u.blockPosition().distSqr(origin)));   // tech builders last (placeNearImpl)
                 return BuildingServerEvents.placeBuilding(kit.extractor(), origin, Rotation.NONE, name,
@@ -1199,9 +1231,8 @@ public class BotPlayer {
             for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
                 if (!bp.isDestroyedServerside && bp.originPos.distSqr(p) < 10 * 10)
                     return false;
-            for (BuildingPlacement bp : com.solegendary.reignofnether.building.Blueprints.pendingOf(name))
-                if (bp.originPos.distSqr(p) < 10 * 10)
-                    return false;   // an extractor already ordered there
+            if (patchTakenBySide(p))
+                return false;   // an extractor already ordered there, by this bot or an ally
             BlockPos enemy = nearestEnemyBuildingAny(p);
             return enemy == null || enemy.distSqr(p) >= 45 * 45 || enemy.distSqr(p) >= p.distSqr(home);
         });
