@@ -146,6 +146,21 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
         MotionPass.apply(entity, this.model, poseStack, partialTicks);
     }
 
+    // the ground under the body (GroundTilt): right after setupRotations - the pose stack at the feet, turned to the body
+    // yaw, nothing scaled yet - the body is lowered and tilted to the ground its feet are over, for the body pass and
+    // every layer alike
+    @Inject(
+            method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;setupRotations(Lnet/minecraft/world/entity/LivingEntity;Lcom/mojang/blaze3d/vertex/PoseStack;FFF)V",
+                    shift = At.Shift.AFTER),
+            require = 1
+    )
+    private void bat$groundTilt(T entity, float entityYaw, float partialTicks, PoseStack poseStack,
+                                MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
+        MotionPass.ground(entity, poseStack, partialTicks);
+    }
+
     // and at HEAD too: a render that threw after the pass (a caller that swallows it, like the portrait) skipped its
     // RETURN, and its parts must not carry that pose into the next unit drawn with the same model
     @Inject(

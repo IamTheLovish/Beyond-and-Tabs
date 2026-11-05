@@ -315,6 +315,66 @@ public class MotionFluidityGameTests {
         });
     }
 
+    // ------------------------------------------------------------------------------------------------ the ground's cost
+
+    /**
+     * What the ground under the body (GroundTilt, step 3 A) costs, set before it was measured: 300 units' ground read and
+     * tilt stepped in at most this many ms a client tick (a client tick is 50 ms; 1.5 ms is 3% of it, on a shared CI
+     * runner).
+     */
+    static final double TILT_BUDGET_MS = 1.5;
+
+    /**
+     * 100 and then 300 units spread over the stepped lane (every width from a man to a War Mammoth, every heading) each
+     * read the ground under their four feet off the lane's real blocks and step their tilt, as AnimStates does every
+     * client tick. After a warm-up, the median of 21 rounds is the cost a client tick.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = BATCH)
+    public static void motion_ground_tilt_costs_little_at_100_and_300_units(GameTestHelper helper) {
+        WalkLineGameTests.Pad pad = WalkLineGameTests.Pad.lay(helper, 21);
+        steps(pad);
+        helper.runAfterDelay(5, () -> {
+            GroundTilt.Ground g = GroundTilt.of(pad.level);
+            float[] widths = { 0.6f, 0.9f, 1.95f, 3.315f };
+            float[] target = new float[3];
+            double[] ms = new double[2];
+            int[] counts = { 100, 300 };
+            for (int k = 0; k < counts.length; k++) {
+                int n = counts[k];
+                float[] slab = new float[n * AnimState.STRIDE];
+                double[] xs = new double[n], ys = new double[n], zs = new double[n];
+                float[] yaws = new float[n], ws = new float[n];
+                for (int i = 0; i < n; i++) {
+                    xs[i] = pad.x0 + 3 + (i * 7.31) % 38;
+                    zs[i] = pad.z0 + 12.5 + (i * 3.17) % 8;
+                    double top = GroundTilt.foot(g, xs[i], zs[i], 0.3, PAD_Y + 2.0);
+                    ys[i] = Double.isNaN(top) ? PAD_Y + 1 : top;
+                    yaws[i] = (i * 37) % 360 - 180f;
+                    ws[i] = widths[i % widths.length];
+                }
+                double[] rounds = new double[21];
+                for (int round = -5; round < rounds.length; round++) {
+                    long t0 = System.nanoTime();
+                    for (int i = 0; i < n; i++) {
+                        GroundTilt.target(g, xs[i], ys[i], zs[i], yaws[i], ws[i], true, target);
+                        GroundTilt.step(slab, i * AnimState.STRIDE, target, round == -5);
+                    }
+                    if (round >= 0)
+                        rounds[round] = (System.nanoTime() - t0) / 1e6;
+                }
+                Arrays.sort(rounds);
+                ms[k] = rounds[rounds.length / 2];
+            }
+            String line = String.format(Locale.ROOT, "[Motion] ground tilt cost a client tick: 100u %.3f ms, 300u %.3f ms"
+                + " (budget %.1f ms at 300u)", ms[0], ms[1], TILT_BUDGET_MS);
+            ReignOfNether.LOGGER.warn(line);
+            if (ms[1] > TILT_BUDGET_MS)
+                helper.fail("the ground under the body costs too much: " + line);
+            else
+                helper.succeed();
+        });
+    }
+
     // ------------------------------------------------------------------------------------------------ one unit
 
     /** One unit under measurement: its motion each server tick, and the packets a copy of its tracker sent. */

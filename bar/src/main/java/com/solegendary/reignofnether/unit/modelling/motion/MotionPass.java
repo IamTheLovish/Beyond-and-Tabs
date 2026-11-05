@@ -113,6 +113,35 @@ public final class MotionPass {
     }
 
     /**
+     * The ground under the body ({@link GroundTilt}): LivingEntityRendererMixin calls this right after
+     * LivingEntityRenderer.setupRotations, where the pose stack stands at the unit's feet turned to its body yaw (it
+     * faces -z, its right is +x, y is up) and nothing is scaled yet - so the body, every layer and its held items are
+     * drawn lowered by the drop, then pitched (+ = nose up) and rolled (+ = right side up) about the feet. A ground unit
+     * with a slot only: a flyer and a rider stay upright, as does a GUI render (partial 1) and the possessed hero seen
+     * from inside.
+     */
+    public static void ground(LivingEntity e, PoseStack ps, float partial) {
+        if (e == null || partial >= 1f || !AnimStates.enabled() || !(e instanceof Unit u) || u.isFlyingUnit()
+            || e.isPassenger())
+            return;
+        int b = AnimStates.base(e.getId());
+        if (b < 0)
+            return;
+        if (PossessionClientEvents.isPossessing() && PossessionClientEvents.getPossessedId() == e.getId()
+            && Minecraft.getInstance().options.getCameraType().isFirstPerson())
+            return;
+        float[] s = AnimStates.slab();
+        float pitch = GroundTilt.pitchAt(s, b, partial), roll = GroundTilt.rollAt(s, b, partial);
+        float drop = GroundTilt.dropAt(s, b, partial);
+        if (drop != 0f)
+            ps.translate(0f, drop, 0f);
+        if (pitch != 0f)
+            ps.mulPose(Q.rotationX(pitch * Mth.DEG_TO_RAD));
+        if (roll != 0f)
+            ps.mulPose(Q.rotationZ(roll * Mth.DEG_TO_RAD));
+    }
+
+    /**
      * The body yaw a frame draws for `e` (LivingEntityRendererMixin redirects LivingEntityRenderer.render's own
      * rotLerp of yBodyRotO..yBodyRot here): {@link Kinematics#bodyYawAt} for a ground unit with a slot - flyers keep
      * vanilla's (their own flight code banks and turns them) - else vanilla's. A GUI render (the HUD portrait, the

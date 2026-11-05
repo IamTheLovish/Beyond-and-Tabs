@@ -46,8 +46,12 @@ public final class GroundTilt {
     public static final float NARROW = 0.8f, WIDE = 1.6f, NARROW_DEG = 3f, WIDE_DEG = 30f;
     /** The most the body is drawn under the server's position, blocks. */
     public static final float MAX_DROP = 0.75f;
-    /** How far the drawn tilt (degrees) and drop (blocks) move in one client tick toward the ground's. */
-    public static final float TILT_STEP = 8f, DROP_STEP = 0.3f;
+    /**
+     * How far the drawn tilt (degrees) and drop (blocks) move in one client tick toward the ground's: a beast tips onto
+     * a step's slope in 2-3 ticks (it should be on its feet before it has walked far over the edge), and the drop moves
+     * less than the playback's drawn rise (0.34 a tick), so the body's height is never drawn moving faster than today.
+     */
+    public static final float TILT_STEP = 12f, DROP_STEP = 0.3f;
 
     /** The most a body this wide tilts, degrees. */
     public static float maxDeg(float width) {
@@ -87,10 +91,53 @@ public final class GroundTilt {
      */
     public static void target(Ground g, double x, double y, double z, float yawDeg, float width, boolean grounded,
                               float[] out) {
-        // not yet: today's body is drawn upright at the server's position on any ground
         out[0] = 0f;
         out[1] = 0f;
         out[2] = 0f;
+        if (g == null || !(width > 0f) || !Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)
+            || !Float.isFinite(yawDeg))
+            return;
+        float yr = yawDeg * Mth.DEG_TO_RAD;
+        double fx = -Mth.sin(yr), fz = Mth.cos(yr), rx = -Mth.cos(yr), rz = -Mth.sin(yr);
+        double d = SPAN * width, s = SIDE * width, r = footRadius(width);
+        // the four pads: front right, front left, back right, back left
+        double fr = foot(g, x + fx * d + rx * s, z + fz * d + rz * s, r, y);
+        double fl = foot(g, x + fx * d - rx * s, z + fz * d - rz * s, r, y);
+        double br = foot(g, x - fx * d + rx * s, z - fz * d + rz * s, r, y);
+        double bl = foot(g, x - fx * d - rx * s, z - fz * d - rz * s, r, y);
+        double front = higher(fr, fl), back = higher(br, bl), right = higher(fr, br), left = higher(fl, bl);
+        double max = maxDeg(width);
+        // the slope that puts both ends on their ground (the rigid body's rise is its length x sin), up to the most
+        // this body tilts
+        double sp = 0, sq = 0;
+        if (!Double.isNaN(front) && !Double.isNaN(back)) {
+            double p = Mth.clamp(Math.toDegrees(Math.asin(Mth.clamp((front - back) / (2 * d), -1.0, 1.0))), -max, max);
+            out[0] = (float) p;
+            sp = Math.sin(Math.toRadians(p)) * d;
+        }
+        if (!Double.isNaN(right) && !Double.isNaN(left)) {
+            double q = Mth.clamp(Math.toDegrees(Math.asin(Mth.clamp((right - left) / (2 * s), -1.0, 1.0))), -max, max);
+            out[1] = (float) q;
+            sq = Math.sin(Math.toRadians(q)) * s;
+        }
+        if (!grounded)
+            return;
+        // lowered until the first foot meets its ground, never raised: no pad's ground above its drawn foot
+        double c = Double.NEGATIVE_INFINITY;
+        c = under(c, fr, y, sp + sq);
+        c = under(c, fl, y, sp - sq);
+        c = under(c, br, y, -sp + sq);
+        c = under(c, bl, y, -sp - sq);
+        if (c != Double.NEGATIVE_INFINITY)
+            out[2] = (float) Mth.clamp(c, -MAX_DROP, 0.0);
+    }
+
+    /**
+     * The drop that puts a foot {@code off} above the body's centre on ground {@code h} (NaN: no ground, no say); the
+     * highest of them is kept, so every foot stands on or over its ground.
+     */
+    private static double under(double c, double h, double y, double off) {
+        return Double.isNaN(h) ? c : Math.max(c, h - y - off);
     }
 
     /**
