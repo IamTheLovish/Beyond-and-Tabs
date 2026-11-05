@@ -2126,6 +2126,11 @@ public final class EyesDirector {
             advanceCloseUps(mc);
             return;
         }
+        if (gaitOffAt > 0 && ticks >= gaitOffAt) {
+            shot(mc, gaitOffName);   // the same walk with vanilla's legs, then the bridge back on for everything after
+            com.solegendary.reignofnether.unit.modelling.motion.MotionPass.gaitBridge = true;
+            gaitOffAt = -1;
+        }
         if (closeUpAt > 0) {
             var unit = mc.level.getEntity(closeUpId);
             String[] names = CLOSE_UPS[closeUpSubject];
@@ -2185,6 +2190,11 @@ public final class EyesDirector {
             } else {
                 checkFraming(mc, unit, names[2]);
                 shot(mc, names[2]);
+                if (names.length > 5 && names[5].equals("gait")) {
+                    com.solegendary.reignofnether.unit.modelling.motion.MotionPass.gaitBridge = false;
+                    gaitOffName = names[2] + "_gait_off";
+                    gaitOffAt = ticks + 2;
+                }
                 // the ghouls are training dummies (AI off, like the foes of ReactionGameTests): they never hit back, so
                 // the subject is drawn clean for the whole clip. With fighting ghouls, vanilla's red hurt tint and the
                 // hit particles covered the body in about half of the 10 fps frames of every attack clip (run
@@ -2218,8 +2228,16 @@ public final class EyesDirector {
         // the quadruped rig (Lane B, PR #76): the Mossback Bison's coat, grove and gait need to be seen moving, not
         // judged from stills (07t-v are the dragon's on claude/dragon-rig, 07z the mesh A/B)
         { "MossbackBisonUnit", "07w_mossback_bison_close", "07x_mossback_bison_walk", "07y_mossback_bison_attack", "mossback_bison_unit" },
+        // vanilla one-bone legs (the gait bridge, PR #523; the Gravebound bodies' "before"): every 07b-y subject is a
+        // rig with its own gait, so no close-up showed the ~60 types still on vanilla's legs walking. Always stand-ins
+        // (the 07 army has none of them).
+        // a 6th column "gait": the walk still gets a "_gait_off" twin two ticks later (MotionPass.gaitBridge off)
+        { "ZombieUnit", "07zg_ghoul_close", "07zh_ghoul_walk", "07zi_ghoul_attack", "zombie_unit", "gait" },
+        { "SkeletonUnit", "07zj_grave_archer_close", "07zk_grave_archer_walk", "07zl_grave_archer_shoot", "skeleton_unit", "gait" },
     };
     private static int closeUpSubject = 0;
+    private static int gaitOffAt = -1;               // 07zh/07zk: tick of the "_gait_off" twin still
+    private static String gaitOffName = null;
     private static int lookOffAt = -1;               // 02b: tick of the look-off still (the world-look A/B)
     private static int framingWaits = 0;             // close-up stills deferred so far for a badly framed subject
     private static int waitedTicks = 0;              // how long the current still waited for its framing

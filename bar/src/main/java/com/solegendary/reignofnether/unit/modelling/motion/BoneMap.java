@@ -53,6 +53,17 @@ public final class BoneMap {
     boolean jointed;
     /** How the look solver treats this body: {@link Motion#LOOK_NONE}, LOOK_FULL or LOOK_TWIST. */
     float look = Motion.LOOK_NONE;
+    /**
+     * A biped on vanilla's one-bone legs walking on vanilla's clock (HumanoidModel, IllagerModel, VillagerModel and their
+     * subclasses): its legs take the gait bridge ({@link Motion#gait}). Rigs with their own gait (generated bodies,
+     * keyframe clips) and other leg layouts never do.
+     */
+    boolean strides;
+
+    BoneMap strides() {
+        strides = true;
+        return this;
+    }
 
     BoneMap looks(float mode) {
         look = mode;

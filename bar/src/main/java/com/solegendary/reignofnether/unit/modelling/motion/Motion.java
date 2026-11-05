@@ -40,14 +40,28 @@ public final class Motion {
         CHEST_PITCH_SHARE_AIM = 0.3f, CHEST_YAW_LIMIT = 25f, CHEST_PITCH_LIMIT = 15f, HEAD_YAW_LOOK = 85f,
         HEAD_PITCH_LOOK = 40f;
     private static final float[] SHARES = new float[2], LIMITS = new float[2], CHAIN = new float[2];
+    /**
+     * The gait bridge's frame input ({@link #pose}'s {@code walk}, filled by MotionPass for a biped on vanilla's
+     * one-bone legs - {@link BoneMap#strides}): vanilla's walk clock (WalkAnimationState's position and speed, as the
+     * model's setupAnim got them) and the angle the model gave each leg, in this class's convention (+ = foot forward).
+     */
+    public static final int WALK_POS = 0, WALK_SPEED = 1, WALK_R = 2, WALK_L = 3, WALK_LEN = 4;
+    /**
+     * The bridge's stride: the planted foot sweeps back at a steady rate and the swinging one comes through eased
+     * (Gait's construction for the quadrupeds), reaching STRIDE_RAD either side at vanilla's own cadence - so the arms,
+     * which vanilla swings on the same clock, stay in step. 0.62 rad is where the planted foot keeps ~3/4 of the ground
+     * speed at every speed (the whole stride in vanilla's cycle would need 0.9 rad, a 52 degree split).
+     */
+    static final float STRIDE_RAD = 0.62f, STEP_LIFT_PX = 1.6f, HIP_SWAY_PX = 0.35f, WALK_FULL = 0.2f,
+        LEG_PX = 12f, CADENCE = 0.6662f;
 
     /** Slider indices (the config's motion_* percentages / 100). */
     public static final int BREATH = 0, WEIGHT = 1, FIDGET = 2, LEAN = 3, ACCEL = 4, FLINCH = 5, SECONDARY = 6;
 
     private static final float D = Mth.DEG_TO_RAD;
     /** Joint limits per bone: rotation (degrees) and translation (px). */
-    private static final float[] ROT_LIMIT_DEG = {15f, 25f, 40f, 40f, 40f, 15f, 15f, 40f};
-    private static final float[] MOVE_LIMIT_PX = {6f, 3f, 2f, 2f, 2f, 1f, 1f, 2f};
+    private static final float[] ROT_LIMIT_DEG = {15f, 25f, 40f, 40f, 40f, 70f, 70f, 40f};   // legs: the gait's correction
+    private static final float[] MOVE_LIMIT_PX = {6f, 3f, 2f, 2f, 2f, 2f, 2f, 2f};
     private static final float HEAD_YAW_LIMIT_DEG = 75f;
 
     /** The clamp of one channel: radians for RX..RZ, px for TX..TZ. */
@@ -86,6 +100,16 @@ public final class Motion {
      */
     public static void pose(float[] s, int b, int id, float ageF, float partial, float zoom, float[] sliders,
                             boolean flinchOnly, float[] look, float[] out) {
+        pose(s, b, id, ageF, partial, zoom, sliders, flinchOnly, look, null, out);
+    }
+
+    /**
+     * {@link #pose} with the look and the gait bridge: {@code walk} is the frame's {@link #WALK_LEN} floats (null: the
+     * legs keep the model's walk). Like the look, the gait is never scaled by a slider, the zoom or the unit's
+     * amplitude: it puts real feet on real ground.
+     */
+    public static void pose(float[] s, int b, int id, float ageF, float partial, float zoom, float[] sliders,
+                            boolean flinchOnly, float[] look, float[] walk, float[] out) {
         for (int i = 0; i < OUT; i++)
             out[i] = 0f;
         float amp = Desync.amp(id);   // the tempo is in the slot: the breath phase turns at it (Kinematics.step)
@@ -137,6 +161,9 @@ public final class Motion {
 
         if (look != null && look[LOOK_MODE] != LOOK_NONE)
             look(s, b, partial, look, out);
+
+        if (!flinchOnly && walk != null)
+            gait(walk, out);
 
         if (!flinchOnly) {
             float standing = Life.smooth(1f - s[b + SPEED] / 0.05f);
@@ -196,6 +223,40 @@ public final class Motion {
         }
 
         clamp(out);
+    }
+
+    /**
+     * The gait bridge on vanilla's one-bone legs: each leg is set to the bridge's stride (the model's angle taken off,
+     * the bridge's put on); the hips drop by what the planted leg's tilt lifts them (so its sole stays on the ground
+     * instead of both soles rising at every stride's end), the swinging leg is drawn up off the ground, and the hips
+     * ride over the planted foot. Phase 0 = the right foot back: vanilla's own (HumanoidModel's right leg is
+     * cos(position x 0.6662) in part space, the foot forward at the half).
+     */
+    static void gait(float[] walk, float[] out) {
+        float w = Life.smooth(Mth.clamp(walk[WALK_SPEED] / WALK_FULL, 0f, 1f));
+        if (!(w > 0f))
+            return;
+        float p = walk[WALK_POS] * CADENCE / Mth.TWO_PI;
+        p -= Mth.floor(p);
+        float pl = p < 0.5f ? p + 0.5f : p - 0.5f;
+        float r = stride(p) * w, l = stride(pl) * w;
+        add(out, LEG_R, RX, r - walk[WALK_R]);
+        add(out, LEG_L, RX, l - walk[WALK_L]);
+        add(out, LEG_R, TY, lift(p) * STEP_LIFT_PX * w);
+        add(out, LEG_L, TY, lift(pl) * STEP_LIFT_PX * w);
+        add(out, ROOT, TY, -LEG_PX * (1f - Mth.cos(p >= 0.5f ? r : l)));
+        add(out, ROOT, TX, -Mth.sin(p * Mth.TWO_PI) * HIP_SWAY_PX * w);   // + = right: over the right foot in its stance
+    }
+
+    /** A leg's angle at phase p (0 back, the swing to 0.5 forward eased, the stance back at a steady sweep). */
+    static float stride(float p) {
+        float x = p < 0.5f ? -1f + 2f * Life.smooth(p * 2f) : 1f - 4f * (p - 0.5f);
+        return (float) Math.asin(x * Mth.sin(STRIDE_RAD));   // the foot moves linearly: the angle is its arcsine
+    }
+
+    /** 0..1 of the step's lift: an arch through the swing, nothing in the stance. */
+    static float lift(float p) {
+        return p < 0.5f ? Mth.sin(p * 2f * Mth.PI) : 0f;
     }
 
     private static void look(float[] s, int b, float partial, float[] look, float[] out) {
