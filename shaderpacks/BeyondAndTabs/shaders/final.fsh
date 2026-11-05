@@ -39,6 +39,11 @@ const float GLOW = 0.30;
 const float GLOW_THRESHOLD = 0.50;
 const float GLOW_RADIUS = 0.016;
 const vec3 SHADOW_TINT = vec3(1.06, 1.00, 0.90);
+// where the shadows' tint lives: a bell on luma, full at SHADOW_TONE_PEAK, gone by SHADOW_TONE_END. The sunlit field
+// starts at 0.30 (dirt and paths; the lawn 0.33-0.43) and stays neutral. The old bell (full at 0.25, gone by 0.50) gave
+// the lit lawn most of the warm tint and, with the light table, turned it olive (Itachi 1, Nov 4)
+const float SHADOW_TONE_PEAK = 0.15;
+const float SHADOW_TONE_END = 0.30;
 // highlights near neutral (lovish, Oct 30: "more white then cream sounds fine"): the old (1.09, 1.00, 0.85) turned
 // white quartz, iron and the capitol cream and grey stone brown (block critic vs the old benchmark screenshot). The warm
 // Enchanted mood stays in the shadows' tint and the light table; whites read white. #326's WorldLookPass Enchanted
@@ -148,8 +153,9 @@ vec3 grade(vec3 c) {
     float lc = l + CONTRAST * 8.0 * l * l * (1.0 - l) * (1.0 - l) * (2.0 * l - 1.0);
     c *= lc / max(l, 1e-4);
     float chroma = length(c - lc);
-    // split tone in bells at 1/4 and 3/4 luma: black, white and the midtones stay neutral
-    float shadows = smoothstep(0.0, 0.25, lc) - smoothstep(0.25, 0.5, lc);
+    // split tone in bells over the dark tones (SHADOW_TONE_PEAK) and at 3/4 luma: black, white and the sunlit field
+    // stay neutral
+    float shadows = smoothstep(0.0, SHADOW_TONE_PEAK, lc) - smoothstep(SHADOW_TONE_PEAK, SHADOW_TONE_END, lc);
     float highlights = smoothstep(0.5, 0.75, lc) - smoothstep(0.75, 1.0, lc);
     c *= mix(vec3(1.0), SHADOW_TINT, shadows * SPLIT_TONE) * mix(vec3(1.0), HIGHLIGHT_TINT, highlights * SPLIT_TONE);
     // the tint turns hue but never adds colour (near-greys may take its faint colour)

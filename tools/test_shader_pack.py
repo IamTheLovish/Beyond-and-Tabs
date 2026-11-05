@@ -4,6 +4,7 @@ The pack (shaderpacks/BeyondAndTabs, design/own_shader_pack.md) is only ever run
 PCs; a GLSL typo there costs a ten-minute eyes run and shows as "no shader pack" in the stills. CI installs glslang
 (build.yml, job ruff); without it the compile test is skipped and only the header checks run.
 """
+import math
 import os
 import sys
 import unittest
@@ -72,6 +73,37 @@ class ShaderPack(unittest.TestCase):
             self.assertIn("const float EXPOSURE = %s;" % exposure, final, materials)
             self.assertNotIn("BOUNCE", terrain, materials)
             self.assertEqual("uniform sampler2D normals;" in terrain, materials == 1)
+
+    def test_noon_light_leaves_open_ground_its_colour(self):
+        # lib/light.glsl aims open ground at noon to come out at its albedo. Itachi 1 measured the lawn under the pack
+        # (eyes 41759309261 vs the plain lane 41759297367, same build, ground sampler, noon): every sunlit ground
+        # material lost ~17% of its blue against its red, and the green lawn read olive. A warm sun is fine; the sun and
+        # the sky's fill together on open ground must stay white, or every colour on the field turns toward yellow. The
+        # lobby's noon (6000, the 30 degree tilt) puts the sun ~60 degrees up: an up face in full sky light, unshadowed,
+        # takes the sun through sunFacing and the fill through surfaceLight's side share, plus MIN_LIGHT. The test reads
+        # those constants and checks the two formulas still use them (review of #506: a change there must go red)
+        src = open(os.path.join(spc.SHADERS, "lib", "light.glsl"), encoding="utf-8").read()
+        self.assertIn("return mix(ndl, sqrt(ndl), SUN_FACING_EASE);", src)
+        self.assertIn("(SKY_FILL_SIDE + (1.0 - SKY_FILL_SIDE) * upness)", src)
+        ease, side = spc.float_const(src, "SUN_FACING_EASE"), spc.float_const(src, "SKY_FILL_SIDE")
+        sun, sky = spc.vec3_const(src, "SUN_HIGH"), spc.vec3_const(src, "SKY_HIGH")
+        floor = spc.vec3_const(src, "MIN_LIGHT")
+        ndl = math.sin(math.radians(60.0))
+        facing = ndl + (math.sqrt(ndl) - ndl) * ease
+        fill = side + (1.0 - side) * 1.0
+        light = [s * facing + k * fill + m for s, k, m in zip(sun, sky, floor)]
+        self.assertLessEqual(max(light) / min(light), 1.02, "noon light on open ground %s is not white" % light)
+        self.assertTrue(0.97 <= sum(light) / 3 <= 1.03, "noon light on open ground %s is not the albedo's level" % light)
+
+    def test_split_tone_leaves_the_lit_ground_neutral(self):
+        # final.fsh's warm shadow tint (the Enchanted mood) belongs to the dark tones, never the sunlit field: the
+        # palette's darkest sunlit ground is dirt and paths at 0.30 luma (the lawn 0.33-0.43). The old bell peaked at
+        # 0.25 and still gave 0.9 of the tint at 0.30 - the larger half of the lawn's olive pull. Deep shade (0.15)
+        # keeps the tone
+        src = open(os.path.join(spc.SHADERS, "final.fsh"), encoding="utf-8").read()
+        for lc in (0.30, 0.35, 0.40, 0.45, 0.50):
+            self.assertLessEqual(spc.split_tone_shadows(src, lc), 0.05, "sunlit ground at luma %.2f is tinted" % lc)
+        self.assertGreaterEqual(spc.split_tone_shadows(src, 0.15), 0.5, "deep shade lost the warm tone")
 
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
     def test_every_program_compiles(self):
