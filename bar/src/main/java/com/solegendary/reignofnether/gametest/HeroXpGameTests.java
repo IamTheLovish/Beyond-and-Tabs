@@ -220,7 +220,7 @@ public class HeroXpGameTests {
     }
 
     /** DIAG (throwaway/diag-488): the neutral-kill scenario 20 times in a row, logging what the victim and the orbs did. */
-    @GameTest(template = ARENA, batch = "diag_neutral_orbs", timeoutTicks = 400)
+    @GameTest(template = ARENA, batch = "diag_neutral_orbs", timeoutTicks = 1200)
     public static void diag_neutral_kill_orbs(GameTestHelper helper) {
         int[] round = { 0 };
         java.util.List<String> lines = new java.util.ArrayList<>();
@@ -245,8 +245,10 @@ public class HeroXpGameTests {
                 int now = helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class, hero.getBoundingBox().inflate(8)).size();
                 helper.runAfterDelay(2, () -> {
                     int later = helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class, hero.getBoundingBox().inflate(8)).size();
-                    lines.add(String.format(java.util.Locale.ROOT, "round %d: hero bbox width %.2f, victim moved %.2f (dist to hero %.2f -> %.2f), target %s, orbs at kill %d, 2 ticks later %d, hero xp %d",
-                        r, hero.getBbWidth(), v1.distanceTo(v0), v0.distanceTo(h0), v1.distanceTo(hero.position()), tgt, now, later, ((HeroUnit) hero).getExperience()));
+                    lines.add(0, "");
+                    lines.remove(0);
+                    com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[ChunkWait] gametest-orbs " + String.format(java.util.Locale.ROOT, "round %d: hero bbox width %.2f, victim moved %.2f (dist to hero %.2f -> %.2f), target %s, orbs at kill %d, 2 ticks later %d, hero xp %d",
+                        r, hero.getBbWidth(), v1.distanceTo(v0), v0.distanceTo(h0), v1.distanceTo(hero.position()), tgt, now, later, ((HeroUnit) hero).getExperience()));   // logged per round
                     helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class, hero.getBoundingBox().inflate(16)).forEach(net.minecraft.world.entity.Entity::discard);
                     hero.discard();
                     if (!victim.isRemoved()) victim.discard();
