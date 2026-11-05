@@ -459,6 +459,7 @@ public final class BarFx {
         if (e == null) return K_OTHER;
         try {
             if (e instanceof net.minecraft.world.entity.projectile.FireworkRocketEntity) return K_ROCKET;
+            if (e instanceof com.solegendary.reignofnether.unit.units.storm.RocketShell) return K_ROCKET;   // the Rocket Battery's own rocket: smoke trail, muzzle flash, impact flash
             if (e instanceof com.solegendary.reignofnether.entities.ThrowableTntProjectile) return K_TNT;
             if (e instanceof com.solegendary.reignofnether.entities.MoltenBombProjectile) return K_BIG_FIREBALL;
             if (e instanceof net.minecraft.world.entity.projectile.LargeFireball) return K_BIG_FIREBALL;

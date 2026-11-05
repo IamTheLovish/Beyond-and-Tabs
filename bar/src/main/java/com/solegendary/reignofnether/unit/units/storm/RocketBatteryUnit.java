@@ -58,14 +58,16 @@ import java.util.Optional;
  * Stormcallers artillery - the <b>Rocket Battery</b> (design/stormcallers_plan.md, slice 2): a crew on the pillager body
  * (its own skin, RocketBatteryRenderer) with a rack of gunpowder rockets. Every {@link #attacksPerSecond}-paced attack is
  * a <b>volley</b>: {@link #VOLLEY_ROCKETS} small rockets, a few ticks apart, each aimed at a random spot within
- * {@link #VOLLEY_SPREAD} blocks of the target and each a {@link BombardShell} on a solved arc that bursts for
- * {@link #attackDamage} splash (never terrain). Range {@link #attackRange}, blind inside {@link #MIN_RANGE}; Attack
+ * {@link #VOLLEY_SPREAD} blocks of the target and each a {@link RocketShell} (a {@link BombardShell} with its own quick,
+ * flat flight, look and burst: Nov 5) on a solved arc that bursts for {@link #attackDamage} splash (never terrain). Range {@link #attackRange}, blind inside {@link #MIN_RANGE}; Attack
  * Ground shells a spot. <b>Not a spell</b>: no energy - the faction's one energy-free damage dealer, so a stalled
  * Stormcaller army still has artillery.
  * <p>
  * A thin copy of the Bombard Crew (the bow-style cooldown goal, the solved-arc shell) rather than a subclass: it is a
- * Tidewrought unit (amphibious, found by instanceof in the Tides code). Cost: four shell entities per volley in flight,
- * one grid query per burst.
+ * Tidewrought unit (amphibious, found by instanceof in the Tides code). Each rocket kicks the crew and lifts the rack
+ * ({@link RocketLaunchPose}, shown by RocketBatteryRenderer from the synced {@link #getLaunchTicks}). Cost: four shell
+ * entities per volley in flight, one grid query per burst, a launch counter synced for {@link RocketLaunchPose#TOTAL_TICKS}
+ * ticks per volley.
  */
 public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.unit.interfaces.FieldArtillery {
     public static final Abilities ABILITIES = new Abilities();
@@ -158,9 +160,16 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
     public static final EntityDataAccessor<String> onDeathCommandDataAccessor =
         SynchedEntityData.defineId(RocketBatteryUnit.class, EntityDataSerializers.STRING);
 
+    /** Ticks the launch animation has left: set to {@link RocketLaunchPose#TOTAL_TICKS} when a volley goes, counted down on the server. */
+    public static final EntityDataAccessor<Integer> launchDataAccessor =
+        SynchedEntityData.defineId(RocketBatteryUnit.class, EntityDataSerializers.INT);
+
+    public int getLaunchTicks() { return this.entityData.get(launchDataAccessor); }
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(launchDataAccessor, 0);
         this.entityData.define(ownerDataAccessor, "");
         this.entityData.define(scenarioRoleDataAccessor, -1);
         this.entityData.define(onDeathCommandDataAccessor, "");
@@ -257,6 +266,8 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         AttackerUnit.tick(this);
         if (attackGroundGoal != null)
             attackGroundGoal.tick();
+        if (!level().isClientSide() && getLaunchTicks() > 0)
+            this.entityData.set(launchDataAccessor, getLaunchTicks() - 1);
     }
 
     @Override
@@ -323,7 +334,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         this.goalSelector.addGoal(4, new RandomLookAroundUnitGoal(this));
     }
 
-    // the crew "holds a bow" only because UnitBowAttackGoal needs one to fire; the rockets are BombardShells
+    // the crew "holds a bow" only because UnitBowAttackGoal needs one to fire (the renderer draws no weapon: the rockets are RocketShells from the rack)
     @Override
     public void setupEquipmentAndUpgradesServer() {
         this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
@@ -333,7 +344,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
     public void performUnitRangedAttack(LivingEntity pTarget, float velocity) {
         // lead part of the way (the Bombard Crew's rule): the rockets fly 1-2 s
         net.minecraft.world.phys.Vec3 v = pTarget.getDeltaMovement();
-        double lead = BombardShell.flightTicksFor(Math.sqrt(distanceToSqr(pTarget))) * 0.6;
+        double lead = RocketFlight.flightTicks(Math.sqrt(distanceToSqr(pTarget))) * 0.6;
         if (fireVolley(pTarget.getX() + v.x * lead, pTarget.getY(), pTarget.getZ() + v.z * lead)
                 && !level().isClientSide() && pTarget instanceof Unit unit)
             FogOfWarClientboundPacket.revealRangedUnit(unit.getOwnerName(), this.getId());
@@ -366,13 +377,9 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
                     () -> fireRocket(x, y, z, false));
         }
         this.playSound(SoundEvents.FIREWORK_ROCKET_LAUNCH, 1.4F, 0.8F + getRandom().nextFloat() * 0.2F);
+        this.entityData.set(launchDataAccessor, RocketLaunchPose.TOTAL_TICKS);
         getMainHandItem().setDamageValue(0);
         return true;
-    }
-
-    /** The ticks the launch animation has left (counts down from {@link RocketLaunchPose#TOTAL_TICKS} when a volley goes). STUB. */
-    public int getLaunchTicks() {
-        return 0;
     }
 
     /** One rocket of a volley; the first lands on the aim itself, the rest scatter round it. Public for the game test. */
@@ -385,13 +392,12 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
             tx += Math.cos(a) * r;
             tz += Math.sin(a) * r;
         }
-        BombardShell shell = new BombardShell(sl, this, getUnitAttackDamage());
+        // the rocket is the projectile: BarFx follows it (it classes a RocketShell K_ROCKET) with the muzzle flash on
+        // launch, a smoke trail in flight and a flash on impact, so nothing is drawn beside it
+        RocketShell shell = new RocketShell(sl, this, getUnitAttackDamage());
         shell.setPos(getX(), getEyeY() + 0.5, getZ());
         shell.aimAt(tx, y, tz);
         sl.addFreshEntity(shell);
-        // the rocket's look: a BarFx rocket trail from the rack toward the spot (the shell itself is the warhead)
-        com.solegendary.reignofnether.barfx.BarFx.shot(sl, new net.minecraft.world.phys.Vec3(getX(), getEyeY() + 0.5, getZ()),
-            new net.minecraft.world.phys.Vec3(tx, y + 1, tz), com.solegendary.reignofnether.barfx.BarFx.K_ROCKET, this);
         sl.sendParticles(net.minecraft.core.particles.ParticleTypes.FIREWORK, getX(), getEyeY() + 0.6, getZ(), 5, 0.15, 0.15, 0.15, 0.03);
         if (!first)
             sl.playSound(null, blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.NEUTRAL, 1.0F, 0.9F + getRandom().nextFloat() * 0.3F);
