@@ -1264,7 +1264,7 @@ public class BuildingPlacement {
             RTSPlayer rtsPlayer = PlayerServerEvents.getRTSPlayer(ownerName);
             if (rtsPlayer != null)
                 rtsPlayer.scores.addToScore(RTSPlayerScoresEnum.TOTAL_BUILDINGS_CONSTRUCTED);
-            // a portal or a game ender forms over ~1.5 s instead of switching on at once (once; fog-filtered per player)
+            // a portal or a game ender forms over ~1.6 s instead of switching on at once (once; fog-filtered per player)
             com.solegendary.reignofnether.barfx.PortalForming.onBuilt(this);
         } else {
             TutorialClientEvents.updateStage();

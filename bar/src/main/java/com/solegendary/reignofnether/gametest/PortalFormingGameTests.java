@@ -25,7 +25,7 @@ import java.util.List;
 
 /**
  * The forming moment (barfx/PortalForming, FormingTimeline, FormingFx): a portal-type building that finishes - a
- * portal of any kind, a game ender - does not switch on at once; one FORMING effect plays over ~1.5 s (a spark at the
+ * portal of any kind, a game ender - does not switch on at once; one FORMING effect plays over ~1.6 s (a spark at the
  * frame, light filling inward, a swirl settling, a rising charge and a settle). lovish, Nov 5: "our own version" of the
  * idea that a big moment needs a build-up. These tests pin the rules the GameTests can see: which buildings form (read
  * off the registry), once per activation and never for a building that was finished the moment it appeared, the fog
