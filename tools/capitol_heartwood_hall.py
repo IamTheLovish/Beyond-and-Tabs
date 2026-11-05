@@ -25,9 +25,10 @@ overgrown air temple; ref 106 organic arches):
     each face pier - lancet - pilaster - POINTED ARCH - pilaster - lancet - pier, three depths on every face (the
     pilasters and cornice stand out, the wall, the lancets recessed into the dark where the tree's legs stand); the
     parapet is broken (ruined crenels, leaves spilling over it);
-  - the WORLD TREE grew up through it: four 2 x 2 legs stand in the hall's inner corners and lean together into one
-    great trunk over the crossing - a banyan standing on its roots - so the hall under it is the tree's hollow heart
-    (a verdant froglight glows in the trunk's underside) and the centre spawn walks out of any of the four arches;
+  - the WORLD TREE grew up through it: four 2 x 2 legs stand in the hall's inner corners, rise through its ROOF
+    (mossy cobble stepping up to an oculus) and lean together over it into one great trunk - a banyan standing on its
+    roots - so the hall under it is the tree's hollow heart (a verdant froglight glows in the trunk's underside, over
+    the oculus) and the centre spawn walks out of any of the four arches; three BOUGHS break out through the roof;
   - ROOTS AS FLYING BUTTRESSES: from each leg a root bursts through the hall's corner pier and arches down over a
     MOONWELL (a water cauldron between bare calcite kerbs) to plant its foot in the garden corner;
   - the STAG-DRYAD FACE is carved in the trunk on every side over the arch (birch mask and muzzle, glowing eyes, dark
@@ -35,8 +36,10 @@ overgrown air temple; ref 106 organic arches):
   - a BLOSSOM CROWN of uneven lobes (Nov 2026, after two blind massing rounds: the round tiered canopy read as "a
     green mound" and "a bullseye from above"): cherry leaves with a flowering azalea leaf in every few cells, each lobe
     on its own bough, leaning north-east away from the RTS camera so the temple's south and west faces show under it,
-    the trunk seen in the gap over the parapet; glowing fruit (ochre / verdant froglights, shroomlight) in the lobes'
-    undersides - blossom as leaves, nothing hanging;
+    glowing fruit (ochre / verdant froglights, shroomlight) in the lobes' undersides - blossom as leaves, nothing
+    hanging. THE TALL TREE (lovish, Nov 5, on the #502 living-crowns still: "the pink tree could be taller and stick
+    out of the building so its more define", "with branches coming out of the roof"): the box rose from 22 to 30, the
+    trunk stands 5 blocks clear of the roof under a crown kept inside the cornice (ring 5), y19-29;
   - the GARDEN: the paving breaks up into moss and rooted dirt, stepping stones, ferns, carpets and flowers.
 
 WHAT THE SIZE TOUCHES IN THE GAME (the coordinator applies these; this file edits nothing):
@@ -44,12 +47,13 @@ WHAT THE SIZE TOUCHES IN THE GAME (the coordinator applies these; this file edit
   - HeartwoodHall.buildTimeBlocks stays 498 (already set; BuildingPlacement times construction by it), the starting
     types (MOSS_BLOCK, MOSSY_STONE_BRICKS) are in layer 0 (and mossy bricks above, as the old hall's walls had them -
     only layer 0 is the foundation, foundationYLayers = 1); no Java of the class needs changing;
-  - BiomeBaseGameTests.capitol_details_keep_box_build_time_and_anchors: add the row
-    { Buildings.HEARTWOOD_HALL, 498, new int[] { 14, 21, 14 } };
+  - BiomeBaseGameTests.capitol_details_keep_box_build_time_and_anchors: the row
+    { Buildings.HEARTWOOD_HALL, 498, new int[] { 14, 29, 14 } } (14, 21, 14 before the tall tree);
   - BuildingAmbienceClientEvents.CAPITOL_SPOTS: "heartwood_hall" -> PETAL_SPOTS below (petals falling from under the
-    canopy skirt's four corner lobes, and off the blossom crown);
+    crown's low lobes, the east roof bough's blossom, and off the crown's top);
+  - CrownMotionTest (the #502 living crowns): the great crown's base is y19 (CROWN_FOOT; y12 before);
   - CapitolLife: none. SkirmishGameTests.heartwood_hall_frees_its_seedshapers: the 15-wide footprint fits its 16-wide
-    column (it stamps from x+1) and the 22-high clearing it makes.
+    column (it stamps from x+1); it clears 22 high, and the tree's top 8 stand in the arena's open sky.
 
 RULES (asserted in check()): the box; the starting types in layer 0; nothing pops off (_SunRig.check_support); leaves
 persistent with their true distance (mex_verdant._leaf_distances); no water (the moonwells are cauldrons), lava,
@@ -67,7 +71,10 @@ import capitol_town_centre as tc   # noqa: E402  - the Cap canvas (a _SunRig add
 import gen_structures as gs        # noqa: E402
 import mex_verdant as mv           # noqa: E402  - the leaf-distance pass shared with the Root Spring
 
-R, H = 7, 22                       # 15 x 22 x 15
+R, H = 7, 30                       # 15 x 30 x 15: the tall tree (lovish, Nov 5) - was 22
+BASE = 14                          # the trunk's base over the hall's roof (y11 before the tall tree)
+LIFT = BASE - 11                   # what the trunk, the stag-dryad and its antlers rose by
+ROOF = 9                           # the roof's ridge, round the oculus over the hollow heart
 O4 = tc.O4
 CORNERS = tc.CORNERS
 inward, outward, along, hsh = tc.inward, tc.outward, tc.along, tc.hsh
@@ -84,8 +91,8 @@ FLOWERS = ("allium", "azure_bluet", "oxeye_daisy", "lily_of_the_valley", "cornfl
 
 STARTING_TYPES = {"moss_block", "mossy_stone_bricks"}       # HeartwoodHall.startingBlockTypes
 # BuildingAmbienceClientEvents.CAPITOL_SPOTS["heartwood_hall"], Fx.PETAL (structure coordinates, block x spans x..x+1):
-# under the crown's four low lobes (LOBES), and over its top
-PETAL_SPOTS = ((10.5, 11.5, 4.5), (4.5, 10.5, 4.5), (10.5, 10.5, 10.5), (3.5, 14.5, 7.5), (7.5, 21.5, 7.5))
+# under three of the crown's low lobes (LOBES), under the blossom at the east roof bough's tip, and over the crown's top
+PETAL_SPOTS = ((11.5, 19.5, 3.5), (6.5, 19.5, 10.5), (10.5, 18.5, 11.5), (13.5, 12.5, 4.5), (8.5, 29.5, 6.5))
 
 
 def leaf(c, dx, y, dz, name="azalea_leaves"):
@@ -198,88 +205,154 @@ def hall(c):
 
 # ====================================================================================================== tree
 def legs_and_trunk(c):
-    """Four 2 x 2 legs in the hall's inner corners (rings 2-3), leaning together at y9-10 into one trunk over the
-    crossing from y11. The cross between the legs stays open from the floor to the trunk's underside: the hollow heart,
-    where the centre spawn stands and walks out along any axis. A verdant froglight in the underside is its light."""
+    """Four 2 x 2 legs in the hall's inner corners (rings 2-3) rise through the roof and lean together over it into
+    one trunk from y14 (BASE): the tree stands out of the building (lovish, Nov 5: "the pink tree could be taller and
+    stick out of the building so its more define"). The cross between the legs stays open from the floor to the
+    trunk's underside - the hollow heart, under the roof's oculus, where the centre spawn (the box centre, y14, walked
+    down) lands on the floor and walks out along any axis. A verdant froglight in the underside is its light."""
     for (sx, sz) in CORNERS:
         for (qx, qz) in ((2, 2), (3, 2), (2, 3), (3, 3)):
-            top = 9 if (qx, qz) != (3, 3) else 8
+            top = 9 + LIFT if (qx, qz) != (3, 3) else 8 + LIFT
             for y in range(2, top + 1):
                 c.set(sx * qx, y, sz * qz, LOG, axis="y")
-        # the lean: the legs' inner edges step in at y10 (bark), their outer cells taper as stairs
-        c.set(sx * 2, 10, sz * 2, WOOD, axis="y")
-        c.set(sx * 1, 10, sz * 2, WOOD, axis="y")
-        c.set(sx * 2, 10, sz * 1, WOOD, axis="y")
-        c.stair(sx * 3, 10, sz * 2, "east" if sx < 0 else "west", name="oak_stairs")
-        c.stair(sx * 2, 10, sz * 3, "south" if sz < 0 else "north", name="oak_stairs")
-        c.stair(sx * 3, 9, sz * 3, "east" if sx < 0 else "west", name="oak_stairs")
-    # y10 arches between the legs over each arm (upside-down stairs - the trunk's vault), the heart's column open
+        # the lean: the legs' inner edges step in (bark), their outer cells taper as stairs
+        c.set(sx * 2, BASE - 1, sz * 2, WOOD, axis="y")
+        c.set(sx * 1, BASE - 1, sz * 2, WOOD, axis="y")
+        c.set(sx * 2, BASE - 1, sz * 1, WOOD, axis="y")
+        c.stair(sx * 3, BASE - 1, sz * 2, "east" if sx < 0 else "west", name="oak_stairs")
+        c.stair(sx * 2, BASE - 1, sz * 3, "south" if sz < 0 else "north", name="oak_stairs")
+        c.stair(sx * 3, BASE - 2, sz * 3, "east" if sx < 0 else "west", name="oak_stairs")
+    # arches between the legs over each arm (upside-down stairs - the trunk's vault), the heart's column open
     for o in O4.values():
-        c.st(o, 2, 0, 10, outward(o), "top", name="oak_stairs")
-    # the trunk's base y11: 5 x 5 of bark, the heart glowing in its underside
+        c.st(o, 2, 0, BASE - 1, outward(o), "top", name="oak_stairs")
+    # the trunk's base: 5 x 5 of bark, the heart glowing in its underside
     for dx, dz in c.cells(2):
-        c.set(dx, 11, dz, WOOD, axis="y")
-    c.set(0, 11, 0, "verdant_froglight", axis="y")
+        c.set(dx, BASE, dz, WOOD, axis="y")
+    c.set(0, BASE, 0, "verdant_froglight", axis="y")
     for (sx, sz) in CORNERS:
-        c.stair(sx * 2, 12, sz * 2, "east" if sx < 0 else "west", name="oak_stairs")   # the base's rounded shoulders
-    # the trunk: 3 x 3 from y12 to y19, rounded at the top, the leader to y20
-    for y in range(12, 20):
+        c.stair(sx * 2, BASE + 1, sz * 2, "east" if sx < 0 else "west", name="oak_stairs")   # rounded shoulders
+    # the trunk: 3 x 3 up to TOP, rounded at the top, the leader over it (into the crown's top lobe)
+    top = H - 4
+    for y in range(BASE + 1, top + 1):
         for dx, dz in c.cells(1):
-            if y == 19 and dx and dz:
+            if y == top and dx and dz:
                 continue
             c.set(dx, y, dz, LOG, axis="y")
-    c.set(0, 20, 0, LOG, axis="y")
+    c.set(0, top + 1, 0, LOG, axis="y")
 
 
 def face(c, o):
-    """The stag-dryad on the trunk's face o (the Root Spring's spirit at the capitol's scale), on ring 2, y11-15: a pale
-    birch mask, a muzzle and snout over the arch, verdant froglight eyes under overhanging dark-oak brows, a moss crown
-    between the burrs - and the antlers rising out of the burrs as the tree's own birch boughs."""
+    """The stag-dryad on the trunk's face o (the Root Spring's spirit at the capitol's scale), on ring 2, y14-18 over
+    the roof (y11-15 + LIFT): a pale birch mask, a muzzle and snout over the arch, verdant froglight eyes under
+    overhanging dark-oak brows, a moss crown between the burrs - and the antlers rising out of the burrs as the tree's
+    own birch boughs, into the crown."""
     # three depths: the muzzle and brows stand out on ring 3, the mask on ring 2, the eyes sunk under the brows
-    c.put(o, 3, 0, 11, BIRCH_W, axis="y")                        # the muzzle, pushed out over the arch's keystone
-    c.st(o, 3, 0, 12, inward(o), name=BIRCH_S)                   # the snout sloping up into the blaze
-    c.put(o, 2, 0, 11, BIRCH_W, axis="y")                        # the jaw behind it
-    c.put(o, 2, 0, 12, BIRCH_W, axis="y")
+    c.put(o, 3, 0, 11 + LIFT, BIRCH_W, axis="y")                 # the muzzle, pushed out over the arch's keystone
+    c.st(o, 3, 0, 12 + LIFT, inward(o), name=BIRCH_S)                   # the snout sloping up into the blaze
+    c.put(o, 2, 0, 11 + LIFT, BIRCH_W, axis="y")                        # the jaw behind it
+    c.put(o, 2, 0, 12 + LIFT, BIRCH_W, axis="y")
     for s in (-1, 1):
-        c.st(o, 3, s, 11, along(o, -s), "top", name=BIRCH_S)     # the cheeks, hollowed under
-        c.st(o, 2, s, 12, along(o, -s), "top", name=BIRCH_S)
-        c.put(o, 2, s, 13, "verdant_froglight", axis="y")        # the eyes, sunk in the mask
-        c.st(o, 3, s, 14, inward(o), "top", name="dark_oak_stairs")   # the brows, jutting over the eyes
-        c.st(o, 2, 2 * s, 14, along(o, -s), "top", name="dark_oak_stairs")   # the brow's outer sweep
-        c.put(o, 2, s, 14, BIRCH_W, axis="y")
-        c.put(o, 2, s, 15, BIRCH, axis="y")                      # the burrs
-        leaf(c, *_xyz(c, o, 2, 2 * s, 13), name="flowering_azalea_leaves")   # leafy ears flicked out
-    c.put(o, 2, 0, 13, BIRCH_W, axis="y")                        # the bridge of the nose
-    c.put(o, 3, 0, 13, BIRCH_W, axis="y")                        # the blaze, standing proud between the eyes
-    c.put(o, 2, 0, 14, BIRCH_W, axis="y")                        # the forehead
-    c.put(o, 2, 0, 15, "moss_block")                             # the moss crown between the burrs
+        c.st(o, 3, s, 11 + LIFT, along(o, -s), "top", name=BIRCH_S)     # the cheeks, hollowed under
+        c.st(o, 2, s, 12 + LIFT, along(o, -s), "top", name=BIRCH_S)
+        c.put(o, 2, s, 13 + LIFT, "verdant_froglight", axis="y")        # the eyes, sunk in the mask
+        c.st(o, 3, s, 14 + LIFT, inward(o), "top", name="dark_oak_stairs")   # the brows, jutting over the eyes
+        c.st(o, 2, 2 * s, 14 + LIFT, along(o, -s), "top", name="dark_oak_stairs")   # the brow's outer sweep
+        c.put(o, 2, s, 14 + LIFT, BIRCH_W, axis="y")
+        c.put(o, 2, s, 15 + LIFT, BIRCH, axis="y")                      # the burrs
+        leaf(c, *_xyz(c, o, 2, 2 * s, 13 + LIFT), name="flowering_azalea_leaves")   # leafy ears flicked out
+    c.put(o, 2, 0, 13 + LIFT, BIRCH_W, axis="y")                        # the bridge of the nose
+    c.put(o, 3, 0, 13 + LIFT, BIRCH_W, axis="y")                        # the blaze, standing proud between the eyes
+    c.put(o, 2, 0, 14 + LIFT, BIRCH_W, axis="y")                        # the forehead
+    c.put(o, 2, 0, 15 + LIFT, "moss_block")                             # the moss crown between the burrs
     # the antlers: burr -> a brow tine straight up, the beam sweeping out to a knuckle, tines forking up, out and
     # toward the viewer - solid birch only at the knuckles, fence between (an open, branching line, not a pillar)
     for s in (-1, 1):
-        c.put(o, 2, s, 16, BIRCH_F)                              # the brow tine
-        c.st(o, 2, 2 * s, 16, along(o, -s), "top", name=BIRCH_S) # the beam leaving the burr
-        c.put(o, 2, 2 * s, 17, BIRCH_F)
-        c.put(o, 2, 3 * s, 17, BIRCH_F)
-        c.put(o, 2, 3 * s, 18, BIRCH, axis="y")                  # the knuckle
-        c.put(o, 2, 3 * s, 19, BIRCH_F)                          # the top tine
+        c.put(o, 2, s, 16 + LIFT, BIRCH_F)                              # the brow tine
+        c.st(o, 2, 2 * s, 16 + LIFT, along(o, -s), "top", name=BIRCH_S) # the beam leaving the burr
+        c.put(o, 2, 2 * s, 17 + LIFT, BIRCH_F)
+        c.put(o, 2, 3 * s, 17 + LIFT, BIRCH_F)
+        c.put(o, 2, 3 * s, 18 + LIFT, BIRCH, axis="y")                  # the knuckle
+        c.put(o, 2, 3 * s, 19 + LIFT, BIRCH_F)                          # the top tine
         if s == 1:
-            c.put(o, 2, 3 * s, 20, BIRCH_F)                      # one tine taller: the pair reads alive, not cast
-        c.put(o, 3, 3 * s, 18, BIRCH_F)                          # a tine forking toward the viewer
-        c.put(o, 2, 4 * s, 18, BIRCH_F)                          # and one sweeping out (a stub: fewer sticks read
+            c.put(o, 2, 3 * s, 20 + LIFT, BIRCH_F)               # one tine taller: the pair reads alive, not cast
+        c.put(o, 3, 3 * s, 18 + LIFT, BIRCH_F)                          # a tine forking toward the viewer
+        c.put(o, 2, 4 * s, 18 + LIFT, BIRCH_F)                   # and one sweeping out (a stub: fewer sticks read
                                                                  # as antlers, a forest of them as scaffolding)
 
 
 def boughs(c):
-    """The boughs that carry the canopy tiers (horizontal bark on the diagonals, clear of the faces): to ring 4 under the
-    skirt, ring 3 under the middle tier, ring 2 under the upper tier."""
+    """The boughs that carry the crown (horizontal bark on the diagonals, clear of the faces): to ring 4 under its
+    rim, ring 3 under its middle, ring 2 under its top."""
     for (sx, sz) in CORNERS:
         for k in (2, 3, 4):
-            c.set(sx * k, 12, sz * k, WOOD, axis="y")
-        c.set(sx * 5, 13, sz * 4, WOOD, axis="y")
-        c.set(sx * 4, 13, sz * 5, WOOD, axis="y")
+            c.set(sx * k, CROWN_FOOT, sz * k, WOOD, axis="y")
         for k in (2, 3):
-            c.set(sx * k, 15, sz * k, WOOD, axis="y")
-        c.set(sx * 2, 18, sz * 2, WOOD, axis="y")
+            c.set(sx * k, CROWN_FOOT + 3, sz * k, WOOD, axis="y")
+        c.set(sx * 2, CROWN_FOOT + 6, sz * 2, WOOD, axis="y")
+
+
+# The boughs that break out through the roof (lovish, Nov 5: "with branches coming out of the roof"), as waypoints
+# (a, t, y) on a side o: from a leg inside the hall, up through the roof's middle step (ring 2, y8, between two roof
+# stairs), then up into the crown's rim, or out over the garden. Three, each its own shape (four alike read as a
+# chapel's ribs). On the south and west faces the RTS camera sees, they climb steeply into the crown: a bough that
+# reached out low over the west garden hid a point of the temple's stone (RTS share 18.1 % against 19.2 %); on the
+# east one reaches out over the garden with a blossom at its tip.
+ROOF_BOUGHS = (("south", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 9), (3, 0, 10), (3, -1, 13), (4, -1, 15),
+                          (4, -2, 17))),
+               ("west", ((2, -1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 9), (3, 0, 10), (3, 1, 13), (4, 1, 15), (4, 2, 17))),
+               ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 9), (4, -1, 10), (5, -1, 12), (6, -2, 13))))
+
+
+def _limb(c, cells):
+    """Bark along the waypoints, every step sharing a face with the last (diagonal-only steps read as separate stumps
+    from the camera): each step moves the axis with the most still to go."""
+    x, y, z = cells[0]
+    out = [(x, y, z)]
+    for tx, ty, tz in cells[1:]:
+        while (x, y, z) != (tx, ty, tz):
+            d = [tx - x, ty - y, tz - z]
+            i = max(range(3), key=lambda k: (abs(d[k]), k == 1))
+            if i == 0:
+                x += 1 if d[0] > 0 else -1
+            elif i == 1:
+                y += 1 if d[1] > 0 else -1
+            else:
+                z += 1 if d[2] > 0 else -1
+            out.append((x, y, z))
+    for q in out:
+        if c.get(*q)[0] in ("air",) or c.get(*q)[0].endswith(("_stairs", "_slab", "_wall", "_leaves")):
+            c.set(*q, WOOD, axis="y")
+    return out
+
+
+def roof(c):
+    """The hall's roof (it was open to the crown): mossy cobble stairs stepping up from inside the parapet (ring 3,
+    y7) to a ridge round the oculus (ring 1, y9), the legs rising through it at the corners and the open heart's
+    column (the centre spawn's) left clear under the trunk."""
+    for k, y in ((3, 7), (2, 8), (1, ROOF)):
+        for o in O4.values():
+            for t in range(-k + 1, k):
+                x, z = c.side(o, k, t)
+                if c.get(x, y, z)[0] == "air":
+                    c.st(o, k, t, y, inward(o), name="mossy_cobblestone_stairs")
+        for (sx, sz) in CORNERS:
+            if c.get(sx * k, y, sz * k)[0] == "air":
+                c.set(sx * k, y, sz * k, MC)
+
+
+def roof_boughs(c):
+    """The ROOF_BOUGHS, each ending where it meets the crown or, out over the garden, in a blossom."""
+    for side, way in ROOF_BOUGHS:
+        o = O4[side]
+        cells = [(c.side(o, a, t)[0], y, c.side(o, a, t)[1]) for a, t, y in way]
+        path = _limb(c, cells)
+        tx, ty, tz = path[-1]
+        if max(abs(tx), abs(tz)) > 5:
+            for dx in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    for dy in (0, 1):
+                        if abs(dx) + abs(dz) + dy <= 2:
+                            leaf(c, tx + dx, ty + dy, tz + dz, "cherry_leaves")
 
 
 def in_face_zone(dx, y, dz):
@@ -288,9 +361,9 @@ def in_face_zone(dx, y, dz):
     for o in O4.values():
         a = dx * o[0] + dz * o[1]
         t = -dx * o[1] + dz * o[0]
-        if 2 <= a <= 4 and abs(t) <= 2 and 11 <= y <= 14:
+        if 2 <= a <= 4 and abs(t) <= 2 and 11 + LIFT <= y <= 14 + LIFT:
             return True
-        if a >= 5 and abs(t) <= 1 and 12 <= y <= 13:
+        if a >= 5 and abs(t) <= 1 and 12 + LIFT <= y <= 13 + LIFT:
             return True                                          # a V notch in the skirt: the stag looks out
     return False
 
@@ -298,10 +371,15 @@ def in_face_zone(dx, y, dz):
 # The crown as LOBES (x, y, z, rx, ry, rz) - not tiers. Massing rounds 1-2 (eyes 41283644479, 41284750886; two blind
 # critics each): a round tiered canopy is "a bullseye / soft ziggurat from above, a lollipop in 3/4" and hides the
 # temple; the winners were a temple you can see under an uneven blossom crown. The crown leans north-east, away from
-# the RTS camera (it looks north-east from the south-west), so the temple's south and west faces show under it; the
-# trunk shows in the gap between the parapet (y7-8) and the lobes' undersides (y11+).
-LOBES = ((3, 14, -3, 3.8, 2.2, 3.8), (-3, 14, -3, 3.1, 2.0, 3.1), (3, 14, 3, 3.1, 2.0, 3.1),
-         (-4, 16, 0, 2.6, 1.8, 2.6), (1, 17, -1, 4.0, 2.6, 4.0), (0, 20, 0, 2.2, 1.4, 2.2))
+# the RTS camera (it looks north-east from the south-west), so the temple's south and west faces show under it.
+# The tall tree (lovish, Nov 5, after the #502 still: "the pink tree could be taller and stick out of the building so
+# its more define"): the lobes rose from y14-20 to y21-28 and keep inside ring 5 (they ran to the plot's edge), so the
+# crown stands clear over the roof (ridge y9) on a trunk seen from the RTS camera, and the hall's roofline and the
+# garden frame it from above.
+CROWN_FOOT = 19                    # the crown's lowest boughs (its underside's green belly hangs to ~y18)
+LOBES = ((3, 22, -3, 3.8, 2.6, 3.8), (-1, 21, 1, 2.7, 1.9, 2.7), (3, 21, 3, 2.6, 1.8, 2.6),
+         (-3, 23, -3, 2.6, 2.0, 2.6), (2, 25, -2, 3.6, 2.4, 3.6), (1, 28, -1, 2.2, 1.4, 2.2),
+         (-1, 25, 1, 2.4, 1.8, 2.4))      # wraps the trunk's camera side, which showed bare through the crown
 
 
 def canopy(c):
@@ -309,14 +387,14 @@ def canopy(c):
     a blossom, not a paint), each lobe carried on its own bough from the trunk. Glowing fruit (ochre and verdant
     froglights, shroomlight) sits in the lobes' undersides, never hanging."""
     for lx, ly, lz, rx, ry, rz in LOBES[:5]:
-        n = max(abs(lx), abs(ly - 12), abs(lz))
-        for i in range(n + 1):                                   # the bough: trunk (y12) to the lobe's heart
-            x, y, z = (round(a + (b - a) * i / n) for a, b in ((0, lx), (12, ly - 1), (0, lz)))
+        n = max(abs(lx), abs(ly - CROWN_FOOT), abs(lz))
+        for i in range(n + 1):                                   # the bough: trunk to the lobe's heart
+            x, y, z = (round(a + (b - a) * i / n) for a, b in ((0, lx), (CROWN_FOOT, ly - 1), (0, lz)))
             if c.get(x, y, z)[0] == "air":
                 c.set(x, y, z, WOOD, axis="y")
     for lx, ly, lz, rx, ry, rz in LOBES:
-        for dx, dz in c.cells(R):
-            for y in range(max(11, int(ly - ry - 1)), min(H - 1, int(ly + ry + 1)) + 1):
+        for dx, dz in c.cells(5):                                # inside the cornice: the roofline frames it
+            for y in range(max(BASE, int(ly - ry - 1)), min(H - 1, int(ly + ry + 1)) + 1):
                 e = ((dx - lx) / (rx + .4)) ** 2 + ((y - ly) / (ry + .4)) ** 2 + ((dz - lz) / (rz + .4)) ** 2
                 h = hsh(dx * 3 + y, dz - y)
                 if e > 1 - (0.25 if h % 5 == 0 else 0) or in_face_zone(dx, y, dz):
@@ -338,11 +416,19 @@ def roots(c):
            (6, 5, 5), (5, 6, 5), (6, 6, 5), (6, 6, 4), (7, 6, 4), (6, 7, 4), (7, 6, 3), (6, 7, 3), (7, 7, 3),
            (7, 7, 2), (7, 7, 1))
     for (sx, sz) in CORNERS:
-        for (k, j, y) in ARC:
+        axis = "x"
+        for i, (k, j, y) in enumerate(ARC):
             if y <= 4 and (k, j) != (7, 7):                    # the arc frays into a root mat as it lands: a solid
                 c.set(sx * k, y, sz * j, "mangrove_roots", **DRY)   # column read as "a zipper / spine" (critics, r3)
-            else:
-                c.set(sx * k, y, sz * j, WOOD, axis="y")
+                continue
+            # bark lying along the arc, never a cube on end: oak_wood cubes read from the RTS camera as "a zipper of
+            # pale-topped cubes - the crate stacks" (Fable critic A, Nov 4); a step straight down keeps the last axis
+            nk, nj, _ = ARC[i + 1] if i + 1 < len(ARC) else ARC[i - 1]
+            if nk != k and (nj == j or i % 2):
+                axis = "x"
+            elif nj != j:
+                axis = "z"
+            c.set(sx * k, y, sz * j, LOG, axis=axis)
         c.set(sx * 7, 0, sz * 7, "rooted_dirt")
         # bark stairs on the arc's back so its top line slopes rather than steps
         c.stair(sx * 5, 8, sz * 5, "east" if sx < 0 else "west", name="oak_stairs")
@@ -391,9 +477,11 @@ def build():
     stylobate(c)
     hall(c)
     legs_and_trunk(c)
+    roof(c)
     for o in O4.values():
         face(c, o)
     boughs(c)
+    roof_boughs(c)
     roots(c)
     moonwells(c)
     canopy(c)
@@ -440,7 +528,7 @@ def check(s, box=(2 * R + 1, H, 2 * R + 1)):
     y = (box[1] - 1) // 2
     while y > 0 and (cx, y - 1, cz) not in names:
         y -= 1
-    assert y == 2 and all((cx, yy, cz) not in names for yy in range(2, 11)), "the centre spawn lands at y%d" % y
+    assert y == 2 and all((cx, yy, cz) not in names for yy in range(2, BASE)), "the centre spawn lands at y%d" % y
     # petal spots: under a leaf or fruit within two cells above (the skirt's corner lobes), the crown spot over it
     for (x, y, z) in PETAL_SPOTS:
         bx, by, bz = int(x), int(y), int(z)
