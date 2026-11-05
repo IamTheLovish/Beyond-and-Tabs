@@ -112,11 +112,13 @@ public class FogEffectGameTests {
         String name = "gametest_fogfx_" + helper.absolutePos(BlockPos.ZERO).asLong();
         FakePlayer sp = FakePlayerFactory.get(level, new GameProfile(UUID.nameUUIDFromBytes(name.getBytes()), name));
         var oldConnection = sp.connection;
-        Recorder rec = new Recorder(sp);
+        Recorder rec = null;
         List<ServerPlayer> listed = level.getServer().getPlayerList().getPlayers();
         List<ServerPlayer> inLevel = level.players();
         String[] stage = { "setup" };
         try {
+            stage[0] = "making the recorder";
+            rec = new Recorder(sp);   // inside the try: its constructor touches the player too
             if (wasOn || size <= com.solegendary.reignofnether.worldborder.WorldBorderServerEvents.RTS_OPTIMIZED_BORDER) {
                 problems.add("the test level already has fog on or a small border; cannot run the effects");
             } else {
@@ -157,12 +159,12 @@ public class FogEffectGameTests {
         } catch (RuntimeException e) {
             // name where it threw: a bare "java.lang.UnsupportedOperationException" (red run 41992398136, attempt 2)
             // said nothing about which step
-            StringBuilder at = new StringBuilder();
+            StringBuilder frames = new StringBuilder();
             StackTraceElement[] st = e.getStackTrace();
             for (int i = 0; i < Math.min(6, st.length); i++)
-                at.append(i == 0 ? "" : " < ").append(st[i].getClassName().replaceAll(".*\\.", "")).append('.')
+                frames.append(i == 0 ? "" : " < ").append(st[i].getClassName().replaceAll(".*\\.", "")).append('.')
                     .append(st[i].getMethodName()).append(':').append(st[i].getLineNumber());
-            problems.add("threw " + e + " during " + stage[0] + " at " + at);
+            problems.add("threw " + e + " during " + stage[0] + " at " + frames);
         } finally {
             try {   // (a list that refused the add refuses the remove too: the catch above has said so)
                 listed.remove(sp);
