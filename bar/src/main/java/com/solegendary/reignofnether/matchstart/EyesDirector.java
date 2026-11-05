@@ -2190,10 +2190,11 @@ public final class EyesDirector {
                 // hit particles covered the body in about half of the 10 fps frames of every attack clip (run
                 // 39295387553 for 5169d6d) - and the body is what these clips exist to show. The dummies still die
                 // under the blows, so the clip keeps its kill. rtsapi-summon loads the entity from the nbt it is given
+                int dummyAt = names.length > 6 ? Integer.parseInt(names[6]) : 2;
                 if (enemyName != null)
                     for (int k = 0; k < 2; k++)
                         runCommand(mc, String.format("rtsapi-summon \"%s\" %s:zombie_unit %d %d %d {NoAI:1b}", enemyName.replace("\"", ""),
-                                ReignOfNether.MOD_ID, (int) Math.floor(unit.getX()) + 2, (int) Math.floor(unit.getY()),
+                                ReignOfNether.MOD_ID, (int) Math.floor(unit.getX()) + dummyAt, (int) Math.floor(unit.getY()),
                                 (int) Math.floor(unit.getZ()) - 1 + 2 * k));
                 ReignOfNether.LOGGER.info("[Eyes] {}: two ghouls of '{}' at its feet, AI off (dummies)", names[3], enemyName);
                 closeUpAt = ticks + 100;   // several swings / throws inside the clip
@@ -2218,6 +2219,10 @@ public final class EyesDirector {
         // the quadruped rig (Lane B, PR #76): the Mossback Bison's coat, grove and gait need to be seen moving, not
         // judged from stills (07t-v are the dragon's on claude/dragon-rig, 07z the mesh A/B)
         { "MossbackBisonUnit", "07w_mossback_bison_close", "07x_mossback_bison_walk", "07y_mossback_bison_attack", "mossback_bison_unit" },
+        // the Rocket Battery's volley (Nov 5): artillery has a 7-block dead zone, so its two ghoul dummies stand 9 blocks off
+        // (optional 6th / 7th entries: the close zoom's factor, and how far the dummies stand), and the zoom is wider so the
+        // rack, the crew's lean and the four rockets leaving it share one frame
+        { "RocketBatteryUnit", "07zm_rocket_battery_close", "07zn_rocket_battery_walk", "07zo_rocket_battery_volley", "rocket_battery_unit", "1.7", "9" },
     };
     private static int closeUpSubject = 0;
     private static int lookOffAt = -1;               // 02b: tick of the look-off still (the world-look A/B)
@@ -2297,7 +2302,7 @@ public final class EyesDirector {
         // past the player's floor of 10 blocks of view height (a unit was ~11% of the screen there): ~5 for a 2-block
         // body, ~7 for the golem-sized paladin - at the close tilt (55 degrees) the body fills about a third of the
         // screen height
-        float closeZoom = Math.max(5f, subject.getBbHeight() * 2.6f);
+        float closeZoom = Math.max(5f, subject.getBbHeight() * 2.6f) * (names.length > 5 ? Float.parseFloat(names[5]) : 1f);
         setZoom(closeZoom);
         placeOnScreen(mc, closeUpMiddle(subject), CLOSE_NDC_X, CLOSE_NDC_Y);
         ReignOfNether.LOGGER.info("[Eyes] {}: zooming in to {} on {} at {}", names[1], closeZoom,
