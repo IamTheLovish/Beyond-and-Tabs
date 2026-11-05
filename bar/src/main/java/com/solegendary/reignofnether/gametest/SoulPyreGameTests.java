@@ -25,11 +25,11 @@ import java.util.Locale;
  * conjurs magic and souls that can be a tier 2 seige unit"), does the job the counter audit found missing: it shells
  * an anti-siege tower (range 20) from where the tower cannot answer.
  * <p>
- * On its own far pad an enemy anti-siege tower stands between a Soul Pyre 21 blocks east of its centre and a Skull
- * Hurler (the T1 lobber) 18 blocks west, both holding position and both ordered onto the tower through the order path.
- * The lobber is the control that the tower is live: it is inside the tower's reach (and outside its own 15), so the
- * tower, which shoots siege units first, kills it. The Pyre must take health off the tower - souls, not chips - and
- * never be hurt.
+ * On its own far pad an enemy anti-siege tower stands against the pad's west rim; a Skull Hurler (the T1 lobber) holds
+ * 18 blocks east of its centre and a Soul Pyre 21 east, in one row, both ordered onto the tower through the order path. The
+ * lobber is the control that the tower is live: it is inside the tower's reach (and outside its own 15), so the tower,
+ * which shoots siege units first, kills it. The Soul Pyre must take health off the tower and never be hurt. Every
+ * unit must end on the pad (it is 32 x 16 and floats at PAD_Y: an earlier layout dropped them off it).
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -52,11 +52,13 @@ public class SoulPyreGameTests {
         GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 400, 1300, "soul pyre pad", () -> {
             RaidGameTests.Cell c = pads.cells.get(0);
             DefenceTower tower = Defences.siegeGuardOf(Factions.VILLAGERS);
-            BlockPos origin = new BlockPos(c.x0() + 24, RaidGameTests.PAD_Y + 1, c.z0() + 20);
+            // all on the pad (DuelGameTests.buildPad: 32 x 16 of glass at PAD_Y, a 3-high rim; off it a unit falls ~150 blocks):
+            // the tower against the west rim, the lobber 18 east of its centre, the Pyre 21 east, one row
+            BlockPos origin = new BlockPos(c.x0() + 1, RaidGameTests.PAD_Y + 1, c.z0() + 6);
             BuildingPlacement bp = tower == null ? null : RaidGameTests.build(level, tower, origin, "gametest_sp_foe", false);
             double cx = bp == null ? 0 : bp.centrePos.getX() + 0.5, cz = bp == null ? 0 : bp.centrePos.getZ() + 0.5;
             Mob pyre = bp == null ? null : RaidGameTests.spawn(level, EntityRegistrar.SOUL_PYRE_UNIT.get(), "gametest_sp_siege", cx + 21, cz);
-            Mob lobber = bp == null ? null : RaidGameTests.spawn(level, EntityRegistrar.SKULL_HURLER_UNIT.get(), "gametest_sp_siege", cx - 18, cz);
+            Mob lobber = bp == null ? null : RaidGameTests.spawn(level, EntityRegistrar.SKULL_HURLER_UNIT.get(), "gametest_sp_siege", cx + 18, cz);
             if (bp == null || pyre == null || lobber == null) {
                 if (pyre != null)
                     pyre.discard();
@@ -133,7 +135,10 @@ public class SoulPyreGameTests {
                 ReignOfNether.LOGGER.info("[SoulPyre] GameTest: first soul after {} ticks, {} health lost; {}",
                     firstHit[0] < 0 ? -1 : firstHit[0] - start, lost, state);
                 String verdict = null;
-                if (lobber.isAlive())
+                if (pyre.getY() < RaidGameTests.PAD_Y || lobber.getY() < RaidGameTests.PAD_Y)
+                    verdict = "setup: a unit fell off the pad (pyre y " + Math.round(pyre.getY()) + ", lobber y " + Math.round(lobber.getY())
+                        + ", pad " + RaidGameTests.PAD_Y + "); " + state;
+                else if (lobber.isAlive())
                     verdict = "control: the anti-siege tower never killed the lobber 18 blocks away (is it firing?); " + state;
                 else if (firstHit[0] < 0)
                     verdict = "the Soul Pyre never hurt the anti-siege tower in " + FIRST_HIT_TICKS / 20 + " s; " + state;
