@@ -72,6 +72,9 @@ public class MountOrderGameTests {
         // a unit with a Mount order is busy: never idle until it is up - else idle auto-aggression may take a passing
         // enemy (Unit.isIdle gates it)
         String[] idle = { rider.isIdle() ? "right after the order, " + state(rider, spider, foe) : null };
+        // the setup check: the order took (green 42123437360 saw one run where it had not, right after the order)
+        String tookNot = rider.getMountGoal().getTarget() != spider
+            ? "the Mount order did not take (nothing tested): " + state(rider, spider, foe) : null;
 
         List<String> history = new ArrayList<>();
         String[] last = { "" };
@@ -96,6 +99,8 @@ public class MountOrderGameTests {
             }
         });
         helper.succeedWhen(() -> {
+            if (tookNot != null)
+                helper.fail(tookNot);
             if (idle[0] != null)
                 helper.fail("ordered to mount, the rider counted as idle before it was up: " + idle[0]
                     + "; history: " + String.join(" | ", history));
@@ -159,8 +164,8 @@ public class MountOrderGameTests {
 
     /**
      * A spider walled in (stone 3 blocks out on every side, a roof): no way to it. The rider must give the Mount order
-     * up as a plain move gives up an unreachable target (MoveToTargetBlockGoal.GIVE_UP_AFTER_STUCK_REPATHS), within
-     * the 30 s the move tests allow - not stand "going to its mount" for good (review round 1 on #507, blocker 2).
+     * up (MountGoal: no block nearer in GIVE_UP_TICKS), within the 30 s the move tests allow - not stand "going to its
+     * mount" for good (review round 1 on #507, blocker 2).
      */
     @GameTest(template = ARENA, timeoutTicks = 900)
     public static void a_mount_order_on_a_walled_in_spider_is_given_up(GameTestHelper helper) {
