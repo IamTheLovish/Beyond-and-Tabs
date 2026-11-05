@@ -6233,10 +6233,13 @@ def write_clover_layers(res, preview_dir=None):
 
 LAWN_VARIANTS = 3
 LAWN_R64 = dict(
-    lay_drift=0.8,                   # rad (std) the wind-lay direction drifts by, over 1.5-4 blocks
+    lay_drift=1.1,                   # rad (std) the wind-lay direction drifts by, over 1.5-4 blocks; r67 0.8 -> 1.1
+                                     # (the r66 critic: "every strand leans the same way ... brushed felt")
     blade=(0.05, 0.11),              # blade stipple: across-wavelength, blocks (1.6-3.5 texels at the RTS mip)
     tuft=(0.16, 0.42),               # tuft clumps: wavelength, blocks
-    tuft_elong=1.5,                  # the clumps streak along the lay, x longer than wide (1 = round)
+    tuft_elong=1.0,                  # the clumps streak along the lay, x longer than wide (1 = round); r67 1.5 -> 1.0
+    blade_elong=1.4,                 # the blade stipple streaks along the lay, x longer than wide; r67 3.0 -> 1.4
+                                     # (round tufts keep the lit side >= 0.02 with the wider drift - test_lawn_r67)
     crease=1.3,                      # valley sharpening (0 = the raw noise, symmetric, no lit side at the camera)
     relief=0.096,                    # luma swing of the forms (the lit flank vs the body); r64 0.16 -> r66 D1 x0.6
                                      # (lovish Nov 5: "softer", grain contrast -40%)
@@ -6357,7 +6360,7 @@ def lawn_turf(res, blocks=LAWN_SHEET_BLOCKS, variant=1, knobs=None, seed=None):
     U = dual(lambda r: _r64_band(F, blocks, 0.6, 2.5, r), wM)
     theta = theta0 + K["lay_drift"] * dual(lambda r: _r64_band(F, blocks, 1.5, 4.0, r), wM)
     # detail
-    blade = dual(lambda r: _r64_lay(F, blocks, theta, K["blade"][0], K["blade"][1], 3.0, r))
+    blade = dual(lambda r: _r64_lay(F, blocks, theta, K["blade"][0], K["blade"][1], K["blade_elong"], r))
     if K["tuft_elong"] > 1.0:
         tuft = dual(lambda r: _r64_lay(F, blocks, theta, K["tuft"][0], K["tuft"][1], K["tuft_elong"], r))
     else:
