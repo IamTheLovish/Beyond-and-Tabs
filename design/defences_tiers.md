@@ -48,6 +48,16 @@ This builds on design/defences.md (today's set) and design/siege_t1.md (the T1 s
 | T3 | Giant Tower (one building, branch picked on build) | heavy | Death: kills near it raise skeletons (cap 6). Vampire: its beam heals own buildings and units by the damage dealt. Zombie: what it kills rises as your zombie (cap 6). Banshee: a wail every 20 s makes enemies within r8 flee for 2 s | Death and Zombie are slow single shots (swarms); Vampire heals nothing without a target (siege it from range); Banshee does little damage (heavies tank the wail) |
 | T4 | Death Fortress (one per player) | experimental | death aura r6: enemy T1-T2 units inside die (one pulse every 2 s); death-rune artillery to r40; Death Ray kills any single unit, T4 included, every 90 s after a 3 s visible rune telegraph | the ray's 90 s cooldown and telegraph (bait it with one unit, then commit); the r6-r12 ring is inside the artillery's minimum range and outside the aura |
 
+### Gravebound's T2 counter unit: the Soul Pyre
+
+The counter audit found Gravebound the one faction with no unit that out-ranges its T1-lab / T2 towers (its longest
+building-hitting reach was the Skull Hurler lobber's 15, against the Heavy anti-raid tower's 16 and the Siege Guard's
+20). lovish (Nov 5): "we can do moving massive flame pit that conjurs magic and souls that can be a tier 2 seige
+unit". Trained at the T2 lab: range 22, minimum range 6, sight 12 (needs a spotter); a conjured soul lobbed every
+~4.5 s, strong on buildings, weak on units, never at air; slow, sets up for ~1.5 s after moving. Weakness (designed):
+slow, blind inside 6, the soul rises ~1 s before the throw, and it shoots the nearest target, so chaff eats its shots.
+Its body, animations and effects come from the animation lane; the mechanics do not wait on them.
+
 lovish's picks (Nov 5): gargoyle upgrades stacked (eye at T2, then the mobile statue at T3); Death Ray every 90 s with
 a 3 s telegraph; the Giant Tower is one building with a branch picked on build (Banshee added). Today's Gravebound
 towers map in: Soulfire Spire becomes the Gargoyle, Bone Harpoon Spire the Bone Ballista, Bat Roost the Death-Mist
@@ -55,7 +65,7 @@ Mage; the Grave Ballista stays the anti-T3 emplacement.
 
 ## Build order (one PR each, tests first)
 
-A. This ladder, the counter audit, and each faction's missing stage counter.
+A. This ladder, the counter audit, and each faction's missing stage counter (Gravebound: the Soul Pyre).
 B. Gravebound T1: Gargoyle (dormant stone skin), Bone Ballista (pierce), Graveyard Shrine on FactionAura.
 C. Gravebound T2: the eye-laser upgrade, Death-Mist Mage, Cauldron Catalyst; today's enhanced towers move to T2.
 D. Gravebound T3: Eye Monolith, Giant Tower branches, the waking gargoyle.
