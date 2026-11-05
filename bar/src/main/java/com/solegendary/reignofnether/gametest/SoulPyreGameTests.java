@@ -122,12 +122,14 @@ public class SoulPyreGameTests {
                     if (b.isPlaced(level))
                         nearest = Math.min(nearest, Math.sqrt(pyre.distanceToSqr(b.getBlockPos().getX() + 0.5, b.getBlockPos().getY() + 1.0,
                             b.getBlockPos().getZ() + 0.5)));
+                var hurtBy = pyre.getLastHurtByMob();
                 String state = String.format(Locale.ROOT, "tower %d of %d health, pyre %.0f/%.0f hp %.1f blocks from the tower (moved %.1f), lobber %s;"
                     + " trail: building target %d ticks, lowest cooldown %s, set-up left %d, conjuring %d ticks, %d shells thrown,"
-                    + " nearest tower block %.1f (range %.0f), canAttackBuildings %s",
+                    + " nearest tower block %.1f (range %.0f), canAttackBuildings %s, last hurt by %s",
                     health, before, pyre.getHealth(), pyreMax, dist, drift, lobber.isAlive() ? "alive at " + Math.round(lobber.getHealth()) + " hp" : "dead",
                     trail[0], trail[1] == Integer.MAX_VALUE ? "none" : String.valueOf(trail[1]), trail[2], trail[3], trail[4], nearest,
-                    ((AttackerUnit) pyre).getAttackRange(), ((AttackerUnit) pyre).canAttackBuildings());
+                    ((AttackerUnit) pyre).getAttackRange(), ((AttackerUnit) pyre).canAttackBuildings(),
+                    hurtBy == null ? "nothing" : hurtBy.getType().toShortString() + " " + Math.round(Math.sqrt(hurtBy.distanceToSqr(pyre))) + " blocks away");
                 ReignOfNether.LOGGER.info("[SoulPyre] GameTest: first soul after {} ticks, {} health lost; {}",
                     firstHit[0] < 0 ? -1 : firstHit[0] - start, lost, state);
                 String verdict = null;
