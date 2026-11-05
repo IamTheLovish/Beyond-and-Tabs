@@ -6238,17 +6238,22 @@ LAWN_R64 = dict(
     tuft=(0.16, 0.42),               # tuft clumps: wavelength, blocks
     tuft_elong=1.5,                  # the clumps streak along the lay, x longer than wide (1 = round)
     crease=1.3,                      # valley sharpening (0 = the raw noise, symmetric, no lit side at the camera)
-    relief=0.16,                     # luma swing of the forms (the lit flank vs the body)
+    relief=0.096,                    # luma swing of the forms (the lit flank vs the body); r64 0.16 -> r66 D1 x0.6
+                                     # (lovish Nov 5: "softer", grain contrast -40%)
     slope_k=8.0,                     # H units per block that count as a fully lit flank
-    selfshade=0.55,                  # how far a flank facing away from the sun goes into shade (x its slope)
+    selfshade=0.75,                  # how far a flank facing away from the sun goes into shade (x its slope); r66 0.55
+                                     # -> 0.75 keeps the east light (test_lawn_r62/r64 lit side >= 0.02) with less relief
     sun_k=6.0,                       # the sun ray's slope, H units per block: lower = longer shadows at the west feet
     shadow_len=0.10,                 # blocks: the longest shadow sampled (short: a line of shade, not a pool)
-    shadow=1.0,                      # how far full shade goes toward LAWN64_UNDER (1 = all the way; that is the floor)
+    shadow=0.7,                      # how far full shade goes toward LAWN64_UNDER (1 = all the way; that is the floor);
+                                     # r66 D1 1.0 -> 0.7: shallower creases, the softer grain
     under=0.91,                      # x LAWN64_UNDER: the crease floor's value (r65 D: a shade deeper - with the patches
                                      # halved the p5-p95 range needed it back; near-black stays ~0.3% under our gain)
-    patch=0.12,                      # the 2-6 block tonal patches: luma x (1 +- patch/2 at one std); r64 0.24 -> r65 D
-                                     # 0.12 (lovish: "The grass looks blotchy"; the calm-patches floor went to 0.08)
-    undul=0.14,                      # the 0.6-2.5 block undulation: luma x (1 +- undul/2); r64 0.06 -> r65 D 0.14: soft
+    patch=0.0,                       # the 2-6 block tonal patches: luma x (1 +- patch/2 at one std); r64 0.24 -> r65 D
+                                     # 0.12 (lovish: "The grass looks blotchy") -> r66 D1 0: one size, evenly spread, they
+                                     # read as camouflage ("too symettrical or patterned"); the drifts now live in
+                                     # postfx/GrassTint (world space, no favourite size - test_lawn_r66)
+    undul=0.10,                      # the 0.6-2.5 block undulation: luma x (1 +- undul/2); r64 0.06 -> r65 D 0.14: soft
                                      # rolling tone in place of the halved 2-6 block patches (keeps the speckle share
                                      # under test_lawn_r62's 0.50 ceiling and the luma range at r64's 0.31)
     clover=0.14,                     # share of flat clover / broadleaf patches
@@ -6256,7 +6261,9 @@ LAWN_R64 = dict(
     # the worn soil: r64 had 0.025 of it, hard-edged (0.3), full LAWN64_SOIL, scattered evenly - the r64 blind critic
     # read it as "scorch marks / droppings"; r65 D (lovish's pick) halves it, lightens it ~30%, feathers it and groups
     # it in 1.5-3 block drifts (test_lawn_r63's soil floor went to 0.3%: the lighter scuffs no longer count as soil)
-    soil=0.0125,                     # share of worn soil
+    soil=0.0,                        # share of worn soil; r66: none - the specks repeated with the sheet (the same brown
+                                     # spots every 8 blocks); lovish Nov 5: "D1, no soil specks" (worn soil comes back
+                                     # only by world placement, near paths and buildings)
     soil_soft=0.6,                   # the soil mask's edge width (noise units): higher = feathered
     soil_tone=1.3,                   # x LAWN64_SOIL (1.3 = ~30% lighter)
     soil_cluster=1.0,                # 0: 0.6-1.8 block patches scattered evenly; 1: specks grouped in 1.5-3 block drifts

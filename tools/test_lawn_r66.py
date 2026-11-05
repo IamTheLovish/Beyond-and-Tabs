@@ -12,7 +12,8 @@ So the 8 x 8 sheet carries the grain only, and the world colour field carries ev
 - the sheet alone (variant 1, 3 x 3 tiles, 32 texels per block) keeps <= 0.03 of its luma variance at 2+ blocks
   (r65 D: 0.087) - its tonal patches are gone; the drifts are the world field's
 - no soil specks in any variant (brown, hue < 80, darker than L 0.35 at the mip: under 0.05%; r65 D ~0.5%)
-- GrassTint has no equal-size blobs: CLUMP_DARK = 0 and MOTTLE = 0 (the 3.5-7 block value terms retired)
+- GrassTint has no equal-size blobs on grass: GRASS_CLUMP_DARK = 0 and GRASS_MOTTLE = 0 (the 3.5-7 block value terms
+  retired for grass; leaves keep them)
 - the field as the player sees it (the hashed 24 x 24-block field of sheet variants times GrassTint, per vertex) has
   no favourite blob size: its luma power per octave of wavelength does not fall from 8-16 blocks to 4-8 to 2-4
   (a camouflage print has a bump at one size; drifts are 1/f-like)
@@ -57,8 +58,8 @@ class LawnRound66Test(unittest.TestCase):
 
     def test_grass_tint_has_no_equal_size_blobs(self):
         k = gtp.constants()
-        self.assertEqual(k["CLUMP_DARK"], 0.0)
-        self.assertEqual(k["MOTTLE"], 0.0)
+        self.assertEqual(k["GRASS_CLUMP_DARK"], 0.0)     # the grass's own (leaves keep rounds 1-7's clumps)
+        self.assertEqual(k["GRASS_MOTTLE"], 0.0)
 
     def test_drifts_have_no_favourite_size(self):
         cells = 3

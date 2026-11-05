@@ -102,6 +102,24 @@ public final class GrassTint {
     static final double SOFT_LIGHT = 0.20;
     static final double SOFT_DARK = 0.22;
 
+    /**
+     * Round 8, grass only (Nov 5, lovish on the lawn of round 64: "too much going on it needs to be softer", "the blend
+     * needs to diffuse a bit better", "it looks too symettrical or patterned"; he picked mock "D1"). The blotches were
+     * one size, evenly spread - a camouflage print - and half of them came from here: the 2-7 block dark clumps and
+     * the 3.5-5 block value mottle. The lawn's sheet now carries only its grain, and this field carries every
+     * variation bigger than a block as broad drifts with no favourite size (1/f-like: 20, 8 and 3.5-block octaves,
+     * weights falling with the cell; the hue drifts over 12 and 6 blocks). No clumps, no value mottle. Leaves keep
+     * rounds 1-7 (the crowns were tuned on them). tools/test_lawn_r66.py, GrassTintTest.
+     */
+    static final double[] GRASS_CELLS = {20.0, 8.0, 3.5};
+    static final double[] GRASS_WEIGHTS = {1.0, 0.7, 0.5};
+    static final double GRASS_CONTRAST = 2.0;
+    static final double GRASS_VALUE = 0.15;
+    static final double[] GRASS_HUE_CELLS = {12.0, 6.0};
+    static final double GRASS_HUE_MOTTLE = 0.05;
+    static final double GRASS_CLUMP_DARK = 0.0;
+    static final double GRASS_MOTTLE = 0.0;
+
     private GrassTint() {
     }
 
@@ -128,15 +146,18 @@ public final class GrassTint {
 
     /** rgb (0xRRGGBB) with the meadow's variation applied at block (x, z). */
     public static int apply(int rgb, int x, int z, int salt) {
-        double f = field(x, z, salt);
+        boolean grass = salt == GRASS;
+        double f = grass ? shape(octaves(x, z, salt * 8, GRASS_CELLS, GRASS_WEIGHTS), GRASS_CONTRAST) : field(x, z, salt);
         double dry = dryness(x, z, salt);
         double s = straw(x, z, salt, dry);
         double cl = octaves(x - 3001, z + 1777, (salt + 202) * 8, CLUMP_CELLS, CLUMP_WEIGHTS);
         double m = smooth(clamp01((cl - CLUMP_AT) / CLUMP_SOFT)) * clamp01((CLUMP_GATE - dry) / 0.4) * (1 - s);
         double mottle = octaves(x + 555, z - 777, salt * 8 + 40, MOTTLE_CELLS, MOTTLE_WEIGHTS);
-        double hm = HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, MOTTLE_CELLS, MOTTLE_WEIGHTS);
-        double v = (1 + VALUE * f) * (1 - CLUMP_DARK * m) * (1 + 0.10 * s)
-                * (1 + MOTTLE * (mottle > 0 ? mottle : 1.6 * mottle));
+        double hm = grass
+                ? GRASS_HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, GRASS_HUE_CELLS, MOTTLE_WEIGHTS)
+                : HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, MOTTLE_CELLS, MOTTLE_WEIGHTS);
+        double v = (1 + (grass ? GRASS_VALUE : VALUE) * f) * (1 - (grass ? GRASS_CLUMP_DARK : CLUMP_DARK) * m)
+                * (1 + 0.10 * s) * (1 + (grass ? GRASS_MOTTLE : MOTTLE) * (mottle > 0 ? mottle : 1.6 * mottle));
         v = v > 1 ? 1 + SOFT_LIGHT * Math.tanh((v - 1) / SOFT_LIGHT) : 1 - SOFT_DARK * Math.tanh((1 - v) / SOFT_DARK);
         double dp = Math.max(dry, 0), dn = Math.min(dry, 0);
         double[] o = salt == GRASS ? OLIVE_GRASS : CANOPY;

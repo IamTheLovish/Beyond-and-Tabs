@@ -91,15 +91,23 @@ def apply(rgb, x, z, salt, k):
 
     def smooth(t):
         return t * t * (3 - 2 * t)
-    f = shape(_octaves(x, z, salt * 8, k["CELLS"], k["WEIGHTS"], k), k["CONTRAST"])
+    grass = salt == 1 and "GRASS_CELLS" in k      # GrassTint.GRASS: round 8's own drifts (leaves keep rounds 1-7)
+    if grass:
+        f = shape(_octaves(x, z, salt * 8, k["GRASS_CELLS"], k["GRASS_WEIGHTS"], k), k["GRASS_CONTRAST"])
+    else:
+        f = shape(_octaves(x, z, salt * 8, k["CELLS"], k["WEIGHTS"], k), k["CONTRAST"])
     dry = shape(_octaves(x + 7919, z - 4583, (salt + 101) * 8, k["DRY_CELLS"], k["DRY_WEIGHTS"], k), k["DRY_CONTRAST"])
     st = _octaves(x - 1201, z + 911, (salt + 303) * 8, k["STRAW_CELLS"], k["STRAW_WEIGHTS"], k)
     s = smooth(np.clip((st - k["STRAW_AT"]) / k["STRAW_SOFT"], 0, 1)) * np.clip((dry - k["STRAW_GATE"]) / 0.4, 0, 1)
     cl = _octaves(x - 3001, z + 1777, (salt + 202) * 8, k["CLUMP_CELLS"], k["CLUMP_WEIGHTS"], k)
     m = smooth(np.clip((cl - k["CLUMP_AT"]) / k["CLUMP_SOFT"], 0, 1)) * np.clip((k["CLUMP_GATE"] - dry) / 0.4, 0, 1) * (1 - s)
     mottle = _octaves(x + 555, z - 777, salt * 8 + 40, k["MOTTLE_CELLS"], k["MOTTLE_WEIGHTS"], k)
-    hm = k["HUE_MOTTLE"] * _octaves(x + 999, z + 333, salt * 8 + 60, k["MOTTLE_CELLS"], k["MOTTLE_WEIGHTS"], k)
-    v = (1 + k["VALUE"] * f) * (1 - k["CLUMP_DARK"] * m) * (1 + 0.10 * s) * (1 + k["MOTTLE"] * np.where(mottle > 0, mottle, 1.6 * mottle))
+    if grass:
+        hm = k["GRASS_HUE_MOTTLE"] * _octaves(x + 999, z + 333, salt * 8 + 60, k["GRASS_HUE_CELLS"], k["MOTTLE_WEIGHTS"], k)
+    else:
+        hm = k["HUE_MOTTLE"] * _octaves(x + 999, z + 333, salt * 8 + 60, k["MOTTLE_CELLS"], k["MOTTLE_WEIGHTS"], k)
+    g = "GRASS_" if grass else ""
+    v = (1 + k[g + "VALUE"] * f) * (1 - k[g + "CLUMP_DARK"] * m) * (1 + 0.10 * s) * (1 + k[g + "MOTTLE"] * np.where(mottle > 0, mottle, 1.6 * mottle))
     d = v - 1
     v = 1 + np.where(d > 0, k["SOFT_LIGHT"] * np.tanh(d / k["SOFT_LIGHT"]), -k["SOFT_DARK"] * np.tanh(-d / k["SOFT_DARK"]))
     dp, dn = np.maximum(dry, 0), np.minimum(dry, 0)
