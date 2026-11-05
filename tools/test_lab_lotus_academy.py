@@ -165,6 +165,54 @@ class LotusAcademyTest(unittest.TestCase):
             low = sorted(q for q, n in s.items() if n.startswith("cherry") and abs(q[1] - hy) > 1)
             self.assertEqual(low, [], "L%d pink crumbs" % (i + 1))
 
+    # ---- lovish's pick D (Nov 5, via Eris.14: "pitched jade + stone apron"; Fable critic r1: "flat, light teal
+    # slabs" where the quality bar's roofs are "the darkest, steepest shapes", and "the plinth sits on grass like a
+    # crate") ----
+    ROOFS = ((0, L.R1, 0, 8), (0, L.R2, 1, 7), (1, L.R3, 2, 6))   # (first level, lip y, x1, x2), each z 0..3
+
+    def test_roofs_climb_two_steps_to_a_dark_ridge(self):
+        """Each roof climbs from its lip in jade stair steps to a dark oak ridge. The side galleries (a lean-to, z 5..6):
+        hem at the court, a jade stair one up, a dark oak ridge on the outer wall the camera sees. Each hall roof
+        (hipped, the north side flush): the cells two in from the west, south and east edges are dark oak two up, or
+        the storey or crown that rises off them - never jade. Shipped: flat jade bands, a jade ridge."""
+        for i in range(3):
+            s, b = self.solid[i], self.lv[i].blocks
+            for lip, step, ridge, f in ((2, 1, 0, "west"), (6, 7, 8, "east")):
+                for z in (5, 6):
+                    self.assertEqual(s.get((step, 5, z)), JADE + "_stairs", "L%d gallery step %s" % (i + 1, (step, z)))
+                    self.assertEqual(b[(step, 5, z)][1].get("facing"), f, "L%d gallery step facing" % (i + 1))
+                    self.assertTrue(s.get((ridge, 5, z), "").startswith("dark_oak"),
+                                    "L%d gallery ridge %s: %s" % (i + 1, (ridge, z), s.get((ridge, 5, z))))
+        for lv, y, x1, x2 in self.ROOFS:
+            for i in range(lv, 3):
+                s = self.solid[i]
+                crest = [(x, z) for x in range(x1, x2 + 1) for z in range(0, 4) if min(x - x1, x2 - x, 3 - z) >= 2]
+                bad = sorted((x, z, s.get((x, y + 2, z))) for (x, z) in crest
+                             if s.get((x, y + 2, z), "air").startswith(JADE) or (x, y + 2, z) not in s)
+                self.assertEqual(bad, [], "L%d roof %d crest" % (i + 1, y))
+
+    def test_dark_ridges_show_on_camera(self):
+        """The ridges are seen at L1: the RTS camera's rays land on the top face of dark oak on the galleries' outer
+        walls (y 5) and on the second hall roof's crest (two above its lip)."""
+        hits = G.shoot(self.lv[0], "rts", step=4)
+        up = [q for (q, n, f, _b) in hits.values() if n.startswith("dark_oak") and f == "up"]
+        self.assertTrue([q for q in up if q[1] == 5 and q[0] in (0, L.SX - 1) and q[2] >= 4], "no gallery ridge seen")
+        self.assertTrue([q for q in up if q[1] == L.R2 + 2 and q[2] <= 3], "no hall ridge seen")
+
+    def test_seated_on_a_kerb_and_a_south_way(self):
+        """The footprint never grows (BuildingLevels), so the apron is the plot's own edge: at every level layer 0's
+        outer ring is a dressed stone-brick kerb, and the gate's three-wide way out (x 3..5, z 7..8) is the pale
+        polished andesite path running in from the south edge. Shipped: the court's plain stone ran to the edge."""
+        for i in range(3):
+            s = self.solid[i]
+            way = {(x, z) for x in (3, 4, 5) for z in (7, 8)}
+            ring = [(x, z) for x in range(L.SX) for z in range(L.SZ)
+                    if (x in (0, L.SX - 1) or z in (0, L.SZ - 1)) and (x, z) not in way]
+            bad = sorted((x, z, s.get((x, 0, z))) for (x, z) in ring if s.get((x, 0, z)) != "stone_bricks")
+            self.assertEqual(bad, [], "L%d kerb" % (i + 1))
+            off = sorted((x, z, s.get((x, 0, z))) for (x, z) in way if s.get((x, 0, z)) != "polished_andesite")
+            self.assertEqual(off, [], "L%d south way" % (i + 1))
+
     def test_shipped_structures_are_the_generator_build(self):
         built = (L.l1(), L.l2(), L.l3())
         with tempfile.TemporaryDirectory() as d:
