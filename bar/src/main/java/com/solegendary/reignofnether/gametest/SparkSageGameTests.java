@@ -80,8 +80,8 @@ public class SparkSageGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
     static final String BATCH = "caster_storm";
-    /** A vindicator's health: 75, no magic resist, so a spell's damage is read straight off it. */
-    static final float VINDICATOR_HP = 75f;
+    /** A vindicator's health, no magic resist, so a spell's damage is read straight off it. */
+    static final float VINDICATOR_HP = com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit.maxHealth;
     /** How long after its danger step begins a Sage has to walk it and be looked at by the AutoCaster (once a second). */
     static final int STEP_THEN_CAST_TICKS = 140;
 
