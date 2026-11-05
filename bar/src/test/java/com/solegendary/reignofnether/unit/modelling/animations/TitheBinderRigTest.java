@@ -54,7 +54,7 @@ class TitheBinderRigTest {
         double[] ahead = {0.0, 20.0, -80.0};
         double[] victim = {-40.0, 20.0, -69.28};          // r4: 5 blocks out at a 30-deg bearing, front-right
         RUNS.put("idle", new Object[]{TitheBinderRig.Clip.IDLE, 10, 60, ahead});
-        RUNS.put("fidget", new Object[]{TitheBinderRig.Clip.FIDGET, 10, 30, ahead});
+        RUNS.put("fidget", new Object[]{TitheBinderRig.Clip.FIDGET, 10, 20, ahead});   // r6b: 20 ticks
         RUNS.put("move", new Object[]{TitheBinderRig.Clip.MOVE, 10, 50, ahead});
         RUNS.put("volley_N5", new Object[]{TitheBinderRig.Clip.VOLLEY, 5, 60, victim});
         RUNS.put("volley_N10", new Object[]{TitheBinderRig.Clip.VOLLEY, 10, 60, victim});

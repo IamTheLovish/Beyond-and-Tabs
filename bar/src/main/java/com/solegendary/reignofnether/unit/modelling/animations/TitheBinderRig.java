@@ -45,7 +45,7 @@ public final class TitheBinderRig {
     static final double LANTERN_LO = -6.0, LANTERN_HI = 25.0, CAPE_LO = -50.0, CAPE_HI = 5.0;
     static final double SHACKLE_LO = -80.0, SHACKLE_HI = 80.0;
     static final double GRAVITY = 1.28;                          // px/tick^2: falling weapons at death
-    static final double DEATH_DROP = 10.9;                       // px: the crumple lands the robe (r6 slump)
+    static final double DEATH_DROP = 10.5;                       // px: the crumple lands the robe (r6b)
     /** tools/gen_tithe_binder.py: LIFT 5, RING r 18 at y 36 + LIFT, RING_TILT -6, BASE_YAW -18. */
     static final double LIFT = 5.0, RING_R = 18.0, RING_TILT = -6.0, BASE_YAW = -18.0;
     static final double[] RING_PIVOT = {0.0, 36.0 + LIFT, 0.0};
@@ -700,7 +700,15 @@ public final class TitheBinderRig {
             double sb = Math.sin(Math.toRadians(b)), cb = Math.cos(Math.toRadians(b));   // "back" = (sb, 0, cb)
             // r6: the strike pose is HELD through the release train (to last), the caster pulsing 1 px per
             // release, then recovers over 12 ticks
-            double hy = K.of(0, 0).k(4, 0).k(8, -2).k(10, 3).k(12, 3).k(13, -1).k(last, -1).k(fe, 0).at(t);
+            // r6b: held for the first third of the train, then eased: 1 -> 0.55 at two thirds -> 0.27 at the
+            // last release -> 0 at fe. held(pre, strike, end): the pre-strike keys + (13, strike) up to t13, then
+            // end + (strike - end) x hold
+            double L = Math.max(1, last - VOLLEY_RELEASE);
+            double ease = K.of(VOLLEY_RELEASE, 1.0).k(VOLLEY_RELEASE + L / 3.0, 1.0)
+                .k(VOLLEY_RELEASE + 2 * L / 3.0, 0.55).k(last, 0.27).k(fe, 0.0).at(t);
+            boolean pre = t <= VOLLEY_RELEASE;
+            double hy = pre ? K.of(0, 0).k(4, 0).k(8, -2).k(10, 3).k(12, 3).k(VOLLEY_RELEASE, -1).at(t)
+                : held(-1, 0.0, ease);
             int since = Integer.MAX_VALUE;
             for (int k = 1; k <= MAX_WEAPONS; k++) {
                 if (st.orderOf[k] < 0)
@@ -711,14 +719,15 @@ public final class TitheBinderRig {
             }
             if (since != Integer.MAX_VALUE)
                 hy -= HOVER_PULSE * (1.0 - since / 2.0);
-            double hb = K.of(0, 0).k(4, 0).k(8, 1).k(10, 3).k(12, 3).k(13, -4).k(last, -4).k(fe, 0).at(t);
+            double hb = pre ? K.of(0, 0).k(4, 0).k(8, 1).k(10, 3).k(12, 3).k(VOLLEY_RELEASE, -4).at(t)
+                : held(-4, 0.0, ease);
             off(o, HOVER, hb * sb, hy, hb * cb);
-            double by = K.of(0, 0).k(4, b).k(8, b + 8).k(10, b + 25).k(12, b + 25).k(13, b - 15).k(last, b - 15)
-                .k(fe, b).at(t);
-            rot(o, BODY, K.of(0, 0).k(4, 0).k(8, -6).k(10, 14).k(12, 14).k(13, -11).k(last, -11).k(fe, 0).at(t),
-                by, 0);
-            rot(o, HEAD, K.of(0, 0).k(8, 0).k(10, -20).k(12, -20).k(13, -8).k(last, -8).k(fe + 2, 0).at(t),
-                b - by, 0);
+            double by = pre ? K.of(0, 0).k(4, b).k(8, b + 8).k(10, b + 25).k(12, b + 25).k(VOLLEY_RELEASE, b - 15)
+                .at(t) : held(b - 15, b, ease);
+            rot(o, BODY, pre ? K.of(0, 0).k(4, 0).k(8, -6).k(10, 14).k(12, 14).k(VOLLEY_RELEASE, -11).at(t)
+                : held(-11, 0.0, ease), by, 0);
+            rot(o, HEAD, pre ? K.of(0, 0).k(8, 0).k(10, -20).k(12, -20).k(VOLLEY_RELEASE, -8).at(t)
+                : held(-8, 0.0, ease), b - by, 0);
             // the whip: delta 40 at t13, then 20 (abs 40) for the release train, circling under the ring; the outward
             // z only once the arm is up
             rot(o, R_ARM, K.of(0, 0).k(8, 0).k(10, 180).k(12, 180).k(13, 40).k(15, 20).k(hold, 20).k(fe, 0).at(t), 0,
@@ -736,18 +745,22 @@ public final class TitheBinderRig {
             rot(o, L_ARM, K.of(0, 0).k(4, 30).k(10, 47).k(hold, 47).k(fe, 0).at(t), 0, 0);
             rot(o, L_FORE, K.of(0, 0).k(10, -30).k(hold, -30).k(fe, 0).at(t), 0, 0);
             off(o, MANTLE, 0, K.of(0, 0).k(8, 0).k(10, 1).k(12, 1).k(13, 0).at(t), 0);
-            st.chTatter = K.of(0, 0).k(8, 4).k(10, -8).k(12, -8).k(13, -15).k(last, -15).k(fe, 0).at(t);
-            st.chCape = K.of(0, 0).k(8, 2).k(10, -6).k(12, -6).k(13, -12).k(last, -12).k(fe, 0).at(t);
-            double tl = K.of(0, 0).k(4, 0).k(8, 12).k(12, 12).k(13, -18).k(last, -18).k(fe, 0).at(t);
+            st.chTatter = pre ? K.of(0, 0).k(8, 4).k(10, -8).k(12, -8).k(VOLLEY_RELEASE, -15).at(t)
+                : held(-15, 0.0, ease);
+            st.chCape = pre ? K.of(0, 0).k(8, 2).k(10, -6).k(12, -6).k(VOLLEY_RELEASE, -12).at(t)
+                : held(-12, 0.0, ease);
+            double tl = pre ? K.of(0, 0).k(4, 0).k(8, 12).k(12, 12).k(VOLLEY_RELEASE, -18).at(t)
+                : held(-18, 0.0, ease);
             st.chTilt0 = tl * cb;                                          // dips toward the target's bearing
             st.chTilt1 = -tl * sb;
-            double ro = K.of(0, 0).k(4, 0).k(8, 4).k(12, 4).k(13, -5).k(last, -5).k(fe, 0).at(t);
+            double ro = pre ? K.of(0, 0).k(4, 0).k(8, 4).k(12, 4).k(VOLLEY_RELEASE, -5).at(t) : held(-5, 0.0, ease);
             st.chRingOff[0] = ro * sb;
-            st.chRingOff[1] = K.of(0, 0).k(4, 0).k(8, 1).k(12, 1).k(13, -2).k(last, -2).k(fe, 0).at(t);
+            st.chRingOff[1] = pre ? K.of(0, 0).k(4, 0).k(8, 1).k(12, 1).k(VOLLEY_RELEASE, -2).at(t)
+                : held(-2, 0.0, ease);
             st.chRingOff[2] = ro * cb;
             // the spin peaks at the snap and decays across the release train
             st.chRingSpin = K.of(0, 0.6).k(10, 6.0).k(13, 6.0).k(last, 1.5).k(fe, 0.6).at(t);
-            st.chCock = K.of(0, 0).k(8, 25).k(12, 25).k(13, 10).k(last, 10).k(fe, 0).at(t);
+            st.chCock = pre ? K.of(0, 0).k(8, 25).k(12, 25).k(VOLLEY_RELEASE, 10).at(t) : held(10, 0.0, ease);
             st.chSpokeScale = K.of(0, 1.0).k(4, 1.0).k(8, CONTRACT).k(12, CONTRACT).k(13, FLARE).k(16, 1.0).at(t);
             int released = 0;
             for (int k = 1; k <= MAX_WEAPONS; k++)
@@ -804,17 +817,17 @@ public final class TitheBinderRig {
             }
             off(o, HOVER, 0, fall, 0);
             // r5: the slumped hood rolls and turns
-            rot(o, HEAD, K.of(0, 0).k(3, 35).k(6, 35).k(16, 35).k(19, 28).k(33, -21).at(t), 0,
-                K.of(0, 0).k(19, 0).k(33, 8).k(36, 12).k(40, 8).at(t));
-            // r6: a sideways slump (body roll 18, less fold)
-            rot(o, BODY, K.of(0, 0).k(3, 8).k(6, 8).k(16, 8).k(17, -8).k(19, -8).k(33, -20).at(t), 0,
-                K.of(0, 0).k(19, 0).k(33, 18).at(t));
-            rot(o, CHEST, K.of(0, 0).k(3, 6).k(6, 6).k(16, 6).k(17, -4).k(19, -4).k(33, -18).at(t), 0, 0);
+            // r6b: r5's forward crumple, contact-clean: head yaw 0, roll 12, the chest 1 px forward as it folds
+            rot(o, HEAD, K.of(0, 0).k(3, 35).k(6, 35).k(16, 35).k(19, 28).k(33, -36).at(t), 0,
+                K.of(0, 0).k(19, 0).k(33, 12).k(36, 16).k(40, 12).at(t));
+            rot(o, BODY, K.of(0, 0).k(3, 8).k(6, 8).k(16, 8).k(17, -8).k(19, -8).k(33, -26).at(t), 0, 0);
+            rot(o, CHEST, K.of(0, 0).k(3, 6).k(6, 6).k(16, 6).k(17, -4).k(19, -4).k(33, -40).at(t), 0, 0);
+            off(o, CHEST, 0, 0, K.of(0, 0).k(19, 0).k(33, -1).at(t));
             // the arms fall limp and IN, along the body
-            rot(o, R_ARM, K.of(0, 0).k(6, 0).k(19, 0).k(33, 30).at(t), 0,
-                K.of(0, 0).k(3, -58).k(6, -58).k(16, -58).k(19, -40).k(33, 5).at(t));
+            rot(o, R_ARM, K.of(0, 0).k(6, 0).k(19, 0).k(33, 20).at(t), 0,
+                K.of(0, 0).k(3, -58).k(6, -58).k(16, -58).k(19, -40).k(33, -12).at(t));
             rot(o, L_ARM, K.of(0, 0).k(6, 0).k(19, 0).k(33, 30).at(t), 0,
-                K.of(0, 0).k(3, 58).k(6, 58).k(16, 58).k(19, 40).k(33, 5).at(t));
+                K.of(0, 0).k(3, 58).k(6, 58).k(16, 58).k(19, 40).k(33, -10).at(t));
             for (int side = 0; side < 2; side++)
                 rot(o, side == 0 ? R_FORE : L_FORE, K.of(0, 0).k(3, -25).k(19, -25).k(33, -35).at(t), 0, 0);
             double fold = K.of(0, 0.0).k(19, 0.0).k(33, 1.0).at(t);
@@ -828,6 +841,11 @@ public final class TitheBinderRig {
             st.chAlpha = K.of(0, 1.0).k(32, 1.0).k(50, 0.0).at(t);         // r5: the dissolve from t32
             st.chRingSpin = 0.6;
         }
+    }
+
+    /** r6b held() after the strike: the strike value eased toward end by the hold factor. */
+    private static double held(double strike, double end, double hold) {
+        return end + (strike - end) * hold;
     }
 
     // ------------------------------------------------------------------ the step --------------------------------
