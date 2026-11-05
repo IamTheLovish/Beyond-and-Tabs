@@ -1084,7 +1084,7 @@ public class BotPlayer {
                             + ", ends " + (p.getEndNode() == null ? "?" : p.getEndNode().asBlockPos().toShortString()));
                     }
                     var below = w.level().getBlockState(w.blockPosition().below());
-                    ReignOfNether.LOGGER.warn("[ChunkWait] gametest-stranded {} worker {} at {} (on {} {}, in water {}), home {}, target {} approach {}; {}; history {}",
+                    com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("[ChunkWait] gametest-stranded {} worker {} at {} (on {} {}, in water {}), home {}, target {} approach {}; {}; history {}",
                         name, w.getId(), w.blockPosition().toShortString(), below.getBlock().getDescriptionId(), w.onGround() ? "ground" : "air",
                         w.isInWater(), home == null ? "?" : home.toShortString(),
                         goal.getBuildingTarget() == null ? "none" : goal.getBuildingTarget().getBuilding().name + "@" + goal.getBuildingTarget().originPos.toShortString(),
