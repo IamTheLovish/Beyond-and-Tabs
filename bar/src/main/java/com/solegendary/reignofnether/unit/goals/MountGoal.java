@@ -34,6 +34,8 @@ public class MountGoal extends MoveToTargetBlockGoal {
 
     public void setTarget(LivingEntity entity) {
         this.targetEntity = entity;
+        if (entity != null)
+            this.lastUnreachableTarget = null;   // a new order (or autofind's pick) starts without the last give-up
     }
 
     /** The mount this goal is walking to, or null (read by PerfScanGameTests' failure history). */
@@ -83,8 +85,35 @@ public class MountGoal extends MoveToTargetBlockGoal {
             stop();
     }
 
+    /**
+     * A mount order gives up an unreachable mount as a plain move gives up an unreachable spot (GIVE_UP_AFTER_STUCK_
+     * REPATHS stuck repaths): {@link #tick} re-sets the move target every tick, which clears lastUnreachableTarget, so
+     * without this a walled-in mount held the rider - not idle, Unit.isIdle - until its next order (review round 1 on
+     * #507).
+     */
+    @Override
+    protected boolean givesUpWhenUnreachable() {
+        return true;
+    }
+
+    /** Only a mount of the rider's own side can be ridden (isMountableUnit, the mount below): any other drops the order. */
+    private boolean ownSide(LivingEntity mount) {
+        return mount instanceof Unit u && this.mob instanceof Unit rider && u.getOwnerName().equals(rider.getOwnerName());
+    }
+
     @Override
     public void tick() {
+        // the move goal gave the mount up as unreachable (onStuckRepath): the order is over, before the move target
+        // is set again below
+        if (this.targetEntity != null && this.moveTarget == null && this.lastUnreachableTarget != null) {
+            this.stop();
+            return;
+        }
+        // a dead or gone mount, or another side's (the Mount cursor sends whichever spider was clicked): nothing to ride
+        if (this.targetEntity != null && (!this.targetEntity.isAlive() || !ownSide(this.targetEntity))) {
+            this.stop();
+            return;
+        }
         if (autofind) {
             int sys = Sys.begin(Sys.MOUNT_SCAN);
             try {
