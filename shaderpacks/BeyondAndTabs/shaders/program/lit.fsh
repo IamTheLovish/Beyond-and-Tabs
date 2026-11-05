@@ -40,8 +40,8 @@ varying vec3 vB;
 #endif
 
 // how far a plant's shading normal leans from up toward the face of its plane the camera sees (lovish, Nov 5: "Try
-// faint shadow + lit side"; 0 = lit as the ground, Oct 28 - Nov 5). At noon the side facing the sun reads ~1.07 of the
-// open lawn and the far side ~0.83 (tools/test_shader_pack.py holds 1.00-1.10 and 0.75-0.90): a tuft has a lit and a
+// faint shadow + lit side"; 0 = lit as the ground, Oct 28 - Nov 5). At noon the side facing the sun reads ~1.05 of the
+// open lawn and the far side ~0.81 (tools/test_shader_pack.py holds 1.00-1.10 and 0.75-0.90): a tuft has a lit and a
 // shaded side, never a dark plane
 const float PLANT_SIDE = 0.35;
 
