@@ -33,6 +33,13 @@ under the hall's frame - a two-wide roofed gallery with spear racks down each si
 roof (the lotus opens on it); L3 the fourth roof and the crown. No amethyst and no banners (team-like hues). Where the
 text below disagrees, this paragraph wins.
 
+NOV 4 2026 FABLE CRITICS (eyes 41792408905, blind: L1 5 / 10, L3 5.5 / 10; tests tools/test_lab_lotus_academy.py): the
+court in the mids (smooth stone; the polished andesite court was the building's lightest plane), the dark oak hem on
+every eave (galleries, gate and all hall roofs), one gold boss on the gate, the lotus crown's boss dark oak with one gold
+seed and a lantern (a gold apex is the Sunforged's), the L1 crown's leftover petal tips turned into rafter ends, and L3
+opens the lotus wide on the third roof instead of a fourth roof (the capitol's profile). Where the text below
+disagrees, this paragraph wins.
+
 THE PLAN (9 x 9, the shipped footprint). The RTS camera looks from the south-west: it sees the roofs, the west face
 (x = 0) and the south face (z = 8). So the hall stands across the north (z 0..3) and faces south over the court
 (z 4..8) toward the camera; the gate is on the south edge on the axis, the lotus on the south-west corner.
@@ -189,7 +196,7 @@ class Rig(gs._SunRig):
 # ======================================================================================================== shapes
 def curved_roof(r, x1, x2, z1, z2, y, chimes, flush_north=True):
     """The kit's curved pagoda roof with its lip on the rectangle [x1..x2] x [z1..z2] at y (the capitol's roof(), drawn
-    on a rectangle): along each side a jade stair, low edge out; the cells next to a corner lift a block (jade + a slab
+    on a rectangle): along each side a stair, low edge out, in dark oak (the hem: Fable critic B, Nov 4); the cells next to a corner lift a block (jade + a slab
     on it) so the eave sweeps up; the corner itself a gold block under an upturned jade slab tip. The north side is
     flush with the footprint (nobody sees it), so its lip is a plain jade course. Inside the lip a flat jade band.
     Returns the corner cells for chimes."""
@@ -213,7 +220,7 @@ def curved_roof(r, x1, x2, z1, z2, y, chimes, flush_north=True):
                 r.slab(x, y + 1, z)
                 continue
             f = "north" if z == z2 else "south" if z == z1 else "east" if x == x1 else "west"
-            r.st(x, y, z, f)
+            r.st(x, y, z, f, name=OAK_ST)     # the dark hem on every eave (Fable critic B, Nov 4)
     for (x, z) in corners:
         chimes.append((x, y - 1, z))
 
@@ -259,8 +266,7 @@ def court_l1(r):
     under the hall's frame: a roofed gallery down each side, the torii on the axis."""
     for x in range(SX):
         for z in range(SZ):
-            edge = x in (0, SX - 1) or z in (0, SZ - 1)
-            r.set(x, 0, z, "stone_bricks" if edge else "polished_andesite")
+            r.set(x, 0, z, court_floor(x, z))
     # the gate: a red torii on the axis, a three-wide way out
     for x in (2, 6):
         for y in (1, 2, 3):
@@ -274,6 +280,18 @@ def court_l1(r):
     stone_lantern(r, 0, 8)
     stone_lantern(r, 8, 8)
     galleries(r)
+
+
+def court_floor(x, z):
+    """Layer 0 (Fable critic B, Nov 4: the polished andesite court was the lightest large area of the building, 0.56 on
+    the noon still - "the floor owns the lights"): a smooth stone court in the mids (camera 0.33 from above), a polished
+    andesite path from the gate to the spawn cell with a short cross arm, stone bricks under the hall and the
+    hall where the camera does not see them (both starting types stay in layer 0)."""
+    if z <= 3:
+        return "stone_bricks"
+    if x == C or (z == 4 and x in (C - 1, C + 1)):
+        return "polished_andesite"
+    return "smooth_stone"
 
 
 GALLERY = (4, 7)   # the side galleries' rows (z), under the hall's first roof's line
@@ -296,7 +314,7 @@ def galleries(r):
             mid, lip = (1, 2) if out == 0 else (SX - 2, SX - 3)
             r.set(out, 4, z, JADE)
             r.set(mid, 4, z, JADE)
-            r.st(lip, 4, z, "east" if out == 0 else "west")
+            r.st(lip, 4, z, "east" if out == 0 else "west", name=OAK_ST)    # the dark hem (Fable critic B)
         for z in (GALLERY[0], GALLERY[1]):
             r.slab(out, 5, z)                              # the eave's lifted ends
 
@@ -347,15 +365,9 @@ def hall_l1(r):
 
 
 def roof1(r, chimes):
+    # round 4: a DARK HEM - the eave stairs in dark oak (corners and lifted tips stay jade), so the outer eave line has
+    # a value of its own against the lawn (critics a / b, rounds 1-3); curved_roof draws it on every roof since Nov 4
     curved_roof(r, 0, 8, 0, 3, R1, chimes)
-    # round 4: a DARK HEM - the first roof's eave stairs in dark oak (its corners and lifted tips stay jade), so the
-    # outer eave line has a value of its own against the lawn (critics a / b, rounds 1-3: "the jade sits in the
-    # lawn's band", "no dark hem at the eave edge")
-    for x in range(SX):
-        for z in range(4):
-            if r.get(x, R1, z)[0] == JADE_ST:
-                q = r.b[(x, R1, z)][1]
-                r.st(x, R1, z, q["facing"], q.get("half", "bottom"), OAK_ST)
     # rafter ends under the front lip, every other cell
     for x in (2, 4, 6):
         r.st(x, R1 - 1, 3, "north", "top", OAK_ST)
@@ -386,23 +398,25 @@ def draw_l1(r):
 
 
 def lotus_crown(r, y, x0=C, z0=1):
-    """THE LOTUS on the ridge, where the camera looks: a gold boss, cherry-stair petals opening round a pearlescent
-    heart, cherry slab petals lying open between them, a gold seed head and the storm's rod."""
-    r.set(x0, y, z0, GOLD)
+    """THE LOTUS on the ridge, where the camera looks: a dark oak boss, cherry-stair petals opening round a pearlescent
+    heart, cherry slab petals lying open between them, a gold seed head and a lantern on it. Fable critics, Nov 4: the
+    gold boss under the petals made a gold apex cube like the Sunforged's (critic C F1 - one gold cell, the seed); the
+    rod gave no light, so the crown was "a faint pink smudge" at dusk (critic B fix 5)."""
+    r.set(x0, y, z0, OAK)
     r.set(x0, y + 1, z0, "pearlescent_froglight", axis="y")
     for (dx, dz), f in (((1, 0), "east"), ((-1, 0), "west"), ((0, 1), "south"), ((0, -1), "north")):
         r.st(x0 + dx, y + 1, z0 + dz, f, name=PETAL_ST)
     for (dx, dz) in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
         r.slab(x0 + dx, y + 1, z0 + dz, PETAL_SLAB)
     r.set(x0, y + 2, z0, GOLD)
-    r.rod(x0, y + 3, z0)
+    r.lantern(x0, y + 3, z0)
     for dx in (-1, 0, 1):                  # a jade boss under the open petals (nothing floats)
         for dz in (-1, 0, 1):
             if r.get(x0 + dx, y, z0 + dz)[0] == "air":
                 r.set(x0 + dx, y, z0 + dz, JADE)
-    # round 4: the petal TIPS reach one cell past the square on the camera's two sides (west, south), so the outline
-    # is a flower, not "a pink square with a gold dot" (critics a / b, rounds 1-3)
-    for (dx, dz), f in (((-2, 0), "west"), ((0, 2), "south")):
+    # round 4: the petal TIPS reach one cell past the square (west, south; east since Nov 4 - the north one would leave
+    # the footprint), so the outline is a flower, not "a pink square with a gold dot" (critics a / b, rounds 1-3)
+    for (dx, dz), f in (((-2, 0), "west"), ((0, 2), "south"), ((2, 0), "east")):
         if r.get(x0 + dx, y + 1, z0 + dz)[0] == "air":
             r.st(x0 + dx, y + 1, z0 + dz, f, "top", PETAL_ST)
 
@@ -450,11 +464,11 @@ def gate_l2(r, chimes):
     """The torii's black beam becomes a curved jade gate roof (one row: a stair sloping toward the camera under a slab
     ridge, gold corners with upturned tips over the swept-up ends, chimes, a lantern on a gold boss); two jade
     guardians flank it inside the court, looking out of the gate."""
-    for x in (2, 6):                               # gold corners over the posts; the kasagi's black swept-up
-        r.set(x, 4, 8, GOLD)                       # ends still peek out past them
+    for x in (2, 6):                               # jade corners over the posts (gold there read as studs, Fable
+        r.set(x, 4, 8, JADE)                       # critic B); the kasagi's black swept-up ends still peek out
         r.slab(x, 5, 8)
     for x in (3, 4, 5):
-        r.st(x, 4, 8, "north")
+        r.st(x, 4, 8, "north", name=OAK_ST)        # the gate's eave, hemmed like the hall's
         r.slab(x, 5, 8)
     r.set(C, 5, 8, GOLD)
     r.lantern(C, 6, 8)
@@ -470,7 +484,7 @@ def draw_l2(r):
 
 
 # ======================================================================================================== L3
-R3, R4 = 14, 17
+R3 = 14
 
 
 def storey3(r, chimes):
@@ -487,40 +501,46 @@ def storey3(r, chimes):
                 else:
                     r.set(x, y, z, OAK)
     curved_roof(r, 2, 6, 0, 3, R3, chimes)
+    # the L1 lotus's petal tips stay outside the storey (the chain only adds or replaces): they read as pink crumbs on
+    # the tower (Fable critic B, Nov 4) - each becomes a dark oak rafter end under the third roof's lip
+    for (x, y, z), (n, p) in list(r.b.items()):
+        if n.startswith("cherry") and y == R2 + 3:
+            f = {(-1, 0): "east", (1, 0): "west", (0, 1): "north"}[(max(-1, min(1, x - C)), max(-1, min(1, z - 1)))]
+            r.st(x, y, z, f, "top", OAK_ST)
     for (x, z) in ((2, 3), (6, 3)):        # lightning rods on the third roof's front tips (the storm caught everywhere)
         r.rod(x, R3 + 2, z)
-    lotus_crown(r, R3 + 1)                 # the lotus climbs onto the new top (L3's fourth storey grows through it)
+    lotus_crown(r, R3 + 1)                 # the lotus climbs onto the new top and opens wide at L3
 
 
-def pagoda_l3(r, chimes):
-    """L3: the fourth storey and roof, a ring narrower, and the LOTUS CROWN on top."""
-    # storey 4: a red core (x 4, z 1..2) under the top roof
-    for y in range(R3 + 1, R4):
-        r.red(4, y, 1)
-        r.set(4, y, 2, PAPER)
-        r.set(3, y, 1, OAK)
-        r.set(5, y, 1, OAK)
-        r.set(4, y, 0, OAK)
-    curved_roof(r, 3, 5, 0, 2, R4, chimes, flush_north=False)
-    # the LOTUS CROWN: a gold boss, cherry petals opening round a pearlescent heart, gold inner petals, the rod
-    x0, z0 = 4, 1
-    y = R4 + 1
-    r.set(x0, y, z0, GOLD)
-    r.set(x0, y + 1, z0, "pearlescent_froglight", axis="y")
-    for (dx, dz), f in (((1, 0), "east"), ((-1, 0), "west"), ((0, 1), "south"), ((0, -1), "north")):
-        r.st(x0 + dx, y + 1, z0 + dz, f, name=PETAL_ST)
-    for (dx, dz) in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
-        r.slab(x0 + dx, y + 1, z0 + dz, PETAL_SLAB)     # the outer petals lying open between them
-    r.set(x0, y + 2, z0, GOLD)                          # the seed head
-    r.rod(x0, y + 3, z0)
-    r.rod(x0, y + 4, z0)
+def lotus_l3(r):
+    """L3: THE THOUSAND-LOTUS opens on the third roof - the academy's own top, not a fourth jade roof (Fable critic C F3,
+    Nov 4: with four roofs and a gold apex the L3 was "the pagoda at two thirds scale"). Round the L2 crown's heart a
+    second ring of cherry petals (stairs opening out on the sides, slabs between, the north row is past the footprint)
+    on a jade pad, and an inner ring of petals raised round the gold seed: a 5 x 4 pink flower cupped round its light."""
+    x0, z0, y = C, 1, R3 + 2
+    for x in range(x0 - 2, x0 + 3):
+        for z in range(z0 - 1, z0 + 3):
+            ring = max(abs(x - x0), abs(z - z0))
+            if ring < 2:
+                if ring == 1:              # the inner petals rise round the seed
+                    f = "east" if x > x0 else "west" if x < x0 else "south" if z > z0 else "north"
+                    r.st(x, y + 1, z, f, name=PETAL_ST)
+                continue
+            if r.get(x, y - 1, z)[0] == "air":
+                r.set(x, y - 1, z, JADE)   # the pad (nothing floats)
+            side = x in (x0 - 2, x0 + 2) and z == z0 or z == z0 + 2 and x == x0
+            if side:
+                f = "west" if x < x0 else "east" if x > x0 else "south"
+                r.st(x, y, z, f, "top", PETAL_ST)
+            else:
+                r.slab(x, y, z, PETAL_SLAB)
 
 
 def gate_l3(r, chimes):
     """The gate roof grows a second, narrower tier: gold corners over the first ridge's ends, a jade stair course, the
     lantern lifted onto its own gold boss."""
     for x in (3, 5):
-        r.set(x, 5, 8, GOLD)
+        r.set(x, 5, 8, JADE)                       # jade, not gold: the lantern's boss is the gate's one gold
         r.slab(x, 6, 8)
     r.set(C, 5, 8, JADE)
     r.set(C, 6, 8, GOLD)
@@ -536,7 +556,7 @@ def court_l3(r):
 
 def draw_l3(r):
     chimes = draw_l2(r)
-    pagoda_l3(r, chimes)
+    lotus_l3(r)
     gate_l3(r, chimes)
     court_l3(r)
     return chimes
