@@ -3,7 +3,6 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
-import com.solegendary.reignofnether.unit.DeathBurst;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import net.minecraft.gametest.framework.GameTest;
@@ -28,6 +27,8 @@ import java.util.Locale;
 public class DeathBurstGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
+    /** A Steam Juggernaut's burst 1.7 and 2.2 from its middle: 40 x (1 - d / 3.25). */
+    static final float NEAR = 19.08f, MID = 12.92f;
 
     static Mob unit(GameTestHelper helper, EntityType<? extends Mob> type, String owner, double x, double z, List<Mob> made) {
         Mob m = HeroGameTests.spawnUnit(helper, type, owner, 0, 0);
@@ -62,32 +63,32 @@ public class DeathBurstGameTests {
     }
 
     /**
-     * A Steam Juggernaut (1.5 wide: radius 3.25, peak 40) dies with three enemies round it: one beside it, one further
-     * out and one past the radius. The near one takes the most, close to DeathBurst.damageAt; the far one nothing.
+     * A Steam Juggernaut (1.5 wide: radius 3.25; 200 HP: peak 40) dies with three enemies round it: one beside it, one
+     * further out and one past the radius. The numbers are pinned here, worked by hand from the rule (peak x (1 - d /
+     * radius), d from the boiler's middle to the target's box; a Vindicator is 0.6 wide), not from DeathBurst's own
+     * functions (review round 1 on #517): the near one 1.7 from it takes 40 x (1 - 1.7 / 3.25) = 19.08, the one 2.2 out
+     * 40 x (1 - 2.2 / 3.25) = 12.92, the one 4.2 out nothing.
      */
     @GameTest(template = ARENA, batch = "death_burst_falloff", timeoutTicks = 60)
     public static void a_machine_bursts_on_death_and_hurts_less_further_out(GameTestHelper helper) {
         String me = HeroGameTests.owner(helper, "burst_me"), them = HeroGameTests.owner(helper, "burst_them");
         List<Mob> made = new ArrayList<>();
         Mob boiler = unit(helper, EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get(), me, 8.5, 8.5, made);
-        Mob near = target(helper, them, 10.5, 8.5, made);   // 2.0 from the middle, 1.7 to its box: ~19 of 40
-        Mob mid = target(helper, them, 8.5, 11.0, made);    // 2.5 out, 2.2 to its box: ~13
+        Mob near = target(helper, them, 10.5, 8.5, made);   // 2.0 from the middle, 1.7 to its box
+        Mob mid = target(helper, them, 8.5, 11.0, made);    // 2.5 out, 2.2 to its box
         Mob far = target(helper, them, 4.0, 8.5, made);     // 4.5 out, 4.2 to its box: past the radius
-        float radius = DeathBurst.radius(boiler.getBbWidth()), peak = DeathBurst.peak(boiler.getMaxHealth());
         helper.runAfterDelay(5, () -> {
-            var centre = boiler.position().add(0, boiler.getBbHeight() / 2.0, 0);
-            float wantNear = DeathBurst.damageAt(peak, radius, distance(near, centre));
             boiler.kill();
             float n = taken(near), md = taken(mid), f = taken(far);
             discard(made);
-            String got = String.format(Locale.ROOT, "near %.1f (want %.1f), mid %.1f, far %.1f; radius %.2f, peak %.1f",
-                n, wantNear, md, f, radius, peak);
+            String got = String.format(Locale.ROOT, "near %.2f (want %.2f), mid %.2f (want %.2f), far %.2f (want 0)",
+                n, NEAR, md, MID, f);
             if (n <= 0)
                 helper.fail("a Steam Juggernaut's death hurt nobody beside it: " + got);
-            else if (Math.abs(n - wantNear) > wantNear * 0.25f)
+            else if (Math.abs(n - NEAR) > 0.5f)
                 helper.fail("the unit beside the burst took a different amount than the falloff gives: " + got);
-            else if (!(md > 0 && md < n))
-                helper.fail("the unit further out must take less than the one beside it, and some: " + got);
+            else if (Math.abs(md - MID) > 0.5f)
+                helper.fail("the unit further out took a different amount than the falloff gives: " + got);
             else if (f != 0)
                 helper.fail("a unit past the radius was hurt: " + got);
             else
@@ -118,10 +119,10 @@ public class DeathBurstGameTests {
                 String got = String.format(Locale.ROOT, "enemy %.2f, ally %.2f, own %.2f", e, a, o);
                 if (e <= 0)
                     helper.fail("the enemy beside an Iron Warden's burst took nothing: " + got);
-                else if (Math.abs(a / e - DeathBurst.FRIENDLY_SHARE) > 0.1f)
-                    helper.fail("an ally must take " + DeathBurst.FRIENDLY_SHARE + " of the enemy's share: " + got);
-                else if (Math.abs(o / e - DeathBurst.FRIENDLY_SHARE) > 0.1f)
-                    helper.fail("the owner's own unit must take " + DeathBurst.FRIENDLY_SHARE + " of the enemy's share: " + got);
+                else if (Math.abs(a / e - 0.5f) > 0.1f)
+                    helper.fail("an ally must take half the enemy's share: " + got);
+                else if (Math.abs(o / e - 0.5f) > 0.1f)
+                    helper.fail("the owner's own unit must take half the enemy's share: " + got);
                 else
                     helper.succeed();
             });
@@ -133,8 +134,8 @@ public class DeathBurstGameTests {
     }
 
     /**
-     * Only a real death bursts: a Steam Juggernaut despawned (discarded, as a match reset or a garrison's removal takes
-     * a unit off the field) hurts nobody, and neither does the death of a unit that is not a machine (a Vindicator).
+     * Only a real death bursts: a Steam Juggernaut despawned (discarded, as a new match's retirement of the old arena or a
+     * garrison's removal takes a unit off the field) hurts nobody, and neither does the death of a unit that is not a machine (a Vindicator).
      * The Rocket Battery, not a machine, does burst.
      */
     @GameTest(template = ARENA, batch = "death_burst_who", timeoutTicks = 60)
@@ -224,11 +225,61 @@ public class DeathBurstGameTests {
         }
     }
 
-    static double distance(Mob target, net.minecraft.world.phys.Vec3 p) {
-        var box = target.getBoundingBox();
-        double dx = Math.max(Math.max(box.minX - p.x, 0), p.x - box.maxX);
-        double dy = Math.max(Math.max(box.minY - p.y, 0), p.y - box.maxY);
-        double dz = Math.max(Math.max(box.minZ - p.z, 0), p.z - box.maxZ);
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    /**
+     * A match reset clears the field with entity.kill() (PlayerServerEvents.resetRTS: back to the lobby, /rts-reset,
+     * /rts-reset-hard, the reset packets), and that is no death in battle: no machine bursts (review round 1 on #517,
+     * blocker 1 - every machine on the map burst into its neighbours). A Steam Juggernaut cleared by the reset's own
+     * kill (PlayerServerEvents.killForReset) beside an enemy: it is dead, the enemy takes nothing.
+     */
+    @GameTest(template = ARENA, batch = "death_burst_reset", timeoutTicks = 60)
+    public static void a_match_reset_clearing_a_machine_does_not_burst(GameTestHelper helper) {
+        String me = HeroGameTests.owner(helper, "burst_reset_me"), them = HeroGameTests.owner(helper, "burst_reset_them");
+        List<Mob> made = new ArrayList<>();
+        Mob boiler = unit(helper, EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get(), me, 8.5, 8.5, made);
+        Mob near = target(helper, them, 10.5, 8.5, made);   // 1.7 from the boiler's middle to its box: 19.08 if it burst
+        helper.runAfterDelay(5, () -> {
+            com.solegendary.reignofnether.player.PlayerServerEvents.killForReset(List.of(boiler), e -> true);
+            boolean dead = !boiler.isAlive();
+            float n = taken(near);
+            discard(made);
+            String got = String.format(Locale.ROOT, "the Juggernaut dead %b, the enemy beside it took %.2f", dead, n);
+            if (!dead)
+                helper.fail("the reset's kill left the Juggernaut alive (nothing tested): " + got);
+            else if (n != 0)
+                helper.fail("a machine cleared by a match reset burst: " + got);
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
+     * The burst deals its full damage to a unit hit a moment before (review round 1 on #517, blocker 2). The burst has
+     * no causing entity, so LivingEntityMixin.unitHitsStack (which opens vanilla's hurt window for a hit a unit causes)
+     * leaves it shut: a target hit earlier the same tick took only the burst's excess over that hit, and two bursts in
+     * one tick did not add. An enemy 1.7 from a Steam Juggernaut's middle is hit for 10 (vanilla's window: 20 ticks, last
+     * hit 10), then the Juggernaut dies: it must take the burst's 19.08 on top, 29.08 in all - not 19.08 (9.08 more).
+     */
+    @GameTest(template = ARENA, batch = "death_burst_window", timeoutTicks = 60)
+    public static void a_burst_hits_a_unit_hit_the_same_tick_in_full(GameTestHelper helper) {
+        String me = HeroGameTests.owner(helper, "burst_win_me"), them = HeroGameTests.owner(helper, "burst_win_them");
+        List<Mob> made = new ArrayList<>();
+        Mob boiler = unit(helper, EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get(), me, 8.5, 8.5, made);
+        Mob near = target(helper, them, 10.5, 8.5, made);
+        helper.runAfterDelay(5, () -> {
+            boolean first = near.hurt(helper.getLevel().damageSources().generic(), 10f);
+            float before = taken(near);
+            int window = near.invulnerableTime;
+            boiler.kill();
+            float burst = taken(near) - before;
+            discard(made);
+            String got = String.format(Locale.ROOT, "first hit landed %b (%.2f, window %d), then the burst %.2f (want %.2f)",
+                first, before, window, burst, NEAR);
+            if (!first || Math.abs(before - 10f) > 0.01f)
+                helper.fail("the first hit did not land as 10 (nothing tested): " + got);
+            else if (Math.abs(burst - NEAR) > 0.5f)
+                helper.fail("a unit hit the same tick took less than the burst's full damage: " + got);
+            else
+                helper.succeed();
+        });
     }
 }
