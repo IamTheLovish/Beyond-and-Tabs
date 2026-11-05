@@ -43,6 +43,11 @@ public final class MotionPass {
     private static float[] cur = OUT;
     private static final float[] LOOK = new float[Motion.LOOK_LEN];
     private static final float[] WALK = new float[Motion.WALK_LEN];
+    /**
+     * The gait bridge on or off. Only the eyes tour turns it off, for one still (07zh / 07zk's "_gait_off" twin: the
+     * same walk, camera and run a moment later - a before/after inside one frame of reference). Client thread only.
+     */
+    public static boolean gaitBridge = true;
     private static final float[] SLIDERS = new float[7];
     private static final float[] SLIDERS_NO_BREATH = new float[7];   // for rigs that breathe by themselves
     private static final Quaternionf Q = new Quaternionf();   // PoseStack.mulPose copies it: one reused, no garbage
@@ -119,7 +124,7 @@ public final class MotionPass {
      * forward); null - the model's own legs - for a rider, a baby (vanilla runs its clock 3x), a swimmer or a sleeper.
      */
     private static float[] walk(LivingEntity e, BoneMap map, float partial) {
-        if (!map.strides || e.isPassenger() || e.isBaby() || e.isVisuallySwimming() || e.isSleeping())
+        if (!gaitBridge || !map.strides || e.isPassenger() || e.isBaby() || e.isVisuallySwimming() || e.isSleeping())
             return null;
         ModelPart r = map.parts[Motion.LEG_R], l = map.parts[Motion.LEG_L];
         if (r == null || l == null)

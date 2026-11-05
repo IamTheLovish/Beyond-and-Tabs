@@ -54,7 +54,6 @@ public final class Motion {
      */
     static final float STRIDE_RAD = 0.62f, STEP_LIFT_PX = 1.6f, HIP_SWAY_PX = 0.35f, WALK_FULL = 0.2f,
         LEG_PX = 12f, CADENCE = 0.6662f;
-    private static final boolean RED_PROOF_OFF = false;   // red proof only: the next commit removes this switch
 
     /** Slider indices (the config's motion_* percentages / 100). */
     public static final int BREATH = 0, WEIGHT = 1, FIDGET = 2, LEAN = 3, ACCEL = 4, FLINCH = 5, SECONDARY = 6;
@@ -163,7 +162,7 @@ public final class Motion {
         if (look != null && look[LOOK_MODE] != LOOK_NONE)
             look(s, b, partial, look, out);
 
-        if (!flinchOnly && walk != null && RED_PROOF_OFF)
+        if (!flinchOnly && walk != null)
             gait(walk, out);
 
         if (!flinchOnly) {
