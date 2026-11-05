@@ -540,6 +540,21 @@ public class BoneDragonUnit extends GhastUnit {
         if (!(level() instanceof ServerLevel sl) || !isAlive() || isBreathing() || getOwnerName() == null
                 || getOwnerName().isEmpty())
             return false;
+        aimBreath(target, aim);
+        breathTick = 0;
+        breathSeq = breathSeq == Integer.MAX_VALUE ? 1 : breathSeq + 1;
+        this.entityData.set(breathSeqAccessor, breathSeq);   // last: the client reads the rest before this
+        // our own sound (sounds/Sfx, generated from maths), pitched down to a dragon's roar of flame; no ghast
+        Vec3 j = jaws(aim);
+        Sfx.SHOT_FIRE.play(sl, j.x, j.y, j.z, 1.4f, 0.5f);
+        return true;
+    }
+
+    /**
+     * Points the breath at {@code aim}, following {@code target} (null: a building or the ground): the landed cone if
+     * the dragon is down, else the airborne one strafing along its heading. The client reads these every tick.
+     */
+    private void aimBreath(@Nullable LivingEntity target, Vec3 aim) {
         breathTarget = target;
         breathBase = aim;
         breathLanded = isLanded();
@@ -552,16 +567,10 @@ public class BoneDragonUnit extends GhastUnit {
             FireBreath.airOffset(h.x, h.z, off);
         }
         breathOffset = new Vec3(off[0], off[1], off[2]);
-        breathTick = 0;
         this.entityData.set(breathTargetAccessor, target == null ? -1 : target.getId());
         this.entityData.set(breathAimAccessor, new Vector3f((float) aim.x, (float) aim.y, (float) aim.z));
         this.entityData.set(breathOffsetAccessor, new Vector3f((float) off[0], (float) off[1], (float) off[2]));
         this.entityData.set(breathLandedAccessor, breathLanded);
-        breathSeq = breathSeq == Integer.MAX_VALUE ? 1 : breathSeq + 1;
-        this.entityData.set(breathSeqAccessor, breathSeq);   // last: the client reads the rest before this
-        // our own sound (sounds/Sfx, generated from maths), pitched down to a dragon's roar of flame; no ghast
-        Sfx.SHOT_FIRE.play(sl, j.x, j.y, j.z, 1.4f, 0.5f);
-        return true;
     }
 
     /** Ends the breath (both sides learn it from the breath number going to 0). */
@@ -586,6 +595,11 @@ public class BoneDragonUnit extends GhastUnit {
             stopBreath();
             return;
         }
+        // an order (or RoN's own pick) onto another unit mid-breath: the fire swings to it now, not after burning out on
+        // the old target (CI 42012754225). The breath's clock runs on, so a new order never buys an extra burn
+        LivingEntity ordered = getTargetGoal().getTarget();
+        if (ordered != null && ordered != breathTarget && ordered.isAlive() && ordered.level() == sl)
+            aimBreath(ordered, aimOf(ordered));
         if (breathTarget != null && breathTarget.isAlive() && breathTarget.level() == sl)
             breathBase = aimOf(breathTarget);
         else
