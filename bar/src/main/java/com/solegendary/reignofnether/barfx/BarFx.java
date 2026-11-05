@@ -525,7 +525,7 @@ public final class BarFx {
      * forming building. Like a vanilla particle (ServerLevelParticleMixin), never through the fog.
      */
     static boolean seenBy(ServerPlayer player, Event e) {
-        return visibleTo((x, z) -> Audience.canSee(player, x, z), e);
+        return rule(player, null, e);
     }
 
     /** What a viewer's fog shows, by block x / z (a game test passes its own). */
@@ -533,20 +533,34 @@ public final class BarFx {
         boolean canSee(double x, double z);
     }
 
-    /** {@link #seenBy(ServerPlayer, Event)}'s rule over any sight. */
+    /** {@link #seenBy(ServerPlayer, Event)}'s rule over any sight: the game tests' way in (the send path never builds one). */
     public static boolean visibleTo(Sight sight, Event e) {
-        if (sight.canSee(e.x, e.z))
+        return rule(null, sight, e);
+    }
+
+    /**
+     * The one rule, over a player's fog (the send path: no lambda per player per event) or a test's sight. Its spot,
+     * either end of a shot or beam, or any corner of a building's footprint (a collapse, a portal forming).
+     */
+    private static boolean rule(ServerPlayer player, Sight sight, Event e) {
+        if (sees(player, sight, e.x, e.z))
             return true;
         return switch (e.type) {
-            case SHOT, NANO -> sight.canSee(e.a, e.c);   // a, c = the far end's x, z
-            // a building's footprint: any corner in sight shows it (a collapse, a portal forming)
-            case COLLAPSE, FORMING -> sight.canSee(e.x - e.a, e.z - e.a) || sight.canSee(e.x + e.a, e.z - e.a)
-                || sight.canSee(e.x - e.a, e.z + e.a) || sight.canSee(e.x + e.a, e.z + e.a);
+            case SHOT, NANO -> sees(player, sight, e.a, e.c);   // a, c = the far end's x, z
+            case COLLAPSE, FORMING -> sees(player, sight, e.x - e.a, e.z - e.a) || sees(player, sight, e.x + e.a, e.z - e.a)
+                || sees(player, sight, e.x - e.a, e.z + e.a) || sees(player, sight, e.x + e.a, e.z + e.a);
             default -> false;
         };
     }
 
-    /** The events of one type queued this tick within {@code r} blocks (horizontally) of x / z (the game tests read it). */
+    private static boolean sees(ServerPlayer player, Sight sight, double x, double z) {
+        return player != null ? Audience.canSee(player, x, z) : sight.canSee(x, z);
+    }
+
+    /**
+     * The events of one type queued this tick within {@code r} blocks (horizontally) of x / z. For the game tests only
+     * (it builds a list per call); nothing in the game calls it.
+     */
     public static List<Event> queuedAt(Level level, byte type, double x, double z, double r) {
         List<Event> out = new ArrayList<>();
         if (!(level instanceof ServerLevel sl))
