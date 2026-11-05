@@ -169,7 +169,8 @@ class ShaderPack(unittest.TestCase):
         in a ford is only a short path deep. A model of the opacity curve from lib/water.glsl's own constants: half a
         block of path (a unit wading) keeps at least 65% of the unit's colour, a 1-block ford shows the bed, and only
         3+ blocks settle into the palette's opaque teal-blue. The foam band stays a few pixels thin, and the caustics
-        multiply by one number per pixel (composite), so a team colour's hue never shifts under water."""
+        multiply by one number per pixel (composite). The water's hue (test_water_turns_the_bed_turquoise) moves a
+        wading unit's team colour by at most a tenth."""
         import math
         src = read("lib", "water.glsl")
 
@@ -195,6 +196,45 @@ class ShaderPack(unittest.TestCase):
         self.assertEqual(re.findall(r"/\* DRAWBUFFERS:(\d+) \*/", water), ["015"])
         self.assertEqual(re.findall(r"/\* DRAWBUFFERS:(\d+) \*/", terrain), ["01"])
         self.assertIn("uniform sampler2D colortex5;", comp)
+
+    def test_water_turns_the_bed_turquoise(self):
+        # Fable critic, round 1: under one alpha a sand bed a block down read "grey-khaki, could pass for a gravel slab".
+        # Composite gives what shows through the water its hue over the path (lib/water.glsl's waterHue: red taken
+        # first, luma kept) on the pixel's transmitted share. The GLSL's own lines are pinned and its constants read:
+        water = read("lib", "water.glsl")
+        comp = read("composite.fsh")
+        lit = read("program", "lit.fsh")
+        self.assertIn("vec3 t = exp(-WATER_ABSORPTION * max(path, 0.0));", water)
+        self.assertIn("return t / max(dot(t, LUMA), 1e-3);", water)
+        self.assertIn("lit *= mix(vec3(1.0), waterHue(path), 1.0 - waterOpacity(path));", comp)
+        self.assertIn("gl_FragData[2] = vec4(waterPathEncode(path),", lit)
+        sigma = spc.vec3_const(water, "WATER_ABSORPTION")
+        k, deep = spc.float_const(water, "WATER_EXTINCTION"), spc.float_const(water, "WATER_DEEP_OPACITY")
+        base, top = spc.float_const(water, "WATER_PATH_BASE"), spc.float_const(water, "WATER_PATH_MAX")
+        luma = (0.2126, 0.7152, 0.0722)
+
+        def seen(colour, path):              # composite's tint on a colour that shows through `path` blocks
+            t = [math.exp(-s * path) for s in sigma]
+            hue = [x / sum(a * b for a, b in zip(t, luma)) for x in t]
+            share = 1.0 - deep * (1.0 - math.exp(-k * path))
+            return [c * (1.0 + (h - 1.0) * share) for c, h in zip(colour, hue)]
+
+        sand = (0.60, 0.50, 0.33)            # lit sand, linear
+        for path in (0.0, 0.5, 1.1, 3.3, 8.0):
+            out = seen(sand, path)
+            # the hue alone: the luma of what shows is unchanged (readability is waterOpacity's)
+            self.assertAlmostEqual(sum(a * b for a, b in zip(out, luma)), sum(a * b for a, b in zip(sand, luma)),
+                                   delta=0.02 * sum(a * b for a, b in zip(sand, luma)))
+        ford = seen(sand, 1.1)
+        # a clear shift (the look itself is the Fable critic's call): the wading bound below caps it - with the tint on the
+        # transmitted share, a 1-block ford can turn at most ~1.45x as far as half a block does
+        self.assertGreaterEqual((ford[2] / ford[0]) / (sand[2] / sand[0]), 1.15, "a 1-block ford's bed is not bluer")
+        for team in ((0.8, 0.1, 0.1), (0.1, 0.2, 0.8), (0.9, 0.8, 0.1)):
+            wading = seen(team, 0.5)
+            self.assertTrue(all(abs(w / c - 1.0) <= 0.10 for w, c in zip(wading, team)), (team, wading))
+        # the path survives the water layer's 8 bits and stays above composite's water flag (r > 0.5)
+        self.assertGreater(base, 0.5)
+        self.assertLessEqual(top / ((1.0 - base) * 255.0), 0.07)    # one step <= 0.07 blocks
 
     def test_no_two_passes_give_one_buffer_two_formats(self):
         # the loader takes one format and one clear colour per colortex, from whichever file it reads last: two passes

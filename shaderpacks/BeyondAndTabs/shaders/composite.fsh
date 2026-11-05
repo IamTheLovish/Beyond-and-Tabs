@@ -172,8 +172,14 @@ void main() {
     }
 #endif
     bool ortho = orthoView();
-#if WATER_REALISM == 1 && (CAUSTICS == 1 || SSR == 1)
+#if WATER_REALISM == 1
     vec4 water = texture2D(colortex5, texcoord);
+    // the bed seen through the water takes the water's hue over its path (lib/water.glsl), on the pixel's share that
+    // is the bed: what the water layer let through
+    if (water.r > 0.5) {
+        float path = waterPathDecode(water.r);
+        lit *= mix(vec3(1.0), waterHue(path), 1.0 - waterOpacity(path));
+    }
 #endif
 #if WATER_REALISM == 1 && CAUSTICS == 1
     // the caustics the water pass worked out for the bed under it: a share more (or less) of the light seen through
@@ -182,10 +188,10 @@ void main() {
 #endif
 #if WATER_REALISM == 1 && SSR == 1
     if (water.r > 0.5 && water.b > 0.0 && depth < 1.0 && isEyeInWater == 0) {
-        // the same ripple normal and Fresnel the water pass used, from the surface's position
+        // the same reflection normal and Fresnel the water pass used (lib/water.glsl), from the surface's position
         vec3 pos = viewPosAt(texcoord, depth);
         vec3 player = (gbufferModelViewInverse * vec4(pos, 1.0)).xyz;
-        vec3 n = mat3(gbufferModelView) * waterNormal(player.xz + cameraPosition.xz, frameTimeCounter);
+        vec3 n = mat3(gbufferModelView) * waterReflectNormal(player.xz + cameraPosition.xz, frameTimeCounter);
         vec3 v = ortho ? vec3(0.0, 0.0, 1.0) : normalize(-pos);
         float fres = waterFresnel(dot(n, v));
         if (fres > SSR_MIN_FRESNEL) {

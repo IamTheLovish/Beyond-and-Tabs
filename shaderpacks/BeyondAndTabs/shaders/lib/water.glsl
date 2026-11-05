@@ -29,6 +29,34 @@ float waterOpacity(float path) {
     return WATER_DEEP_OPACITY * (1.0 - exp(-WATER_EXTINCTION * max(path, 0.0)));
 }
 
+// ---- the colour of what shows through ----
+// Water takes red first, then green, blue least, so a sand bed a block down reads turquoise: under one alpha it read as
+// the sand's beige behind a grey veil (Fable critic, round 1: "grey-khaki, could pass for a gravel slab"). waterOpacity
+// decides how much of the bed shows (the ford's readability); this only turns the hue of what shows, its luminance kept,
+// so a unit wading stays exactly as visible. Composite applies it to the pixel's share that is the bed, from the path
+// the water pass writes into colortex5's red.
+// per block of path, red / green / blue: clear river water's order (red ~10x blue), mild enough that a unit's team
+// colour half a block down keeps its hue to within a tenth (tools/test_shader_pack.py)
+const vec3 WATER_ABSORPTION = vec3(0.45, 0.10, 0.04);
+// colortex5's red: 0 where there is no water, WATER_PATH_BASE and up where there is - the share of WATER_PATH_MAX
+// blocks of path - so composite's `water.r > 0.5` still tells water from the rest
+const float WATER_PATH_BASE = 0.52;
+const float WATER_PATH_MAX = 8.0;
+
+// the hue the water gives the light that crosses `path` blocks of it (luma 1: the hue alone)
+vec3 waterHue(float path) {
+    vec3 t = exp(-WATER_ABSORPTION * max(path, 0.0));
+    return t / max(dot(t, LUMA), 1e-3);
+}
+
+float waterPathEncode(float path) {
+    return WATER_PATH_BASE + (1.0 - WATER_PATH_BASE) * clamp(path / WATER_PATH_MAX, 0.0, 1.0);
+}
+
+float waterPathDecode(float r) {
+    return (r - WATER_PATH_BASE) / (1.0 - WATER_PATH_BASE) * WATER_PATH_MAX;
+}
+
 // view-space position of a screen point (uv 0..1) at a depth buffer value
 vec3 waterViewAt(vec2 uv, float depth) {
     vec4 v = gbufferProjectionInverse * vec4(vec3(uv, depth) * 2.0 - 1.0, 1.0);
@@ -73,6 +101,17 @@ vec3 waterNormal(vec2 p, float t) {
     return normalize(vec3(-g.x, 1.0, -g.y));
 }
 
+// the share of the ripples' tilt the reflection and Fresnel see. With all of it, a grazing first-person view flipped
+// between the bright horizon and the dark ground ripple by ripple: hard white blobs over the pond (Fable critic, round
+// 1). The sun's glint keeps the full ripples, so it still breaks into sparkles
+const float REFLECT_RIPPLE = 0.5;
+
+// the normal the surface reflects with, world space: the ripples at REFLECT_RIPPLE of their tilt
+vec3 waterReflectNormal(vec2 p, float t) {
+    vec2 g = waterSlope(p, t) * REFLECT_RIPPLE;
+    return normalize(vec3(-g.x, 1.0, -g.y));
+}
+
 float waterFresnel(float cosTheta) {
     return WATER_F0 + (1.0 - WATER_F0) * pow(1.0 - clamp(cosTheta, 0.0, 1.0), 5.0);
 }
@@ -86,7 +125,8 @@ float waterFresnel(float cosTheta) {
 const float FOAM_WIDTH = 0.25;
 // the band's colour (display value) and its opacity at the very edge
 const float FOAM_ALBEDO = 0.85;
-const float FOAM_OPACITY = 0.6;
+// 0.45: at 0.6 the band along a bank's wall read as a hard white frame round the pond (Fable critic, round 1)
+const float FOAM_OPACITY = 0.45;
 
 // the foam's share at a pixel with `below` blocks of water under it: soft, and broken by a slow ripple along the shore
 float shoreFoam(float below, vec2 p, float t) {

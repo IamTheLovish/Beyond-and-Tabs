@@ -173,9 +173,12 @@ void main() {
         bool top = (mat3(gbufferModelViewInverse) * geomN).y > 0.5;
         vec3 wn = top ? mat3(gbufferModelView) * waterNormal(playerPos.xz + cameraPosition.xz, frameTimeCounter)
                       : geomN;
+        // the calmer normal the sky reflection and Fresnel use (lib/water.glsl: REFLECT_RIPPLE)
+        vec3 wr = top ? mat3(gbufferModelView) * waterReflectNormal(playerPos.xz + cameraPosition.xz, frameTimeCounter)
+                      : geomN;
         // the RTS camera is orthographic: one view direction for every pixel (as the materials' highlight)
         vec3 v = orthoView() ? vec3(0.0, 0.0, 1.0) : normalize(-viewPos);
-        float fres = top ? waterFresnel(dot(wn, v)) : WATER_F0;
+        float fres = top ? waterFresnel(dot(wr, v)) : WATER_F0;
         c *= 1.0 + RIPPLE_SHADE * clamp(dot(wn, l) - dot(geomN, l), -0.25, 0.25);
         // the fog of war's darkening of the water's vertex colour, for what is lit without the albedo (foam, reflections)
         float fogDim = clamp(max(glcolor.r, max(glcolor.g, glcolor.b)) / WATER_TINT_BRIGHTEST, 0.0, 1.0);
@@ -186,7 +189,7 @@ void main() {
 
         // what the surface reflects: the sky of this frame's light table (dimmed under a roof, as the materials' sky
         // sheen) and the sun's glint, which a bank's shadow on the water puts out
-        vec3 reflected = skyInDirection(reflect(-v, wn), skyColour, sunColour) * (fres * levels.y);
+        vec3 reflected = skyInDirection(reflect(-v, wr), skyColour, sunColour) * (fres * levels.y);
         Material wm;
         wm.normal = wn;
         wm.ao = 1.0;
@@ -222,11 +225,11 @@ void main() {
         gl_FragData[0] = vec4(c, alpha);
         // no ambient occlusion on the water's own light: its 0, blended in by its alpha, fades the bed's under it
         gl_FragData[1] = vec4(0.0, 0.0, 0.0, alpha);
-        // colortex5, written opaque (alpha 1) so it replaces what the buffer held: one water layer's data per pixel
-        // b: how much of the reflected sky this pixel shows per unit of Fresnel (top surface only), so composite's
+        // colortex5, written opaque (alpha 1) so it replaces what the buffer held: one water layer's data per pixel.
+        // r: the path through the water, for the hue of the bed (composite). b: how much of the reflected sky this pixel shows per unit of Fresnel (top surface only), so composite's
         // screen-space reflection can swap the sky for what the ray meets, on the same terms
         float reflectShare = top ? levels.y * fogDim * (1.0 - foam) : 0.0;
-        gl_FragData[2] = vec4(1.0, clamp(0.5 + boost * CAUSTIC_ENCODE, 0.0, 1.0), reflectShare, 1.0);
+        gl_FragData[2] = vec4(waterPathEncode(path), clamp(0.5 + boost * CAUSTIC_ENCODE, 0.0, 1.0), reflectShare, 1.0);
         return;
     }
 #endif
