@@ -39,6 +39,12 @@ varying vec3 vT;
 varying vec3 vB;
 #endif
 
+// how far a plant's shading normal leans from up toward the face of its plane the camera sees (lovish, Nov 5: "Try
+// faint shadow + lit side"; 0 = lit as the ground, Oct 28 - Nov 5). At noon the side facing the sun reads ~1.05 of the
+// open lawn and the far side ~0.81 (tools/test_shader_pack.py holds 1.00-1.10 and 0.75-0.90): a tuft has a lit and a
+// shaded side, never a dark plane
+const float PLANT_SIDE = 0.35;
+
 /* DRAWBUFFERS:01 */
 void main() {
     vec4 tex = texture2D(texture, texcoord);
@@ -67,8 +73,9 @@ void main() {
     albedo = mix(albedo, entityColor.rgb, entityColor.a);
 #endif
 
-    // grass, flowers and crops are crossed planes whose normals point sideways: lit as the ground they stand on, so a
-    // tuft reads as part of the lawn (no dark patches on the planes turned from the sun)
+    // grass, flowers and crops are crossed planes whose normals point sideways: they start from the ground's up normal
+    // (lit with the lawn they stand on) and lean PLANT_SIDE toward their own face below, so a tuft has a sunny and a
+    // shaded side without the dark planes a plane's own normal gives
     // a draw with no normal (all zero) would light as NaN, and the glow and edge smoothing would spread it: up instead
     // geomN is the surface's own normal: the shadow lookup's offset and the terminator use it, so a bump on a face
     // turned from the sun never catches light through the block; n, the mapped one, shades
@@ -87,6 +94,15 @@ void main() {
     vec3 n = geomN;
     float texAo = 1.0;
 #endif
+    // a plant's plane, turned to the side the camera sees (the planes are drawn from both sides). geomN stays up, so
+    // the shadow lookup's offset and the terminator are the ground's
+    if (foliage > 0.5 && dot(viewNormal, viewNormal) >= 1e-6) {
+        vec3 face = normalize(viewNormal);
+        vec3 toEye = orthoView() ? vec3(0.0, 0.0, 1.0) : normalize(-viewPos);
+        if (dot(face, toEye) < 0.0)
+            face = -face;
+        n = normalize(mix(geomN, face, PLANT_SIDE));
+    }
     float facing = sunFacing(n, l);
 #ifdef LIT_PBR
     // past the face's own terminator no bump is lit (a soft step, for the smooth normals of round entity parts)
