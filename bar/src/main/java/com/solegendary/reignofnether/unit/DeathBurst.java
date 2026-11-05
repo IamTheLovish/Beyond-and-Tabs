@@ -28,8 +28,9 @@ import java.util.List;
  * <ul>
  *   <li><b>Who bursts:</b> every {@link Machine} (anything that carries Heat: its boiler) and the
  *       {@link RocketBatteryUnit} - only on a real death (LivingDeathEvent, not cancelled, so a Totem that saves the
- *       unit stops it too). A unit taken off the field without dying (despawned, discarded, a match reset, gone into
- *       a garrison) never bursts, and one that dies while garrisoned does not either: the building holds it.</li>
+ *       unit stops it too). A unit taken off the field without dying (despawned, discarded, gone into a
+ *       garrison) never bursts; nor does one a match reset clears with a kill ({@link #quietly},
+ *       PlayerServerEvents.killForReset), nor one that dies while garrisoned: the building holds it.</li>
  *   <li><b>Radius</b> by size: {@link #radius} = {@value #RADIUS_BASE} + {@value #RADIUS_PER_WIDTH} x the body's width,
  *       {@value #RADIUS_MIN}..{@value #RADIUS_MAX} blocks (Rocket Battery 2.0, Iron Warden 2.7, Steam Juggernaut 3.3,
  *       Iron Leviathan Engine 5.7).</li>
@@ -85,6 +86,23 @@ public final class DeathBurst {
         return e instanceof Machine || e instanceof RocketBatteryUnit;
     }
 
+    // > 0 while a match reset clears the field (quietly): its kills are no deaths in battle
+    private static int quietDepth = 0;
+
+    /**
+     * Runs {@code clear} with bursts off: a match reset takes every unit off the field with entity.kill(), and a
+     * machine killed that way must not burst into its neighbours (review round 1 on #517). Nests (a depth count, as
+     * UnitDamage's explicit scope); server thread only.
+     */
+    public static void quietly(Runnable clear) {
+        quietDepth++;
+        try {
+            clear.run();
+        } finally {
+            quietDepth--;
+        }
+    }
+
     /** Own or allied (a neutral, ownerless unit is nobody's friend). */
     static boolean friendly(String deadOwner, String targetOwner) {
         if (deadOwner == null || deadOwner.isBlank() || targetOwner == null || targetOwner.isBlank())
@@ -104,7 +122,7 @@ public final class DeathBurst {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLivingDeath(LivingDeathEvent evt) {
         LivingEntity dead = evt.getEntity();
-        if (!(dead.level() instanceof ServerLevel level) || !burstsOnDeath(dead))
+        if (quietDepth > 0 || !(dead.level() instanceof ServerLevel level) || !burstsOnDeath(dead))
             return;
         if (dead instanceof Unit u && GarrisonableBuildingAddon.getGarrison(u) != null)
             return;   // inside a building: the walls take it
@@ -128,8 +146,11 @@ public final class DeathBurst {
                 * share(friendly(owner, ((Unit) target).getOwnerName()));
             if (amount <= 0f)
                 continue;
-            // the dead unit is the direct source and nobody the causing one: vanilla scales an explosion caused by a
-            // living non-player with the world's difficulty, and a unit's numbers must not move with it
+            // the dead unit is the direct source and nobody the causing one (a burst is no unit's kill). With no
+            // causing unit, LivingEntityMixin.unitHitsStack leaves vanilla's hurt window shut, so open it here, as
+            // BombardShell does: a unit hit earlier this tick, or by another burst, still takes the full burst.
+            // (The explosion type's difficulty scaling runs only in Player.hurt, and players are never hit.)
+            target.invulnerableTime = 0;
             target.hurt(level.damageSources().explosion(dead, null), amount);
             hurt++;
         }
