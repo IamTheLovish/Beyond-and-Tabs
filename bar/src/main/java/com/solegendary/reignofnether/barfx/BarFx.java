@@ -31,7 +31,13 @@ public final class BarFx {
 
     // ---- event types
     public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6,
-            SCORCH = 7, SFX = 8, DOME = 9;
+            SCORCH = 7, SFX = 8, DOME = 9, RUNE = 10;
+
+    // ---- RUNE (a rune circle on the ground, barfx/RuneFx + RuneFxClient): flags low 2 bits = start / end, bit 4 = it
+    // follows the entity whose id is the circle id; kind = the faction style (F_*); a = radius, b = lifetime in ticks,
+    // c = the circle id (float-exact)
+    public static final byte RUNE_START = 0, RUNE_END = 1;
+    public static final byte RUNE_FOLLOW = 0x10;
 
     // ---- DOME (a barrier drawn as geometry, barfx/DomeFx): flags low 2 bits = what happened, bit 4 = it follows the
     // entity whose id is the dome id; kind = style; a = radius, b = lifetime in ticks, c = the dome id (float-exact)
@@ -489,14 +495,7 @@ public final class BarFx {
         List<Event> events = new ArrayList<>(q);
         q.clear();
         for (ServerPlayer player : level.players()) {
-            List<Event> mine = new ArrayList<>();
-            double px = player.getX(), pz = player.getZ();
-            boolean fogged = FogOfWarServerEvents.isFogActiveFor(player);
-            for (Event e : events) {
-                double dx = e.x - px, dz = e.z - pz;
-                if (dx * dx + dz * dz <= SEND_RANGE * SEND_RANGE && (!fogged || seenBy(player, e)))
-                    mine.add(e);
-            }
+            List<Event> mine = eventsFor(player, events, FogOfWarServerEvents.isFogActiveFor(player), LIVE_SIGHT);
             if (!mine.isEmpty()) {
                 try {
                     PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new BarFxClientboundPacket(mine));
@@ -505,18 +504,49 @@ public final class BarFx {
         }
     }
 
+    /** Whether a player's fog shows the block column at (x, z). */
+    @FunctionalInterface
+    public interface Sight {
+        boolean canSee(ServerPlayer player, double x, double z);
+    }
+
+    /** The running game's fog (network/Audience.canSee). */
+    static final Sight LIVE_SIGHT = Audience::canSee;
+
     /**
-     * Does a fogged player see this event (network/Audience.canSee)? Its spot, or either end of a shot or beam
-     * (BAR shows a shell flying into your sight from a shooter you cannot see), or any corner of a collapsing
-     * building. Like a vanilla particle (ServerLevelParticleMixin), never through the fog.
+     * The send rule, per player: the events within {@link #SEND_RANGE} of them, and when the fog applies to them
+     * ({@code fogged}) only those {@link #seenBy} them. flush calls it with the live fog; the game test with the vision
+     * the fog tick stored (the test server runs with fog off).
      */
-    static boolean seenBy(ServerPlayer player, Event e) {
-        if (Audience.canSee(player, e.x, e.z))
+    public static List<Event> eventsFor(ServerPlayer player, List<Event> events, boolean fogged, Sight sight) {
+        List<Event> mine = new ArrayList<>();
+        double px = player.getX(), pz = player.getZ();
+        for (Event e : events) {
+            double dx = e.x - px, dz = e.z - pz;
+            if (dx * dx + dz * dz <= SEND_RANGE * SEND_RANGE && (!fogged || seenBy(player, e, sight)))
+                mine.add(e);
+        }
+        return mine;
+    }
+
+    /** This tick's queued events of {@code level}, not yet sent (a copy; the game tests read what a call queued). */
+    public static List<Event> queued(ServerLevel level) {
+        List<Event> q = QUEUE.get(level.dimension());
+        return q == null ? List.of() : new ArrayList<>(q);
+    }
+
+    /**
+     * Does a fogged player see this event? Its spot, or either end of a shot or beam (BAR shows a shell flying into
+     * your sight from a shooter you cannot see), or any corner of a collapsing building. Like a vanilla particle
+     * (ServerLevelParticleMixin), never through the fog. A rune circle goes by its caster's spot.
+     */
+    static boolean seenBy(ServerPlayer player, Event e, Sight sight) {
+        if (sight.canSee(player, e.x, e.z))
             return true;
         return switch (e.type) {
-            case SHOT, NANO -> Audience.canSee(player, e.a, e.c);   // a, c = the far end's x, z
-            case COLLAPSE -> Audience.canSee(player, e.x - e.a, e.z - e.a) || Audience.canSee(player, e.x + e.a, e.z - e.a)
-                || Audience.canSee(player, e.x - e.a, e.z + e.a) || Audience.canSee(player, e.x + e.a, e.z + e.a);
+            case SHOT, NANO -> sight.canSee(player, e.a, e.c);   // a, c = the far end's x, z
+            case COLLAPSE -> sight.canSee(player, e.x - e.a, e.z - e.a) || sight.canSee(player, e.x + e.a, e.z - e.a)
+                || sight.canSee(player, e.x - e.a, e.z + e.a) || sight.canSee(player, e.x + e.a, e.z + e.a);
             default -> false;
         };
     }

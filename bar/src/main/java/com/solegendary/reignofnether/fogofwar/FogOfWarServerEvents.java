@@ -188,6 +188,14 @@ public class FogOfWarServerEvents {
         return isColumnInVision(player.getUUID(), x, z);
     }
 
+    /**
+     * The stored vision alone, whether or not the fog applies to {@code player}: does the vision the fog tick last
+     * computed for them cover column (x, z)? The game tests read it (the test server runs with fog off).
+     */
+    public static boolean isColumnVisibleUnderFog(ServerPlayer player, int x, int z) {
+        return isColumnInVision(player.getUUID(), x, z);
+    }
+
     // the stored vision masks alone (no fog-active test): live chunk, or edge chunk with the column's bit set
     private static boolean isColumnInVision(UUID uuid, int x, int z) {
         ChunkPos cp = new ChunkPos(x >> 4, z >> 4);
