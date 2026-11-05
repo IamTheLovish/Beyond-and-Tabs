@@ -50,14 +50,6 @@ public final class ServerTickProfile {
     static final int MAX_RECORD_SECONDS = 600;
 
     private static int ticks = 0;
-
-    /**
-     * Server ticks until the periodic report, counting the current one: 1 = at the end of this tick (GameTests that line a
-     * window up with the report). Read only.
-     */
-    public static int ticksUntilReport() {
-        return LOG_EVERY_TICKS - ticks % LOG_EVERY_TICKS;
-    }
     // /rts-perf: tick durations (ms) being recorded, and how many ticks are left
     private static List<Double> recording = null;
     private static int recordTicksLeft = 0;

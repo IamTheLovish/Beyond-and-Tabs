@@ -238,6 +238,11 @@ public final class Sys {
         return TIMER.ticks;
     }
 
+    /** Ticks of the current window whose whole-tick time is in its mean (tests: never more than windowTicks). */
+    public static int windowMsTicks() {
+        return windowMsTicks;
+    }
+
     /**
      * The [Sys] line for what was measured since the last report - without the MIN_TICKS rule - and a new window. For
      * the GameTest, which measures a few dozen ticks.

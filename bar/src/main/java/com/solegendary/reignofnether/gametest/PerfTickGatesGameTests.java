@@ -178,70 +178,64 @@ public class PerfTickGatesGameTests {
         });
     }
 
-    static final long RELEASED_STALL_MS = 1500;
-    static final int RELEASED_HOLD = 30, RELEASED_OPEN_BEFORE_REPORT = 150;
+    static final int RELEASED_HOLD = 30, RELEASED_WATCH = 10, RELEASED_TRIES = 6;
 
     /**
      * A hold that ends without a snapshot leaves the window to the periodic report, and the ticks after it - not
-     * measured - must not be booked into it. Review round 3 on #490 (af6b658c): Sys kept owing "the last tick's time"
-     * after measuring stopped, so every later tick added its time to the window until the report, and the live [Sys]
-     * line's mean was diluted by up to ~180 unmeasured ticks (ours and vanilla's share inflated, elsewhere near 0). The
-     * window opens 150 ticks before a report (ServerTickProfile.ticksUntilReport), holds 30 ticks with a 1500 ms
-     * stall in them and is released about 120 ticks before the report: its line's mean must be the 30 held ticks'.
-     * Its own batch: no other holder.
+     * measured - must not book their time into it. Review round 3 on #490 (af6b658c): Sys kept owing "the last tick's
+     * time" after measuring stopped, so every later tick added its time to the window until the report and the live
+     * [Sys] line's mean was diluted by up to ~180 unmeasured ticks (ours and vanilla's share inflated, elsewhere near 0).
+     * The rule, whatever the runner's speed: a window never holds more tick times than ticks it measured
+     * (Sys.windowMsTicks() <= Sys.windowTicks()), checked on each tick after the hold while measuring is off. A busy
+     * runner keeps measuring on by itself (the slow-server rule, tick p95 >= 25 ms: the first red of this test,
+     * 42015339793, measured 110-150 ticks), which is not the case under test: the hold is tried again, and the test says
+     * so if measuring never went off. Its own batch: no other holder.
      */
-    @GameTest(template = ARENA, timeoutTicks = 520, batch = "perf_sys_released")
+    @GameTest(template = ARENA, timeoutTicks = RELEASED_TRIES * (RELEASED_HOLD + RELEASED_WATCH + 5) + 60, batch = "perf_sys_released")
     public static void a_released_sys_window_does_not_count_the_ticks_after_its_hold(GameTestHelper helper) {
         Object hold = new Object();
         TestCleanup.atEnd(helper, () -> Sys.force(hold, false));
-        int[] phase = { 0 };
-        long[] openAt = { -1 }, releasedAt = { -1 };
-        String[] before = { null };
+        int[] phase = { 0 }, tries = { 0 }, offTicks = { 0 };
+        long[] at = { -1 };
         helper.onEachTick(() -> {
             long tick = helper.getTick();
-            if (phase[0] == 0) {
-                if (ServerTickProfile.ticksUntilReport() != RELEASED_OPEN_BEFORE_REPORT)
-                    return;
+            if (phase[0] == 0) {   // hold the timer for RELEASED_HOLD ticks
                 Sys.force(hold, true);
                 Sys.snapshot();   // a fresh window from here
-                openAt[0] = tick;
+                at[0] = tick;
                 phase[0] = 1;
             } else if (phase[0] == 1) {
-                if (tick == openAt[0] + 5)
-                    spin(RELEASED_STALL_MS);   // one held tick, outside every timed section
-                if (tick < openAt[0] + RELEASED_HOLD)
+                if (tick < at[0] + RELEASED_HOLD)
                     return;
-                before[0] = Sys.lastLine;
-                Sys.force(hold, false);   // released without a snapshot: the periodic report writes this window
-                releasedAt[0] = tick;
+                Sys.force(hold, false);   // released without a snapshot
+                at[0] = tick;
+                offTicks[0] = 0;
                 phase[0] = 2;
             } else if (phase[0] == 2) {
-                String line = Sys.lastLine;
-                if (line == before[0]) {   // the same string: no report yet
-                    if (tick > releasedAt[0] + ServerTickProfile.LOG_EVERY_TICKS + 20) {
+                int ticks = Sys.windowTicks(), msTicks = Sys.windowMsTicks();
+                if (!Sys.isMeasuring()) {
+                    offTicks[0]++;
+                    if (msTicks > ticks) {
                         phase[0] = 3;
-                        helper.fail("no periodic [Sys] line came back " + (tick - releasedAt[0]) + " ticks after the hold ended");
+                        helper.fail("the released [Sys] window holds the time of " + msTicks + " ticks but measured " + ticks
+                            + ": " + offTicks[0] + " unmeasured tick(s) after the hold booked their time into it");
+                        return;
                     }
-                    return;
                 }
-                phase[0] = 3;
-                ReignOfNether.LOGGER.info("[SysWindow] GameTest released: held {} ticks with a {} ms stall, report {} ticks after: {}",
-                    RELEASED_HOLD, RELEASED_STALL_MS, tick - releasedAt[0], line);
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\[Sys\\] (\\d+) ticks, mean ([0-9.]+) ms/tick").matcher(line);
-                if (!m.find()) {
-                    helper.fail("the periodic [Sys] line has no tick count and mean: " + line);
+                if (tick < at[0] + RELEASED_WATCH)
                     return;
-                }
-                int ticks = Integer.parseInt(m.group(1));
-                double mean = Double.parseDouble(m.group(2));
-                double held = RELEASED_STALL_MS / (double) RELEASED_HOLD;
-                if (Math.abs(ticks - RELEASED_HOLD) > 1)
-                    helper.fail("the periodic line measured " + ticks + " ticks, not the " + RELEASED_HOLD + " held (not the case under test): " + line);
-                else if (mean < held * 0.6)
-                    helper.fail(String.format(Locale.ROOT, "the released window's mean tick %.1f ms was diluted by the %d unmeasured ticks"
-                        + " after the hold (its %d held ticks: about %.0f ms plus idle): %s", mean, tick - releasedAt[0], RELEASED_HOLD, held, line));
-                else
+                if (offTicks[0] >= 2) {
+                    phase[0] = 3;
+                    ReignOfNether.LOGGER.info("[SysWindow] GameTest released: {} unmeasured ticks watched after a {}-tick hold, window"
+                        + " {} ticks / {} tick times", offTicks[0], RELEASED_HOLD, ticks, msTicks);
                     helper.succeed();
+                } else if (++tries[0] < RELEASED_TRIES) {
+                    phase[0] = 0;   // measuring stayed on (a slow runner): not the case under test, hold again
+                } else {
+                    phase[0] = 3;
+                    helper.fail("measuring never went off after a hold in " + RELEASED_TRIES + " tries (the server is slow: tick p95"
+                        + " >= 25 ms), so the case under test never happened");
+                }
             }
         });
     }
