@@ -15,7 +15,6 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import building_gates as G  # noqa: E402
-import camera_colour as C  # noqa: E402
 import lab_barracks as L  # noqa: E402
 import schem_study as S  # noqa: E402
 
@@ -26,6 +25,16 @@ NBT = [os.path.join(RES, "data", "reignofnether", "structures", f) for f in FILE
 NBT_ASSETS = [os.path.join(RES, "assets", "reignofnether", "structures", f) for f in FILES]
 KEEP_Y = 9          # a column whose top is at least this high belongs to the leading mass
 PALE = ("smooth_sandstone", "sandstone", "calcite", "quartz", "diorite")
+
+# The floor blocks' values from ABOVE on today's stills (tools/camera_colour.measure, the median 'up' value of the
+# pixels each block's rays hit): eyes 41792408905 (Nov 4, main: the Fable critics' run) and 41973122578 (Nov 5, this
+# lane's Lotus before / after). design/vehicle_labs/camera_colours.json was measured Oct 30 on the block pack of then
+# and no longer matches the stills (smooth stone 0.33 there, 0.63 on screen; tuff 0.34 there, 0.19 on the Ashborn
+# capitol's terrace): the first court fix, smooth stone, passed on the old table and read LIGHTER than the shipped
+# court on the after still (court crop luma 0.56 -> 0.60). The court test reads this measured model instead.
+COURT_UP = {"polished_andesite": 0.59, "polished_andesite_stairs": 0.55, "smooth_stone": 0.63, "stone": 0.40,
+            "stone_bricks": 0.44, "stone_brick_stairs": 0.41, "chiseled_stone_bricks": 0.42, "dark_oak_planks": 0.31,
+            "tuff": 0.19, "pearlescent_froglight": 0.96}
 
 
 def tops(solid):
@@ -134,16 +143,20 @@ class BarracksTest(unittest.TestCase):
     # ---- the Fable critics' fixes (Nov 4, eyes 41792408905: L1 5 / 10, L3 4 / 10; critic-b.md, critic-c.md F6) ----
     def test_court_in_the_mids_on_camera(self):
         """The court the RTS camera sees (layer 0) reads in the mids at every level: the median of what each floor
-        cell looks like from above (design/vehicle_labs/camera_colours.json, the eyes stills' own values) sits in
-        0.28-0.40, under the white masses and near the lawn (grass 0.26), not in the lights. Shipped: a polished
-        andesite court at 0.45 - on the noon still luma 0.56, lighter than the keep's south face (0.51)."""
-        table = C.load()
+        cell looks like from above (COURT_UP, measured on today's stills) sits in the Art method's mids, 0.28-0.50,
+        under the white masses (0.7) and near the lawn (grass 0.36), not in the lights. Shipped: a polished andesite
+        court at 0.59 - on the noon still luma 0.56, lighter than the keep's south face (0.51). A floor block the model
+        lacks fails. And at most 35 % of the court's pixels are in the lights (>= 0.50: the pale path and the
+        start-type steps only) - a median alone passed the shipped Lotus court on its stone-brick border."""
         for i in range(3):
-            vals = sorted(C.lookup(table, n, "up")[2] for (q, n, _f, _b) in self.hits[i]
-                          if q[1] == 0 and C.lookup(table, n, "up"))
+            floor = [n for (q, n, _f, _b) in self.hits[i] if q[1] == 0]
+            self.assertEqual(sorted({n for n in floor if n not in COURT_UP}), [], "L%d: unmeasured floor" % (i + 1))
+            vals = sorted(COURT_UP[n] for n in floor)
             self.assertTrue(vals, "L%d: no floor seen" % (i + 1))
             med = vals[len(vals) // 2]
-            self.assertTrue(0.28 <= med <= 0.40, "L%d court median %.2f" % (i + 1, med))
+            self.assertTrue(0.28 <= med < 0.50, "L%d court median %.2f" % (i + 1, med))
+            light = sum(1 for v in vals if v >= 0.50) / len(vals)
+            self.assertLessEqual(light, 0.35, "L%d court in the lights %.2f" % (i + 1, light))
 
     def test_keep_faces_have_a_dark_band_and_windows(self):
         """The keep's two camera faces (west x 6, south z 3) are no 8-high blank planes: in every column of a face,
