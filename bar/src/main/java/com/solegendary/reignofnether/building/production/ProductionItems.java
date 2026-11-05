@@ -466,7 +466,9 @@ public class ProductionItems {
         VERDANT_T3B,
         TIDE_T3B,
         STORM_T3B,
-        BRASS_T3B
+        BRASS_T3B,
+        // Tier 4 (H5a): trainable at the Fortress after Ascension, so getProductionItem finds it (every_unit_type_has_cost_faction_abilities_icon_and_name)
+        WORLDBREAKER
     );
 
     @Nullable
