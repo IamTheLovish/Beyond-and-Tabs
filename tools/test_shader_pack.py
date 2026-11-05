@@ -112,6 +112,27 @@ class ShaderPack(unittest.TestCase):
             self.assertIn("uniform sampler2D normals;", src, name)
             self.assertIn("uniform sampler2D specular;", src, name)
         self.assertIn("#define LIT_WATER", open(os.path.join(spc.SHADERS, "gbuffers_water.fsh"), encoding="utf-8").read())
+        # and after the preprocessor (what the GPU compiles) the water pass binds no material maps at all, while
+        # terrain keeps them - so this check cannot pass by the preprocessor dropping everything
+        terrain = spc.preprocess(spc.expand(os.path.join(spc.SHADERS, "gbuffers_terrain.fsh")))
+        self.assertIn("uniform sampler2D normals;", terrain)
+        water = spc.preprocess(spc.expand(os.path.join(spc.SHADERS, "gbuffers_water.fsh")))
+        self.assertIn("void main()", water)
+        self.assertNotIn("uniform sampler2D normals;", water)
+        self.assertNotIn("uniform sampler2D specular;", water)
+
+    def test_materials_off_is_slice_one(self):
+        # the option screen promises MATERIALS Off = slice 1's look (review of #434, Nov 5): no material maps and slice 1's
+        # exposure 0.95. Only the near-neutral highlight tint (lovish, Oct 30) stays. Neither setting bounces the sun
+        # onto walls: lovish, Nov 5, "Keep the strong step" (slice 1's wall-to-roof step, 1.73 on the block sampler)
+        def program(name, materials):
+            src = spc.expand(os.path.join(spc.SHADERS, name))
+            return spc.preprocess(src.replace("#define MATERIALS 1 ", "#define MATERIALS %d " % materials))
+        for materials, exposure in ((1, "1.05"), (0, "0.95")):
+            final, terrain = program("final.fsh", materials), program("gbuffers_terrain.fsh", materials)
+            self.assertIn("const float EXPOSURE = %s;" % exposure, final, materials)
+            self.assertNotIn("BOUNCE", terrain, materials)
+            self.assertEqual("uniform sampler2D normals;" in terrain, materials == 1)
 
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
     def test_every_program_compiles(self):
