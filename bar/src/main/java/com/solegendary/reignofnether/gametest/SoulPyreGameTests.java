@@ -75,6 +75,10 @@ public class SoulPyreGameTests {
             float pyreMax = pyre.getMaxHealth();
             double pyreX = pyre.getX(), pyreZ = pyre.getZ();
             int[] firstHit = { -1, 0 };
+            // the state trail a failure prints: ticks with a building target, the lowest shot cooldown seen, the last
+            // set-up ticks left, ticks spent conjuring, shells seen in flight from this Pyre
+            int[] trail = { 0, Integer.MAX_VALUE, -1, 0, 0 };
+            java.util.Set<Integer> shells = new java.util.HashSet<>();
             boolean[] ordered = { false }, over = { false };
             watch[0] = () -> {
                 if (over[0])
@@ -88,6 +92,19 @@ public class SoulPyreGameTests {
                     ordered[0] = true;
                     return;
                 }
+                if (((AttackerUnit) pyre).getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.RangedAttackBuildingGoal<?> g
+                        && g.getBuildingTarget() != null)
+                    trail[0]++;
+                if (((AttackerUnit) pyre).getAttackGoal() instanceof com.solegendary.reignofnether.unit.goals.UnitBowAttackGoal<?> bow)
+                    trail[1] = Math.min(trail[1], (int) bow.getAttackCooldown());
+                trail[2] = com.solegendary.reignofnether.unit.SetUp.ticksLeft(pyre);
+                if (pyre instanceof com.solegendary.reignofnether.unit.units.monsters.SoulPyreUnit sp && sp.isConjuring())
+                    trail[3]++;
+                for (var e : level.getEntitiesOfClass(com.solegendary.reignofnether.unit.units.tide.BombardShell.class,
+                        pyre.getBoundingBox().inflate(30)))
+                    if (e.getOwner() == pyre)
+                        shells.add(e.getId());
+                trail[4] = shells.size();
                 int health = bp.getHealth();
                 if (firstHit[0] < 0 && health < before) {
                     firstHit[0] = now;
@@ -100,8 +117,17 @@ public class SoulPyreGameTests {
                 double dist = Math.sqrt(pyre.distanceToSqr(cx, pyre.getY(), cz));
                 double drift = Math.sqrt((pyre.getX() - pyreX) * (pyre.getX() - pyreX) + (pyre.getZ() - pyreZ) * (pyre.getZ() - pyreZ));
                 int lost = before - health;
-                String state = String.format(Locale.ROOT, "tower %d of %d health, pyre %.0f/%.0f hp %.1f blocks from the tower (moved %.1f), lobber %s",
-                    health, before, pyre.getHealth(), pyreMax, dist, drift, lobber.isAlive() ? "alive at " + Math.round(lobber.getHealth()) + " hp" : "dead");
+                double nearest = Double.MAX_VALUE;
+                for (var b : bp.getBlocks())
+                    if (b.isPlaced(level))
+                        nearest = Math.min(nearest, Math.sqrt(pyre.distanceToSqr(b.getBlockPos().getX() + 0.5, b.getBlockPos().getY() + 1.0,
+                            b.getBlockPos().getZ() + 0.5)));
+                String state = String.format(Locale.ROOT, "tower %d of %d health, pyre %.0f/%.0f hp %.1f blocks from the tower (moved %.1f), lobber %s;"
+                    + " trail: building target %d ticks, lowest cooldown %s, set-up left %d, conjuring %d ticks, %d shells thrown,"
+                    + " nearest tower block %.1f (range %.0f), canAttackBuildings %s",
+                    health, before, pyre.getHealth(), pyreMax, dist, drift, lobber.isAlive() ? "alive at " + Math.round(lobber.getHealth()) + " hp" : "dead",
+                    trail[0], trail[1] == Integer.MAX_VALUE ? "none" : String.valueOf(trail[1]), trail[2], trail[3], trail[4], nearest,
+                    ((AttackerUnit) pyre).getAttackRange(), ((AttackerUnit) pyre).canAttackBuildings());
                 ReignOfNether.LOGGER.info("[SoulPyre] GameTest: first soul after {} ticks, {} health lost; {}",
                     firstHit[0] < 0 ? -1 : firstHit[0] - start, lost, state);
                 String verdict = null;
