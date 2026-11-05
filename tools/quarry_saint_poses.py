@@ -45,6 +45,27 @@ HANG_L = {"shoulder_l": [0, 0, 0], "forearm_l": [0, 0, 0]}
 
 KEYS = {
     "rest": dict(),
+    # r3 clip keys (tools/quarry_saint_anim.py interpolates between solved keys; every key is solved, none typed)
+    "ready": dict(grip=(-10.0, 22.0, -12.0), yaw=-25.0, pitch=40.0, move=(0.0, -2.0, 0.0), torso=(-4, 0, 0),
+                  feet={}, left="haft"),
+    "carry": dict(grip=(-16.0, 38.0, -11.0), yaw=180.0, pitch=35.0, dir_tol=(10, 5), carry=True,
+                  left={"shoulder_l": [0, 0, 0]}),
+    "rest_lift": dict(rest_lift=6.0),
+    "sweep_mid": dict(grip=(0.0, 22.0, -16.0), yaw=-75.0, pitch=12.0, move=(1.0, -3.0, 0.0), pelvis=(0, 6, 0),
+                      torso=(2, -16, 0), head=(0, 10, 0), feet={}, left="haft"),
+    "sweep_recover": dict(grip=(-8.0, 20.0, -12.0), yaw=-10.0, pitch=15.0, move=(0.0, -2.0, 0.0), torso=(-4, 8, 0),
+                          feet={}, left="haft"),
+    "slam_step": dict(grip=(-10.0, 22.0, -12.0), yaw=-25.0, pitch=40.0, move=(0.0, -2.5, 0.0), torso=(-4, 0, 0),
+                      feet={"l": (0, 0, -3, 0)}, left="haft"),
+    "slam_mid": dict(grip=(-4.0, 44.0, -12.0), yaw=0.0, pitch=85.0, move=(0.0, -4.0, 0.0), torso=(0, 0, 0),
+                     head=(0, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft", head_x_max=-6.0),
+    "slam_pop": dict(grip=(-6.0, 30.0, -22.0), yaw=0.0, pitch=20.0, move=(0.0, -5.0, -1.0), torso=(-20, 0, 0),
+                     head=(6, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft"),
+    "gatefall_brace": dict(grip=(-10.0, 22.0, -12.0), yaw=-25.0, pitch=40.0, move=(0.0, -4.0, 0.0), torso=(-4, 0, 0),
+                           feet={"r": (-3, 0, 0, 0), "l": (3, 0, 0, 0)}, left="haft"),
+    "gatefall_mid": dict(grip=(-4.0, 44.0, -12.0), yaw=0.0, pitch=85.0, move=(0.0, -5.0, 0.0), torso=(0, 0, 0),
+                         head=(0, 0, 0), feet={"r": (-3, 0, 0, 0), "l": (3, 0, 0, 0)}, left="haft", head_x_max=-6.0),
+    "death_hit": dict(torso=(6, 0, 4), head=(4, 0, 0), keep_rest_maul=True, feet={}),
     # 3.3 walk, CARRY stance (maul on the right disc); shin values are the sheet's knee flexion (a knee bends -x)
     "walk_contact_R": dict(CARRY, move=(-1.0, None, 0.0), pelvis=(0, -3, 3), torso=(0, 3, -2), legs={"r": (22, -4),
                            "l": (-16, -18)}, toe={"l": -15}, planted="r", left={"shoulder_l": [12, 0, 0]}),
@@ -66,6 +87,7 @@ KEYS = {
                          torso=(-6, 28, 0), head=(0, -12, 0), feet={"r": (0, 0, 0, 10)}, left="haft"),
     # 3.5 the slam (vs buildings)
     "slam_windup": dict(grip=(-4.0, 52.0, -2.0), yaw=180.0, pitch=70.0, move=(0.0, -3.5, 0.0), torso=(18, 0, 0),
+                        head_x_max=-6.0,
                         head=(-15, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft"),
     "slam_contact": dict(grip=(-6.0, 22.0, -24.0), yaw=0.0, pitch=-35.0, buried=-3.0, move=(0.0, -5.0, -1.0),
                          torso=(-30, 0, 0), head=(10, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft"),
@@ -73,6 +95,7 @@ KEYS = {
                         torso=(-18, 0, 0), head=(4, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft"),
     # 3.8 Gatefall
     "gatefall_windup": dict(grip=(-4.0, 54.0, 0.0), yaw=180.0, pitch=85.0, move=(0.0, -4.0, 0.0), torso=(24, 0, 0),
+                            head_x_max=-6.0,
                             head=(-20, 0, 0), feet={"r": (-3, 0, 0, 0), "l": (3, 0, 0, 0)}, left="haft"),
     "gatefall_contact": dict(grip=(-6.0, 20.0, -24.0), yaw=0.0, pitch=-40.0, buried=-4.0, move=(0.0, -6.0, -1.0),
                              torso=(-38, 0, 0), head=(14, 0, 0), feet={"r": (-3, 0, 0, 0), "l": (3, 0, 0, 0)},
@@ -126,7 +149,7 @@ def body_box_arrays(m, T, extra=()):
 
 
 def fit_grip(m, G0, yaw0, pitch0, T, two_hands=True, ground=None, dir_tol=(20, 15), head_out_left=None,
-             carry=False, k=1):
+             carry=False, k=1, head_x_max=None):
     """The reachable grip and haft direction nearest the key's: both shoulders within reach of their fists (11 to 23
     px from the shoulder pivot), the fists, the haft and the head out of the body (torso, pelvis, head, thighs), the
     head's centre not under the ground. Returns (G, yaw, pitch, shift px)."""
@@ -172,6 +195,10 @@ def fit_grip(m, G0, yaw0, pitch0, T, two_hands=True, ground=None, dir_tol=(20, 1
             hc = G + 34.0 * d
             if ground is not None:
                 c = c + 2.0 * np.maximum(0, ground - (hc[:, 1] - 6.0)) ** 2
+            if head_x_max is not None:                    # r3: the maul head this far right of the head (x <=)
+                c = c + 0.8 * np.maximum(0, hc[:, 0] - head_x_max) ** 2
+                # and away from the halo from above: its centre >= 9 px off the head's vertical line
+                c = c + 0.8 * np.maximum(0, 9.0 - np.hypot(hc[:, 0], hc[:, 2] - 2.0)) ** 2
             if head_out_left is not None:
                 c = c + 0.5 * np.maximum(0, SL[0] + head_out_left - hc[:, 0]) ** 2
             for i in np.argsort(c)[:12]:
@@ -302,7 +329,13 @@ def solve_key(bind, name, spec, log, dsl=None):
     T = tuple(T)
     # the maul
     G_used = None
-    if spec.get("keep_rest_maul") or "grip" not in spec:
+    if spec.get("rest_lift"):
+        g, d = q.haft_axis(m)
+        yaw = math.degrees(math.atan2(-d[0], -d[2]))
+        pitch = math.degrees(math.asin(d[1])) + spec["rest_lift"]
+        q.place_right(m, g, q.maul_dir(yaw, pitch), T)
+        note.append("rest maul lifted %.0f deg" % spec["rest_lift"])
+    elif spec.get("keep_rest_maul") or "grip" not in spec:
         pass
     else:
         two = spec.get("left") == "haft"
@@ -311,7 +344,7 @@ def solve_key(bind, name, spec, log, dsl=None):
             ground = 0.5
         cands = fit_grip(m, spec["grip"], spec["yaw"], spec["pitch"], T, two_hands=two, ground=ground,
                          dir_tol=spec.get("dir_tol", (20, 15)), head_out_left=spec.get("head_out_left"),
-                         carry=spec.get("carry", False), k=4)
+                         carry=spec.get("carry", False), k=8, head_x_max=spec.get("head_x_max"))
         best = None
         base = copy.deepcopy(m)
         for ci, (G, yaw, pitch, shift) in enumerate(cands):
@@ -416,11 +449,11 @@ def measure(name, bind, m, T, dsl):
     return r
 
 
-def solve_all(only=None, massing="control"):
+def solve_all(only=None, massing=q.DEFAULT_MASSING):
     bind, _ = q.build(massing)
     dsl = json.loads(json.dumps(bind.to_json()))
     import render_concept
-    tmp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".scratch", "_qs_bind_%s.json" % massing)
+    tmp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".scratch", "_qs_bind_%s_%d.json" % (massing, os.getpid()))
     os.makedirs(os.path.dirname(tmp), exist_ok=True)
     with open(tmp, "w") as f:
         json.dump(dsl, f)
@@ -444,7 +477,7 @@ def main():
     ap.add_argument("--out", default="-")
     ap.add_argument("--report", default=None)
     ap.add_argument("--only", default="")
-    ap.add_argument("--massing", default="control", choices=q.MASSINGS,
+    ap.add_argument("--massing", default=q.DEFAULT_MASSING, choices=q.MASSINGS,
                     help="control = the round-1 body; a | b | c = the round-2 massing greyboxes (gen_quarry_saint)")
     a = ap.parse_args()
     poses, report = solve_all([x for x in a.only.split(",") if x], a.massing)
