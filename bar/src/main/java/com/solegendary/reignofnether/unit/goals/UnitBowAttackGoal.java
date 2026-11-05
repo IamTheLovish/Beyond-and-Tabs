@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.unit.goals;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.unit.Engage;
+import com.solegendary.reignofnether.unit.SetUp;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -106,6 +107,14 @@ public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends
     public void tick() {
         LivingEntity target = this.mob.getTarget();
 
+        // a target that took off (a Celestial Dragon lifting again) or reached it some other way: a unit that cannot
+        // hit air lets it go (AttackerUnit.canTargetAir)
+        if (target != null && AttackerUnit.refusesTarget(this.mob, target)) {
+            ((Unit) this.mob).getTargetGoal().setTarget(null);
+            this.mob.setTarget(null);
+            return;
+        }
+
         if (target != null && target.isAlive()) {
             this.mob.getLookControl().setLookAt(target.getX(), target.getEyeY(), target.getZ());
 
@@ -173,7 +182,8 @@ public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends
                 }
                 else if (distToTarget <= attackRange && canSeeTarget) { // start drawing bowstring
                     int i = this.mob.getTicksUsingItem();
-                    if (i >= attackWindupTime && attackCooldown <= 0) {
+                    // artillery set-up (unit/SetUp): the draw is held, the cooldown kept, until it has stood still
+                    if (i >= attackWindupTime && attackCooldown <= 0 && SetUp.isSetUp(this.mob)) {
                         this.mob.stopUsingItem();
 
                         float velocity = 0;

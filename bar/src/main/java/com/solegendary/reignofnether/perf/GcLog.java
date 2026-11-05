@@ -25,6 +25,16 @@ public final class GcLog {
     private static final AtomicBoolean INSTALLED = new AtomicBoolean();
     private static long windowStart = 0, windowGcMs = 0;
     private static int windowCount = 0;
+    /** Pause milliseconds since the last [Sys] line (Sys takes and clears it with each line). */
+    private static long sysWindowMs = 0;
+
+    static long takeSysWindowMs() {
+        synchronized (GcLog.class) {
+            long ms = sysWindowMs;
+            sysWindowMs = 0;
+            return ms;
+        }
+    }
 
     public static void install() {
         if (!INSTALLED.compareAndSet(false, true))
@@ -65,6 +75,7 @@ public final class GcLog {
                 windowCount = 0;
             }
             windowGcMs += ms;
+            sysWindowMs += ms;
             windowCount++;
         }
         if (ms >= PAUSE_MS)

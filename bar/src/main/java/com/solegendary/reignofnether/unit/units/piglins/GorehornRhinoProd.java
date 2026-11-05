@@ -62,7 +62,7 @@ public class GorehornRhinoProd extends ProductionItem implements IUnitProduction
             List.of(
                 Component.translatable("entity.reignofnether.gorehorn_rhino_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.gorehorn_rhino_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.gorehorn_rhino_unit.tooltip2").getVisualOrderText()

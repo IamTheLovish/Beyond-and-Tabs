@@ -42,6 +42,13 @@ public class BuildingCountGameTests {
                 blocks.add(b);
                 minY = Math.min(minY, b.getBlockPos().getY());
             }
+        // the hall and its floor stand 240/160 blocks off, over other tests' arenas: put back when the test ends,
+        // pass or fail (they stayed for good)
+        TestCleanup.BlockUndo undo = TestCleanup.blocks(helper);
+        for (BuildingBlock b : blocks) {
+            BlockPos p = b.getBlockPos(), under = new BlockPos(p.getX(), minY - 1, p.getZ());
+            undo.region(p, p).region(under, under);
+        }
         for (BuildingBlock b : blocks)
             level.setBlock(new BlockPos(b.getBlockPos().getX(), minY - 1, b.getBlockPos().getZ()),
                 Blocks.STONE.defaultBlockState(), 2);

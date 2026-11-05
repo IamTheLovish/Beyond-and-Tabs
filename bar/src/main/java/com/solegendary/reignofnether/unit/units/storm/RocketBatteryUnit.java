@@ -67,7 +67,7 @@ import java.util.Optional;
  * Tidewrought unit (amphibious, found by instanceof in the Tides code). Cost: four shell entities per volley in flight,
  * one grid query per burst.
  */
-public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.unit.interfaces.IndirectFire {
+public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.unit.interfaces.FieldArtillery {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new AttackGround(RocketBatteryUnit.attackRange), Keybindings.abilitySlot1);
@@ -180,7 +180,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
 
     final static public float attackDamage = 5.0f;      // per rocket, to every enemy in its splash (4 a volley)
     final static public float attacksPerSecond = 0.1667f; // one volley every 6 s
-    final static public float maxHealth = 38.0f;
+    final static public float maxHealth = 30.0f;   // -20% (lovish, Oct 24: artillery death ball)
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.22f;
     final static public float attackRange = 24.0F;      // outranges the Bombard Crew (22) by a step: a saturation weapon
@@ -346,13 +346,15 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
     }
 
     /**
-     * Fires a volley at (x, y, z) unless it is inside {@link #MIN_RANGE}: the first rocket now, the rest a few ticks
-     * apart (scheduled tasks, nothing per tick), each at its own spot within {@link #VOLLEY_SPREAD} of the aim. Returns
-     * whether it fired. Public for the game test.
+     * Fires a volley at (x, y, z) unless it is inside {@link #MIN_RANGE} or still setting up (unit/SetUp): the first
+     * rocket now, the rest a few ticks apart (scheduled tasks, nothing per tick), each at its own spot within
+     * {@link #VOLLEY_SPREAD} of the aim. Returns whether it fired. Public for the game test.
      */
     public boolean fireVolley(double x, double y, double z) {
         if (level().isClientSide())
             return false;
+        if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(this))
+            return false;   // still setting up after moving (FieldArtillery)
         double dx = x - getX(), dz = z - getZ();
         if (dx * dx + dz * dz < MIN_RANGE * MIN_RANGE)
             return false;

@@ -137,7 +137,7 @@ production item and distinct hotkeys, so the grid never empties once research is
 lovish's clip 5: "I can't use formation when using attack command, which I don't even see an attack command" - the
 orders row read X (sword), B, G, N, Y, P and a cut-off "Spc", seven tiles in a row the portrait starts 6.5 tiles in.
 The card is now laid out from `CommandCard` (side-neutral, shared with the hotkey GameTest) in rows of 6 from the
-bottom: **Attack (X)**, **Move (M)**, **Stop (S)**, **Hold (H)** for fighters or **Build (B)** for workers,
+bottom: **Attack (X)**, **Move (M)**, **Stop (Ctrl+S)**, **Hold (H)** for fighters or **Build (B)** for workers,
 **Patrol (P)**, **Guard (G)**; above them the fire state (click), the gather target (click; it lost G to Guard) and
 **Garrison (N)**. Ability and build-menu rows start above the order rows.
 
@@ -152,7 +152,7 @@ bottom: **Attack (X)**, **Move (M)**, **Stop (S)**, **Hold (H)** for fighters or
   lovish's card kept reading "A". `KeybindMigration` moves a saved binding still on an old default to the new one once
   (client config `keybind_layout`, toast "Controls updated"); a key the player chose is never touched. Moving a default
   later = bump `LAYOUT_VERSION` and add the old key to `KeybindMigration.STALE`. Controls marks a card key a player put
-  on a pan key red (`KeyConflicts`); Stop on S, as shipped, is not flagged.
+  on a pan key red (`KeyConflicts`); Stop is the Ctrl+S chord since Nov 3 (a tap of a bare S while panning stopped workers), so a fresh install has no red key.
 - **Space** looks at the last alert (`Keybindings.lastAlert`), so Stop lost its Space default.
 - **Card keys win**: a key used by the selected card's own buttons (`HudClientEvents.cardButtons`: orders, abilities,
   build menu, production) never also fires a HUD-wide button - the minimap toggle on M, the idle-worker cycler on
@@ -183,7 +183,7 @@ the item shop). Alert lines with a place ("Base under attack", "Units under atta
 
 From the reference clip of another Minecraft RTS mod: with nothing selected the unit-info corner shows a small,
 localised **controls cheat-sheet** (Left-drag select, Right-click move/attack, Right-drag line formation, A
-attack-move, S stop, H hold, B build, . idle worker, Space last alert, Ctrl+right-drag area command; keys read from
+attack-move, Ctrl+S stop, H hold, B build, . idle worker, Space last alert, Ctrl+right-drag area command; keys read from
 the live bindings), hidden as soon as anything is selected or hovered. **Hovering a building** instead shows its card
 (`HoverCards`): name, owner swatch, health or build progress, and "Producing <item> 45% +N". Your own and allied
 queues are on the client already; for anyone else the client asks the server (`BuildingHoverServerboundPacket`,
@@ -256,6 +256,24 @@ reclaim circle is dragged (Ctrl + right-drag) the circle's total metal hangs ove
 server-side on the block-display entity, so `WreckSyncServerEvents` sends the changed heaps' whole-metal values once a
 second (`WreckSyncClientboundPacket`), the full list to a joining player; `WreckClientEvents` keeps the id → metal map,
 prunes gone entities once a second, and matches the hovered block to the nearest wreck within 1.5 blocks.
+
+**Wreck markers (Oct 24, "winning pays").** Players did not notice the wrecks, so in the RTS view every known wreck now
+carries a compact number (just the metal; a big heap of 150+ gets the reclaim mark and a brighter, larger number, 500+
+- a commander's 600 - is gold and larger still). The hovered wreck of a selected worker keeps the fuller label above and
+loses its marker; while an area-reclaim circle is dragged only the circle's total shows. Per frame the cost is bounded
+by `resources/WreckMarkerRules` (pure, JUnit-tested): wrecks within 240 blocks of the camera, inside the frustum and in a
+chunk the fog shows now, richest first, at most 48, fading from 120 blocks out and scaling with the camera zoom.
+Fog: `WreckSyncServerEvents` sends a client only the wrecks it may know (`Audience.mayKnow`), the marker also needs the
+chunk to be lit, so a fogged heap is never marked; a heap seen earlier and since fogged simply loses its number.
+
+## Idle auto-reclaim and the winner's wreck
+
+An idle worker (nothing ordered, queued, built, gathered or fought) with a wreck within **8 blocks** walks over and
+strips it by itself, by the same reclaim target + move target an explicit RECLAIM order sets
+(`WreckServerEvents.autoReclaimIdle`, once a second, on the wreck cell index). It never overrides orders or building and
+leaves commanders and combat engineers alone; a heap it cannot reach in 12 s is dropped. The `idleReclaim` gamerule
+(default on) switches it off. First Battle's Reclaim step is not auto-completed by it. Fallen commanders leave a 600
+metal wreck, fallen heroes 150 + 50 x level (never below the normal half-cost heap).
 
 ## Kill feed
 

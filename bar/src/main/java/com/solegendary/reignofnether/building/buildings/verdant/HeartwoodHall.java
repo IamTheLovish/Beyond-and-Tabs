@@ -48,7 +48,6 @@ public class HeartwoodHall extends ProductionBuilding {
 
         this.productions.add(ProductionItems.SEEDSHAPER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.FOX_COURIER, Keybindings.abilitySlot2);
-        this.productions.add(ProductionItems.RESEARCH_STEWARD, Keybindings.abilitySlot8);   // auto-trains workers (StewardServerEvents)
         this.productions.add(ProductionItems.RESEARCH_TIER_2, Keybindings.abilitySlot9);
         this.productions.add(ProductionItems.RESEARCH_TIER_3, Keybindings.abilitySlot10);
     }
@@ -64,7 +63,6 @@ public class HeartwoodHall extends ProductionBuilding {
             () -> true,
             List.of(Component.translatable("buildings.reignofnether.heartwood_hall").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPop(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("buildings.reignofnether.heartwood_hall.tooltip1").getVisualOrderText(),
                 Component.translatable("buildings.reignofnether.heartwood_hall.tooltip2").getVisualOrderText()

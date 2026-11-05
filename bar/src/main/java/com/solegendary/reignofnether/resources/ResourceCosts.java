@@ -6,7 +6,7 @@ import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.util.FormattedCharSequence;
 
 // defined here because we need to be able to access in both
-// static (for ProductionItems) and nonstatic (for getCurrentPopulation) contexts
+// static (for ProductionItems) and nonstatic (per unit) contexts
 // and we can't declare static getters in the Unit interface
 public class ResourceCosts {
     private static final String ID = ReignOfNether.MOD_ID;
@@ -23,6 +23,7 @@ public class ResourceCosts {
     public static final ResourceCost SPIDER = new ResourceCost(ID, "SPIDER");
     public static final ResourceCost POISON_SPIDER = new ResourceCost(ID, "POISON_SPIDER");
     public static final ResourceCost WRAITH = new ResourceCost(ID, "WRAITH");
+    public static final ResourceCost TOMBCALLER = new ResourceCost(ID, "TOMBCALLER");   // Gravebound essence caster (T1)
     public static final ResourceCost SLIME = new ResourceCost(ID, "SLIME");
     public static final ResourceCost WARDEN = new ResourceCost(ID, "WARDEN");
     public static final ResourceCost ZOMBIE_PIGLIN = new ResourceCost(ID, "ZOMBIE_PIGLIN");
@@ -37,6 +38,8 @@ public class ResourceCosts {
     public static final ResourceCost VINDICATOR = new ResourceCost(ID, "VINDICATOR");
     public static final ResourceCost WITCH = new ResourceCost(ID, "WITCH");
     public static final ResourceCost EVOKER = new ResourceCost(ID, "EVOKER");
+    public static final ResourceCost ANGEL_CALLER = new ResourceCost(ID, "ANGEL_CALLER");   // Sunforged essence caster
+    public static final ResourceCost ANGEL = new ResourceCost(ID, "ANGEL");   // its summons: free, no population
     public static final ResourceCost RAVAGER = new ResourceCost(ID, "RAVAGER");
     public static final ResourceCost WAR_MAMMOTH = new ResourceCost(ID, "WAR_MAMMOTH");
     public static final ResourceCost BONEWRIGHT = new ResourceCost(ID, "BONEWRIGHT");
@@ -49,6 +52,7 @@ public class ResourceCosts {
     public static final ResourceCost ELDER_TREANT = new ResourceCost(ID, "ELDER_TREANT");
     public static final ResourceCost WISP_CHOIR = new ResourceCost(ID, "WISP_CHOIR");
     public static final ResourceCost BLOOM_PRIESTESS = new ResourceCost(ID, "BLOOM_PRIESTESS");
+    public static final ResourceCost THORNWEAVER = new ResourceCost(ID, "THORNWEAVER");
     public static final ResourceCost CIRCLE_OF_ELDERS = new ResourceCost(ID, "CIRCLE_OF_ELDERS");
     public static final ResourceCost SUN_COLOSSUS = new ResourceCost(ID, "SUN_COLOSSUS");
     // Verdant Court T3: the Heart of the Wild and the World Tree Walker
@@ -63,6 +67,8 @@ public class ResourceCosts {
     public static final ResourceCost CUTLASS_RAIDER = new ResourceCost(ID, "CUTLASS_RAIDER");
     public static final ResourceCost REEF_GUARD = new ResourceCost(ID, "REEF_GUARD");
     public static final ResourceCost BOMBARD_CREW = new ResourceCost(ID, "BOMBARD_CREW");
+    /** Every faction's T1 siege lobber (design/siege_t1.md): one shared price. */
+    public static final ResourceCost SIEGE_LOBBER = new ResourceCost(ID, "SIEGE_LOBBER");
     public static final ResourceCost TIDE_PRIEST = new ResourceCost(ID, "TIDE_PRIEST");
     public static final ResourceCost HARPOONER = new ResourceCost(ID, "HARPOONER");
     public static final ResourceCost FLAK_SWIVEL = new ResourceCost(ID, "FLAK_SWIVEL");
@@ -95,6 +101,7 @@ public class ResourceCosts {
     public static final ResourceCost EARTHSHAKER = new ResourceCost(ID, "EARTHSHAKER");
     public static final ResourceCost GRAVITY_MONK = new ResourceCost(ID, "GRAVITY_MONK");
     public static final ResourceCost MIRROR_MAGE = new ResourceCost(ID, "MIRROR_MAGE");
+    public static final ResourceCost SPARK_SAGE = new ResourceCost(ID, "SPARK_SAGE");
     public static final ResourceCost CELESTIAL_OBSERVATORY = new ResourceCost(ID, "CELESTIAL_OBSERVATORY");
     // Stormcallers slice 4 (the rest of T2, Heaven's Gate and the Celestial Dragon)
     public static final ResourceCost SEER = new ResourceCost(ID, "SEER");
@@ -272,7 +279,6 @@ public class ResourceCosts {
     // ABILITIES
 
     public static final ResourceCost ENCHANT_MAIMING = new ResourceCost(ID, "ENCHANT_MAIMING");
-    public static final ResourceCost VINE_SNARE = new ResourceCost(ID, "VINE_SNARE");   // Verdant Seedshaper trap
     public static final ResourceCost THICKET = new ResourceCost(ID, "THICKET");         // Verdant Seedshaper 3x3 thicket
     public static final ResourceCost ENCHANT_QUICK_CHARGE = new ResourceCost(ID, "ENCHANT_QUICK_CHARGE");
     public static final ResourceCost ENCHANT_SHARPNESS = new ResourceCost(ID, "ENCHANT_SHARPNESS");
@@ -293,6 +299,7 @@ public class ResourceCosts {
     public static final ResourceCost DRILL_BURROWER = new ResourceCost(ID, "DRILL_BURROWER");
     public static final ResourceCost REPAIR_CRAWLER = new ResourceCost(ID, "REPAIR_CRAWLER");
     public static final ResourceCost CLOCKWORK_SPIDER = new ResourceCost(ID, "CLOCKWORK_SPIDER");
+    public static final ResourceCost SOUL_ENGINEER = new ResourceCost(ID, "SOUL_ENGINEER");
     public static final ResourceCost ASSEMBLY_WORKS = new ResourceCost(ID, "ASSEMBLY_WORKS");
     public static final ResourceCost RAIL_BATTERY = new ResourceCost(ID, "RAIL_BATTERY");
     public static final ResourceCost IRON_LEVIATHAN_ENGINE = new ResourceCost(ID, "IRON_LEVIATHAN_ENGINE");
@@ -324,6 +331,7 @@ public class ResourceCosts {
     public static final ResourceCost FIELD_MASON = new ResourceCost(ID, "FIELD_MASON");
     public static final ResourceCost BONESETTER = new ResourceCost(ID, "BONESETTER");
     public static final ResourceCost WRECKER = new ResourceCost(ID, "WRECKER");
+    public static final ResourceCost VOODOO_SHAMAN = new ResourceCost(ID, "VOODOO_SHAMAN");
     public static final ResourceCost ROOTWARDEN = new ResourceCost(ID, "ROOTWARDEN");
     public static final ResourceCost SALVAGER = new ResourceCost(ID, "SALVAGER");
     public static final ResourceCost JADE_MENDER = new ResourceCost(ID, "JADE_MENDER");
@@ -352,26 +360,15 @@ public class ResourceCosts {
         str = str.trim();
         return FormattedCharSequence.forward(str, MyRenderer.iconStyle);
     }
-    public static FormattedCharSequence getFormattedPopAndTime(ResourceCost resCost) {
-        return FormattedCharSequence.forward("\uE003  " + resCost.population + "     \uE004  " + resCost.ticks/ResourceCost.TICKS_PER_SECOND + "s", MyRenderer.iconStyle);
-    }
-    public static FormattedCharSequence getFormattedPop(ResourceCost resCost) {
-        return FormattedCharSequence.forward("\uE003  " + resCost.population, MyRenderer.iconStyle);
-    }
     public static FormattedCharSequence getFormattedTime(ResourceCost resCost) {
         return FormattedCharSequence.forward("\uE004  " + resCost.ticks/ResourceCost.TICKS_PER_SECOND + "s", MyRenderer.iconStyle);
     }
 
     public static final int REPLANT_WOOD_COST = 1;
     public static final int REDUCED_REPLANT_WOOD_COST = 0;
-    // BAR-scale battles (150-200+ units per player): was 150. Note the maxPopulation gamerule only takes this
-    // default for NEW worlds; existing saves keep their stored value (/gamerule maxPopulation 400).
-    // lovish, Oct 13 2026 ("there shouldnt be a max population", after hitting 400 at 26 minutes in his playtest):
-    // no cap by default, as in BAR. A value at or above UNLIMITED_POPULATION means "no cap" everywhere (the HUD
-    // shows just the count, the gamerule button reads "unlimited"); the gamerule still lets a host set one.
-    // Performance is guarded elsewhere (pathfinder budgets, Flywheel rendering to come), not by a cap.
-    public static final int UNLIMITED_POPULATION = 100_000;
-    public static final int DEFAULT_MAX_POPULATION = UNLIMITED_POPULATION;
+    // No max population (lovish, Oct 13 "there shouldnt be a max population"; Oct 29 "there should be no population
+    // in this game", "like no max population"): a unit's population is only counted, never a limit - the
+    // maxPopulation gamerule is gone. Performance is guarded elsewhere (pathfinder budgets), not by a cap.
     /*
         Unit costs are defined here during CommonSetup
         Do not read values and initialize from config earlier, else will result in IllegalStateException !!!
@@ -392,6 +389,7 @@ public class ResourceCosts {
         SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SPIDER);
         POISON_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.POISON_SPIDER);
         WRAITH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WRAITH);
+        TOMBCALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TOMBCALLER);
         SLIME.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SLIME);
         WARDEN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WARDEN);
         NECROMANCER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.NECROMANCER);
@@ -409,6 +407,8 @@ public class ResourceCosts {
         VINDICATOR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.VINDICATOR);
         WITCH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WITCH);
         EVOKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EVOKER);
+        ANGEL_CALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ANGEL_CALLER);
+        ANGEL.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ANGEL);
         RAVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.RAVAGER);
         WAR_MAMMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WAR_MAMMOTH);
         BONEWRIGHT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONEWRIGHT);
@@ -420,6 +420,7 @@ public class ResourceCosts {
         ELDER_TREANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ELDER_TREANT);
         WISP_CHOIR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WISP_CHOIR);
         BLOOM_PRIESTESS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BLOOM_PRIESTESS);
+        THORNWEAVER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.THORNWEAVER);
         CIRCLE_OF_ELDERS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CIRCLE_OF_ELDERS);
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
         WORLD_TREE_WALKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WORLD_TREE_WALKER);
@@ -431,6 +432,7 @@ public class ResourceCosts {
         CUTLASS_RAIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CUTLASS_RAIDER);
         REEF_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REEF_GUARD);
         BOMBARD_CREW.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BOMBARD_CREW);
+        SIEGE_LOBBER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SIEGE_LOBBER);
         TIDE_PRIEST.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TIDE_PRIEST);
         HARPOONER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.HARPOONER);
         FLAK_SWIVEL.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FLAK_SWIVEL);
@@ -459,6 +461,7 @@ public class ResourceCosts {
         EARTHSHAKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EARTHSHAKER);
         GRAVITY_MONK.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GRAVITY_MONK);
         MIRROR_MAGE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MIRROR_MAGE);
+        SPARK_SAGE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SPARK_SAGE);
         CELESTIAL_OBSERVATORY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CELESTIAL_OBSERVATORY);
         SEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEER);
         LANTERN_FORTRESS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.LANTERN_FORTRESS);
@@ -628,7 +631,6 @@ public class ResourceCosts {
         RESEARCH_PILLAGER_CROSSBOWS.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_PILLAGER_CROSSBOWS);
         // ******************* ABILITIES ******************* //
         ENCHANT_MAIMING.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_MAIMING);
-        VINE_SNARE.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.VINE_SNARE);
         THICKET.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.THICKET);
         ENCHANT_QUICK_CHARGE.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_QUICK_CHARGE);
         ENCHANT_SHARPNESS.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_SHARPNESS);
@@ -644,6 +646,7 @@ public class ResourceCosts {
         DRILL_BURROWER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.DRILL_BURROWER);
         REPAIR_CRAWLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REPAIR_CRAWLER);
         CLOCKWORK_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CLOCKWORK_SPIDER);
+        SOUL_ENGINEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SOUL_ENGINEER);
         ASSEMBLY_WORKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ASSEMBLY_WORKS);
         RAIL_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.RAIL_BATTERY);
         IRON_LEVIATHAN_ENGINE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.IRON_LEVIATHAN_ENGINE);
@@ -671,6 +674,7 @@ public class ResourceCosts {
         FIELD_MASON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FIELD_MASON);
         BONESETTER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONESETTER);
         WRECKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WRECKER);
+        VOODOO_SHAMAN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.VOODOO_SHAMAN);
         ROOTWARDEN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROOTWARDEN);
         SALVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SALVAGER);
         JADE_MENDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.JADE_MENDER);

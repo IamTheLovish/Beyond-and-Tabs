@@ -56,8 +56,7 @@ public class ScenarioServerEvents {
         ScenarioRoleSaveData scenarioRoleSaveData = ScenarioRoleSaveData.getInstance(level);
         scenarioRoleSaveData.scenarioRoleSaves.clear();
         scenarioRoleSaveData.scenarioRoleSaves.addAll(scenarioRoles);
-        scenarioRoleSaveData.save();
-        level.getDataStorage().save();
+        scenarioRoleSaveData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     @SubscribeEvent

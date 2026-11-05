@@ -115,6 +115,8 @@ public final class MatchOutcome {
         forgetFactionState(playerName);
         List<LivingEntity> units = new ArrayList<>();
         List<BuildingPlacement> buildings = new ArrayList<>();
+        // a Voodoo Shaman's Spirit Puppets the beaten side holds go back to their owners first: the strip would take them
+        com.solegendary.reignofnether.unit.units.piglins.SpiritPuppets.giveBackHeldBy(playerName);
         stripOwnership(playerName, units, buildings);
 
         PlayerServerEvents.saveRTSPlayers();
@@ -138,6 +140,7 @@ public final class MatchOutcome {
         com.solegendary.reignofnether.mana.DecoyServerEvents.clearOwner(playerName);
         com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearOwner(playerName);
         com.solegendary.reignofnether.mana.TempestServerEvents.clearOwner(playerName);
+        com.solegendary.reignofnether.ability.abilities.Thunderhead.clearOwner(playerName);
     }
 
     /**

@@ -87,13 +87,6 @@ public class UnitActionServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
-            if (this.action == UnitAction.DEBUG1) {
-                UnitServerEvents.debug1(this.preselectedBlockPos);
-            }
-            if (this.action == UnitAction.DEBUG2) {
-                UnitServerEvents.debug2();
-            }
-
             ServerPlayer player = ctx.get().getSender();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("Sender for unit action packet was null");
@@ -101,6 +94,14 @@ public class UnitActionServerboundPacket {
             }
             if (!allowOrder(player, this.unitIds))
                 return;
+            // the debug hooks are server-wide: after the sender and rate checks, and the host's (or an op's) only.
+            // They ran before any check, for anyone (security audit F20, Oct 26; their bodies are empty today)
+            if ((this.action == UnitAction.DEBUG1 || this.action == UnitAction.DEBUG2) && PacketAuth.isHostOrOp(player, 2)) {
+                if (this.action == UnitAction.DEBUG1)
+                    UnitServerEvents.debug1(this.preselectedBlockPos);
+                else
+                    UnitServerEvents.debug2();
+            }
             success.set(accept(player, this.ownerName, this.action, this.unitId, this.unitIds,
                 this.preselectedBlockPos, this.selectedBuildingPos, this.queueMode));
         });

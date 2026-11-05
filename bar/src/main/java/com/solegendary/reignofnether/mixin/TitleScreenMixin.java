@@ -315,8 +315,20 @@ public class TitleScreenMixin extends Screen {
             if (rose)
                 SplashArt.buttonScrim(guiGraphics, this.children(), alpha);
 
-            // Call the superclass render
-            super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
+            // Call the superclass render. With the art up, the text buttons draw no vanilla label: the gothic pass
+            // below paints it (lovish Oct 23: "the old minecraft on is on top of our art so its reprinted twice")
+            if (rose) {
+                try (var labels = com.solegendary.reignofnether.util.HiddenLabels.<GuiEventListener, Component>hide(
+                        this.children(),
+                        c -> ((net.minecraft.client.gui.components.Button) c).getMessage(),
+                        (c, m) -> ((net.minecraft.client.gui.components.Button) c).setMessage(m),
+                        c -> c instanceof net.minecraft.client.gui.components.Button b && b.visible && b.getWidth() >= 40,
+                        Component.empty())) {
+                    super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
+                }
+            } else {
+                super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
+            }
             if (rose)
                 SplashArt.restyleButtons(guiGraphics, this.font, this.children(), alpha);
 

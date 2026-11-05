@@ -30,8 +30,8 @@ public abstract class LiquidBlockRendererMixin {
         if (WorldBorderClientEvents.isOutsideWorldBorder(pos)) {
             tint = WorldBorderClientEvents.OUTSIDE_WORLD_BORDER_TINT;
         }
-        else if (FogOfWarClientEvents.isEnabled() && !FogOfWarClientEvents.isBlockVisible(pos)) {
-            tint = FogOfWarClientEvents.FOG_TINT_RGB;
+        else if (FogOfWarClientEvents.isEnabled()) {
+            tint = FogOfWarClientEvents.fogTintAt(pos.getX(), pos.getZ());
         }
         if (tint == 0) return original;
 

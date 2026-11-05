@@ -64,7 +64,7 @@ import java.util.Optional;
  * <p>
  * The Rocket Battery's frame (the bow-style cooldown goal, the solved-arc shell) with one shell a shot.
  */
-public class MortarCrawlerUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.brass.Machine, com.solegendary.reignofnether.unit.interfaces.IndirectFire {
+public class MortarCrawlerUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.brass.Machine, com.solegendary.reignofnether.unit.interfaces.FieldArtillery {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new AttackGround(MortarCrawlerUnit.attackRange), Keybindings.abilitySlot1);
@@ -201,7 +201,7 @@ public class MortarCrawlerUnit extends Pillager implements Unit, AttackerUnit, R
 
     final static public float attackDamage = 14.0f;     // per shell, to every enemy in its splash
     final static public float attacksPerSecond = 0.2f;  // one shell every 5 s
-    final static public float maxHealth = 40.0f;
+    final static public float maxHealth = 32.0f;   // -20% (lovish, Oct 24: artillery death ball)
     final static public float armorValue = 1.0f;
     final static public float movementSpeed = 0.21f;
     final static public float attackRange = 22.0F;      // the Bombard Crew's reach
@@ -284,7 +284,9 @@ public class MortarCrawlerUnit extends Pillager implements Unit, AttackerUnit, R
     /** Overclocked machines fire faster (brass/Heat). */
     @Override
     public float getAttackCooldownMultiplier() {
-        return AttackerUnit.super.getAttackCooldownMultiplier() * com.solegendary.reignofnether.brass.Heat.cooldownScale(this);
+        // FieldArtillery, not AttackerUnit: it extends AttackerUnit, so AttackerUnit.super would not compile
+        return com.solegendary.reignofnether.unit.interfaces.FieldArtillery.super.getAttackCooldownMultiplier()
+            * com.solegendary.reignofnether.brass.Heat.cooldownScale(this);
     }
 
     @Override
@@ -376,13 +378,15 @@ public class MortarCrawlerUnit extends Pillager implements Unit, AttackerUnit, R
     }
 
     /**
-     * Fires a volley at (x, y, z) unless it is inside {@link #MIN_RANGE}: the first rocket now, the rest a few ticks
-     * apart (scheduled tasks, nothing per tick), each at its own spot within {@link #VOLLEY_SPREAD} of the aim. Returns
-     * whether it fired. Public for the game test.
+     * Fires a volley at (x, y, z) unless it is inside {@link #MIN_RANGE} or still setting up (unit/SetUp): the first
+     * rocket now, the rest a few ticks apart (scheduled tasks, nothing per tick), each at its own spot within
+     * {@link #VOLLEY_SPREAD} of the aim. Returns whether it fired. Public for the game test.
      */
     public boolean fireVolley(double x, double y, double z) {
         if (level().isClientSide())
             return false;
+        if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(this))
+            return false;   // still setting up after moving (FieldArtillery)
         double dx = x - getX(), dz = z - getZ();
         if (dx * dx + dz * dz < MIN_RANGE * MIN_RANGE)
             return false;

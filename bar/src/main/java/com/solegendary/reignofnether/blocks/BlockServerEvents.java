@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.level.BlockEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.*;
@@ -61,6 +62,33 @@ public class BlockServerEvents {
             BlockState bs = blocksToPlace.get(bp);
             evt.level.setBlockAndUpdate(bp, bs);
         }
+        blocksToPlace.clear();
+    }
+
+    /**
+     * Neither list is saved, and both outlived the server: quitting world A and opening world B placed A's pending
+     * blocks at the same coordinates in B, and A kept its temporary blocks (ice, webs, walls...) for good. On stop -
+     * before the worlds are saved, with the overworld still loaded - each placed temporary block is reverted as its
+     * lifespan would have (TemporaryBlock.revert), the pending placements are made as the next tick would have, and
+     * both lists are emptied (security audit F5, Oct 26). Only in loaded chunks: placing a block in an unloaded one
+     * would load or generate it during shutdown, so such a block stays as it is today.
+     */
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent evt) {
+        revertAndClear(evt.getServer().getLevel(Level.OVERWORLD));
+    }
+
+    /** The stop handler's work (public for the game test). A null level just empties the lists. */
+    public static void revertAndClear(ServerLevel level) {
+        if (level != null) {
+            for (TemporaryBlock tb : tempBlocks)
+                if (level.isLoaded(tb.bp))
+                    tb.revert(level);
+            for (Map.Entry<BlockPos, BlockState> e : blocksToPlace.entrySet())
+                if (level.isLoaded(e.getKey()))
+                    level.setBlockAndUpdate(e.getKey(), e.getValue());
+        }
+        tempBlocks.clear();
         blocksToPlace.clear();
     }
 

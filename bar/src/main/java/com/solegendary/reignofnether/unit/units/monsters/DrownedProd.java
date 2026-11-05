@@ -2,7 +2,6 @@ package com.solegendary.reignofnether.unit.units.monsters;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.buildings.placements.CustomBuildingPlacement;
-import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.*;
 import com.solegendary.reignofnether.hud.buttons.UnitSpawnButton;
@@ -29,11 +28,7 @@ public class DrownedProd extends GraveyardUnitProductionItem implements IUnitPro
         super(cost);
         this.onComplete = (Level level, ProductionPlacement placement) -> {
             if (!level.isClientSide()) {
-                if (placement instanceof GraveyardPlacement gy && banksAsSkull(placement)) {
-                    gy.createSkull(EntityRegistrar.DROWNED_UNIT.get());
-                } else {
-                    placement.produceUnit((ServerLevel) level, EntityRegistrar.DROWNED_UNIT.get(), placement.ownerName, true);
-                }
+                placement.produceUnit((ServerLevel) level, EntityRegistrar.DROWNED_UNIT.get(), placement.ownerName, true);
             }
         };
     }
@@ -69,7 +64,7 @@ public class DrownedProd extends GraveyardUnitProductionItem implements IUnitPro
             List.of(
                 FormattedCharSequence.forward(LanguageUtil.getTranslation("entity.reignofnether.drowned_unit"), Style.EMPTY.withBold(true)),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 FormattedCharSequence.forward(LanguageUtil.getTranslation("entity.reignofnether.drowned_unit.tooltip1"), Style.EMPTY),
                 FormattedCharSequence.forward(LanguageUtil.getTranslation("entity.reignofnether.drowned_unit.tooltip2"), Style.EMPTY),

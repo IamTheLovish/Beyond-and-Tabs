@@ -237,8 +237,8 @@ public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, H
     final static public float attackDamage = 6.5f;
     final static public float attackBonusPerLevel = 0.5f;
     final static public float attacksPerSecond = 0.4f;
-    final static public float maxHealth = 140.0f;
-    final static public float maxHealthBonusPerLevel = 17.0f;
+    final static public float maxHealth = 155.0f;
+    final static public float maxHealthBonusPerLevel = 18.5f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.28f;
     final static public float attackRange = 3F; // only used by ranged units or melee building attackers

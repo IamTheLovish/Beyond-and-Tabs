@@ -81,7 +81,21 @@ public class OnboardingTips {
     }
 
     private static boolean allSeen() {
-        return seen().size() >= Tip.values().length;
+        for (Tip t : Tip.values())
+            if (unseen(t))
+                return false;
+        return true;
+    }
+
+    /** Seen-list id of the camera controls hint (shown by OrthoviewClientEvents on the first RTS view, not a Tip). */
+    static final String CAMERA_HINT_ID = "camera_hint";
+
+    /** True once ever (and again after "Reset tips"): the first call marks the camera controls hint seen. */
+    public static boolean takeCameraHint() {
+        if (!seen().add(CAMERA_HINT_ID))
+            return false;
+        ReignOfNetherClientConfigs.ONBOARDING_SEEN_TIPS.set(String.join(",", seen()));
+        return true;
     }
 
     static void markSeen(Tip t) {

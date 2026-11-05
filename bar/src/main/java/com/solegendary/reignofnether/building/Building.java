@@ -62,6 +62,7 @@ public abstract class Building {
     public boolean shouldDestroyOnReset = true;
     public boolean drawAggro = true;
 
+    // base sights: the fog a building reveals is these times the Vision multiplier (BuildingPlacement.getSightRange)
     public static final int CAPITOL_SIGHT_RANGE = 32;
     public static final int DEFAULT_SIGHT_RANGE = 16;
     public static final int GARRISONED_BONUS_SIGHT_RANGE = 16;
@@ -144,8 +145,9 @@ public abstract class Building {
         this.isCapitol = isCapitol;
     }
 
+    /** What a unit's damage is multiplied by on this building: melee blows, arrows, the Warden's sonic boom (see {@link BuildingDamage}). */
     public float getMeleeDamageMult() {
-        return 0.25F; // this is 50% visually, as 1 block is 2hp by default
+        return BuildingDamage.MELEE_MULT;   // BASE_MELEE_MULT 0.25 is 50% visually, as 1 block is 2hp by default; times the global multiplier
     }
 
     public ArrayList<BuildingBlock> getRelativeBlockData(LevelAccessor level) {
@@ -207,6 +209,16 @@ public abstract class Building {
     public void onBuilt(BuildingPlacement buildingPlacement) {
 
     }
+
+    /** A built building has just fallen to damage (not a cancel, a decommission or a clean-up), blocks still standing. Hook for death blasts. */
+    public void onFellToDamage(ServerLevel serverLevel, BuildingPlacement placement) { }
+
+    /**
+     * Whether this building's collapse blasts (BuildingPlacement.destroy) leave the ground alone. A TNT-style blast at
+     * the bottom layer craters the dirt under the footprint, and a metal patch whose ground is holed fails the "ground
+     * not flat" check, so the patch could not be rebuilt on. The effect and sound stay; only the terrain damage goes.
+     */
+    public boolean keepsGroundIntact() { return false; }
 
     public void destroy(ServerLevel serverLevel, BuildingPlacement placement) {
 

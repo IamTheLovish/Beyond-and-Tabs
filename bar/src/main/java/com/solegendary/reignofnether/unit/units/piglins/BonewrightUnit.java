@@ -1,8 +1,5 @@
 package com.solegendary.reignofnether.unit.units.piglins;
 
-import com.solegendary.reignofnether.ability.Abilities;
-import com.solegendary.reignofnether.ability.abilities.TotemOfThePack;
-import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 
@@ -21,33 +18,6 @@ import javax.annotation.Nullable;
 public class BonewrightUnit extends GruntUnit {
 
     public static final float BUILD_POWER = 2.0f;
-
-    // GruntUnit used to hand out its shared static set (fixed: it clones now), and adding to that gave every Grunt the
-    // totem: the Bonewright keeps its own. No initializer on purpose - GruntUnit's constructor fills it through
-    // updateAbilityButtons() before this class' field initializers would run, and one would wipe it again.
-    private Abilities bonewrightAbilities;
-
-    @Override
-    public void updateAbilityButtons() {
-        super.updateAbilityButtons();
-        // the type's own ability is added only when missing: a re-run (client cooldown sync) keeps the previous one
-        // and any commander abilities added at runtime, instead of wiping them
-        Abilities prev = bonewrightAbilities;
-        bonewrightAbilities = Abilities.cloneKeepingExtras(GruntUnit.ABILITIES, prev);
-        boolean has = false;
-        for (var a : bonewrightAbilities.get())
-            if (a instanceof TotemOfThePack)
-                has = true;
-        if (!has)
-            bonewrightAbilities.add(new TotemOfThePack(), Keybindings.hotkey1);   // V: Q is the Central Portal on the build menu
-    }
-
-    @Override
-    public Abilities getAbilities() {
-        if (bonewrightAbilities == null)
-            updateAbilityButtons();
-        return bonewrightAbilities;
-    }
 
     public BonewrightUnit(EntityType<? extends Piglin> entityType, Level level) {
         super(entityType, level);

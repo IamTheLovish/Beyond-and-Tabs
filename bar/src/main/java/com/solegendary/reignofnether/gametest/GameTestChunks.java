@@ -329,6 +329,7 @@ public final class GameTestChunks {
     public static void whenEntitiesReady(GameTestHelper helper, ServerLevel level, List<long[]> chunks, int minTicks,
                                          int stallTicks, int capTicks, String what, Runnable body) {
         final int[] t = { 0 }, best = { -1 }, bestAt = { 0 }, bestHalo = { -1 };
+        final long[] bestAtNanos = { System.nanoTime() };
         final boolean[] ran = { false };
         java.util.Set<Long> listed = new java.util.HashSet<>(), halo = new java.util.HashSet<>();
         for (long[] c : chunks)
@@ -366,8 +367,13 @@ public final class GameTestChunks {
                 best[0] = Math.max(best[0], ready);
                 bestHalo[0] = Math.max(bestHalo[0], haloFull);
                 bestAt[0] = t[0];
+                bestAtNanos[0] = System.nanoTime();
             }
-            boolean stalled = t[0] - bestAt[0] >= stallTicks;
+            // the loads are wall-clock work (IO and worldgen threads) but the GameTest server runs its ticks back to back,
+            // several hundred a second when little else runs (run 40447858037): a stall needs stallTicks ticks AND as
+            // long in real time as those ticks take at 20 per second
+            boolean stalled = t[0] - bestAt[0] >= stallTicks
+                && System.nanoTime() - bestAtNanos[0] >= stallTicks * 50_000_000L;
             if (notReady > 0 && !stalled && t[0] < capTicks)
                 return;
             ran[0] = true;
@@ -416,6 +422,30 @@ public final class GameTestChunks {
      * {@code -Dreignofnether.asyncStructureChunks=true|false}. Normal play never runs the game-test framework, and
      * stays untouched either way.
      */
+    /**
+     * Vanilla's StructureUtils.clearSpaceForStructure clears a structure's box (its footprint widened by 2-3) only up to
+     * 20 blocks over its top. An arena is cut into generated ground, so what rests on that ceiling is the ground's own:
+     * natural gravel there hung over the cleared space and fell ~30 blocks onto the arena once the setup touched a
+     * neighbour (flake-stress 41646780667: it closed a half-blocked graveyard's one open gate cell; ArenaClearingGameTests).
+     * In every column of the box, the run of blocks that can fall (gravel, sand, concrete powder...) resting on the
+     * ceiling becomes stone, up to the first block that cannot; anything already falling over the box is removed. The
+     * rest of the ground stays: it is the arena's lid (taking whole columns away opened the arenas to the sky, and the
+     * blow-timing tests' zombies burned).
+     */
+    public static void settleAbove(ServerLevel level, net.minecraft.world.level.levelgen.structure.BoundingBox box) {
+        int x0 = box.minX() - 2, x1 = box.maxX() + 3, z0 = box.minZ() - 3, z1 = box.maxZ() + 3, from = box.maxY() + 21;
+        int top = level.getMaxBuildHeight() - 1;
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        net.minecraft.world.level.block.state.BlockState stone = net.minecraft.world.level.block.Blocks.STONE.defaultBlockState();
+        for (int x = x0; x <= x1; x++)
+            for (int z = z0; z <= z1; z++)
+                for (int y = from; y <= top && level.getBlockState(p.set(x, y, z)).getBlock() instanceof net.minecraft.world.level.block.FallingBlock; y++)
+                    level.setBlock(p, stone, 2);
+        for (var falling : level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,
+                new net.minecraft.world.phys.AABB(x0, box.minY(), z0, x1 + 1, top + 1, z1 + 1)))
+            falling.discard();
+    }
+
     public static boolean asyncStructureLoad(ServerLevel level) {
         String prop = System.getProperty("reignofnether.asyncStructureChunks");
         if (prop != null)

@@ -233,8 +233,8 @@ public class EnchanterUnit extends Vindicator implements AttackerUnit, HeroUnit,
     final static public float attackDamage = 4.0f;
     final static public float attackBonusPerLevel = 0.4f;
     final static public float attacksPerSecond = 0.5f;
-    final static public float maxHealth = 100.0f;
-    final static public float maxHealthBonusPerLevel = 10.0f;
+    final static public float maxHealth = 110.0f;
+    final static public float maxHealthBonusPerLevel = 11.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.25f;
     final static public float attackRange = 2; // only used by ranged units or melee building attackers

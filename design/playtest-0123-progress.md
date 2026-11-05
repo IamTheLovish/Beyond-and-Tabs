@@ -1,7 +1,7 @@
 # playtest-0123 - progress
 
 Branch for lovish's Oct 12 01:23-01:38 clips (build e211f6a, Watch Battle). Report: design/playtest_oct12.md
-(crops in design/playtest_oct12/). Not merged.
+(crops in design/playtest_oct12/). Status (Oct 26 2026): on main, no PR number - it landed before the PR workflow (`isMatchSpectator` first appears in OrthoviewClientEvents at 1fe3bbf7, 2026-10-16).
 
 ## Done (CI green on 0843a76)
 - Spectator stays in the RTS view: toggle key (Backspace/F12) refused while spectating, auto re-enter twice a second

@@ -55,7 +55,6 @@ public class Mausoleum extends ProductionBuilding implements NightSourceAddon, R
 
         this.productions.add(ProductionItems.ZOMBIE_VILLAGER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.BAT, Keybindings.abilitySlot2);
-        this.productions.add(ProductionItems.RESEARCH_STEWARD, Keybindings.abilitySlot8);   // auto-trains workers (StewardServerEvents)
         this.productions.add(ProductionItems.RESEARCH_TIER_2, Keybindings.abilitySlot9);
         this.productions.add(ProductionItems.RESEARCH_TIER_3, Keybindings.abilitySlot10);
 
@@ -76,7 +75,6 @@ public class Mausoleum extends ProductionBuilding implements NightSourceAddon, R
             () -> true,
             List.of(Component.translatable("buildings.reignofnether.mausoleum").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPop(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("buildings.reignofnether.mausoleum.tooltip1").getVisualOrderText(),
                 FormattedCharSequence.forward("", Style.EMPTY),

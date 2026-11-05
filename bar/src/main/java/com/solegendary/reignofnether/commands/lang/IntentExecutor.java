@@ -371,6 +371,9 @@ public final class IntentExecutor {
         for (LivingEntity le : UnitClientEvents.getAllUnits()) {
             if (!(le instanceof Unit) || !le.isAlive() || UnitClientEvents.getPlayerToEntityRelationship(le) != Relationship.HOSTILE)
                 continue;
+            // an enemy in the fog is not there to be named: "attack the nearest enemy" must not find it
+            if (!com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isInBrightChunk(le))
+                continue;
             double d = le.position().distanceToSqr(from);
             if (d < bestD) {
                 bestD = d;

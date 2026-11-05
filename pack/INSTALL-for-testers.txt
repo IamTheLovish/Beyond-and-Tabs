@@ -1,6 +1,17 @@
 Beyond and Tabs - how to join lovish's test game
 ================================================
 
+Windows, easiest: run BeyondAndTabs-Setup.exe from the download page. It installs everything
+and puts a "lovish" shortcut (the cat) on your Desktop. That shortcut opens the Beyond and Tabs
+launcher: your build, what's new, what's coming, and a big PLAY button.
+- PLAY opens Prism Launcher, which updates the game and starts Minecraft.
+- "Couldn't check GitHub" in orange only means the news can't load; PLAY still works.
+- "Open log" shows the game's log folder: send latest.log with a bug report.
+- No launcher window? Start Prism Launcher from %LOCALAPPDATA%\BeyondAndTabs\PrismLauncher
+  and launch "BeyondAndTabs-test", or run the installer again.
+
+Manual way (any system, Prism you already have):
+
 You need: a Minecraft Java Edition account and the file BeyondAndTabs-test.mrpack.
 
 1. Install Prism Launcher (free) from https://prismlauncher.org and sign in with your

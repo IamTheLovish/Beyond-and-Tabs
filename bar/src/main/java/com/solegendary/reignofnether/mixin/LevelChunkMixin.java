@@ -23,17 +23,32 @@ public abstract class LevelChunkMixin {
 
     @Shadow public abstract Level getLevel();
 
+    // server: a border chunk the fog snapshot has not captured yet is captured before its first change, so the
+    // snapshot (spread over ticks, FogChunkSnapshot) still holds the pre-match state
+    @Inject(method = "setBlockState", at = @At("HEAD"))
+    private void reignofnether$captureFogSnapshotFirst(BlockPos pos, BlockState state, boolean isMoving,
+                                                       CallbackInfoReturnable<BlockState> cir) {
+        if (com.solegendary.reignofnether.fogofwar.FogChunkSnapshot.isCapturing())
+            com.solegendary.reignofnether.fogofwar.FogChunkSnapshot.beforeBlockChange((LevelChunk) (Object) this);
+    }
+
     @Inject(method = "setBlockState", at = @At("TAIL"))
     private void reignofnether$invalidateWalkability(BlockPos pos, BlockState state, boolean isMoving,
                                                      CallbackInfoReturnable<BlockState> cir) {
-        // Only feed the walkability cache when the rtsPathfinding gamerule is on; with it off the
-        // grid is unused so there's nothing to invalidate. The resource index is independent and always runs.
+        // With the rtsPathfinding gamerule on, mark the chunk for the deferred rebuild. With it off nothing drains the
+        // dirty set, so a cached chunk is dropped instead (no grid for the level = no-op): otherwise it would be served
+        // stale when the flag comes back on. The resource index is independent and always runs.
         if (UnitServerEvents.rtsPathfinding)
             WalkabilityGrid.markChunkDirtyIfPresent(getLevel(), pos);
+        else
+            WalkabilityGrid.forgetChunkIfPresent(getLevel(), pos);
         ResourceIndex.onBlockChange(getLevel(), pos, state);
         // the chase goals' per-tick cell memo (Terrain.classify) must not answer from before this change
         com.solegendary.reignofnether.unit.Terrain.onBlockChanged();
         // client: a ground scar's decal follows the column's new top face (worldmemory/GroundMemoryClient)
         WorldMemoryHooks.onBlockChanged(getLevel(), pos);
+        // server: the battlefield journal keeps each block's state from before the match, for Back to lobby
+        // (match/BattlefieldJournal); the return value is the replaced state, null when nothing changed
+        com.solegendary.reignofnether.match.BattlefieldJournal.onBlockChanged(getLevel(), pos, cir.getReturnValue());
     }
 }

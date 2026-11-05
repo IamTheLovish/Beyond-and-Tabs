@@ -44,9 +44,9 @@ public class PlayerPanelServerEvents {
     private static boolean sentEmpty = true;   // nothing to clear before the first match
 
     /**
-     * One roster line before it is filtered for a recipient. {@code popUsed} (units plus queued production, as the
-     * server's own population check counts it), {@code popWorkers} and {@code popArmy} feed the spectator's observer
-     * table, which used to count the units its own client had loaded - far bots always read 0 (playtest Oct 12).
+     * One roster line before it is filtered for a recipient. {@code popUsed}, {@code popWorkers} and {@code popArmy}
+     * are unit counts now (all units, workers, the rest - no population: lovish, Oct 29); they feed the spectator's
+     * observer table, which used to count the units its own client had loaded - far bots always read 0 (playtest Oct 12).
      */
     public record Row(String name, String factionKey, boolean alive, float metalIncome, float energyIncome,
                       float commanderHp, float metalStored, float metalStorage, float energyStored, float energyStorage,
@@ -78,13 +78,10 @@ public class PlayerPanelServerEvents {
         com.solegendary.reignofnether.ability.abilities.CryptTide.class,
         com.solegendary.reignofnether.ability.abilities.WarDrums.class,
         com.solegendary.reignofnether.ability.abilities.BastionAegis.class,
-        com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class,
         com.solegendary.reignofnether.ability.abilities.MagmaRupture.class,
         com.solegendary.reignofnether.ability.abilities.HolyBell.class,
         com.solegendary.reignofnether.ability.abilities.WitheringFog.class,
         com.solegendary.reignofnether.ability.abilities.SunriseSortie.class,
-        com.solegendary.reignofnether.ability.abilities.SoulWisps.class,
-        com.solegendary.reignofnether.ability.abilities.AwakenThicket.class,
         com.solegendary.reignofnether.ability.abilities.Bloom.class);
 
     @SubscribeEvent
@@ -212,11 +209,9 @@ public class PlayerPanelServerEvents {
             float[] a = armyByOwner.computeIfAbsent(owner, k -> new float[5]);
             a[1]++;
             boolean worker = le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
-            if (u.getCost() != null) {
-                if (!worker)
-                    a[0] += u.getCost().metal();
-                a[worker ? 3 : 4] += u.getCost().population;
-            }
+            if (u.getCost() != null && !worker)
+                a[0] += u.getCost().metal();
+            a[worker ? 3 : 4]++;   // the observer's worker / army counts (no population: lovish, Oct 29)
             // Abilities.get() builds a list, so only units that can carry a power look: commanders (their powers are
             // added at runtime) and unit types that were seen with one
             if (u.getAbilities() != null && (CommanderServerEvents.isCommander(le) || carriesPower(le, u)))
@@ -266,9 +261,7 @@ public class PlayerPanelServerEvents {
                 com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3) ? 3
             : com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(p.name,
                 com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2) ? 2 : 1;
-        // population as the server's own cap check counts it (units plus queued production): one walk over the
-        // owner's buildings for each side in play, every 2 s
-        int popUsed = alive ? UnitServerEvents.getCurrentPopulation(p.name) : 0;
+        int popUsed = alive && a != null ? (int) (a[3] + a[4]) : 0;   // the unit count
         return new Row(p.name, key == null ? "" : key.toString(), alive, metal, energy,
             alive ? commanderHp.getOrDefault(p.name, -1f) : -1f, mStored, mStorage, eStored, eStorage,
             a == null ? 0 : a[0], a == null ? 0 : (int) a[1],

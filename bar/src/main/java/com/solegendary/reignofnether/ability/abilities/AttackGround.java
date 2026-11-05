@@ -2,6 +2,9 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.ExperimentalAbilityText;
+import com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit;
+import java.util.ArrayList;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -36,6 +39,27 @@ public class AttackGround extends Ability {
         );
     }
 
+    /** Tooltip body for the Iron Leviathan Engine's cannon. Public for the tooltip game test. */
+    public String description() {
+        return "Click the ground to shell that spot from afar: it outranges every tower, so static defences and slow armies fall to it.";
+    }
+
+    /** Tooltip range line, from the ability's own range. Public for the tooltip game test. */
+    public String rangeLine() {
+        return ExperimentalAbilityText.rangeLine(range);
+    }
+
+    /** Plain tooltip for every unit; the Engine, a T3 experimental, also gets its description and range. */
+    private List<FormattedCharSequence> tooltip(Unit unit) {
+        List<FormattedCharSequence> lines = new ArrayList<>();
+        lines.add(FormattedCharSequence.forward(LanguageUtil.getTranslation("abilities.reignofnether.attack_ground"), Style.EMPTY));
+        if (unit instanceof IronLeviathanEngineUnit) {
+            lines.add(FormattedCharSequence.forward(rangeLine(), Style.EMPTY));
+            lines.add(FormattedCharSequence.forward(description(), Style.EMPTY));
+        }
+        return lines;
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton(
@@ -58,9 +82,7 @@ public class AttackGround extends Ability {
                 () -> true,
                 () -> CursorClientEvents.setLeftClickAction(UnitAction.ATTACK_GROUND),
                 null,
-                List.of(
-                        FormattedCharSequence.forward(LanguageUtil.getTranslation("abilities.reignofnether.attack_ground"), Style.EMPTY)
-                ),
+                tooltip(unit),
                 this,
                 unit
         );

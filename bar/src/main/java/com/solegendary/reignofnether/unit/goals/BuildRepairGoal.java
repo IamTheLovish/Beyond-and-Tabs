@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit.goals;
 
 import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.Blueprints;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
@@ -9,10 +10,12 @@ import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.building.buildings.villagers.OakStockpile;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.unit.Relationship;
+import com.solegendary.reignofnether.unit.UnitChunkLoader;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 
 import javax.annotation.Nullable;
@@ -29,8 +32,12 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
 
     public boolean ignoreNextCheckpoint = false;
     public final List<BuildingPlacement> queuedBuildings = new ArrayList<>();
-    /** Shift-queue depth per builder (sites queued here plus ones waiting in fog); BuildingServerEvents enforces it. */
-    public static final int MAX_QUEUE = 32;
+    /**
+     * Shift-queue depth per builder (sites queued here plus ones waiting in fog); BuildingServerEvents enforces it.
+     * 5x the old 32 (user, Oct 26: "builders have 5x their max queue for blueprints"); MexQueueGameTests AC-5.
+     */
+    public static final int OLD_MAX_QUEUE = 32;
+    public static final int MAX_QUEUE = 5 * OLD_MAX_QUEUE;
     private BuildingPlacement buildingTarget;
 
     private Boolean isBuildingServerside = false;
@@ -112,9 +119,21 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
             }
             return;
         }
+        // the site's surroundings stay loaded while the worker heads for it, whatever the owner's camera does: the
+        // building holds only its centre chunk, and a route or approach cell in an unloaded chunk is "no path"
+        if (this.mob.level() instanceof ServerLevel sl && this.mob.tickCount % 20 == 0 && !isBuilding())
+            UnitChunkLoader.holdSite(sl, buildingTarget.centrePos);
         calcMoveTarget();
         if (!this.mob.level().isClientSide() && checkUnreachable())
             return;
+        // a blueprint (Blueprints) comes to life when its worker is in range: the site is checked again and physical
+        // construction starts, or it is cancelled and the worker moves on to its next order
+        if (!this.mob.level().isClientSide() && buildingTarget != null && Blueprints.isPending(buildingTarget)
+                && isBuilding() && Blueprints.arrive(buildingTarget) == Blueprints.Arrival.CANCELLED) {
+            if (!startNextQueuedBuilding())
+                stopBuilding();
+            return;
+        }
         if (isBuilding() && buildingTarget != null) {
             BlockPos bp = buildingTarget.centrePos;
             this.mob.getLookControl().setLookAt(bp.getX(), bp.getY(), bp.getZ());
@@ -239,6 +258,26 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
     }
 
     public BuildingPlacement getBuildingTarget() { return buildingTarget; }
+
+    /**
+     * One line of what this builder is doing about its site, for the "site cancelled for no progress" log and tests:
+     * target, distance to its footprint, approach cell, path state, stall time, queue depth.
+     */
+    public String describeState() {
+        if (buildingTarget == null)
+            return "goal: no target, queue " + queuedBuildings.size();
+        var nav = this.mob.getNavigation();
+        var path = nav.getPath();
+        long now = this.mob.level().getGameTime();
+        return String.format("goal: target %s@%s, dist %.1f, approach %s, building %s, fromRange %s, running %s, "
+                + "pathPending %s, backoff %s, path %s, stalled %s ticks, queue %d",
+            buildingTarget.getBuilding().structureName, buildingTarget.centrePos.toShortString(), Math.sqrt(siteDistSqr()),
+            moveTarget == null ? "none" : moveTarget.toShortString(), isBuilding(), buildFromRange, isGoalRunning(),
+            isPathPending(), isInBackoff(),
+            path == null ? "none" : (path.isDone() ? "done" : "node " + path.getNextNodeIndex() + "/" + path.getNodeCount()
+                + " to " + path.getTarget().toShortString() + (path.canReach() ? "" : " (cannot reach)")),
+            stallSinceTick < 0 ? "-" : String.valueOf(now - stallSinceTick), queuedBuildings.size());
+    }
 
     // if we override stop() it for some reason is called after start() and we can never begin this goal...
     public void stopBuilding() {

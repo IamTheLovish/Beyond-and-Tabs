@@ -52,7 +52,8 @@ public class ProductionPlacement extends BuildingPlacement {
     protected ArrayList<BlockPos> rallyPoints = new ArrayList<>();
     protected LivingEntity rallyPointEntity;
     public List<Button> productionButtons;
-    public final List<ActiveProduction> productionQueue = new ArrayList<>();
+    // counts its changes, so a per-tick cache over the queues is never stale
+    public final List<ActiveProduction> productionQueue = new ProductionQueueList<>();
     /**
      * Depth of one building's production queue (BAR factories take a long queue; RoN had no cap at all, so a held
      * key could pile up hundreds of items that only ever showed as "+N"). Hitting it says "Queue full" and refuses the
@@ -100,6 +101,64 @@ public class ProductionPlacement extends BuildingPlacement {
         if (getLevel() != null && !getLevel().isClientSide())
             getDataStorage().setData(STEWARD_PAUSED, paused);
     }
+
+    /**
+     * BAR's factoryguard (Ctrl+G, tester request): while on, every builder this factory produces is given a guard
+     * order on it as its first order - it assists the factory's production instead of walking to the rally point.
+     * Combat units are unaffected. Off by default (bots never set it).
+     */
+    public boolean factoryGuard = false;
+    public static final com.solegendary.reignofnether.building.data.DataType<Boolean> FACTORY_GUARD =
+            com.solegendary.reignofnether.building.data.DataType.createRegistered(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                            com.solegendary.reignofnether.ReignOfNether.MOD_ID, "factory_guard"),
+                    (tag, server) -> tag.getBoolean("guard"),
+                    on -> {
+                        CompoundTag tag = new CompoundTag();
+                        tag.putBoolean("guard", on);
+                        return tag;
+                    },
+                    () -> false);
+
+    /** Sets the factory guard toggle and records it in the building's save data (server side). */
+    public void setFactoryGuard(boolean on) {
+        this.factoryGuard = on;
+        if (getLevel() != null && !getLevel().isClientSide())
+            getDataStorage().setData(FACTORY_GUARD, on);
+    }
+
+    /** Reads the factory guard toggle back from this building's save data (BuildingServerEvents, on load). */
+    public void restoreFactoryGuard() {
+        this.factoryGuard = Boolean.TRUE.equals(getDataStorage().getData(FACTORY_GUARD));
+    }
+
+    // ---- build power lent by guarding builders (GuardServerEvents): BAR's assist on a factory's production ----
+    private float guardAssistPower = 0;
+    private long guardAssistTick = Long.MIN_VALUE / 2;
+    /** A guard pass's assist is good for this many ticks (the pass runs every 10). */
+    public static final int GUARD_ASSIST_TICKS = 15;
+
+    /** One guarding builder lends {@code power} to this factory's production in the guard pass of tick {@code now}. */
+    public void addGuardAssist(float power, long now) {
+        if (guardAssistTick != now) {
+            guardAssistTick = now;
+            guardAssistPower = 0;
+        }
+        guardAssistPower += power;
+    }
+
+    /** The build power guarding builders lend this factory now (0 when no recent guard pass lent any). */
+    public float getGuardAssistPower() {
+        if (getLevel() == null || getLevel().getGameTime() - guardAssistTick > GUARD_ASSIST_TICKS)
+            return 0;
+        return guardAssistPower;
+    }
+
+    @Override
+    public float getProductionBuildPower() {
+        return (super.getProductionBuildPower() + getGuardAssistPower())
+            * com.solegendary.reignofnether.ability.abilities.SoulBoiler.speedMult(this);
+    }
     public boolean attackRally = false;
     public ResourceName rallyResourceName = ResourceName.NONE; // used to set worker resource targets
 
@@ -108,8 +167,9 @@ public class ProductionPlacement extends BuildingPlacement {
         if (building instanceof ProductionBuilding productionBuilding) {
             productionButtons = productionBuilding.productions.getButtons(this);
         }
-        if (isCapitol)
-            this.allowProdWhileBuilding = true;
+        // every production building takes a queue while it is still going up (Joisco, 2026-10-23: "pre queue units in
+        // workshops while the building is being built"); ProductionItem.tick keeps the queue frozen until isBuilt
+        this.allowProdWhileBuilding = true;
     }
 
     @Nullable
@@ -191,17 +251,7 @@ public class ProductionPlacement extends BuildingPlacement {
     }
 
     public Entity produceUnit(ServerLevel level, EntityType<? extends Unit> entityType, String ownerName, boolean spawnIndoors, Vec3i spawnOffset) {
-        ProductionBuilding building = (ProductionBuilding) getBuilding();
-        BlockPos spawnPoint;
-        if (spawnIndoors) {
-            spawnPoint = getIndoorSpawnPoint(level);
-        }
-        else if (!rallyPoints.isEmpty())
-            spawnPoint = getClosestGroundPos(rallyPoints.get(0), (int) building.spawnRadiusOffset);
-        else if (rallyPointEntity != null)
-            spawnPoint = getClosestGroundPos(rallyPointEntity.getOnPos(), (int) building.spawnRadiusOffset);
-        else
-            spawnPoint = getDefaultOutdoorSpawnPoint();
+        BlockPos spawnPoint = spawnIndoors ? getIndoorSpawnPoint(level) : outdoorSpawnPoint();
 
         spawnPoint = spawnPoint.offset(spawnOffset);
         BlockPos safe = safeSpawnPoint(level, spawnPoint, entityType);
@@ -213,6 +263,21 @@ public class ProductionPlacement extends BuildingPlacement {
                 if (safe != null)
                     break;
             }
+        }
+        if (safe != null && !inWater(level, safe)
+                && !com.solegendary.reignofnether.unit.UnitUnstick.leavesFootprint(level, safe, minCorner, maxCorner)) {
+            // "stuck units in the graveyard" (lovish, Oct 22 20:23): a cell inside the building with no way out of it.
+            // The Graveyard raises its units in a walled yard whose one gate, two blocks wide, any building placed
+            // flush against it (buildings may touch) or a 2-block bank outside it closes off; the yard is too big for
+            // the pocket rule above or UnitUnstick to call it a trap, so every unit stood in it for good
+            // (GraveyardExitGameTests). Interiors are allowed, trapped units are not (design/LANES.md, Oct 20): it is
+            // raised outside instead, on the rally side.
+            BlockPos out = outsideSpawnPoint(level, entityType, spawnOffset);
+            if (out != null)
+                safe = out;
+            else
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("A {} raised in {} at {} has no way out of it, and no cell outside fits it",
+                        EntityType.getKey(entityType), getBuilding().name, originPos.toShortString());
         }
         boolean roof = safe == null;
         if (roof) {
@@ -242,13 +307,55 @@ public class ProductionPlacement extends BuildingPlacement {
         if (entity instanceof Unit unit) {
             unit.setOwnerName(ownerName);
             unit.setupEquipmentAndUpgradesServer();
-            setDelayedRally(unit);
+            // factory guard: an own builder's first order is to guard (assist) this factory, not the rally point
+            if (factoryGuard && unit instanceof WorkerUnit && this.ownerName.equals(ownerName)) {
+                com.solegendary.reignofnether.unit.GuardServerEvents.setGuardBuilding(unit, this);
+                if (unit.getMoveGoal() != null)
+                    unit.getMoveGoal().stopMoving();   // it spawned beside the factory: assist from there, not its centre
+            } else
+                setDelayedRally(unit);
             recordUnitProduced(ownerName, entity);
             watchSpawn(entity);
             if (roof)
                 entity.getPersistentData().putBoolean(com.solegendary.reignofnether.unit.UnitUnstick.KEY_ROOF_SPAWN, true);
         }
         return entity;
+    }
+
+    /** Where an outdoor unit is raised: beside the footprint nearest the rally point (or rally entity), else the corner. */
+    private BlockPos outdoorSpawnPoint() {
+        int offset = (int) ((ProductionBuilding) getBuilding()).spawnRadiusOffset;
+        if (!rallyPoints.isEmpty())
+            return getClosestGroundPos(rallyPoints.get(0), offset);
+        if (rallyPointEntity != null)
+            return getClosestGroundPos(rallyPointEntity.getOnPos(), offset);
+        return getDefaultOutdoorSpawnPoint();
+    }
+
+    /**
+     * A cell outside the footprint for a unit whose cell inside has no way out: the outdoor spawn point (rally side),
+     * then the middle of each side nearest it - the first the body fits in, outside the footprint, that it can walk
+     * away from. Null if there is none.
+     */
+    @Nullable
+    private BlockPos outsideSpawnPoint(ServerLevel level, EntityType<?> type, Vec3i spawnOffset) {
+        BlockPos wanted = outdoorSpawnPoint().offset(spawnOffset);
+        List<BlockPos> candidates = new ArrayList<>(5);
+        candidates.add(wanted);
+        candidates.addAll(sideSpawnPoints(type, wanted));
+        for (BlockPos c : candidates) {
+            BlockPos s = safeSpawnPoint(level, c, type);
+            if (s != null && !BuildingUtils.isPosInsideAnyBuilding(false, s)
+                    && com.solegendary.reignofnether.unit.UnitUnstick.leavesFootprint(level, s, minCorner, maxCorner))
+                return s;
+        }
+        return null;
+    }
+
+    // a harbour's ship is raised in water on purpose; the ground-move rules of leavesFootprint are not its rules
+    private static boolean inWater(ServerLevel level, BlockPos cell) {
+        return com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, cell.getX(), cell.getY(),
+            cell.getZ()) == com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER;
     }
 
     /**
@@ -372,7 +479,7 @@ public class ProductionPlacement extends BuildingPlacement {
     public static BlockPos safeSpawnPoint(ServerLevel level, BlockPos spawnPoint) {
         byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
                 spawnPoint.getY(), spawnPoint.getZ());
-        if (kind == com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER)
+        if (com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind))
             return spawnPoint;
         if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
                 && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
@@ -525,6 +632,12 @@ public class ProductionPlacement extends BuildingPlacement {
         }
     }
 
+    /** Whether this owner already has {@code item} recorded as researched (heroes and other non-research items never are). */
+    private boolean alreadyResearched(ProductionItem item) {
+        var key = com.solegendary.reignofnether.api.ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item);
+        return key != null && com.solegendary.reignofnether.research.ResearchServerEvents.recordedCount(ownerName, key) > 0;
+    }
+
     // return true if successful
     public boolean startProductionItem(ProductionItem prodItem) {
         return startProductionItem(prodItem, -1);
@@ -549,7 +662,10 @@ public class ProductionPlacement extends BuildingPlacement {
             }
             else {
                 boolean allow = switch (prodItem.dupeRule) {
-                    case DISALLOW -> !prodItem.itemIsBeingProduced(false, ownerName);
+                    // one-off, player-wide: refused while queued at ANY of the owner's buildings, and once it is done.
+                    // The queue test alone let a second Tier 2 start after the first finished (the client only hides
+                    // the button; a stale card, a double press, the bot or a raw packet got through): tester report.
+                    case DISALLOW -> !prodItem.itemIsBeingProduced(false, ownerName) && !alreadyResearched(prodItem);
                     case DISALLOW_FOR_BUILDING -> !prodItem.itemIsBeingProducedAt(false, this);
                     case ALLOW -> true;
                 };
@@ -590,19 +706,10 @@ public class ProductionPlacement extends BuildingPlacement {
                         ResourcesServerEvents.addSubtractResources(Resources.emeralds(ownerName, -emeraldCost));
                     success = true;
                 }
-                else {
-                    if (!prodItem.isBelowMaxPopulation(this))
-                        ResourcesClientboundPacket.warnMaxPopulation(ownerName);
-                    else if (!prodItem.canAffordPopulation(this)) {
-                        if (prodItem instanceof GraveyardUnitProductionItem && this instanceof GraveyardPlacement gy && gy.getUpgradeLevel() > 0) {
-                            ResourcesClientboundPacket.warnFullGraveyard(ownerName);
-                        } else {
-                            ResourcesClientboundPacket.warnInsufficientPopulation(ownerName);
-                        }
-                    }
-                    else if (!ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald))
-                        // only emeralds are still paid upfront; metal and energy never block queueing
-                        ResourcesClientboundPacket.warnInsufficientResources(ownerName, true, true, true, false);
+                else if (!ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald)) {
+                    // only emeralds are still paid upfront; metal and energy never block queueing, and there is no
+                    // population limit (lovish, Oct 29)
+                    ResourcesClientboundPacket.warnInsufficientResources(ownerName, true, true, true, false);
                 }
             }
         }

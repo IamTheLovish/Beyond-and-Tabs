@@ -60,60 +60,13 @@ public abstract class ProductionItem {
 
     public abstract String getItemName();
 
-    // BAR flow economy: metal/energy are paid while the item is produced, so queueing only needs population
-    // (and emeralds, which are still paid upfront for item-shop style costs)
+    // BAR flow economy: metal/energy are paid while the item is produced, so queueing only needs emeralds (still
+    // paid upfront for item-shop style costs). No population check anywhere: lovish, Oct 29 "there should be no
+    // population in this game" - a unit's population is only counted (the HUD), never a limit on production.
     public boolean canAfford(ProductionPlacement pp) {
         for (Resources resources : ResourcesServerEvents.resourcesList)
             if (resources.ownerName.equals(pp.ownerName))
-                return resources.emerald >= getCost(pp.getLevel().isClientSide(), pp.ownerName).emerald &&
-                        canAffordPopulation(pp);
-        return false;
-    }
-
-    public boolean canAffordPopulation(ProductionPlacement pp) {
-        if (getCost(pp.getLevel().isClientSide(), pp.ownerName).population == 0)
-            return true;
-
-        int currentPop = UnitServerEvents.getCurrentPopulation(pp.ownerName);
-        int popSupply = BuildingServerEvents.getTotalPopulationSupply(pp.ownerName);
-
-        for (Resources resources : ResourcesServerEvents.resourcesList)
-            if (resources.ownerName.equals(pp.ownerName))
-                return (currentPop + getCost(pp.getLevel().isClientSide(), pp.ownerName).population) <= popSupply;
-        return false;
-    }
-
-    // check we didn't dip below pop supply after starting production
-    public boolean isBelowPopulationSupply(ProductionPlacement pp) {
-        if (getCost(pp.getLevel().isClientSide(), pp.ownerName).population == 0)
-            return true;
-
-        int currentPop;
-        int popSupply;
-        if (pp.getLevel().isClientSide()) {
-            currentPop = UnitClientEvents.getCurrentPopulation(pp.ownerName);
-            popSupply = BuildingClientEvents.getTotalPopulationSupply(pp.ownerName);
-        } else {
-            currentPop = UnitServerEvents.getCurrentPopulation(pp.ownerName);
-            popSupply = BuildingServerEvents.getTotalPopulationSupply(pp.ownerName);
-        }
-        return currentPop <= popSupply;
-    }
-
-    public boolean isBelowMaxPopulation(ProductionPlacement pp) {
-        if (getCost(pp.getLevel().isClientSide(), pp.ownerName).population == 0)
-            return true;
-
-        int currentPop = UnitServerEvents.getCurrentPopulation(pp.ownerName);
-
-        for (Resources resources : ResourcesServerEvents.resourcesList) {
-            if (resources.ownerName.equals(pp.ownerName)) {
-                if (pp.getLevel().isClientSide())
-                    return (currentPop + getCost(pp.getLevel().isClientSide(), pp.ownerName).population) <= GameruleClient.maxPopulation;
-                else
-                    return (currentPop + getCost(pp.getLevel().isClientSide(), pp.ownerName).population) <= UnitServerEvents.maxPopulation;
-            }
-        }
+                return resources.emerald >= getCost(pp.getLevel().isClientSide(), pp.ownerName).emerald;
         return false;
     }
 
@@ -184,10 +137,7 @@ public abstract class ProductionItem {
         speed *= isClientSide ? com.solegendary.reignofnether.resources.EconomyPace.clientMultiplier()
             : com.solegendary.reignofnether.resources.EconomyPace.of(placement.ownerName);
 
-        // asked once per step, not three times: each ask walks every building's queue (getCurrentPopulation), per
-        // producing item per tick - at 8v8 that was the bulk of the production step (design/code_review.md CR-08)
-        boolean belowSupply = isBelowPopulationSupply(placement);
-        if (active.ticksLeft > 0 && belowSupply && placement.isBuilt) {
+        if (active.ticksLeft > 0 && placement.isBuilt) {
             if (isClientSide) {
                 // clientside prediction only; completion is always decided by the server
                 active.ticksLeft -= (RtsDebugClientEvents.getCappedTPS() / 20D) * speed *
@@ -209,7 +159,7 @@ public abstract class ProductionItem {
                 active.ticksLeft = 0;
         }
         // items without a production time still have to be paid for in full before they complete
-        if (!isClientSide && active.ticksLeft <= 0 && !active.completed && belowSupply) {
+        if (!isClientSide && active.ticksLeft <= 0 && !active.completed) {
             ResourceCost cost = getCost(false, placement.ownerName);
             if (cost.ticks <= 0 && active.paidFraction < 1f && !hasCheat) {
                 float df = 1f - active.paidFraction;
@@ -222,7 +172,7 @@ public abstract class ProductionItem {
                     return false;
             }
         }
-        if (!isClientSide && active.ticksLeft <= 0 && belowSupply && !active.completed) {
+        if (!isClientSide && active.ticksLeft <= 0 && !active.completed) {
             active.complete(placement);
             return true;
         }

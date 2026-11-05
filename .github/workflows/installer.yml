@@ -7,11 +7,14 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['installer/**', '.github/workflows/installer.yml']
+    paths: ['installer/**', '.github/workflows/installer.yml', 'tools/test_install_scripts.py']
+  # PRs: build + test only (the copy-paste scripts run for real on Windows and Linux); publishing stays main-only
+  pull_request:
+    paths: ['installer/**', '.github/workflows/installer.yml', 'tools/test_install_scripts.py']
 permissions:
   contents: write
 concurrency:
-  group: installer
+  group: installer-${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
   cancel-in-progress: false
 jobs:
   build:
@@ -37,7 +40,10 @@ jobs:
           go vet ./...
           go build -trimpath -ldflags="-s -w" -o ../BeyondAndTabs-Setup.exe .
           ls -l ../BeyondAndTabs-Setup.exe
+      - name: Copy-paste installers (Linux run + rules for Windows)
+        run: python3 tools/test_install_scripts.py
       - name: Publish to the 'installer' release
+        if: github.event_name != 'pull_request'
         run: |
           notes="One-click Windows installer built from ${GITHUB_SHA::7}. It fetches Prism Launcher, the current test-pack modpack and all mods, makes a Desktop shortcut and opens the launcher. Windows SmartScreen will warn because the file is not code-signed: More info -> Run anyway."
           if ! gh api "repos/$GITHUB_REPOSITORY/releases/tags/installer" >/dev/null 2>&1; then
@@ -46,4 +52,31 @@ jobs:
           else
             gh release edit installer --repo "$GITHUB_REPOSITORY" --notes "$notes"
           fi
-          gh release upload installer BeyondAndTabs-Setup.exe --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload installer BeyondAndTabs-Setup.exe "installer/Install Beyond and Tabs.cmd" --repo "$GITHUB_REPOSITORY" --clobber
+
+  # the Windows one-liner (installer/install.ps1), run for real on a clean Windows machine: portable Prism is fetched,
+  # the instance carries the cat and the pack updater (lovish, Oct 23: copy-paste setup that works for everyone)
+  windows-paste:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run install.ps1 the way players paste it
+        shell: powershell
+        env:
+          BAT_ROOT: ${{ runner.temp }}\bat
+          BAT_NO_LAUNCH: '1'
+        run: |
+          Get-Content -Raw installer/install.ps1 | Invoke-Expression
+          $inst = Join-Path $env:BAT_ROOT 'local\BeyondAndTabs\PrismLauncher\instances\BeyondAndTabs-test'
+          $cfg = Get-Content -Raw (Join-Path $inst 'instance.cfg')
+          if ($cfg -notmatch 'iconKey=lovish_cat') { throw "no cat icon key:`n$cfg" }
+          if ($cfg -notmatch 'packwiz-installer-bootstrap.jar https://') { throw "no pack updater:`n$cfg" }
+          if (-not (Test-Path (Join-Path $env:BAT_ROOT 'local\BeyondAndTabs\PrismLauncher\prismlauncher.exe'))) { throw 'Prism not unpacked' }
+          if ((Get-Item (Join-Path $inst 'minecraft\packwiz-installer-bootstrap.jar')).Length -lt 10000) { throw 'updater jar missing' }
+          # a second run (repair / update) keeps the player's own settings
+          Add-Content (Join-Path $inst 'instance.cfg') 'JvmArgs=-Xmx8G'
+          Get-Content -Raw installer/install.ps1 | Invoke-Expression
+          $again = Get-Content -Raw (Join-Path $inst 'instance.cfg')
+          if ($again -notmatch 'JvmArgs=-Xmx8G') { throw 'rerun lost the player settings' }
+          if (([regex]::Matches($again, 'iconKey=')).Count -ne 1) { throw "iconKey duplicated:`n$again" }
+          Write-Host 'install.ps1 OK'

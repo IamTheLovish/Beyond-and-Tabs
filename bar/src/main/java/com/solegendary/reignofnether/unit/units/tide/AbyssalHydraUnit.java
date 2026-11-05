@@ -62,7 +62,7 @@ import java.util.List;
  *   targets the heads share them) and spits for {@link #HEAD_DAMAGE}.</li>
  *   <li><b>Brine Mist</b> ({@link BrineMist}, tap, 25 s): a fog cloud 8 across for 6 s - friends inside are hidden,
  *   enemy shots at them miss half the time.</li>
- *   <li><b>Regrow</b> (passive): in water or on a tidepool it heals 3 HP/s (the Tides pass' 2 HP/s plus
+ *   <li><b>Regrow</b> (passive): on a tidepool (not real water: the grid rule, slice 1a) it heals 3 HP/s (the Tides pass' 2 HP/s plus
  *   {@link #tidesRegenBonus}) and is faster on top of the faction's ({@link #WET_SPEED_BONUS}); a <i>severed head</i> (one
  *   hit above {@link #SEVER_DAMAGE}) silences one head for {@link #SEVER_TICKS} ticks (5 s).</li>
  *   <li><b>Siege</b>: artillery and siege hit it {@link #SIEGE_MULTIPLIER}x (the Leviathan's rule, LeviathanUnit.isSiegeHit).

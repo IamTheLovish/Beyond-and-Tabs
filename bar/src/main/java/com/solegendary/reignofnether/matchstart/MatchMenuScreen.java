@@ -73,8 +73,13 @@ public class MatchMenuScreen extends Screen {
         return !inMatch() && LobbyClientEvents.isSharedWorld();
     }
 
+    /** The match is decided and you host: offer Back to lobby (reset the battlefield, rematch on this server). */
+    private static boolean canGoBackToLobby() {
+        return MatchEndClientEvents.hasResults() && LobbyClientEvents.isHost();
+    }
+
     private static int rows() {
-        return 6 + (inMatch() ? 1 : 0) + (canSpectate() ? 1 : 0) + (canOpenLobby() ? 1 : 0);
+        return 6 + (inMatch() ? 1 : 0) + (canSpectate() ? 1 : 0) + (canOpenLobby() ? 1 : 0) + (canGoBackToLobby() ? 1 : 0);
     }
 
     private int panelHeight() {
@@ -108,6 +113,14 @@ public class MatchMenuScreen extends Screen {
                 onClose();
             }).bounds(x, y, BTN_W, BTN_H).build());
             spectate.setTooltip(Tooltip.create(Component.translatable("matchend.reignofnether.spectate.tooltip")));
+            y += BTN_H + GAP;
+        }
+        if (canGoBackToLobby()) {
+            Button back = addRenderableWidget(Button.builder(Component.literal("Back to lobby"), b -> {
+                onClose();
+                LobbyClientEvents.backToLobby();
+            }).bounds(x, y, BTN_W, BTN_H).build());
+            back.setTooltip(Tooltip.create(Component.literal("Reset the battlefield and reopen the lobby with the same players, bots and settings")));
             y += BTN_H + GAP;
         }
         if (canOpenLobby()) {

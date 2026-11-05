@@ -203,7 +203,8 @@ public class MudskipperSloopUnit extends EntityMudskipper implements Unit, Attac
                 .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
                 .add(AttributeRegistrar.SIGHT_RANGE.get(), Unit.DEFAULT_SIGHT_RANGE)
                 .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0)
+                .add(AttributeRegistrar.BUILDING_DAMAGE_BONUS.get(), com.solegendary.reignofnether.raid.RaidTuning.vehicleBuildingBonus(attackDamage, attacksPerSecond));   // T1 vehicle: breaks buildings (RaidTuning)
     }
 
     @Override

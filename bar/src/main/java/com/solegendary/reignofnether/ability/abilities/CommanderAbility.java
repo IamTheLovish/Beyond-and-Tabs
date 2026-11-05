@@ -108,7 +108,7 @@ public class CommanderAbility extends Ability {
             case RIPTIDE -> {
                 title = "Riptide";
                 line1 = "A " + (int) RIPTIDE_RANGE + "-block cone of surf: " + (int) RIPTIDE_DAMAGE
-                    + " damage and a hard shove, twice as hard on foes in water or tidepools.";
+                    + " damage and a hard shove, twice as hard on foes standing on the grid.";
                 line2 = "The sea goes where the Admiral points.";
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/trident.png");
             }
@@ -136,7 +136,7 @@ public class CommanderAbility extends Ability {
                 title = "Rally Standard";
                 line1 = "Allies within 12 blocks: Resistance I and Speed I for 20 s.";
                 line2 = "Hold the line under the sun banner.";
-                icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/white_banner.png");
+                icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/goat_horn.png");
             }
         }
         // Blink is aimed: the button arms the cursor and the click sends the spot (UnitActionItem dispatches it)
