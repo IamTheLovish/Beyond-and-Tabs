@@ -172,6 +172,16 @@ def vec3_const(source, name):
     return [x * k for x in xs]
 
 
+def float_const(source, name, default=None):
+    """A `const float NAME = x;` from a shader's source; `default` when the source has none."""
+    m = re.search(r"const float %s = (-?\d+(?:\.\d+)?);" % name, source)
+    if not m:
+        if default is None:
+            raise ValueError("no const float %s" % name)
+        return default
+    return float(m.group(1))
+
+
 def _smoothstep(a, b, x):
     t = min(max((x - a) / (b - a), 0.0), 1.0)
     return t * t * (3.0 - 2.0 * t)

@@ -40,6 +40,8 @@ const vec3 MIN_LIGHT = vec3(0.012);
 // from 1 to this, never to nothing. The light engine can leave open ground with a stale low sky light (the eyes
 // structure pads: freshly laid ground read 1/3 of its sky light), which the sun hides but a shadow showed as black
 const float SKY_FILL_FLOOR = 0.35;
+// the sky's fill on a wall as a share of its fill on open ground: a face looking straight up sees the whole sky
+const float SKY_FILL_SIDE = 0.75;
 
 // sine of the sun's height above the horizon
 float sunHeight() {
@@ -65,11 +67,13 @@ vec2 lightLevels(vec2 lm) {
     return clamp((lm - 1.0 / 32.0) * (16.0 / 15.0), 0.0, 1.0);
 }
 
-// Lambert, eased toward a square root: a low sun still rakes the open ground (Dusk's long shadows read as shade, not
-// as nothing), and the terminator on round shapes is softer
+// Lambert, eased SUN_FACING_EASE of the way toward a square root: a low sun still rakes the open ground (Dusk's long
+// shadows read as shade, not as nothing), and the terminator on round shapes is softer
+const float SUN_FACING_EASE = 0.5;
+
 float sunFacing(vec3 n, vec3 l) {
     float ndl = max(dot(n, l), 0.0);
-    return mix(ndl, sqrt(ndl), 0.5);
+    return mix(ndl, sqrt(ndl), SUN_FACING_EASE);
 }
 
 // the sun's light reaching a surface before its facing: the colour, the shadow, and the fade where the sky light says
@@ -88,7 +92,7 @@ vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, flo
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
     vec3 light = sunArriving(shadow, levels, sunColour) * (facing * mix(1.0, texAo, 0.5));
     float upness = dot(n, up);
-    light += skyColour * ((0.75 + 0.25 * upness) * mix(SKY_FILL_FLOOR, 1.0, sky) * ao * texAo);
+    light += skyColour * ((SKY_FILL_SIDE + (1.0 - SKY_FILL_SIDE) * upness) * mix(SKY_FILL_FLOOR, 1.0, sky) * ao * texAo);
     // no light bounced off the ground onto walls: slice 2 tried 0.20 of the sun (block critic, Oct 30) and the
     // wall-to-roof step fell from slice 1's 1.73 to 1.42 (eyes 41962082358 / 41962085182); lovish, Nov 5: "Keep the
     // strong step" - walls stay at ~58% of the roofs, so a building reads its shape from the RTS camera
