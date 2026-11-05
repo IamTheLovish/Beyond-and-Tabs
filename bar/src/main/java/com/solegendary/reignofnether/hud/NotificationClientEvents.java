@@ -93,7 +93,17 @@ public class NotificationClientEvents {
         GAME_ENDER_AIMED("game_ender_aimed", 10_000, -1, 98),
         GAME_ENDER_INTERCEPTED("game_ender_intercepted", 5_000, -1, 85),
         HERO_BOON("hero_boon", 10_000, -1, 40),
-        START_POSITIONS("start_positions", 0, -1, 105);
+        START_POSITIONS("start_positions", 0, -1, 105),
+        // one of our heroes died (FallenHeroClientboundPacket, which reaches the owner however far away it fell):
+        // above an ally's call, below an attack on the base. No voice line yet, so it is a text line + its chord. No
+        // alert-wide cooldown: HeroFallenNews keeps one per HERO, so two heroes falling in one fight are both heard
+        // (review round 1 on #508). Periwinkle: clearly apart from the ambers of the attack and ally lines.
+        HERO_FALLEN("hero_fallen", 0, 0x8C9EFF, 75);
+
+        /** The line for one of our units dying: null for a hero, whose death the fallen-hero packet announces. */
+        static Alert forDeath(boolean commander, boolean hero) {
+            return commander ? COMMANDER_KILLED : hero ? null : UNIT_LOST;
+        }
 
         public final String key;
         public final long cooldownMs;
@@ -317,10 +327,28 @@ public class NotificationClientEvents {
         if (!evt.getLevel().isClientSide() || !(evt.getEntity() instanceof Unit unit)
                 || !(evt.getEntity() instanceof LivingEntity le) || !le.isDeadOrDying())
             return;
-        // the commander's death is its own, louder line: it also means the com-blast is about to go off
-        if (canAlert() && myName.equals(unit.getOwnerName()))
-            fire(CommanderServerEvents.looksLikeCommander(le) ? Alert.COMMANDER_KILLED : Alert.UNIT_LOST, null);
+        // the commander's death is its own, louder line: it also means the com-blast is about to go off; a hero's is
+        // announced by onHeroFallen (the packet reaches us even when the hero fell out of tracking range)
+        if (canAlert() && myName.equals(unit.getOwnerName())) {
+            Alert a = Alert.forDeath(CommanderServerEvents.looksLikeCommander(le),
+                le instanceof com.solegendary.reignofnether.unit.interfaces.HeroUnit);
+            if (a != null)
+                fire(a, null);
+        }
     }
+
+    /**
+     * From FallenHeroClientboundPacket: one of our heroes died. The same packet re-sends every fallen hero when a
+     * player joins; canAlert()'s RTS warm-up keeps that resync quiet, so only a death during play is news.
+     */
+    public static void onHeroFallen(String ownerName, String heroDescriptionId, String heroUuid) {
+        if (canAlert() && HERO_NEWS.admit(myName, ownerName, heroUuid, System.currentTimeMillis()))
+            fire(Alert.HERO_FALLEN, I18n.get(heroDescriptionId));
+    }
+
+    /** Which fallen-hero packets are news: our own heroes, once per hero per HeroFallenNews.SAME_HERO_MS. */
+    private static final com.solegendary.reignofnether.hero.HeroFallenNews HERO_NEWS =
+        new com.solegendary.reignofnether.hero.HeroFallenNews();
 
     // The T3 announcement is a plain translatable chat line; reading its key avoids adding a packet for it.
     @SubscribeEvent
@@ -666,6 +694,11 @@ public class NotificationClientEvents {
             case CAPTURE_LOST -> {
                 note(SoundEvents.BEACON_DEACTIVATE, 0.8f, 0.6f * v, 0);
                 note(SoundEvents.NOTE_BLOCK_BASS.value(), 0.7f, 0.8f * v, 3);
+            }
+            case HERO_FALLEN -> {          // a low tolling bell, twice, over a falling horn: heavier than a unit lost
+                note(SoundEvents.BELL_BLOCK, 0.5f, 0.6f * v, 0);
+                note(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), 0.6f, 0.7f * v, 0);
+                note(SoundEvents.BELL_BLOCK, 0.45f, 0.5f * v, 8);
             }
         }
     }
