@@ -594,11 +594,21 @@ public class BoneDragonUnit extends GhastUnit {
     /** The dragon's breath state and its last events, for a game test's failure message. */
     public String breathDebug() {
         LivingEntity goal = getTargetGoal().getTarget(), mob = getTarget();
+        // the attack goal's own conditions (UnitBowAttackGoal.tick): range, sight, the draw, the cooldown, the goals
+        // holding the MOVE / LOOK flags - stress 42058476189: an ordered dragon that never started a breath
+        StringBuilder running = new StringBuilder();
+        this.goalSelector.getRunningGoals().forEach(g -> running.append(running.length() == 0 ? "" : ",")
+            .append(g.getGoal().getClass().getSimpleName()));
+        float cd = getAttackGoal() instanceof com.solegendary.reignofnether.unit.goals.UnitBowAttackGoal<?> bow
+            ? bow.getAttackCooldown() : -1;
         return String.format(java.util.Locale.ROOT, "[dragon#%d breathing %s tick %d, goal target %s, mob target %s,"
-                + " landed %s, flyer %s, hp %.0f, events: %s]", getId(), isBreathing(), breathTick,
+                + " landed %s, flyer %s, hp %.0f, at y %.2f, to target %.2f of range %.1f, sight %s, drawing %s (%d),"
+                + " cooldown %.0f, hold %s, item %s, running goals %s, events: %s]", getId(), isBreathing(), breathTick,
             goal == null ? "none" : net.minecraft.world.entity.EntityType.getKey(goal.getType()).getPath() + "#" + goal.getId(),
-            mob == null ? "none" : net.minecraft.world.entity.EntityType.getKey(mob.getType()).getPath() + "#" + mob.getId(), isLanded(), isFlyingUnit(),
-            getHealth(), String.join("; ", trace));
+            mob == null ? "none" : net.minecraft.world.entity.EntityType.getKey(mob.getType()).getPath() + "#" + mob.getId(),
+            isLanded(), isFlyingUnit(), getHealth(), getY(), mob == null ? -1 : distanceTo(mob), getAttackRange(),
+            mob != null && getSensing().hasLineOfSight(mob), isUsingItem(), getTicksUsingItem(), cd, getHoldPosition(),
+            getMainHandItem().getItem(), running, String.join("; ", trace));
     }
 
     /** Ends the breath (both sides learn it from the breath number going to 0). */

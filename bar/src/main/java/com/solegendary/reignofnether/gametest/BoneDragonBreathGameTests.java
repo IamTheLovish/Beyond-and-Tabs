@@ -112,7 +112,7 @@ public class BoneDragonBreathGameTests {
                         .append(m instanceof Unit u && u.getOwnerName() != null && u.getOwnerName().endsWith("_foe") ? " foe" : " friend")
                         .append(String.format(Locale.ROOT, " %.0f hp", m.getHealth()));
             }
-            said.add("this test's units: " + ids);
+            said.add("this test's units: " + ids + "; the foes' floor at y " + helper.absolutePos(new BlockPos(0, 2, 0)).getY());
             problems = said;
         }
         return DragonDiveGameTests.finish(helper, problems, clean);
