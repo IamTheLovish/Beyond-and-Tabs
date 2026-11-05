@@ -29,8 +29,9 @@ import java.util.List;
  *   <li><b>Who bursts:</b> every {@link Machine} (anything that carries Heat: its boiler) and the
  *       {@link RocketBatteryUnit} - only on a real death (LivingDeathEvent, not cancelled, so a Totem that saves the
  *       unit stops it too). A unit taken off the field without dying (despawned, discarded, gone into a
- *       garrison) never bursts; nor does one a match reset clears with a kill ({@link #quietly},
- *       PlayerServerEvents.killForReset), nor one that dies while garrisoned: the building holds it.</li>
+ *       garrison) never bursts; nor does one killed to clear it ({@link #quietly}: a match reset's
+ *       PlayerServerEvents.killForReset, a defeated side's DefeatCleanupServerEvents, the player's Delete order), nor
+ *       one that dies while garrisoned: the building holds it.</li>
  *   <li><b>Radius</b> by size: {@link #radius} = {@value #RADIUS_BASE} + {@value #RADIUS_PER_WIDTH} x the body's width,
  *       {@value #RADIUS_MIN}..{@value #RADIUS_MAX} blocks (Rocket Battery 2.0, Iron Warden 2.7, Steam Juggernaut 3.3,
  *       Iron Leviathan Engine 5.7).</li>
@@ -86,12 +87,13 @@ public final class DeathBurst {
         return e instanceof Machine || e instanceof RocketBatteryUnit;
     }
 
-    // > 0 while a match reset clears the field (quietly): its kills are no deaths in battle
+    // > 0 while units are cleared off the field (quietly): those kills are no deaths in battle
     private static int quietDepth = 0;
 
     /**
-     * Runs {@code clear} with bursts off: a match reset takes every unit off the field with entity.kill(), and a
-     * machine killed that way must not burst into its neighbours (review round 1 on #517). Nests (a depth count, as
+     * Runs {@code clear} with bursts off. A match reset (review round 1 on #517), a defeated side's cleanup and the
+     * player's Delete order (Command Center Eris.14, Nov 5, lovish to confirm) take units off the field with
+     * entity.kill(), and a machine killed that way must not burst into its neighbours. Nests (a depth count, as
      * UnitDamage's explicit scope); server thread only.
      */
     public static void quietly(Runnable clear) {
