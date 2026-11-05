@@ -51,28 +51,28 @@ Tools: `tools/anim_lab.py` (keys as data -> `gen/*Anim.java`), `tools/pose_previ
 Reference technique = how The Isle (Evrima) and the best creature games do it; our score is 1-10 on what a player
 sees today. **Re-audited Nov 5 2026 against `main` e92a89e1**, after #373 (death pose), #375 (contact), #377 (look
 solver), #382/#399/#405 (death finishes), #412 (smooth turning), #421 (blow on the strike), #440/#509 (dragon passes),
-#441 (walking a line), #448 (hit flash), #469 (body-yaw hold) and #512 (no glance while waiting for a path). Each score
+#441 (walking a line), #448 (hit flash), #469 (body-yaw hold) and #512 (no look-around while waiting for a path). Each score
 reads "Oct 21 -> Oct 29 -> Nov 5"; the older wording is in git history and section 6 lists what landed.
 
 | Behaviour | What exists (Nov 5) | What is missing (engine side in bold) | Reference technique | Score |
 |---|---|---|---|---|
 | **Breathing** | `MotionPass` breathes every vanilla-bodied unit (humanoid, illager, villager, golem, witch and spider families) and the 9 keyframe units: chest, shoulders, then the neck a beat later; the rate from the shared `EXERTION` (60 ticks at rest, 25 blown); per-unit tempo and amplitude (`Desync`). The generated rigs and the Bison breathe by themselves; the dragon's ribcage no longer strobes on a glide change (#509) | The generated human rigs' breath ignores `EXERTION`. Vanilla bodies have no clavicle or neck bone. The 11 Alex's Mobs models have nothing | Additive full-body breath, amplitude and rate from exertion | 3 -> 6 -> **6** |
-| **Weight shift / idle variation** | `Idle` (seeded per unit): a weight shift every 6-14 s with the feet kept, 3 fidgets (grip adjust, shoulder roll, a 50-degree look-around) and glances at real things (nearest enemy, an ally just hit, its own hero); quiet 1.5 s after a stop; no random glance while a unit waits for its path (#512). Generated rigs: the HumanBase idle clip | Feet are not locked, so a big shift on a generated rig slides them. No stance change over a long hold; nothing per weapon class | Base pose + seeded additive fidgets, inertialized; the hip shift absorbed by IK legs | 2 -> 5 -> **5** |
+| **Weight shift / idle variation** | `Idle` (seeded per unit): a weight shift every 6-14 s with the feet kept, 3 fidgets (grip adjust, shoulder roll, a 50-degree look-around) and glances at real things (nearest enemy, an ally just hit, its own hero); quiet 1.5 s after a stop. On the server side, the look-around goal holds while a unit waits for its path (#512: `RandomLookAroundUnitGoal`, `MoveToTargetBlockGoal`). Generated rigs: the HumanBase idle clip | Feet are not locked, so a big shift on a generated rig slides them. No stance change over a long hold; nothing per weapon class | Base pose + seeded additive fidgets, inertialized; the hip shift absorbed by IK legs | 2 -> 5 -> **5** |
 | **Look-at** | `Life.look` (#377): the look spring (`SP_LOOK_YAW/PITCH`) is shared between chest and head with per-bone shares and limits; a ranged unit drawing on a target (`AIM`) turns its upper body to it (chest share 0.45, limit 25 degrees), and on a vanilla body the arms keep the model's aim. Glances still spring the head | No neck bone on vanilla bodies (chest + head only); the eyes do not lead; creature rigs keep their own `neckLook` | A per-bone look chain (eyes 100%, head 60%, neck 30%, chest 10%) with a spring on the target | 4 -> 5 -> **6** |
 | **Turning / lean / acceleration** | `Kinematics` per client tick (0.10 us a unit): lean into turns (max 12 degrees), start/brake pitch with an overshoot rock, arm lag on a start. Smooth turning (#412): the drawn body yaw is a spring (`SP_TURN`, `Kinematics.bodyYawAt`), so a new order swings the body round instead of spinning it 90 degrees a tick; units walk a line without rocking (#441); every unit ticks on the client so the yaw spring never holds (#469) | No stepping feet in a turn on the spot; no slope pitch; a generated rig leans as one block | A per-tick motion snapshot feeding additive spine/pelvis lean; turn-in-place steps | 1 -> 6 -> **7** |
 | **Foot planting / gait** | `Gait` (the Bison) and HumanBase's planted walk for the generated humans. **Open: #523, the gait bridge**: every unit on vanilla's one-bone legs (~60 types) gets a planted-foot stride (the stance sweeping back steadily, the swing eased), hips that drop so one sole is always on the ground, a 1.6 px step lift and hip sway (JUnit `GaitBridgeTest`: stance slip 0.36-0.82 -> 0.27-0.30 of the ground speed, lower-sole lift up to 8 px -> 0) | Vanilla-legged units slide and float until #523; a full plant needs a retimed cadence and retimed arms. **No ground sampling, no 2-bone IK helper**; nothing adapts to slopes or stairs | Stride warping, foot-lock, 2-bone IK to the sampled ground, the pelvis dropped to the lowest foot | 3 -> 3 -> **3** (4-5 with #523) |
 | **Hit reactions / stagger** | Directional flinch for every mapped family from the damage event's direction (`LivingEntityDamageMotionMixin`); a stagger past a 12% health drop in 3 ticks; keyframe units included. Contact (#375): the attacker's arms and torso jolt back (`SP_RECOIL`, `Kinematics.onContact`) on the frame its blow lands. Hit flash (#448) on vanilla's overlay row, no extra draw | **No hit-stop.** `Quadruped` and `Dragon` still flinch on `hurtTime` (Quadruped.java:338, Dragon.java:773), blind to direction. Generated human rigs flinch with the head and stagger with the whole body only | Additive reactions by direction and size, layered over locomotion; contact drives the target's reaction | 2 -> 5 -> **6** |
-| **Death** | Death pose (#373): humanoid, illager and villager bodies fall rigidly and the generated human rigs fall jointed (elbows, knees), away from the killing blow: reel, fall, one bounce, still by tick 18; `Corpses` holds up to 96 bodies after the server removes the unit; faction finishes (#382, #399, data in death_finishes.json); weapons lie down with the body (#399, #405) | About 73 types still flip and vanish: golems, spiders, keyframe rigs, the Bison, dragons, slimes and every Alex's Mobs model. **No fallback fall for any model** (the accepted death plan's step 2), and the cost-sized death blast is not yet retired (step 1) | A fall seeded by the last hit, a settled corpse, a finish | 2 -> 2 -> **5** |
+| **Death** | Death pose (#373): humanoid, illager and villager bodies fall rigidly and the generated human rigs fall jointed (elbows, knees), away from the killing blow: reel, fall, one bounce, still by tick 18; `Corpses` holds up to 96 bodies after the server removes the unit; faction finishes (#382, #399, data in death_finishes.json); weapons lie down with the body (#399, #405) | Every body outside those families still does vanilla's flip and vanishes: golems, spiders, keyframe rigs, slimes and every Alex's Mobs model (`BoneMaps.build` gives them no death parts); the Bison and the dragons fall by their own rigs (Quadruped.java:348) but get no corpse hold. **No fallback fall for any other model**, and every death still draws the cost-sized blast (`BarFxServerEvents.onLivingDeath`) | A fall seeded by the last hit, a settled corpse, a finish | 2 -> 2 -> **5** |
 | **Combat technique (anticipation / follow-through)** | The Halberdier's keyed 18-tick thrust (`KeyedSwing`, `HeldBlow`). The blow on the strike for every family (#421, `BlowTiming`): vanilla's arm swing lands its damage at tick 3, the generated chop at tick 4, the Bison's toss at tick 9, so the target's flinch, the spark and sound and the attacker's recoil all fall on the visible strike | Every vanilla body still plays the 6-tick arm bump: no wind-up, no follow-through, no weapon classes. **No hit-stop, no crossfade into or out of an attack** | Anticipation -> drive -> contact (hit-stop, recoil) -> recovery, per weapon class | 3 -> 4 -> **5** |
 | **Clip blending** (new row) | HumanBase crossfades idle and walk by the stride; the motion pass is additive, so it never pops | **The 9 keyframe units hard-cut between clips** (`AnimationState` start/stop); the generated bodies blend into their attack and cast poses with their own per-model ramps | Inertialized blends: a 4-6 tick crossfade on every clip change | **3** |
 | **Melee spacing (the fight's read)** (new row) | Melee ring slots (`Engage`) spread attackers round a target; a knockback gate per target is open (#463) | **Pairs are not held at weapon reach**: the ring is one fixed radius (`Engage.RING_RADIUS`), not the weapon's reach, and nothing measures how far fighting pairs overlap. The blow is timed, not spaced | Attack positions at the weapon's reach, a facing turn before the strike | **3** |
 | **Spine / neck wave (dragons, chains)** | `Life.springChain` exists. The Bone Dragon and `Dragon` use `Life.chain` (a lagged sine) and their own bank; the dragon passes (#440, #509) fixed the roll and the strobe | **Nothing calls `springChain`**. `BoneMaps` still returns NONE for the Bone Dragon with a stale "PR #145 ... owns its motion" line (BoneMaps.java:113; #145 merged Oct 28) | Damped springs per link, driven by the parent's acceleration | 3 -> 3 -> **3** |
-| **Cloth / secondary motion** | Sines on tassels and tabards; `BackBannerLayer` is static; vanilla bodies get the arms' spring lag | Nothing reacts to motion: **`springChain` is unused here too**; no client wind for units | Spring chains with gravity and wind, clamped | 2 -> 2 -> **2** |
+| **Cloth / secondary motion** | Sines on tassels and tabards; a captain's back banner sways on a slow per-unit sine (`BackBannerLayer`); vanilla bodies get the arms' spring lag | Nothing reacts to motion: **`springChain` is unused here too**; no client wind for units | Spring chains with gravity and wind, clamped | 2 -> 2 -> **2** |
 
 Overall, Nov 5: death, contact, look and turning landed, so a single unit reads alive. What still reads as "weird
 moving units and animations smacking each other" (lovish, Nov 5) is **how two units fight**: no wind-up or
 follow-through on ~60 vanilla bodies, hard cuts between clips, pairs that overlap instead of standing at reach, no
-hit-stop. Then **feet that slide** (#523) and the **73 bodies with no fall**. Secondary motion (cloth, tails) is still
+hit-stop. Then **feet that slide** (#523) and the **bodies with no fall** (every family outside humanoid, illager, villager and the generated humans). Secondary motion (cloth, tails) is still
 sines.
 
 ## 3. Engine work, in order of visible gain
@@ -89,7 +89,7 @@ status follows each item in bold.
    caller (only `LifeSpringTest`).
 3. **Hit, contact and death contracts.** (a) The hit stamp: **landed.** (b) Contact: **landed (#375)**, and the blow
    on the strike: **landed (#421).** (c) The death pose and corpse hold: **landed (#373)**, finishes (#382, #399).
-   **Left: the fallback fall for every other model, and retiring the blast (the accepted death plan, steps 1-2).**
+   **Left: a fallback fall for every other model, and retiring the blast.**
 4. **Look solver.** **Landed (#377).**
 5. **Smooth turning.** **Landed (#412, #441, #469, #512).**
 6. **The gait bridge** (vanilla one-bone legs: planted stride, hip drop, step lift, sway). **Open: #523.**
@@ -163,7 +163,7 @@ because `dsl_to_game.py` emits nearly a part per cube (341 cubes in 279 parts: e
 Decision on LOD rules: **no animation LOD.** Decimating or skipping procedural layers past the detail zoom would save ~0.5 ms
 per 500 units and show (a block of units stuttering at 10 Hz reads worse than static). Lane B should spend the
 animation budget freely: a rig can do ten times today's work per unit before it registers. The lever that matters
-is geometry at the RTS zoom - a far body of ~40-80 cubes per unit (section 3, item 6) would cut the body pass
+is geometry at the RTS zoom - a far body of ~40-80 cubes per unit (section 3, item 12) would cut the body pass
 ~5x where most of a match is watched, and that is a Lane B asset plus a one-line swap in the renderer, after the
 rigs are right. `[Anim]` and `[AnimBench]` stay as the gate: a change that moves the animation share past ~10% of a
 unit's cost, or the per-unit posing past 40 us, gets looked at.
@@ -171,7 +171,7 @@ unit's cost, or the per-unit posing past 40 us, gets looked at.
 ## 5. Open questions for Lane B (posted on #35)
 
 Which engine piece first: the `AnimState`/`Motion` snapshot (1), the springs (2), or the hit/death contracts (3)?
-And the cube budget for a far body (6) once lovish's PC gives an `[Anim]` line at 300+ units.
+And the cube budget for a far body (now item 12) once lovish's PC gives an `[Anim]` line at 300+ units.
 
 ## 6. What landed since Oct 21
 
@@ -180,7 +180,8 @@ And the cube budget for a far body (6) once lovish's PC gives an `[Anim]` line a
 | Shared `AnimState` + motion snapshot | A slab of 80 floats a unit (64 before the look and turn slots), stepped per client tick | #279; `motion/AnimState`, `AnimStates`, `Kinematics` |
 | Springs and inertial chains | `Life.spring`, `springAt`, `springChain` | #278; `animations/Life.java` |
 | Additive pass for vanilla bodies | `Motion` (pure: snapshot -> 8 bones x 6 channels), `MotionPass`, `BoneMaps` per family | #281, #283 |
-| Idle variation | `Idle`: weight shift, grip, shoulder, look-around, real-target glances | #282; #512 (no glance while waiting for a path) |
+| Idle variation | `Idle`: weight shift, grip, shoulder, look-around, real-target glances | #282 |
+| No look-around while waiting for a path | `RandomLookAroundUnitGoal`, `MoveToTargetBlockGoal` (server goals) | #512 |
 | Hit stamp | `LivingEntityDamageMotionMixin` -> `AnimStates.onDamage` | #279, #281 |
 | Per-unit variety | `Desync`, `ZoomGain`, 7 sliders and a master switch | #278 |
 | A review stage | `/parade` (`ParadeGround`), A/B on Numpad 0 or `/livingarmy` | #280 |
