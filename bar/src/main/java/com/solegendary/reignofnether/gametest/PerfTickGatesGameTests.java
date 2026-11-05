@@ -129,6 +129,62 @@ public class PerfTickGatesGameTests {
         });
     }
 
+    static final long SPIKE_BEFORE_MS = 2000, SPIKE_INSIDE_MS = 500;
+    static final int TICK_MS_WINDOW = 20;
+
+    /**
+     * A [Sys] window's mean tick is the time of ITS OWN ticks. Sys was handed MinecraftServer.tickTimes[tick - 1], the
+     * previous tick's time, at each tick's end and added it to the current tick's window: the mean counted the tick before
+     * the window opened and missed its last tick, so a slow tick just before a held window (a GC, the batch setting up)
+     * landed in "elsewhere" and dragged the coverage down (a_300_unit_window_accounts_for_the_tick: "[Sys] 100 ticks ...
+     * cover only 80%", flake-stress 41810956897). An untimed stall in the tick before the window must not count; one
+     * inside it must. Its own batch: the stalls hold up nothing else.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "perf_sys_tick_ms")
+    public static void a_sys_window_counts_its_own_ticks_time_not_the_tick_before_it(GameTestHelper helper) {
+        Object hold = new Object();
+        TestCleanup.atEnd(helper, () -> Sys.force(hold, false));
+        helper.runAfterDelay(39, () -> spin(SPIKE_BEFORE_MS));   // the tick before the window
+        helper.runAfterDelay(40, () -> {
+            Sys.force(hold, true);
+            Sys.snapshot();   // a fresh window from here
+        });
+        helper.runAfterDelay(50, () -> spin(SPIKE_INSIDE_MS));   // a tick inside it
+        helper.runAfterDelay(40 + TICK_MS_WINDOW, () -> {
+            String line = Sys.snapshot();
+            Sys.force(hold, false);
+            ReignOfNether.LOGGER.info("[SysWindow] GameTest tick ms: stall {} ms before the window, {} ms inside it: {}",
+                SPIKE_BEFORE_MS, SPIKE_INSIDE_MS, line);
+            java.util.regex.Matcher m = line == null ? null
+                : java.util.regex.Pattern.compile("\\[Sys\\] (\\d+) ticks, mean ([0-9.]+) ms/tick").matcher(line);
+            if (m == null || !m.find()) {
+                helper.fail("no [Sys] line came back: " + line);
+                return;
+            }
+            int ticks = Integer.parseInt(m.group(1));
+            double mean = Double.parseDouble(m.group(2));
+            double inside = SPIKE_INSIDE_MS / (double) TICK_MS_WINDOW;
+            double before = SPIKE_BEFORE_MS / (double) TICK_MS_WINDOW;
+            if (ticks != TICK_MS_WINDOW)
+                helper.fail("the window counted " + ticks + " of its " + TICK_MS_WINDOW + " ticks (cut, not the case under test): " + line);
+            else if (mean >= inside + before / 2)
+                helper.fail(String.format(Locale.ROOT, "the window's mean tick %.1f ms counted the %d ms stall in the tick before it opened"
+                    + " (its own ticks: about %.0f ms plus idle): %s", mean, SPIKE_BEFORE_MS, inside, line));
+            else if (mean < inside * 0.8)
+                helper.fail(String.format(Locale.ROOT, "the window's mean tick %.1f ms missed the %d ms stall inside it: %s", mean,
+                    SPIKE_INSIDE_MS, line));
+            else
+                helper.succeed();
+        });
+    }
+
+    /** Busy for the given milliseconds, outside every timed section (the GameTest's own tick work). */
+    private static void spin(long ms) {
+        long end = System.nanoTime() + ms * 1_000_000L;
+        while (System.nanoTime() < end)
+            Thread.onSpinWait();
+    }
+
     /** 40 idle units call Entity.move at most 160 times in 40 ticks: one full travel in 10 each (1600 without F1). */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void idle_units_rarely_move(GameTestHelper helper) {
