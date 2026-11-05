@@ -175,18 +175,19 @@ class LotusAcademyTest(unittest.TestCase):
     ROOFS = ((0, L.R1, 0, 8), (0, L.R2, 1, 7), (1, L.R3, 2, 6))   # (first level, lip y, x1, x2), each z 0..3
 
     def test_roofs_climb_two_steps_to_a_dark_ridge(self):
-        """Each roof climbs from its lip in jade stair steps to a dark oak ridge. The side galleries (a lean-to, z 5..6):
-        hem at the court, a jade stair one up, a dark oak ridge on the outer wall the camera sees. Each hall roof
-        (hipped, the north side flush): the cells two in from the west, south and east edges are dark oak two up, or
-        the storey or crown that rises off them - never jade. Shipped: flat jade bands, a jade ridge."""
+        """Each roof climbs from its lip in full jade steps to a dark oak ridge (blind Fable round r2: stair steps read
+        as "flat 2-wide teal slab planes" from the RTS camera - a full block's riser casts the shadow line). The side
+        galleries (a lean-to, z 5..6): hem at the court (y 4), a jade block one in and one up (y 5), a dark oak ridge
+        one more up (y 6) on the outer wall the camera sees. Each hall roof (hipped, the north side flush): the cells
+        two in from the west, south and east edges are dark oak two up, or the storey or crown that rises off them -
+        never jade. Shipped: flat jade bands, a jade ridge."""
         for i in range(3):
-            s, b = self.solid[i], self.lv[i].blocks
-            for lip, step, ridge, f in ((2, 1, 0, "west"), (6, 7, 8, "east")):
+            s = self.solid[i]
+            for step, ridge in ((1, 0), (7, 8)):
                 for z in (5, 6):
-                    self.assertEqual(s.get((step, 5, z)), JADE + "_stairs", "L%d gallery step %s" % (i + 1, (step, z)))
-                    self.assertEqual(b[(step, 5, z)][1].get("facing"), f, "L%d gallery step facing" % (i + 1))
-                    self.assertTrue(s.get((ridge, 5, z), "").startswith("dark_oak"),
-                                    "L%d gallery ridge %s: %s" % (i + 1, (ridge, z), s.get((ridge, 5, z))))
+                    self.assertEqual(s.get((step, 5, z)), JADE, "L%d gallery step %s" % (i + 1, (step, z)))
+                    self.assertTrue(s.get((ridge, 6, z), "").startswith("dark_oak"),
+                                    "L%d gallery ridge %s: %s" % (i + 1, (ridge, z), s.get((ridge, 6, z))))
         for lv, y, x1, x2 in self.ROOFS:
             for i in range(lv, 3):
                 s = self.solid[i]
@@ -197,11 +198,22 @@ class LotusAcademyTest(unittest.TestCase):
 
     def test_dark_ridges_show_on_camera(self):
         """The ridges are seen at L1: the RTS camera's rays land on the top face of dark oak on the galleries' outer
-        walls (y 5). (The hall roofs' crests carry the second storey and the lotus at every level, so their ridges are
+        walls (y 6). (The hall roofs' crests carry the second storey and the lotus at every level, so their ridges are
         checked in the structure above, not on camera.)"""
         hits = G.shoot(self.lv[0], "rts", step=4)
         up = [q for (q, n, f, _b) in hits.values() if n.startswith("dark_oak") and f == "up"]
-        self.assertTrue([q for q in up if q[1] == 5 and q[0] in (0, L.SX - 1) and q[2] >= 4], "no gallery ridge seen")
+        self.assertTrue([q for q in up if q[1] == 6 and q[0] in (0, L.SX - 1) and q[2] >= 4], "no gallery ridge seen")
+
+    def test_no_dark_stripe_down_the_south_front(self):
+        """The hall roofs all lip on the south row (z 3), so their dark hems stack over each other; nothing dark stands
+        between two hems in that row (rafter ends, the old crown's petal tips turned rafters), or the stack reads as
+        one "dark brown wedge from crown to court ... a wooden ramp or scar" (blind Fable round r2, L3)."""
+        lips = (L.R1, L.R2, L.R3, L.R4)
+        for i in range(3):
+            s = self.solid[i]
+            dark = sorted(q for q, n in s.items() if q[2] == 3 and n.startswith("dark_oak") and q[1] > L.R1
+                          and q[1] not in lips)
+            self.assertEqual(dark, [], "L%d" % (i + 1))
 
     def test_seated_on_a_kerb_and_a_south_way(self):
         """The footprint never grows (BuildingLevels), so the apron is the plot's own edge: at every level layer 0's
