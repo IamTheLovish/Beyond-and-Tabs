@@ -185,12 +185,18 @@ class HeartwoodHallTest(unittest.TestCase):
         a log lying along its line (axis x or z), so the camera sees bark on top, never a pale log end. Shipped: full
         oak_wood cubes standing on end - "four diagonal stacks of full oak_wood cubes ... a zipper of pale-topped cubes
         - the crate stacks" (Fable critic A, Nov 4, 4/10: the most distracting element on the still). Logs on their
-        side still read as "crate stacks at every corner" (Fable critic, round 1, Nov 5), so the roots now lie low as
-        mangrove-root mats and no bark stands there at all."""
+        side still read as "crate stacks at every corner" (Fable critic, round 1, Nov 5), and mangrove-root mats as
+        "crates" (round 7), so the roots lie low as moss mats round each corner pier's foot - and they are there: at
+        least 4 moss carpets on ring 5-7 of each garden corner (#522 review N3: without this a hall with no roots
+        passed)."""
         cells = [(q, n, pr) for q, (n, pr) in self.b.blocks.items() if _bark(n) and _ring(q) >= 5 and q[1] <= 8]
         bad = [(q, n, pr.get("axis")) for q, n, pr in cells
                if not n.endswith("_log") or pr.get("axis") not in ("x", "z")]
         self.assertEqual(bad, [], "%d of %d root cells are cubes or stand on end" % (len(bad), len(cells)))
+        for sx, sz in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
+            mat = [q for q, n in self.names.items() if n == "moss_carpet" and q[1] == 1 and _ring(q) >= 5
+                   and (q[0] - C) * sx >= 4 and (q[2] - C) * sz >= 4]
+            self.assertGreaterEqual(len(mat), 4, ((sx, sz), mat))
 
     def test_data_and_assets_copies_match(self):
         with open(NBT, "rb") as f, open(NBT_ASSETS, "rb") as g:
