@@ -79,6 +79,10 @@ on:
         description: "Heroes instead of the tour: our heroes and the enemy's beside our base - a point held then spent, the Horde's two heroes side by side, cloaked heroes, ours selected, an enemy hero in the fog (EyesDirector scene 19; eyes-only, no gameplay change). Publishes to eyes-heroes"
         type: boolean
         default: false
+      forming:
+        description: "The forming moment instead of the tour: a basic portal completing beside our base and a Sun Spire forming, a still per phase (spark, fill, swirl, settle), after, the ender, strategic zoom (EyesDirector scene 20; eyes-only, no gameplay change). Publishes to eyes-forming"
+        type: boolean
+        default: false
       overlays:
         description: "Overlay cost instead of the tour: 500 units + 1,700 buildings, stills at mid / strategic zoom, frame and per-handler ms at zoom 30 and 200 (EyesDirector scene 18). Runs side by side; each adds folder <build sha>-<run id>/ to branch eyes-overlays"
         type: boolean
@@ -136,7 +140,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.keep_only && format('keep-{0}-', github.run_id) || '' }}${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.heroes && 'heroes-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.mist && 'mist-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.keep_only && format('keep-{0}-', github.run_id) || '' }}${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.heroes && 'heroes-' || '' }}${{ inputs.forming && 'forming-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.mist && 'mist-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -146,11 +150,12 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.heroes && 5 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.heroes && 5 || inputs.forming && 8 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
       SCARS: ${{ inputs.scars && '1' || '0' }}
       FOG: ${{ inputs.fog && '1' || '0' }}
       OVERLAYS: ${{ inputs.overlays && '1' || '0' }}
       HEROES: ${{ inputs.heroes && '1' || '0' }}
+      FORMING: ${{ inputs.forming && '1' || '0' }}
       OVERLAY_MIX: ${{ inputs.overlay_mix || '' }}
       KEEP_ONLY: ${{ inputs.keep_only && '1' || '0' }}
       STRUCTURES: ${{ inputs.structure || '' }}
@@ -165,7 +170,7 @@ jobs:
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
       # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders; a valley mist pilot run -mist)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}{4}', inputs.overlays && 'eyes-overlays' || inputs.heroes && 'eyes-heroes' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), format('{0}{1}', (inputs.shaders && inputs.shader_pack == 'ours') && '-ours' || '', inputs.pack == 'none' && '-nopack' || ''), (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '', inputs.mist && '-mist' || '') }}
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}{4}', inputs.overlays && 'eyes-overlays' || inputs.heroes && 'eyes-heroes' || inputs.forming && 'eyes-forming' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), format('{0}{1}', (inputs.shaders && inputs.shader_pack == 'ours') && '-ours' || '', inputs.pack == 'none' && '-nopack' || ''), (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '', inputs.mist && '-mist' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -335,6 +340,9 @@ jobs:
       - name: Heroes scene only (dispatch input `heroes`; EyesDirector scene 19)
         if: env.HEROES == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.heroes=true' >> "$GITHUB_ENV"
+      - name: Forming scene only (dispatch input `forming`; EyesDirector scene 20)
+        if: env.FORMING == '1'
+        run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.forming=true' >> "$GITHUB_ENV"
       - name: Window size (1600x900, a common laptop size; the default 854x480 crowds the HUD)
         run: |
           mkdir -p run
@@ -652,6 +660,12 @@ jobs:
             got=$(find out -name 'bat_eyes_19_heroes_*.png' | wc -l)
             ls out | grep '^bat_eyes_19_' | sed 's/^/::notice::[Eyes] still /' || true
             [ "$got" -ge 5 ] || { echo "::error::only $got hero stills (expected 5)"; exit 1; }
+          fi
+          if [ "${FORMING:-0}" = "1" ]; then   # a forming run: the eight stills of scene 20 (each phase's age is in the log)
+            got=$(find out -name 'bat_eyes_20_forming_*.png' | wc -l)
+            ls out | grep '^bat_eyes_20_' | sed 's/^/::notice::[Eyes] still /' || true
+            grep -h "20_forming_after: " out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -1 | sed 's/^/::notice::/' || true
+            [ "$got" -ge 8 ] || { echo "::error::only $got forming stills (expected 8)"; exit 1; }
           fi
           if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
             got=$(find out -name 'bat_eyes_16_scars_*.png' | wc -l)
