@@ -247,6 +247,13 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
     private int hookAge = -1;
     private LivingEntity hookMover = null;
     private double hookDirX, hookDirZ, hookDistance;
+    // the last hook's drag: blocks asked of move() and blocks it really moved (the test prints both when a drag falls short)
+    private double hookAsked, hookMoved;
+
+    /** "asked A, moved M" for the last Grave Hook drag or pull (for the game test's failure message). */
+    public String lastHookTrail() {
+        return String.format(java.util.Locale.ROOT, "asked %.2f, moved %.2f", hookAsked, hookMoved);
+    }
 
     /**
      * TEST-SCOPED CLOCK INJECTION. Null in the game: the ledger runs on the level's game time. A GameTest may set a
@@ -530,6 +537,8 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
         hookTargetId = target.getId();
         hookAge = 0;
         hookMover = null;
+        hookAsked = 0;
+        hookMoved = 0;
         return null;
     }
 
@@ -582,9 +591,18 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
         int i = hookAge - TitheLedger.HOOK_WRAP_TICK;
         if (i >= 1 && i <= TitheLedger.DRAG_TICKS && hookMover != null && hookMover.isAlive()) {
             double step = (TitheLedger.dragProgress(i) - TitheLedger.dragProgress(i - 1)) * hookDistance;
-            if (hookMover instanceof Mob mob)
+            if (hookMover instanceof Mob mob) {
+                // a stopped mob keeps walking to its old wanted position unless the move control is cleared too (#416)
                 mob.getNavigation().stop();
-            hookMover.move(MoverType.SELF, new Vec3(hookDirX * step, 0, hookDirZ * step));   // walls stop it
+                mob.getMoveControl().setWantedPosition(mob.getX(), mob.getY(), mob.getZ(), 0);
+            }
+            // as LeafDash / SunriseSortie: a small downward y keeps onGround true so the move can step up a lip (a flat
+            // y = 0 move clears onGround and the next step stops at the first lip); walls still stop it
+            double x0 = hookMover.getX(), z0 = hookMover.getZ();
+            hookMover.move(MoverType.SELF, new Vec3(hookDirX * step, hookMover.onGround() ? -0.08 : -0.4, hookDirZ * step));
+            hookMover.setDeltaMovement(0, Math.min(0, hookMover.getDeltaMovement().y), 0);
+            hookAsked += step;
+            hookMoved += Math.sqrt((hookMover.getX() - x0) * (hookMover.getX() - x0) + (hookMover.getZ() - z0) * (hookMover.getZ() - z0));
             if (hookMover == target && i % 2 == 0)
                 sl.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY() + 0.1, target.getZ(), 2, 0.2, 0.05, 0.2, 0.0);
         }

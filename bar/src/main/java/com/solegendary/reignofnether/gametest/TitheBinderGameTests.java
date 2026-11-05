@@ -511,7 +511,8 @@ public class TitheBinderGameTests {
                     problems.add("a hook was still out after 80 ticks");
                 double dragged = d0[0] - flat(bl.position(), light.position());
                 if (Math.abs(dragged - 4.0) > 0.4)
-                    problems.add("the light Vindicator was dragged " + f(dragged) + " blocks toward the Binder, expected 4");
+                    problems.add("the light Vindicator was dragged " + f(dragged) + " blocks toward the Binder, expected 4 ("
+                        + bl.lastHookTrail() + ")");
                 int stun = effectTicks(light, MobEffectRegistrar.STUN.get());
                 if (stun < 20)
                     problems.add("the light Vindicator has " + stun + " ticks of stun left when the drag ends, expected about 30 (1.5 s)");
@@ -524,7 +525,8 @@ public class TitheBinderGameTests {
                     problems.add("the heavy Vindicator was stunned: a heavy is rooted (it still fights)");
                 double pulled = d0[1] - flat(bh.position(), heavy.position());
                 if (Math.abs(pulled - 1.0) > 0.3)
-                    problems.add("the Binder was pulled " + f(pulled) + " blocks toward the heavy one, expected 1");
+                    problems.add("the Binder was pulled " + f(pulled) + " blocks toward the heavy one, expected 1 ("
+                        + bh.lastHookTrail() + ")");
             } finally {
                 clean.run();
             }
