@@ -153,4 +153,13 @@ class RocketRackTest {
         // the battery's cooldown is 120 ticks (one volley every 6 s): the window must fit in it
         assertTrue(RocketCharge.RELOAD_WINDOW <= 120);
     }
+
+    @Test
+    void aChargedRackIsAlreadyLiftedAtTheFirstBoltAndSettlesAtTheEnd() {
+        assertEquals(1f, RocketLaunchPose.chargedLift(0f), 1e-4f);
+        assertEquals(1f, RocketLaunchPose.chargedLift(2f), 1e-4f);
+        for (float age = 2f; age <= RocketLaunchPose.TOTAL_TICKS; age += 0.5f)
+            assertEquals(RocketLaunchPose.rackLift(age), RocketLaunchPose.chargedLift(age), 1e-5f, "differs from the plain lift at " + age);
+        assertEquals(0f, RocketLaunchPose.chargedLift(RocketLaunchPose.TOTAL_TICKS), 1e-4f);
+    }
 }

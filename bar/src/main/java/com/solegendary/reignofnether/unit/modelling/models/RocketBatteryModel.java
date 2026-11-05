@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
 import com.solegendary.reignofnether.unit.units.storm.RocketBatteryUnit;
+import com.solegendary.reignofnether.unit.units.storm.RocketCharge;
 import com.solegendary.reignofnether.unit.units.storm.RocketLaunchPose;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
@@ -23,11 +24,14 @@ public class RocketBatteryModel extends VillagerUnitModel<RocketBatteryUnit> {
     public void setupAnim(RocketBatteryUnit unit, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         super.setupAnim(unit, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         int left = unit.getLaunchTicks();
-        if (left <= 0)
-            return;
         float partial = ageInTicks - unit.tickCount;
+        // between volleys the crew braces on the rack as it charges (the wind-up); in a volley it holds it and is jolted
+        float charge = left > 0 ? 0f : RocketCharge.charge(unit.getReloadTicks(), unit.isEngaged());
+        if (left <= 0 && charge <= 0f)
+            return;
         float age = RocketLaunchPose.age(left, partial);
-        float brace = RocketLaunchPose.rackLift(age), recoil = RocketLaunchPose.recoil(age);
+        float brace = left > 0 ? RocketLaunchPose.chargedLift(age) : charge;
+        float recoil = left > 0 ? RocketLaunchPose.recoil(age) : 0f;
         this.crossedArms.visible = false;
         this.rightArm.visible = true;
         this.leftArm.visible = true;

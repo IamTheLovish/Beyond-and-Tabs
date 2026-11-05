@@ -28,7 +28,12 @@ public final class RocketRackGeometry {
 
     /** The tip of rod {@code rod} in torso space (px) with the rack tilted by {@code tilt}: {x, y, z}. */
     public static float[] tip(int rod, float tilt) {
-        return new float[3];   // stub: filled in by the implementation commit
+        float len = ROD_LENGTH[rod], fan = ROD_FAN[rod];
+        // the rod leans out by its fan angle about z (a positive angle moves the top towards +x) ...
+        float x = ROD_X[rod] + len * (float) Math.sin(fan), y = -len * (float) Math.cos(fan);
+        // ... and the whole rack tips about x (a positive tilt moves the tops towards -z, forward)
+        float cos = (float) Math.cos(tilt), sin = (float) Math.sin(tilt);
+        return new float[] { x, HINGE_Y + y * cos, HINGE_Z + y * sin };
     }
 
     /**
@@ -36,6 +41,10 @@ public final class RocketRackGeometry {
      * faces {@code bodyYawDeg} (Minecraft yaw: 0 = +z), with the rack at {@code tilt}: {x, y, z}.
      */
     public static double[] tipWorld(double fx, double fy, double fz, float bodyYawDeg, int rod, float tilt) {
-        return new double[] { fx, fy + 2.1, fz };   // stub: the old launch point, above the hat
+        float[] t = tip(rod, tilt);
+        double yaw = Math.toRadians(bodyYawDeg);
+        double leftX = Math.cos(yaw), leftZ = Math.sin(yaw), fwdX = -Math.sin(yaw), fwdZ = Math.cos(yaw);
+        double side = t[0] / 16.0, back = t[2] / 16.0;   // +x is the crew's left, +z its back
+        return new double[] { fx + leftX * side - fwdX * back, fy + SHOULDER_HEIGHT - t[1] / 16.0, fz + leftZ * side - fwdZ * back };
     }
 }

@@ -18,11 +18,19 @@ public final class RocketCharge {
 
     /** How full rod {@code rod} is (0 empty, 1 loaded) when the next volley is {@code ticksUntilReady} ticks away. */
     public static float fill(int rod, int ticksUntilReady) {
-        return 1f;   // stub
+        // rod 0 takes its bolt first, over STEP ticks; each next rod starts when the one before it is full
+        float step = (RELOAD_WINDOW - CHARGE_TICKS) / (float) RocketRackGeometry.RODS;
+        float start = RELOAD_WINDOW - rod * step;
+        return smoothstep((start - ticksUntilReady) / step);
+    }
+
+    private static float smoothstep(float x) {
+        float t = x < 0f ? 0f : Math.min(x, 1f);
+        return t * t * (3f - 2f * t);
     }
 
     /** How charged the rack is, 0 to 1: zero without a target, and rising over the last {@link #CHARGE_TICKS}. */
     public static float charge(int ticksUntilReady, boolean engaged) {
-        return 0f;   // stub
+        return engaged ? smoothstep((CHARGE_TICKS - ticksUntilReady) / (float) CHARGE_TICKS) : 0f;
     }
 }
