@@ -17,8 +17,8 @@ These checks sit beside test_lawn_r61/r62/r63's, which all stay (the r62/r63 ban
 - the 24 x 24-block field built with the hashed pick (one variant per 8 x 8 cell, no turn): autocorrelation at the
   8-block step no more than 1/K + 0.12 (two cells at that step show the SAME variant with probability 1/K - that
   share is the Java pick's, not the texture's; the texture adds only its edge bands) and under 0.15 at 4 blocks
-- luma p5-p95 range at the RTS camera (plain lane) >= 0.31 (79 levels; r63 0.30, 61b in game 0.30): the critic's
-  >= 100 is out of reach under the biome tint's ceiling (albedo white = L 0.58) with near-black under 1%
+- luma p5-p95 range at the RTS camera (plain lane): first >= 0.31 (the critic's "range up"); since lovish's "Re-set to
+  the new look" (Nov 5, after D1 "softer") a band 0.17-0.23
 - the painted light comes from the EAST: LAWN_SUN = (1, 0), and round the darkest 10% the luma 2 px WEST minus 2 px
   EAST >= 0.02 (test_lawn_r62's method, the direction fixed here)
 - test_lawn_r62/r63's bands re-stated on the pack's 8 x 8 sheet at 32 texels per block (those files mip to a
@@ -173,9 +173,16 @@ class LawnSheetRound64Test(unittest.TestCase):
         self.assertLess(max(abs(ax4), abs(az4)), 0.15)
 
     def test_luma_range_at_the_camera(self):
-        """p5-p95 of the plain lane's luma (one sheet at 32 texels per block, tinted) >= 0.31."""
+        """p5-p95 of the plain lane's luma (one sheet at 32 texels per block, tinted), a BAND 0.17-0.23. History: the
+        floor 0.31 came from the round 63 critic ("range up"); round 64 in game then read as "too much going on it
+        needs to be softer", "too symettrical or patterned" (lovish, Nov 4 ~23:10Z). He picked the softer D1 (grain
+        contrast -40%, measured 0.195 on the mock) and, asked how the older 'more contrast' limits should change,
+        chose "Re-set to the new look (Recommended)" (Nov 5, grass design lead's session): band 0.17-0.23 - the floor
+        keeps it from going flat (felt), the ceiling keeps it soft."""
         L = sim.luma(sheet_mip())
-        self.assertGreaterEqual(float(np.percentile(L, 95) - np.percentile(L, 5)), 0.31)
+        r = float(np.percentile(L, 95) - np.percentile(L, 5))
+        self.assertGreaterEqual(r, 0.17)
+        self.assertLessEqual(r, 0.23)
 
     def test_lit_from_the_east(self):
         """the engine's sun at t5000 is east (+u): LAWN_SUN says so, and round the darkest 10% of the mip the luma
