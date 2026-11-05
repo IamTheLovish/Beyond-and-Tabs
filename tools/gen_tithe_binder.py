@@ -47,8 +47,9 @@ PALETTE = {
     "bone": "#e4ddc8", "bone_dark": "#b9b09a", "bone_old": "#c6bca3", "socket": "#15120f",
     "robe": "#2a2729", "robe_edge": "#4b4448", "deepslate": "#4f5055", "deepslate_dark": "#35363b",
     # the sheet's iron_rust / iron_dark, renamed: dsl_to_game paints any name holding "iron" (or "dark") as polished
-    # steel plate (tools/materials.py), which turned the rust chains clean grey steel (r1 review)
-    "rust": "#7a5a44", "rust_deep": "#5b4335",
+    # steel plate (tools/materials.py) - r1's chains read clean steel; r2's plain "rust" read as brown leather belts;
+    # r3: "rust_mail" takes the mail material (metal sheen, link relief) at the sheet's rust hexes
+    "rust_mail": "#7a5a44", "rust_mail_deep": "#5b4335",
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c",
     "soul_glow": "#62f3cb", "soul_core": "#34dba3", "soul_thread": "#2f8f7f", "soul_dim": "#1b6d53",
     "white_hot": "#e9fff8",
@@ -63,12 +64,16 @@ LIFT = 5.0
 # the wheel, r2: ONE flat ring of radial spokes at shoulder height (the r1 two tiers at different heights and pitches
 # read as 6-8 unrelated sticks from the RTS camera and N = 5 could not be told from N = 10). Pommels at r 14, every
 # weapon level (pitch 0) and pointing straight out, spaced 360/N; slot 1 at the front-left, no spoke straight ahead
-RING = dict(r=14.0, y=30.0 + LIFT)
+# r3: r 18 and 6 px higher (r2's r 14 at shoulder height = arm reach: the sword sat in the right forearm at rest and a
+# yawing ring swept spokes through the hands and the lantern chain); a 6 deg front-down tilt (RING_TILT, the ring
+# bone's rest rotation) so the front spokes clear the face and the back ones show from the RTS camera
+RING = dict(r=18.0, y=36.0 + LIFT)
+RING_TILT = -6.0
 RING_PIVOT = (0.0, RING["y"], 0.0)
 BASE_YAW = -18.0                              # yaw < 0 turns -z toward +x, the unit's left
 # docked length ladder (px, pommel to tip): short to long with the slot, in a narrow band so the ring stays one shape;
 # each weapon's docked scale = its target / its length at flight scale 1.0 (DOCK_SCALE[k], at most 0.9)
-DOCK_LEN = {k: 11.0 + 0.7 * (k - 1) for k in range(1, 11)}
+DOCK_LEN = {k: 10.0 + 0.5 * (k - 1) for k in range(1, 11)}     # r3: 10 -> 14.5 (r2 11 -> 17.3): the wider ring
 UNDERLAY = 0.6                                # px: the soul_dim rim round a phantom weapon's main parts (its outline)
 
 
@@ -149,7 +154,7 @@ def body(m):
     b.cube([-5, 10, -4], [10, 5, 8], "robe")                          # skirt flare
     b.cube([-5.5, 9, -4.5], [11, 1.5, 9], "robe_edge")                # hem band
     # chain 1, the belt: 12 links at y 17-18 round the waist (4 front, 4 back, 2 per side)
-    loop_links(b, 17.0, 1.0, 4.3, 3.3, 4, 2, ("rust", "rust_deep"))
+    loop_links(b, 17.0, 1.0, 4.3, 3.3, 4, 2, ("rust_mail", "rust_mail_deep"))
 
     # tatters: jagged strips under the hem, the MIDDLE one longest (r2: a short middle between two long outer strips
     # read as two legs); tips y 6.5 / 5 / 6 at the front, the back alike (tops tucked into the skirt)
@@ -175,9 +180,9 @@ def body(m):
                                             (0.0, 3.6, 1, [-25, 0, 0])), start=1):
         za = pz + 0.6 * out
         a = m.bone("hem_chain_%d" % k, [px, 17, pz], "body", rotation=rot)
-        link_chain(a, (px, 17, za), 3, 2.0, ((1, 2, 0.5), (0.5, 2, 1)), ("rust", "rust_deep"))
+        link_chain(a, (px, 17, za), 3, 2.0, ((1, 2, 0.5), (0.5, 2, 1)), ("rust_mail", "rust_mail_deep"))
         bb = m.bone("hem_chain_%d_b" % k, [px, 11, za], "hem_chain_%d" % k, rotation=[6 * out, 0, 0])
-        link_chain(bb, (px, 11, za), 2, 1.9, ((1, 2, 0.5), (0.5, 2, 1)), ("rust", "rust_deep"))
+        link_chain(bb, (px, 11, za), 2, 1.9, ((1, 2, 0.5), (0.5, 2, 1)), ("rust_mail", "rust_mail_deep"))
 
     # chest
     c = m.bone("chest", [0, 22, 0], "body")
@@ -191,7 +196,7 @@ def body(m):
     for i in range(7):
         t = (i + 0.5) / 7
         cx, cy = p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t
-        c.box_at([cx, cy, -2.9], [1.2, 2, 0.6], "rust" if i % 2 == 0 else "rust_deep",
+        c.box_at([cx, cy, -2.9], [1.2, 2, 0.6], "rust_mail" if i % 2 == 0 else "rust_mail_deep",
                  rotation=[0, 0, -ang], pivot=[cx, cy, -2.9])
 
     # mantle (TEAM top plane) and cape
@@ -220,7 +225,7 @@ def body(m):
     h.box_at([0, 42.4, -0.5], [6, 0.8, 6], "bone", upgrade=UPGRADE)
     h.box_at([0, 42.4, -0.5], [6, 0.8, 6], "bone", rotation=[0, 45, 0], pivot=[0, 42.4, -0.5], upgrade=UPGRADE)
     h.box_at([0, 42.95, -0.5], [2, 0.3, 2], "socket", upgrade=UPGRADE)
-    loop_links(h, 31.9, 1.0, 4.85, 4.85, 2, 2, ("rust", "rust_deep"), inflate=0.0, upgrade=UPGRADE,
+    loop_links(h, 31.9, 1.0, 4.85, 4.85, 2, 2, ("rust_mail", "rust_mail_deep"), inflate=0.0, upgrade=UPGRADE,
                long=(1.5, 0.6), cross=(0.6, 1.0), skip_front=True)
 
     # arms: a wide sleeve, a bone forearm with a shackle and its broken chain, a bone hand (palm down at rest)
@@ -231,7 +236,7 @@ def body(m):
         arm.cube([ax - 2.5, 21, -2.5], [5, 2, 5], "robe_edge")
         fore = m.bone(side + "_forearm", [ax, 22, 0], side + "_arm", rotation=[35, 0, 0])
         fore.cube([ax - 0.75, 15, -0.75], [1.5, 7, 1.5], "bone")
-        fore.cube([ax - 1.75, 17, -1.75], [3.5, 1.5, 3.5], "rust")
+        fore.cube([ax - 1.75, 17, -1.75], [3.5, 1.5, 3.5], "rust_mail")
         hand = m.bone(side + "_hand", [ax, 15, 0], side + "_forearm")
         hand.cube([ax - 1.1, 13, -0.5], [2.2, 2, 1.0], "bone_dark")   # a flat palm (r2: a 2.5 cube read as a block)
         # three fingers spread across x so the palm faces down when the forearm points forward (the conductor's rest)
@@ -246,7 +251,7 @@ def body(m):
         piv = [ax, 17.75, 1.85]
         sc = m.bone(side + "_shackle_chain", piv, side + "_forearm")
         sc.rotation = world_rotation(m, side + "_forearm", rot_mat(0, 0, 0))
-        link_chain(sc, (ax, piv[1], piv[2]), 3, 1.5, ((0.6, 1.6, 0.4), (0.4, 1.6, 0.6)), ("rust_deep",),
+        link_chain(sc, (ax, piv[1], piv[2]), 3, 1.5, ((0.6, 1.6, 0.4), (0.4, 1.6, 0.6)), ("rust_mail_deep",),
                    axis_len=1.2)
 
     # chain 8 + the lantern: hangs plumb from the sternum (the body leans 4 forward)
@@ -255,14 +260,16 @@ def body(m):
     for i in range(3):
         w, d = ((0.8, 0.4), (0.4, 0.8))[i % 2]
         yt = 30 - i * 1.4
-        lc.cube([-w / 2, yt - 1.6, -4.7 - 0.2 * i - d / 2], [w, 1.6, d], "rust")
+        lc.cube([-w / 2, yt - 1.6, -4.7 - 0.2 * i - d / 2], [w, 1.6, d], "rust_mail")
     ln = m.bone("lantern", [0, 26, -5.2], "lantern_chain")
     ln.cube([-2, 25, -7.2], [4, 1, 4], "deepslate_dark")              # caps
     ln.cube([-2, 20.5, -7.2], [4, 1, 4], "deepslate_dark")
     for px in (-2, 1.3):
         for pz in (-7.2, -3.9):
             ln.cube([px, 21.25, pz], [0.7, 4, 0.7], "deepslate")      # posts
-    ln.cube([-1.4, 21.4, -6.6], [2.8, 3.2, 2.8], "soul_glow")         # the core: GLOW 1
+    # r3: the core on its own bone (lantern_core, hidden when the lantern cracks: death t8) over a dim core inside it
+    ln.cube([-1.3, 21.5, -6.5], [2.6, 3.0, 2.6], "soul_dim")
+    m.bone("lantern_core", [0, 26, -5.2], "lantern").cube([-1.4, 21.4, -6.6], [2.8, 3.2, 2.8], "soul_glow")   # GLOW 1
     ln.cube([-0.75, 26, -5.45], [1.5, 1, 0.5], "deepslate")           # finial ring
     ln.cube([-0.5, 19, -5.7], [1, 1.5, 1], "deepslate")               # spike
     # Tithe of Iron: a bone cage over the core, four ribs leaning in at the top
@@ -271,7 +278,7 @@ def body(m):
         ln.box_at([rx, 23.5, rz], [0.6, 6, 0.6], "bone", rotation=rot, pivot=[rx, 20.5, rz], upgrade=UPGRADE)
 
     shift_all(m, LIFT)
-    m.bone("ring", list(RING_PIVOT), "hover")
+    m.bone("ring", list(RING_PIVOT), "hover", rotation=[RING_TILT, 0, 0])
 
 
 # ------------------------------------------------------------------ the ten weapons ----------------------------------
@@ -299,21 +306,22 @@ def edge_of(prim, side, col="soul_glow", t=0.4, inset=0.0):
 
 def grave_hook():
     """1. His own: a bone haft, a rusted iron sickle blade curling 8 px to the side, one glowing edge."""
-    out = [P((0, 0, 0), (2, 2, 1), "rust_deep"),                       # pommel ring
+    out = [P((0, 0, 0), (2, 2, 1), "rust_mail_deep"),                       # pommel ring
            P((0, 0, -6.0), (1, 1, 11), "bone")]                         # haft z -0.5 .. -11.5
     p = (0.0, -10.5)
     blade = []
     for yaw, length, width in ((30, 5, 3), (90, 4, 3), (150, 3, 2)):   # cumulative 30 / +60 / +60: an 8 px hook
-        prim, p = seg_along(p, yaw, length, width, 1.0, "rust")
+        prim, p = seg_along(p, yaw, length, width, 1.0, "rust_mail")
         blade.append(prim)
     out += blade
-    out += [edge_of(b, -1) for b in blade]                              # the inner (cutting) edge glows
+    # the inner (cutting) edge glows: r3 a 1.3 px strip astride the edge (r1/r2 0.4 px: at N = 1 no teal read)
+    out += [edge_of(b, -1, t=1.3) for b in blade]
     return out
 
 
 def seax(sign):
     yaw = 12 * sign
-    prims = [P((0, 0, -3.0), (0.8, 1, 3), "soul_core"),                 # grip
+    prims = [P((0, 0, -3.0), (0.8, 1, 3), "soul_thread"),               # grip
              P((0, 0, -4.8), (2.6, 1.0, 0.6), "soul_core"),             # guard
              P((0, 0, -9.1), (2, 0.8, 8), "soul_core")]                 # blade
     prims.append(P((0.2, 0, -13.5), (1.4, 0.7, 1.4), "soul_core", (0, 45, 0)))    # the broken-back tip
@@ -328,13 +336,13 @@ def seax(sign):
 
 def twin_seaxes():
     """2. A pair in one slot, splayed +-12, their chains joined at a ring."""
-    return [P((0, 0, 0), (1.4, 1.4, 0.8), "soul_core")] + seax(1) + seax(-1)
+    return [P((0, 0, 0), (1.4, 1.4, 0.8), "soul_thread")] + seax(1) + seax(-1)
 
 
 def hand_axe():
     """3. Bearded hand axe: a haft and a flat head out to the side with a beard sweeping back."""
-    return [P((0, 0, 0), (1.4, 1.4, 1.0), "soul_core"),
-            P((0, 0, -6.5), (1, 1, 13), "soul_core"),
+    return [P((0, 0, 0), (1.4, 1.4, 1.0), "soul_thread"),
+            P((0, 0, -6.5), (1, 1, 13), "soul_thread"),
             P((2.6, 0, -11.3), (4.2, 1, 3.4), "soul_core"),             # head, out along +x
             P((4.0, 0, -8.8), (2.0, 1, 2.6), "soul_core", (0, -20, 0)),  # beard, back toward the pommel
             P((4.85, 0, -10.4), (0.4, 0.4, 5.6), "soul_glow")]          # the edge
@@ -342,8 +350,8 @@ def hand_axe():
 
 def arming_sword():
     """4. Arming sword: pommel, grip, cross guard, a flat blade in two widths and a diamond tip."""
-    return [P((0, 0, -0.8), (1.6, 1.6, 1.6), "soul_core"),
-            P((0, 0, -3.1), (1, 1, 3), "soul_core"),
+    return [P((0, 0, -0.8), (1.6, 1.6, 1.6), "soul_thread"),
+            P((0, 0, -3.1), (1, 1, 3), "soul_thread"),
             P((0, 0, -5.1), (5, 1, 1), "soul_core"),
             P((0, 0, -9.6), (2, 0.8, 8), "soul_core"),
             P((0, 0, -15.6), (1.6, 0.8, 4), "soul_core"),
@@ -354,8 +362,8 @@ def arming_sword():
 
 def boar_spear():
     """5. Boar spear: a long haft, the lugs (a crossbar), a leaf head and its point."""
-    return [P((0, 0, 0), (1.4, 1.4, 1.0), "soul_core"),
-            P((0, 0, -11), (1, 1, 22), "soul_core"),
+    return [P((0, 0, 0), (1.4, 1.4, 1.0), "soul_thread"),
+            P((0, 0, -11), (1, 1, 22), "soul_thread"),
             P((0, 0, -21.6), (3, 0.6, 0.6), "soul_core"),               # lugs
             P((0, 0, -25.0), (3, 0.6, 6), "soul_core"),                 # leaf head
             P((0, 0, -28.0), (1.6, 0.55, 1.6), "soul_core", (0, 45, 0)),
@@ -364,16 +372,16 @@ def boar_spear():
 
 def flail():
     """6. Flail: the haft only - the links and the spiked ball hang from weapon_6_ball (flail_head)."""
-    return [P((0, 0, 0), (1.6, 1.6, 1.0), "soul_core"),
-            P((0, 0, -5.0), (1.2, 1.2, 10), "soul_core"),
-            P((0, 0, -10.0), (1.8, 1.8, 0.6), "soul_core")]             # the ferrule the chain hangs from
+    return [P((0, 0, 0), (1.6, 1.6, 1.0), "soul_thread"),
+            P((0, 0, -5.0), (1.2, 1.2, 10), "soul_thread"),
+            P((0, 0, -10.0), (1.8, 1.8, 0.6), "soul_thread")]           # the ferrule the chain hangs from
 
 
 def flail_head():
     """The flail's chain and its ball (6 spikes), along the bone's local -z from the haft's end."""
     # r2: one taut chain bar for the three links (the 0.3 px^3 links fell into the lod part at RTS zoom and left the
     # ball floating apart from its haft)
-    out = [P((0, 0, -3.0), (1.2, 1.0, 6.0), "soul_core")]
+    out = [P((0, 0, -3.0), (1.2, 1.0, 6.0), "soul_thread")]
     c = -8.0
     out.append(P((0, 0, c), (4, 4, 4), "soul_core"))
     for v in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)):
@@ -383,8 +391,8 @@ def flail_head():
 
 def war_maul():
     """7. War maul: a heavy head across the haft's end, a back spike."""
-    return [P((0, 0, 0), (1.8, 1.8, 1.2), "soul_core"),
-            P((0, 0, -8.0), (1.2, 1.2, 16), "soul_core"),
+    return [P((0, 0, 0), (1.8, 1.8, 1.2), "soul_thread"),
+            P((0, 0, -8.0), (1.2, 1.2, 16), "soul_thread"),
             P((0, 0, -17.5), (7, 4, 5), "soul_core"),
             P((-4.5, 0, -17.5), (2, 1, 1), "soul_core"),                # back spike
             P((3.55, 0, -17.5), (0.4, 4.2, 5.2), "soul_glow")]          # the striking face
@@ -392,10 +400,10 @@ def war_maul():
 
 def scythe():
     """8. Scythe: a long snath, two grip pegs, a blade curving 14 px out and back toward the pommel."""
-    out = [P((0, 0, 0), (1.4, 1.4, 1.0), "soul_core"),
-           P((0, 0, -11), (1, 1, 22), "soul_core"),
-           P((1.0, 0, -6.0), (2, 0.6, 0.6), "soul_core"),
-           P((1.0, 0, -13.0), (2, 0.6, 0.6), "soul_core")]
+    out = [P((0, 0, 0), (1.4, 1.4, 1.0), "soul_thread"),
+           P((0, 0, -11), (1, 1, 22), "soul_thread"),
+           P((1.0, 0, -6.0), (2, 0.6, 0.6), "soul_thread"),
+           P((1.0, 0, -13.0), (2, 0.6, 0.6), "soul_thread")]
     p = (0.0, -21.5)
     blade = []
     for yaw, length, width in ((-80, 5.5, 2.6), (-102, 5, 2.0), (-128, 4.2, 1.4)):
@@ -408,8 +416,8 @@ def scythe():
 
 def greatsword():
     """9. Greatsword: a big flat blade, a wide guard, a long grip, a heavy pommel."""
-    return [P((0, 0, -1.0), (2, 2, 2), "soul_core"),
-            P((0, 0, -4.8), (1.2, 1.2, 6), "soul_core"),
+    return [P((0, 0, -1.0), (2, 2, 2), "soul_thread"),
+            P((0, 0, -4.8), (1.2, 1.2, 6), "soul_thread"),
             P((0, 0, -8.6), (8, 1.2, 1.5), "soul_core"),
             P((0, 0, -17.4), (3, 1, 16), "soul_core"),
             P((0, 0, -29.4), (2.4, 1, 8), "soul_core"),
@@ -420,8 +428,8 @@ def greatsword():
 
 def halberd():
     """10. Halberd: the longest haft, an axe blade to one side, a back spike, a top spike."""
-    return [P((0, 0, 0), (1.8, 1.8, 1.2), "soul_core"),
-            P((0, 0, -15.0), (1.2, 1.2, 30), "soul_core"),
+    return [P((0, 0, 0), (1.8, 1.8, 1.2), "soul_thread"),
+            P((0, 0, -15.0), (1.2, 1.2, 30), "soul_thread"),
             P((4.0, 0, -27.0), (7, 1, 5), "soul_core"),                 # axe blade, out along +x
             P((-2.6, 0, -27.0), (4, 1, 1), "soul_core"),                # back spike
             P((0, 0, -33.5), (0.8, 1.2, 7), "soul_core"),               # top spike
@@ -477,6 +485,8 @@ def place(bone, origin, prims, scale, underlay=False):
 
 
 def weapons(m, n):
+    # r3: shafts (hafts, grips, snath, pommels, the flail's chain) are soul_thread, the heads soul_core and only the
+    # heads keep the soul_dim underlay - at 21 px/block every weapon read as the same rod-with-blob
     for (k, tier, yaw, pivot, pitch) in slot_layout(n):
         slot = m.bone("slot_%d" % k, list(pivot), "ring", rotation=[0, round(yaw, 3), 0])
         w = m.bone("weapon_%d" % k, list(pivot), slot.name, rotation=[pitch, 0, 0])
@@ -507,7 +517,7 @@ def build(n=10):
     # the hood's back folds over the cape's top when the head tips back (cloth on cloth at the nape)
     m.contact_ok = [("body", t) for t in ("tatter_f", "tatter_b", "tatter_l", "tatter_r")] + [
         ("chest", "mantle"), ("mantle", "cape"), ("mantle", "head"), ("mantle", "right_arm"), ("mantle", "left_arm"),
-        ("head", "cape"),
+        ("head", "cape"), ("lantern", "lantern_core"),
         ("right_arm", "right_forearm"), ("left_arm", "left_forearm"), ("right_hand", "weapon_1")]
     return m
 
