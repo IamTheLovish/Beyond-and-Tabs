@@ -77,7 +77,7 @@ public final class BoneMaps {
                     .follow(pl.rightPants, pl.rightLeg).follow(pl.leftPants, pl.leftLeg);
             if (model instanceof VillagerUnitModel<?> v)
                 m.set(Motion.ARMS, v.crossedArms);
-            return m.fallsAsIs().looks(Motion.LOOK_FULL);
+            return m.fallsAsIs().looks(Motion.LOOK_FULL).strides();
         }
         if (model instanceof IllagerModel<?> il) {
             ModelPart root = il.root();
@@ -86,7 +86,7 @@ public final class BoneMaps {
                 .set(Motion.ARMS, child(root, "arms"))
                 .set(Motion.ARM_R, child(root, "right_arm")).set(Motion.ARM_L, child(root, "left_arm"))
                 .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"));
-            return m.fallsAsIs().looks(Motion.LOOK_FULL);   // the illager's hat is the head's child: it follows the head
+            return m.fallsAsIs().looks(Motion.LOOK_FULL).strides();   // the illager's hat is the head's child: it follows the head
         }
         if (model instanceof IronGolemModel<?> g) {
             ModelPart root = g.root();
@@ -102,7 +102,7 @@ public final class BoneMaps {
                 .set(Motion.BODY, child(root, "body")).set(Motion.HEAD, child(root, "head"))
                 .set(Motion.ARMS, child(root, "arms"))
                 .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"))
-                .fallsAsIs().looks(Motion.LOOK_FULL);
+                .fallsAsIs().looks(Motion.LOOK_FULL).strides();
         }
         if (model instanceof SpiderModel<?> sp) {
             ModelPart root = sp.root();

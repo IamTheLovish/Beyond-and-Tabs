@@ -42,6 +42,7 @@ public final class MotionPass {
     /** The offsets the placement reads: OUT, or DEATH_OUT for a fall. */
     private static float[] cur = OUT;
     private static final float[] LOOK = new float[Motion.LOOK_LEN];
+    private static final float[] WALK = new float[Motion.WALK_LEN];
     private static final float[] SLIDERS = new float[7];
     private static final float[] SLIDERS_NO_BREATH = new float[7];   // for rigs that breathe by themselves
     private static final Quaternionf Q = new Quaternionf();   // PoseStack.mulPose copies it: one reused, no garbage
@@ -104,12 +105,30 @@ public final class MotionPass {
                 LOOK[Motion.LOOK_PITCH] = Mth.lerp(partial, e.xRotO, e.getXRot());
             }
             Motion.pose(AnimStates.slab(), b, e.getId(), e.tickCount + partial, partial, zoom,
-                map.noBreath ? SLIDERS_NO_BREATH : SLIDERS, map.flinchOnly, LOOK, OUT);
+                map.noBreath ? SLIDERS_NO_BREATH : SLIDERS, map.flinchOnly, LOOK, walk(e, map, partial), OUT);
             place(map, ps);
         } catch (RuntimeException ex) {
             restore();
             BoneMaps.disable(model.getClass(), ex);
         }
+    }
+
+    /**
+     * The gait bridge's input for a biped on vanilla's legs ({@link BoneMap#strides}): the walk clock as
+     * LivingEntityRenderer gave it to setupAnim, and the angle setupAnim gave each leg (part space: - = the foot
+     * forward); null - the model's own legs - for a rider, a baby (vanilla runs its clock 3x), a swimmer or a sleeper.
+     */
+    private static float[] walk(LivingEntity e, BoneMap map, float partial) {
+        if (!map.strides || e.isPassenger() || e.isBaby() || e.isVisuallySwimming() || e.isSleeping())
+            return null;
+        ModelPart r = map.parts[Motion.LEG_R], l = map.parts[Motion.LEG_L];
+        if (r == null || l == null)
+            return null;
+        WALK[Motion.WALK_POS] = e.walkAnimation.position(partial);
+        WALK[Motion.WALK_SPEED] = Math.min(1f, e.walkAnimation.speed(partial));
+        WALK[Motion.WALK_R] = -r.xRot;
+        WALK[Motion.WALK_L] = -l.xRot;
+        return WALK;
     }
 
     /**
