@@ -13,6 +13,7 @@
 
 #include "/lib/settings.glsl"
 #include "/lib/shadowfit.glsl"
+#include "/lib/world.glsl"
 #include "/lib/wind.glsl"
 
 uniform mat4 shadowModelViewInverse;

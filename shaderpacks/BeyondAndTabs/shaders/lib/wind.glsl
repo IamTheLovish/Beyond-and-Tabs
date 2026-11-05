@@ -11,13 +11,10 @@
 // Every offset is a smooth function of the vertex's world position, so two blocks sharing a vertex move it the same
 // way (no cracks between leaves), and the shadow pass (shadow.vsh) calls the same function on the same position, so a
 // moving leaf's shadow moves with it. Amplitudes are in blocks.
-// Needs lib/settings.glsl before it.
+// Needs lib/settings.glsl and lib/world.glsl (cameraPosition, frameTimeCounter) before it.
 
 #ifndef WIND_GLSL
 #define WIND_GLSL
-
-uniform float frameTimeCounter;        // seconds; the loader wraps it after an hour (one jump in the gusts then)
-uniform vec3 cameraPosition;
 
 const float WIND_TWO_PI = 6.2831853;
 const float WIND_HEADING = 0.6;        // radians, x toward +x, z toward +z: WindField.BASE_HEADING

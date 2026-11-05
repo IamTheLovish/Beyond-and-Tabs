@@ -46,6 +46,18 @@ const float ambientOcclusionLevel = 1.0;
 // A/B; only the near-neutral highlight tint (lovish, Oct 30) stays either way
 #define MATERIALS 1 // [0 1]
 
+// realistic water (slice 4, lib/water.glsl): opacity from the depth of water under each pixel - clear over a shallow
+// bed, the palette's dark teal-blue over deep water. Off: slice 1's one fixed alpha, for an A/B
+#define WATER_REALISM 1 // [0 1]
+// the ripples on water: their steepness (0 = a still mirror, 1 = gentle, 2 = a breezy day)
+#define WATER_WAVES 1.0 // [0.0 0.5 1.0 1.5 2.0]
+// sunlight focused by the ripples into moving bright lines on the bed under shallow water
+#define CAUSTICS 1 // [0 1]
+// screen-space reflections on water (composite.fsh): the banks, trees and buildings mirrored where the surface
+// reflects strongly - a grazing first-person view. The march runs only where Fresnel passes 4%, which the RTS
+// camera's ~65 degrees down never reaches (water there is ~2% mirror), so from above it costs one fetch per pixel
+#define SSR 1 // [0 1]
+
 // plants and leaves move in the wind (lib/wind.glsl): gusts rolling across the lawn, leaves shimmering. Off: still
 #define WIND 1 // [0 1]
 // how far they move: 1 = a grass tuft's top ~0.12 block at a full gust
@@ -56,7 +68,8 @@ const float ambientOcclusionLevel = 1.0;
 // camera (0 = the hardware's choice; 1 = a whole level finer, visibly shimmering as the camera pans). README: trade-off
 #define TEXTURE_SHARPNESS 0.5 // [0.0 0.25 0.5 0.75 1.0]
 
-// block ids from block.properties
+// block ids from block.properties (each id once: tools/test_shader_pack.py)
 #define ID_FOLIAGE 10001.0             // plants, and the lower half of two-block ones
-#define ID_LEAVES 10004.0              // 10002 is water's (#438)
+#define ID_WATER 10002.0
 #define ID_FOLIAGE_UPPER 10003.0       // the upper half of a two-block plant
+#define ID_LEAVES 10004.0
