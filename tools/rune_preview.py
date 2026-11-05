@@ -119,7 +119,7 @@ class Frame:
 
     # -- primitives, as RuneFxClient draws them
     def disc(self, cell, cx, cy, cz, r, spin, alpha, reveal=1.0, seg=32, shade=False, start=-math.pi / 2, feather=0,
-             tint=(0.0, 0.0, 0.0)):
+             tint=(0.0, 0.0, 0.0), pull=0.0):
         """fan(): a flat disc of radius r at height cy, the cell mapped on it turned by spin, swept in by reveal."""
         if alpha <= 0.01:
             return
@@ -147,12 +147,45 @@ class Frame:
         c = sample(cell, u, v) * mask[..., None]
         f = self.cam.f
         d = (wx - self.cam.t[0]) * f[0] + (cy - self.cam.t[1]) * f[1] + (wz - self.cam.t[2]) * f[2]
-        c = c * (d <= self.udepth[y0:y1, x0:x1] + 0.05)[..., None]
+        c = c * (d - pull <= self.udepth[y0:y1, x0:x1] + 0.05)[..., None]
         if shade:   # ordinary alpha blending of a dark disc (tint): the underlay
             k = c[..., 3:4] * alpha
             self.img[y0:y1, x0:x1] = self.img[y0:y1, x0:x1] * (1 - k) + np.array(tint, np.float32) * k
         else:
             self.img[y0:y1, x0:x1] += c[..., :3] * c[..., 3:4] * alpha
+
+    def stroke(self, cx, cy, cz, r, w, rgb, alpha, reveal=1.0, start=-math.pi / 2, seg=32, feather=2, shade=False,
+               pull=0.0):
+        """RuneFxClient.stroke(): a flat ring of light of radius r, full within w / 2 of it, fading to 0 at w; drawn as
+        geometry (no texture), so its width is whatever the zoom needs."""
+        if alpha <= 0.01:
+            return
+        self.quads += 3 * seg
+        ro = r + w
+        pts = [self.cam.proj((cx + ro * math.cos(a), cy, cz + ro * math.sin(a))) for a in np.linspace(0, TAU, 17)]
+        xs, ys = [q[0] for q in pts], [q[1] for q in pts]
+        x0, x1 = int(max(0, min(xs) - 2)), int(min(self.cam.W, max(xs) + 3))
+        y0, y1 = int(max(0, min(ys) - 2)), int(min(self.cam.H, max(ys) + 3))
+        if x1 <= x0 or y1 <= y0:
+            return
+        wx, wz = self.cam.plane(cy, x0, y0, x1, y1)
+        lx, lz = wx - cx, wz - cz
+        th = np.arctan2(lz, lx)
+        dist = np.abs(np.sqrt(lx * lx + lz * lz) - r)
+        a = np.clip((w - dist) / (w / 2), 0, 1)
+        if reveal < 1:
+            lit_f = reveal * (seg + feather)
+            j = np.floor(((th - start) % TAU) / (TAU / seg))
+            a = a * np.clip((lit_f - j) / feather, 0, 1)
+        f = self.cam.f
+        d = (wx - self.cam.t[0]) * f[0] + (cy - self.cam.t[1]) * f[1] + (wz - self.cam.t[2]) * f[2]
+        a = (a * (d - pull <= self.udepth[y0:y1, x0:x1] + 0.05) * alpha)[..., None]
+        col = np.array(gen.rgb(rgb), np.float32) / (255 if max(gen.rgb(rgb)) > 1 else 1)
+        if shade:
+            k = np.clip(a, 0, 1)
+            self.img[y0:y1, x0:x1] = self.img[y0:y1, x0:x1] * (1 - k) + col * k
+        else:
+            self.img[y0:y1, x0:x1] += col * a
 
     def billboard(self, cell, P, half, alpha, tint=None):
         if alpha <= 0.01:
@@ -661,6 +694,213 @@ def v6(fr, f, P, t, life=1.5, R=CAST_RADIUS, cid=0):
                      0.17 * max(1, sc), ga * 0.7 * math.sin(math.pi * u))
 
 
+# v7 (round 6, the first judged on in-game stills: 21/60): the textured rim was ~1 px on screen, grass blades cut it,
+# Verdant and Sunforged sank into the grass, 48 overlapping circles made a haze at zoom 45. Now: a rim stroke drawn as
+# geometry (a near-white core, a faction halo, a dark line under both) never thinner than 3 px; the ground layer pulled
+# 1 block toward the camera (grass no longer cuts it, units still hide it); radius 1.3 (was 1.6), at most x1.5 with the
+# zoom (was x2); the crowd dims less; the release is the rim thrown out plus a white burst (no smudged glyph disc);
+# no climbing glyphs; past zoom 33 the details fade, past 45 only the rim, its dark line and the release are drawn.
+CAST_RADIUS7, SCALE_MAX7 = 1.3, 1.5
+CROWD7 = (3.0, 0.75)          # the crowd: radius in blocks, the least the light is dimmed to
+CORE7 = {0: 0xFFFFFF, 1: 0xFFF1B0, 2: 0xE2FF6A, 3: 0xFFB080, 4: 0x9CFFC8, 5: 0xA8F8FF, 6: 0xD0B8FF, 7: 0xFFE0A0}
+HALO7 = {0: 0xC8C8FF, 1: 0xFF9A2E, 2: 0x8FD000, 3: 0xFF2A00, 4: 0x2AE890, 5: 0x00D8F0, 6: 0x9050FF, 7: 0xE0A020}
+DARK7 = {0: 0x202040, 1: 0x3A1E00, 2: 0x1A2A00, 3: 0x3A0800, 4: 0x0B3D1E, 5: 0x002A3A, 6: 0x1E0A40, 7: 0x3A2400}
+CORE_W7 = (0.05, 1.5)         # the rim core's half width: at least this many blocks, at least this many px
+HALO_K7, HALO_A7, CORE_A7 = 3.0, 0.35, 0.95
+DARK_K7, DARK_A7, UNDER7 = 2.2, 0.55, 0.18
+LOD7 = (33.0, 45.0)           # zoom: the details fade out from the first to the second
+PULL7 = 1.0                   # blocks toward the camera, the ground layer only
+PULSE7 = (1.0, 1.35, 0.2)     # the rim thrown out at the release: from, to (shares of R), s
+BURST7 = (0.6, 0.1, 0.8)      # the white burst at the release: half size (blocks), s, alpha
+SIGIL_SPIN7 = 0.25
+MOTE_HALF7, MOTE_A7 = 0.19, 1.0
+
+
+def radius_for(style, zoom):
+    base, top = {'v7': (CAST_RADIUS7, SCALE_MAX7), 'v8': (CAST_RADIUS7, SCALE_MAX8)}.get(style, (CAST_RADIUS, 2.0))
+    return base * max(1.0, min(top, zoom / 30))
+
+
+def v7(fr, f, P, t, life=1.5, R=CAST_RADIUS7, cid=0):
+    global RISE
+    s = strength(t, life)
+    if s <= 0.01:
+        return
+    s_light = s * crowd.get(cid, 1.0)
+    zoom = 1080 / fr.cam.ppb
+    near = min(1.0, max(0.0, (LOD7[1] - zoom) / (LOD7[1] - LOD7[0])))
+    wc = max(CORE_W7[0], CORE_W7[1] / fr.cam.ppb)
+    sc = R / CAST_RADIUS7
+    ending = max(0, 1 - (life - t) / FADE)
+    grow = 1 + 0.12 * ending
+    breath = BREATH6[0] + BREATH6[1] * math.sin(t * TAU * BREATH6[2])
+    rel = t - DRAW_IN
+    flash = flash_scale * (max(0, 1 - rel / FLASH_T4) if rel >= 0 else 0)
+    cx, cy, cz = P[0], P[1] + 0.05, P[2]
+    reveal = min(1, t / DRAW_IN)
+    a0 = sweep_start(fr.cam)
+    rr = R * grow
+    # the dark ground: the underlay, and a dark line under the rim (alpha blended)
+    fr.disc(fr.small(f, 'shade'), cx, cy - 0.01, cz, rr * UNDER_R5, 0, UNDER7 * s, reveal, 16, shade=True, start=a0,
+            feather=FEATHER, tint=under_tint(f), pull=PULL7)
+    fr.stroke(cx, cy, cz, rr, wc * DARK_K7, DARK7[f], DARK_A7 * s, reveal, a0, 24, shade=True, pull=PULL7)
+    if t < SEED6[1]:
+        fr.billboard(fr.small(f, 'spark'), (cx, cy + 0.15, cz), SEED6[0] * max(1, sc), 1 - t / SEED6[1])
+    if near > 0.01:   # the rune ring's detail inside the rim
+        fr.disc(fr.cell(f, 0), cx, cy, cz, rr / RIM_IN_CELL, t * RING_SPIN4 * TAU, RING_A5 * s_light * breath * near,
+                reveal, start=a0, feather=FEATHER, pull=PULL7)
+    fr.stroke(cx, cy, cz, rr, wc * HALO_K7, HALO7[f], HALO_A7 * s_light * (1 + flash), reveal, a0, pull=PULL7)
+    fr.stroke(cx, cy, cz, rr, wc, CORE7[f], min(1.0, CORE_A7 * s_light * breath + 0.5 * flash * s_light), reveal, a0,
+              pull=PULL7)
+    if t < DRAW_IN and near > 0.01:
+        ang = a0 + reveal * TAU
+        fr.billboard(fr.small(f, 'glyph', cid & 15), (cx + math.cos(ang) * rr * 0.92, cy + 0.25, cz + math.sin(ang) * rr * 0.92),
+                     TIP_HALF * max(1, sc), s_light * near)
+    p0, p1, pt = PULSE7
+    if 0 <= rel < pt:   # the release: the rim thrown out
+        q = rel / pt
+        rp = rr * (p0 + (p1 - p0) * ease(q))
+        fr.stroke(cx, cy + 0.02, cz, rp, wc * HALO_K7, HALO7[f], HALO_A7 * (1 - q) * s_light, pull=PULL7)
+        fr.stroke(cx, cy + 0.02, cz, rp, wc, CORE7[f], (1 - q) * s_light, pull=PULL7)
+    bh, bt, ba = BURST7
+    if 0 <= rel < bt:
+        fr.billboard(fr.small(f, 'spark'), (cx, cy + 0.15, cz), bh * max(1, sc), ba * flash_scale * (1 - rel / bt))
+    if near <= 0.01:
+        return
+    for k, (h, rs, at, ta, spin, kind) in enumerate(TIERS6):
+        rise = ease((t - at) / 0.12)
+        a = ta * s_light * rise * near
+        if a > 0.01:
+            fr.disc(fr.cell(f, 3), cx, cy + h * sc * rise, cz, R * rs * grow / RIM_IN_CELL, t * spin * TAU + k, a, 1, 24)
+    grow_in = ease((t - 0.08) / 0.22)
+    shrink = min(1, max(0, (life - t) / 0.4))
+    k_s = grow_in * shrink
+    if k_s > 0.01:
+        sa = SIGIL_A * s_light * min(1, k_s * 1.5) * near
+        sr = R * SIGIL_R6 * k_s
+        fr.disc(fr.cell(f, 1), cx, cy + SIGIL_H6 * sc, cz, sr / RIM_IN_CELL, t * SIGIL_SPIN7 * TAU, sa, 1, 16)
+        fr.stroke(cx, cy + SIGIL_H6 * sc, cz, sr * 1.04, wc * 0.8, CORE7[f], sa * 0.8)
+    p_from, p_h, p_hw, p_a, p_t = PILLAR4
+    if 0 <= rel < p_t:
+        fr.beam(fr.small(f, 'beam'), (cx, cy + p_from * sc, cz), p_h * sc, p_hw * sc,
+                p_a * flash_scale * s_light * (1 - rel / p_t) * near, 0.0)
+    ma = s_light * min(1, max(0, (t - 0.2) / 0.2)) * MOTE_A7 * near
+    if ma > 0.01:
+        keep, RISE = RISE, RISE5
+        try:
+            if f == 7:
+                for k in range(10):
+                    ang = TAU * (k / 10 + t * 0.6)
+                    fr.billboard(fr.small(f, 'mote'), (cx + math.cos(ang) * R * 0.75, cy + 1.6 * sc,
+                                                       cz + math.sin(ang) * R * 0.75), 0.18 * 1.2, ma)
+            else:
+                for k in range(MOTES4):
+                    x, y, z, half, a = mote(f, k, t * MOTE_SPEED4, cid, R)
+                    fr.billboard(fr.small(f, 'mote'), (cx + x, cy + y, cz + z), MOTE_HALF7 * max(1, math.sqrt(sc)),
+                                 ma * a)
+        finally:
+            RISE = keep
+
+
+# v8 (round 7: v7 beat v6 38 to 29, blind): the critic's next fixes - a second stroke weight (an inner line at 0.68 of
+# the rim, 0.6 of its width), the rim settling to 0.7 over the hold, the underlay darker (the dark line's colour, 0.32,
+# the full ring), the sigil's ring in the faction's hue (white read as a selection marker), fewer bigger motes, the zoom
+# growth capped at 1.2 (less overlap in a dense army).
+UNDER8 = 0.32
+SETTLE8 = (0.5, 1.3, 0.3)     # the rim's core: from t, to t, how much it settles
+INNER8 = (0.68, 0.6, 0.75)    # the inner line: radius share, width share of the core's, alpha
+SIGIL_RING_A8 = 0.6
+MOTES8, MOTE_HALF8 = 14, 0.26
+SCALE_MAX8 = 1.2
+
+
+def v8(fr, f, P, t, life=1.5, R=CAST_RADIUS7, cid=0):
+    global RISE, MOTES
+    s = strength(t, life)
+    if s <= 0.01:
+        return
+    s_light = s * crowd.get(cid, 1.0)
+    zoom = 1080 / fr.cam.ppb
+    near = min(1.0, max(0.0, (LOD7[1] - zoom) / (LOD7[1] - LOD7[0])))
+    wc = max(CORE_W7[0], CORE_W7[1] / fr.cam.ppb)
+    sc = R / CAST_RADIUS7
+    ending = max(0, 1 - (life - t) / FADE)
+    grow = 1 + 0.12 * ending
+    breath = BREATH6[0] + BREATH6[1] * math.sin(t * TAU * BREATH6[2])
+    rel = t - DRAW_IN
+    flash = flash_scale * (max(0, 1 - rel / FLASH_T4) if rel >= 0 else 0)
+    cx, cy, cz = P[0], P[1] + 0.05, P[2]
+    reveal = min(1, t / DRAW_IN)
+    a0 = sweep_start(fr.cam)
+    rr = R * grow
+    # the dark ground: the underlay, and a dark line under the rim (alpha blended)
+    fr.disc(fr.small(f, 'shade'), cx, cy - 0.01, cz, rr, 0, UNDER8 * s, reveal, 16, shade=True, start=a0,
+            feather=FEATHER, tint=tuple(float(c) for c in gen.rgb(DARK7[f])), pull=PULL7)
+    fr.stroke(cx, cy, cz, rr, wc * DARK_K7, DARK7[f], DARK_A7 * s, reveal, a0, 24, shade=True, pull=PULL7)
+    if t < SEED6[1]:
+        fr.billboard(fr.small(f, 'spark'), (cx, cy + 0.15, cz), SEED6[0] * max(1, sc), 1 - t / SEED6[1])
+    if near > 0.01:   # the rune ring's detail inside the rim
+        fr.disc(fr.cell(f, 0), cx, cy, cz, rr / RIM_IN_CELL, t * RING_SPIN4 * TAU, RING_A5 * s_light * breath * near,
+                reveal, start=a0, feather=FEATHER, pull=PULL7)
+    fr.stroke(cx, cy, cz, rr, wc * HALO_K7, HALO7[f], HALO_A7 * s_light * (1 + flash), reveal, a0, pull=PULL7)
+    settle = 1 - SETTLE8[2] * min(1.0, max(0.0, (t - SETTLE8[0]) / (SETTLE8[1] - SETTLE8[0])))
+    fr.stroke(cx, cy, cz, rr, wc, CORE7[f], min(1.0, CORE_A7 * s_light * breath * settle + 0.5 * flash * s_light),
+              reveal, a0, pull=PULL7)
+    if near > 0.01:   # the inner line: the second weight under the rim
+        fr.stroke(cx, cy, cz, rr * INNER8[0], wc * INNER8[1], CORE7[f], INNER8[2] * s_light * near, reveal, a0,
+                  pull=PULL7)
+    if t < DRAW_IN and near > 0.01:
+        ang = a0 + reveal * TAU
+        fr.billboard(fr.small(f, 'glyph', cid & 15), (cx + math.cos(ang) * rr * 0.92, cy + 0.25, cz + math.sin(ang) * rr * 0.92),
+                     TIP_HALF * max(1, sc), s_light * near)
+    p0, p1, pt = PULSE7
+    if 0 <= rel < pt:   # the release: the rim thrown out
+        q = rel / pt
+        rp = rr * (p0 + (p1 - p0) * ease(q))
+        fr.stroke(cx, cy + 0.02, cz, rp, wc * HALO_K7, HALO7[f], HALO_A7 * (1 - q) * s_light, pull=PULL7)
+        fr.stroke(cx, cy + 0.02, cz, rp, wc, CORE7[f], (1 - q) * s_light, pull=PULL7)
+    bh, bt, ba = BURST7
+    if 0 <= rel < bt:
+        fr.billboard(fr.small(f, 'spark'), (cx, cy + 0.15, cz), bh * max(1, sc), ba * flash_scale * (1 - rel / bt))
+    if near <= 0.01:
+        return
+    for k, (h, rs, at, ta, spin, kind) in enumerate(TIERS6):
+        rise = ease((t - at) / 0.12)
+        a = ta * s_light * rise * near
+        if a > 0.01:
+            fr.disc(fr.cell(f, 3), cx, cy + h * sc * rise, cz, R * rs * grow / RIM_IN_CELL, t * spin * TAU + k, a, 1, 24)
+    grow_in = ease((t - 0.08) / 0.22)
+    shrink = min(1, max(0, (life - t) / 0.4))
+    k_s = grow_in * shrink
+    if k_s > 0.01:
+        sa = SIGIL_A * s_light * min(1, k_s * 1.5) * near
+        sr = R * SIGIL_R6 * k_s
+        fr.disc(fr.cell(f, 1), cx, cy + SIGIL_H6 * sc, cz, sr / RIM_IN_CELL, t * SIGIL_SPIN7 * TAU, sa, 1, 16)
+        fr.stroke(cx, cy + SIGIL_H6 * sc, cz, sr * 1.04, wc * 0.8, HALO7[f], sa * SIGIL_RING_A8)
+    p_from, p_h, p_hw, p_a, p_t = PILLAR4
+    if 0 <= rel < p_t:
+        fr.beam(fr.small(f, 'beam'), (cx, cy + p_from * sc, cz), p_h * sc, p_hw * sc,
+                p_a * flash_scale * s_light * (1 - rel / p_t) * near, 0.0)
+    ma = s_light * min(1, max(0, (t - 0.2) / 0.2)) * MOTE_A7 * near
+    if ma > 0.01:
+        keep, RISE = RISE, RISE5
+        keep_n, MOTES = MOTES, MOTES8
+        try:
+            if f == 7:
+                for k in range(10):
+                    ang = TAU * (k / 10 + t * 0.6)
+                    fr.billboard(fr.small(f, 'mote'), (cx + math.cos(ang) * R * 0.75, cy + 1.6 * sc,
+                                                       cz + math.sin(ang) * R * 0.75), 0.18 * 1.2, ma)
+            else:
+                for k in range(MOTES8):
+                    x, y, z, half, a = mote(f, k, t * MOTE_SPEED4, cid, R)
+                    fr.billboard(fr.small(f, 'mote'), (cx + x, cy + y, cz + z), MOTE_HALF8 * max(1, math.sqrt(sc)),
+                                 ma * a)
+        finally:
+            RISE = keep
+            MOTES = keep_n
+
+
 # ---------------------------------------------------------------- the scene
 
 def ground(fr, seed=4):
@@ -680,6 +920,45 @@ def ground(fr, seed=4):
     dirt = (block > 0.95)[..., None]
     img = np.where(dirt, np.array([0.47, 0.36, 0.25], np.float32) * (0.82 + 0.3 * dtile[tz, tx][..., None]), img)
     fr.img[:] = np.clip(img, 0, 1) * 0.92
+
+
+def tufts(fr, seed=5, density=0.45):
+    """Grass blades (as the game's grass and ferns): thin, 0.35-0.9 block tall, depth tested and depth writing, so a
+    ring at ground height is cut where they stand in front of it. Drawn after the units."""
+    W, H = fr.cam.W, fr.cam.H
+    wx, wz = fr.cam.plane(0.0, 0, 0, W, H)
+    rng = random.Random(seed)
+    px = fr.cam.ppb
+    bw = max(1, int(round(0.07 * px)))
+    for bx in range(int(math.floor(wx.min())), int(math.ceil(wx.max()))):
+        for bz in range(int(math.floor(wz.min())), int(math.ceil(wz.max()))):
+            if rng.random() > density:
+                continue
+            fx, fz = bx + rng.random(), bz + rng.random()
+            sx, sy = fr.cam.proj((fx, 0, fz))
+            if not (-20 <= sx <= W + 20 and -20 <= sy <= H + 80):
+                continue
+            g = 0.75 + 0.4 * rng.random()
+            col = np.array([0.26, 0.47, 0.17], np.float32) * g
+            for _ in range(3):
+                h = 0.35 + 0.55 * rng.random()
+                lx, lz = (rng.random() - 0.5) * 0.4, (rng.random() - 0.5) * 0.4
+                bx0, bz0 = fx + (rng.random() - 0.5) * 0.3, fz + (rng.random() - 0.5) * 0.3
+                steps = max(2, int(h * px * 0.9))
+                for k in range(steps + 1):
+                    u = k / steps
+                    Q = (bx0 + lx * u, h * u, bz0 + lz * u)
+                    qx, qy = fr.cam.proj(Q)
+                    d = fr.depth(Q)
+                    w = max(1, int(round(bw * (1 - 0.7 * u))))
+                    x0, y0 = int(qx) - w // 2, int(qy)
+                    x1, y1 = x0 + w, y0 + 1
+                    if x1 <= 0 or y1 <= 0 or x0 >= W or y0 >= H:
+                        continue
+                    x0, y0 = max(0, x0), max(0, y0)
+                    m = d <= fr.udepth[y0:y1, x0:x1]
+                    fr.img[y0:y1, x0:x1][m] = col * (0.8 + 0.35 * u)
+                    fr.udepth[y0:y1, x0:x1][m] = d
 
 
 def box(fr, P, sx, sy, sz, col):
@@ -758,6 +1037,7 @@ def scene_lineup(at, draw, out, t=0.75, zoom=15):
         caster(fr, P, ROBES[f])
         sx, sy = cam.proj(P)
         labels.append((NAMES[f], (int(sx) - 30, int(sy) + 70)))
+    tufts(fr, 3)
     for i, f in enumerate(ids):
         off = (i - 3) * 3.6
         draw(fr, f, (rx * off, 0.0, rz * off), t, cid=i * 5 + 1)
@@ -780,6 +1060,7 @@ def scene_timing(at, draw, out, f=6, zoom=15):
         caster(fr, P, ROBES[f])
         sx, sy = cam.proj(P)
         labels.append((f't = {t:.2f} s', (int(sx) - 28, H - 40)))
+    tufts(fr, 8)
     for i, t in enumerate(times):
         off = (i - 2.5) * 4.6
         draw(fr, f, (rx * off, 0.0, rz * off), t, cid=7)
@@ -817,6 +1098,7 @@ def scene_battle(at, draw, out, zoom=30, seed=9):
     units.sort(key=lambda u: -np.dot(np.array(u[1]) - cam.t, cam.f))
     for kind, P, col in units:
         (caster if kind == 'c' else soldier)(fr, P, col)
+    tufts(fr, 2)
     global flash_scale
     flashing = sum(1 for _, _, t, _ in casts if 0 <= t - DRAW_IN < FLASH_T)
     flash_scale = min(1.0, 3.0 / max(1, flashing))
@@ -832,21 +1114,68 @@ def scene_battle(at, draw, out, zoom=30, seed=9):
     return fr.quads
 
 
+def scene_army(at, draw, out, style, zoom=15, seed=12):
+    """The eyes overlays scene, in small: a block of units 1.5 apart, casters of every faction among them, casts at
+    random moments, at most 48 circles live; the radius and the crowd as the style's own client draws them."""
+    W, H = 1920, 1080
+    cam = Cam(W, H, zoom, target=(0, 0, 0))
+    fr = Frame(cam, at)
+    ground(fr, 6)
+    rng = random.Random(seed)
+    n = 22
+    units, casts = [], []
+    k = 0
+    for i in range(n):
+        for j in range(n):
+            P = ((i - n / 2) * 1.5 + (rng.random() - 0.5) * 0.4, 0.0, (j - n / 2) * 1.5 + (rng.random() - 0.5) * 0.4)
+            if rng.random() < 0.2:
+                f = rng.choice([1, 2, 3, 4, 5, 6, 7])
+                units.append(('c', P, ROBES[f]))
+                t = rng.random() * 3.0
+                if t < 1.48:
+                    casts.append((f, P, t + 0.02, k))
+                    k += 1
+            else:
+                units.append(('s', P, 0x2A3A78))
+    casts = casts[:48]
+    units.sort(key=lambda u: -np.dot(np.array(u[1]) - cam.t, cam.f))
+    for kind, P, col in units:
+        (caster if kind == 'c' else soldier)(fr, P, col)
+    tufts(fr, 4)
+    R = radius_for(style, zoom)
+    cr, cmin = CROWD7 if style in ('v7', 'v8') else (4.0, 0.55)
+    global flash_scale
+    flashing = sum(1 for _, _, t, _ in casts if 0 <= t - DRAW_IN < FLASH_T)
+    flash_scale = min(1.0, 3.0 / max(1, flashing))
+    crowd.clear()
+    for f, P, t, kk in casts:
+        nn = sum(1 for _, Q, _, j in casts if j != kk and math.hypot(P[0] - Q[0], P[2] - Q[2]) < cr)
+        crowd[kk * 3 + 1] = max(cmin, 1 / math.sqrt(1 + nn))
+    for f, P, t, kk in casts:
+        draw(fr, f, P, t, R=R, cid=kk * 3 + 1)
+    flash_scale = 1.0
+    crowd.clear()
+    save(fr, out, f'{os.path.basename(out)} - zoom {zoom}, {len(units)} units, {len(casts)} circles live')
+    return fr.quads
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('outdir')
-    ap.add_argument('--style', default='v2', choices=['v1', 'v2', 'v3', 'v4', 'v5', 'v6'])
+    ap.add_argument('--style', default='v2', choices=['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8'])
     ap.add_argument('--tag', default='')
     args = ap.parse_args()
     os.makedirs(args.outdir, exist_ok=True)
     at = gen.atlas()
-    draw = {'v1': v1, 'v2': v2, 'v3': v3, 'v4': v4, 'v5': v5, 'v6': v6}[args.style]
+    draw = {'v1': v1, 'v2': v2, 'v3': v3, 'v4': v4, 'v5': v5, 'v6': v6, 'v7': v7, 'v8': v8}[args.style]
     tag = args.tag or args.style
     scene_lineup(at, draw, os.path.join(args.outdir, f'{tag}_1_lineup_zoom15.png'))
     scene_timing(at, draw, os.path.join(args.outdir, f'{tag}_2_timing_storm.png'), 6)
     scene_timing(at, draw, os.path.join(args.outdir, f'{tag}_3_timing_horde.png'), 3)
     q = scene_battle(at, draw, os.path.join(args.outdir, f'{tag}_4_battle_zoom30.png'))
-    print('wrote', args.outdir, tag, 'battle quads', q)
+    qa = scene_army(at, draw, os.path.join(args.outdir, f'{tag}_5_army_zoom15.png'), args.style, 15)
+    qb = scene_army(at, draw, os.path.join(args.outdir, f'{tag}_6_army_zoom45.png'), args.style, 45)
+    print('wrote', args.outdir, tag, 'battle quads', q, 'army quads z15', qa, 'z45', qb)
 
 
 if __name__ == '__main__':
