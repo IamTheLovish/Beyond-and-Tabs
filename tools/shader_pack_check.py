@@ -196,13 +196,17 @@ def code_of(source):
 def noon_light(light_source, upness, ndl, sun_through=1.0):
     """Luma of lib/light.glsl's surfaceLight at the lobby's noon (the high-sun row) for a face in full sky light with
     no ambient occlusion: `upness` its normal's dot with up, `ndl` with the sun, `sun_through` the shadow (1 = lit).
-    Mirrors sunFacing (Lambert eased halfway to its square root), the fill's (0.75 + 0.25 x upness) and MIN_LIGHT."""
+    Mirrors sunFacing (Lambert eased SUN_FACING_EASE of the way to its square root), skyFill's (SKY_FILL_SIDE +
+    (1 - SKY_FILL_SIDE) x upness) and MIN_LIGHT, with the constants read from the source (test_noon_light_leaves_open_
+    ground_its_colour pins the two expressions themselves)."""
     def lum(v):
         return sum(a * b for a, b in zip(v, LUMA))
     sun, sky = lum(vec3_const(light_source, "SUN_HIGH")), lum(vec3_const(light_source, "SKY_HIGH"))
+    ease, side = float_const(light_source, "SUN_FACING_EASE"), float_const(light_source, "SKY_FILL_SIDE")
     ndl = max(ndl, 0.0)
-    facing = 0.5 * (ndl + ndl ** 0.5)
-    return sun * facing * sun_through + sky * (0.75 + 0.25 * upness) + lum(vec3_const(light_source, "MIN_LIGHT"))
+    facing = ndl + (ndl ** 0.5 - ndl) * ease
+    return (sun * facing * sun_through + sky * (side + (1.0 - side) * upness)
+            + lum(vec3_const(light_source, "MIN_LIGHT")))
 
 
 def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_height=1080.0):
