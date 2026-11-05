@@ -730,8 +730,8 @@ public class StrategicViewClientEvents {
         } else if (ringW > 0f) {
             drawShape(bb, mat, shape, sx, sy, r + ICON_OUTLINE_W + ringW, ringCol);
         }
-        // a flyer keeps its role shape and spreads a pair of swept wings behind it (role icons, backlog 12): 14 flying
-        // types read as their attack role alone. Drawn first so the shape covers the wing roots; 8 triangles.
+        // a flyer keeps its role shape and spreads a pair of swept wings behind it (role icons, backlog 12): 16 flying
+        // unit classes read as their attack role alone. Drawn first so the shape covers the wing roots; 8 triangles.
         if (!commander && UnitIconTier.isFlyer(entity))
             wings(bb, mat, sx, sy, r, fill);
         // the dark edge under every icon, so a pale team colour still reads on snow or bright grass

@@ -104,9 +104,12 @@ public final class UnitIconTier {
     /**
      * A flyer: its move control flies. Every flying unit sets a FlyingUnitMoveControl (the dragons' DragonMoveControl
      * is one) in its constructor, so the client knows it too; Unit.isFlyingUnit reads the move goal, which only the
-     * server registers. The Windcaller swaps controls as it takes off and lands.
+     * server registers. The Windcaller is the exception: it swaps controls as it takes off and lands, on the server
+     * and its owner's client only, so every other client would see it grounded - its synced isFlying() decides.
      */
     public static boolean isFlyer(LivingEntity entity) {
+        if (entity instanceof com.solegendary.reignofnether.unit.units.villagers.WindcallerUnit windcaller)
+            return windcaller.isFlying();
         return entity instanceof net.minecraft.world.entity.Mob mob
             && mob.getMoveControl() instanceof com.solegendary.reignofnether.unit.controls.FlyingUnitMoveControl;
     }
