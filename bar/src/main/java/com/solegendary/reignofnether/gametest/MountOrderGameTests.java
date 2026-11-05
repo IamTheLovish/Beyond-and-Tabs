@@ -1,0 +1,119 @@
+package com.solegendary.reignofnether.gametest;
+
+import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.unit.UnitAction;
+import com.solegendary.reignofnether.unit.UnitActionItem;
+import com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit;
+import com.solegendary.reignofnether.unit.units.monsters.SpiderUnit;
+import com.solegendary.reignofnether.unit.units.villagers.VillagerUnit;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * A Mount order is an order (#507, Command Center Eris.13, Nov 5): a unit the player has told to mount is busy until it
+ * is up, the way a unit with a move order is, so an enemy walking past does not turn it into a fight. Before, Unit.isIdle
+ * read the move goal only: a rider on its way to a mount (its MountGoal walking it there, a path still being worked
+ * out) counted as idle, and idle auto-aggression took the passing enemy as its target - the
+ * autofind_mounts_the_nearest_mountable flake (#507's history: the rider's attack target named a neighbouring
+ * arena's unit).
+ */
+@GameTestHolder(ReignOfNether.MOD_ID)
+@PrefixGameTestTemplate(false)
+public class MountOrderGameTests {
+
+    static final String ARENA = SkirmishGameTests.ARENA;
+    static final String OWNER = "gametest_mount_order";
+    static final String FOE = "gametest_mount_order_foe";
+
+    /**
+     * The player orders a skeleton to mount its spider 10 blocks off (the Mount Spider button on the spider, the order
+     * the client sends); an enemy villager walks past 6 blocks to the side, inside the skeleton's aggro range (12), the
+     * whole time. The skeleton must not take the villager as a target before it is up, and it must mount. The spider is
+     * held still (no AI) so only the rider's behaviour is under test. On its own glass pad (ArenaReady.pad, a free
+     * slot) so no neighbouring test's units are near.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void a_unit_ordered_to_mount_ignores_an_enemy_walking_past_and_mounts(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = ArenaReady.pad(helper, 326);
+        SkeletonUnit rider = EntityRegistrar.SKELETON_UNIT.get().create(level);
+        SpiderUnit spider = EntityRegistrar.SPIDER_UNIT.get().create(level);
+        VillagerUnit foe = EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (rider == null || spider == null || foe == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        rider.moveTo(pad.getX() + 2.5, pad.getY(), pad.getZ() + 2.5, 0, 0);
+        spider.moveTo(pad.getX() + 12.5, pad.getY(), pad.getZ() + 2.5, 0, 0);
+        foe.moveTo(pad.getX() + 0.5, pad.getY(), pad.getZ() + 8.5, 0, 0);
+        rider.setOwnerName(OWNER);
+        spider.setOwnerName(OWNER);
+        foe.setOwnerName(FOE);
+        spider.setNoAi(true);
+        for (var u : List.of(rider, spider, foe))
+            level.addFreshEntity(u);
+        TestCleanup.entities(helper, List.of(rider, spider, foe));
+
+        // the enemy walks along the pad, 6 blocks to the side of the rider's way, and back
+        foe.getMoveGoal().setMoveTarget(pad.offset(15, -1, 8));
+        // the player's Mount order: the Mount Spider ability on the spider
+        new UnitActionItem(OWNER, UnitAction.MOUNT_SPIDER, spider.getId(), new int[] { rider.getId() }).action(level);
+
+        List<String> history = new ArrayList<>();
+        String[] last = { "" };
+        String[] tookFoe = { null };
+        helper.onEachTick(() -> {
+            if (rider.getVehicle() == spider)
+                return;
+            if (foe.getMoveGoal().getMoveTarget() == null && foe.position().x > pad.getX() + 13)
+                foe.getMoveGoal().setMoveTarget(pad.offset(0, -1, 8));
+            else if (foe.getMoveGoal().getMoveTarget() == null && foe.position().x < pad.getX() + 2)
+                foe.getMoveGoal().setMoveTarget(pad.offset(15, -1, 8));
+            if (tookFoe[0] == null && (rider.getTarget() == foe || rider.getTargetGoal().getTarget() == foe))
+                tookFoe[0] = "t" + helper.getTick() + " " + state(rider, spider, foe);
+            if (helper.getTick() % 10 != 0)
+                return;
+            String now = state(rider, spider, foe);
+            if (!now.equals(last[0])) {
+                history.add("t" + helper.getTick() + " " + now);
+                last[0] = now;
+            }
+        });
+        helper.succeedWhen(() -> {
+            if (tookFoe[0] != null)
+                helper.fail("ordered to mount, the rider took the enemy walking past as its target: " + tookFoe[0]
+                    + "; history: " + String.join(" | ", history));
+            if (rider.getVehicle() != spider)
+                helper.fail("ordered to mount, the rider is not on its spider yet; now " + state(rider, spider, foe)
+                    + "; history: " + String.join(" | ", history));
+        });
+    }
+
+    /** Where the three are, the mount goal's state and the rider's attack target. */
+    static String state(SkeletonUnit rider, SpiderUnit spider, VillagerUnit foe) {
+        var goal = rider.getMountGoal();
+        BlockPos mt = goal.getMoveTarget();
+        LivingEntity target = goal.getTarget();
+        LivingEntity attack = rider.getTarget() != null ? rider.getTarget() : rider.getTargetGoal().getTarget();
+        return String.format(Locale.ROOT,
+            "rider at %.1f,%.1f,%.1f vehicle %s idle %s d(spider) %.2f | foe at %.1f,%.1f d %.2f | goal target %s"
+                + " moveTarget %s pathPending %s | attack %s",
+            rider.getX(), rider.getY(), rider.getZ(),
+            rider.getVehicle() == null ? "none" : rider.getVehicle() == spider ? "spider" : rider.getVehicle().getType().toShortString(),
+            rider.isIdle(), rider.distanceTo(spider), foe.getX(), foe.getZ(), rider.distanceTo(foe),
+            target == null ? "none" : target == spider ? "spider" : target.getType().toShortString(),
+            mt == null ? "none" : mt.toShortString(), goal.isPathPending(),
+            attack == null ? "none" : attack == foe ? "FOE" : attack.getType().toShortString());
+    }
+}

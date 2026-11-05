@@ -36,6 +36,12 @@ public class MountGoal extends MoveToTargetBlockGoal {
         this.targetEntity = entity;
     }
 
+    /** The mount this goal is walking to, or null (read by MountOrderGameTests' failure history). */
+    @javax.annotation.Nullable
+    public LivingEntity getTarget() {
+        return targetEntity;
+    }
+
     private boolean isMountableUnit(Mob m) {
         if (!(m instanceof Unit unit))
             return false;
