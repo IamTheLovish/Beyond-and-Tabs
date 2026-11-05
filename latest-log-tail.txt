@@ -1,0 +1,200 @@
+[19:45:57] [Render thread/INFO]: [Eyes] 15_heartwood_hall_r9_rts_close: aimed at -184, 81, 51 - the camera at -186, 89, 53 looks at -184, 51 (45 frames, 4.1 s in the phase)
+[19:45:57] [Render thread/INFO]: [Eyes] 15_heartwood_hall_r9_rts_close: the structure's box holds 1596 non-air blocks on the client
+[19:45:57] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_r9_rts_close 1793907957308
+[19:45:57] [Server thread/INFO]: [Eyes] 15_heartwood_hall_r9_rts_close: ... and 1596 on the server
+[19:45:57] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:45:58] [IO-Worker-10/INFO]: [Eyes] 15_heartwood_hall_r9_rts_close: Saved screenshot as bat_eyes_15_heartwood_hall_r9_rts_close.png
+[19:45:58] [Render thread/INFO]: [Frame] p50 109.3 ms (9 fps), p95 186.7 ms, max 410.6 ms over 240 frames; first-person view, zoom 26, 5 units known
+[19:45:58] [Render thread/INFO]: [FrameParts] 99 frames, mean 100.0 ms/frame; ours 1.4 ms (1%): buildingDecor 0.76 (max 11.7, 4.0/f) | markersRange 0.19 (max 3.5, 1.0/f) | markersMapWorld 0.17 (max 6.2, 0.9/f) | entityShadows 0.10 (max 3.1, 21/f) | unitOverlays 0.05 (max 0.1, 11/f) | buildingBoxes 0.03 (max 0.0, 0.9/f) (+17 smaller); elsewhere 98.7 ms; 0 section re-mesh requests/s
+[19:45:58] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:46:00] [Render thread/INFO]: [Sfx] 253 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[19:46:01] [Server thread/INFO]: [Tick] p50 7.1 ms, p95 14.0 ms, max 17.6 ms over the last 100 ticks; 8 units, 5 buildings, 1 players
+[19:46:01] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:46:02] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_r9_34 1793907962409
+[19:46:02] [IO-Worker-10/INFO]: [Eyes] 15_heartwood_hall_r9_34: Saved screenshot as bat_eyes_15_heartwood_hall_r9_34.png
+[19:46:04] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[19:46:07] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_r9_front 1793907967474
+[19:46:07] [Render thread/INFO]: [Eyes] 15_heartwood_hall_r9_close: standing at -187.0, 88.0, 54.0 (direction -1, 1 from the middle), eye 1.00 over the aim, pitch 11 down
+[19:46:07] [IO-Worker-10/INFO]: [Eyes] 15_heartwood_hall_r9_front: Saved screenshot as bat_eyes_15_heartwood_hall_r9_front.png
+[19:46:08] [Render thread/INFO]: [Frame] p50 102.2 ms (10 fps), p95 152.5 ms, max 242.5 ms over 240 frames; first-person view, zoom 26, 5 units known
+[19:46:08] [Render thread/INFO]: [FrameParts] 85 frames, mean 117.9 ms/frame; ours 1.1 ms (1%): buildingDecor 0.61 (max 11.0, 4.0/f) | markersRange 0.27 (max 5.4, 1.0/f) | unitOverlays 0.09 (max 0.2, 11/f) | bars 0.08 (max 3.0, 22/f) | unitBodies 0.06 (max 4.6, 0.0/f) (+15 smaller); elsewhere 116.8 ms; 0 section re-mesh requests/s
+[19:46:08] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:46:11] [Server thread/INFO]: [Tick] p50 7.0 ms, p95 17.6 ms, max 49.6 ms over the last 100 ticks; 9 units, 6 buildings, 1 players
+[19:46:11] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:46:11] [Render thread/INFO]: [Sfx] 220 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[19:46:12] [Render thread/INFO]: [Eyes] 15_heartwood_hall_r9_close: aimed at -184, 87, 51 - the camera at -187, 88, 54 looks at -184, 51 (36 frames, 5.0 s in the phase)
+[19:46:12] [Render thread/INFO]: [Eyes] 15_heartwood_hall_r9_close: the structure's box holds 1596 non-air blocks on the client
+[19:46:12] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_r9_close 1793907972479
+[19:46:12] [Server thread/INFO]: [Eyes] 15_heartwood_hall_r9_close: ... and 1596 on the server
+[19:46:12] [Render thread/INFO]: [System] [CHAT] 
+[19:46:12] [Render thread/INFO]: [System] [CHAT] Night falls...
+[19:46:12] [Render thread/INFO]: [System] [CHAT] 
+[19:46:12] [IO-Worker-10/INFO]: [Eyes] 15_heartwood_hall_r9_close: Saved screenshot as bat_eyes_15_heartwood_hall_r9_close.png
+[19:46:16] [Render thread/INFO]: [Eyes] 15_heartwood_hall_r9_dusk: the last drawn frame saw day time 13000
+[19:46:16] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_r9_dusk 1793907976370
+[19:46:16] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:46:16] [IO-Worker-10/INFO]: [Eyes] 15_heartwood_hall_r9_dusk: Saved screenshot as bat_eyes_15_heartwood_hall_r9_dusk.png
+[19:46:18] [Render thread/INFO]: [Frame] p50 109.7 ms (9 fps), p95 165.5 ms, max 258.2 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:46:18] [Render thread/INFO]: [FrameParts] 74 frames, mean 135.5 ms/frame; ours 0.9 ms (1%): buildingDecor 0.32 (max 3.6, 4.0/f) | markersRange 0.29 (max 3.6, 1.0/f) | entityShadows 0.14 (max 8.6, 7.5/f) | markersMapWorld 0.04 (max 0.2, 0.3/f) | unitOverlays 0.04 (max 0.1, 11/f) (+18 smaller); elsewhere 134.6 ms; 0 section re-mesh requests/s
+[19:46:18] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:46:21] [Render thread/INFO]: [Eyes] 15_heartwood_hall_r9_golden_rts: aimed at -184, 81, 51 - the camera at -192, 104, 59 looks at -184, 51 (51 frames, 5.0 s in the phase)
+[19:46:21] [Render thread/INFO]: [Eyes] 15_heartwood_hall_r9_golden_rts: the structure's box holds 1596 non-air blocks on the client
+[19:46:21] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_r9_golden_rts 1793907981381
+[19:46:21] [Server thread/INFO]: [Eyes] 15_heartwood_hall_r9_golden_rts: ... and 1596 on the server
+[19:46:21] [Render thread/INFO]: [System] [CHAT] 
+[19:46:21] [Render thread/INFO]: [System] [CHAT] Night falls...
+[19:46:21] [Render thread/INFO]: [System] [CHAT] 
+[19:46:21] [Server thread/INFO]: [Tick] p50 5.8 ms, p95 10.7 ms, max 13.6 ms over the last 100 ticks; 9 units, 7 buildings, 1 players
+[19:46:21] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:46:21] [IO-Worker-11/INFO]: [Eyes] 15_heartwood_hall_r9_golden_rts: Saved screenshot as bat_eyes_15_heartwood_hall_r9_golden_rts.png
+[19:46:25] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_r9_rts_t12600 1793907985467
+[19:46:25] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:46:26] [IO-Worker-5/INFO]: [Eyes] 15_heartwood_hall_r9_rts_t12600: Saved screenshot as bat_eyes_15_heartwood_hall_r9_rts_t12600.png
+[19:46:28] [Render thread/INFO]: [Frame] p50 114.6 ms (9 fps), p95 175.0 ms, max 258.2 ms over 240 frames; first-person view, zoom 30, 5 units known
+[19:46:28] [Render thread/INFO]: [FrameParts] 94 frames, mean 106.4 ms/frame; ours 0.7 ms (1%): buildingDecor 0.17 (max 2.2, 4.0/f) | markersMapWorld 0.13 (max 3.2, 0.8/f) | buildingBoxes 0.12 (max 5.5, 0.8/f) | markersRange 0.09 (max 0.7, 1.0/f) | entityShadows 0.08 (max 3.1, 19/f) | unitOverlays 0.07 (max 3.1, 11/f) (+17 smaller); elsewhere 105.6 ms; 0 section re-mesh requests/s
+[19:46:28] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:46:30] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_r9_34_t12600 1793907990600
+[19:46:30] [Server thread/INFO]: [Offline: Gamerule sendCommandFeedback is now set to: false]
+[19:46:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-185, 72, 40)]
+[19:46:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-183, 72, 40)]
+[19:46:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-185, 72, 60)]
+[19:46:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-183, 72, 60)]
+[19:46:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-194, 72, 49)]
+[19:46:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-194, 72, 51)]
+[19:46:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, 49)]
+[19:46:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, 51)]
+[19:46:30] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:46:30] [Render thread/INFO]: [Sfx] 382 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 1
+[19:46:31] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit.png (1024x1024) uploaded with 3 mip levels
+[19:46:31] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_team.png (1024x1024) uploaded with 3 mip levels
+[19:46:31] [IO-Worker-5/INFO]: [Eyes] 15_heartwood_hall_r9_34_t12600: Saved screenshot as bat_eyes_15_heartwood_hall_r9_34_t12600.png
+[19:46:31] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_glow.png (1024x1024) uploaded with 3 mip levels
+[19:46:31] [Server thread/INFO]: [Tick] p50 7.3 ms, p95 14.7 ms, max 33.8 ms over the last 100 ticks; 17 units, 7 buildings, 1 players
+[19:46:31] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:46:34] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[19:46:35] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_r9_rts_army 1793907995670
+[19:46:35] [Server thread/INFO]: [Offline: Killed 8 entities]
+[19:46:35] [Server thread/INFO]: [Eyes] 15_heartwood_hall: pad x -199..-169, z 35..65 keeps 81.1 blocks from the arena wall's ring (centre -10, 6, radius 280)
+[19:46:35] [Render thread/INFO]: [System] [CHAT] 
+[19:46:35] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[19:46:35] [Render thread/INFO]: [System] [CHAT] 
+[19:46:35] [Render thread/INFO]: [Eyes] 15_heartwood_hall: 'heartwood_hall' 15x30x15 placed at -191, 72, 43 (pad centre -184, 72, 50)
+[19:46:36] [IO-Worker-5/INFO]: [Eyes] 15_heartwood_hall_r9_rts_army: Saved screenshot as bat_eyes_15_heartwood_hall_r9_rts_army.png
+[19:46:38] [Render thread/INFO]: [Frame] p50 112.4 ms (9 fps), p95 184.9 ms, max 423.9 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:46:38] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.2 ms, p95 1.7 ms; unit render p50 19.8 ms, p95 38.1 ms; per unit 46.8 us anim, 2958.3 us render (anim 2%); RTS view, zoom 30, detail on, over 70 frames
+[19:46:38] [Render thread/INFO]: [FrameParts] 77 frames, mean 130.4 ms/frame; ours 24.1 ms (18%): unitBodies 20.00 (max 258.7, 6.5/f) | entityShadows 2.06 (max 77.5, 48/f) | worldFx 0.99 (max 48.9, 11/f) | markersWreck 0.31 (max 10.4, 1.0/f) | unitOverlays 0.20 (max 2.8, 11/f) | markersMapWorld 0.18 (max 3.3, 0.9/f) | markersRange 0.12 (max 3.4, 1.0/f) | buildingDecor 0.11 (max 1.2, 4.0/f) | bars 0.08 (max 4.2, 22/f) | buildingBoxes 0.03 (max 0.0, 0.9/f) (+14 smaller); elsewhere 106.3 ms; 0 section re-mesh requests/s
+[19:46:38] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.5, 9.8/t)
+[19:46:40] [Render thread/INFO]: [Eyes] 15_heartwood_hall_rts: aimed at -184, 81, 51 - the camera at -191, 102, 58 looks at -184, 51 (45 frames, 5.0 s in the phase)
+[19:46:40] [Render thread/INFO]: [Eyes] 15_heartwood_hall_rts: the structure's box holds 1589 non-air blocks on the client
+[19:46:40] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_rts 1793908000916
+[19:46:40] [Server thread/INFO]: [Eyes] 15_heartwood_hall_rts: ... and 1589 on the server
+[19:46:41] [IO-Worker-9/INFO]: [Eyes] 15_heartwood_hall_rts: Saved screenshot as bat_eyes_15_heartwood_hall_rts.png
+[19:46:41] [Server thread/INFO]: [Tick] p50 7.5 ms, p95 13.5 ms, max 18.2 ms over the last 100 ticks; 10 units, 8 buildings, 1 players
+[19:46:41] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:46:43] [Render thread/INFO]: [Sfx] 259 ticks, played/asked: units 1/8 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 1
+[19:46:45] [Render thread/INFO]: [Clock] tick 2412: 60 frames over 6099 ms; old clock (game time) advanced 0.00 with 32 steps back, new clock advanced 122.00 with 0 steps back
+[19:46:45] [Render thread/INFO]: [Clock] frames (ms,old,new): 0,6000.000,2412.000 84,6000.760,2413.760 174,6000.480,2415.480 258,6000.180,2417.180 341,6000.900,2418.900 429,6000.600,2420.600 519,6000.420,2422.420 609,6000.200,2424.200 704,6000.100,2426.100 804,6000.100,2428.100 902,6000.080,2430.080 987,6000.820,2431.820 1079,6000.600,2433.600 1169,6000.280,2435.280 1253,6000.080,2437.080 1367,6000.180,2439.180 1479,6000.600,2441.600 1593,6000.860,2443.860 1713,6000.220,2446.220 1865,6000.200,2449.200 1989,6000.740,2451.740 2128,6000.480,2454.480 2225,6000.440,2456.440 2329,6000.600,2458.600 2429,6000.600,2460.600 2531,6000.600,2462.600 2636,6000.760,2464.760 2733,6000.680,2466.680 2822,6000.460,2468.460 2935,6000.660,2470.660 3091,6000.680,2473.680 3222,6000.400,2476.400 3310,6000.220,2478.220 3416,6000.340,2480.340 3506,6000.140,2482.140 3591,6000.900,2483.900 3678,6000.580,2485.580 3765,6000.260,2487.260 3866,6000.260,2489.260 3956,6000.080,2491.080 4070,6000.280,2493.280 4187,6000.700,2495.700 4309,6000.060,2498.060 4421,6000.420,2500.420 4530,6000.620,2502.620 4636,6000.740,2504.740 4733,6000.700,2506.700 4822,6000.460,2508.460 4917,6000.360,2510.360 5029,6000.620,2512.620 5140,6000.820,2514.820 5278,6000.000,2517.000 5386,6000.740,2519.740 5497,6000.940,2521.940 5617,6000.300,2524.300 5707,6000.160,2526.160 5792,6000.860,2527.860 5922,6000.420,2530.420 6012,6000.280,2532.280 6099,6000.000,2534.000
+[19:46:48] [Render thread/INFO]: [ShaderBench] 15_heartwood_hall_rts: 60 frames, p50 88.80 ms, p95 119.80 ms, mean 95.49 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[19:46:48] [Render thread/INFO]: [Frame] p50 99.3 ms (10 fps), p95 170.8 ms, max 423.9 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:46:48] [Render thread/INFO]: [FrameParts] 102 frames, mean 97.8 ms/frame; ours 1.3 ms (1%): markersWreck 0.63 (max 3.9, 1.0/f) | entityShadows 0.28 (max 3.2, 94/f) | markersMapWorld 0.13 (max 3.2, 1.0/f) | markersRange 0.07 (max 2.1, 1.0/f) | worldFx 0.06 (max 0.5, 11/f) | unitOverlays 0.05 (max 0.1, 11/f) | buildingDecor 0.04 (max 3.0, 4.0/f) | buildingBoxes 0.04 (max 0.1, 1.0/f) (+15 smaller); elsewhere 96.5 ms; 0 section re-mesh requests/s
+[19:46:48] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:46:51] [Server thread/INFO]: [Tick] p50 5.9 ms, p95 10.4 ms, max 13.4 ms over the last 100 ticks; 10 units, 9 buildings, 1 players
+[19:46:51] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:46:52] [Render thread/INFO]: [Eyes] 15_heartwood_hall_rts_close: aimed at -184, 81, 51 - the camera at -191, 102, 58 looks at -184, 51 (46 frames, 4.1 s in the phase)
+[19:46:52] [Render thread/INFO]: [Eyes] 15_heartwood_hall_rts_close: the structure's box holds 1589 non-air blocks on the client
+[19:46:52] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_rts_close 1793908012881
+[19:46:52] [Server thread/INFO]: [Eyes] 15_heartwood_hall_rts_close: ... and 1589 on the server
+[19:46:52] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:46:53] [IO-Worker-10/INFO]: [Eyes] 15_heartwood_hall_rts_close: Saved screenshot as bat_eyes_15_heartwood_hall_rts_close.png
+[19:46:55] [Render thread/INFO]: [Sfx] 241 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[19:46:57] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_34 1793908017936
+[19:46:58] [Notification Thread/INFO]: [GC] pause 53 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1298 MB of 4096 MB
+[19:46:58] [IO-Worker-8/INFO]: [Eyes] 15_heartwood_hall_34: Saved screenshot as bat_eyes_15_heartwood_hall_34.png
+[19:46:58] [Render thread/INFO]: [Frame] p50 98.2 ms (10 fps), p95 163.1 ms, max 364.3 ms over 240 frames; first-person view, zoom 26, 5 units known
+[19:46:58] [Render thread/INFO]: [FrameParts] 83 frames, mean 120.4 ms/frame; ours 1.1 ms (1%): markersWreck 0.35 (max 3.5, 1.0/f) | buildingDecor 0.24 (max 0.7, 4.0/f) | markersRange 0.21 (max 4.7, 1.0/f) | entityShadows 0.09 (max 0.2, 50/f) | markersMapWorld 0.05 (max 0.1, 0.6/f) | unitOverlays 0.05 (max 0.2, 11/f) | bars 0.04 (max 2.3, 22/f) (+17 smaller); elsewhere 119.3 ms; 0 section re-mesh requests/s
+[19:46:58] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:47:01] [Server thread/INFO]: [Tick] p50 8.1 ms, p95 14.6 ms, max 20.7 ms over the last 100 ticks; 12 units, 9 buildings, 1 players
+[19:47:01] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:47:03] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_front 1793908023080
+[19:47:03] [Render thread/INFO]: [Eyes] 15_heartwood_hall_close: standing at -187.0, 88.0, 54.0 (direction -1, 1 from the middle), eye 1.00 over the aim, pitch 11 down
+[19:47:03] [IO-Worker-9/INFO]: [Eyes] 15_heartwood_hall_front: Saved screenshot as bat_eyes_15_heartwood_hall_front.png
+[19:47:04] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[19:47:08] [Render thread/INFO]: [Eyes] 15_heartwood_hall_close: aimed at -184, 87, 51 - the camera at -187, 88, 54 looks at -184, 51 (34 frames, 5.1 s in the phase)
+[19:47:08] [Render thread/INFO]: [Eyes] 15_heartwood_hall_close: the structure's box holds 1589 non-air blocks on the client
+[19:47:08] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_close 1793908028148
+[19:47:08] [Server thread/INFO]: [Eyes] 15_heartwood_hall_close: ... and 1589 on the server
+[19:47:08] [Render thread/INFO]: [System] [CHAT] 
+[19:47:08] [Render thread/INFO]: [System] [CHAT] Night falls...
+[19:47:08] [Render thread/INFO]: [System] [CHAT] 
+[19:47:08] [IO-Worker-10/INFO]: [Eyes] 15_heartwood_hall_close: Saved screenshot as bat_eyes_15_heartwood_hall_close.png
+[19:47:08] [Render thread/INFO]: [Frame] p50 112.7 ms (9 fps), p95 185.5 ms, max 260.4 ms over 240 frames; first-person view, zoom 26, 5 units known
+[19:47:08] [Render thread/INFO]: [FrameParts] 66 frames, mean 149.8 ms/frame; ours 0.6 ms (0%): markersRange 0.19 (max 2.3, 1.0/f) | buildingDecor 0.18 (max 6.6, 4.0/f) | unitOverlays 0.14 (max 3.2, 11/f) | worldFx 0.09 (max 5.0, 11/f) (+16 smaller); elsewhere 149.2 ms; 0 section re-mesh requests/s
+[19:47:08] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:47:11] [Server thread/INFO]: [Tick] p50 8.1 ms, p95 14.8 ms, max 44.5 ms over the last 100 ticks; 12 units, 10 buildings, 1 players
+[19:47:11] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:47:12] [Render thread/INFO]: [Eyes] 15_heartwood_hall_dusk: the last drawn frame saw day time 13000
+[19:47:12] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_dusk 1793908032555
+[19:47:12] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:47:12] [IO-Worker-8/INFO]: [Eyes] 15_heartwood_hall_dusk: Saved screenshot as bat_eyes_15_heartwood_hall_dusk.png
+[19:47:13] [Notification Thread/INFO]: [GC] 2 collections took 100 ms of the last 15 s
+[19:47:15] [Render thread/INFO]: [Sfx] 399 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 1
+[19:47:17] [Render thread/INFO]: [Eyes] 15_heartwood_hall_golden_rts: aimed at -184, 81, 51 - the camera at -191, 102, 58 looks at -184, 51 (53 frames, 5.0 s in the phase)
+[19:47:17] [Render thread/INFO]: [Eyes] 15_heartwood_hall_golden_rts: the structure's box holds 1589 non-air blocks on the client
+[19:47:17] [Server thread/INFO]: [Eyes] 15_heartwood_hall_golden_rts: ... and 1589 on the server
+[19:47:17] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_golden_rts 1793908037570
+[19:47:17] [Render thread/INFO]: [System] [CHAT] 
+[19:47:17] [Render thread/INFO]: [System] [CHAT] Night falls...
+[19:47:17] [Render thread/INFO]: [System] [CHAT] 
+[19:47:18] [IO-Worker-10/INFO]: [Eyes] 15_heartwood_hall_golden_rts: Saved screenshot as bat_eyes_15_heartwood_hall_golden_rts.png
+[19:47:18] [Render thread/INFO]: [Frame] p50 130.6 ms (8 fps), p95 189.9 ms, max 260.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:47:18] [Render thread/INFO]: [FrameParts] 91 frames, mean 110.8 ms/frame; ours 1.4 ms (1%): markersWreck 0.47 (max 3.5, 1.0/f) | markersMapWorld 0.24 (max 8.6, 0.7/f) | entityShadows 0.20 (max 3.2, 66/f) | buildingDecor 0.18 (max 0.7, 4.0/f) | markersRange 0.12 (max 3.4, 1.0/f) | unitOverlays 0.07 (max 2.4, 11/f) | buildingBoxes 0.06 (max 3.1, 0.7/f) (+16 smaller); elsewhere 109.4 ms; 0 section re-mesh requests/s
+[19:47:18] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:47:21] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_rts_t12600 1793908041591
+[19:47:21] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:47:21] [Server thread/INFO]: [Tick] p50 7.4 ms, p95 11.0 ms, max 13.2 ms over the last 100 ticks; 14 units, 11 buildings, 1 players
+[19:47:21] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:47:22] [IO-Worker-10/INFO]: [Eyes] 15_heartwood_hall_rts_t12600: Saved screenshot as bat_eyes_15_heartwood_hall_rts_t12600.png
+[19:47:26] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_34_t12600 1793908046736
+[19:47:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-185, 72, 40)]
+[19:47:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-183, 72, 40)]
+[19:47:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-185, 72, 60)]
+[19:47:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-183, 72, 60)]
+[19:47:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-194, 72, 49)]
+[19:47:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-194, 72, 51)]
+[19:47:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, 49)]
+[19:47:26] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, 51)]
+[19:47:26] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:47:27] [IO-Worker-2/INFO]: [Eyes] 15_heartwood_hall_34_t12600: Saved screenshot as bat_eyes_15_heartwood_hall_34_t12600.png
+[19:47:28] [Render thread/INFO]: [Frame] p50 129.9 ms (8 fps), p95 181.6 ms, max 293.3 ms over 240 frames; RTS view, zoom 30, 13 units known
+[19:47:28] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.2 ms; unit render p50 10.5 ms, p95 22.2 ms; per unit 15.1 us anim, 1771.2 us render (anim 1%); RTS view, zoom 30, detail on, over 18 frames
+[19:47:28] [Render thread/INFO]: [FrameParts] 83 frames, mean 120.7 ms/frame; ours 4.6 ms (4%): unitBodies 3.20 (max 27.2, 1.7/f) | entityShadows 0.44 (max 7.0, 57/f) | markersWreck 0.31 (max 3.4, 1.0/f) | buildingDecor 0.30 (max 3.4, 4.0/f) | unitOverlays 0.11 (max 3.1, 11/f) | markersRange 0.08 (max 0.3, 1.0/f) | markersMapWorld 0.05 (max 0.2, 0.6/f) | buildingBoxes 0.04 (max 2.1, 0.6/f) | worldFx 0.03 (max 1.4, 11/f) (+15 smaller); elsewhere 116.1 ms; 0 section re-mesh requests/s
+[19:47:28] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:47:31] [Server thread/INFO]: [Tick] p50 7.7 ms, p95 15.4 ms, max 21.0 ms over the last 100 ticks; 22 units, 11 buildings, 1 players
+[19:47:31] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[19:47:31] [Render thread/INFO]: [Eyes] clip-mark 15_heartwood_hall_rts_army 1793908051767
+[19:47:31] [Server thread/INFO]: [Offline: Killed 8 entities]
+[19:47:32] [Render thread/INFO]: [Sfx] 326 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 1
+[19:47:32] [IO-Worker-2/INFO]: [Eyes] 15_heartwood_hall_rts_army: Saved screenshot as bat_eyes_15_heartwood_hall_rts_army.png
+[19:47:34] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[19:47:34] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[19:47:34] [Render thread/INFO]: [Eyes] tour complete
+[19:47:34] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[19:47:34] [Render thread/INFO]: Stopping!
+[19:47:34] [Server thread/INFO]: Offline lost connection: Disconnected
+[19:47:34] [Server thread/INFO]: Offline left the game
+[19:47:34] [Server thread/INFO]: Player logged out: Offline, id: 2
+[19:47:34] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[19:47:34] [Server thread/INFO]: RTSPlayerSaveData.load
+[19:47:34] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1207|0
+[19:47:34] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1376|575|0
+[19:47:34] [Server thread/INFO]: Stopping server
+[19:47:34] [Server thread/INFO]: Saving players
+[19:47:34] [Server thread/INFO]: Saving worlds
+[19:47:34] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[19:47:34] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[19:47:34] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[19:47:34] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[19:47:34] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[19:47:34] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[19:47:34] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[19:47:34] [Render thread/INFO]: Stopping worker threads
