@@ -26,7 +26,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -353,7 +352,7 @@ public class GatherResourcesGoal extends MoveToTargetBlockGoal {
                         boolean isLogBlock = isLogBlock(bs);
                         boolean isFallingLogBlock = isFallingLogBlock(bs);
                         if (isLogBlock)
-                            ResourcesServerEvents.fellAdjacentLogs(data.gatherTarget, new ArrayList<>(), this.mob.level());
+                            ResourcesServerEvents.fellAdjacentLogs(data.gatherTarget, this.mob.level());
 
                         ResourceName expName = ResourceName.NONE;
                         if (ResourceSources.getBlockResourceName(getGatherTarget(), mob.level()) == ResourceName.FOOD && isFarming())
