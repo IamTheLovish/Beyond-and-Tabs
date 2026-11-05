@@ -2191,13 +2191,25 @@ public final class EyesDirector {
                 // 39295387553 for 5169d6d) - and the body is what these clips exist to show. The dummies still die
                 // under the blows, so the clip keeps its kill. rtsapi-summon loads the entity from the nbt it is given
                 int dummyAt = names.length > 6 ? Integer.parseInt(names[6]) : 2;
+                // artillery (names[6] set): the dummies stand on the real ground dummyAt blocks off (the walk ended on a
+                // ledge, and a ghoul spawned at the unit's y inside the next rise suffocated), and the battery is ORDERED
+                // to shell that spot: the run of Nov 5 (42045632661) showed it never picking the NoAI dummies by itself,
+                // so the clip held a battery standing still. The clip window is [mark - 4 s, mark + 6 s], so the still
+                // comes 2.5 s after the order - the rockets are in the air then - not 5 s, after the volley is over
+                boolean artillery = names.length > 6;
+                int dummyX = (int) Math.floor(unit.getX()) + dummyAt, dummyZ = (int) Math.floor(unit.getZ());
+                int dummyY = artillery ? mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, dummyX, dummyZ) : (int) Math.floor(unit.getY());
                 if (enemyName != null)
                     for (int k = 0; k < 2; k++)
                         runCommand(mc, String.format("rtsapi-summon \"%s\" %s:zombie_unit %d %d %d {NoAI:1b}", enemyName.replace("\"", ""),
-                                ReignOfNether.MOD_ID, (int) Math.floor(unit.getX()) + dummyAt, (int) Math.floor(unit.getY()),
-                                (int) Math.floor(unit.getZ()) - 1 + 2 * k));
+                                ReignOfNether.MOD_ID, dummyX, dummyY, dummyZ - 1 + 2 * k));
                 ReignOfNether.LOGGER.info("[Eyes] {}: two ghouls of '{}' at its feet, AI off (dummies)", names[3], enemyName);
-                closeUpAt = ticks + 100;   // several swings / throws inside the clip
+                if (artillery) {
+                    BlockPos at = new BlockPos(dummyX, dummyY, dummyZ);
+                    UnitClientEvents.sendUnitCommandManual(UnitAction.ATTACK_GROUND, -1, new int[] { closeUpId }, at);
+                    ReignOfNether.LOGGER.info("[Eyes] {}: ordered to attack the ground at {}", names[3], at.toShortString());
+                }
+                closeUpAt = ticks + (artillery ? 50 : 100);   // several swings / throws inside the clip
             }
             closeUpPhase++;
         }
