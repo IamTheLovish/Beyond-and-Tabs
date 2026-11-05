@@ -198,14 +198,17 @@ def curved_roof(r, x1, x2, z1, z2, y, chimes, flush_north=True):
     """The kit's curved pagoda roof with its lip on the rectangle [x1..x2] x [z1..z2] at y (the capitol's roof(), drawn
     on a rectangle): along each side a stair, low edge out, in dark oak (the hem: Fable critic B, Nov 4); the cells next to a corner lift a block (jade + a slab
     on it) so the eave sweeps up; the corner itself a gold block under an upturned jade slab tip. The north side is
-    flush with the footprint (nobody sees it), so its lip is a plain jade course. Inside the lip a flat jade band.
+    flush with the footprint (nobody sees it), so its lip is a plain jade course. Inside the lip the roof is PITCHED
+    (lovish's pick D, Nov 5: "pitched jade + stone apron"; Fable critic r1: "flat, light teal slabs" where the quality
+    bar's roofs are the darkest, steepest shapes): each cell climbs one block per cell in from the west, south and east
+    edges (and the north one when it is not flush) in jade stairs, two steps up, to a DARK OAK ridge.
     Returns the corner cells for chimes."""
     corners = [(x1, z1), (x2, z1), (x1, z2), (x2, z2)]
     for x in range(x1, x2 + 1):
         for z in range(z1, z2 + 1):
             edge_x, edge_z = x in (x1, x2), z in (z1, z2)
             if not (edge_x or edge_z):
-                r.set(x, y, z, JADE)          # the band
+                pitch(r, x, y, z, x1, x2, z1, z2, flush_north)
                 continue
             if (x, z) in corners:              # jade, not gold: gold corners read as "studs" / "dots" (Nov 1)
                 r.set(x, y, z, JADE)
@@ -213,7 +216,7 @@ def curved_roof(r, x1, x2, z1, z2, y, chimes, flush_north=True):
                 continue
             near = (edge_z and x in (x1 + 1, x2 - 1)) or (edge_x and z in (z1 + 1, z2 - 1))
             if z == z1 and flush_north:
-                r.set(x, y, z, JADE)
+                pitch(r, x, y, z, x1, x2, z1, z2, flush_north)      # the hidden back climbs with the rest
                 continue
             if near and (x2 - x1 >= 4):
                 r.set(x, y, z, JADE)
@@ -223,6 +226,20 @@ def curved_roof(r, x1, x2, z1, z2, y, chimes, flush_north=True):
             r.st(x, y, z, f, name=OAK_ST)     # the dark hem on every eave (Fable critic B, Nov 4)
     for (x, z) in corners:
         chimes.append((x, y - 1, z))
+
+
+def pitch(r, x, y, z, x1, x2, z1, z2, flush_north):
+    """One cell inside a roof's lip: d = its distance in from the nearest seen edge; jade under it, then a jade stair
+    one up per cell (facing in, the low edge out) until two up, where the ridge is dark oak."""
+    sides = [(z2 - z, "north"), (x - x1, "east"), (x2 - x, "west")] + ([] if flush_north else [(z - z1, "south")])
+    d, f = min(sides, key=lambda t: t[0])
+    h = min(d, 2)
+    for k in range(h):
+        r.set(x, y + k, z, JADE)
+    if h < 2:
+        r.st(x, y + h, z, f)
+    else:
+        r.set(x, y + 2, z, OAK)
 
 
 def hang_chimes(r, chimes):
@@ -287,8 +304,11 @@ def court_floor(x, z):
     the noon still - "the floor owns the lights"): a plain stone court in the mids (0.40 from above on the Nov stills;
     smooth stone, the first try, read 0.63), a polished andesite path from the gate to the spawn cell with a short cross
     arm, stone bricks under the hall where the camera does not see them (both starting types stay in layer 0)."""
-    if z <= 3:
-        return "stone_bricks"
+    if x == C and z == SZ - 1:
+        return "polished_andesite"     # the path's mouth on the south edge (lovish's pick D, Nov 5; a 3-wide threshold
+                                       # put the L2 court at 0.39 in the lights on camera, cap 0.35)
+    if z <= 3 or x in (0, SX - 1) or z == SZ - 1:
+        return "stone_bricks"          # under the hall, and the kerb: the plot's own ring (the footprint never grows)
     if x == C or (z == 4 and x in (C - 1, C + 1)):
         return "polished_andesite"
     return "stone"
@@ -310,13 +330,19 @@ def galleries(r):
             r.rod(out, 2, z)
         for z in range(GALLERY[0], GALLERY[1] + 1):
             r.set(out, 3, z, OAK)
+        # a lean-to (lovish's pick D, Nov 5): the dark hem at the court (low edge out), a jade step, a dark oak ridge
+        # on the outer wall the camera sees; the ridge's ends lift as jade slab tips
+        up = "west" if out == 0 else "east"
         for z in range(GALLERY[0], GALLERY[1] + 1):
             mid, lip = (1, 2) if out == 0 else (SX - 2, SX - 3)
             r.set(out, 4, z, JADE)
             r.set(mid, 4, z, JADE)
-            r.st(lip, 4, z, "east" if out == 0 else "west", name=OAK_ST)    # the dark hem (Fable critic B)
-        for z in (GALLERY[0], GALLERY[1]):
-            r.slab(out, 5, z)                              # the eave's lifted ends
+            r.st(lip, 4, z, up, name=OAK_ST)               # the dark hem (Fable critic B)
+            r.st(mid, 5, z, up)
+            if z in (GALLERY[0], GALLERY[1]):
+                r.slab(out, 5, z)                          # the eave's lifted ends
+            else:
+                r.set(out, 5, z, OAK)
 
 
 def hall_l1(r):
@@ -371,20 +397,7 @@ def roof1(r, chimes):
     # rafter ends under the front lip, every other cell
     for x in (2, 4, 6):
         r.st(x, R1 - 1, 3, "north", "top", OAK_ST)
-    # the second course climbing onto the band, the ridge with gold ends and rods
-    for x in range(2, 7):
-        r.st(x, R1 + 1, 2, "north")
-        r.st(x, R1 + 1, 1, "south")
-    for z in (1, 2):
-        r.st(1, R1 + 1, z, "east")
-        r.st(7, R1 + 1, z, "west")
-    for x in range(3, 6):
-        r.slab(x, R1 + 2, 1)
-        r.slab(x, R1 + 2, 2)
-    for x in (2, 6):                       # the ridge ends: a gold "owl tail" toward the camera, a rod on it
-        r.set(x, R1 + 2, 1, JADE)
-        r.set(x, R1 + 2, 2, JADE)          # jade, not gold (Nov 1: one gold leader, the lotus)
-        r.rod(x, R1 + 3, 2)
+    # the pitch (curved_roof) climbs to the ridge the second storey stands on (hall_l2, drawn at L1 too)
 
 
 def draw_l1(r):
@@ -445,16 +458,7 @@ def hall_l2(r, chimes):
     curved_roof(r, 1, 7, 0, 3, R2, chimes)
     for x in (3, 5):
         r.st(x, R2 - 1, 3, "north", "top", OAK_ST)       # rafter ends
-    # its course and ridge: gold "owl-tail" ends with rods, a jade ridge between
-    for x in range(3, 6):
-        r.st(x, R2 + 1, 2, "north")
-        r.st(x, R2 + 1, 1, "south")
-    for z in (1, 2):
-        r.st(2, R2 + 1, z, "east")
-        r.st(6, R2 + 1, z, "west")
-    for x in (3, 5):
-        r.set(x, R2 + 2, 1, JADE)
-        r.set(x, R2 + 2, 2, JADE)
+    # its pitch climbs to a dark oak ridge (curved_roof); the lotus stands on it
     # lanterns on the first roof's band at the ends, like lamps set out on a balcony
     for x in (1, 7):
         r.lantern(x, R1 + 1, 2) if r.get(x, R1, 2)[0] == JADE else None
