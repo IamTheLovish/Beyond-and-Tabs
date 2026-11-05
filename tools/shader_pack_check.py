@@ -285,17 +285,47 @@ def option_variants(source):
     return out
 
 
-# a program-scope declaration the loader binds or a stage passes on: `uniform vec3 cameraPosition;`
-DECLARATION = re.compile(r"^\s*(uniform|varying|attribute)\s+\w+\s+(\w+)\s*(?:\[[^\]]*\])?\s*;", re.M)
+# a program-scope declaration the loader binds or a stage passes on, as GLSL allows it: optional interpolation /
+# invariance qualifiers, the storage qualifier, an optional precision, the type, then one or more names - each maybe
+# an array, maybe with an initialiser (`uniform vec3 a, b;`, `flat varying highp float k[2];`, `uniform float s = 1.0;`)
+DECLARATION = re.compile(
+    r"^[ \t]*(?:(?:invariant|flat|smooth|noperspective|centroid)\s+)*(uniform|varying|attribute)\s+"
+    r"(?:(?:lowp|mediump|highp)\s+)?\w+\s+([^;{}()]*?(?:\([^;{}]*\)[^;{}()]*?)*);", re.M)
+
+
+def declared_names(declarators):
+    """The names in a declaration's list: `a, b[2], c = vec3(1.0, 0.0, 0.0)` -> [a, b, c]. Commas inside an
+    initialiser's brackets do not split it."""
+    names, depth, part = [], 0, ""
+    for ch in declarators + ",":
+        if ch in "([":
+            depth += 1
+        elif ch in ")]":
+            depth -= 1
+        if ch == "," and depth == 0:
+            m = re.match(r"\s*(\w+)", part)
+            if m:
+                names.append(m.group(1))
+            part = ""
+        else:
+            part += ch
+    return names
 
 
 def duplicate_declarations(source):
     """Names a program declares twice (GLSL 120 rejects a second `uniform vec3 cameraPosition;`), after its #if /
-    #ifdef are applied (preprocess): [(name, count)]."""
+    #ifdef are applied (preprocess) and with its comments gone: [(name, count)]."""
     counts = {}
-    for _, name in DECLARATION.findall(preprocess(source)):
-        counts[name] = counts.get(name, 0) + 1
+    for _, declarators in DECLARATION.findall(code_lines(preprocess(source))):
+        for name in declared_names(declarators):
+            counts[name] = counts.get(name, 0) + 1
     return sorted((n, c) for n, c in counts.items() if c > 1)
+
+
+def code_lines(source):
+    """The source without its comments, its lines kept (so a statement still starts a line)."""
+    source = re.sub(r"/\*.*?\*/", lambda m: "\n" * m.group(0).count("\n"), source, flags=re.S)
+    return re.sub(r"//[^\n]*", "", source)
 
 
 def variants_of(base):

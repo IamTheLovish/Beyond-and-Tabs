@@ -353,6 +353,22 @@ class ShaderPack(unittest.TestCase):
         self.assertGreater(base, 0.5)
         self.assertLessEqual(top / ((1.0 - base) * 255.0), 0.07)    # one step <= 0.07 blocks
 
+    def test_rts_view_reads_terrain_textures_sharper(self):
+        # lovish, Oct 30: "better resolution for rts view". Under the orthographic RTS camera a 128 px block texture is
+        # read from the atlas's mip 2 and reads soft; terrain reads TEXTURE_SHARPNESS mip levels finer (a negative
+        # bias), first person and everything but terrain keep the hardware's choice, and the relief and material maps
+        # read at the same bias as the albedo (a sharp albedo over blurred relief looks painted on). Eris.14 (#437 r2):
+        # without this, `lodBias = 0.0` or a flipped sign passed every test
+        code = spc.code_of(read("program", "lit.fsh"))
+        self.assertIn("#ifdef LIT_TERRAIN float lodBias = orthoView() ? -TEXTURE_SHARPNESS : 0.0; #else "
+                      "float lodBias = 0.0; #endif", code)
+        self.assertIn("readMaterial(texture2D(normals, texcoord, lodBias), texture2D(specular, texcoord, lodBias),", code)
+        m = re.search(r"(?m)^#define TEXTURE_SHARPNESS (\S+) // \[([^\]]*)\]", read("lib", "settings.glsl"))
+        self.assertIsNotNone(m)
+        default, values = float(m.group(1)), [float(v) for v in m.group(2).split()]
+        self.assertTrue(0.0 < default <= 1.0, default)          # on by default, never past one whole mip level
+        self.assertEqual((min(values), max(values)), (0.0, 1.0))  # the screen can turn it off
+
     def test_water_body_has_no_seams_and_leans_to_the_palette(self):
         # Fable critic, rounds 1 and 2: a grid of seams across the pond (the water texture's per-block pattern) and a
         # grey body with a black far bank. The water reads its texture's average and the ripples draw the detail; the
@@ -416,8 +432,26 @@ class ShaderPack(unittest.TestCase):
         for name in spc.programs():
             for label, src in spc.variants_of(spc.expand(os.path.join(spc.SHADERS, name))):
                 self.assertEqual(spc.duplicate_declarations(src), [], "%s [%s]" % (name, label or "defaults"))
-        for lib in ("wind.glsl", "clouds.glsl", "water.glsl", "pbr.glsl", "light.glsl", "shadow.glsl"):
-            self.assertNotRegex(read("lib", lib), r"(?m)^\s*uniform\s+\w+\s+(cameraPosition|frameTimeCounter)\s*;", lib)
+        # only lib/world.glsl declares the two world uniforms
+        for dirpath, _, files in os.walk(spc.SHADERS):
+            for n in files:
+                if n.endswith((".vsh", ".fsh", ".glsl")) and n != "world.glsl":
+                    with open(os.path.join(dirpath, n), encoding="utf-8") as f:
+                        src = spc.code_lines(f.read())
+                    names = [x for _, d in spc.DECLARATION.findall(src) for x in spc.declared_names(d)]
+                    self.assertNotIn("cameraPosition", names, n)
+                    self.assertNotIn("frameTimeCounter", names, n)
+        # the check reads every way GLSL can write a declaration (Eris.14, #437 r2): a list of names, an initialiser,
+        # an array, precision and interpolation qualifiers; comments and function parameters are not declarations
+        for src, want in (("uniform vec3 a, b;\nuniform float b;", [("b", 2)]),
+                          ("flat varying highp float k[2];\nvarying float k;", [("k", 2)]),
+                          ("uniform float s = 1.0;\nuniform float s;", [("s", 2)]),
+                          ("uniform vec3 c = vec3(1.0, 0.0, 0.0), d;\nuniform vec3 d;", [("d", 2)]),
+                          ("invariant varying vec4 p;\ncentroid varying vec4 p;", [("p", 2)]),
+                          ("uniform mediump sampler2D t; // uniform sampler2D t;", []),
+                          ("/* uniform float x;\n */\nuniform float x;", []),
+                          ("void f(in float a) { float x = 1.0; }\nuniform float a;", [])):
+            self.assertEqual(spc.duplicate_declarations("#version 120\n" + src), want, src)
 
     def test_noon_light_leaves_open_ground_its_colour(self):
         # lib/light.glsl aims open ground at noon to come out at its albedo. Itachi 1 measured the lawn under the pack

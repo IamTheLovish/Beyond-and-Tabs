@@ -21,9 +21,10 @@ const bool shadowHardwareFiltering = false;
 // soft shadows (slice 3, lib/shadow.glsl): sharp at the caster's foot, softer the farther the shadow falls, as the
 // sun's disc makes them. Off: slice 1's crisp edge everywhere
 #define SOFT_SHADOWS 1 // [0 1]
-// how much of the sun a plant's shadow takes (grass, flowers, crops: ID_FOLIAGE). lovish, Nov 5: "Try faint shadow +
-// lit side"; from Oct 28 they cast none, as hard shadows read as dark stars under every tuft. 0.30 leaves the ground
-// under a tuft at ~0.82 of the open lawn at noon (tools/test_shader_pack.py holds 0.80-0.92)
+// how much of the sun a plant's shadow takes (grass, flowers, crops: ID_FOLIAGE, and the upper half of a two-block
+// plant: ID_FOLIAGE_UPPER - shadow.vsh). lovish, Nov 5: "Try faint shadow + lit side"; from Oct 28 they cast none,
+// as hard shadows read as dark stars under every tuft. 0.30 leaves the ground under a tuft at ~0.82 of the open lawn
+// at noon (tools/test_shader_pack.py holds 0.80-0.92)
 const float PLANT_SHADOW = 0.30;
 // vanilla's per-vertex ambient occlusion, kept (it arrives in the vertex colour's alpha: separateAo)
 const float ambientOcclusionLevel = 1.0;
