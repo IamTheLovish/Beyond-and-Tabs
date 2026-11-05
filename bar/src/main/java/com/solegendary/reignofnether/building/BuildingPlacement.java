@@ -627,19 +627,33 @@ public class BuildingPlacement {
 
     /**
      * Whether a unit can stand at a ring cell taken at the foundation's height, either way callers use it (a move
-     * target, an "on pos"): its feet in the cell (a floor under it, or a low block in it such as a carpet, a bottom
-     * slab or snow), or its feet on the cell (the cell a floor, the one above clear or low). Two clear means nothing
-     * that blocks a body: a collision box reaching above half a block.
+     * target, an "on pos"), with room for a body about two blocks tall:
+     * <ul>
+     *   <li>the cell is a floor: feet on it (on a carpet, bottom slab or snow over it, if one), the block above that free;</li>
+     *   <li>else feet in the cell, on a low block in it or on the floor under it, with nothing at all in the block above
+     *       (a bottom slab floating at head height over air is a ceiling, not standing room); on a low block the head
+     *       reaches into the block two above, so that one must be free too.</li>
+     * </ul>
      */
     private boolean standableAt(BlockPos bp, BlockState atBp, BlockState below) {
         BlockPos up = bp.above();
         BlockState atUp = level.getBlockState(up);
-        if (blocksBody(atUp, up))
-            return false;   // both ways need the cell above free for the body
-        if (!blocksBody(atBp, bp))   // feet in the cell: a floor under it, or a low block in it
-            return !atBp.getCollisionShape(level, bp).isEmpty() || !below.getCollisionShape(level, bp.below()).isEmpty();
-        BlockPos up2 = bp.above(2);   // the cell is a floor: feet on it, the next two free
-        return !blocksBody(level.getBlockState(up2), up2);
+        BlockPos up2 = bp.above(2);
+        if (blocksBody(atBp, bp)) {   // a floor: feet on it
+            if (blocksBody(atUp, up) || !free(up2))
+                return false;
+            return atUp.getCollisionShape(level, up).isEmpty() || free(bp.above(3));   // raised by a low block above
+        }
+        if (!atUp.getCollisionShape(level, up).isEmpty())
+            return false;   // feet in the cell: the block above must hold nothing
+        if (!atBp.getCollisionShape(level, bp).isEmpty())
+            return free(up2);   // on a low block in the cell: the head reaches into the block two above
+        return !below.getCollisionShape(level, bp.below()).isEmpty();
+    }
+
+    private boolean free(BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.isAir() || state.getCollisionShape(level, pos).isEmpty();
     }
 
     /** A collision box reaching above half a block: not a carpet, a bottom slab or a few layers of snow. */
