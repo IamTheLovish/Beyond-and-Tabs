@@ -185,10 +185,14 @@ CROWN = "smooth_basalt"                          # no vertical grain (round 1: "
 RIM = "blackstone_stairs"
 GLOW = "shroomlight"                             # ONE glow: the crater
 GATE = "obsidian"
-FRAME = "smooth_stone"                           # the gate's light surround
+FRAME = "waxed_cut_copper"                       # the gate's pylons in the kit's bronze (Fable critic A, Nov 4: the
+                                                 # capitol had no accent of its own; was light smooth stone)
 AXIS_ST = "polished_blackstone_brick_stairs"     # the processional stair on the gate axis
-RAIL = "tuff"                                    # mid rails either side of the stair (0.34 up): round 3's
-                                                 # polished andesite made a "pale pad" over the gate (r3 critic b)
+RAIL = "waxed_exposed_cut_copper"                # worn bronze rails either side of the stair (was tuff; round 3's
+                                                 # polished andesite made a "pale pad" over the gate, r3 critic b)
+BRONZE_W = "waxed_exposed_cut_copper"            # worn bronze: the crown's top course
+FOOT = ("basalt", "polished_basalt")             # the kit's column wall (ashborn_lab_parts: the ground storey
+                                                 # everywhere), jointed: basalt prisms, a polished basalt joint
 
 INWARD = {(-1, 0): "east", (1, 0): "west", (0, -1): "south", (0, 1): "north"}
 OUTWARD = {(-1, 0): "west", (1, 0): "east", (0, -1): "north", (0, 1): "south"}
@@ -290,6 +294,12 @@ def build():
     c.fill(0, 0, 0, 14, 0, 14, START)                                   # y 0: the pad, the starting type
     # T1, the plinth (k 7, y 1-3): blackstone-brick piers and dark bays, tuff paving on top, a light rim
     _tier(c, 7, 1, 3, piers=(7, 4, 1), wall=PLINTH, bay_rows=(1, 2))
+    for o in SIDES:                                 # Fable critic A, Nov 4: the piers as basalt columns, jointed at
+        for t in range(-7, 8):                      # y 2 - the Ashborn lab's foot, not the Gravebound's brick
+            if abs(t) in (7, 4, 1):
+                x, z = _at(o, 7, t)
+                for y in (1, 2, 3):
+                    c.set(x, y, z, FOOT[1] if y == 2 else FOOT[0], axis="y")
     _paving(c, 6, 3)
     _rim(c, 7, 4)
     # T2 (k 5, y 4-8) on a sloped foot at k 6, basalt piers and bays
@@ -319,11 +329,17 @@ def build():
     for sx in (-2, 2):
         for sz in (-2, 2):
             c.set(C + sx, 17, C + sz, "blackstone")
+    for o in SIDES:                                 # the crown's top course in worn bronze (Fable critic A)
+        for t in range(-2, 3):
+            x, z = _at(o, 2, t)
+            c.set(x, 16, z, BRONZE_W)
     for dx in range(-1, 2):
         for dz in range(-1, 2):
             c.set(C + dx, 16, C + dz, CROWN)
-            c.set(C + dx, 17, C + dz, GLOW if dx * dz == 0 else "blackstone")  # round 4: the glow level with the lip, so it reads in 3/4 and at
-                                                 # dusk - round 3's sunk pool was "a dot" below ~60 deg (r3 a/b)
+            # round 4: the glow level with the lip, so it reads in 3/4 and at dusk (round 3's sunk pool was "a dot");
+            # Nov 4 (Fable critics A fix 1, C F5): one irregular patch - the 3 x 3 but its north-east corner - not
+            # the plus that read as an orange X / team mark, so the dusk read is a vent, not the Mausoleum's twin
+            c.set(C + dx, 17, C + dz, "blackstone" if (dx, dz) == (1, -1) else GLOW)
     c.set(7, 18, 7, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
     # round 4: no notches - the glow sits level with the lip, so the lip no longer hides it (round 3's notches were
     # the only way to see a pool sunk below it)
@@ -350,6 +366,14 @@ def build():
     for y in (13, 14):                              # the shrine door
         x, z = _at(WEST, 2, 0)
         c.set(x, y, z, GATE)
+    # the gate mouth open to the sky (lovish, Nov 4: "Ashborn: open gate mouth"; Fable critic A: from the RTS camera
+    # the mouth was invisible under the lintel and the T2 batter): the outer two cells of the mouth lose their roof,
+    # so the camera looks down into a dark forecourt cut into the plinth, the obsidian back wall under T2 behind it;
+    # the processional stair now starts at T2's face
+    for a in (6, 7):
+        for t in (-1, 0, 1):
+            x, z = _at(WEST, a, t)
+            c.clear(x, 1, z, x, SY - 1, z)
     return c
 
 

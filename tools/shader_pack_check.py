@@ -25,6 +25,9 @@ CLEAN_ROOM = "Original work, written clean-room"
 INCLUDE = re.compile(r'^\s*#include\s+"([^"]+)"\s*$')
 # a loader macro some programs test for, and a value for it (the loader defines the render stages as small ints)
 LOADER_MACROS = {"MC_RENDER_STAGE_STARS": "5"}
+# option-screen switches (lib/settings.glsl `#define NAME value // [...]`) compiled at a non-default value as well: one
+# variant per entry, each applied to the programs that read it
+OPTION_VARIANTS = [{"MATERIALS": "0"}, {"WATER_REALISM": "0"}, {"CAUSTICS": "0"}, {"SSR": "0"}, {"CAUSTICS": "0", "SSR": "0"}]
 
 
 def expand(path, seen=()):
@@ -56,6 +59,21 @@ def with_macros(source, macros):
     lines = source.split("\n")
     extra = ["#define %s %s" % kv for kv in macros.items()]
     return "\n".join(lines[:1] + extra + lines[1:])
+
+
+def with_options(source, options):
+    """The source with each option's `#define NAME value` line set to the given value (the loader rewrites the same
+    line when a player changes the option)."""
+    for name, value in options.items():
+        source, n = re.subn(r"^(\s*#define\s+%s\s+)\S+" % re.escape(name), r"\g<1>" + value, source, flags=re.M)
+        if n == 0:
+            raise ValueError("option %s is not defined" % name)
+    return source
+
+
+def reads_option(source, name):
+    """Whether the program tests the option anywhere past its definition."""
+    return len(re.findall(r"\b%s\b" % re.escape(name), source)) > 1
 
 
 def _condition(expr, defines):
@@ -182,6 +200,33 @@ def float_const(source, name, default=None):
     return float(m.group(1))
 
 
+LUMA = (0.2126, 0.7152, 0.0722)
+
+
+def code_of(source):
+    """A shader's source without its comments, every run of whitespace one space: the lines the GPU runs, so a test that
+    looks for a statement is not satisfied by a comment quoting it."""
+    source = re.sub(r"/\*.*?\*/", " ", source, flags=re.S)
+    source = re.sub(r"//[^\n]*", " ", source)
+    return re.sub(r"\s+", " ", source)
+
+
+def noon_light(light_source, upness, ndl, sun_through=1.0):
+    """Luma of lib/light.glsl's surfaceLight at the lobby's noon (the high-sun row) for a face in full sky light with
+    no ambient occlusion: `upness` its normal's dot with up, `ndl` with the sun, `sun_through` the shadow (1 = lit).
+    Mirrors sunFacing (Lambert eased SUN_FACING_EASE of the way to its square root), skyFill's (SKY_FILL_SIDE +
+    (1 - SKY_FILL_SIDE) x upness) and MIN_LIGHT, with the constants read from the source (test_noon_light_leaves_open_
+    ground_its_colour pins the two expressions themselves)."""
+    def lum(v):
+        return sum(a * b for a, b in zip(v, LUMA))
+    sun, sky = lum(vec3_const(light_source, "SUN_HIGH")), lum(vec3_const(light_source, "SKY_HIGH"))
+    ease, side = float_const(light_source, "SUN_FACING_EASE"), float_const(light_source, "SKY_FILL_SIDE")
+    ndl = max(ndl, 0.0)
+    facing = ndl + (ndl ** 0.5 - ndl) * ease
+    return (sun * facing * sun_through + sky * (side + (1.0 - side) * upness)
+            + lum(vec3_const(light_source, "MIN_LIGHT")))
+
+
 def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_height=1080.0):
     """lib/ao.glsl's aoDepthTolerance in blocks, evaluated from the GLSL itself: the `return` under its
     `if (aoOrtho(projection))` (the RTS view) or the one after it (first person), with the file's float constants filled
@@ -222,32 +267,49 @@ def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 
 
-def check(glslang):
-    """All problems found, as printable lines."""
+def check(glslang, options=None):
+    """All problems found, as printable lines. options: option values every program is compiled at (default: the
+    pack's own), on top of which OPTION_VARIANTS are tried."""
     problems = header_problems()
     for name in programs():
-        source = expand(os.path.join(SHADERS, name))
-        variants = [({}, source)]
-        used = {m: v for m, v in LOADER_MACROS.items() if m in source}
-        if used:
-            variants.append((used, with_macros(source, used)))
-        for macros, src in variants:
-            err = compile_errors(glslang, name, src)
-            if err:
-                label = name + (" with " + ", ".join(macros) if macros else "")
-                problems.append("%s:\n%s" % (label, err))
+        base = expand(os.path.join(SHADERS, name))
+        base = with_options(base, {k: v for k, v in (options or {}).items() if reads_option(base, k) or
+                                   re.search(r"#define\s+%s\b" % re.escape(k), base)})
+        sources = [("", base)]
+        for opts in OPTION_VARIANTS:
+            if all(reads_option(base, o) for o in opts):
+                sources.append((", ".join("%s=%s" % kv for kv in opts.items()), with_options(base, opts)))
+        for opt_label, source in sources:
+            variants = [({}, source)]
+            used = {m: v for m, v in LOADER_MACROS.items() if m in source}
+            if used:
+                variants.append((used, with_macros(source, used)))
+            for macros, src in variants:
+                err = compile_errors(glslang, name, src)
+                if err:
+                    label = name + (" with " + ", ".join(macros) if macros else "") + (
+                        " [" + opt_label + "]" if opt_label else "")
+                    problems.append("%s:\n%s" % (label, err))
     return problems
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--glslang", help="path to glslang (default: glslang or glslangValidator on PATH)")
+    ap.add_argument("--option", action="append", default=[], metavar="NAME=VALUE",
+                    help="compile every program with this option value (repeatable)")
     args = ap.parse_args()
+    options = dict(o.split("=", 1) for o in args.option)
+    settings = open(os.path.join(SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+    for o in options:
+        if not re.search(r"^#define\s+%s\s" % re.escape(o), settings, re.M):
+            print("no option %s in lib/settings.glsl" % o, file=sys.stderr)
+            return 2
     glslang = find_glslang(args.glslang)
     if not glslang:
         print("glslang not found (apt-get install glslang-tools)", file=sys.stderr)
         return 2
-    problems = check(glslang)
+    problems = check(glslang, options)
     for p in problems:
         print(p)
     print("%d programs, %d problems" % (len(programs()), len(problems)))
