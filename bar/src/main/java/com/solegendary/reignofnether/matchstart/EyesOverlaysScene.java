@@ -549,12 +549,26 @@ final class EyesOverlaysScene {
             for (double[] r : runeRows)
                 if ((int) r[0] == zoom)
                     rows.add(r);
-            if (!rows.isEmpty())
-                ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes zoom {} (medians of {} slices): {} casters, {} circles held, "
-                        + "{} ms/frame (peak held {})", zoom, rows.size(), runeCasters.size(), Math.round(median(rows, 2)),
-                        String.format("%.3f", median(rows, 1)), RuneFxClient.peak());
+            if (rows.isEmpty())
+                continue;
+            double ms = median(rows, 1);
+            ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes zoom {} (medians of {} slices): {} casters, {} circles held, "
+                    + "{} ms/frame (peak held {})", zoom, rows.size(), runeCasters.size(), Math.round(median(rows, 2)),
+                    String.format("%.3f", ms), RuneFxClient.peak());
+            Double budget = RUNE_BUDGET_MS.get(zoom);
+            if (budget != null)
+                ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes budget zoom {}: {} ms/frame vs {} ms (v6's eyes 42020209227 + 1 ms{}): {}",
+                        zoom, String.format("%.3f", ms), String.format("%.2f", budget), zoom == 60 ? ", the gate" : "",
+                        ms <= budget ? "OK" : "OVER");
         }
     }
+
+    /**
+     * The rune circles' draw budget per zoom, ms/frame at 100 casters (48 held): v6's measured medians (eyes run
+     * 42020209227: 1.54, 3.70, 3.48) plus 1 ms. Zoom 60 is the gate (Eris.14, before v10's build): 100 casters at once is
+     * a real late-game sight. A runner's speed varies, so read it with the same run's other parts.
+     */
+    private static final java.util.Map<Integer, Double> RUNE_BUDGET_MS = java.util.Map.of(30, 2.54, 60, 4.70, 200, 4.48);
 
     private static double median(List<double[]> rows, int col) {
         double[] v = rows.stream().mapToDouble(r -> r[col]).sorted().toArray();
