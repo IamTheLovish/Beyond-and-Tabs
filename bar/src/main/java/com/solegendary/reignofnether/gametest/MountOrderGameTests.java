@@ -46,7 +46,7 @@ public class MountOrderGameTests {
     @GameTest(template = ARENA, timeoutTicks = 400)
     public static void a_unit_ordered_to_mount_ignores_an_enemy_walking_past_and_mounts(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        BlockPos pad = ArenaReady.pad(helper, 326);
+        BlockPos pad = ArenaReady.pad(helper, 232);   // y + 6 must stay under the build limit (320): 326 put the pad in the void
         SkeletonUnit rider = EntityRegistrar.SKELETON_UNIT.get().create(level);
         SpiderUnit spider = EntityRegistrar.SPIDER_UNIT.get().create(level);
         VillagerUnit foe = EntityRegistrar.VILLAGER_UNIT.get().create(level);
