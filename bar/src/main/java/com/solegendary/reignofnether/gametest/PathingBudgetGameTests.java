@@ -286,7 +286,8 @@ public class PathingBudgetGameTests {
      * Plan 015 B: the arena is cut into generated ground at y = -61, and water from a cave or aquifer cell next to or
      * over the cleared pocket flowed into it (run 40401681056: the wall-detour Vindicator stopped at "water level=7"
      * ahead, nav done). Water placed over the pocket's middle (y 5) and beside it (x -1, y 3) must not reach the pocket
-     * once it is opened and sealed.
+     * once it is opened and sealed. (Since openGround keeps fluids out on its own, ArenaReady.sealed finds none of the
+     * two cells left; the setup check is that both held water before the clearing.)
      */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void sealed_arena_has_no_fluid_after_openGround(GameTestHelper helper) {
@@ -295,6 +296,10 @@ public class PathingBudgetGameTests {
         BlockPos side = helper.absolutePos(new BlockPos(-1, 3, 8));
         net.minecraft.world.level.block.state.BlockState sideWas = level.getBlockState(side);
         level.setBlock(side, Blocks.WATER.defaultBlockState(), 3);
+        // the setup check: both cells hold water before the clearing (since openGround keeps fluids out itself -
+        // ArenaGroundGameTests - ArenaReady.sealed finds nothing left after it)
+        int placed = (level.getFluidState(helper.absolutePos(new BlockPos(8, 5, 8))).isEmpty() ? 0 : 1)
+            + (level.getFluidState(side).isEmpty() ? 0 : 1);
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> outside = new java.util.LinkedHashMap<>();
         outside.put(side, sideWas);          // put back what stood there, not the water this test placed
@@ -311,8 +316,8 @@ public class PathingBudgetGameTests {
                             z = 16;
                             break;
                         }
-            if (removed < 2)
-                problems.add("the seal found " + removed + " fluid cells, the test placed 2");
+            if (placed < 2)
+                problems.add("the test placed water in " + placed + " of its 2 cells (nothing tested)");
             try {
                 TerrainGameTests.finish(helper, problems);
             } finally {
