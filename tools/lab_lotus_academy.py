@@ -284,14 +284,14 @@ def court_l1(r):
 
 def court_floor(x, z):
     """Layer 0 (Fable critic B, Nov 4: the polished andesite court was the lightest large area of the building, 0.56 on
-    the noon still - "the floor owns the lights"): a smooth stone court in the mids (camera 0.33 from above), a polished
-    andesite path from the gate to the spawn cell with a short cross arm, stone bricks under the hall and the
-    hall where the camera does not see them (both starting types stay in layer 0)."""
+    the noon still - "the floor owns the lights"): a plain stone court in the mids (0.40 from above on the Nov stills;
+    smooth stone, the first try, read 0.63), a polished andesite path from the gate to the spawn cell with a short cross
+    arm, stone bricks under the hall where the camera does not see them (both starting types stay in layer 0)."""
     if z <= 3:
         return "stone_bricks"
     if x == C or (z == 4 and x in (C - 1, C + 1)):
         return "polished_andesite"
-    return "smooth_stone"
+    return "stone"
 
 
 GALLERY = (4, 7)   # the side galleries' rows (z), under the hall's first roof's line
