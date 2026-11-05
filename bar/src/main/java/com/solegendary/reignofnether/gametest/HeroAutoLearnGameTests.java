@@ -189,13 +189,15 @@ public class HeroAutoLearnGameTests {
         if (!(witch instanceof FactionHero w))
             return;
         var owner = player(helper, me);
-        for (int t = 2; t < 460; t += 100)
-            helper.runAfterDelay(t, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
-        helper.runAfterDelay(460, () -> {
-            List<String> problems = new ArrayList<>();
-            if (ranks(w) != 0 || w.getSkillPoints() != 1)
-                problems.add("auto-learn spent the point while the owner's rank-up menu was open (" + state(w) + ")");
-            finish(helper, problems, witch, me);
+        whenHeroTicks(helper, witch, () -> {
+            for (int t = 2; t < 460; t += 100)
+                helper.runAfterDelay(t, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
+            helper.runAfterDelay(460, () -> {
+                List<String> problems = new ArrayList<>();
+                if (ranks(w) != 0 || w.getSkillPoints() != 1)
+                    problems.add("auto-learn spent the point while the owner's rank-up menu was open (" + state(w) + ")");
+                finish(helper, problems, witch, me);
+            });
         });
     }
 
@@ -210,16 +212,18 @@ public class HeroAutoLearnGameTests {
         if (!(witch instanceof FactionHero w))
             return;
         var owner = player(helper, me);
-        List<String> problems = new ArrayList<>();
-        helper.runAfterDelay(2, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
-        helper.runAfterDelay(300, () -> {
-            if (ranks(w) != 0)
-                problems.add("the point was spent while the menu hold still stood (" + state(w) + " at 15 s)");
-        });
-        helper.runAfterDelay(800, () -> {
-            if (ranks(w) != 1 || w.getSkillPoints() != 0)
-                problems.add("the menu hold never lapsed: the point was still unspent at 40 s (" + state(w) + ")");
-            finish(helper, problems, witch, me);
+        whenHeroTicks(helper, witch, () -> {
+            List<String> problems = new ArrayList<>();
+            helper.runAfterDelay(2, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
+            helper.runAfterDelay(300, () -> {
+                if (ranks(w) != 0)
+                    problems.add("the point was spent while the menu hold still stood (" + state(w) + " at 15 s)");
+            });
+            helper.runAfterDelay(800, () -> {
+                if (ranks(w) != 1 || w.getSkillPoints() != 0)
+                    problems.add("the menu hold never lapsed: the point was still unspent at 40 s (" + state(w) + ")");
+                finish(helper, problems, witch, me);
+            });
         });
     }
 
@@ -250,11 +254,15 @@ public class HeroAutoLearnGameTests {
             return;
         var owner = player(helper, me);
         whenHeroTicks(helper, witch, () -> {
-            helper.runAfterDelay(2, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
+            List<String> problems = new ArrayList<>();
+            helper.runAfterDelay(2, () -> {
+                HeroServerboundPacket.onRankMenu(owner, witch.getId(), true);
+                if (!w.heroCore().rankMenuHeld(witch.level().getGameTime()))
+                    problems.add("the owner's RANK_MENU_OPEN held nothing (the hero not in the level?): nothing tested");
+            });
             helper.runAfterDelay(40, () -> HeroServerEvents.onPlayerLogout(
                 new net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent(owner)));
             helper.runAfterDelay(500, () -> {
-                List<String> problems = new ArrayList<>();
                 if (ranks(w) != 1 || w.getSkillPoints() != 0)
                     problems.add("after the owner logged out the menu hold stood on: the point was unspent at 25 s (" + state(w) + ")");
                 finish(helper, problems, witch, me);
@@ -281,9 +289,14 @@ public class HeroAutoLearnGameTests {
         return m;
     }
 
-    /** Runs a test's timeline: at once. */
+    /**
+     * Runs a test's timeline once the hero has run ArenaReady.TICKS ticks of its own (it is in the level, its chunk is
+     * entity-ticking): auto-learn's 20 s run from the hero's ticks, and RANK_MENU_OPEN finds the hero only once it is
+     * in the level, so a clock started at the test's start checked a hero whose chunk came up late before its 20 s
+     * had run (#488's green 42010140175). Fails the test if the hero is not ticking by test tick 200.
+     */
     static void whenHeroTicks(GameTestHelper helper, Mob hero, Runnable timeline) {
-        timeline.run();
+        ArenaReady.whenTicking(helper, List.of(hero), 200, tick -> timeline.run());
     }
 
     /** Only the owner's menu holds auto-learn back: another player's RANK_MENU_OPEN on this hero changes nothing. */
@@ -294,13 +307,15 @@ public class HeroAutoLearnGameTests {
         if (!(witch instanceof FactionHero w))
             return;
         var other = player(helper, me + "_ally");
-        for (int t = 2; t < 460; t += 100)
-            helper.runAfterDelay(t, () -> HeroServerboundPacket.onRankMenu(other, witch.getId(), true));
-        helper.runAfterDelay(460, () -> {
-            List<String> problems = new ArrayList<>();
-            if (ranks(w) != 1 || w.getSkillPoints() != 0)
-                problems.add("another player's open menu held back the owner's auto-learn (" + state(w) + " at 23 s)");
-            finish(helper, problems, witch, me);
+        whenHeroTicks(helper, witch, () -> {
+            for (int t = 2; t < 460; t += 100)
+                helper.runAfterDelay(t, () -> HeroServerboundPacket.onRankMenu(other, witch.getId(), true));
+            helper.runAfterDelay(460, () -> {
+                List<String> problems = new ArrayList<>();
+                if (ranks(w) != 1 || w.getSkillPoints() != 0)
+                    problems.add("another player's open menu held back the owner's auto-learn (" + state(w) + " at 23 s)");
+                finish(helper, problems, witch, me);
+            });
         });
     }
 }
