@@ -101,7 +101,7 @@ void main() {
         vec3 toEye = orthoView() ? vec3(0.0, 0.0, 1.0) : normalize(-viewPos);
         if (dot(face, toEye) < 0.0)
             face = -face;
-        n = normalize(mix(geomN, face, PLANT_SIDE));
+        n = normalize(mix(geomN, face, abOldPlant() ? 0.0 : PLANT_SIDE));   // EYES ONLY: old columns lit as the ground
     }
     float facing = sunFacing(n, l);
 #ifdef LIT_PBR

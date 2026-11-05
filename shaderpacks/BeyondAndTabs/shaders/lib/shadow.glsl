@@ -40,8 +40,14 @@ const float PENUMBRA_MIN_TEXELS = 0.75;
 const float SHADOW_MAX_SLOPE = 3.0;
 
 // the sun let through at one texel: all of it in front of the nearest caster, behind it what that caster lets pass
+// EYES ONLY, never merge: even 40 px screen columns draw the old pack (plants cast nothing, solid casters all)
+bool abOldPlant() { return mod(floor(gl_FragCoord.x / 40.0), 2.0) < 0.5; }
+
 float casterThrough(vec2 uv) {
-    return 1.0 - texture2D(shadowcolor0, uv).r;
+    float op = texture2D(shadowcolor0, uv).r;
+    if (abOldPlant())
+        return op < 0.99 ? 1.0 : 0.0;
+    return 1.0 - op;
 }
 
 float shadowTap(vec2 uv, float depth) {
