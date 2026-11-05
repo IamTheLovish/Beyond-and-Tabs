@@ -505,8 +505,9 @@ def far_lod(m, k, w, pivot):
 
 
 def weapons(m, n):
-    # r3: shafts (hafts, grips, snath, pommels, the flail's chain) are soul_thread, the heads soul_core; r4: the heads
-    # carry glow edges, and every weapon a far stand-in (far_lod)
+    # r3: shafts (hafts, grips, snath, pommels, the flail's chain) are soul_thread, the heads soul_core; r4: every weapon a
+    # far stand-in (far_lod); r5: the r4 glow edges are off again (the blind A/B preferred r3's darker shafts and
+    # saturated heads to r4's pale mint) - place(edges=True) is kept for the renderer's own phantom pass to decide
     for (k, tier, yaw, pivot, pitch) in slot_layout(n):
         slot = m.bone("slot_%d" % k, list(pivot), "ring", rotation=[0, round(yaw, 3), 0])
         w = m.bone("weapon_%d" % k, list(pivot), slot.name, rotation=[pitch, 0, 0])
@@ -514,12 +515,12 @@ def weapons(m, n):
         if k == 6:
             # the flail's head on its own bone from the haft's end (a spring in flight); docked it lies on along the
             # haft, so the spoke stays one straight line (r2: a ball hanging plumb read as a floating cube)
-            place(w, pivot, flail(), sc, edges=True)
+            place(w, pivot, flail(), sc)
             hp = [pivot[0], pivot[1], pivot[2] - 10.0 * sc]
             hb = m.bone("weapon_6_ball", hp, w.name)
-            place(hb, hp, [q for q in flail_head() if q[2] != "soul_glow"], sc, edges=True)
+            place(hb, hp, [q for q in flail_head() if q[2] != "soul_glow"], sc)
         else:
-            place(w, pivot, prims_of(k), sc, edges=k != 1)
+            place(w, pivot, prims_of(k), sc)
         far_lod(m, k, w, pivot)
 
 
