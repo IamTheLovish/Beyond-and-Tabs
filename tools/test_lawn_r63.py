@@ -24,6 +24,10 @@ B 0.827 - the biome-tint pull that is the shader lane's to fix). They sit beside
 and the clover layer sprites (grass_clover_layer_1..8, a floating cutout plane another lane draws): 128 x 128 RGBA,
 10-25% opaque, pale albedo (the biome tint makes them bright green), nothing near-black.
 
+Since lovish's answer (Nov 5 ~05:00Z, "Yes, measure what ships") the sheet checks read the SHIPPED 8 x 8 sheet
+(gen_blocks.LAWN_SHEET_BLOCKS) at 32 texels per block, not the 4-block default cut; bands unchanged. The flower
+count keeps its 4 x 4-block window (the density it was written for).
+
 Run: python3 -m unittest tools/test_lawn_r63.py
 """
 import os
@@ -42,7 +46,7 @@ _C = {}
 
 def sheet():
     if "s" not in _C:
-        _C["s"] = gen_blocks.lawn_sheet(256)          # (H, alb) of the whole 4 x 4 sheet, 1024 x 1024
+        _C["s"] = gen_blocks.lawn_sheet(256, gen_blocks.LAWN_SHEET_BLOCKS)   # the shipped 8 x 8 sheet, 2048 x 2048
     return _C["s"]
 
 
@@ -50,7 +54,7 @@ def field(gain=True):
     key = "fg" if gain else "f"
     if key not in _C:
         _H, alb = sheet()
-        m = sim.box_mip(alb, 128)                    # 32 texels per block
+        m = sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS)   # 32 texels per block
         f = np.tile(m, (3, 3, 1)) * sim.hex_rgb(sim.LAWN_TINT)
         _C[key] = np.clip(f * LAWN_GAIN if gain else f, 0, 1)
     return _C[key]
@@ -159,7 +163,8 @@ class LawnSheetRound63Test(unittest.TestCase):
         top 0.5% of one sheet's mip forms 8+ specks of 2+ px, 4+ of them 5+ px (the buttercups, 0.1 block = 7 mip
         px), none a blotch over 30 px."""
         _H, alb = sheet()
-        f = np.clip(sim.box_mip(alb, 128) * sim.hex_rgb(sim.LAWN_TINT), 0, 1)
+        n = 128                                      # one 4 x 4-block window: the density this count was written for
+        f = np.clip(sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS)[:n, :n] * sim.hex_rgb(sim.LAWN_TINT), 0, 1)
         L = sim.luma(f)
         sizes = [s for s in components(L > np.percentile(L, 99.5)) if s >= 2]
         self.assertGreaterEqual(len(sizes), 8)
@@ -167,7 +172,7 @@ class LawnSheetRound63Test(unittest.TestCase):
         self.assertLessEqual(max(sizes), 30)
 
     def test_sheet_wraps_seamlessly(self):
-        """the sheet repeats every 4 blocks: its last column / row must join its first like any inner neighbours do."""
+        """the sheet repeats every 8 blocks: its last column / row must join its first like any inner neighbours do."""
         _H, alb = sheet()
         L = alb @ gen_blocks.LUMA
         cols = np.abs(np.diff(L, axis=1)).mean(0)

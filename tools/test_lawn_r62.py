@@ -3,7 +3,9 @@
 blocks, laid by world position by GiantLawnBakedModel - Athena's giant loader would cover the dirt sides too).
 
 What the fresh critic of round 61b measured (claude/round-r61b-critic-nov4.md) and these checks pin, at the RTS camera
-(the sheet box-mipped to 32 texels per block, tiled 3 x 3 = 12 x 12 blocks, tinted #6FA64A, not turned):
+(the sheet box-mipped to 32 texels per block, tiled 3 x 3, tinted #6FA64A, not turned):
+Since lovish's answer (Nov 5 ~05:00Z, "Yes, measure what ships") these read the SHIPPED 8 x 8 sheet
+(gen_blocks.LAWN_SHEET_BLOCKS, 24 x 24 blocks tiled), not the 4-block default cut; bands unchanged.
 - 10% near-black (holes, not shade; bench 0%)            -> near-black (L < 0.15) under 1%
 - zero lit-side asymmetry (the blade flanks never showed) -> round the darkest 10%, away-from-sun minus toward-sun >= 0.02
 - 4% of its variance at 2+ blocks (bench 48%: "calm")     -> >= 8% of the luma variance at wavelengths of 2+ blocks
@@ -28,14 +30,14 @@ _C = {}
 
 def sheet():
     if "s" not in _C:
-        _C["s"] = gen_blocks.lawn_sheet(256)          # (H, alb) of the whole 4 x 4 sheet, 1024 x 1024
+        _C["s"] = gen_blocks.lawn_sheet(256, gen_blocks.LAWN_SHEET_BLOCKS)   # the shipped 8 x 8 sheet, 2048 x 2048
     return _C["s"]
 
 
 def field():
     if "f" not in _C:
         _H, alb = sheet()
-        m = sim.box_mip(alb, 128)                    # 32 texels per block
+        m = sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS)   # 32 texels per block
         _C["f"] = np.clip(np.tile(m, (3, 3, 1)) * sim.hex_rgb(sim.LAWN_TINT), 0, 1)
     return _C["f"]
 
@@ -66,7 +68,7 @@ class LawnSheetRound62Test(unittest.TestCase):
         self.assertGreaterEqual(float(away[dark].mean() - toward[dark].mean()), 0.02)
 
     def test_calm_patches_across_blocks(self):
-        """wavelengths of 2+ blocks (64+ px; the sheet's own 4-block period is the longest it can hold), as a BAND
+        """wavelengths of 2+ blocks (64+ px; up to the shipped sheet's own 8-block period), as a BAND
         0.08-0.30. History: the floor 0.15 was set from the critic's numbers (bench 48%, r61b 4%) before any sheet
         existed; 2b44f04 re-set it to 0.08 after the r62 clumps' depth left the patches at 0.103 - lovish (via
         Eris.10, Nov 4 04:54 ET) did not approve that re-set: "make it better and realistic", and 9a402fe restored
@@ -87,7 +89,7 @@ class LawnSheetRound62Test(unittest.TestCase):
         self.assertGreaterEqual(m["L"], 0.34)
 
     def test_sheet_wraps_seamlessly(self):
-        """the sheet repeats every 4 blocks: its last column / row must join its first like any inner neighbours do
+        """the sheet repeats every 8 blocks: its last column / row must join its first like any inner neighbours do
         (within the spread of the inner rows - one row is noisy, so not against their mean)."""
         _H, alb = sheet()
         L = alb @ gen_blocks.LUMA
