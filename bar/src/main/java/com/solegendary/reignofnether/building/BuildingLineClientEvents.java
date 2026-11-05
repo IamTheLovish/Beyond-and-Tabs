@@ -37,6 +37,8 @@ import java.util.Map;
  *   <li><b>Shift + Alt + drag</b>: a grid filling the dragged rectangle, one block apart each way (BAR's "stack":
  *       lovish's clip - "shift alt should let me make a stack like in BAR").</li>
  *   <li>Walls and gates (design/defences.md) lay their Shift+drag line edge to edge, cell by cell ({@link #wallLine}).</li>
+ *   <li><b>Shift + wheel</b> while placing: the gap between copies, 0 (touching) to 8 blocks, remembered per building
+ *       type for the session ({@link BuildSpacing}, BAR's buildspacing inc / dec); walls and gates are never spaced.</li>
  * </ul>
  * The first building is placed by the normal Shift-click; while the mouse is held, ghosts preview the rest, and
  * releasing queues every valid one on the selected workers (each its own placement, paid as normal). Invalid slots
@@ -61,10 +63,65 @@ public class BuildingLineClientEvents {
         return active();
     }
 
+    static final long SPACING_LABEL_MS = 2000;   // the label lingers this long after a change outside a drag
+    static long spacingChangedAt = 0;
+
+    /** The session key BuildSpacing remembers a building's spacing under; null for walls and gates (never spaced). */
+    static String spacingType(Building building) {
+        if (building == null || isWall(building))
+            return null;
+        return building.name != null ? building.name : building.structureName;
+    }
+
+    /** The gap between footprints of the building being placed (0 = touching, today's default). */
+    static int currentGap() {
+        return BuildSpacing.get(spacingType(BuildingClientEvents.getBuildingToPlace()));
+    }
+
+    /** True when Shift + wheel should change the spacing: a spaceable ghost is out in Shift placement. */
+    static boolean spacingActive() {
+        Building building = BuildingClientEvents.getBuildingToPlace();
+        return spacingType(building) != null && !AreaMexClientEvents.active() && Keybindings.shiftMod.isDown()
+            && OrthoviewClientEvents.isEnabled() && MC.level != null;
+    }
+
+    /**
+     * BAR's buildspacing inc / dec on Shift + wheel (BAR's Alt+Z / Alt+X: Alt drops the ghost here and Alt+Z is the
+     * NVIDIA overlay). Shift is already held for every line / grid placement, so the wheel tunes the drag in progress
+     * and the ghosts update on the next frame. Returns true when it used the wheel (the camera must not zoom).
+     */
+    public static boolean onScroll(double delta) {
+        if (delta == 0 || !spacingActive())
+            return false;
+        BuildSpacing.adjust(spacingType(BuildingClientEvents.getBuildingToPlace()), delta > 0 ? 1 : -1);
+        spacingChangedAt = System.currentTimeMillis();
+        return true;
+    }
+
+    /** The spacing label beside the cursor: while a line / grid is dragged, and briefly after each change. */
+    @SubscribeEvent
+    public static void onDrawScreen(ScreenEvent.Render.Post evt) {
+        if (!spacingActive())
+            return;
+        boolean recent = System.currentTimeMillis() - spacingChangedAt < SPACING_LABEL_MS;
+        if (!active() && !recent)
+            return;
+        net.minecraft.client.gui.GuiGraphics g = evt.getGuiGraphics();
+        String text = net.minecraft.client.resources.language.I18n.get("hud.reignofnether.build_spacing", currentGap());
+        int w = MC.font.width(text);
+        int x = evt.getMouseX() + 14, y = evt.getMouseY() - 22;   // above-right: the tree-clearing note sits below-right
+        if (x + w + 4 > g.guiWidth())
+            x = evt.getMouseX() - w - 10;
+        if (y < 4)
+            y = evt.getMouseY() + 28;
+        g.fill(x - 3, y - 3, x + w + 3, y + 11, 0xC0101216);
+        g.drawString(MC.font, text, x, y, 0xFFB8E0FF, false);
+    }
+
     @SubscribeEvent
     public static void onMousePress(ScreenEvent.MouseButtonPressed.Post evt) {
         if (evt.getButton() != GLFW.GLFW_MOUSE_BUTTON_1 || BuildingClientEvents.getBuildingToPlace() == null
-                || !Keybindings.shiftMod.isDown() || HudClientEvents.isMouseOverAnyButtonOrHud())
+                || AreaMexClientEvents.active() || !Keybindings.shiftMod.isDown() || HudClientEvents.isMouseOverAnyButtonOrHud())
             return;
         startCentre = CursorClientEvents.getPreselectedBlockPos();
     }
@@ -122,23 +179,24 @@ public class BuildingLineClientEvents {
         }
         if (isWall(building))
             return wallLine(end, fp, bridge, rot, dims);
-        // line: along the drag, one footprint (+ gap) apart
-        int size = Math.max(fp[0], fp[1]);
-        double dx = end.getX() - startCentre.getX(), dz = end.getZ() - startCentre.getZ();
-        double len = Math.hypot(dx, dz);
-        int step = size + GAP;
-        int n = (int) Math.min(MAX_IN_LINE, Math.floor(len / step));
-        for (int i = 1; i <= n; i++) {
-            int cx = startCentre.getX() + (int) Math.round(dx / len * step * i);
-            int cz = startCentre.getZ() + (int) Math.round(dz / len * step * i);
-            out.add(BuildingUtils.getBuildingOriginPos(ground(cx, cz), bridge, rot, dims));
-        }
+        // line: along the drag, one footprint apart (today's step) - or, once the player set a spacing for this
+        // building (Shift+wheel, BuildSpacing), exactly that gap between footprints
+        String type = spacingType(building);
+        List<int[]> centres = BuildSpacing.isSet(type)
+            ? BuildSpacing.line(startCentre.getX(), startCentre.getZ(), end.getX(), end.getZ(), fp[0] + GAP, fp[1] + GAP,
+                BuildSpacing.get(type), MAX_IN_LINE)
+            : BuildSpacing.legacyLine(startCentre.getX(), startCentre.getZ(), end.getX(), end.getZ(),
+                Math.max(fp[0], fp[1]) + GAP, MAX_IN_LINE);
+        for (int[] c : centres)
+            out.add(BuildingUtils.getBuildingOriginPos(ground(c[0], c[1]), bridge, rot, dims));
         return out;
     }
 
     /** A grid drag's extent from the first building to {@code end}: {nx, nz, stepX, stepZ, sgnX, sgnZ} - nx / nz cells beyond the first along each axis. */
     static int[] gridExtent(BlockPos end, int[] fp) {
-        int stepX = fp[0] + GAP, stepZ = fp[1] + GAP;
+        // fp is dims (max - min), so fp + GAP is the full footprint width: the grid touches at spacing 0
+        int[] steps = BuildSpacing.gridSteps(fp[0] + GAP, fp[1] + GAP, currentGap());
+        int stepX = steps[0], stepZ = steps[1];
         int dx = end.getX() - startCentre.getX(), dz = end.getZ() - startCentre.getZ();
         return new int[] { Math.abs(dx) / stepX, Math.abs(dz) / stepZ, stepX, stepZ, dx < 0 ? -1 : 1, dz < 0 ? -1 : 1 };
     }
@@ -195,7 +253,8 @@ public class BuildingLineClientEvents {
     static void drawMergePreview(PoseStack matrix) {
         Building building = BuildingClientEvents.getBuildingToPlace();
         BlockPos end = CursorClientEvents.getPreselectedBlockPos();
-        if (building == null || !building.mergeable || !Keybindings.altMod.isDown() || end == null || MC.level == null)
+        if (building == null || !building.mergeable || !Keybindings.altMod.isDown() || end == null || MC.level == null
+                || currentGap() > 0)   // spaced copies never touch, so nothing merges
             return;
         Vec3i dims = BuildingClientEvents.getBuildingDimensions();
         Rotation rot = BuildingClientEvents.getBuildingRotation();
@@ -259,7 +318,10 @@ public class BuildingLineClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+            return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fpS = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_LINE);
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || !active())
@@ -268,6 +330,7 @@ public class BuildingLineClientEvents {
                 BuildingClientEvents.drawBuildingToPlace(evt.getPoseStack(), origin, 0);
             drawMergePreview(evt.getPoseStack());
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fpS);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
@@ -291,7 +354,7 @@ public class BuildingLineClientEvents {
             List<MergeGrid.Cell> cells = new ArrayList<>();
             List<BlockPos> origins = formationOrigins(cells);
             // merged buildings: the lattice the queued cells are cut on - world-oriented, as the server will cut them
-            DragLattice lattice = grid && building.mergeable
+            DragLattice lattice = grid && building.mergeable && currentGap() == 0
                 ? new DragLattice(gridExtent(CursorClientEvents.getPreselectedBlockPos(), footprint()),
                     BuildingClientEvents.getBuildingRotation(), BuildingClientEvents.getBuildingDimensions())
                 : null;

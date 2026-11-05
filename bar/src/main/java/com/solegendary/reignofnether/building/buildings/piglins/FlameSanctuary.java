@@ -56,6 +56,10 @@ public class FlameSanctuary extends ProductionBuilding {
         this.productions.add(ProductionItems.BONEWRIGHT, Keybindings.abilitySlot6);   // T2 constructor
         this.productions.add(ProductionItems.GOREHORN_RHINO, Keybindings.abilitySlot7);   // T2 beast (design/big_units.md)
         this.productions.add(ProductionItems.WRECKER, Keybindings.abilitySlot8);   // combat engineer (design/combat_engineers.md)
+        // the T2-lab hero and its revive share a slot (H13: design/heroes-t2-lab.md); slots 1-8 were all taken
+        this.productions.add(ProductionItems.ASH_SHAMAN, Keybindings.abilitySlot9);
+        this.productions.add(ProductionItems.ASH_SHAMAN_REVIVE, Keybindings.abilitySlot9);
+        // (the Voodoo Shaman, the essence caster, is T1 now - the Military Portal: lovish, Oct 29)
     }
 
 

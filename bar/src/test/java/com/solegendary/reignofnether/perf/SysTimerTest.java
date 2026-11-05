@@ -152,6 +152,21 @@ class SysTimerTest {
         assertEquals(0, timer.worstTickNs[OUTER]);
     }
 
+    @Test
+    void theLifetimeTotalsOutliveAReset() {
+        // a benchmark differences two readings across the 10-second report windows (Sys.lifetime)
+        int outer = open(OUTER);
+        int inner = open(INNER);
+        close(inner, 3_000);
+        close(outer, 1_000);
+        timer.reset();
+        timer.add(INNER, 2_000);
+        assertEquals(1_000, timer.lifetimeNs[OUTER], "self time, like the window's");
+        assertEquals(5_000, timer.lifetimeNs[INNER]);
+        assertEquals(2, timer.lifetimeCalls[INNER]);
+        assertEquals(2_000, timer.selfNs[INNER], "the window itself did start again");
+    }
+
     // ---- the text ----------------------------------------------------------------------------------------------
 
     @Test

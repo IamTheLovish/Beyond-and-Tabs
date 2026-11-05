@@ -35,7 +35,7 @@ public class PortalPocket extends AbstractPortal {
 
     public PortalPocket() {
         super(structureName, cost);
-        // BAR economy: population buildings double as small energy generators
+        // BAR economy: a small energy generator (it gave population once; no supply now - lovish, Oct 29)
         this.energyIncome = 5f;
         this.name = buildingName;
         this.portraitBlock = Blocks.GRAY_GLAZED_TERRACOTTA;

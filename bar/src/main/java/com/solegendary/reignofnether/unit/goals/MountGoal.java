@@ -1,7 +1,7 @@
 package com.solegendary.reignofnether.unit.goals;
 
 import com.solegendary.reignofnether.hud.HudClientEvents;
-import com.solegendary.reignofnether.unit.UnitServerEvents;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.PoisonSpiderUnit;
 import com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit;
@@ -55,34 +55,38 @@ public class MountGoal extends MoveToTargetBlockGoal {
         if (this.mob.level().isClientSide())
             return;
 
-        for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
-            if (this.mob instanceof Unit) {
-                // find the closest mob
-                double closestDist = Double.MAX_VALUE;
-                Mob closestMob = null;
-                for (Mob pfMob : MiscUtil.getEntitiesWithinRange(
-                        new Vector3d(this.mob.position().x, this.mob.position().y, this.mob.position().z),
-                        SEARCH_RANGE, Mob.class, this.mob.level())) {
-                    if (isMountableUnit(pfMob)) {
-                        double dist = mob.position().distanceTo(pfMob.position());
-                        if (dist < closestDist) {
-                            closestDist = mob.position().distanceTo(pfMob.position());
-                            closestMob = pfMob;
-                        }
-                    }
+        if (!(this.mob instanceof Unit))
+            return;
+        // find the closest mob
+        double closestDist = Double.MAX_VALUE;
+        Mob closestMob = null;
+        for (Mob pfMob : MiscUtil.getEntitiesWithinRange(
+                new Vector3d(this.mob.position().x, this.mob.position().y, this.mob.position().z),
+                SEARCH_RANGE, Mob.class, this.mob.level())) {
+            if (isMountableUnit(pfMob)) {
+                double dist = mob.position().distanceTo(pfMob.position());
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestMob = pfMob;
                 }
-                if (closestMob != null)
-                    setTarget(closestMob);
-                else
-                    stop();
             }
         }
+        if (closestMob != null)
+            setTarget(closestMob);
+        else
+            stop();
     }
 
     @Override
     public void tick() {
-        if (autofind)
-            setNearestTarget();
+        if (autofind) {
+            int sys = Sys.begin(Sys.MOUNT_SCAN);
+            try {
+                setNearestTarget();
+            } finally {
+                Sys.end(sys);
+            }
+        }
 
         if (this.targetEntity != null)
             this.setMoveTarget(this.targetEntity.getOnPos());

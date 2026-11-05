@@ -79,6 +79,15 @@ public final class HintBar {
         queue.addLast(new Hint(text, Math.max(20, ticks), edgeRgb & 0xFFFFFF));
     }
 
+    /** Drops this one hint (waiting or showing) and leaves every other hint and the banner alone. */
+    public static void clearIfShowing(String text) {
+        queue.removeIf(h -> h.text().equals(text));
+        if (showing != null && showing.text().equals(text)) {
+            showing = null;
+            showTicks = 0;
+        }
+    }
+
     public static void clear() {
         queue.clear();
         showing = null;

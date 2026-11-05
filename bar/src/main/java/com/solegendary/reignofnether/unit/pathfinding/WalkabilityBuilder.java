@@ -18,7 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-// classifies one cell (x, y, z) as LAND / WATER / FIRE / LAVA / SLIME / TIDEPOOL / BLOCKED.
+// classifies one cell (x, y, z) as LAND / WATER / SHALLOW_WATER / FIRE / LAVA / SLIME / TIDEPOOL / BLOCKED.
 // a cell is occupiable when feet (y) and head (y+1) are non-solid AND the floor (y-1) supports.
 public final class WalkabilityBuilder {
     private WalkabilityBuilder() {}
@@ -33,6 +33,17 @@ public final class WalkabilityBuilder {
     // for TIDAL units - so a pool can never wall off a choke, and a stale (not yet reclassified) cell reading as
     // LAND is just as walkable. PathConverter maps it to WALKABLE.
     public static final byte KIND_TIDEPOOL = 6;
+    // Wading water: the feet cell holds water, the floor under it is solid ground and the head is out of the water -
+    // a ford, a 1-deep pool, a river's shallow edge. Before this every wet cell was KIND_WATER at one price, so a ford
+    // cost as much as the deep channel beside it and A* crossed wherever the river was narrowest, swimming the deep
+    // part. Priced per class in MobilityClass (PathfinderConfig.SHALLOW_WATER_COST for land units). Code that asks
+    // "is this water" uses isWater, which reads both kinds.
+    public static final byte KIND_SHALLOW_WATER = 7;
+
+    /** Whether a cell kind is water of any depth (wading or deep). */
+    public static boolean isWater(byte kind) {
+        return kind == KIND_WATER || kind == KIND_SHALLOW_WATER;
+    }
 
     // hot path (per cell during a chunk build); reuse mutable positions to avoid BlockPos allocations.
     private static final ThreadLocal<BlockPos.MutableBlockPos> FEET  = ThreadLocal.withInitial(BlockPos.MutableBlockPos::new);
@@ -66,7 +77,8 @@ public final class WalkabilityBuilder {
 
         FluidState feetFluid = feetBs.getFluidState();
         if (feetFluid.is(FluidTags.LAVA)) return KIND_LAVA;
-        if (!feetFluid.isEmpty())          return KIND_WATER;
+        if (!feetFluid.isEmpty())
+            return isWadingDepth(level, floor, floorBs, headBs) ? KIND_SHALLOW_WATER : KIND_WATER;
 
         if (floorBs.getBlock() == Blocks.SLIME_BLOCK) return KIND_SLIME;
         if (feetBs.getBlock() == Blocks.FIRE || feetBs.getBlock() == Blocks.SOUL_FIRE) return KIND_FIRE;
@@ -87,6 +99,15 @@ public final class WalkabilityBuilder {
         if (floorBs.getFluidState().is(FluidTags.LAVA)) return KIND_LAVA;
         if (!floorBs.getFluidState().isEmpty()) return KIND_WATER;
         return KIND_BLOCKED; // no floor support
+    }
+
+    // A wet feet cell is wading depth when the body stands on real ground (the same support rule as a dry floor) with
+    // its head out of the water. Head under water = submerged, water under the feet = swimming: both deep. Reads only
+    // the states classify already fetched, plus the floor's solidity.
+    private static boolean isWadingDepth(Level level, BlockPos floor, BlockState floorBs, BlockState headBs) {
+        if (!headBs.getFluidState().isEmpty()) return false;
+        return MiscUtil.isSolidBlocking(level, floor) && !isFenceLike(floorBs) && !floorBs.is(BlockTags.LEAVES)
+            && !isPitFloor(floorBs);
     }
 
     // Half the width of the narrowest unit body (0.6: villagers, zombies, cats), and how tall a thing in the feet cell

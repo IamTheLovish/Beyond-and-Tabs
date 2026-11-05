@@ -122,9 +122,7 @@ public class FirstBattleScreen extends Screen {
                 OnboardingUi.GOOD, false);
 
         // right column: the faction's card
-        int cardH = FactionInfoCard.height(font, f, col);
-        int cardY = Math.max(top, Math.min(top, bottom - cardH));
-        FactionInfoCard.render(g, font, f, right, cardY, col);
+        FactionInfoCard.renderFitted(g, font, f, right, top, col, bottom - top);
 
         super.render(g, mouseX, mouseY, partialTick);
         if (SplashArt.ensureLoaded())

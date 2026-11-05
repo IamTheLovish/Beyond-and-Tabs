@@ -255,7 +255,7 @@ def main():
     if a.all:
         import export_bodies
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        for model, _cls, texture, team in export_bodies.BODIES:
+        for model, _cls, texture, team, *_ in export_bodies.BODIES:
             out = os.path.join(a.out_dir, texture + "_rts.png") if a.out_dir else None
             if out:
                 os.makedirs(a.out_dir, exist_ok=True)

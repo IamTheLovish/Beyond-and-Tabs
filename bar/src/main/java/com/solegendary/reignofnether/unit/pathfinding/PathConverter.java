@@ -239,6 +239,7 @@ public final class PathConverter {
         byte kind = view.kindAt(bp.getX(), bp.getY(), bp.getZ());
         return switch (kind) {
             case WalkabilityBuilder.KIND_WATER -> BlockPathTypes.WATER;
+            case WalkabilityBuilder.KIND_SHALLOW_WATER -> BlockPathTypes.WATER;
             case WalkabilityBuilder.KIND_LAVA  -> BlockPathTypes.LAVA;
             case WalkabilityBuilder.KIND_FIRE  -> BlockPathTypes.DAMAGE_FIRE;
             case WalkabilityBuilder.KIND_SLIME  -> BlockPathTypes.STICKY_HONEY;

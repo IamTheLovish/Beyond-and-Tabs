@@ -454,6 +454,9 @@ public class MyRenderer {
 
         // all vertices are in order: BR, TR, TL, BL
 
+        // 255 is a marker as well as a light: vanilla never packs a block light above 240 (LightTexture.FULL_BRIGHT), so
+        // our shader pack draws anything with 255 as drawn - selection, checkpoint and placement boxes are overlays,
+        // not lit geometry (shaderpacks/BeyondAndTabs/shaders/program/lit.vsh). Keep it 255.
         int light = 255;
 
         VertexConsumer vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));

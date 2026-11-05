@@ -1,5 +1,11 @@
 # Beyond and Tabs - working notes
 
+> **Oct 26 2026 note:** the "Kingdom / Fallen / Gilded Legion" faction names below are prototype-era names. The
+> current factions are the seven in `AGENTS.md` section 1 (Sunforged, Gravebound, Horde, Verdant, Tidewrought,
+> Stormcallers, Brassworks; Hivebound is planned). The code registry is
+> `bar/src/main/java/com/solegendary/reignofnether/faction/Factions.java`. This file is an older session log; for
+> anything current, trust `AGENTS.md` and `design/LANES.md`.
+
 A BAR-style RTS in Minecraft, built as a GPL-3 fork of Reign of Nether, with TABS-era faction themes.
 This file is the session-proof status log: what's shipped, how to install, what's next.
 

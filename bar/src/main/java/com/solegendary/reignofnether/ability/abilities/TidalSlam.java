@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.ExperimentalAbilityText;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
@@ -54,6 +55,16 @@ public class TidalSlam extends Ability {
         this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: an arc in front of the leviathan when it is fighting
     }
 
+    /** Tooltip body. Public for the tooltip game test. */
+    public String description() {
+        return "After a 1 s warning, a wall of water crashes down in a wide arc in front: enemies take " + (int) DAMAGE + " damage and are thrown back.";
+    }
+
+    /** Tooltip range line, from the ability's own values. Public for the tooltip game test. */
+    public String rangeLine() {
+        return ExperimentalAbilityText.selfLine(RADIUS);
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Tidal Slam",
@@ -66,8 +77,8 @@ public class TidalSlam extends Ability {
             null,
             List.of(
                 FormattedCharSequence.forward("Tidal Slam  (" + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("After a 1 s warning, a wall of water crashes down in a wide arc in front, "
-                    + (int) RADIUS + " blocks out: enemies take " + (int) DAMAGE + " damage and are thrown back.", Style.EMPTY),
+                FormattedCharSequence.forward(rangeLine(), Style.EMPTY),
+                FormattedCharSequence.forward(description(), Style.EMPTY),
                 FormattedCharSequence.forward("The spray rises first, and nothing behind it is hit.", Style.EMPTY.withItalic(true))
             ),
             this,

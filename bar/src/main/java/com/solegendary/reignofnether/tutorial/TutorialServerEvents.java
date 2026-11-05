@@ -75,8 +75,7 @@ public class TutorialServerEvents {
         if (serverLevel != null) {
             TutorialSaveData tutorialData = TutorialSaveData.getInstance(serverLevel);
             tutorialData.stage = stage;
-            tutorialData.save();
-            serverLevel.getDataStorage().save();
+            tutorialData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
             //ReignOfNether.LOGGER.info("saved tutorialStage in serverevents");
         }
     }

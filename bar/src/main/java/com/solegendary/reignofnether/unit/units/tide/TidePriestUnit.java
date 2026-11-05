@@ -12,7 +12,10 @@ import com.solegendary.reignofnether.time.TimeUtils;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.support.SupportBrain;
+import com.solegendary.reignofnether.unit.support.SupportState;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -52,7 +55,7 @@ import java.util.List;
  * potion abilities and HUD). The Bearer's healing pulse is gone; the witch's habit of swapping a potion into her hand
  * is still cleaned up every step so she keeps holding her conch (a nautilus shell).
  */
-public class TidePriestUnit extends Witch implements Unit {
+public class TidePriestUnit extends Witch implements Unit, SupportUnit {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new RaiseTidepool(), Keybindings.abilitySlot1);
@@ -134,6 +137,13 @@ public class TidePriestUnit extends Witch implements Unit {
 
     public void setFollowTarget(@Nullable LivingEntity target) { this.followTarget = target; }
 
+    // the support brain (unit/support/SupportBrain, claude/healer-ai-oct21.md): attack orders hold a standoff behind
+    // the fighters instead of following the enemy into melee, Fight takes the rear rank, it steps out of melee
+    private final SupportState supportState = new SupportState();
+    @Override public SupportState getSupportState() { return supportState; }
+    // she raises tidepools under the army, so she stands where her reach covers the front
+    @Override public double getSupportReach() { return RaiseTidepool.RANGE; }
+
     // endregion
 
     final static public float maxHealth = 35.0f;
@@ -174,6 +184,7 @@ public class TidePriestUnit extends Witch implements Unit {
         this.setCanPickUpLoot(false);
         super.tick();
         Unit.tick(this);
+        SupportBrain.tick(this, this);
     }
 
     @Override

@@ -158,6 +158,22 @@ public class UnitQueueSync {
             // the client draws to the entity itself and skips the entry if it can't see it
             put(out, TYPE_ATTACK, BlockPos.ZERO, unit.getTargetGoal().getTarget().getId());
         }
+        // a worker's shift-queued sites live in its build goal, not in CommandQueues, and a site queued in the fog is
+        // only on the server: list them here so the owner sees the whole build queue - and sees it again whenever
+        // the worker's entity comes back into the client's view, since this goes out to the player, not the entity
+        if (le instanceof WorkerUnit wu && wu.getBuildRepairGoal() != null) {
+            for (BuildingPlacement b : wu.getBuildRepairGoal().queuedBuildings) {
+                if (b == building || b.centrePos == null || out.size() >= MAX_ENTRIES_PER_UNIT * INTS_PER_ENTRY)
+                    continue;
+                put(out, TYPE_BUILD, b.centrePos, -1);
+            }
+            if (wu.getExploreBuildLocationGoal() != null)
+                for (BuildingPlacement b : wu.getExploreBuildLocationGoal().getFogQueuedBuildings()) {
+                    if (b.centrePos == null || out.size() >= MAX_ENTRIES_PER_UNIT * INTS_PER_ENTRY)
+                        continue;
+                    put(out, TYPE_BUILD, b.centrePos, -1);
+                }
+        }
         if (!queued)
             return;
         for (int i = 0; i < queue.size(); i++) {

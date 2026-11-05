@@ -17,6 +17,36 @@ Previews (generated, committed): `design/lobby_preview_16x9.png`, `design/lobby_
 `design/lobby_preview_16x9_lobby.png` (scrim + mock panel + the gothic heading and buttons),
 `design/title_preview_16x9.png` (the title screen: the same scene in its title layout, design/splash.md).
 
+## Depth rules (round 6, Oct 22) - read these before touching any layer
+
+lovish (Oct 22): "I really want you to imitate the depths of those drawings" (his two reference drawings: the cathedral
+over a field of red and ivory flowers, and the moon behind the spires with a blood river). Only their depth, density and
+value structure are taken - never their composition, objects or shapes (no skull in the river, no copied towers).
+
+1. **Many overlapping planes, each on its own parallax layer** (back to front): sky + stars + moon (0.003-0.005) -> far
+   cloud banks (0.007) -> far spires (0.011) -> far hills and the forest edge (`hills_far`, 0.0125) -> near cloud wisps
+   (0.012) -> the cathedral's eight layers (0.013-0.040) -> the ground plane with the river (0.02-0.062, by row) -> the
+   flower fields (riding the ground) -> the framing trees (0.055), near trunks / gravestones / railing / outcrop
+   (0.065), canopy (0.075) on **both** sides -> the extreme foreground (0.11-0.13). Near-black framing on both sides
+   makes a tunnel; on the right it stays low or at the very edge so the cathedral is never covered (title layout too).
+2. **A value ladder**: the nearest planes are the darkest, with the finest, hardest line work (`LADDER` in
+   `tools/lobby_depth.py`: `frame`, `near`); each plane back is lighter, lower in contrast and lifted into a dark-red
+   haze (`ground`, `mid`, `hills`, `far`); the far spires dissolve into it (`spires_grade`). The moon is the brightest
+   light; the darkest darks sit next to the lit glass.
+3. **Linear perspective**: the river widens toward the viewer and zig-zags back to the fall (`RIVER`, mirrored in
+   `LobbyBackdrop.java`); the ground's level lines and grass tufts spread with nearness (`depth_s`); flowers grow from
+   specks at the horizon to big blooms in the bottom corners, in drifts with bare ground between, crowding the banks.
+4. **Engraving everywhere** (`etch()`): every surface is lines along the form whose width carries the tone, a
+   second set across them in the light (cross-hatching), stipple where the tone just rises from black, every line
+   wobbling and broken by the paper's tooth. No flat colour areas. Foliage is cut in leaf-sized patches, each in its own
+   direction; the sky's lines ring the moon and follow the glow's contours (never level scanlines).
+5. **Light**: the moon sits behind the towers (so the spires cut its disc) and a blood-red glow rises behind the
+   cathedral, which reads as a dark, intricate silhouette (`cathedral_grade` re-cuts its stone as an engraving: light
+   lines along the drawing's own forms on near-black, the farther layers lifted into the haze) with the red glass as
+   the focal point;
+   rims of light on the edges facing the moon. **Red is the only saturated colour**; everything else is near-monochrome
+   bone, grey and black.
+
 ## Layout (round 4: natural, asymmetric, in depth)
 
 lovish (Oct 21, 22:33): "less AI-looking, natural, asymmetric" and "give the castle an ability to be 3D ... so it pops
@@ -34,6 +64,8 @@ broken wall on the left slope, a scarp of rock ledges under the cathedral, the c
 and the scarp into a meandering river (uneven banks, a gravel sandbar, a fallen log, the half-sunk skull, the moon's
 reflection where it bends under the moon), flowers in drifts with bare ground between (red and ivory in their own
 drifts), a ruined arch and wall framing the left edge, a lone oak with a one-sided crown and a dead bough on the right.
+(Round 6 redrew the ground, river, flowers, framing and foreground - see "Depth rules"; the half-sunk skull and the moon
+column on the water are gone, the moon moved behind the towers, the river zig-zags back to the fall.)
 
 Artboard: A = the cover-scaled screen height (`max(h, w / ART_W)`, ART_W = 2560/1100), x from the screen centre, y
 from the top, bottom-anchored. Frames and foreground pop-outs are pinned to the screen edges.
@@ -100,9 +132,21 @@ NativeImage reads them as RGBA), the smooth glows stay RGBA: about 7.6 MB in all
   the main buttons (`GothicText.LOBBY_MAIN`) in Cinzel capitals; names, tooltips, stats and the small buttons stay in
   the vanilla font.
 
+The paper (`grain.png`, `lobby_depth.paper_grain`) is a warm monochrome tooth with fibres and pits, tiled in screen
+space at low alpha - not RGB noise.
+
+## Motion (round 6 additions)
+
+Candle-flicker behind every window layer (`LobbyBackdrop.candle`: three incommensurate tremors per layer and a rare
+gutter, so no two windows pulse together); moonlight glints carried down the river by the current (`glints`, ten sparks,
+each on its own period and lane, swelling with nearness); the cloud banks drift (wrapping textures, seamless); the
+flowers, grass and trees sway in gusts that cross the scene (each strip at its own phase); bats and embers as before.
+The light-shaft cone from the rose is gone (it read as a flat triangle). `splash_reduce_motion` freezes everything.
+
 ## Regenerate
 
-`python3 tools/gen_lobby_art.py` (deterministic, about 6 minutes; `--only=ground,fields` repaints some layers, `--layout`
+`python3 tools/gen_lobby_art.py` (deterministic, about 15 minutes on two cores; the round-6 planes come from
+`tools/lobby_depth.py`, which runs alone too: `python3 tools/lobby_depth.py sky clouds hills ground fields frames fg`; `--only=ground,fields` repaints some layers, `--layout`
 draws a quick flat check of the cathedral geometry) paints every layer, runs the hand-drawn pass, palettes
 the textured layers and writes the previews; `--previews-only` re-composes the previews. Change a rect, the river or
 the cascade here and in `LobbyBackdrop.java` together.

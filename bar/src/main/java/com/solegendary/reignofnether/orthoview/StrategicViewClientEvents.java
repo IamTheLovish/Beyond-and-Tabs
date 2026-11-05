@@ -37,6 +37,7 @@ import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitIconTier;
 import com.solegendary.reignofnether.unit.interfaces.*;
 import com.solegendary.reignofnether.util.MyRenderer;
+import com.solegendary.reignofnether.time.ClientTicks;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -129,6 +130,11 @@ public class StrategicViewClientEvents {
             return;
         }
         float enter = Math.min(STRATEGIC_ZOOM_ENTER, com.solegendary.reignofnether.config.DisplaySettings.iconZoomThreshold());
+        // a crowd's models are what the frame pays for (lovish's Oct 23 log: 120 fps at <60 units, 55-75 at 450-575):
+        // the switch comes in as the army grows, never past close zoom (UnitLodRules.iconEnterZoom); the A/B toggle
+        // unit_render_lod turns it off. Hysteresis and the big-unit switch follow the scaled value.
+        if (com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.enabled())
+            enter = com.solegendary.reignofnether.unit.modelling.renderers.UnitLodRules.iconEnterZoom(enter, UnitClientEvents.getAllUnits().size());
         float hysteresis = STRATEGIC_ZOOM_ENTER - STRATEGIC_ZOOM_EXIT;
         float exit = enter - hysteresis;
         float zoom = OrthoviewClientEvents.getZoom();
@@ -183,9 +189,16 @@ public class StrategicViewClientEvents {
     public static void onRenderLiving(RenderLivingEvent.Pre<? extends LivingEntity, ? extends EntityModel<?>> evt) {
         if (!strategic)
             return;
-        LivingEntity entity = evt.getEntity();
-        if (entity instanceof Unit && entity != HudClientEvents.hudSelectedEntity && !keepsModel(entity))
+        if (skipsModel(evt.getEntity()))
             evt.setCanceled(true);
+    }
+
+    /** This entity's model is not drawn this frame (UnitLodRules.skipUnitModel): icon view, not the portrait's unit, not a big one yet. */
+    public static boolean skipsModel(net.minecraft.world.entity.Entity entity) {
+        if (!strategic || !(entity instanceof Unit) || !(entity instanceof LivingEntity living))
+            return false;
+        return com.solegendary.reignofnether.unit.modelling.renderers.UnitLodRules.skipUnitModel(
+            true, strategicBig, true, UnitIconTier.isBig(living), living == HudClientEvents.hudSelectedEntity);
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -486,8 +499,9 @@ public class StrategicViewClientEvents {
     }
 
     private static int mexTier(BuildingPlacement building) {
-        long now = MC.level != null ? MC.level.getGameTime() : 0;
-        if (now - mexTierCacheTime >= 20 || now < mexTierCacheTime) {
+        long now = MC.level != null ? ClientTicks.now() : 0;
+        // MIN_VALUE = never filled (now - MIN_VALUE overflows negative: the cache was never cleared, an upgrade never showed)
+        if (mexTierCacheTime == Long.MIN_VALUE || now - mexTierCacheTime >= 20 || now < mexTierCacheTime) {
             mexTierCache.clear();
             mexTierCacheTime = now;
         }

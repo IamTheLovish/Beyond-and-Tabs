@@ -18,7 +18,7 @@ public final class PathfinderConfig {
     public static final int MAX_CHAIN_SEGMENTS = 10;
     public static final int MIN_DILATION = 48;
     // max parked (chunk-warming) and max in-flight (A*) requests before new ones get a "busy" retry signal. Was 500;
-    // with maxPopulation 400 a single select-all move plus ongoing repaths of other units could hit 500 and leave
+    // with a 400-unit army a single select-all move plus ongoing repaths of other units could hit 500 and leave
     // part of the army waiting ~1 s for a retry. Requests are small (no snapshot until dispatch), so 1000 is cheap.
     public static final int QUEUE_BACKPRESSURE_CAP = 1000;
     // walkability-grid building (getBlockState/getCollisionShape + crowd[] precompute) must run on the main
@@ -69,6 +69,21 @@ public final class PathfinderConfig {
     // chunks) plus margin for capture dilation past the border edge: 72*72 = (64 + 8 each side). since the
     // prewarmed map fits, chunks never LRU-evict; they only change when marked dirty and the region rebuilds.
     public static final int MAX_CACHED_CHUNKS = 5184;
+
+    // Water, per cell, by depth (WalkabilityBuilder: KIND_SHALLOW_WATER = feet wet, head dry, solid ground under;
+    // KIND_WATER = swimming or submerged). A land unit wades at half its land speed (Terrain.WADING_SPEED) and hits at
+    // 0.75x, so a ford cell is priced a little over the two dry cells it takes the time of: it crosses a ford rather
+    // than walk far round, and goes round a puddle when the dry way is short. Deep water stays a last resort (25x:
+    // swimming a 10-wide channel is worth a 240-block detour, past MAX_RADIUS, so any ford or bridge in reach wins),
+    // never a wall: with no ford in reach the unit still swims rather than stand on the bank.
+    public static final float SHALLOW_WATER_COST = 3.0f;
+    public static final float DEEP_WATER_COST = 25.0f;
+    // AQUATIC bodies (Drowned, dogs, cats, water animals, frost boots) wade well and swim at a price; TIDAL units
+    // (Tidewrought, amphibious by design: design/tidewrought_plan.md 3.5) are as at home in a ford as on land.
+    public static final float AQUATIC_SHALLOW_WATER_COST = 1.5f;
+    public static final float AQUATIC_DEEP_WATER_COST = 3.0f;
+    public static final float TIDAL_SHALLOW_WATER_COST = 1.0f;
+    public static final float TIDAL_DEEP_WATER_COST = 1.5f;
 
     // cost multiplier a non-fire-immune unit pays to cross a fire/magma/campfire cell (when its DAMAGE_FIRE
     // malus marks fire dangerous). fire-immune units pay 1x (see RtsPathfinder.fireCostFor) and cross freely.

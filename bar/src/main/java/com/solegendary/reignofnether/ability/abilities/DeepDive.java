@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.ExperimentalAbilityText;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -39,6 +40,16 @@ public class DeepDive extends Ability {
         this.showRangeCircle = true;
     }
 
+    /** Tooltip body. Public for the tooltip game test. */
+    public String description() {
+        return "From the water: dives out of sight and surfaces at the water's edge nearest the spot with a tidal slam (" + (int) TidalSlam.DAMAGE + " to everything round it).";
+    }
+
+    /** Tooltip range line, from the ability's own values. Public for the tooltip game test. */
+    public String rangeLine() {
+        return ExperimentalAbilityText.rangeLine(range);
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Deep Dive",
@@ -51,9 +62,8 @@ public class DeepDive extends Ability {
             null,
             List.of(
                 FormattedCharSequence.forward("Deep Dive  (" + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("From the water: dives out of sight and swims up to " + (int) LeviathanUnit.DIVE_RANGE
-                    + " blocks under the surface, then surfaces at the water's edge nearest the spot with a tidal slam ("
-                    + (int) TidalSlam.DAMAGE + " to everything round it).", Style.EMPTY),
+                FormattedCharSequence.forward(rangeLine(), Style.EMPTY),
+                FormattedCharSequence.forward(description(), Style.EMPTY),
                 FormattedCharSequence.forward("Only from a river, the coast or a tidepool. Bubbles show the way and boil where it will rise.", Style.EMPTY.withItalic(true))
             ),
             this,

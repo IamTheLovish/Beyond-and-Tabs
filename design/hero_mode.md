@@ -109,6 +109,12 @@ Code: `hero/HeroProgression.java` (curve, boons, capture XP), `hero/FactionHero.
 
 - **XP from kills**: Reign of Nether's orbs, unchanged - a unit dying within 20 blocks of an enemy hero drops orbs worth
   (pop + 1) x 5 (+5 per level of a killed hero) that fly to the hero.
+- **Decisive-kill burst** (Oct 24, "winning pays"): when a **commander** or a **hero** dies, every enemy hero within
+  **28 blocks** (`HeroProgression.BURST_RANGE`) gains a one-time extra **400 XP** (commander) or **150 + 50 x the
+  victim's level** (hero), straight through `addExperience` (so level 10 stays level 10). It sits on top of the orbs
+  above, which are unchanged; own and allied heroes get nothing. Numbers are picks for lovish. The same two deaths also
+  leave a big wreck (`WreckServerEvents`: commander 600 metal, hero 150 + 50 x level, never below the normal half-cost
+  heap), so the winner can reclaim it and tech - see design/hud.md "Reclaim labels".
 - **XP from capture points**: taking an Ancient Mine / Ley Shrine / Mercenary Camp (any capture site) pays every hero
   of the taker's team within 24 blocks **100 XP**; holding it pays **1 XP a second** to the team's heroes within 24
   blocks (CapturePointServerEvents.setOwner / reward -> HeroProgression.onCapture / onHold). An early capture is a third
@@ -259,6 +265,26 @@ simply - strikes at the nearest enemy in range, gap closers for the melee heroes
 are within reach. Never while a player possesses it.
 
 Unit card: a faction hero's role line reads "Hero - Vanguard / Raider / Caster / Support / Skirmisher".
+
+## 5b. Hero AI (Oct 24 2026)
+
+lovish (Oct 24): "Id allow for heros to be complex ai's that use their abilities and act extremely smart when there is
+no hero player this can be a toggle players can set if they dont want this option".
+
+- **Who:** every hero nobody possesses. A bot's hero always; a human player's hero while that player's **Hero AI**
+  switch is on (default on; Settings > HUD... > "Hero AI on/off", config `hero_ai`; the client tells the server on
+  login and on every click, `HeroAction.HERO_AI_ON/OFF`). Possessing the hero stops it the same second; letting go
+  hands the hero back. One brain for both: `HeroBot.useAbilities`.
+- **Points:** a bot's hero spends its own; a player's stay manual (the rank-up choice is part of playing a hero).
+- **What it does, once a second, most urgent first:** below 30% health with enemies on it, it saves itself (escape
+  ability aimed away from the enemies, else its shield or heal on itself, else a nova/wave to peel, else it walks back
+  10 blocks unless the player gave it a move); heals go where they mend the most hurt friends; the fourth ability
+  (long cooldown) waits for a real fight (3+ enemies within 14, or a hurt hero/team for the shields); area bursts
+  need two or more enemies in reach; strikes go to the best target (one it can finish, then enemy heroes and
+  commanders, then the weakest, plus a cluster bonus for chain and splash); gap closers only for melee heroes above
+  half health and never into a crowd bigger than its own; while hurt it keeps the escape's mana in reserve.
+- **Tests:** `HeroAiGameTests` (casts unpossessed, switch off, possession, bots and manual points, focus, saved
+  ultimate).
 
 ## 6. Balance rules
 

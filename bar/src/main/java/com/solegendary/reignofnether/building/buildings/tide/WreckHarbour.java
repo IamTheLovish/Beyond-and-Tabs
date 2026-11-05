@@ -50,7 +50,6 @@ public class WreckHarbour extends ProductionBuilding {
 
         this.productions.add(ProductionItems.SHIPWRIGHT, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.GULL_SPOTTER, Keybindings.abilitySlot2);
-        this.productions.add(ProductionItems.RESEARCH_STEWARD, Keybindings.abilitySlot8);   // auto-trains workers (StewardServerEvents)
         this.productions.add(ProductionItems.RESEARCH_TIER_2, Keybindings.abilitySlot9);
         this.productions.add(ProductionItems.RESEARCH_TIER_3, Keybindings.abilitySlot10);
     }
@@ -66,7 +65,6 @@ public class WreckHarbour extends ProductionBuilding {
             () -> true,
             List.of(Component.translatable("buildings.reignofnether.wreck_harbour").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPop(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("buildings.reignofnether.wreck_harbour.tooltip1").getVisualOrderText(),
                 Component.translatable("buildings.reignofnether.wreck_harbour.tooltip2").getVisualOrderText()

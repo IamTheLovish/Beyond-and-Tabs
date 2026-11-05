@@ -239,7 +239,7 @@ public class HoglinUnit extends Hoglin implements Unit, AttackerUnit, Convertabl
                 .add(AttributeRegistrar.SIGHT_RANGE.get(), Unit.DEFAULT_SIGHT_RANGE)
                 .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
                 .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.BUILDING_DAMAGE_BONUS.get(), 1.0);
+                .add(AttributeRegistrar.BUILDING_DAMAGE_BONUS.get(), com.solegendary.reignofnether.raid.RaidTuning.vehicleBuildingBonus(attackDamage, attacksPerSecond));   // T1 vehicle: breaks buildings (RaidTuning)
     }
 
     @Override // prevent vanilla logic for picking up items

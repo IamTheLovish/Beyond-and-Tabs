@@ -6,21 +6,30 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.building.buildings.shared.EnergyConverter;
 import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
+import com.solegendary.reignofnether.building.buildings.shared.SolarGenerator;
+import com.solegendary.reignofnether.building.buildings.shared.WindGenerator;
 import com.solegendary.reignofnether.building.production.ProductionItem;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.resources.MetalPatches;
+import com.solegendary.reignofnether.raid.RaidTuning;
+import com.solegendary.reignofnether.raid.WorkerFlee;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
+import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.CombatEngineer;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
 import java.util.ArrayList;
@@ -77,8 +86,11 @@ public class BotArmy {
 
     /** Enemy units within this many blocks of home count as a threat to the base. */
     public static final double BASE_RADIUS = 45;
-    /** How far a bot unit or building "sees" an enemy building for {@link #knownSites} (a unit's sight, roughly). */
-    static final double SIGHT = 28;
+    /**
+     * How far a bot unit or building "sees" an enemy building for {@link #knownSites} (a unit's sight, roughly): 28
+     * base, through the same Vision multiplier as every player unit's fog (42 at 1.5x), so bots keep parity.
+     */
+    static final double SIGHT = com.solegendary.reignofnether.fogofwar.Vision.scaled(28);
     /** The circle round the army's centre the retreat check weighs both sides in. */
     static final double FIGHT_RADIUS = 24;
     /** Units more than this far above or below the point of interest are not part of the fight there. */
@@ -118,7 +130,22 @@ public class BotArmy {
     final Map<BuildingPlacement, Integer> lastHealth = new IdentityHashMap<>();
     int scoutId = -1;
     double scoutAngle = 0;
-    final Set<Integer> raidIds = new HashSet<>();
+    /** The infantry raid squad, the vehicle raid squad, and both together (what the rally and the site squads leave alone). */
+    final Set<Integer> raidIds = new HashSet<>(), vehicleRaidIds = new HashSet<>(), allRaidIds = new HashSet<>();
+    long lastVehicleRaidAt = -1, vehicleRaidSince = -1;
+
+    /** A worker of an enemy player that one of our units or buildings has seen: where, and when (game ticks). */
+    public record WorkerSighting(BlockPos pos, long at) { }
+    /** Enemy workers seen lately by entity id (refreshed with the sightings pass); the infantry raid hunts them first. */
+    public final Map<Integer, WorkerSighting> knownWorkers = new LinkedHashMap<>();
+    /** A worker not seen for this long is forgotten (30 s): workers move, and a raid at an empty spot is a walk to nowhere. */
+    public static final long WORKER_MEMORY_TICKS = 20 * 30;
+    /** A worker within this many blocks of a known enemy defence is not hunted (the tower would eat the raid). */
+    static final double WORKER_COVER_RADIUS = 18;
+    /** What the last launched raids went for ("workers", "converter", "extractor", "wind"; "" = none yet) and where, and how many of each have gone out. */
+    public String raidKind = "", vehicleRaidKind = "";
+    public BlockPos raidTarget = null, vehicleRaidTarget = null;
+    public int raidsLaunched = 0, workerRaidsLaunched = 0, vehicleRaidsLaunched = 0;
     /** Reused per think: fighters (the army minus scouts) and the idle ones among them. */
     final List<LivingEntity> fighters = new ArrayList<>(), idle = new ArrayList<>();
 
@@ -169,6 +196,7 @@ public class BotArmy {
         if (lastSightingAt < 0 || gameTime - lastSightingAt >= 100) {
             lastSightingAt = gameTime;
             updateKnownSites(mine, buildings);
+            updateKnownWorkers(level, gameTime, mine, buildings);
         }
         fighters.clear();
         float value = 0;
@@ -207,6 +235,11 @@ public class BotArmy {
         if (attacker == null)
             attacker = commanderAttacker(mine);
         boolean hit = hitBuilding != null || attacker != null;
+        // a worker hurt anywhere (an outlying extractor's builder, a raided wind line) is an alarm too - the workers
+        // run to cover on their own (raid/WorkerFlee); this sends the defenders to whoever is hunting them. Not a
+        // "hit" on its own (that calls the whole army home): the push test below weighs the raiders' value
+        if (attacker == null)
+            attacker = workerAttacker(level, mine);
         if (intruder == null && attacker != null) {
             intruder = attacker;
             threat += metal(attacker);
@@ -227,14 +260,22 @@ public class BotArmy {
                 if (lastOrderAt < 0 || gameTime - lastOrderAt >= 40) {
                     lastOrderAt = gameTime;
                     stance(fighters, EngagementStance.FIRE_AT_WILL);
-                    bot.order(fighters, UnitAction.ATTACK_MOVE, meetingPoint(level, intruder));
+                    // only the fighters not already in a fight: a new order resets a unit's behaviours (its target,
+                    // a melee windup in progress, its path), and this repeats every 2 s for as long as the intruder
+                    // is near - the whole home guard dropped its fight every 40 ticks (lovish's Oct 22 1v1, "units
+                    // weren't attacking each other"). A unit whose fight ends picks up the next order 2 s later.
+                    List<LivingEntity> free = new ArrayList<>(fighters.size());
+                    for (LivingEntity le : fighters)
+                        if (!inFight(le))
+                            free.add(le);
+                    bot.order(free, UnitAction.ATTACK_MOVE, defendPoint(level, intruder, home));
                 }
                 return;
             }
             if (state != State.DEFEND && (lastSquadAt < 0 || gameTime - lastSquadAt >= 60)) {
                 // a lone scout or raider: the three nearest idle fighters see it off, the rest stay on their job
                 lastSquadAt = gameTime;
-                BlockPos at = meetingPoint(level, intruder);
+                BlockPos at = defendPoint(level, intruder, home);
                 collectIdle(fighters, at, 3, true);
                 bot.order(idle, UnitAction.ATTACK_MOVE, at);
             }
@@ -242,8 +283,8 @@ public class BotArmy {
 
         // 1b) capture sites (BotSites): a squad takes, holds, defends and retakes the map's sites. Its fighters are
         // then left out of the rally and the waves (a held site stays held); a base defence above still takes them
-        if (state == State.BUILD_UP || state == State.ATTACK) {
-            bot.sites.step(level, gameTime, fighters, raidIds, minutes);
+        if (!passive() && (state == State.BUILD_UP || state == State.ATTACK)) {
+            bot.sites.step(level, gameTime, fighters, allRaidIds, minutes);
             if (!bot.sites.holders.isEmpty())
                 fighters.removeIf(le -> bot.sites.holders.contains(le.getId()));
         }
@@ -271,7 +312,9 @@ public class BotArmy {
         boolean cooling = lastAttackAt >= 0 && gameTime - lastAttackAt < tuning.attackCooldownTicks();
         boolean ready = value >= threshold && !cooling;
         boolean overflow = value >= threshold * OVERFLOW_WAVE;
-        if ((ready || overflow) && !fighters.isEmpty()) {
+        if (passive()) {
+            noWaveReason = "passive: never attacks";
+        } else if ((ready || overflow) && !fighters.isEmpty()) {
             BlockPos target = pickTarget(home, minutes);
             if (target != null) {
                 noWaveReason = "";
@@ -290,25 +333,30 @@ public class BotArmy {
             noWaveReason = "no fighters alive";
         else if (value < threshold)
             noWaveReason = "value " + (int) value + " under the wave threshold " + threshold + " (" + fighters.size()
-                + " fighters, " + bot.sites.holders.size() + " on site duty, " + raidIds.size() + " raiding)";
+                + " fighters, " + bot.sites.holders.size() + " on site duty, " + allRaidIds.size() + " raiding)";
         else
             noWaveReason = "wave cooldown, " + (tuning.attackCooldownTicks() - (gameTime - lastAttackAt)) / 20 + " s left";
         raid(level, gameTime, home);
+        vehicleRaid(level, gameTime, home);
         // gather idle fighters at the rally point (not the raid squad while its raid is young)
         if ((lastRallyAt < 0 || gameTime - lastRallyAt >= 160) && !fighters.isEmpty()) {
             lastRallyAt = gameTime;
             BlockPos rally = rallyPoint(level, home);
             idle.clear();
-            boolean raiding = raidSince >= 0 && gameTime - raidSince < 20 * 60;
+            boolean raiding = (raidSince >= 0 && gameTime - raidSince < 20 * 60) || (vehicleRaidSince >= 0 && gameTime - vehicleRaidSince < 20 * 60);
             for (LivingEntity le : fighters)
                 if (le instanceof Unit u && u.isIdle() && le.blockPosition().distSqr(rally) > 12 * 12
-                        && !(raiding && raidIds.contains(le.getId())))
+                        && !(raiding && allRaidIds.contains(le.getId())))
                     idle.add(le);
             bot.order(idle, UnitAction.ATTACK_MOVE, rally);
         }
     }
 
     void attack(ServerLevel level, long gameTime, BlockPos home, float value, long minutes) {
+        if (passive()) {
+            enter(State.BUILD_UP, gameTime);
+            return;
+        }
         if (fighters.isEmpty()) {
             enter(State.BUILD_UP, gameTime);
             return;
@@ -359,40 +407,35 @@ public class BotArmy {
     }
 
     /**
-     * A raid: every raidCooldown, the fastest idle fighters attack-move to the best known enemy extractor (nearest,
-     * weighted by its patch's value) that is not next to a known defence, so an opponent who leaves expansions bare pays for it (what BARbarian's raiders do).
+     * The infantry raid (lovish, Oct 22: "killing workers early sets people behind"): every raidCooldown the fastest
+     * idle infantry attack-move onto the enemy's workers - the freshest sighting nearest home that no known defence
+     * covers ({@link #knownWorkers}) - else onto its nearest uncovered converter (the fragile one), else a bare extractor
+     * weighted by its patch's value (what BARbarian's raiders do). Siege and T1 vehicles stay out of it (the vehicles
+     * have their own raid on buildings, {@link #vehicleRaid}).
      */
     void raid(ServerLevel level, long gameTime, BlockPos home) {
+        if (passive())
+            return;
         if (tuning.raidCooldownTicks() <= 0 || (lastRaidAt >= 0 && gameTime - lastRaidAt < tuning.raidCooldownTicks()))
             return;
         if (fighters.size() < MIN_FIGHTERS)
             return;   // (not a "tried": the next raid is wanted as soon as the army exists)
-        BlockPos target = null;
-        double bestD = Double.MAX_VALUE;
-        for (Map.Entry<BlockPos, Building> e : knownSites.entrySet()) {
-            if (!(e.getValue() instanceof MetalExtractor))
-                continue;
-            boolean covered = false;
-            for (Map.Entry<BlockPos, Building> d : knownSites.entrySet())
-                if ((BotRoles.isDefence(d.getValue()) || d.getValue().isCapitol) && d.getKey().distSqr(e.getKey()) < 30 * 30) {
-                    covered = true;
-                    break;
-                }
-            // a rich patch is the better raid (design/maps.md: 1.5x and 2.0x patches): distance over the patch's
-            // value, as the expansion rule weighs our own patches (the extractor's centre is its origin + 2)
-            BlockPos o = e.getKey();
-            double dist = Math.sqrt(o.distSqr(home)) / MetalPatches.valueNear(level, o.getX() + 2, o.getY(), o.getZ() + 2);
-            if (!covered && dist < bestD) {
-                bestD = dist;
-                target = e.getKey();
-            }
+        String kind = "workers";
+        BlockPos target = workerTarget(gameTime, home);
+        if (target == null) {
+            kind = "converter";
+            target = bareSite(level, home, EnergyConverter.class);
+        }
+        if (target == null) {
+            kind = "extractor";
+            target = bareSite(level, home, MetalExtractor.class);
         }
         if (target == null)
             return;
-        lastRaidAt = gameTime;   // tried: a bare extractor out of reach is not retried every think
+        lastRaidAt = gameTime;   // tried: a bare site out of reach is not retried every think
         idle.clear();
         for (LivingEntity le : fighters)
-            if (le instanceof Unit u && u.isIdle() && !BotRoles.isSiege(le))
+            if (le instanceof Unit u && u.isIdle() && !BotRoles.isSiege(le) && !RaidTuning.isT1Vehicle(le))
                 idle.add(le);
         if (idle.size() < tuning.raidSize())
             return;
@@ -402,9 +445,120 @@ public class BotArmy {
         raidIds.clear();
         for (LivingEntity le : idle)
             raidIds.add(le.getId());
+        allRaidIds.clear();
+        allRaidIds.addAll(raidIds);
+        allRaidIds.addAll(vehicleRaidIds);
         raidSince = gameTime;
+        raidKind = kind;
+        raidTarget = target;
+        raidsLaunched++;
+        if (kind.equals("workers"))
+            workerRaidsLaunched++;
         stance(idle, EngagementStance.FIRE_AT_WILL);
         bot.order(idle, UnitAction.ATTACK_MOVE, target);
+    }
+
+    /**
+     * The vehicle raid: idle T1 vehicles (the beasts and siege of the T1 labs, RaidTuning.isT1Vehicle) go for the
+     * enemy's nearest uncovered converter, else extractor, else wind or solar field - the buildings they are good at
+     * breaking. The infantry hunts workers meanwhile. Needs {@link BotTuning#vehicleRaidSize()} idle vehicles.
+     */
+    void vehicleRaid(ServerLevel level, long gameTime, BlockPos home) {
+        if (tuning.vehicleRaidCooldownTicks() <= 0
+                || (lastVehicleRaidAt >= 0 && gameTime - lastVehicleRaidAt < tuning.vehicleRaidCooldownTicks()))
+            return;
+        idle.clear();
+        for (LivingEntity le : fighters)
+            if (le instanceof Unit u && u.isIdle() && RaidTuning.isT1Vehicle(le))
+                idle.add(le);
+        if (idle.size() < tuning.vehicleRaidSize())
+            return;   // (not a "tried": the next raid is wanted as soon as the vehicles exist)
+        String kind = "converter";
+        BlockPos target = bareSite(level, home, EnergyConverter.class);
+        if (target == null) {
+            kind = "extractor";
+            target = bareSite(level, home, MetalExtractor.class);
+        }
+        if (target == null) {
+            kind = "wind";
+            target = bareSite(level, home, WindGenerator.class);
+        }
+        if (target == null) {
+            kind = "wind";
+            target = bareSite(level, home, SolarGenerator.class);
+        }
+        if (target == null)
+            return;
+        lastVehicleRaidAt = gameTime;
+        BlockPos to = target;
+        idle.sort((a, b) -> Double.compare(a.blockPosition().distSqr(to), b.blockPosition().distSqr(to)));
+        vehicleRaidIds.clear();
+        for (LivingEntity le : idle)
+            vehicleRaidIds.add(le.getId());
+        allRaidIds.clear();
+        allRaidIds.addAll(raidIds);
+        allRaidIds.addAll(vehicleRaidIds);
+        vehicleRaidSince = gameTime;
+        vehicleRaidKind = kind;
+        vehicleRaidTarget = target;
+        vehicleRaidsLaunched++;
+        stance(idle, EngagementStance.FIRE_AT_WILL);
+        bot.order(idle, UnitAction.ATTACK_MOVE, target);
+    }
+
+    /** Whether this unit is in the infantry raid squad / the vehicle raid squad (for the game tests). */
+    public boolean inInfantryRaid(int id) { return raidIds.contains(id); }
+    public boolean inVehicleRaid(int id) { return vehicleRaidIds.contains(id); }
+
+    /** The enemy worker sighting nearest home that is fresh and not within WORKER_COVER_RADIUS of a known defence, as a position; null if none. */
+    BlockPos workerTarget(long gameTime, BlockPos home) {
+        BlockPos best = null;
+        double bestD = Double.MAX_VALUE;
+        for (WorkerSighting w : knownWorkers.values()) {
+            if (gameTime - w.at() > WORKER_MEMORY_TICKS)
+                continue;
+            boolean covered = false;
+            for (Map.Entry<BlockPos, Building> d : knownSites.entrySet())
+                if (BotRoles.isDefence(d.getValue()) && d.getKey().distSqr(w.pos()) < WORKER_COVER_RADIUS * WORKER_COVER_RADIUS) {
+                    covered = true;
+                    break;
+                }
+            double dist = w.pos().distSqr(home);
+            if (!covered && dist < bestD) {
+                bestD = dist;
+                best = w.pos();
+            }
+        }
+        return best;
+    }
+
+    /**
+     * The nearest known enemy site of this kind (a building class) that no known defence or capitol stands within 30
+     * blocks of, or null. Extractors are weighed by their patch's value like our own expansion rule (design/maps.md:
+     * 1.5x and 2.0x patches - the extractor's centre is its origin + 2).
+     */
+    BlockPos bareSite(ServerLevel level, BlockPos home, Class<? extends Building> kind) {
+        BlockPos target = null;
+        double bestD = Double.MAX_VALUE;
+        for (Map.Entry<BlockPos, Building> e : knownSites.entrySet()) {
+            if (!kind.isInstance(e.getValue()))
+                continue;
+            boolean covered = false;
+            for (Map.Entry<BlockPos, Building> d : knownSites.entrySet())
+                if ((BotRoles.isDefence(d.getValue()) || d.getValue().isCapitol) && d.getKey().distSqr(e.getKey()) < 30 * 30) {
+                    covered = true;
+                    break;
+                }
+            BlockPos o = e.getKey();
+            double dist = Math.sqrt(o.distSqr(home));
+            if (MetalExtractor.class.isAssignableFrom(kind))
+                dist /= MetalPatches.valueNear(level, o.getX() + 2, o.getY(), o.getZ() + 2);
+            if (!covered && dist < bestD) {
+                bestD = dist;
+                target = e.getKey();
+            }
+        }
+        return target;
     }
 
     /**
@@ -413,6 +567,8 @@ public class BotArmy {
      * 100 blocks out round home. What it passes within SIGHT of becomes a known site.
      */
     void scout(ServerLevel level, long gameTime, List<LivingEntity> mine, List<BuildingPlacement> buildings, BlockPos home) {
+        if (passive())
+            return;
         if (tuning.scoutEveryTicks() <= 0)
             return;
         LivingEntity scout = null;
@@ -465,7 +621,8 @@ public class BotArmy {
      * Sightings: every enemy building within SIGHT of one of our units (sampled down to ~16) or buildings becomes a
      * known site; sites whose building is gone are forgotten; the nearest unseen one is where the scout goes next.
      */
-    void updateKnownSites(List<LivingEntity> mine, List<BuildingPlacement> buildings) {
+    /** The points our side sees from: a sample of up to ~16 units, the scout, a sample of ~8 buildings. */
+    List<BlockPos> eyes(List<LivingEntity> mine, List<BuildingPlacement> buildings) {
         List<BlockPos> eyes = new ArrayList<>(24);
         int stride = Math.max(1, mine.size() / 16);
         for (int i = 0; i < mine.size(); i += stride)
@@ -476,6 +633,36 @@ public class BotArmy {
         int bstride = Math.max(1, buildings.size() / 8);
         for (int i = 0; i < buildings.size(); i += bstride)
             eyes.add(buildings.get(i).originPos);
+        return eyes;
+    }
+
+    /**
+     * Enemy workers (not combat engineers: they fight) within SIGHT of one of our eyes become {@link #knownWorkers}
+     * with where they were and when; a worker gone from view for WORKER_MEMORY_TICKS, dead or unloaded is forgotten.
+     * No map hack: a worker nobody of ours has come within sight of is never listed.
+     */
+    void updateKnownWorkers(ServerLevel level, long gameTime, List<LivingEntity> mine, List<BuildingPlacement> buildings) {
+        List<BlockPos> eyes = eyes(mine, buildings);
+        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+            if (!(le instanceof WorkerUnit) || le instanceof CombatEngineer || le.level() != level || !bot.isEnemyUnit(le)
+                    || !(le instanceof Unit u) || u.getOwnerName() == null || u.getOwnerName().isEmpty()
+                    || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le))
+                continue;
+            for (BlockPos eye : eyes) {
+                double dx = eye.getX() - le.getX(), dz = eye.getZ() - le.getZ();
+                if (dx * dx + dz * dz <= SIGHT * SIGHT) {
+                    knownWorkers.put(le.getId(), new WorkerSighting(le.blockPosition(), gameTime));
+                    break;
+                }
+            }
+        }
+        knownWorkers.values().removeIf(w -> gameTime - w.at() > WORKER_MEMORY_TICKS);
+        if (knownWorkers.size() > 64)   // a big enemy economy: keep the freshest
+            knownWorkers.keySet().removeIf(id -> !(level.getEntity(id) instanceof LivingEntity w) || !w.isAlive());
+    }
+
+    void updateKnownSites(List<LivingEntity> mine, List<BuildingPlacement> buildings) {
+        List<BlockPos> eyes = eyes(mine, buildings);
         Set<BlockPos> live = new HashSet<>();
         BlockPos unseen = null;
         double unseenD = Double.MAX_VALUE;
@@ -590,10 +777,40 @@ public class BotArmy {
     }
 
     /**
+     * The enemy unit hunting one of our workers (hurt within WorkerFlee's window), or null: the hurt worker's last
+     * attacker, else the nearest enemy fighter within 14 blocks of it. Commanders and combat engineers fight and
+     * are not "workers" here.
+     */
+    LivingEntity workerAttacker(ServerLevel level, List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof WorkerUnit) || le instanceof CombatEngineer || !(le instanceof Mob m) || !WorkerFlee.recentlyHurt(m)
+                    || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le))
+                continue;
+            LivingEntity by = enemyOrNull(le.getLastHurtByMob());
+            if (by != null)
+                return by;
+            for (LivingEntity other : UnitGrid.near(level, le.getX(), le.getZ(), 14, bot.scan))
+                if (bot.isEnemyUnit(other) && other instanceof AttackerUnit && !(other instanceof WorkerUnit))
+                    return other;
+        }
+        return null;
+    }
+
+    /**
      * Where the army goes to meet an intruder: its own block, or for a flyer the ground under it - an attack-move at
      * a block in the air is a path to nowhere, and the fighters that can shoot up (the mixed kits' archers and
      * pikemen, the AA units queueAntiAir adds) only do so from underneath.
      */
+    /** Passive bots never leave the base: an attacker out of BASE_RADIUS (artillery, a flyer) is met at home instead. */
+    BlockPos defendPoint(ServerLevel level, LivingEntity intruder, BlockPos home) {
+        BlockPos at = meetingPoint(level, intruder);
+        if (passive() && at.distSqr(new BlockPos(home.getX(), at.getY(), home.getZ())) > BASE_RADIUS * BASE_RADIUS)
+            return home;
+        return at;
+    }
+
+    boolean passive() { return bot.difficulty == BotPlayer.Difficulty.PASSIVE; }
+
     static BlockPos meetingPoint(ServerLevel level, LivingEntity intruder) {
         if (intruder instanceof Unit u && u.isFlyingUnit())
             return BotPlayer.ground(level, intruder.blockPosition().getX(), intruder.blockPosition().getZ());
@@ -613,6 +830,14 @@ public class BotArmy {
     }
 
     /** Sets a fire state on the units (applied at once, like a player's toggle; skipped for units already in it). */
+    /** Fighting right now: a live unit target, or a building it is hitting. */
+    static boolean inFight(LivingEntity le) {
+        if (le instanceof net.minecraft.world.entity.Mob m && m.getTarget() != null && m.getTarget().isAlive())
+            return true;
+        return le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au
+            && com.solegendary.reignofnether.unit.interfaces.AttackerUnit.isAttackingBuilding(au);
+    }
+
     void stance(List<LivingEntity> units, EngagementStance s) {
         int n = 0;
         for (LivingEntity le : units)

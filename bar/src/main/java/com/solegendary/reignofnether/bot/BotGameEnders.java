@@ -96,7 +96,7 @@ public final class BotGameEnders {
      * meant to lose to one). Public for the game test.
      */
     public static int wardsWanted(BotPlayer.Difficulty difficulty, boolean tier2, int enemyEnders) {
-        if (difficulty == BotPlayer.Difficulty.EASY || !tier2)
+        if (difficulty.easyLike() || !tier2)
             return 0;
         return Math.min(3, enemyEnders);
     }

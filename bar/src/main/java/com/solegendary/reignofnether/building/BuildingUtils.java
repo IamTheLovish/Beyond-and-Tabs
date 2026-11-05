@@ -108,7 +108,19 @@ public class BuildingUtils {
         boolean flag = BuildingGrid.legacyScans
             ? BuildingScansLegacy.hasOrigin(getBuildingsList(isClientSide), building.originPos)
             : BuildingGrid.of(isClientSide).hasOrigin(building.originPos);
+        // a blueprint (a pending site, Blueprints) is buildable too: that is how a worker gets sent to start it
+        if (!flag && !isClientSide)
+            flag = Blueprints.isPending(building);
         return flag && building.getBlocksPlaced() < building.getBlocksTotal() && (!building.isBuilt || building.getBuilding().repairable);
+    }
+
+    /** The registered building at {@code pos} (as {@link #findBuilding}), else the server's blueprint there, else null. */
+    @Nullable
+    public static BuildingPlacement findBuildingOrBlueprint(boolean isClientSide, BlockPos pos) {
+        BuildingPlacement b = findBuilding(isClientSide, pos);
+        if (b == null && !isClientSide)
+            b = Blueprints.findAt(pos);
+        return b;
     }
 
     // returns a list of BPs that may reside in unique chunks for fog of war calcs

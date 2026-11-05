@@ -4,6 +4,7 @@ import static com.solegendary.reignofnether.building.BuildingUtils.getAbsoluteBl
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.blocks.BlockClientEvents;
+import com.solegendary.reignofnether.bot.BotRoles;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
@@ -12,6 +13,7 @@ import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.unit.Concealment;
 import com.solegendary.reignofnether.unit.UnitGrid;
+import com.solegendary.reignofnether.unit.interfaces.FieldArtillery;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.util.MiscUtil;
 
@@ -29,7 +31,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * The self-firing static defences (design/defences.md), one weapon class with six tunings ({@link Kind}):
+ * The self-firing static defences (design/defences.md), one weapon class with seven tunings ({@link Kind}):
  * <ul>
  *   <li>{@link Kind#RAID} - the <b>T1 anti-raid tower</b> (BAR's LLT): a small 3x3 tower every faction can raise once
  *       its capitol stands. Short reach, a quick light shot that hits light units (max health {@link #LIGHT_HEALTH} or
@@ -44,6 +46,12 @@ import java.util.function.Supplier;
  *       bar", 02:51).</li>
  *   <li>{@link Kind#FLAK} - the <b>T2 flak</b>: air only, a burst that hits every enemy flyer within
  *       {@link Kind#splash} of the target - the answer to a clump of flyers. Tier 2 research and a T2 constructor.</li>
+ *   <li>{@link Kind#SIEGE_GUARD} - the <b>anti-siege tower</b> (BAR's HLT; lovish Oct 29, design/siege_t1.md): a tall
+ *       T1-lab tower whose reach (20) is past the T1 siege lobber's (15) and every T1 line unit's, with a slow, heavy
+ *       shot (45 every 2.5 s) that hits siege units ({@link #isSiege}) {@link Kind#bonusMult} times as hard and
+ *       prefers them - one kills a lobber - and the health to outlast six lobbers. Ground only; lovish's balance pass
+ *       (Oct 29) slowed it from 1.5 s so the enhanced anti-raid tower stays the better raid answer and a lobber push
+ *       keeps its window. The long artillery (22-24) still outranges it.</li>
  *   <li>{@link Kind#ANTI_T3} - the <b>anti-experimental emplacement</b>: a 5x5 heavy weapon at the T3 lab tier, priced
  *       at DefenceCosts.ANTI_T3_SHARE of the priciest experimental. A slow, heavy shot that hits experimentals
  *       (and anything that big) {@link Kind#bonusMult} times as hard and prefers them; it reaches flyers too (two of
@@ -70,7 +78,8 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         SKY_WATCH(       20,   15f, 20,      1f,   true,   true,   0f,    280d, Gate.CAPITOL, 0.8f),
         SKY_WATCH_HEAVY( 22,   35f, 20,      1f,   true,   true,   0f,    550d, Gate.T1_LAB,  1.0f),
         FLAK(            24,   12f, 15,      1.5f, true,   true,   3f,    650d, Gate.TIER_2,  0.9f),
-        ANTI_T3(         16,   25f, 60,      3f,   true,   false,  0f,    700d, Gate.TIER_3,  0.9f);
+        ANTI_T3(         16,   25f, 60,      3f,   true,   false,  0f,    700d, Gate.TIER_3,  0.9f),
+        SIEGE_GUARD(     20,   45f, 50,      2f,   false,  false,  0f,    1000d, Gate.T1_LAB, 1.2f);
 
         public final int range;
         public final float damage;
@@ -106,12 +115,17 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
 
         /** The big-weapon look (the anti-T3 portrait, the heavy tracer and sound). */
         public boolean heavyLook() {
-            return this == ANTI_T3 || this == FLAK;
+            return this == ANTI_T3 || this == FLAK || this == SIEGE_GUARD;
         }
 
         /** The bonus goes against light units (the raid towers) rather than experimentals (anti-T3, flak). */
         public boolean bonusVsLight() {
             return this == RAID || this == RAID_HEAVY;
+        }
+
+        /** The bonus goes against siege units (the anti-siege tower). */
+        public boolean bonusVsSiege() {
+            return this == SIEGE_GUARD;
         }
     }
 
@@ -143,13 +157,23 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         setActiveAddon(RangeIndicatorAddon.class, this, true);
     }
 
-    /** Whether the target counts for the bonus: light units for the anti-raid tower, experimentals for the anti-T3 one. */
+    /**
+     * Whether the target counts for the bonus: light units for the anti-raid tower, siege units for the anti-siege one,
+     * experimentals for the anti-T3 one.
+     */
     public boolean isBonusTarget(LivingEntity le) {
         if (kind.bonusMult == 1f)
             return false;
         if (kind.bonusVsLight())
             return le.getMaxHealth() <= LIGHT_HEALTH;
+        if (kind.bonusVsSiege())
+            return isSiege(le);
         return isExperimental(le);
+    }
+
+    /** A siege unit: the bot's siege role (the T1 lobbers, the wall-breakers) or the shell-lobbing field artillery. */
+    public static boolean isSiege(LivingEntity le) {
+        return le instanceof FieldArtillery || BotRoles.isSiege(le);
     }
 
     /** An experimental: priced like a T3 (WallSegment.T3_METAL) or simply that big. */
@@ -206,6 +230,8 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         public int cooldown = 0;
         /** The enemy owner a game test limits targets to (null in play: game tests share one world). */
         @Nullable public String onlyFoe = null;
+        /** The last look found a target: the tower looks again the tick it is ready, not at the next SCAN_TICKS. */
+        private boolean engaged = false;
 
         private final List<LivingEntity> scratch = new ArrayList<>();
 
@@ -222,15 +248,19 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
                 tickWeapon(sl);
         }
 
-        /** One server tick: count the cooldown down, then look for a target every SCAN_TICKS. Public for the game test. */
+        /**
+         * One server tick: count the cooldown down and fire on the tick it reaches 0, so a tower shoots every
+         * cooldownTicks exactly. A tower still in a fight looks for its next target the tick it is ready; an idle one
+         * only every SCAN_TICKS (one grid query per shot, one per SCAN_TICKS while idle). It used to skip the ready
+         * tick and then wait for the next SCAN_TICKS even mid-fight: a 1 s tower fired every 1.5 s. Public for the
+         * game test.
+         */
         public void tickWeapon(ServerLevel sl) {
-            if (cooldown > 0) {
-                cooldown--;
+            if (cooldown > 0 && --cooldown > 0)
                 return;
-            }
-            if (tickAge % SCAN_TICKS != 0 && onlyFoe == null)
+            if (!engaged && tickAge % SCAN_TICKS != 0 && onlyFoe == null)
                 return;
-            fire(sl);
+            engaged = fire(sl) != null;
         }
 
         /** Dormant: unbuilt, destroyed, ownerless, or a flak / anti-T3 defence whose owner lacks its tier's research. */
@@ -274,6 +304,10 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         boolean canTarget(LivingEntity le) {
             if (!isFoe(le) || Concealment.isHiddenFrom(le, ownerName) || le.isInvisible())
                 return false;
+            // a low flyer (Unit.meleeReachableHeight: the Seraph Archer, lovish Oct 29: "melee units and ground towers
+            // can hit it") is in reach of every tower, ground and air alike
+            if (le instanceof Unit lu && lu.isFlyingUnit() && lu.meleeReachableHeight() > 0)
+                return true;
             boolean flyer = le instanceof Unit u && u.isFlyingUnit();
             if (flyer)
                 return tower.kind.hitsAir;
@@ -282,7 +316,8 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
 
         /**
          * Raid towers: the nearest enemy on the ground. Anti-air: the nearest enemy flyer. Anti-T3 and flak: the nearest
-         * experimental, else the nearest enemy they may shoot.
+         * experimental, else the nearest enemy they may shoot. Anti-siege: the nearest siege unit, else the nearest
+         * ground enemy.
          */
         @Nullable
         public LivingEntity pickTarget(ServerLevel sl) {

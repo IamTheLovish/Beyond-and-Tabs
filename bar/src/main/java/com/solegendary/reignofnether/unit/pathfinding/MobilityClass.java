@@ -35,9 +35,15 @@ public enum MobilityClass {
         switch (kind) {
             case WalkabilityBuilder.KIND_LAND: return 1.0f;
             case WalkabilityBuilder.KIND_WATER:
-                if (this == AQUATIC) return 3.0f;
-                if (this == TIDAL) return 1.5f;
-                return 25.0f;
+                if (this == AQUATIC) return PathfinderConfig.AQUATIC_DEEP_WATER_COST;
+                if (this == TIDAL) return PathfinderConfig.TIDAL_DEEP_WATER_COST;
+                return PathfinderConfig.DEEP_WATER_COST;
+            // a ford: a land unit wades it at half speed (Terrain.WADING_SPEED), so it costs a few dry cells - the
+            // detour to it beats swimming the deep channel, a short dry detour still beats a long wade
+            case WalkabilityBuilder.KIND_SHALLOW_WATER:
+                if (this == AQUATIC) return PathfinderConfig.AQUATIC_SHALLOW_WATER_COST;
+                if (this == TIDAL) return PathfinderConfig.TIDAL_SHALLOW_WATER_COST;
+                return PathfinderConfig.SHALLOW_WATER_COST;
             // a mild wading preference to go round a pool, never a wall
             case WalkabilityBuilder.KIND_TIDEPOOL: return this == TIDAL ? 1.0f : 1.5f;
             case WalkabilityBuilder.KIND_FIRE: return mob == FIRE_IMMUNE ? 1.0f : PathfinderConfig.FIRE_AVOID_COST;

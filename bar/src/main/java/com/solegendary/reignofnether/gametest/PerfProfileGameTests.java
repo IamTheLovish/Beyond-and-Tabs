@@ -62,6 +62,7 @@ public class PerfProfileGameTests {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_perfprof_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<Entity> made = new ArrayList<>();
+        TestCleanup.entities(helper, made);
         for (int i = 0; i < PER_SIDE; i++) {
             if (spawn(helper, owner, 1.5 + i * 1.1, 3.5, made) == null || spawn(helper, owner + "_foe", 1.5 + i * 1.1, 12.5, made) == null) {
                 cleanUp(made);
@@ -71,10 +72,13 @@ public class PerfProfileGameTests {
         }
         boolean[] started = { false };
         String[] sys = { null };
+        // a run that never got its profile (a timeout) kept its measuring hold for the rest of the server, so every
+        // later "sections are inert when nothing is measuring" check passed without checking
+        TestCleanup.atEnd(helper, () -> Sys.force(started, false));
         helper.succeedWhen(() -> {
             if (!started[0]) {
                 ServerTickProfile.lastCaptureSummary = null;
-                Sys.force(true);
+                Sys.force(started, true);   // this test's own hold (the array is unique to this run)
                 // another capture on this shared server (the 8v8 stress test can trip the automatic one): wait for it
                 if (!ServerTickProfile.startCapture(level.getServer(), 40, "gametest"))
                     notYet("another capture is running on this shared server");
@@ -85,7 +89,7 @@ public class PerfProfileGameTests {
                 notYet("waiting for the recorder's profile");
             if (sys[0] == null) {
                 sys[0] = Sys.snapshot();
-                Sys.force(false);
+                Sys.force(started, false);
             }
             if (ServerTickProfile.lastCaptureEmpty || ServerTickProfile.lastCaptureSections <= 0)
                 throw new GameTestAssertException("the lag capture came back with an EMPTY profile: " + summary);

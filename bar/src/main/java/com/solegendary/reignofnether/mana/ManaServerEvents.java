@@ -78,11 +78,9 @@ import java.util.Set;
  * {@link #converterThreshold} reads {@link FactionTraits#converterThreshold}: 0.5 for everyone, 0.75 for the
  * Stormcallers, so a Mana Condenser never eats the spell reserve.
  *
- * <h2>Mana Wells and Ley Links</h2>
- * The well registry ({@link #registerWell} / {@link #unregisterWell} / {@link #insideWell}) is fed by the Ley Master's
- * Mana Well (slice 3, {@link ManaWellServerEvents}); {@link #spellPowerAt} / {@link #spellCostAt} read it: x1.25 power
- * and x0.8 cost within {@link #WELL_RADIUS} of an own or allied well, at most {@link #WELLS_PER_PLAYER} per player.
- * Ley links live in {@link LeyNetwork}.
+ * <h2>Mana wells</h2>
+ * Only the Jade Qilin is a (walking) well now ({@link #insideWell}); the Ley Master's placed Mana Well was removed 2026-10-26.
+ *
  *
  * Faction lookups are cached per owner (not per call); owners without an RTSPlayer are not cached (they may join
  * later) and read as {@link FactionTraits#NEUTRAL}. {@link #bindTraits} lets GameTests and scenarios give such an
@@ -103,7 +101,6 @@ public class ManaServerEvents {
     public static final int WELL_RADIUS = 10;
     public static final float WELL_POWER = 1.25f;
     public static final float WELL_DISCOUNT = 0.8f;
-    public static final int WELLS_PER_PLAYER = 4;
 
     /** Why the last call refused; langKey is null for NONE. Shown with HudClientboundPacket.showTempMessageI18n. */
     public enum Refusal {
@@ -111,9 +108,6 @@ public class ManaServerEvents {
         NO_POOL("hud.mana.reignofnether.no_pool"),
         NOT_ENOUGH_ENERGY("hud.mana.reignofnether.not_enough_energy"),
         NOT_MANA("hud.mana.reignofnether.not_mana"),
-        WELL_CAP("hud.mana.reignofnether.well_cap"),
-        LINK_INVALID("hud.mana.reignofnether.link_invalid"),
-        LINK_CAP("hud.mana.reignofnether.link_cap"),
         CHANNEL_STOPPED("hud.mana.reignofnether.channel_stopped");
 
         public final String langKey;
@@ -148,7 +142,6 @@ public class ManaServerEvents {
 
     private static final Set<String> overcharged = new HashSet<>();
     private static final Map<String, FactionTraits> traitsCache = new HashMap<>();
-    private static final Map<String, List<BlockPos>> wells = new HashMap<>();
     private static Refusal lastRefusal = Refusal.NONE;
 
     // ------------------------------------------------------------------ faction
@@ -193,7 +186,7 @@ public class ManaServerEvents {
 
     /**
      * Location power factor for a spell cast at pos: {@link #WELL_POWER} inside an own or allied Mana Well (slice 3,
-     * the Ley Master's ManaWellServerEvents), else 1. Wells don't stack.
+     * the walking Jade Qilin), else 1. Wells don't stack.
      */
     public static float spellPowerAt(String owner, BlockPos pos) {
         return insideWell(owner, pos) ? WELL_POWER : 1f;
@@ -399,30 +392,6 @@ public class ManaServerEvents {
         return true;
     }
 
-    // ------------------------------------------------------------------ Mana Wells (the registry; the wells themselves are ManaWellServerEvents)
-
-    /** Register a Mana Well's centre; refused past {@link #WELLS_PER_PLAYER}. */
-    public static Refusal registerWell(String owner, BlockPos centre) {
-        List<BlockPos> list = wells.computeIfAbsent(owner, k -> new ArrayList<>(WELLS_PER_PLAYER));
-        if (list.contains(centre))
-            return Refusal.NONE;
-        if (list.size() >= WELLS_PER_PLAYER)
-            return Refusal.WELL_CAP;
-        list.add(centre.immutable());
-        return Refusal.NONE;
-    }
-
-    public static void unregisterWell(String owner, BlockPos centre) {
-        List<BlockPos> list = wells.get(owner);
-        if (list != null)
-            list.remove(centre);
-    }
-
-    public static int wellCount(String owner) {
-        List<BlockPos> list = wells.get(owner);
-        return list == null ? 0 : list.size();
-    }
-
     /** Is pos within {@link #WELL_RADIUS} of an own or allied well? At most 4 distance checks per player. */
     public static boolean insideWell(String owner, BlockPos pos) {
         if (owner == null || pos == null)
@@ -430,43 +399,20 @@ public class ManaServerEvents {
         // beasts-2: a friendly Jade Qilin is a walking well (BigUnitServerEvents; never stacks with a real one)
         if (com.solegendary.reignofnether.unit.BigUnitServerEvents.inQilinWell(owner, pos))
             return true;
-        if (wells.isEmpty())
-            return false;
-        if (nearOwnWell(owner, pos))
-            return true;
-        for (String ally : AlliancesServerEvents.getAllAllies(owner))
-            if (nearOwnWell(ally, pos))
-                return true;
-        return false;
-    }
-
-    private static boolean nearOwnWell(String owner, BlockPos pos) {
-        List<BlockPos> list = wells.get(owner);
-        if (list == null)
-            return false;
-        for (BlockPos c : list)
-            if (c.distSqr(pos) <= WELL_RADIUS * WELL_RADIUS)
-                return true;
         return false;
     }
 
     // ------------------------------------------------------------------ lifecycle
 
-    /** Defeat: Overcharge off, wells (and their markers) and ley links forgotten. */
+    /** Defeat: Overcharge off. */
     public static void clearOwner(String owner) {
         overcharged.remove(owner);
         traitsCache.remove(owner);
-        wells.remove(owner);
-        ManaWellServerEvents.clearOwner(owner);
-        LeyNetwork.clearOwner(owner);
     }
 
     /** /rts-reset: nothing about Mana outlives a match. */
     public static void clearAll() {
         overcharged.clear();
         traitsCache.clear();
-        wells.clear();
-        ManaWellServerEvents.clearAll();
-        LeyNetwork.clearAll();
     }
 }

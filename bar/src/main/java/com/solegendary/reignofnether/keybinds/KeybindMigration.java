@@ -29,7 +29,7 @@ import java.util.function.ToIntFunction;
 public final class KeybindMigration {
 
     /** The key layout the saved bindings are moved to; stored in the client config as keybind_layout. */
-    public static final int LAYOUT_VERSION = 1;
+    public static final int LAYOUT_VERSION = 3;
 
     /** What {@code savedKey} returns for a binding that must not move: a modifier combo, a mouse button, not found. */
     public static final int CUSTOM = Integer.MIN_VALUE;
@@ -46,6 +46,10 @@ public final class KeybindMigration {
     static final List<Stale> STALE = List.of(
         // Oct 11 (c4d0b47) to Oct 21 (#39): Attack was A. Every install of those builds saved it.
         new Stale(1, "key.reignofnether.attack", GLFW.GLFW_KEY_A, "Attack A -> X, so A is pure camera pan-left (#39)"),
+        // Oct 23 to Oct 26: the commander and idle T2 builder buttons shipped on End / Home, which the production
+        // monitor (Home) and pause unit production (End) now use. Their chords are Ctrl+C / Ctrl+Shift+B (ChordKeys).
+        new Stale(2, "key.reignofnether.select_commander", GLFW.GLFW_KEY_END, "Select commander End -> Ctrl+C"),
+        new Stale(2, "key.reignofnether.idle_t2_builder", GLFW.GLFW_KEY_HOME, "Idle T2 builder Home -> Ctrl+Shift+B"),
         // Oct 8 to Oct 11: the first WASD builds. Stop sat on Space, Patrol on Y and Guard on P; c4d0b47 moved them to
         // BAR's S / P / G and the gather toggle gave G up, but an install of those days keeps the old keys.
         new Stale(1, "key.reignofnether.stop", GLFW.GLFW_KEY_SPACE, "Stop Space -> S (BAR)"),
@@ -59,7 +63,11 @@ public final class KeybindMigration {
         new Stale(1, "key.reignofnether.hotkey_5", GLFW.GLFW_KEY_D, "Return resources D -> ; (D pans right)"),
         new Stale(1, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_Z, "Build slot 8 Z -> . (Z is ability slot 2)"),
         new Stale(1, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_X, "Build slot 9 X -> , (X is Attack)"),
-        new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)")
+        new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)"),
+        // Oct 11 (c4d0b47) to Nov 3: Stop was S, sharing the key with pan-down by the tap/hold rule. Nick: a short tap
+        // of S while panning stopped the selected workers. Stop is now the Ctrl+S chord, its own key unbound; listed after its layout-1 row so
+        // history() names this, the newest move.
+        new Stale(3, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> Ctrl+S (a tap of S while panning stopped workers)")
     );
 
     private KeybindMigration() { }
@@ -96,11 +104,15 @@ public final class KeybindMigration {
         return moves;
     }
 
-    /** The one-line history of a move, for the log and the toast ("Attack A -> X, ..."). */
+    /**
+     * The one-line history of a binding's newest move, for the log and the toast ("Attack A -> X, ..."). A binding that
+     * moved twice (Stop: Space -> S -> unbound) has a row per layout; the highest layout is the move being applied.
+     */
     public static String history(String binding) {
+        Stale newest = null;
         for (Stale row : STALE)
-            if (row.binding().equals(binding))
-                return row.history();
-        return binding;
+            if (row.binding().equals(binding) && (newest == null || row.version() > newest.version()))
+                newest = row;
+        return newest == null ? binding : newest.history();
     }
 }

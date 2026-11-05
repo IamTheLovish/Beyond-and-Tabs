@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.faction;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
+import com.solegendary.reignofnether.building.BuildGroup;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuilding;
@@ -50,6 +51,29 @@ public class Faction {
 
 	public java.util.Map<Building, Keybinding> getBuildHotkeys() {
 		return buildHotkeys;
+	}
+
+	// which tab of the worker's build menu each building sits in (both sides, like buildHotkeys)
+	final java.util.LinkedHashMap<Building, BuildGroup> buildGroups = new java.util.LinkedHashMap<>();
+	private final java.util.EnumMap<BuildGroup, Integer> groupCounts = new java.util.EnumMap<>(BuildGroup.class);
+
+	public java.util.Map<Building, BuildGroup> getBuildGroups() {
+		return buildGroups;
+	}
+
+	/** The buildings of one tab, in slot order (slot N is on BuildGroup.SLOT_KEYS[N]). */
+	public List<Building> getBuildingsIn(BuildGroup group) {
+		List<Building> out = new ArrayList<>();
+		for (var e : buildGroups.entrySet())
+			if (e.getValue() == group)
+				out.add(e.getKey());
+		return out;
+	}
+
+	/** The slot key of the next building registered into this tab (null once the tab is past its last key). */
+	public Keybinding nextSlotKey(BuildGroup group) {
+		int n = groupCounts.merge(group, 1, Integer::sum) - 1;
+		return BuildGroup.slotKey(n);
 	}
 
 	public Faction() {
@@ -135,8 +159,10 @@ public class Faction {
 		return faction != null && faction.key.equals(this.key);
 	}
 	
-	public void addBuilding(Building building, Keybinding keybinding) {
+	public void addBuilding(Building building, Keybinding keybinding, BuildGroup group) {
 		BuildingPlaceButton buildButton = getBuilding(ReignOfNetherRegistries.BUILDING.getKey(building)).getBuildButton(keybinding);
+		buildButton.group = group;
+		buildButton.slot = (int) buildGroups.values().stream().filter(g -> g == group).count() - 1;
 		buildingButtons.add(buildButton);
 	}
 	

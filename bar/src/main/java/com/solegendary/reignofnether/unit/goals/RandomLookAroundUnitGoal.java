@@ -43,11 +43,27 @@ public class RandomLookAroundUnitGoal extends Goal {
             if (attackerUnit.getAttackBuildingGoal() instanceof MeleeAttackBuildingGoal mabg && mabg.isAttacking())
                 return false;
 
+        if (ordered())
+            return false;
+
         return this.mob.getRandom().nextFloat() < 0.02F;
     }
 
     public boolean canContinueToUse() {
-        return this.lookTime >= 0;
+        return this.lookTime >= 0 && !ordered();
+    }
+
+    /**
+     * A move order is in hand: the move goal has a target, or its RTS path is still on its way. No glance then. Several
+     * units (Vindicator, Enchanter, Royal Guard, Slime) register their move goal in the targetSelector, which ticks
+     * before this goal's goalSelector, so a running glance overwrote the head the move goal aimed every tick, and the
+     * idle body followed it off the line while the path was pending (review round 1 on #512).
+     */
+    private boolean ordered() {
+        if (!(mob instanceof com.solegendary.reignofnether.unit.interfaces.Unit unit))
+            return false;
+        MoveToTargetBlockGoal move = unit.getMoveGoal();
+        return move != null && (move.getMoveTarget() != null || move.isPathPending());
     }
 
     public void start() {

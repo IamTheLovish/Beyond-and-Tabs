@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """The Brassworks capitol, the Foundry Hall, redrawn as THE GRAND FOUNDRY - the centrepiece of the base.
 
+NOV 2026 - THE WORKS: build() now draws the works hall the blind critic rounds chose (tools/foundry_hall_massing.py
+round3: a monitor-roofed verdigris hall, one great stack, a furnace hood on the east portal, pale andesite towers;
+5 / 5 -> 6.5 / 6.5, PR #485). Its plinth, hall faces, portals, nave, yard and golems are this file's functions; the
+roof, clock tower, gables, pipes and stacks described below are the Grand Foundry's, kept drawable as build_grand().
+
 lovish, Oct 19 2026: capitols "can be a lot bigger than the current capital size, a lot taller, a lot more detailed",
 "I want it to be the center piece of the base", everything "connects" to it with "fluidity", "don't break the game".
 Detailed = fine-grained (stairs, slabs, walls, chains, bars), not chunky blocks. The bar is the Sunforged Temple of the
@@ -95,9 +100,9 @@ def sl(c):
 
 STARTING_TYPES = {"polished_blackstone", "deepslate_bricks"}   # FoundryHall.startingBlockTypes
 # BuildingAmbienceClientEvents.CAPITOL_SPOTS["foundry_hall"] (structure coordinates, the block (x, y, z) spans x..x+1):
-# steam off the pressure dome on the south-west tower, embers out of the four lit blast furnaces on the south (+z) and
-# west (-x) faces - the camera's faces
-SPOTS = ((2.5, 13.0, 12.5, "STEAM"), (4.5, 2.6, 12.2, "EMBER"), (10.5, 2.6, 12.2, "EMBER"),
+# steam off the works side's furnace hood (east portal; the Grand Foundry's was its pressure dome), embers out of the
+# four lit blast furnaces on the south (+z) and west (-x) faces - the camera's faces
+SPOTS = ((12.5, 8.0, 7.5, "STEAM"), (4.5, 2.6, 12.2, "EMBER"), (10.5, 2.6, 12.2, "EMBER"),
          (2.8, 2.6, 4.5, "EMBER"), (2.8, 2.6, 10.5, "EMBER"))
 
 
@@ -418,6 +423,19 @@ def yard_dressing(c):
 
 
 def build():
+    """THE WORKS (Nov 2026, the buildings lane on lovish's API key): the Grand Foundry below read as an "orange stepped
+    pyramid with chimneys" to two fresh critics (5 / 5; 59 % of its pixels team-orange on screen; the stepped roof the
+    church read lovish rejected on the Engine Shed). Blind rounds (tools/foundry_hall_massing.py, PR body) settled a
+    works hall on the same plinth, hall, towers, yard and golems: a pitched verdigris roof under a raised clerestory
+    MONITOR with a pale andesite roof, both stacks on the east end (one great 2 x 2 stack leading, one plume each),
+    the east portal turned into the works side (a furnace hood of lit blast furnaces, coal and a rail spur), pale
+    andesite towers / gables / panels, orange copper only as the east towers' pipes and the brass keystones. The
+    Grand Foundry stays drawable as build_grand() (the massing rounds' base and control)."""
+    import foundry_hall_massing as M
+    return M.round3()
+
+
+def build_grand():
     c = tc.Cap(R, H)
     yard(c)
     plinth(c)
@@ -470,13 +488,13 @@ def check(s, box=(2 * R + 1, H, 2 * R + 1)):
     while y > 0 and (cx, y - 1, cz) not in names:
         y -= 1
     assert y == 2 and all((cx, yy, cz) not in names for yy in range(2, 14)), "the centre spawn lands at y%d" % y
-    # each ambience spot sits just off its block: the steam over the pressure dome's slab, an ember just outside each
+    # each ambience spot sits just off its block: the steam over the furnace hood's soot stair, an ember just outside each
     # furnace's mouth (the block behind the spot on the face it is drawn on)
-    holders = {(2.5, 13.0, 12.5): (2, 12, 12), (4.5, 2.6, 12.2): (4, 2, 11), (10.5, 2.6, 12.2): (10, 2, 11),
+    holders = {(12.5, 8.0, 7.5): (12, 7, 7), (4.5, 2.6, 12.2): (4, 2, 11), (10.5, 2.6, 12.2): (10, 2, 11),
                (2.8, 2.6, 4.5): (3, 2, 4), (2.8, 2.6, 10.5): (3, 2, 10)}
     for (x, y, z, fx) in SPOTS:
         cell = holders[(x, y, z)]
-        want = "waxed_oxidized_cut_copper_slab" if fx == "STEAM" else "blast_furnace"
+        want = "polished_blackstone_brick_stairs" if fx == "STEAM" else "blast_furnace"
         assert names.get(cell) == want, "spot %s: %s at %s" % ((x, y, z), names.get(cell), cell)
     return n
 

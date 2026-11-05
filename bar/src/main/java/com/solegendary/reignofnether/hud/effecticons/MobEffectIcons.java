@@ -228,6 +228,12 @@ public class MobEffectIcons {
             "limited_lifespan"
     );
 
+    public static final MobEffectIcon ROOTBOUND = new MobEffectIcon(
+            MobEffectRegistrar.ROOTBOUND.get(),
+            ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/hanging_roots.png"),
+            "rootbound"
+    );
+
     @Nullable
     public static MobEffectIcon getIcon(MobEffectInstance mei) {
         for (MobEffectIcon effectIcon : EFFECT_ICONS)
@@ -239,6 +245,7 @@ public class MobEffectIcons {
     public static final List<MobEffectIcon> EFFECT_ICONS = List.of(
             STUN,
             FREEZE,
+            ROOTBOUND,
             UNCONTROLLABLE,
             ZOMBIE_INFECTED,
             SLIME_INFECTED,
