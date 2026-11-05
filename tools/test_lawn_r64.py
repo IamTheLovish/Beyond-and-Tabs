@@ -223,8 +223,9 @@ class LawnSheetRound64Test(unittest.TestCase):
         with self.subTest("flower specks"):
             L1 = sim.luma(sheet_mip())
             sizes = [s for s in components(L1 > np.percentile(L1, 99.5)) if s >= 2]
-            self.assertGreaterEqual(len(sizes), 8)
-            self.assertGreaterEqual(sum(1 for s in sizes if s >= 5), 4)
+            # r63's 8 / 4 were per 4 x 4 blocks; this is the 8 x 8 sheet, 4x the area
+            self.assertGreaterEqual(len(sizes), 32)
+            self.assertGreaterEqual(sum(1 for s in sizes if s >= 5), 16)
             self.assertLessEqual(max(sizes), 30)
         with self.subTest("wraps"):
             _H, alb = variants(256)[0]

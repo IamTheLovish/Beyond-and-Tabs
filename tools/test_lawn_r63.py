@@ -156,14 +156,14 @@ class LawnSheetRound63Test(unittest.TestCase):
 
     def test_flower_specks(self):
         """under the biome tint a flower cannot be white - only the brightest thing on the sheet (albedo G 1): the
-        top 0.5% of one sheet's mip forms 8+ specks of 2+ px, 4+ of them 5+ px (the buttercups, 0.1 block = 7 mip
-        px), none a blotch over 30 px."""
+        top 0.5% of the 8 x 8 sheet's mip forms 32+ specks of 2+ px, 16+ of them 5+ px (the buttercups, 0.1 block = 7
+        mip px; 8 / 4 per 4 x 4 blocks, scaled by area), none a blotch over 30 px."""
         _H, alb = sheet()
         f = np.clip(sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS) * sim.hex_rgb(sim.LAWN_TINT), 0, 1)
         L = sim.luma(f)
         sizes = [s for s in components(L > np.percentile(L, 99.5)) if s >= 2]
-        self.assertGreaterEqual(len(sizes), 8)
-        self.assertGreaterEqual(sum(1 for s in sizes if s >= 5), 4)
+        self.assertGreaterEqual(len(sizes), 32)
+        self.assertGreaterEqual(sum(1 for s in sizes if s >= 5), 16)
         self.assertLessEqual(max(sizes), 30)
 
     def test_sheet_wraps_seamlessly(self):
