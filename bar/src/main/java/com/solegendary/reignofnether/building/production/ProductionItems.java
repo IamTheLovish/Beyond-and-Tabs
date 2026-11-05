@@ -280,6 +280,10 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.building.production.SecondT3Prod STORM_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storm_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit.ITEM_NAME, "earthshaker", com.solegendary.reignofnether.resources.ResourceCosts.STORM_T3B, CELESTIAL_DRAGON, () -> EntityRegistrar.JADE_SENTINEL_UNIT.get(), "entity.reignofnether.jade_sentinel_unit"));
     public static final com.solegendary.reignofnether.building.production.SecondT3Prod BRASS_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "brass_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.brass.BrassZeppelinUnit.ITEM_NAME, "iron_leviathan_engine", com.solegendary.reignofnether.resources.ResourceCosts.BRASS_T3B, IRON_LEVIATHAN_ENGINE, () -> EntityRegistrar.BRASS_ZEPPELIN_UNIT.get(), "entity.reignofnether.brass_zeppelin_unit"));
 
+    // Tier 4 (slice H5a): the Horde's Ascension research and its Worldbreaker, both at the Fortress
+    public static final com.solegendary.reignofnether.research.researchItems.ResearchAscension RESEARCH_ASCENSION = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ascension"), new com.solegendary.reignofnether.research.researchItems.ResearchAscension());
+    public static final com.solegendary.reignofnether.unit.units.piglins.WorldbreakerProd WORLDBREAKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "worldbreaker"), new com.solegendary.reignofnether.unit.units.piglins.WorldbreakerProd());
+
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
     }
@@ -462,7 +466,9 @@ public class ProductionItems {
         VERDANT_T3B,
         TIDE_T3B,
         STORM_T3B,
-        BRASS_T3B
+        BRASS_T3B,
+        // Tier 4 (H5a): trainable at the Fortress after Ascension, so getProductionItem finds it (every_unit_type_has_cost_faction_abilities_icon_and_name)
+        WORLDBREAKER
     );
 
     @Nullable
