@@ -233,12 +233,13 @@ public final class BarFx {
 
     /**
      * A portal-type building forms (PortalForming, once per activation): {@code base} = the footprint's centre at its
-     * floor, {@code halfSize} its horizontal half size, {@code height} its height; style FS_*, faction F_* (the tint).
+     * floor, {@code halfSize} its horizontal half size, {@code height} its height; style FS_*, faction F_* (the tint);
+     * {@code doorway} a portal's opening packed by PortalForming.doorway (0 = none).
      */
-    public static void forming(Level level, Vec3 base, float halfSize, float height, byte style, byte faction) {
+    public static void forming(Level level, Vec3 base, float halfSize, float height, byte style, byte faction, float doorway) {
         if (level == null || level.isClientSide() || base == null) return;
         emit(level, new Event(FORMING, style, (byte) (faction & FACTION_MASK), (float) base.x, (float) base.y, (float) base.z,
-            Math.max(1, halfSize), Math.max(1, height), 0));
+            Math.max(1, halfSize), Math.max(1, height), doorway));
     }
 
     /** A weapon fires from 'from' towards 'to'. */
