@@ -46,7 +46,7 @@ import java.util.List;
 public final class ServerTickProfile {
     private ServerTickProfile() { }
 
-    static final int LOG_EVERY_TICKS = 200;
+    public static final int LOG_EVERY_TICKS = 200;
     static final int MAX_RECORD_SECONDS = 600;
 
     private static int ticks = 0;
