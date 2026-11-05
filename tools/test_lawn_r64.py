@@ -211,8 +211,8 @@ class LawnSheetRound64Test(unittest.TestCase):
         and the 2+ block share on the sheet times the world colour field ("Yes, as the player sees it"): near-black
         < 0.5% under our gain, speckle 0.40-0.50, 2+ block share 0.08-0.30 (floor 0.15 -> 0.08 with test_lawn_r62's
         on lovish's "D, and lower both floors", Nov 4 ~17:05 ET), fine grain (under 0.2 block over
-        0.25-0.6 block), saturation >= 0.58 and L >= 0.34 under our gain, worn soil 0.3-8% (floor 1% -> 0.3% with
-        test_lawn_r63's on lovish's "D, and lower both floors") in pieces of 32-4096 px,
+        0.25-0.6 block), saturation >= 0.58 and L >= 0.34 under our gain, worn soil at most 8% (the floor went with
+        lovish's "Re-set to the new look", Nov 5: no soil specks in the sheet) in pieces of 32-4096 px,
         the brightest 0.5% in 8+ specks of 2+ px (4+ of 5+ px, none over 30), and the sheet wraps."""
         f3 = np.tile(sheet_mip(), (3, 3, 1))
         g3 = np.tile(sheet_mip(gain=True), (3, 3, 1))
@@ -233,12 +233,12 @@ class LawnSheetRound64Test(unittest.TestCase):
             m = sim.measure(g3)
             self.assertGreaterEqual(m["sat"], 0.58)
             self.assertGreaterEqual(m["L"], 0.34)
-        with self.subTest("worn soil patches"):
+        with self.subTest("worn soil patches"):        # no floor since lovish's "Re-set to the new look" (Nov 5)
             soil = (hue_deg(f3) < 80) & (L < 0.35)
-            self.assertGreaterEqual(float(soil.mean()), 0.003)
             self.assertLessEqual(float(soil.mean()), 0.08)
-            sizes = components(soil)
-            self.assertGreaterEqual(max(sizes), 32)
+            sizes = components(soil) or [0]
+            if float(soil.mean()) >= 0.0005:
+                self.assertGreaterEqual(max(sizes), 32)
             self.assertLessEqual(max(sizes), 4096)
         with self.subTest("flower specks"):
             L1 = sim.luma(sheet_mip())

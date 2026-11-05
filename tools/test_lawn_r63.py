@@ -163,14 +163,17 @@ class LawnSheetRound63Test(unittest.TestCase):
         set before the build); round 64's blind critic read the soil as "scorch marks / droppings" (hard-edged,
         near-black brown, evenly scattered) and lovish said "The grass looks blotchy" (Nov 4 16:53 ET); r65's
         candidate A halves the scuffs, lightens them ~30% and feathers them - the lighter ones no longer count as
-        soil here (0.4%) - and he chose "D, and lower both floors" (~17:05 ET): floor 0.3% by his choice."""
+        soil here (0.4%) - and he chose "D, and lower both floors" (~17:05 ET): floor 0.3% by his choice. Round 66:
+        the soil specks repeated with the sheet (the same brown spots every 8 blocks) and lovish picked "D1, no soil
+        specks" and "Re-set to the new look" (Nov 5: "With no specks, the worn-soil minimum goes"): no floor; at most
+        8%, and any soil there is comes in pieces of 32-4096 px."""
         f = field(gain=False)
         soil = (hue_deg(f) < 80) & (sim.luma(f) < 0.35)
         share = float(soil.mean())
-        self.assertGreaterEqual(share, 0.003)
         self.assertLessEqual(share, 0.08)
-        sizes = components(soil)
-        self.assertGreaterEqual(max(sizes), 32)
+        sizes = components(soil) or [0]
+        if share >= 0.0005:                          # specks of soil, if any, still come in patches
+            self.assertGreaterEqual(max(sizes), 32)
         self.assertLessEqual(max(sizes), 4096)
 
     def test_flower_specks(self):
