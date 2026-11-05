@@ -50,7 +50,7 @@ DRIVE = 6.0                            # deg per px/tick^2
 CLAMP = {"hem_front": (0.0, 40.0), "hem_back": (-40.0, 0.0), "hem_b": (-40.0, 40.0), "tatter": (-60.0, 10.0),
          "lantern": (-6.0, 25.0), "cape": (-50.0, 5.0), "shackle": (-80.0, 80.0)}
 GRAVITY = 1.28                         # px/tick^2 (0.08 blocks/tick^2) - falling weapons at death
-DEATH_DROP = 10.5                      # px: the crumple lands the robe on the ground (tools/tithe_binder_poses.py)
+DEATH_DROP = 10.9                      # px: the crumple lands the robe on the ground (r6 slump: tithe_binder_poses.py death_t30 lands at -10.86)
 HUB = (0.0, 27.0 + G.LIFT, 0.0)        # where the soul chains leave the ribs
 LANTERN = (0.0, 23.0 + G.LIFT, -6.5)    # the lantern's core at rest (the bind's orb flies into it)
 RING_PIVOT, RING_R, RING_TILT = G.RING_PIVOT, G.RING["r"], G.RING_TILT
@@ -68,10 +68,28 @@ CONTRACT, FLARE = 0.8, 1.3             # r5: every docked spoke's scale at the w
 HIT_KICK_R, HIT_DROP = 2.7, 3.0        # r5 hit react, t1: every spoke kicks out 2.7 px (15% of r 18) and drops 3 px
 K_KICK, C_KICK = 0.10, 0.30            # r5: their own soft spring (back in ~8 ticks; the radial spring took 3)
 SWAY_PHASE = 137.5                     # r5: the idle sway's phase step per spoke (deg; r4 36 read as one unison sway)
-MOVE_TILT, MOVE_LAG = 10.0, 3          # r5: the ring tilts back 10 at full speed, 3 ticks behind the speed
+MOVE_TILT, MOVE_LAG = 10.0, 3          # r5: the ring tilts back 10 at full speed (r6: the lag is the K_RMOVE spring;
+#                                        MOVE_LAG is no longer used)
 IMPACT_TICKS, IMPACT_R = 4, 6.0        # r5: the impact flash on contact (renderer quad, px)
 LASH_SAG = 3.0                         # r5: the bind lash sags (px at its middle)
 TRAIL = 3                              # r5: positions kept per flying weapon for its streak (renderer)
+# r6: the wheel grows with N - pommel radius and docked spoke size per count (a tight hook at 1, the full wheel at 10)
+RING_R_MIN, SPOKE_MIN = 15.0, 0.6      # at N = 1 (N = 10: RING_R and 1.0 - the model's own geometry)
+HOVER_PULSE = 1.0                      # r6: px the hover dips at each release of the train (back in 2 ticks)
+K_RMOVE, C_RMOVE = 0.15, 0.35          # r6: the move's ring tilt as a spring (lags ~3 ticks, no pop)
+FLUTTER, FLUTTER_T = 9.0, 24.0         # r6: tatter flutter amplitude (deg) / period (ticks) (r5 4 / 30: read static)
+SHACKLE_DRIVE = 0.8                    # r6: a shackle chain is kicked back by its arm's angular velocity
+HALO_DIP = 2.0                         # r6: the count halo dips (px) for 3 ticks on a hit (renderer)
+
+
+def ring_r_n(n):
+    """The pommel radius for N bound weapons (r6)."""
+    return RING_R_MIN + (RING_R - RING_R_MIN) * (max(1, min(10, n)) - 1) / 9.0
+
+
+def spoke_n(n):
+    """The docked spoke size (part scale on the model's N = 10 geometry) for N bound weapons (r6)."""
+    return SPOKE_MIN + (1.0 - SPOKE_MIN) * (max(1, min(10, n)) - 1) / 9.0
 LATERAL, ARC_UP = 16.0, (8.0, 6.0)     # px: the arc's control points off the bearing, and up
 VICTIM_R = 5.0                         # px: the tip stops 2 px inside a victim of this radius (r3: at its centre)
 HUB_R = 6.0                            # px: a soul chain leaves the ribs this far out toward its weapon
@@ -199,7 +217,7 @@ def layout_angles(n):
 def initial_state(n=10, seed=1):
     seed, r = lcg(seed)
     springs = {b: [0.0, 0.0] for b in ("hem_chain_1", "hem_chain_2", "hem_chain_3", "hem_chain_1_b", "hem_chain_2_b",
-                                        "hem_chain_3_b", "lantern_chain", "cape", "body_lean", "ring_tilt_x",
+                                        "hem_chain_3_b", "lantern_chain", "cape", "body_lean", "ring_move", "ring_tilt_x",
                                         "ring_tilt_z", "right_shackle_x", "right_shackle_z", "left_shackle_x",
                                         "left_shackle_z") + TATTERS}
     slots = {k: {"angle": a, "ang_v": 0.0, "radial": [0.0, 0.0], "roll": [0.0, 0.0], "kick": [0.0, 0.0],
@@ -207,7 +225,7 @@ def initial_state(n=10, seed=1):
                  "mode": "DOCKED", "since": 0, "data": {}} for k, a in zip(range(1, n + 1), layout_angles(n))}
     return {"n": n, "seed": seed, "tick": 0, "bob": 0.0, "breath": 0.0, "look": 0.0, "fidget_in": 200 + int(200 * r),
             "fidget_t": -1, "ring_yaw": 0.0, "ring_yaw_v": 0.6, "springs": springs, "slots": slots,
-            "v_hist": [0.0] * MOVE_LAG,
+            "arm_prev": {},
             "root": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], "root_z": 0.0, "speed": 0.0,
             "lean_x": 0.0, "lean_v": 0.0, "lantern": 1.0, "order": {}, "falling": {}}
 
@@ -228,7 +246,7 @@ def slot_local(angle, radial=0.0, y=0.0):
 def slot_world(st, angle, radial=0.0):
     """A slot's pommel in model space from the CURRENT ring transform (state['ring_now']); angle includes the spin."""
     R, o = st["ring_now"]
-    p = slot_local(angle, radial)
+    p = slot_local(angle, radial + st.get("n_off", 0.0))        # r6: + the N-dependent radius offset
     return [o[i] + sum(R[i][j] * p[j] for j in range(3)) for i in range(3)]
 
 
@@ -259,6 +277,8 @@ def body_targets(st, clip, t, inp):
         idle_w = 1.0 - keys(t, [(0, 0.0), (4, 1.0), (st["f_end"], 1.0), (st["f_end"] + 6, 0.0)])
     if clip == "death":
         idle_w = 1.0 - keys(t, [(0, 0.0), (3, 1.0)])
+    if clip == "move":
+        idle_w = 1.0 - 0.8 * inp.get("speed", 0.0)                  # r6: the weave gives way to the sweep
     bob, br, look = st["bob"], st["breath"], st["look"]
     amp = 2.0 - 0.5 * st["speed"]
     put("hover", off=[0, amp * math.sin(bob) * idle_w, 0])
@@ -274,7 +294,7 @@ def body_targets(st, clip, t, inp):
     curl = (10 + 10 * math.sin(2 * math.pi * st["tick"] / 40.0)) * idle_w
     put("right_hand", rot=[curl, 0, 0])
     put("left_hand", rot=[curl, 0, 0])
-    tat = [4 * math.sin(2 * math.pi * st["tick"] / 30.0 + i * math.pi / 2) * idle_w for i in range(4)]
+    tat = [FLUTTER * math.sin(2 * math.pi * st["tick"] / FLUTTER_T + i * math.pi / 2) for i in range(4)]
     ch["tatter_add"] = tat
 
     if clip == "fidget":       # "counting": the wheel spins one fast turn, its spokes flare, the weapons rattle
@@ -286,18 +306,17 @@ def body_targets(st, clip, t, inp):
     if clip == "move":
         v = inp.get("speed", 0.0)
         ch["speed"] = v
-        ch["lean_target"] = -10.0 * v
+        # r6 (the review: "idle + ring tilt"): a deeper lean (abs -18), the arms swept well back, the cloth trailing
+        ch["lean_target"] = -14.0 * v
         put("hover", off=[0, -2.0 * v, 0])
-        put("head", rot=[10 * v, 0, 0])
+        put("head", rot=[14 * v, 0, 0])
         for side in ("right", "left"):
-            put(side + "_arm", rot=[-40 * v, 0, 0])
-            put(side + "_forearm", rot=[-25 * v, 0, 0])
-            put(side + "_hand", rot=[-15 * v, 0, 0])
-        ch["tatter"] = -35.0 * v + 6 * math.sin(2 * math.pi * t / 12.0) * v
-        ch["cape"] = -30.0 * v
-        v_lag = st["v_hist"][0]                 # r5: the ring tilts BACK 10 and lags the speed by MOVE_LAG ticks
-        ch["ring_tilt"] = [MOVE_TILT * v_lag, 0.0]
-        ch["ring_off"] = [0.0, 0.0, 2.0 * v_lag]
+            put(side + "_arm", rot=[-55 * v, 0, 0])
+            put(side + "_forearm", rot=[-30 * v, 0, 0])
+            put(side + "_hand", rot=[-20 * v, 0, 0])
+        ch["tatter"] = -45.0 * v + 6 * math.sin(2 * math.pi * t / 12.0) * v
+        ch["cape"] = -35.0 * v
+        ch["ring_move"] = MOVE_TILT * v          # r6: through a spring (K_RMOVE): lags ~3 ticks without r5's pop
         ch["ring_spin"] = 0.6 + 0.6 * v
         ch["trail"] = 10.0 * v
 
@@ -310,12 +329,18 @@ def body_targets(st, clip, t, inp):
         b = st["bearing"]
         sb, cb = math.sin(math.radians(b)), math.cos(math.radians(b))
         back = lambda d: [d * sb, 0.0, d * cb]                      # noqa: E731  (away from the target, px)
-        hy = keys(t, [(0, 0), (4, 0), (8, -2), (10, 3), (12, 3), (13, -1), (fe, 0)])
-        hb = keys(t, [(0, 0), (4, 0), (8, 1), (10, 3), (12, 3), (13, -4), (fe, 0)])
+        # r6: the strike pose is HELD through the release train (to `last`), the caster pulsing 1 px per release,
+        # then recovers over 12 ticks (r5 popped back to rest by t16 and idled while the weapons dripped out)
+        hy = keys(t, [(0, 0), (4, 0), (8, -2), (10, 3), (12, 3), (13, -1), (last, -1), (fe, 0)])
+        rel = [VOLLEY_RELEASE + RELEASE_GAP * o for o in st["order"].values()]
+        since = [t - r for r in rel if 0 <= t - r < 2]
+        if since:
+            hy -= HOVER_PULSE * (1.0 - min(since) / 2.0)
+        hb = keys(t, [(0, 0), (4, 0), (8, 1), (10, 3), (12, 3), (13, -4), (last, -4), (fe, 0)])
         put("hover", off=[back(hb)[0], hy, back(hb)[2]])
-        by = keys(t, [(0, 0), (4, b), (8, b + 8), (10, b + 25), (12, b + 25), (13, b - 15), (fe, b)])
-        put("body", rot=[keys(t, [(0, 0), (4, 0), (8, -6), (10, 14), (12, 14), (13, -11), (fe, 0)]), by, 0])
-        put("head", rot=[keys(t, [(0, 0), (8, 0), (10, -20), (12, -20), (13, 0), (fe + 2, 0)]), b - by, 0])
+        by = keys(t, [(0, 0), (4, b), (8, b + 8), (10, b + 25), (12, b + 25), (13, b - 15), (last, b - 15), (fe, b)])
+        put("body", rot=[keys(t, [(0, 0), (4, 0), (8, -6), (10, 14), (12, 14), (13, -11), (last, -11), (fe, 0)]), by, 0])
+        put("head", rot=[keys(t, [(0, 0), (8, 0), (10, -20), (12, -20), (13, -8), (last, -8), (fe + 2, 0)]), b - by, 0])
         # the whip: through to delta 40 at t13, then down to 20 (abs 40) for the release train, so the whip circles
         # run under the ring (r5 clearance: at delta 40 the circling hand came within 0.8 px of the spokes)
         put("right_arm", rot=[keys(t, [(0, 0), (8, 0), (10, 180), (12, 180), (13, 40), (15, 20),
@@ -323,7 +348,7 @@ def body_targets(st, clip, t, inp):
                               # the outward z only once the arm is up (r5: swung out on the way up, the hand
                               # passed the spokes at 0.9 px)
                               keys(t, [(0, 0), (9, 0), (10, 42), (12, 42), (13, 0)])])
-        fx = keys(t, [(0, 0), (8, -10), (10, 25), (12, 25), (13, -25), (fe, 0)])
+        fx = keys(t, [(0, 0), (8, -10), (10, 50), (12, 50), (13, -25), (fe, 0)])
         fz = 0.0
         if n >= 3 and 13 < t <= last + 1:       # one crack of the whip per release
             ph = 2 * math.pi * (t - VOLLEY_RELEASE) / float(RELEASE_GAP)
@@ -334,14 +359,16 @@ def body_targets(st, clip, t, inp):
         put("left_arm", rot=[keys(t, [(0, 0), (4, 30), (10, 47), (max(last + 2, 15), 47), (fe, 0)]), 0, 0])
         put("left_forearm", rot=[keys(t, [(0, 0), (10, -30), (max(last + 2, 15), -30), (fe, 0)]), 0, 0])
         put("mantle", off=[0, keys(t, [(0, 0), (8, 0), (10, 1), (12, 1), (13, 0)]), 0])
-        ch["tatter"] = keys(t, [(0, 0), (8, 4), (10, -8), (12, -8), (13, -15), (fe, 0)])
-        ch["cape"] = keys(t, [(0, 0), (8, 2), (10, -6), (12, -6), (13, -12), (fe, 0)])
-        tl = keys(t, [(0, 0), (4, 0), (8, 12), (12, 12), (13, -18), (fe, 0)])
+        ch["tatter"] = keys(t, [(0, 0), (8, 4), (10, -8), (12, -8), (13, -15), (last, -15), (fe, 0)])
+        ch["cape"] = keys(t, [(0, 0), (8, 2), (10, -6), (12, -6), (13, -12), (last, -12), (fe, 0)])
+        tl = keys(t, [(0, 0), (4, 0), (8, 12), (12, 12), (13, -18), (last, -18), (fe, 0)])
         ch["ring_tilt"] = [tl * cb, -tl * sb]                        # dips toward the target's bearing
-        ro = keys(t, [(0, 0), (4, 0), (8, 4), (12, 4), (13, -5), (fe, 0)])
-        ch["ring_off"] = [back(ro)[0], keys(t, [(0, 0), (4, 0), (8, 1), (12, 1), (13, -2), (fe, 0)]), back(ro)[2]]
-        ch["ring_spin"] = keys(t, [(0, 0.6), (10, 6.0), (last, 6.0), (last + 15, 0.6)])
-        ch["cock"] = keys(t, [(0, 0), (8, 25), (12, 25), (13, 10), (fe, 0)])
+        ro = keys(t, [(0, 0), (4, 0), (8, 4), (12, 4), (13, -5), (last, -5), (fe, 0)])
+        ch["ring_off"] = [back(ro)[0], keys(t, [(0, 0), (4, 0), (8, 1), (12, 1), (13, -2), (last, -2), (fe, 0)]),
+                          back(ro)[2]]
+        # the spin peaks at the snap and decays across the release train (each release takes some of it)
+        ch["ring_spin"] = keys(t, [(0, 0.6), (10, 6.0), (13, 6.0), (last, 1.5), (fe, 0.6)])
+        ch["cock"] = keys(t, [(0, 0), (8, 25), (12, 25), (13, 10), (last, 10), (fe, 0)])
         ch["spoke_scale"] = keys(t, [(0, 1.0), (4, 1.0), (8, CONTRACT), (12, CONTRACT), (13, FLARE), (16, 1.0)])
         released = len([k for k, o in st["order"].items() if VOLLEY_RELEASE + RELEASE_GAP * o <= t])
         ch["lantern"] = keys(t, [(0, 1.0), (10, 1.6), (last, 1.6), (fe, 1.0)])
@@ -364,11 +391,13 @@ def body_targets(st, clip, t, inp):
         ch["lantern"] = keys(t, [(0, 1.8), (16, 2.0), (17, 2.0), (31, 1.0)])
 
     if clip == "hit":          # sheet 5.5 (a blow from inputs["hit_dir"], default the front)
-        st_ = 1.0 if t >= 0 else 0.0
-        put("hover", off=[0, keys(t, [(0, -3), (2, -3), (8, 0)]) * st_, 0])
-        put("head", rot=[keys(t, [(0, 15), (2, 15), (8, 0)]), 0, 0])
-        ch["lean_kick"] = 12.0 if t == 0 else 0.0
-        ch["tilt_kick"] = 18.0 if t == 0 else 0.0
+        # r6 (the review: a ~4 px kick, the hood's peak at t6): keyed, the peak at t1-2, settled by t11 - the body
+        # thrown back 18 and pushed 2 px back, the hood with it, the ring's front kicked up 18 (no spring lag)
+        put("hover", off=[0, keys(t, [(0, 0), (1, -3), (3, -3), (8, 0)]), keys(t, [(0, 0), (1, 2), (3, 2), (9, 0)])])
+        put("body", rot=[keys(t, [(0, 0), (1, 18), (2, 18), (5, 4), (8, -2), (11, 0)]), 0, 0])
+        put("head", rot=[keys(t, [(0, 0), (1, 15), (2, 15), (8, 0)]), 0, 0])
+        ch["ring_tilt"] = [keys(t, [(0, 0), (1, 18), (3, 14), (7, -3), (11, 0)]), 0.0]
+        ch["halo_dip"] = HALO_DIP if 1 <= t <= 3 else 0.0
         ch["rattle"] = 15.0 if t == 0 else 0.0
         ch["pitch_kick"] = 30.0 if t == 0 else 0.0
         ch["tatter_kick"] = -6.0 if t == 0 else 0.0
@@ -386,15 +415,18 @@ def body_targets(st, clip, t, inp):
             fall = -DEATH_DROP + keys(t, [(16, -1.5), (19, -1.5), (21, 0.0), (33, 0.0), (35, -1.0), (37, 0.4), (40, 0.0)])
         put("hover", off=[0, fall, 0])
         # r5: the slumped hood rolls and turns (it read as an upright red crate)
-        put("head", rot=[keys(t, [(0, 0), (3, 35), (6, 35), (16, 35), (19, 28), (33, -36)]),
-                         keys(t, [(0, 0), (19, 0), (33, 15)]), keys(t, [(0, 0), (19, 0), (33, 22), (36, 26), (40, 22)])])
-        put("body", rot=[keys(t, [(0, 0), (3, 8), (6, 8), (16, 8), (17, -8), (19, -8), (33, -26)]), 0, 0])
-        put("chest", rot=[keys(t, [(0, 0), (3, 6), (6, 6), (16, 6), (17, -4), (19, -4), (33, -40)]), 0, 0])
+        put("head", rot=[keys(t, [(0, 0), (3, 35), (6, 35), (16, 35), (19, 28), (33, -21)]),
+                         0, keys(t, [(0, 0), (19, 0), (33, 8), (36, 12), (40, 8)])])
+        # r6: a sideways slump (body roll 18, less fold: the r5 -26 / -40 fold read as a red crate with the hood on
+        # top, and put the chest into the waist)
+        put("body", rot=[keys(t, [(0, 0), (3, 8), (6, 8), (16, 8), (17, -8), (19, -8), (33, -20)]), 0,
+                         keys(t, [(0, 0), (19, 0), (33, 18)])])
+        put("chest", rot=[keys(t, [(0, 0), (3, 6), (6, 6), (16, 6), (17, -4), (19, -4), (33, -18)]), 0, 0])
         # the arms fall limp and IN, along the body (r3: the left hand poked out from under the hood at t30)
-        put("right_arm", rot=[keys(t, [(0, 0), (6, 0), (19, 0), (33, 20)]), 0,
-                              keys(t, [(0, 0), (3, -58), (6, -58), (16, -58), (19, -40), (33, 10)])])
-        put("left_arm", rot=[keys(t, [(0, 0), (6, 0), (19, 0), (33, 20)]), 0,
-                             keys(t, [(0, 0), (3, 58), (6, 58), (16, 58), (19, 40), (33, -10)])])
+        put("right_arm", rot=[keys(t, [(0, 0), (6, 0), (19, 0), (33, 30)]), 0,
+                              keys(t, [(0, 0), (3, -58), (6, -58), (16, -58), (19, -40), (33, 5)])])
+        put("left_arm", rot=[keys(t, [(0, 0), (6, 0), (19, 0), (33, 30)]), 0,
+                             keys(t, [(0, 0), (3, 58), (6, 58), (16, 58), (19, 40), (33, 5)])])
         for side in ("right", "left"):
             put(side + "_forearm", rot=[keys(t, [(0, 0), (3, -25), (19, -25), (33, -35)]), 0, 0])
         fold = keys(t, [(0, 0.0), (19, 0.0), (33, 1.0)])
@@ -433,6 +465,7 @@ def start_clip(st, clip, inp):
         st["target"] = list(tgt)
         st["bearing"] = bearing
     if clip == "bind":
+        st["n_prev"] = n
         k = n + 1
         st["slots"][k] = {"angle": G.BASE_YAW + 360.0 / k * (k - 1), "ang_v": 0.0, "radial": [0.0, 0.0],
                           "roll": [0.0, 0.0], "kick": [0.0, 0.0], "drop": [0.0, 0.0], "mode": "FORGING",
@@ -451,7 +484,6 @@ def step(state, inp):
     v = inp.get("speed", 0.0) if clip == "move" else 0.0
     # ---- phases (kept as state; the move shortens the bob to 40 ticks)
     st["speed"] = v
-    st["v_hist"] = (st.get("v_hist") or [0.0] * MOVE_LAG)[1:] + [v]
     st["bob"] = (st["bob"] + 2 * math.pi / (60.0 - 20.0 * v)) % (2 * math.pi)
     st["breath"] = (st["breath"] + 2 * math.pi / 80.0) % (2 * math.pi)
     st["look"] = (st["look"] + 2 * math.pi / 160.0) % (2 * math.pi)
@@ -470,6 +502,8 @@ def step(state, inp):
     if ch.get("lean_kick"):
         S["body_lean"] = [ch["lean_kick"], 0.0]
     S["body_lean"] = spring(S["body_lean"], ch["lean_target"], K_LEAN, C_LEAN)
+    S.setdefault("ring_move", [0.0, 0.0])
+    S["ring_move"] = spring(S["ring_move"], ch.get("ring_move", 0.0), K_RMOVE, C_RMOVE)
     b = B.setdefault("body", {"rot": [0.0, 0.0, 0.0], "off": [0.0, 0.0, 0.0]})
     b["rot"][0] += S["body_lean"][0]
     lean = b["rot"][0] + B.get("chest", {"rot": [0, 0, 0]})["rot"][0]
@@ -501,7 +535,11 @@ def step(state, inp):
         fore = B.get(side + "_forearm", {"rot": [0, 0, 0]})["rot"]
         tx = -(lean + arm[0] + fore[0])
         tz = -arm[2]
-        S[side + "_shackle_x"] = spring(S[side + "_shackle_x"], tx, K_CHAIN, C_CHAIN, drive_x, *CLAMP["shackle"])
+        prev = st.setdefault("arm_prev", {}).get(side, arm[0] + fore[0])
+        st["arm_prev"][side] = arm[0] + fore[0]
+        swing = -SHACKLE_DRIVE * ((arm[0] + fore[0]) - prev)       # r6: kicked back by the arm's own swing
+        S[side + "_shackle_x"] = spring(S[side + "_shackle_x"], tx, K_CHAIN, C_CHAIN, drive_x + swing,
+                                        *CLAMP["shackle"])
         S[side + "_shackle_z"] = spring(S[side + "_shackle_z"], tz, K_CHAIN, C_CHAIN, drive_z, *CLAMP["shackle"])
         B.setdefault(side + "_shackle_chain", {"rot": [0.0, 0.0, 0.0], "off": [0.0, 0.0, 0.0]})["rot"] = [
             S[side + "_shackle_x"][0], 0.0, S[side + "_shackle_z"][0]]
@@ -511,13 +549,19 @@ def step(state, inp):
     # the tilt: the clip's keyed tilt + a spring perturbation (kicked by hits, driven by the root's acceleration)
     if ch.get("tilt_kick"):
         S["ring_tilt_x"][1] += ch["tilt_kick"] * 0.6
-    S["ring_tilt_x"] = spring(S["ring_tilt_x"], 0.0, K_TILT, C_TILT, -0.5 * drive_x)
-    S["ring_tilt_z"] = spring(S["ring_tilt_z"], 0.0, K_TILT, C_TILT, -0.5 * drive_z)
-    tilt = [ch["ring_tilt"][0] + S["ring_tilt_x"][0], ch["ring_tilt"][1] + S["ring_tilt_z"][0]]
+    S["ring_tilt_x"] = spring(S["ring_tilt_x"], 0.0, K_TILT, C_TILT, -0.2 * drive_x)   # r6: 0.2 (r5 0.5: a pop)
+    S["ring_tilt_z"] = spring(S["ring_tilt_z"], 0.0, K_TILT, C_TILT, -0.2 * drive_z)
+    tilt = [ch["ring_tilt"][0] + S["ring_tilt_x"][0] + S["ring_move"][0], ch["ring_tilt"][1] + S["ring_tilt_z"][0]]
+    ch["ring_off"] = [ch["ring_off"][0], ch["ring_off"][1], ch["ring_off"][2] + 0.2 * S["ring_move"][0]]
     ring_off = [hov[i] + ch["ring_off"][i] for i in range(3)]
     B["ring"] = {"rot": [tilt[0], 0.0, tilt[1]], "off": list(ch["ring_off"])}
     st["ring_now"] = (ring_matrix(tilt[0], tilt[1]), [RING_PIVOT[i] + ring_off[i] for i in range(3)])
     st["hub_now"] = HUB_now(B)
+    # ---- r6: the wheel's size for the current count (the bind eases old -> new over its forge, t18-28)
+    n_from = st.get("n_prev", n) if clip == "bind" else n
+    u_n = smooth((t - 18) / 10.0) if clip == "bind" else 1.0
+    st["n_off"] = (ring_r_n(n_from) + (ring_r_n(n) - ring_r_n(n_from)) * u_n) - RING_R
+    st["n_scale"] = spoke_n(n_from) + (spoke_n(n) - spoke_n(n_from)) * u_n
     # ---- every slot
     targets = {k: a for k, a in zip(sorted(st["slots"]), layout_angles(n))}
     slots_out, flying, hidden, ribbons = {}, {}, list(ch["hidden"]), []
@@ -551,18 +595,18 @@ def step(state, inp):
             mode = weapon_flight(st, s, k, t, flying, ribbons)
         if clip == "death" and t >= 6 + 2 * (k - 1):
             mode = weapon_fall(st, s, k, t, flying, hidden)
-        sc = ch["spoke_scale"]
+        sc = ch["spoke_scale"] * st["n_scale"]
         if mode == "FORGING":
             if t < 18:
                 hidden.append("weapon_%d" % k)
             else:
                 g = smooth((t - 18) / 6.0)
-                s["data"]["forge"] = 0.4 + 0.6 * g                        # sheet 5.4: outline 0.4 -> 0.7 docked
+                s["data"]["forge"] = (0.4 + 0.6 * g) * st["n_scale"]     # sheet 5.4: outline 0.4 -> 0.7 docked
                 if t >= 24:
                     s["mode"] = "DOCKED"
                     mode = "DOCKED"
         if mode in ("DOCKED", "FORGING") and ("weapon_%d" % k) not in hidden:
-            slots_out[k] = {"angle": round(s["angle"] + st["ring_yaw"], 3), "radial": round(radial, 3),
+            slots_out[k] = {"angle": round(s["angle"] + st["ring_yaw"], 3), "radial": round(radial + st["n_off"], 3),
                             "y": round(s["drop"][0], 3), "pitch": round(pitch, 3), "roll": round(roll, 3),
                             "scale": round(s["data"].get("forge", 1.0) if mode == "FORGING" else sc, 3)}
             if clip != "death" or t < 6:
@@ -580,6 +624,8 @@ def step(state, inp):
             "fx": bind_fx(st, clip, t, inp, B) if clip == "bind" else {}}
     if st.get("impacts_now"):
         pose["fx"]["impacts"] = st.pop("impacts_now")
+    if ch.get("halo_dip"):
+        pose["fx"]["halo_dip"] = ch["halo_dip"]
     pose["fx"]["halo"] = len(slots_out) + len([k for k, f in flying.items() if f["state"] != "SHATTER"]) if (
         clip != "death" or t < 6) else max(0, n - max(0, (t - 6) // 2 + 1))
     if ch["lantern"] < 0.5:
@@ -672,7 +718,8 @@ def weapon_flight(st, s, k, t, flying, ribbons):
                  hist=[],
                  q0=q_from_mat(slot_rot_world(st, ang)))
     p0, Pc = D["p0"], D["P"]
-    scale = 1.0 + (FLIGHT_SCALE - 1.0) * smooth((tau + 1) / float(SLING + 1))
+    s0 = st.get("n_scale", 1.0)
+    scale = s0 + (FLIGHT_SCALE - s0) * smooth((tau + 1) / float(SLING + 1))
     kind, rate = TUMBLE[k]
     hub = hub_toward(st, D.get("p_end", Pc[3]))
     if tau < SLING:
@@ -721,7 +768,7 @@ def weapon_flight(st, s, k, t, flying, ribbons):
         pos = [(1 - e) ** 2 * D["p_end"][i] + 2 * (1 - e) * e * mid[i] + e * e * dock[i] for i in range(3)]
         qd = q_from_mat(slot_rot_world(st, ang))
         q = q_mul(q_slerp(D["q_end"], qd, e), q_from_axis(D["tangent"], 360.0 * e))
-        scale = FLIGHT_SCALE + (1.0 - FLIGHT_SCALE) * e
+        scale = FLIGHT_SCALE + (s0 - FLIGHT_SCALE) * e
         state = "REEL"
         ctrl = sag_ctrl(hub, pos, 3.0)
         if u >= 1.0:

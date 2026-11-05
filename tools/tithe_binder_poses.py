@@ -313,12 +313,14 @@ def key_poses(n=10):
 
     # death t30 (the crumple): fallen 5 px onto the ground, folded forward into the robe, the tatters spread on the
     # ground, the arms hanging limp (plumb), every weapon gone (shattered)
-    p = {"body": A("body", [-30, 0, 0]), "chest": [-40, 0, 0], "head": A("head", [-30, 0, 0]),
+    # r6: a sideways slump with less fold (the r2-r5 -30 / -40 fold read as a red crate and sank the chest into the
+    # waist) - the driver's death clip ends here too
+    p = {"body": A("body", [-24, 0, 18]), "chest": [-18, 0, 0], "head": [-21, 0, 0],
          "tatter_f": [80, 0, 0], "tatter_b": [-80, 0, 0], "tatter_l": [0, 0, 80], "tatter_r": [0, 0, -80],
          "right_forearm": A("right_forearm", [0, 0, 0]), "left_forearm": A("left_forearm", [0, 0, 0]),
          "_move": {"hover": [0, -5.0, 0]}, "_hide": ["ring"]}
-    for side in ("right", "left"):
-        p[side + "_arm"] = rig.world(p, side + "_arm", rot_mat(0, 0, 0))
+    p["right_arm"] = [30, 0, 5]          # r6: limp along the body (plumb arms swung into the chest of the slump)
+    p["left_arm"] = [30, 0, 5]
     # landed: the lowest cloth / bone touches y = 0 (the sheet's "falls 5 px"; the forward fold sets the exact drop)
     p["_move"]["hover"][1] = 0.0
     p["_move"]["hover"][1] = round(-rig.low(p, skip=("hem_chain",)), 2)
