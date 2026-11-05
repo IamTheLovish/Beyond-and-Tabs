@@ -111,4 +111,92 @@ public class BuildingApproachGameTests {
         else
             helper.succeed();
     }
+
+    /** A raid tower placement at y 220 over this test's arena, with the box round it cleared; null after a fail. */
+    static BuildingPlacement site(GameTestHelper helper, String tag) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        BuildingPlacement site = BuildingUtils.getNewBuildingPlacement(Defences.VILLAGERS.raidTower(), level,
+            new BlockPos(base.getX(), 220, base.getZ()), Rotation.NONE,
+            "gametest_approach_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong(), false);
+        if (site == null) {
+            helper.fail("could not make the raid tower placement");
+            return null;
+        }
+        int x0 = site.minCorner.getX(), x1 = site.maxCorner.getX(), z0 = site.minCorner.getZ(), z1 = site.maxCorner.getZ();
+        int y = site.minCorner.getY();
+        TestCleanup.blocks(helper).region(new BlockPos(x0 - 3, y - 2, z0 - 3), new BlockPos(x1 + 3, y + 3, z1 + 3));
+        for (int x = x0 - 3; x <= x1 + 3; x++)
+            for (int z = z0 - 3; z <= z1 + 3; z++)
+                for (int k = -2; k <= 3; k++)
+                    level.setBlock(new BlockPos(x, y + k, z), Blocks.AIR.defaultBlockState(), 2);
+        return site;
+    }
+
+    /**
+     * Review round 1 on #514: when NO ring cell is standable (a site on a pillar: all four sides open air) the nearest
+     * ring cell must still win, as on main. A 999999 start for the best distance let no cell carrying the 1e6
+     * penalty win, and the helper returned minCorner - a cell inside the footprint (production units spawned in the
+     * building, a bridge's builder sent to its far corner).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void when_no_ring_cell_is_standable_the_nearest_ring_cell_still_wins(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BuildingPlacement site = site(helper, "pillar");
+        if (site == null)
+            return;
+        int x0 = site.minCorner.getX(), x1 = site.maxCorner.getX(), z0 = site.minCorner.getZ(), z1 = site.maxCorner.getZ();
+        int y = site.minCorner.getY();
+        for (int x = x0; x <= x1; x++)   // the pillar: stone under the footprint only
+            for (int z = z0; z <= z1; z++)
+                for (int k = -2; k <= 0; k++)
+                    level.setBlock(new BlockPos(x, y + k, z), Blocks.STONE.defaultBlockState(), 2);
+        int zMid = (z0 + z1) / 2;
+        BlockPos cell = site.getClosestGroundPos(new BlockPos(x0 - 6, y, zMid), 1, false);
+        if (site.isPosInsideBuilding(cell))
+            helper.fail("with every ring cell open air the approach is " + cell.toShortString()
+                + ", inside the footprint " + x0 + ".." + x1 + " x " + z0 + ".." + z1 + "; the nearest ring cell is "
+                + (x0 - 1) + ", " + y + ", " + zMid);
+        else if (cell.getX() != x0 - 1 || cell.getZ() != zMid || cell.getY() != y)
+            helper.fail("with every ring cell open air the approach from -x should be the nearest ring cell "
+                + (x0 - 1) + ", " + y + ", " + zMid + ", got " + cell.toShortString());
+        else
+            helper.succeed();
+    }
+
+    /**
+     * Review round 1 on #514: a carpet, a bottom slab or a few layers of snow on the ground round a site is ground a
+     * unit stands on, not a wall: on flat ground covered with each, the approach is the nearest ring cell.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void carpet_slab_or_snow_on_the_ground_is_still_ground_to_stand_on(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BuildingPlacement site = site(helper, "cover");
+        if (site == null)
+            return;
+        int x0 = site.minCorner.getX(), x1 = site.maxCorner.getX(), z0 = site.minCorner.getZ(), z1 = site.maxCorner.getZ();
+        int y = site.minCorner.getY();
+        int zMid = (z0 + z1) / 2;
+        var covers = new net.minecraft.world.level.block.state.BlockState[] {
+            Blocks.WHITE_CARPET.defaultBlockState(),
+            Blocks.STONE_SLAB.defaultBlockState(),   // a bottom slab
+            Blocks.SNOW.defaultBlockState().setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, 4) };
+        java.util.List<String> problems = new java.util.ArrayList<>();
+        for (var cover : covers) {
+            for (int x = x0 - 3; x <= x1 + 3; x++)
+                for (int z = z0 - 3; z <= z1 + 3; z++)
+                    for (int k = -2; k <= 3; k++)
+                        level.setBlock(new BlockPos(x, y + k, z), k <= 0 ? Blocks.STONE.defaultBlockState()
+                            : k == 1 && !site.isPosInsideBuilding(new BlockPos(x, y, z)) ? cover
+                            : Blocks.AIR.defaultBlockState(), 2);
+            BlockPos cell = site.getClosestGroundPos(new BlockPos(x0 - 6, y, zMid), 1, false);
+            if (cell.getX() != x0 - 1 || cell.getZ() != zMid || cell.getY() != y)
+                problems.add(cover.getBlock().getDescriptionId() + " on the ground: approach " + cell.toShortString()
+                    + ", expected the nearest ring cell " + (x0 - 1) + ", " + y + ", " + zMid);
+        }
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
 }
