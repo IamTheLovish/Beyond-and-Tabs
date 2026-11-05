@@ -31,7 +31,11 @@ public final class BarFx {
 
     // ---- event types
     public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6,
-            SCORCH = 7, SFX = 8, DOME = 9, RUNE = 10;
+            SCORCH = 7, SFX = 8, DOME = 9, FORMING = 10, RUNE = 11;
+
+    // ---- FORMING (a portal-type moment: barfx/PortalForming sends it, FormingTimeline + FormingFx play it): kind = style,
+    // flags low 3 bits = the owner's faction (F_*); a = the footprint's horizontal half size, b = its height
+    public static final byte FS_PORTAL = 0, FS_ENDER = 1;
 
     // ---- RUNE (a rune circle on the ground, barfx/RuneFx + RuneFxClient): flags low 2 bits = start / end, bit 4 = it
     // follows the entity whose id is the circle id; kind = the faction style (F_*); a = radius, b = lifetime in ticks,
@@ -169,7 +173,7 @@ public final class BarFx {
         if (!Float.isFinite(e.x) || !Float.isFinite(e.y) || !Float.isFinite(e.z))
             return;
         List<Event> q = QUEUE.computeIfAbsent(sl.dimension(), k -> new ArrayList<>());
-        if (q.size() >= MAX_PER_TICK) {
+        if (q.size() >= MAX_PER_TICK && e.type != FORMING) {   // a forming is one per activation: never dropped
             // when flooded, keep the big stuff and drop small shots/hits/nano beams
             if (isMinor(e.type))
                 return;
@@ -231,6 +235,17 @@ public final class BarFx {
     /** The barrier goes down: {@code broken} = shattered by damage (a flash), else it simply fades. */
     public static void domeEnd(Level level, int id, Vec3 centre, byte style, boolean broken) {
         emit(level, new Event(DOME, style, broken ? DOME_BROKEN : DOME_END, (float) centre.x, (float) centre.y, (float) centre.z, 0, 0, id));
+    }
+
+    /**
+     * A portal-type building forms (PortalForming, once per activation): {@code base} = the footprint's centre at its
+     * floor, {@code halfSize} its horizontal half size, {@code height} its height; style FS_*, faction F_* (the tint);
+     * {@code doorway} a portal's opening packed by PortalForming.doorway (0 = none).
+     */
+    public static void forming(Level level, Vec3 base, float halfSize, float height, byte style, byte faction, float doorway) {
+        if (level == null || level.isClientSide() || base == null) return;
+        emit(level, new Event(FORMING, style, (byte) (faction & FACTION_MASK), (float) base.x, (float) base.y, (float) base.z,
+            Math.max(1, halfSize), Math.max(1, height), doorway));
     }
 
     /** A weapon fires from 'from' towards 'to'. */
@@ -495,7 +510,7 @@ public final class BarFx {
         List<Event> events = new ArrayList<>(q);
         q.clear();
         for (ServerPlayer player : level.players()) {
-            List<Event> mine = eventsFor(player, events, FogOfWarServerEvents.isFogActiveFor(player), LIVE_SIGHT);
+            List<Event> mine = eventsFor(player, events, FogOfWarServerEvents.isFogActiveFor(player), null);
             if (!mine.isEmpty()) {
                 try {
                     PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new BarFxClientboundPacket(mine));
@@ -504,26 +519,19 @@ public final class BarFx {
         }
     }
 
-    /** Whether a player's fog shows the block column at (x, z). */
-    @FunctionalInterface
-    public interface Sight {
-        boolean canSee(ServerPlayer player, double x, double z);
-    }
-
-    /** The running game's fog (network/Audience.canSee). */
-    static final Sight LIVE_SIGHT = Audience::canSee;
-
     /**
      * The send rule, per player: the events within {@link #SEND_RANGE} of them, and when the fog applies to them
-     * ({@code fogged}) only those {@link #seenBy} them. flush calls it with the live fog; the game test with the vision
-     * the fog tick stored (the test server runs with fog off).
+     * ({@code fogged}) only those the fog shows: the player's live fog ({@link #seenBy}) when {@code sight} is null,
+     * else {@code sight} through the same rule ({@link #visibleTo}; the game test passes the vision the fog tick
+     * stored, as the test server runs with fog off).
      */
     public static List<Event> eventsFor(ServerPlayer player, List<Event> events, boolean fogged, Sight sight) {
         List<Event> mine = new ArrayList<>();
         double px = player.getX(), pz = player.getZ();
         for (Event e : events) {
             double dx = e.x - px, dz = e.z - pz;
-            if (dx * dx + dz * dz <= SEND_RANGE * SEND_RANGE && (!fogged || seenBy(player, e, sight)))
+            if (dx * dx + dz * dz <= SEND_RANGE * SEND_RANGE
+                    && (!fogged || (sight == null ? seenBy(player, e) : visibleTo(sight, e))))
                 mine.add(e);
         }
         return mine;
@@ -536,19 +544,60 @@ public final class BarFx {
     }
 
     /**
-     * Does a fogged player see this event? Its spot, or either end of a shot or beam (BAR shows a shell flying into
-     * your sight from a shooter you cannot see), or any corner of a collapsing building. Like a vanilla particle
-     * (ServerLevelParticleMixin), never through the fog. A rune circle goes by its caster's spot.
+     * Does a fogged player see this event (network/Audience.canSee)? Its spot, or either end of a shot or beam
+     * (BAR shows a shell flying into your sight from a shooter you cannot see), or any corner of a collapsing or
+     * forming building. Like a vanilla particle (ServerLevelParticleMixin), never through the fog. A rune circle goes by
+     * its caster's spot.
      */
-    static boolean seenBy(ServerPlayer player, Event e, Sight sight) {
-        if (sight.canSee(player, e.x, e.z))
+    static boolean seenBy(ServerPlayer player, Event e) {
+        return rule(player, null, e);
+    }
+
+    /** What a viewer's fog shows, by block x / z (a game test passes its own). */
+    public interface Sight {
+        boolean canSee(double x, double z);
+    }
+
+    /** {@link #seenBy(ServerPlayer, Event)}'s rule over any sight: the game tests' way in (the send path never builds one). */
+    public static boolean visibleTo(Sight sight, Event e) {
+        return rule(null, sight, e);
+    }
+
+    /**
+     * The one rule, over a player's fog (the send path: no lambda per player per event) or a test's sight. Its spot,
+     * either end of a shot or beam, or any corner of a building's footprint (a collapse, a portal forming).
+     */
+    private static boolean rule(ServerPlayer player, Sight sight, Event e) {
+        if (sees(player, sight, e.x, e.z))
             return true;
         return switch (e.type) {
-            case SHOT, NANO -> sight.canSee(player, e.a, e.c);   // a, c = the far end's x, z
-            case COLLAPSE -> sight.canSee(player, e.x - e.a, e.z - e.a) || sight.canSee(player, e.x + e.a, e.z - e.a)
-                || sight.canSee(player, e.x - e.a, e.z + e.a) || sight.canSee(player, e.x + e.a, e.z + e.a);
+            case SHOT, NANO -> sees(player, sight, e.a, e.c);   // a, c = the far end's x, z
+            case COLLAPSE, FORMING -> sees(player, sight, e.x - e.a, e.z - e.a) || sees(player, sight, e.x + e.a, e.z - e.a)
+                || sees(player, sight, e.x - e.a, e.z + e.a) || sees(player, sight, e.x + e.a, e.z + e.a);
             default -> false;
         };
+    }
+
+    private static boolean sees(ServerPlayer player, Sight sight, double x, double z) {
+        return player != null ? Audience.canSee(player, x, z) : sight.canSee(x, z);
+    }
+
+    /**
+     * The events of one type queued this tick within {@code r} blocks (horizontally) of x / z. For the game tests only
+     * (it builds a list per call); nothing in the game calls it.
+     */
+    public static List<Event> queuedAt(Level level, byte type, double x, double z, double r) {
+        List<Event> out = new ArrayList<>();
+        if (!(level instanceof ServerLevel sl))
+            return out;
+        List<Event> q = QUEUE.get(sl.dimension());
+        if (q != null)
+            for (Event e : q) {
+                double dx = e.x - x, dz = e.z - z;
+                if (e.type == type && dx * dx + dz * dz <= r * r)
+                    out.add(e);
+            }
+        return out;
     }
 
     static void clearAll() {

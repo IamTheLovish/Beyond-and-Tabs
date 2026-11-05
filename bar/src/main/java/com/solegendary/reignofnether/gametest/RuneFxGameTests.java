@@ -91,8 +91,9 @@ public class RuneFxGameTests {
     }
 
     /** The vision the fog tick stored for {@code p} (fog is off globally in the test server). */
-    static final BarFx.Sight STORED_VISION = (p, x, z) ->
-        FogOfWarServerEvents.isColumnVisibleUnderFog(p, Mth.floor(x), Mth.floor(z));
+    static BarFx.Sight storedVision(ServerPlayer p) {
+        return (x, z) -> FogOfWarServerEvents.isColumnVisibleUnderFog(p, Mth.floor(x), Mth.floor(z));
+    }
 
     @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
     public static void rune_cast_reaches_who_sees_the_caster_and_not_the_fogged(GameTestHelper helper) {
@@ -158,9 +159,9 @@ public class RuneFxGameTests {
                     Mob c = casters.get(i);
                     String who = c.getType().getDescriptionId();
                     // the setup the rule below depends on: the seer's vision covers the caster, the blind one's doesn't
-                    if (!STORED_VISION.canSee(seerP, c.getX(), c.getZ()))
+                    if (!storedVision(seerP).canSee(c.getX(), c.getZ()))
                         problems.add(who + ": setup - the seer's unit 'sees' no caster column (sight " + sight + ")");
-                    if (STORED_VISION.canSee(blindP, c.getX(), c.getZ()))
+                    if (storedVision(blindP).canSee(c.getX(), c.getZ()))
                         problems.add(who + ": setup - the blind viewer's far unit covers the caster");
                     if (!runes(level, c.getId()).isEmpty())
                         problems.add(who + ": a rune was queued before any cast");
@@ -185,9 +186,9 @@ public class RuneFxGameTests {
                     if (Math.abs(e.x - c.getX()) > 0.01 || Math.abs(e.z - c.getZ()) > 0.01)
                         problems.add(who + ": the rune is not under its caster");
                     // the real per-player send rule
-                    int seen = count(BarFx.eventsFor(seerP, rs, true, STORED_VISION), BarFx.RUNE);
-                    int fogged = count(BarFx.eventsFor(blindP, rs, true, STORED_VISION), BarFx.RUNE);
-                    int fogOff = count(BarFx.eventsFor(blindP, rs, false, STORED_VISION), BarFx.RUNE);
+                    int seen = count(BarFx.eventsFor(seerP, rs, true, storedVision(seerP)), BarFx.RUNE);
+                    int fogged = count(BarFx.eventsFor(blindP, rs, true, storedVision(blindP)), BarFx.RUNE);
+                    int fogOff = count(BarFx.eventsFor(blindP, rs, false, storedVision(blindP)), BarFx.RUNE);
                     if (seen != 1)
                         problems.add(who + ": the player who sees the caster gets " + seen + " rune events, not 1");
                     if (fogged != 0)
