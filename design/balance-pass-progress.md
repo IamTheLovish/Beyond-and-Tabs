@@ -55,3 +55,28 @@ Branch `balance-pass` (based on main 102ba10). Scope: stat numbers, costs, the d
 
 ## Known failures
 - each_faction_hero_trains_at_its_lab flaked once (run 38233016657).
+
+## balance-pass-2 (Nov 4 2026, Lane C)
+Local headless runs of duel_matrix + duel_counters, 2 repetitions per matchup. Compare with care: the same code moved
+faction mix scores by about 10 points between runs.
+
+- Reporting bug: the two duel batches run in separate shards, and only the shard with duel_results.json printed its
+  summary, so mix, RPS and hero rows stopped reaching CI when the batches were split. Fixed in build.yml.
+- Clock bug: the pads are open sky and nothing set the time, so undead burned or not by luck of the run. The same
+  Zombie went 28-0 at night and 0-28 by day. Pinned to night; BAT_DUEL_TIME=day measures the sunlit case. Older
+  Gravebound rows, including "Zombie 0-10", depend on when they ran.
+- Kept: Elder Treant HP 380 -> 310 (night keep-diff +56 -> +44, day matrix +58 -> +45; still 13-0 and 12-2), Ravager
+  damage 7 -> 8.5 (night -8 -> -4; day -11 -> -9, within noise, +3 and -1 in the run before), Vindicator HP 75 -> 80
+  (night 12-15 -> 16-12, day 10-14 -> 17-11).
+- Tried and dropped: Zombie/Husk/Drowned HP 45 -> 42 and Skeleton/Stray damage 4 -> 5 (both answered the clock, not a
+  real weakness), Blade Dancer HP 52 -> 50 (no effect).
+- Left alone: Mortar Galley 0-14 (open pad, no water, charged by melee; artillery nerf of Oct 24 was deliberate).
+
+## Open for a later pass
+- Gravebound swings +38 at night to -26 by day: is that sharp a swing the intent? The T1 matrix now shows only the night
+  side in CI.
+- Brassworks is low on both clocks (-20, -16) and 0 wins of 10 on the ladder; Storm is high (+11, +26) and 7 of 9.
+- Elder Treant is still far ahead: the boulder is the next thing to look at.
+- Heroes: none beat two Iron Golems in the base run (the target is to beat two and lose to three).
+- duel_counters failed twice on main's code by day (49 and 168 duels with no fighting; 23:09, 23:30). It never failed
+  at night (3 runs) or on this branch by day (2 runs). Cause unknown.

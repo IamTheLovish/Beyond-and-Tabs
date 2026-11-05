@@ -144,6 +144,9 @@ for tier, u, label, v, med, explained in outliers:
 # this pass (balance-pass, Oct 12): measured with the counter batch of gametest/DuelGameTests - see "Balance pass" under
 # Duel results for the before/after rows
 BALANCE_CHANGES = [
+    '**balance-pass-2 (Nov 4)**: Elder Treant HP 380 -> 310 (14-0 at 380 on a pinned clock), Ravager damage 7 -> 8.5 '
+    '(5-9 and 3-11 in the T2 matrix), Vindicator HP 75 -> 80 (Sunforged mix 1-10 at night). Duels now run on a pinned '
+    'clock: the same Zombie went 28-0 at night and 0-28 by day, so older Gravebound rows depend on when they ran.',
     '**Lines lose some arrow-proofing**: ranged resist Halberdier (Vindicator), Zombie/Husk/Drowned and Brute 0.2 -> 0.1, '
     'Reef Guard 0.45 -> 0.3. With it every line beat every skirmisher 1.4-3.2x in the open field (Thornbow v Reef Guard '
     '3.1x); now 1.2-2.0x and the Rifle Squad beats the Halberdier.',

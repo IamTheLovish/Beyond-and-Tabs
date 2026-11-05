@@ -162,7 +162,7 @@ public class RavagerUnit extends Ravager implements Unit, AttackerUnit {
 
     // endregion
 
-    final static public float attackDamage = 7.0f;
+    final static public float attackDamage = 8.5f;   // 7 -> 8.5 (balance-pass-2: 3-11 in the T2 matrix; DPS/100m under the T2 median)
     final static public float attacksPerSecond = 0.6f;
     final static public float maxHealth = 290.0f;   // duel sim 2026-10: lost every T2 melee matchup at 250
     final static public float armorValue = 0.0f;
