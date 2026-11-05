@@ -53,6 +53,7 @@ public class BarFxClientEvents {
     public static void onCameraAngles(ViewportEvent.ComputeCameraAngles evt) {
         if (OrthoviewClientEvents.isEnabled())
             return;
+        FeelFxClient.applyCamera(evt);   // trauma shake of the feel kit (first/third person only)
         float sx = BarFxClient.shakeX(), sy = BarFxClient.shakeY();
         if (sx == 0 && sy == 0)
             return;
