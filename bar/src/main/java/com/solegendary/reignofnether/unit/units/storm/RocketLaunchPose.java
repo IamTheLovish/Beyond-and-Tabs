@@ -51,6 +51,11 @@ public final class RocketLaunchPose {
         return smoothstep(age / 2f) * (1f - smoothstep((age - (TOTAL_TICKS - 6)) / 6f));
     }
 
+    /** How loaded rod {@code rod} is {@code age} ticks into a volley: 1 until its bolt leaves (rod i at i x GAP), 0 a tick later. */
+    public static float loaded(int rod, float age) {
+        return 1f;   // stub: filled in by the implementation commit
+    }
+
     private static float smoothstep(float x) {
         float t = clamp(x, 0f, 1f);
         return t * t * (3f - 2f * t);

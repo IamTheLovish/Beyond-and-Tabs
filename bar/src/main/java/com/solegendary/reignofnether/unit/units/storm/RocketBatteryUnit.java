@@ -166,9 +166,20 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
 
     public int getLaunchTicks() { return this.entityData.get(launchDataAccessor); }
 
+    /** Ticks until the next volley can go, clamped to {@link RocketCharge#RELOAD_WINDOW} (what the rack shows); and whether the crew has a target. */
+    public static final EntityDataAccessor<Integer> reloadDataAccessor =
+        SynchedEntityData.defineId(RocketBatteryUnit.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> engagedDataAccessor =
+        SynchedEntityData.defineId(RocketBatteryUnit.class, EntityDataSerializers.BOOLEAN);
+
+    public int getReloadTicks() { return this.entityData.get(reloadDataAccessor); }
+    public boolean isEngaged() { return this.entityData.get(engagedDataAccessor); }
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(reloadDataAccessor, 0);
+        this.entityData.define(engagedDataAccessor, false);
         this.entityData.define(launchDataAccessor, 0);
         this.entityData.define(ownerDataAccessor, "");
         this.entityData.define(scenarioRoleDataAccessor, -1);
