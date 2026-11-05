@@ -578,7 +578,7 @@ public class BuildingPlacement {
     }
     public BlockPos getClosestGroundPos(BlockPos bpTarget, int radiusOffset, boolean avoidAllBuildings) {
         radiusOffset = Math.max(1, radiusOffset);
-        float minDist = 999999;
+        float minDist = NO_CELL_YET;
         BlockPos minPos = this.minCorner;
         int minX = minPos.getX() - radiusOffset;
         int minY = minPos.getY();
@@ -594,10 +594,18 @@ public class BuildingPlacement {
                     continue;
 
                 float dist = (float) bpTarget.distToCenterSqr(bp.getX(), bp.getY(), bp.getZ());
+                if (dist >= minDist)
+                    continue;   // the penalties below only add: this cell can't win (and costs no block reads)
                 BlockState bs = level.getBlockState(bp);
                 BlockState bsBelow = level.getBlockState(bp.below());
                 if (!bs.getFluidState().isEmpty() || !bsBelow.getFluidState().isEmpty())
                     dist += 100; // disincentivise walking onto water/lava
+                // a cell at the foundation's height where the ground falls away (open air) or rises (inside a hill):
+                // nobody can stand there, so a path to it ends short and a builder never comes in range (the storm
+                // bot's capitol, run 41913285997: approach 2723, 78, 167 four blocks above its builder at y 74). Any
+                // cell a unit can stand at wins; on flat ground every cell can, and nothing changes
+                if (dist < minDist && !standableAt(bp, bs, bsBelow))
+                    dist += UNSTANDABLE_PENALTY;
 
                 if (dist < minDist) {
                     minDist = dist;
@@ -606,6 +614,54 @@ public class BuildingPlacement {
             }
         }
         return minPos;
+    }
+
+    /** Larger than any squared distance round a footprint: an unstandable ring cell loses to every standable one. */
+    static final float UNSTANDABLE_PENALTY = 1_000_000f;
+    /**
+     * The best distance before any cell is seen: above every distance plus {@link #UNSTANDABLE_PENALTY}, so that when
+     * no ring cell is standable the nearest one still wins (review round 1 on #514: a 999999 start let no penalised
+     * cell win, and an all-air or all-hill ring returned minCorner, a cell inside the footprint).
+     */
+    static final float NO_CELL_YET = Float.MAX_VALUE;
+
+    /**
+     * Whether a unit can stand at a ring cell taken at the foundation's height, either way callers use it (a move
+     * target, an "on pos"), with room for a body about two blocks tall:
+     * <ul>
+     *   <li>the cell is a floor: feet on it (on a carpet, bottom slab or snow over it, if one), the block above that free;</li>
+     *   <li>else feet in the cell, on a low block in it or on the floor under it, with nothing at all in the block above
+     *       (a bottom slab floating at head height over air is a ceiling, not standing room); on a low block the head
+     *       reaches into the block two above, so that one must be free too.</li>
+     * </ul>
+     */
+    private boolean standableAt(BlockPos bp, BlockState atBp, BlockState below) {
+        BlockPos up = bp.above();
+        BlockState atUp = level.getBlockState(up);
+        BlockPos up2 = bp.above(2);
+        if (blocksBody(atBp, bp)) {   // a floor: feet on it
+            if (blocksBody(atUp, up) || !free(up2))
+                return false;
+            return atUp.getCollisionShape(level, up).isEmpty() || free(bp.above(3));   // raised by a low block above
+        }
+        if (!atUp.getCollisionShape(level, up).isEmpty())
+            return false;   // feet in the cell: the block above must hold nothing
+        if (!atBp.getCollisionShape(level, bp).isEmpty())
+            return free(up2);   // on a low block in the cell: the head reaches into the block two above
+        return !below.getCollisionShape(level, bp.below()).isEmpty();
+    }
+
+    private boolean free(BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.isAir() || state.getCollisionShape(level, pos).isEmpty();
+    }
+
+    /** A collision box reaching above half a block: not a carpet, a bottom slab or a few layers of snow. */
+    private boolean blocksBody(BlockState state, BlockPos pos) {
+        if (state.isAir())
+            return false;
+        net.minecraft.world.phys.shapes.VoxelShape shape = state.getCollisionShape(level, pos);
+        return !shape.isEmpty() && shape.max(net.minecraft.core.Direction.Axis.Y) > 0.5;
     }
 
     // does not account for fog of war
