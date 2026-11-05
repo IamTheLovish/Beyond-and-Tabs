@@ -24,7 +24,8 @@ import java.util.function.Function;
  * +y turns the front toward -x, rotation order x then y then z; every bone rotation / offset in the pose is a DELTA
  * on the generated rest pose. A docked slot is absolute: its azimuth (0 points -z, + turns toward -x), the pommel's
  * radius / lift and the weapon's own pitch / roll. Flying and falling weapons are in model space (DSL px, y up from
- * the feet): the renderer draws them, not the bone tree.
+ * the feet): the renderer draws them, not the bone tree. r4: the ring bone carries the tilt only; the wheel's spin is
+ * inside every docked slot's angle.
  */
 public final class TitheBinderRig {
 
@@ -59,9 +60,16 @@ public final class TitheBinderRig {
     static final int[] SPIN_KIND = {TUMBLE, TUMBLE, TUMBLE, TUMBLE, ROLL, ROLL, TUMBLE, TUMBLE, FLAT, ROLL, TUMBLE,
         TUMBLE, TUMBLE};
     static final double[] SPIN_RATE = {0, 40, 60, 50, 20, 15, 30, 25, 30, 10, 20, 20, 20};
-    static final int VOLLEY_RELEASE = 14, RELEASE_GAP = 2;
-    static final int SLING = 2, EMBED = 3, REEL = 8;
+    static final double[] LANTERN = {0.0, 23.0 + LIFT, -6.5};    // the lantern's core at rest (the bind's orb)
+    // r4 volley: the strike at t16, a release every 3 ticks, sling 1, flight 6, each hit held 5, reel 4
+    static final int VOLLEY_RELEASE = 16, RELEASE_GAP = 3;
+    static final int SLING = 1, FLIGHT = 6, EMBED = 5, REEL = 4;
     static final double DOCK_OVERSHOOT = 2.0;
+    static final double FLIGHT_SCALE = 1.25;                     // part scale in flight
+    static final double LATERAL = 16.0, ARC_UP_1 = 8.0, ARC_UP_2 = 6.0;   // px: arc controls off the bearing, up
+    static final double VICTIM_R = 5.0;                          // px: the tip stops 2 px inside a victim this wide
+    static final double HUB_R = 6.0;                             // px: a chain leaves the ribs toward its weapon
+    static final double WEAVE_X = 12.0, WEAVE_Z = 6.0, WEAVE_FORE = 10.0;  // the idle conductor weave
 
     /** The bones the driver moves (DSL names = the generated TitheBinderModel's). Pose.rot / Pose.off index these. */
     public static final String[] BONES = {"hover", "body", "chest", "mantle", "head", "right_arm", "left_arm",
@@ -174,10 +182,15 @@ public final class TitheBinderRig {
         final double[][] p0 = new double[MAX_WEAPONS + 1][3], radDir = new double[MAX_WEAPONS + 1][3],
             tangent = new double[MAX_WEAPONS + 1][3], pEnd = new double[MAX_WEAPONS + 1][3];
         final double[][] q0 = new double[MAX_WEAPONS + 1][4], qEnd = new double[MAX_WEAPONS + 1][4];
-        // the volley's release order (-1: not in it), its last release / end, the target
+        /** The driver's D["p_end"] present (set in flight, popped at the dock): the reel's chain hub aims at it. */
+        final boolean[] hasPEnd = new boolean[MAX_WEAPONS + 1];
+        /** The flight's cubic, fixed at release (the driver's D["P"]): [sling_end, P1, P2, P3]. */
+        final double[][][] path = new double[MAX_WEAPONS + 1][4][3];
+        // the volley's release order (-1: not in it), its last release / end, the target and its bearing
         final int[] orderOf = new int[MAX_WEAPONS + 1];
         int lastRelease, fEnd;
         final double[] target = new double[3];
+        double bearing;
         // the falling weapons (death)
         final boolean[] fallOn = new boolean[MAX_WEAPONS + 1];
         final double[][] fallP = new double[MAX_WEAPONS + 1][3], fallV = new double[MAX_WEAPONS + 1][3];
@@ -194,7 +207,8 @@ public final class TitheBinderRig {
         final Keys keys = new Keys();
         final double[] hov = new double[3], rootV = new double[3], acc = new double[3];
         final double[] va = new double[3], vb = new double[3], vc = new double[3], vd = new double[3],
-            ve = new double[3], vf = new double[3], vg = new double[3], vh = new double[3];
+            ve = new double[3], vf = new double[3], vg = new double[3], vh = new double[3], vi = new double[3],
+            vj = new double[3];
         final double[] ma = new double[9], mb = new double[9], mc = new double[9], md = new double[9];
         final double[] qa = new double[4], qb = new double[4], qc = new double[4], qd = new double[4];
         final double[] diff = new double[MAX_WEAPONS + 1];
@@ -247,12 +261,24 @@ public final class TitheBinderRig {
         public boolean lanternCoreHidden;
         /** Body alpha (the death dissolve) and the lantern's glow 0..2.5. */
         public double alpha = 1.0, lantern = 1.0;
-        /** The soul chains: hub -> end (model px), sag px, width px; the first {@link #ribbons} rows are live. */
+        /**
+         * The soul chains: a quadratic Bezier hub -> end with control point ctrl (model px), width px; the first
+         * {@link #ribbons} rows are live.
+         */
         public int ribbons;
-        public final double[][] ribbonHub = new double[MAX_WEAPONS][3], ribbonEnd = new double[MAX_WEAPONS][3];
-        public final double[] ribbonSag = new double[MAX_WEAPONS], ribbonWidth = new double[MAX_WEAPONS];
+        public final double[][] ribbonHub = new double[MAX_WEAPONS][3], ribbonCtrl = new double[MAX_WEAPONS][3],
+            ribbonEnd = new double[MAX_WEAPONS][3];
+        public final double[] ribbonWidth = new double[MAX_WEAPONS];
+        /** fx.halo: the count halo's lit dots (docked + flying non-shattered; in death N minus one per 2 ticks). */
+        public int halo;
+        /** Bind fx (model px): the lash lantern -> corpse (t0-15), the soul orb, the flash, the forge line. */
+        public boolean lashOn, orbOn, flashOn, forgeOn;
+        public final double[] lashA = new double[3], lashB = new double[3], orb = new double[3],
+            flash = new double[3], forgeA = new double[3], forgeB = new double[3];
 
         void clear() {
+            lashOn = orbOn = flashOn = forgeOn = false;
+            halo = 0;
             for (int b = 0; b < BONES.length; b++) {
                 Arrays.fill(rot[b], 0.0);
                 Arrays.fill(off[b], 0.0);
@@ -266,10 +292,10 @@ public final class TitheBinderRig {
             ribbons = 0;
         }
 
-        void ribbon(double[] hub, double[] end, double sag, double width) {
+        void ribbon(double[] hub, double[] ctrl, double[] end, double width) {
             System.arraycopy(hub, 0, ribbonHub[ribbons], 0, 3);
+            System.arraycopy(ctrl, 0, ribbonCtrl[ribbons], 0, 3);
             System.arraycopy(end, 0, ribbonEnd[ribbons], 0, 3);
-            ribbonSag[ribbons] = sag;
             ribbonWidth[ribbons] = width;
             ribbons++;
         }
@@ -483,9 +509,29 @@ public final class TitheBinderRig {
         st.forge[k] = 1.0;
         st.orderOf[k] = -1;
         st.fallOn[k] = false;
+        st.hasPEnd[k] = false;
     }
 
-    /** slot_world: a slot's pommel in model space from this tick's ring transform. */
+    /** hub_toward: where a soul chain leaves the ribs - HUB_R px from the hub toward its end (horizontal). */
+    static void hubToward(State st, double[] end, double[] out) {
+        double[] h = st.hub;
+        double dx = end[0] - h[0], dz = end[2] - h[2];
+        double d = Math.sqrt(dx * dx + dz * dz);
+        if (d == 0.0)
+            d = 1.0;
+        out[0] = h[0] + HUB_R * dx / d;
+        out[1] = h[1];
+        out[2] = h[2] + HUB_R * dz / d;
+    }
+
+    /** sag_ctrl: the quadratic ribbon's control point for a chain sagging {@code sag} px between a and b. */
+    static void sagCtrl(double[] a, double[] b, double sag, double[] out) {
+        out[0] = (a[0] + b[0]) / 2;
+        out[1] = (a[1] + b[1]) / 2 - 2 * sag;
+        out[2] = (a[2] + b[2]) / 2;
+    }
+
+    /** slot_world: a slot's pommel in model space from this tick's ring transform; the angle includes the spin. */
     static void slotWorld(State st, double angle, double radial, double[] out) {
         double a = Math.toRadians(angle), r = RING_R + radial;
         double px = -Math.sin(a) * r, py = 0.0, pz = -Math.cos(a) * r;
@@ -545,8 +591,11 @@ public final class TitheBinderRig {
         rot(o, CHEST, 3 * Math.sin(br) * idleW, 0, 0);
         off(o, MANTLE, 0, 0.5 * Math.max(0.0, Math.sin(br)) * idleW, 0);
         rot(o, HEAD, 0, 10 * Math.sin(look) * idleW, 0);
-        rot(o, R_ARM, 5 * Math.sin(bob + Math.PI / 2) * idleW, 0, 3 * Math.sin(bob) * idleW);
-        rot(o, L_ARM, 5 * Math.sin(bob + 3 * Math.PI / 2) * idleW, 0, 3 * Math.sin(bob) * idleW);
+        // the conductor's weave (r4: x12 / z6 / forearm 10)
+        rot(o, R_ARM, WEAVE_X * Math.sin(bob + Math.PI / 2) * idleW, 0, WEAVE_Z * Math.sin(bob) * idleW);
+        rot(o, L_ARM, WEAVE_X * Math.sin(bob + 3 * Math.PI / 2) * idleW, 0, WEAVE_Z * Math.sin(bob) * idleW);
+        rot(o, R_FORE, WEAVE_FORE * Math.sin(bob) * idleW, 0, 0);
+        rot(o, L_FORE, -WEAVE_FORE * Math.sin(bob) * idleW, 0, 0);
         double curl = (10 + 10 * Math.sin(2 * Math.PI * st.tick / 40.0)) * idleW;
         rot(o, R_HAND, curl, 0, 0);
         rot(o, L_HAND, curl, 0, 0);
@@ -579,43 +628,49 @@ public final class TitheBinderRig {
         }
 
         if (clip == Clip.VOLLEY) {
+            // r4: t0-8 turn to the target, t8-10 CROUCH, t10-12 the arm SNAPS up, t12-15 HOLD, t16 STRIKE; the body
+            // keeps facing the target afterwards
             int fe = st.fEnd, last = st.lastRelease;
-            int hold = Math.max(last + 2, 16);
-            off(o, HOVER, 0, K.of(0, 0).k(11, 3).k(14, 3).k(15, -1).k(fe, 0).at(t),
-                K.of(0, 0).k(11, 3).k(14, 3).k(15, -4).k(fe, 0).at(t));
-            rot(o, BODY, K.of(0, 0).k(11, 14).k(14, 14).k(15, -11).k(fe, 0).at(t),
-                K.of(0, 0).k(11, 30).k(14, 30).k(15, -20).k(fe, 0).at(t), 0);
-            rot(o, HEAD, K.of(0, 0).k(11, -20).k(14, -20).k(15, 0).k(fe + 2, 0).at(t),
-                K.of(0, 0).k(11, -10).k(14, -10).k(15, 15).k(fe + 2, 0).at(t), 0);
-            rot(o, R_ARM, K.of(0, 0).k(11, 180).k(14, 180).k(15, 40).k(hold, 40).k(fe, 0).at(t), 0,
-                K.of(0, 0).k(11, 42).k(14, 42).k(15, 0).at(t));
-            double fx = K.of(0, 0).k(11, 25).k(14, 25).k(15, -25).k(fe, 0).at(t);
+            int hold = Math.max(last + 2, 18);
+            double b = st.bearing;
+            double sb = Math.sin(Math.toRadians(b)), cb = Math.cos(Math.toRadians(b));   // "back" = (sb, 0, cb)
+            double hy = K.of(0, 0).k(8, 0).k(10, -2).k(12, 3).k(15, 3).k(16, -1).k(fe, 0).at(t);
+            double hb = K.of(0, 0).k(8, 0).k(10, 1).k(12, 3).k(15, 3).k(16, -4).k(fe, 0).at(t);
+            off(o, HOVER, hb * sb, hy, hb * cb);
+            double by = K.of(0, 0).k(8, b).k(10, b + 8).k(12, b + 25).k(15, b + 25).k(16, b - 15).k(fe, b).at(t);
+            rot(o, BODY, K.of(0, 0).k(8, 0).k(10, -6).k(12, 14).k(15, 14).k(16, -11).k(fe, 0).at(t), by, 0);
+            rot(o, HEAD, K.of(0, 0).k(10, 0).k(12, -20).k(15, -20).k(16, 0).k(fe + 2, 0).at(t), b - by, 0);
+            rot(o, R_ARM, K.of(0, 0).k(10, 0).k(12, 180).k(15, 180).k(16, 40).k(hold, 40).k(fe, 0).at(t), 0,
+                K.of(0, 0).k(10, 0).k(12, 42).k(15, 42).k(16, 0).at(t));
+            double fx = K.of(0, 0).k(10, -10).k(12, 25).k(15, 25).k(16, -25).k(fe, 0).at(t);
             double fz = 0.0;
-            if (n >= 3 && 15 < t && t <= last + 1) {        // one crack of the whip per release
-                double ph = 2 * Math.PI * (t - 14) / 4.0;
-                fx = 25 + 20 * Math.sin(ph) - 25;
+            if (n >= 3 && 16 < t && t <= last + 1) {        // one crack of the whip per release
+                double ph = 2 * Math.PI * (t - VOLLEY_RELEASE) / (double) RELEASE_GAP;
+                fx = 20 * Math.sin(ph);
                 fz = 15 * Math.sin(ph);
             }
             rot(o, R_FORE, fx, 0, fz);
-            rot(o, R_HAND, K.of(0, 0).k(11, 20).k(14, 20).k(15, 0).at(t), 0, 0);
-            rot(o, L_ARM, K.of(0, 0).k(11, 64).k(hold, 64).k(fe, 0).at(t),
-                K.of(0, 0).k(11, 10).k(hold, 10).k(fe, 0).at(t), 0);
-            rot(o, L_FORE, K.of(0, 0).k(11, -30).k(hold, -30).k(fe, 0).at(t), 0, 0);
-            off(o, MANTLE, 0, K.of(0, 0).k(11, 1).k(14, 1).k(15, 0).at(t), 0);
-            st.chTatter = K.of(0, 0).k(11, -8).k(14, -8).k(15, -15).k(fe, 0).at(t);
-            st.chCape = K.of(0, 0).k(11, -6).k(14, -6).k(15, -12).k(fe, 0).at(t);
-            st.chTilt0 = K.of(0, 0).k(11, 12).k(14, 12).k(15, -18).k(fe, 0).at(t);
-            st.chTilt1 = 0.0;
-            st.chRingOff[0] = 0.0;
-            st.chRingOff[1] = K.of(0, 0).k(11, 1).k(14, 1).k(15, -2).k(fe, 0).at(t);
-            st.chRingOff[2] = K.of(0, 0).k(11, 4).k(14, 4).k(15, -5).k(fe, 0).at(t);
-            st.chRingSpin = K.of(0, 0.6).k(11, 6.0).k(last, 6.0).k(last + 20, 0.6).at(t);
-            st.chCock = K.of(0, 0).k(11, 25).k(14, 25).k(15, 10).k(fe, 0).at(t);
+            rot(o, R_HAND, K.of(0, 0).k(10, 0).k(12, 20).k(15, 20).k(16, 0).at(t), 0, 0);
+            // the aim hand: abs x 75, under the ring's front edge when it dips at the strike; no yaw
+            rot(o, L_ARM, K.of(0, 0).k(8, 30).k(12, 55).k(hold, 55).k(fe, 0).at(t), 0, 0);
+            rot(o, L_FORE, K.of(0, 0).k(12, -30).k(hold, -30).k(fe, 0).at(t), 0, 0);
+            off(o, MANTLE, 0, K.of(0, 0).k(10, 0).k(12, 1).k(15, 1).k(16, 0).at(t), 0);
+            st.chTatter = K.of(0, 0).k(10, 4).k(12, -8).k(15, -8).k(16, -15).k(fe, 0).at(t);
+            st.chCape = K.of(0, 0).k(10, 2).k(12, -6).k(15, -6).k(16, -12).k(fe, 0).at(t);
+            double tl = K.of(0, 0).k(8, 0).k(10, 12).k(15, 12).k(16, -18).k(fe, 0).at(t);
+            st.chTilt0 = tl * cb;                                          // dips toward the target's bearing
+            st.chTilt1 = -tl * sb;
+            double ro = K.of(0, 0).k(8, 0).k(10, 4).k(15, 4).k(16, -5).k(fe, 0).at(t);
+            st.chRingOff[0] = ro * sb;
+            st.chRingOff[1] = K.of(0, 0).k(8, 0).k(10, 1).k(15, 1).k(16, -2).k(fe, 0).at(t);
+            st.chRingOff[2] = ro * cb;
+            st.chRingSpin = K.of(0, 0.6).k(12, 6.0).k(last, 6.0).k(last + 15, 0.6).at(t);
+            st.chCock = K.of(0, 0).k(10, 25).k(15, 25).k(16, 10).k(fe, 0).at(t);
             int released = 0;
             for (int k = 1; k <= MAX_WEAPONS; k++)
                 if (st.orderOf[k] >= 0 && VOLLEY_RELEASE + RELEASE_GAP * st.orderOf[k] <= t)
                     released++;
-            st.chLantern = K.of(0, 1.0).k(11, 1.6).k(last, 1.6).k(fe, 1.0).at(t);
+            st.chLantern = K.of(0, 1.0).k(12, 1.6).k(last, 1.6).k(fe, 1.0).at(t);
             if (t <= last)
                 st.chLantern = Math.max(1.0, st.chLantern - 0.1 * released);     // -0.1 per release
         }
@@ -650,30 +705,32 @@ public final class TitheBinderRig {
             st.chTatterKick = t == 0 ? -6.0 : 0.0;
         }
 
-        if (clip == Clip.DEATH) {      // sheet 5.6
-            double fall = K.of(0, 0.0).k(6, 0.0).at(t);
+        if (clip == Clip.DEATH) {      // sheet 5.6; r4: a landing squash held t16-19 before the crumple (t19-33)
+            double fall = 0.0;
             if (6 <= t && t <= 16) {
                 double u = (t - 6) / 10.0;
                 fall = -DEATH_DROP * u * u;                                     // gravity ease-in
             } else if (t > 16) {
-                fall = -DEATH_DROP + K.of(16, 0.0).k(17, 1.0).k(19, 0.0).at(t);
+                fall = -DEATH_DROP + K.of(16, -1.5).k(19, -1.5).k(21, 0.0).at(t);
             }
             off(o, HOVER, 0, fall, 0);
-            rot(o, HEAD, K.of(0, 0).k(3, 35).k(6, 35).k(16, 35).k(30, -36).at(t), 0, 0);
-            rot(o, BODY, K.of(0, 0).k(3, 8).k(6, 8).k(16, 8).k(30, -26).at(t), 0, 0);
-            rot(o, CHEST, K.of(0, 0).k(3, 6).k(6, 6).k(16, 6).k(30, -40).at(t), 0, 0);
-            rot(o, R_ARM, K.of(0, 0).k(6, 0).k(16, 0).k(30, 50).at(t), 0,
-                K.of(0, 0).k(3, -58).k(6, -58).k(16, -58).k(30, 12).at(t));
-            rot(o, L_ARM, K.of(0, 0).k(6, 0).k(16, 0).k(30, 50).at(t), 0,
-                K.of(0, 0).k(3, 58).k(6, 58).k(16, 58).k(30, -12).at(t));
+            rot(o, HEAD, K.of(0, 0).k(3, 35).k(6, 35).k(16, 35).k(19, 28).k(33, -36).at(t), 0, 0);
+            rot(o, BODY, K.of(0, 0).k(3, 8).k(6, 8).k(16, 8).k(17, -8).k(19, -8).k(33, -26).at(t), 0, 0);
+            rot(o, CHEST, K.of(0, 0).k(3, 6).k(6, 6).k(16, 6).k(17, -4).k(19, -4).k(33, -40).at(t), 0, 0);
+            // the arms fall limp and IN, along the body
+            rot(o, R_ARM, K.of(0, 0).k(6, 0).k(19, 0).k(33, 20).at(t), 0,
+                K.of(0, 0).k(3, -58).k(6, -58).k(16, -58).k(19, -40).k(33, 10).at(t));
+            rot(o, L_ARM, K.of(0, 0).k(6, 0).k(19, 0).k(33, 20).at(t), 0,
+                K.of(0, 0).k(3, 58).k(6, 58).k(16, 58).k(19, 40).k(33, -10).at(t));
             for (int side = 0; side < 2; side++)
-                rot(o, side == 0 ? R_FORE : L_FORE, K.of(0, 0).k(3, -25).k(16, -25).k(30, -35).at(t), 0, 0);
-            double fold = K.of(0, 0.0).k(16, 0.0).k(30, 1.0).at(t);
-            rot(o, TATTER_F, 80 * fold, 0, 0);
-            rot(o, TATTER_F + 1, -80 * fold, 0, 0);
-            rot(o, TATTER_F + 2, 0, 0, 80 * fold);
-            rot(o, TATTER_F + 3, 0, 0, -80 * fold);
-            st.chTatterHold = fold > 0;
+                rot(o, side == 0 ? R_FORE : L_FORE, K.of(0, 0).k(3, -25).k(19, -25).k(33, -35).at(t), 0, 0);
+            double fold = K.of(0, 0.0).k(19, 0.0).k(33, 1.0).at(t);
+            double splay = K.of(0, 0.0).k(16, 0.0).k(17, 1.0).k(19, 1.0).k(21, 0.0).at(t);   // the squash
+            rot(o, TATTER_F, 80 * fold + 15 * splay, 0, 0);
+            rot(o, TATTER_F + 1, -80 * fold - 15 * splay, 0, 0);
+            rot(o, TATTER_F + 2, 0, 0, 80 * fold + 15 * splay);
+            rot(o, TATTER_F + 3, 0, 0, -80 * fold - 15 * splay);
+            st.chTatterHold = t >= 16;
             st.chLantern = K.of(0, 1.0).k(1, 2.5).k(6, 2.5).k(8, 0.3).k(30, 0.3).k(40, 0.0).at(t);
             st.chAlpha = K.of(0, 1.0).k(35, 1.0).k(50, 0.0).at(t);
             st.chRingSpin = 0.6;
@@ -688,8 +745,8 @@ public final class TitheBinderRig {
         if (clip == Clip.VOLLEY) {
             double[] tgt = in.target;
             double bearing = Math.toDegrees(Math.atan2(-tgt[0], -tgt[2]));   // the slot-yaw convention
-            for (int k = 1; k <= n; k++)                                      // ~ the yaw at t14
-                st.diff[k] = pmod(st.angle[k] + st.ringYaw + 11 * 6.0 - bearing + 180, 360) - 180;
+            for (int k = 1; k <= n; k++)                                      // ~ the spin at t16
+                st.diff[k] = pmod(st.angle[k] + st.ringYaw + 12 * 4.0 - bearing + 180, 360) - 180;
             int first = 1;
             for (int k = 2; k <= n; k++)
                 if (Math.abs(st.diff[k]) < Math.abs(st.diff[first]))
@@ -724,6 +781,7 @@ public final class TitheBinderRig {
             st.lastRelease = VOLLEY_RELEASE + RELEASE_GAP * (pos - 1);
             st.fEnd = st.lastRelease + 2 + 10;
             System.arraycopy(tgt, 0, st.target, 0, 3);
+            st.bearing = bearing;
         }
         if (clip == Clip.BIND && n < MAX_WEAPONS) {
             int k = n + 1;
@@ -823,11 +881,11 @@ public final class TitheBinderRig {
         spring(th, om, S_TILT_X, 0.0, K_TILT, C_TILT, -0.5 * driveX, NO_LO, NO_HI);
         spring(th, om, S_TILT_Z, 0.0, K_TILT, C_TILT, -0.5 * driveZ, NO_LO, NO_HI);
         double tilt0 = st.chTilt0 + th[S_TILT_X], tilt1 = st.chTilt1 + th[S_TILT_Z];
-        out.rot[RING][0] = tilt0;
-        out.rot[RING][1] = st.ringYaw;
+        out.rot[RING][0] = tilt0;                     // r4: the ring carries the tilt only; spin in the slots
+        out.rot[RING][1] = 0.0;
         out.rot[RING][2] = tilt1;
         System.arraycopy(st.chRingOff, 0, out.off[RING], 0, 3);
-        rotMat(RING_TILT + tilt0, st.ringYaw, tilt1, st.ringM);
+        rotMat(RING_TILT + tilt0, 0.0, tilt1, st.ringM);
         for (int i = 0; i < 3; i++) {
             st.ringO[i] = RING_PIVOT[i] + (hov[i] + st.chRingOff[i]);
             st.hub[i] = HUB[i] + hov[i];
@@ -864,7 +922,7 @@ public final class TitheBinderRig {
                     out.weaponHidden[k] = true;
                 } else {
                     double g = smooth((t - 18) / 6.0);
-                    st.forge[k] = 0.57 + 0.43 * g;
+                    st.forge[k] = 0.4 + 0.6 * g;                            // sheet 5.4: outline 0.4 -> 1
                     st.hasForge[k] = true;
                     if (t >= 24) {
                         st.mode[k] = M_DOCKED;
@@ -874,87 +932,168 @@ public final class TitheBinderRig {
             }
             if ((mode == M_DOCKED || mode == M_FORGING) && !out.weaponHidden[k]) {
                 out.slotOn[k] = true;
-                out.slotAngle[k] = st.angle[k];
+                out.slotAngle[k] = st.angle[k] + st.ringYaw;
                 out.slotRadial[k] = radial;
                 out.slotY[k] = 0.0;
                 out.slotPitch[k] = pitch;
                 out.slotRoll[k] = roll;
                 out.slotScale[k] = mode == M_FORGING ? (st.hasForge[k] ? st.forge[k] : 1.0) : 1.0;
                 if (clip != Clip.DEATH || t < 6) {
-                    slotWorld(st, st.angle[k], radial, st.va);
-                    out.ribbon(st.hub, st.va, 2.0, 1.2);
+                    double[] end = st.va, hub = st.vi, ctrl = st.vj;
+                    slotWorld(st, st.angle[k] + st.ringYaw, radial, end);
+                    hubToward(st, end, hub);
+                    sagCtrl(hub, end, 2.0, ctrl);
+                    out.ribbon(hub, ctrl, end, 1.2);
                 }
             }
         }
         st.tick += 1;
+        if (clip == Clip.BIND)
+            bindFx(st, t, in, out);
+        if (clip != Clip.DEATH || t < 6) {
+            int lit = 0;
+            for (int k = 1; k <= MAX_WEAPONS; k++)
+                if (out.slotOn[k] || (out.flyState[k] != FLY_NONE && out.flyState[k] != FLY_SHATTER))
+                    lit++;
+            out.halo = lit;
+        } else {
+            out.halo = Math.max(0, n - Math.max(0, (t - 6) / 2 + 1));
+        }
         out.alpha = st.chAlpha;
         out.lantern = st.chLantern;
         if (st.chLantern < 0.5)
             out.lanternCoreHidden = true;
     }
 
-    /** weapon_flight: DOCKED -> SLUNG (2) -> FLYING -> EMBED (3) -> REEL (8) -> DOCKED (+2 px overshoot). */
+    /**
+     * bind_fx (sheet 5.4): the lash from the lantern to the corpse (t0-3 growing, held to t15), the soul orb lifted
+     * (t4-5) and dragged along it to the lantern (t6-15), the flash (t16-17), the forge line to the new slot (t18-23).
+     */
+    static void bindFx(State st, int t, Inputs in, Pose out) {
+        double[] h = st.hov, c = in.target;
+        double l0 = LANTERN[0] + h[0], l1 = LANTERN[1] + h[1], l2 = LANTERN[2] + h[2];
+        if (t <= 15) {
+            double u = smooth((t + 1) / 3.0);
+            out.lashOn = true;
+            out.lashA[0] = l0;
+            out.lashA[1] = l1;
+            out.lashA[2] = l2;
+            out.lashB[0] = l0 + (c[0] - l0) * u;
+            out.lashB[1] = l1 + (c[1] - l1) * u;
+            out.lashB[2] = l2 + (c[2] - l2) * u;
+        }
+        if (4 <= t && t <= 5) {
+            out.orbOn = true;
+            out.orb[0] = c[0];
+            out.orb[1] = c[1] + 16.0 * smooth((t - 3) / 2.0);
+            out.orb[2] = c[2];
+        } else if (6 <= t && t <= 15) {
+            double u = smooth((t - 5) / 10.0);
+            double top1 = c[1] + 16.0;
+            out.orbOn = true;
+            out.orb[0] = c[0] + (l0 - c[0]) * u;
+            out.orb[1] = top1 + (l1 - top1) * u;
+            out.orb[2] = c[2] + (l2 - c[2]) * u;
+        }
+        if (16 <= t && t <= 17) {
+            out.flashOn = true;
+            out.flash[0] = l0;
+            out.flash[1] = l1;
+            out.flash[2] = l2;
+        }
+        if (18 <= t && t <= 23) {
+            int k = st.n;
+            out.forgeOn = true;
+            out.forgeA[0] = l0;
+            out.forgeA[1] = l1;
+            out.forgeA[2] = l2;
+            slotWorld(st, st.angle[k] + st.ringYaw, 0.0, out.forgeB);
+        }
+    }
+
+    /**
+     * weapon_flight (r4): DOCKED -> SLUNG (1) -> FLYING (6, a lateral arc on alternating sides) -> EMBED (5, held)
+     * -> REEL (4) -> DOCKED (+2 px radial overshoot). The arc is fixed at release.
+     */
     static int weaponFlight(State st, int k, int t, Pose out) {
-        int tr = VOLLEY_RELEASE + RELEASE_GAP * st.orderOf[k];
+        int o = st.orderOf[k];
+        int tr = VOLLEY_RELEASE + RELEASE_GAP * o;
         int tau = t - tr;
         if (tau < 0)
             return M_DOCKED;
         double[] tgt = st.target;
-        double dBlocks = Math.sqrt(tgt[0] * tgt[0] + tgt[2] * tgt[2]) / 16.0;
-        int F = (int) Math.rint(6 + 0.4 * dBlocks);                      // Python round(): half to even
-        double full = 1.0 / DOCK_SCALE[k];
+        double latSign = o % 2 == 0 ? 1.0 : -1.0;
         double[] p0 = st.p0[k], radial = st.radDir[k], tangent = st.tangent[k];
+        double[][] path = st.path[k];
         if (tau == 0) {
-            slotWorld(st, st.angle[k], st.radTh[k], p0);
-            double a = Math.toRadians(st.angle[k] + st.ringYaw);
+            double ang = st.angle[k] + st.ringYaw;
+            slotWorld(st, ang, st.radTh[k], p0);
+            double a = Math.toRadians(ang);
             radial[0] = -Math.sin(a);
             radial[1] = 0.0;
             radial[2] = -Math.cos(a);
             tangent[0] = -Math.cos(a);
             tangent[1] = 0.0;
             tangent[2] = Math.sin(a);
-            slotRotWorld(st, st.angle[k], 0.0, st.md);
+            double hx = tgt[0] - st.hub[0], hz = tgt[2] - st.hub[2];
+            double hd = Math.sqrt(hx * hx + hz * hz);
+            if (hd == 0.0)
+                hd = 1.0;
+            double dh0 = hx / hd, dh2 = hz / hd;                         // the bearing, horizontal
+            double[] lat = st.va;                                        // its left-hand perpendicular
+            lat[0] = -dh2;
+            lat[1] = 0.0;
+            lat[2] = dh0;
+            double[] se = path[0], p1 = path[1], p2 = path[2], p3 = path[3], surf = st.vb, tv = st.vc;
+            for (int i = 0; i < 3; i++)
+                se[i] = p0[i] + tangent[i] * 2 + radial[i] * 2;
+            se[1] += 1.0;
+            double size = LENGTH[k] * DOCK_SCALE[k] * FLIGHT_SCALE;
+            surf[0] = tgt[0] - dh0 * VICTIM_R;
+            surf[1] = tgt[1];
+            surf[2] = tgt[2] - dh2 * VICTIM_R;
+            // the last leg comes in from the arc's side: its direction sets where the pommel stops (tip 2 px in)
+            for (int i = 0; i < 3; i++)
+                p2[i] = se[i] + (surf[i] - se[i]) * 0.75 + lat[i] * latSign * LATERAL;
+            p2[1] += ARC_UP_2;
+            for (int i = 0; i < 3; i++)
+                tv[i] = surf[i] - p2[i];
+            double nT = Math.sqrt(tv[0] * tv[0] + tv[1] * tv[1] + tv[2] * tv[2]);
+            for (int i = 0; i < 3; i++) {
+                tv[i] = tv[i] / nT;
+                p3[i] = surf[i] + tv[i] * 2.0 - tv[i] * size;
+            }
+            for (int i = 0; i < 3; i++)
+                p1[i] = se[i] + (p3[i] - se[i]) * 0.33 + lat[i] * latSign * LATERAL;
+            p1[1] += ARC_UP_1;
+            slotRotWorld(st, ang, 0.0, st.md);
             qFromMat(st.md, st.q0[k]);
         }
-        double[] slingEnd = st.vb, p1 = st.vc, p2 = st.vd, p3 = st.ve, pos = st.vf, tEnd = st.vg;
-        for (int i = 0; i < 3; i++)
-            slingEnd[i] = p0[i] + (tangent[i] * 3 + radial[i] * 3);
-        slingEnd[1] += 1.0;
-        double L = LENGTH[k] * 0.8;
-        for (int i = 0; i < 3; i++)
-            p1[i] = slingEnd[i] + radial[i] * 32;
-        p1[1] += 24;
-        System.arraycopy(tgt, 0, p2, 0, 3);
-        p2[1] += (1.5 + 0.1 * dBlocks) * 16;
-        for (int i = 0; i < 3; i++)
-            tEnd[i] = tgt[i] - p2[i];
-        double nT = Math.sqrt(tEnd[0] * tEnd[0] + tEnd[1] * tEnd[1] + tEnd[2] * tEnd[2]);
-        for (int i = 0; i < 3; i++) {
-            tEnd[i] = tEnd[i] / nT;
-            p3[i] = tgt[i] - tEnd[i] * L;
-        }
-        double scale = 1.0 + (full - 1.0) * smooth(tau / 4.0);
+        double scale = 1.0 + (FLIGHT_SCALE - 1.0) * smooth((tau + 1) / (double) (SLING + 1));
         int kind = SPIN_KIND[k];
         double rate = SPIN_RATE[k];
-        double[] q = st.qa;
+        double[] hub = st.vi, ctrl = st.vj, pos = st.vf, q = st.qa;
+        hubToward(st, st.hasPEnd[k] ? st.pEnd[k] : path[3], hub);
         int state;
         if (tau < SLING) {
             double u = smooth((tau + 1) / (double) SLING);
             for (int i = 0; i < 3; i++)
-                pos[i] = p0[i] + (slingEnd[i] - p0[i]) * u;
+                pos[i] = p0[i] + (path[0][i] - p0[i]) * u;
             System.arraycopy(st.q0[k], 0, q, 0, 4);
             state = FLY_SLUNG;
-        } else if (tau < SLING + F) {
-            double u = (tau - SLING + 1) / (double) F;
-            bezier(slingEnd, p1, p2, p3, u, pos);
-            bezierD(slingEnd, p1, p2, p3, u, st.vh);
+            sagCtrl(hub, pos, 2.0, ctrl);
+        } else if (tau < SLING + FLIGHT) {
+            double u = (tau - SLING + 1) / (double) FLIGHT;
+            bezier(path[0], path[1], path[2], path[3], u, pos);
+            bezierD(path[0], path[1], path[2], path[3], u, st.vh);
             frameAlong(st.vh, st.mc);
             double[] base = st.qb;
             qFromMat(st.mc, base);
             double ang = rate * (tau - SLING + 1);
-            if (tau >= SLING + F - 2) {                                  // the last 2 ticks: turn point-first
-                double ang0 = rate * (F - 2);
-                ang = ang0 + ((Math.ceil(ang0 / 360.0) * 360.0) - ang0) * smooth((tau - (SLING + F - 3)) / 2.0);
+            if (tau >= SLING + FLIGHT - 2) {                             // the last 2 ticks: turn point-first
+                double ang0 = rate * (FLIGHT - 2);
+                ang = ang0 + ((Math.ceil(ang0 / 360.0) * 360.0) - ang0)
+                    * smooth((tau - (SLING + FLIGHT - 3)) / 2.0);
             }
             double[] spin = st.qc;
             if (kind == ROLL) {
@@ -967,35 +1106,47 @@ public final class TitheBinderRig {
                 qFromAxis(1, 0, 0, ang, spin);
                 qMul(base, spin, q);
             }
+            if (u >= 1.0)                                                // exactly point-first at the hit
+                System.arraycopy(base, 0, q, 0, 4);
             state = FLY_FLYING;
             System.arraycopy(q, 0, st.qEnd[k], 0, 4);
             System.arraycopy(pos, 0, st.pEnd[k], 0, 3);
-        } else if (tau < SLING + F + EMBED) {
+            st.hasPEnd[k] = true;
+            // the chain pays out along the flown path: the quadratic through the path's halfway point
+            double[] mid = st.va;
+            bezier(path[0], path[1], path[2], path[3], u / 2.0, mid);
+            for (int i = 0; i < 3; i++)
+                ctrl[i] = 2 * mid[i] - (hub[i] + pos[i]) / 2;
+        } else if (tau < SLING + FLIGHT + EMBED) {
             System.arraycopy(st.pEnd[k], 0, pos, 0, 3);
             System.arraycopy(st.qEnd[k], 0, q, 0, 4);
             state = FLY_EMBED;
-        } else if (tau < SLING + F + EMBED + REEL) {
-            double u = (tau - (SLING + F + EMBED) + 1) / (double) REEL;
+            sagCtrl(hub, pos, 0.0, ctrl);                                // taut: the hit
+        } else if (tau < SLING + FLIGHT + EMBED + REEL) {
+            double u = (tau - (SLING + FLIGHT + EMBED) + 1) / (double) REEL;
             double e = u * u;                                             // slow start, fast arrival
+            double ang = st.angle[k] + st.ringYaw;
             double[] dock = st.vh, mid = st.va, pEnd = st.pEnd[k];
-            slotWorld(st, st.angle[k], 0.0, dock);
+            slotWorld(st, ang, 0.0, dock);
             for (int i = 0; i < 3; i++)
                 mid[i] = (pEnd[i] + dock[i]) / 2;
-            mid[1] += 8.0;
+            mid[1] += 6.0;
             for (int i = 0; i < 3; i++)
                 pos[i] = (1 - e) * (1 - e) * pEnd[i] + 2 * (1 - e) * e * mid[i] + e * e * dock[i];
-            slotRotWorld(st, st.angle[k], 0.0, st.md);
+            slotRotWorld(st, ang, 0.0, st.md);
             double[] qd = st.qb, tumble = st.qc;
             qFromMat(st.md, qd);
             qSlerp(st.qEnd[k], qd, e, st.qd);
             qFromAxis(tangent[0], tangent[1], tangent[2], 360.0 * e, tumble);
             qMul(st.qd, tumble, q);
-            scale = full + (1.0 - full) * e;
+            scale = FLIGHT_SCALE + (1.0 - FLIGHT_SCALE) * e;
             state = FLY_REEL;
+            sagCtrl(hub, pos, 3.0, ctrl);
             if (u >= 1.0) {
                 st.radTh[k] = DOCK_OVERSHOOT;
                 st.radOm[k] = 0.0;
                 st.mode[k] = M_DOCKED;
+                st.hasPEnd[k] = false;
                 return M_DOCKED;
             }
         } else {
@@ -1006,25 +1157,20 @@ public final class TitheBinderRig {
         System.arraycopy(pos, 0, out.flyPos[k], 0, 3);
         euler(st.mc, out.flyRot[k]);
         out.flyScale[k] = scale;
-        double[] hub = st.hub;
-        double dist = Math.sqrt((pos[0] - hub[0]) * (pos[0] - hub[0]) + (pos[1] - hub[1]) * (pos[1] - hub[1])
-            + (pos[2] - hub[2]) * (pos[2] - hub[2]));
-        double sag = state == FLY_EMBED ? 0.0
-            : 0.15 * dist * (1.0 - Math.min(1.0, Math.max(0.0, (tau - SLING) / (double) F)));
-        out.ribbon(hub, pos, sag, 1.6 * (tau == SLING + F ? 1.3 : 1.0));
+        out.ribbon(hub, ctrl, pos, 1.6 * (tau == SLING + FLIGHT ? 1.3 : 1.0));
         return state == FLY_SLUNG ? M_SLUNG : state == FLY_FLYING ? M_FLYING : state == FLY_EMBED ? M_EMBED : M_REEL;
     }
 
     /** weapon_fall: death - the weapon lets go (one every 2 ticks in ring order), flung out, falls, shatters. */
     static int weaponFall(State st, int k, int t, Pose out) {
         if (!st.fallOn[k]) {
-            slotWorld(st, st.angle[k], 0.0, st.fallP[k]);
+            slotWorld(st, st.angle[k] + st.ringYaw, 0.0, st.fallP[k]);
             double a = Math.toRadians(st.angle[k] + st.ringYaw);
             double[] vel = st.fallV[k];
             vel[0] = -Math.sin(a) * 1.2 - Math.cos(a) * 0.6;
             vel[1] = 0.0;
             vel[2] = -Math.cos(a) * 1.2 + Math.sin(a) * 0.6;
-            slotRotWorld(st, st.angle[k], 0.0, st.md);
+            slotRotWorld(st, st.angle[k] + st.ringYaw, 0.0, st.md);
             qFromMat(st.md, st.fallQ[k]);
             st.fallGround[k] = NO_GROUND;
             st.fallOn[k] = true;

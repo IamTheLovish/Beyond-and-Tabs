@@ -31,7 +31,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * clip into design/fixtures/tithe_binder_clips.json; the Java rig, run through the same harness (seed 1, 40 idle ticks
  * of warm-up, the same inputs), must land on every sampled number within 0.01 (degrees, px, alpha / glow / scale):
  * every bone delta, every docked slot, every flying / falling weapon (state, pommel, world rotation, scale), the hidden
- * parts, the body alpha, the lantern glow and every soul-chain ribbon. Then the API's shape (one state, one pose, reused,
+ * parts, the body alpha, the lantern glow, every soul-chain ribbon (r4: hub, ctrl, end, width) and the fx (the count
+ * halo; the bind's lash, orb, flash, forge line). Then the API's shape (one state, one pose, reused,
  * no allocation per step) and the DSL -> ModelPart sign mapping of tools/dsl_to_game.py ((x, y, z) degrees ->
  * (-x, +y, -z) radians; offsets y down) on three bones and one slot.
  */
@@ -47,11 +48,12 @@ class TitheBinderRigTest {
 
     static {
         double[] ahead = {0.0, 20.0, -80.0};
+        double[] victim = {-40.0, 20.0, -69.28};          // r4: 5 blocks out at a 30-deg bearing, front-right
         RUNS.put("idle", new Object[]{TitheBinderRig.Clip.IDLE, 10, 60, ahead});
         RUNS.put("fidget", new Object[]{TitheBinderRig.Clip.FIDGET, 10, 30, ahead});
         RUNS.put("move", new Object[]{TitheBinderRig.Clip.MOVE, 10, 50, ahead});
-        RUNS.put("volley_N5", new Object[]{TitheBinderRig.Clip.VOLLEY, 5, 60, ahead});
-        RUNS.put("volley_N10", new Object[]{TitheBinderRig.Clip.VOLLEY, 10, 60, ahead});
+        RUNS.put("volley_N5", new Object[]{TitheBinderRig.Clip.VOLLEY, 5, 60, victim});
+        RUNS.put("volley_N10", new Object[]{TitheBinderRig.Clip.VOLLEY, 10, 60, victim});
         RUNS.put("bind", new Object[]{TitheBinderRig.Clip.BIND, 5, 32, new double[]{-40.0, 4.0, -56.0}});
         RUNS.put("hit", new Object[]{TitheBinderRig.Clip.HIT, 10, 16, ahead});
         RUNS.put("death", new Object[]{TitheBinderRig.Clip.DEATH, 10, 50, ahead});
@@ -234,11 +236,34 @@ class TitheBinderRigTest {
             String w = at + " ribbon " + r + " ";
             for (int i = 0; i < 3; i++) {
                 d.near(w + "hub[" + i + "]", rb.get(0).getAsJsonArray().get(i).getAsDouble(), got.ribbonHub[r][i]);
-                d.near(w + "end[" + i + "]", rb.get(1).getAsJsonArray().get(i).getAsDouble(), got.ribbonEnd[r][i]);
+                d.near(w + "ctrl[" + i + "]", rb.get(1).getAsJsonArray().get(i).getAsDouble(), got.ribbonCtrl[r][i]);
+                d.near(w + "end[" + i + "]", rb.get(2).getAsJsonArray().get(i).getAsDouble(), got.ribbonEnd[r][i]);
             }
-            d.near(w + "sag", rb.get(2).getAsDouble(), got.ribbonSag[r]);
             d.near(w + "width", rb.get(3).getAsDouble(), got.ribbonWidth[r]);
         }
+        // fx: the count halo, and the bind's lash / orb / flash / forge line
+        JsonObject fx = want.getAsJsonObject("fx");
+        d.same(at + " fx.halo", Integer.toString(fx.get("halo").getAsInt()), Integer.toString(got.halo));
+        fxPoint(d, at + " fx.lash", fx, "lash", 0, got.lashOn, got.lashA);
+        fxPoint(d, at + " fx.lash", fx, "lash", 1, got.lashOn, got.lashB);
+        fxPoint(d, at + " fx.orb", fx, "orb", -1, got.orbOn, got.orb);
+        fxPoint(d, at + " fx.flash", fx, "flash", -1, got.flashOn, got.flash);
+        fxPoint(d, at + " fx.forge", fx, "forge", 0, got.forgeOn, got.forgeA);
+        fxPoint(d, at + " fx.forge", fx, "forge", 1, got.forgeOn, got.forgeB);
+        for (String key : fx.keySet())
+            d.truth(at + " fx key " + key + " is ported",
+                key.equals("halo") || key.equals("lash") || key.equals("orb") || key.equals("flash")
+                    || key.equals("forge"));
+    }
+
+    /** One fx point: fx[key] (a point) or fx[key][end] (a segment end); absent in the driver = off in the rig. */
+    private static void fxPoint(Diff d, String what, JsonObject fx, String key, int end, boolean on, double[] got) {
+        d.same(what + " on", Boolean.toString(fx.has(key)), Boolean.toString(on));
+        if (!fx.has(key) || !on)
+            return;
+        JsonArray p = end < 0 ? fx.getAsJsonArray(key) : fx.getAsJsonArray(key).get(end).getAsJsonArray();
+        for (int i = 0; i < 3; i++)
+            d.near(what + (end < 0 ? "" : "[" + end + "]") + "[" + i + "]", p.get(i).getAsDouble(), got[i]);
     }
 
     /** Counts compared values and keeps the first mismatches for the failure message. */
