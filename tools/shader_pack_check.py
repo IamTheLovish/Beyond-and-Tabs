@@ -58,6 +58,50 @@ def with_macros(source, macros):
     return "\n".join(lines[:1] + extra + lines[1:])
 
 
+def _condition(expr, defines):
+    """A #if / #elif condition as the GLSL preprocessor reads it: `defined X` / `defined(X)`, X == n, !, &&, ||."""
+    expr = re.sub(r"defined\s*\(?\s*(\w+)\s*\)?", lambda m: "1" if m.group(1) in defines else "0", expr)
+    expr = re.sub(r"\b[A-Za-z_]\w*\b", lambda m: defines.get(m.group(0)) or "0", expr)
+    expr = expr.replace("&&", " and ").replace("||", " or ")
+    expr = re.sub(r"!(?!=)", " not ", expr)
+    if re.search(r"[^\w\s.()=<>!+\-*/]", expr):
+        raise ValueError("cannot read #if %r" % expr)
+    return bool(eval(expr, {"__builtins__": {}}, {}))
+
+
+def preprocess(source):
+    """An expanded program with its #define / #if / #ifdef / #ifndef / #elif / #else / #endif applied: the lines the
+    GPU compiles. Enough for this pack's own directives (integer options, `defined`, &&, ||, !)."""
+    defines, out, stack = {}, [], []          # stack: (this branch is on, a branch of this #if was taken, outer on)
+    for line in source.split("\n"):
+        d = re.match(r"\s*#\s*(\w+)\s*(.*)", line)
+        word, rest = (d.group(1), d.group(2).split("//")[0].strip()) if d else (None, "")
+        on = all(s[0] for s in stack)
+        if word in ("if", "ifdef", "ifndef"):
+            if word == "if":
+                c = on and _condition(rest, defines)
+            else:
+                c = on and ((rest in defines) == (word == "ifdef"))
+            stack.append((c, c, on))
+        elif word == "elif":
+            _, taken, outer = stack.pop()
+            c = outer and not taken and _condition(rest, defines)
+            stack.append((c, taken or c, outer))
+        elif word == "else":
+            _, taken, outer = stack.pop()
+            stack.append((outer and not taken, True, outer))
+        elif word == "endif":
+            stack.pop()
+        elif not on:
+            continue
+        elif word == "define":
+            name, _, value = rest.partition(" ")
+            defines[name] = value.strip() or "1"
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
 def compile_errors(glslang, name, source):
     """glslang's complaints about one program ('' when it compiles)."""
     stage = "vert" if name.endswith(".vsh") else "frag"
@@ -115,6 +159,63 @@ def enchanted_pairs(java, fsh):
             return None
         pairs += [("%s[%d]" % (const, i), w, g) for i, (w, g) in enumerate(zip(want, got))]
     return pairs
+
+
+def vec3_const(source, name):
+    """A `const vec3 NAME = vec3(r, g, b) [* k];` (or `vec3(x)`) from a shader's source, as three floats."""
+    m = re.search(r"const vec3 %s = vec3\(([^)]*)\)\s*(?:\*\s*(-?\d+(?:\.\d+)?))?\s*;" % name, source)
+    if not m:
+        raise ValueError("no const vec3 %s" % name)
+    xs = _numbers(m.group(1))
+    xs = xs * 3 if len(xs) == 1 else xs
+    k = float(m.group(2)) if m.group(2) else 1.0
+    return [x * k for x in xs]
+
+
+def float_const(source, name, default=None):
+    """A `const float NAME = x;` from a shader's source; `default` when the source has none."""
+    m = re.search(r"const float %s = (-?\d+(?:\.\d+)?);" % name, source)
+    if not m:
+        if default is None:
+            raise ValueError("no const float %s" % name)
+        return default
+    return float(m.group(1))
+
+
+def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_height=1080.0):
+    """lib/ao.glsl's aoDepthTolerance in blocks, evaluated from the GLSL itself: the `return` under its
+    `if (aoOrtho(projection))` (the RTS view) or the one after it (first person), with the file's float constants filled
+    in and the RTS view's projection[1][1] = 2 / zoom (zoom = blocks of view height)."""
+    m = re.search(r"float aoDepthTolerance\([^)]*\) \{\s*if \(aoOrtho\(projection\)\)\s*return ([^;]*);\s*return ([^;]*);"
+                  r"\s*\}", ao_source)
+    if not m:
+        raise ValueError("lib/ao.glsl's aoDepthTolerance is not `if (aoOrtho(projection)) return ...; return ...;`")
+    expr = (m.group(1) if ortho else m.group(2)).replace("projection[1][1]", "p11")
+    consts = dict(re.findall(r"const float (\w+) = (-?\d+(?:\.\d+)?);", ao_source))
+    expr = re.sub(r"\b[A-Z][A-Z0-9_]*\b", lambda c: consts[c.group(0)], expr)
+    if re.search(r"[^\w\s.,()+\-*/]", expr) or set(re.findall(r"[A-Za-z_]\w*", expr)) - {
+            "max", "base", "viewDepth", "viewHeight", "p11"}:
+        raise ValueError("cannot evaluate %r" % expr)
+    return eval(expr, {"__builtins__": {}}, {"max": max, "base": base, "viewDepth": view_depth,
+                                            "viewHeight": view_height, "p11": 2.0 / zoom})
+
+
+def _smoothstep(a, b, x):
+    t = min(max((x - a) / (b - a), 0.0), 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def split_tone_shadows(source, lc):
+    """final.fsh's split-tone shadow weight at luma lc: its own `float shadows = ...;` line, with the file's float
+    constants filled in, evaluated as GLSL would (smoothstep only)."""
+    m = re.search(r"float shadows = ([^;]*);", source)
+    if not m:
+        raise ValueError("final.fsh has no `float shadows = ...;` line")
+    consts = {k: v for k, v in re.findall(r"const float (\w+) = (-?\d+(?:\.\d+)?);", source)}
+    expr = re.sub(r"\b[A-Z][A-Z0-9_]*\b", lambda c: consts[c.group(0)], m.group(1))
+    if re.search(r"[^\w\s.,()+\-*]", expr) or set(re.findall(r"[A-Za-z_]\w*", expr)) - {"smoothstep", "lc"}:
+        raise ValueError("cannot evaluate %r" % expr)
+    return eval(expr, {"__builtins__": {}}, {"smoothstep": _smoothstep, "lc": lc})
 
 
 def find_glslang(given=None):
