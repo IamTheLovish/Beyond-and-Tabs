@@ -67,7 +67,35 @@ public class TargetScanGameTests {
     /** The chunk-aligned corner of this test's pad: 6000 west and {@code north} blocks north of its arena, plus east. */
     static int[] origin(GameTestHelper helper, int east, int north) {
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        return new int[] { ((base.getX() - 6000 + east) >> 4) << 4, ((base.getZ() - north) >> 4) << 4 };
+        int[] o = { ((base.getX() - 6000 + east) >> 4) << 4, ((base.getZ() - north) >> 4) << 4 };
+        PADS.put("east " + east + " north " + north + " @arena " + base.getX() + "," + base.getZ(), o[0] + "," + o[1]);
+        return o;
+    }
+
+    /**
+     * Every pad laid this run (the slot, its arena, the pad's corner), so a failure can say where the batch's other
+     * pads were: the pads are placed relative to their arenas, and #488's CI (42003290917, attempt 1) saw the quiet unit
+     * gather with no enemy near it.
+     */
+    static final java.util.Map<String, String> PADS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Every living entity within {@code r} of {@code me} that is not on {@code me}'s side: what it is, its owner, its
+     * offset from {@code me} and whether that owner is allied to {@code me}'s - so a scan that gathered "with no enemy
+     * near" names what it saw.
+     */
+    static String notOwnSideNear(ServerLevel level, Mob me, double r) {
+        String self = unitOf(me).getOwnerName();
+        List<String> out = new ArrayList<>();
+        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, me.getBoundingBox().inflate(r), x -> x != me)) {
+            String owner = e instanceof Unit u ? u.getOwnerName() : null;
+            if (self.equals(owner))
+                continue;
+            out.add(describe(e) + String.format(Locale.ROOT, " at %+.1f,%+.1f,%+.1f", e.getX() - me.getX(),
+                e.getY() - me.getY(), e.getZ() - me.getZ()) + (owner == null ? "" : AlliancesServerEvents.isAllied(self, owner)
+                ? " allied" : " NOT allied") + (e.isAlive() ? "" : " dead") + (e.isRemoved() ? " removed" : ""));
+        }
+        return out.isEmpty() ? "nothing" : String.join("; ", out);
     }
 
     static String describe(Entity e) {
@@ -434,7 +462,9 @@ public class TargetScanGameTests {
                 if (now <= 48) {
                     if (probe[0][1] > 0 || target != null)
                         throw new GameTestAssertException("with no enemy within 50 blocks the unit gathered candidates at tick "
-                            + now + state);
+                            + now + state + "; not its side within " + (10 + 3 + 8) + " blocks: "
+                            + notOwnSideNear(level, me, 10 + 3 + 8) + "; allied(quiet_a, quiet_c) "
+                            + AlliancesServerEvents.isAllied(a, c) + "; pads this run: " + PADS);
                     if (now == 48) {
                         if (probe[0][0] < 3)
                             throw new GameTestAssertException("the idle unit hardly looked for a target in 48 ticks" + state);
