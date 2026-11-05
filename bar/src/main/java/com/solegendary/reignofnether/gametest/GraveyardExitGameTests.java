@@ -78,6 +78,10 @@ public class GraveyardExitGameTests {
     /** OPEN is only used by the open-ground walk-out tests (see below); they call {@link #run} from their own class. */
     enum Gate { OPEN, HALF_BLOCKED, BLOCKED, BANK }
 
+    // DIAG (throwaway): per-Zombie position trail, and the drops already logged
+    private static final java.util.Map<Integer, java.util.Deque<String>> DIAG_TRAILS = new java.util.HashMap<>();
+    private static final Set<String> DIAG_LOGGED = new HashSet<>();
+
     // ------------------------------------------------------------------------------------- open ground, each level
 
     // The four open-ground walk-out tests (plain, Overflowing, L2, L3: run(helper, code, Gate.OPEN)) live in the PR that
@@ -272,6 +276,26 @@ public class GraveyardExitGameTests {
                     EngagementStance.set(made, EngagementStance.HOLD_FIRE);
                     made.setInvulnerable(true);
                     raised.add(made);
+                }
+                // DIAG (throwaway, never merge): the first tick each Zombie leaves the arena's plinth, and how
+                for (int i = 0; i < raised.size(); i++) {
+                    ZombieUnit z = raised.get(i);
+                    String key = "drop" + z.getId();
+                    java.util.Deque<String> trail = DIAG_TRAILS.computeIfAbsent(z.getId(), k -> new java.util.ArrayDeque<>());
+                    BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+                    double rx = z.getX() - o.getX(), ry = z.getY() - o.getY(), rz = z.getZ() - o.getZ();
+                    net.minecraft.world.phys.Vec3 v = z.getDeltaMovement();
+                    int near = level.getEntitiesOfClass(ZombieUnit.class, z.getBoundingBox().inflate(0.6), n -> n != z).size();
+                    var path = z.getNavigation().getPath();
+                    String next = path == null || path.isDone() ? "none" : path.getNextNodePos().toShortString()
+                        + " (" + path.getNextNodeIndex() + "/" + path.getNodeCount() + ", end " + (path.getEndNode() == null ? "?" : path.getEndNode().asBlockPos().toShortString()) + ")";
+                    trail.addLast(String.format(Locale.ROOT, "t%d %.2f/%.2f/%.2f v%.3f/%.3f/%.3f g%s n%d next %s", tick, rx, ry, rz,
+                        v.x, v.y, v.z, z.onGround() ? "1" : "0", near, next));
+                    if (trail.size() > 8)
+                        trail.removeFirst();
+                    if ((ry < -0.5 || rx < -0.35 || rz < -0.35 || rx > 16.35 || rz > 16.35) && DIAG_LOGGED.add(key + helper.absolutePos(BlockPos.ZERO).asLong()))
+                        ReignOfNether.LOGGER.info("[GraveyardExit] GameTest DROP {} #{} left the plinth at tick {}: {}", layout, z.getId(),
+                            tick - readyAt[0], String.join(" | ", trail));
                 }
                 final int lastAt = readyAt[0] + SETTLE + (UNITS - 1) * SPACING;
                 if (tick < lastAt + 1)
