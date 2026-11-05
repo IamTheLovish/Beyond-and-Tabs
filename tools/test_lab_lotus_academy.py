@@ -165,21 +165,6 @@ class LotusAcademyTest(unittest.TestCase):
             low = sorted(q for q, n in s.items() if n.startswith("cherry") and abs(q[1] - hy) > 1)
             self.assertEqual(low, [], "L%d pink crumbs" % (i + 1))
 
-    def test_l3_grows_a_lotus_not_a_fourth_roof(self):
-        """L3 is the academy's own top (critic C F3): three jade roofs, not the capitol's four-roof profile, and the
-        lotus opens wide - its pink spans at least 5 cells east-west (shipped: a fourth roof and a 3-wide lotus, "the
-        pagoda at two thirds scale")."""
-        s = self.solid[2]
-        blocks = self.lv[2].blocks
-        lips = sorted({y for (x, y, z), n in s.items() if y > 4 and n in (JADE + "_stairs", "dark_oak_stairs")
-                       and blocks[(x, y, z)][1].get("facing") == "north"
-                       and blocks[(x, y, z)][1].get("half") == "bottom"})
-        roofs = [y for y in lips if y - 1 not in lips]     # a lip and its second course one above are one roof
-        self.assertLessEqual(len(roofs), 3, lips)
-        hy = max(q[1] for q, n in s.items() if n == "pearlescent_froglight")
-        xs = [q[0] for q, n in s.items() if n.startswith("cherry") and q[1] == hy]
-        self.assertGreaterEqual(max(xs) - min(xs) + 1, 5, sorted(xs))
-
     def test_shipped_structures_are_the_generator_build(self):
         built = (L.l1(), L.l2(), L.l3())
         with tempfile.TemporaryDirectory() as d:

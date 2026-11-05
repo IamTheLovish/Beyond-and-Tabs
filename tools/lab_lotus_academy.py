@@ -34,11 +34,11 @@ roof (the lotus opens on it); L3 the fourth roof and the crown. No amethyst and 
 text below disagrees, this paragraph wins.
 
 NOV 4 2026 FABLE CRITICS (eyes 41792408905, blind: L1 5 / 10, L3 5.5 / 10; tests tools/test_lab_lotus_academy.py): the
-court in the mids (smooth stone; the polished andesite court was the building's lightest plane), the dark oak hem on
+court in the mids (plain stone; the polished andesite court was the building's lightest plane), the dark oak hem on
 every eave (galleries, gate and all hall roofs), one gold boss on the gate, the lotus crown's boss dark oak with one gold
-seed and a lantern (a gold apex is the Sunforged's), the L1 crown's leftover petal tips turned into rafter ends, and L3
-opens the lotus wide on the third roof instead of a fourth roof (the capitol's profile). Where the text below
-disagrees, this paragraph wins.
+seed and a lantern (a gold apex is the Sunforged's), the leftover petals of the lower crowns turned into rafter ends
+and jade slabs. L3 keeps its fourth roof (a blind round, Nov 5: the wide flat lotus tried instead read as a pink box).
+Where the text below disagrees, this paragraph wins.
 
 THE PLAN (9 x 9, the shipped footprint). The RTS camera looks from the south-west: it sees the roofs, the west face
 (x = 0) and the south face (z = 8). So the hall stands across the north (z 0..3) and faces south over the court
@@ -484,7 +484,7 @@ def draw_l2(r):
 
 
 # ======================================================================================================== L3
-R3 = 14
+R3, R4 = 14, 17
 
 
 def storey3(r, chimes):
@@ -509,31 +509,29 @@ def storey3(r, chimes):
             r.st(x, y, z, f, "top", OAK_ST)
     for (x, z) in ((2, 3), (6, 3)):        # lightning rods on the third roof's front tips (the storm caught everywhere)
         r.rod(x, R3 + 2, z)
-    lotus_crown(r, R3 + 1)                 # the lotus climbs onto the new top and opens wide at L3
+    lotus_crown(r, R3 + 1)                 # the lotus climbs onto the new top (L3's fourth storey grows through it)
 
 
-def lotus_l3(r):
-    """L3: THE THOUSAND-LOTUS opens on the third roof - the academy's own top, not a fourth jade roof (Fable critic C F3,
-    Nov 4: with four roofs and a gold apex the L3 was "the pagoda at two thirds scale"). Round the L2 crown's heart a
-    second ring of cherry petals (stairs opening out on the sides, slabs between, the north row is past the footprint)
-    on a jade pad, and an inner ring of petals raised round the gold seed: a 5 x 4 pink flower cupped round its light."""
-    x0, z0, y = C, 1, R3 + 2
-    for x in range(x0 - 2, x0 + 3):
-        for z in range(z0 - 1, z0 + 3):
-            ring = max(abs(x - x0), abs(z - z0))
-            if ring < 2:
-                if ring == 1:              # the inner petals rise round the seed
-                    f = "east" if x > x0 else "west" if x < x0 else "south" if z > z0 else "north"
-                    r.st(x, y + 1, z, f, name=PETAL_ST)
-                continue
-            if r.get(x, y - 1, z)[0] == "air":
-                r.set(x, y - 1, z, JADE)   # the pad (nothing floats)
-            side = x in (x0 - 2, x0 + 2) and z == z0 or z == z0 + 2 and x == x0
-            if side:
-                f = "west" if x < x0 else "east" if x > x0 else "south"
-                r.st(x, y, z, f, "top", PETAL_ST)
-            else:
-                r.slab(x, y, z, PETAL_SLAB)
+def pagoda_l3(r, chimes):
+    """L3: the fourth storey and roof, a ring narrower, and the LOTUS CROWN on top. Nov 5: kept after a blind Fable
+    round on the after stills (eyes 41973122578, critic-lotus_academy-r1): the Nov 4 plan's wide 5 x 4 lotus in place
+    of this fourth roof (critic C F3) read as "a wide flat pink slab lid ... a pink box", 4 / 10 against the shipped
+    four-roof spire's 5 / 10 - the spire is the quality bar's "one dominant spire". The crown takes the Nov 4 fixes
+    (dark oak boss, one gold seed, a lantern) and the L2 crown's petals left outside storey 4 turn to jade slabs."""
+    # storey 4: a red core (x 4, z 1..2) under the top roof
+    for y in range(R3 + 1, R4):
+        r.red(4, y, 1)
+        r.set(4, y, 2, PAPER)
+        r.set(3, y, 1, OAK)
+        r.set(5, y, 1, OAK)
+        r.set(4, y, 0, OAK)
+    # the L2 crown's petals outside the storey (the chain only adds or replaces): jade slabs, not pink crumbs on the
+    # tower (Fable critic B, L3 fix 1)
+    for (x, y, z), (n, p) in list(r.b.items()):
+        if n.startswith("cherry") and y == R3 + 2:
+            r.slab(x, y, z)
+    curved_roof(r, 3, 5, 0, 2, R4, chimes, flush_north=False)
+    lotus_crown(r, R4 + 1)
 
 
 def gate_l3(r, chimes):
@@ -556,7 +554,7 @@ def court_l3(r):
 
 def draw_l3(r):
     chimes = draw_l2(r)
-    lotus_l3(r)
+    pagoda_l3(r, chimes)
     gate_l3(r, chimes)
     court_l3(r)
     return chimes
