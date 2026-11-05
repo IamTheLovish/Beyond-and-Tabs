@@ -166,6 +166,64 @@ public class DeathBurstGameTests {
         });
     }
 
+    /**
+     * A machine that dies garrisoned does not burst: the building holds it (DeathBurst.onLivingDeath asks
+     * GarrisonableBuildingAddon.getGarrison). An Iron Warden on a built Watchtower's garrison spot dies with an enemy
+     * 1.3 blocks from it, and a second Warden on the ground dies beside another enemy (the burst is on): the first
+     * enemy takes nothing, the second takes its share.
+     */
+    @GameTest(template = ARENA, batch = "death_burst_garrison", timeoutTicks = 60)
+    public static void a_machine_dying_in_a_garrison_does_not_burst(GameTestHelper helper) {
+        String me = HeroGameTests.owner(helper, "burst_gar_me"), them = HeroGameTests.owner(helper, "burst_gar_them");
+        net.minecraft.server.level.ServerLevel level = helper.getLevel();
+        net.minecraft.core.BlockPos origin = helper.absolutePos(new net.minecraft.core.BlockPos(2, 1, 2));
+        TestCleanup.blocks(helper).region(origin.offset(-1, -1, -1), origin.offset(8, 16, 8));
+        com.solegendary.reignofnether.building.BuildingPlacement tower = RaidGameTests.build(level,
+            com.solegendary.reignofnether.building.Buildings.WATCHTOWER, origin, me, false);
+        List<Mob> made = new ArrayList<>();
+        try {
+            if (tower == null) {
+                helper.fail("could not build the Watchtower");
+                return;
+            }
+            net.minecraft.core.BlockPos spot = ((com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon)
+                tower.getBuilding().getActiveAddon(com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon.class))
+                .getEntryPosition(tower);
+            Mob inside = unit(helper, EntityRegistrar.IRON_WARDEN_UNIT.get(), me, 0, 0, made);
+            inside.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+            inside.setNoGravity(true);
+            Mob byInside = target(helper, them, 0, 0, made);
+            byInside.moveTo(spot.getX() + 1.8, spot.getY(), spot.getZ() + 0.5, 0, 0);
+            byInside.setNoGravity(true);
+            Mob outside = unit(helper, EntityRegistrar.IRON_WARDEN_UNIT.get(), me, 12.5, 12.5, made);
+            Mob byOutside = target(helper, them, 14.0, 12.5, made);
+            helper.runAfterDelay(5, () -> {
+                boolean garrisoned = com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon.getGarrison(
+                    (Unit) inside) == tower;
+                inside.kill();
+                outside.kill();
+                float in = taken(byInside), out = taken(byOutside);
+                discard(made);
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(tower);
+                String got = String.format(Locale.ROOT, "beside the garrisoned Warden %.2f, beside the Warden outside %.2f "
+                    + "(garrisoned %b)", in, out, garrisoned);
+                if (!garrisoned)
+                    helper.fail("the Warden on the Watchtower's spot is not garrisoned there: " + got);
+                else if (out <= 0)
+                    helper.fail("the Warden outside did not burst: " + got);
+                else if (in != 0)
+                    helper.fail("a machine dying in a garrison burst: " + got);
+                else
+                    helper.succeed();
+            });
+        } catch (RuntimeException ex) {
+            discard(made);
+            if (tower != null)
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(tower);
+            throw ex;
+        }
+    }
+
     static double distance(Mob target, net.minecraft.world.phys.Vec3 p) {
         var box = target.getBoundingBox();
         double dx = Math.max(Math.max(box.minX - p.x, 0), p.x - box.maxX);
