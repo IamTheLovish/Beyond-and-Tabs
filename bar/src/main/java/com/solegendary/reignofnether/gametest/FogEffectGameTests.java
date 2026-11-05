@@ -101,6 +101,25 @@ public class FogEffectGameTests {
         level.explode(null, at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5, 0.5f, Level.ExplosionInteraction.NONE);
     }
 
+    /** The exception's top six frames, "Class.method:line < ...". */
+    static String frames(Throwable e) {
+        StringBuilder out = new StringBuilder();
+        StackTraceElement[] st = e.getStackTrace();
+        for (int i = 0; i < Math.min(6, st.length); i++)
+            out.append(i == 0 ? "" : " < ").append(st[i].getClassName().replaceAll(".*\\.", "")).append('.')
+                .append(st[i].getMethodName()).append(':').append(st[i].getLineNumber());
+        return out.toString();
+    }
+
+    /** One clean-up step: a throw is named in the failure instead of escaping bare (and the next steps still run). */
+    static void cleanUp(List<String> problems, String step, Runnable r) {
+        try {
+            r.run();
+        } catch (RuntimeException e) {
+            problems.add("clean-up of " + step + " threw " + e + " at " + frames(e));
+        }
+    }
+
     @GameTest(template = SkirmishGameTests.ARENA, batch = "fog_effects", timeoutTicks = 20)
     public static void a_player_whose_fog_hides_a_spot_gets_none_of_its_effects(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -162,22 +181,25 @@ public class FogEffectGameTests {
         } catch (RuntimeException e) {
             // name where it threw: a bare "java.lang.UnsupportedOperationException" (red run 41992398136, attempt 2)
             // said nothing about which step
-            StringBuilder frames = new StringBuilder();
-            StackTraceElement[] st = e.getStackTrace();
-            for (int i = 0; i < Math.min(6, st.length); i++)
-                frames.append(i == 0 ? "" : " < ").append(st[i].getClassName().replaceAll(".*\\.", "")).append('.')
-                    .append(st[i].getMethodName()).append(':').append(st[i].getLineNumber());
-            problems.add("threw " + e + " during " + stage[0] + " at " + frames);
+            problems.add("threw " + e + " during " + stage[0] + " at " + frames(e));
         } finally {
-            listed.remove(sp);
-            if (inLevel.contains(sp))
-                level.removePlayerImmediately(sp, net.minecraft.world.entity.Entity.RemovalReason.DISCARDED);
-            sp.connection = oldConnection;
-            MatchLifecycleCases.forget(name);
-            if (FogOfWarServerEvents.isEnabled() && !wasOn)
-                FogOfWarServerEvents.setEnabled(false);
-            border.setCenter(cx, cz);
-            border.setSize(size);
+            // every clean-up step on its own, each throw named (red run 42086654528 threw a bare one again: after the
+            // try, so from here)
+            cleanUp(problems, "the player list", () -> listed.remove(sp));
+            cleanUp(problems, "leaving the level", () -> {
+                if (inLevel.contains(sp))
+                    level.removePlayerImmediately(sp, net.minecraft.world.entity.Entity.RemovalReason.DISCARDED);
+            });
+            cleanUp(problems, "the old connection", () -> sp.connection = oldConnection);
+            cleanUp(problems, "the RTS side", () -> MatchLifecycleCases.forget(name));
+            cleanUp(problems, "fog off", () -> {
+                if (FogOfWarServerEvents.isEnabled() && !wasOn)
+                    FogOfWarServerEvents.setEnabled(false);
+            });
+            cleanUp(problems, "the border", () -> {
+                border.setCenter(cx, cz);
+                border.setSize(size);
+            });
         }
         if (FogOfWarServerEvents.isEnabled() != wasOn)
             problems.add("fog flag was not restored");
