@@ -253,6 +253,61 @@ public class DeathBurstGameTests {
     }
 
     /**
+     * A defeated side's units are cleared with a kill over the next ticks (DefeatCleanupServerEvents), and that is
+     * bookkeeping, not combat: none of its machines bursts into the winner's army (Command Center Eris.14, Nov 5,
+     * provisional until lovish confirms). A defeated owner's Steam Juggernaut handed to the cleanup beside an enemy 1.7
+     * from its middle: it is dead 10 ticks later, the enemy took nothing.
+     */
+    @GameTest(template = ARENA, batch = "death_burst_defeat", timeoutTicks = 60)
+    public static void a_defeated_sides_machine_cleared_by_the_cleanup_does_not_burst(GameTestHelper helper) {
+        String loser = HeroGameTests.owner(helper, "burst_def_loser"), them = HeroGameTests.owner(helper, "burst_def_them");
+        List<Mob> made = new ArrayList<>();
+        Mob boiler = unit(helper, EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get(), loser, 8.5, 8.5, made);
+        Mob near = target(helper, them, 10.5, 8.5, made);   // 19.08 if it burst
+        helper.runAfterDelay(5, () -> com.solegendary.reignofnether.player.DefeatCleanupServerEvents.begin(
+            helper.getLevel(), loser, List.of(), List.of(boiler)));
+        helper.runAfterDelay(15, () -> {
+            boolean dead = !boiler.isAlive();
+            float n = taken(near);
+            discard(made);
+            String got = String.format(Locale.ROOT, "the Juggernaut dead %b, the enemy beside it took %.2f", dead, n);
+            if (!dead)
+                helper.fail("the defeat cleanup left the Juggernaut alive (nothing tested): " + got);
+            else if (n != 0)
+                helper.fail("a defeated side's machine cleared by the cleanup burst: " + got);
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
+     * The Delete order kills the unit, and a deleted machine does not burst: else deleting your own machine beside the
+     * enemy is a free bomb (Command Center Eris.14, Nov 5, provisional until lovish confirms). The owner deletes a Steam
+     * Juggernaut (the order the client sends) with an enemy 1.7 from its middle: it is dead, the enemy took nothing.
+     */
+    @GameTest(template = ARENA, batch = "death_burst_delete", timeoutTicks = 60)
+    public static void a_deleted_machine_does_not_burst(GameTestHelper helper) {
+        String me = HeroGameTests.owner(helper, "burst_del_me"), them = HeroGameTests.owner(helper, "burst_del_them");
+        List<Mob> made = new ArrayList<>();
+        Mob boiler = unit(helper, EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get(), me, 8.5, 8.5, made);
+        Mob near = target(helper, them, 10.5, 8.5, made);   // 19.08 if it burst
+        helper.runAfterDelay(5, () -> {
+            new com.solegendary.reignofnether.unit.UnitActionItem(me, com.solegendary.reignofnether.unit.UnitAction.DELETE,
+                -1, new int[] { boiler.getId() }).action(helper.getLevel());
+            boolean dead = !boiler.isAlive();
+            float n = taken(near);
+            discard(made);
+            String got = String.format(Locale.ROOT, "the Juggernaut dead %b, the enemy beside it took %.2f", dead, n);
+            if (!dead)
+                helper.fail("the Delete order left the Juggernaut alive (nothing tested): " + got);
+            else if (n != 0)
+                helper.fail("a deleted machine burst: " + got);
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
      * The burst deals its full damage to a unit hit a moment before (review round 1 on #517, blocker 2). The burst has
      * no causing entity, so LivingEntityMixin.unitHitsStack (which opens vanilla's hurt window for a hit a unit causes)
      * leaves it shut: a target hit earlier the same tick took only the burst's excess over that hit, and two bursts in
