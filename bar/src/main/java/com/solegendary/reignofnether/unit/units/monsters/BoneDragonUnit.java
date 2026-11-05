@@ -41,6 +41,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.NotNull;
@@ -627,8 +628,9 @@ public class BoneDragonUnit extends GhastUnit {
 
     /**
      * One burn of the breath - THE shared entry, landed and airborne: the cone from the jaws toward {@code aim}
-     * (FireBreath.reaches) burns every enemy unit in it for its attack damage per second of breath (x1.3 at night) as
-     * soul-fire - indirect magic from the dragon, so its kills still rise - and withers it; every enemy building it
+     * (FireBreath.reachesBox, on each body's box) burns every enemy unit in it for its attack damage per second of
+     * breath (x1.3 at night) as soul-fire - indirect magic from the dragon, so its kills still rise - and withers it;
+     * every enemy building it
      * reaches loses that, at BuildingDamage's unit rate. One grid query and one pass over the buildings per burn, never
      * one per flame drawn. Returns how many units it burnt. Public for the game test.
      */
@@ -657,9 +659,11 @@ public class BoneDragonUnit extends GhastUnit {
             String o = u.getOwnerName();
             if (o == null || o.isEmpty() || o.equals(owner) || AlliancesServerEvents.isAllied(owner, o))
                 continue;
-            double r = Math.max(le.getBbWidth(), le.getBbHeight()) / 2;
-            if (FireBreath.reaches(j.x, j.y, j.z, axis.x, axis.y, axis.z, len, tan,
-                    le.getX(), le.getY() + le.getBbHeight() / 2, le.getZ(), r))
+            // the body as it is - its box, like a building's. A ball as wide as the unit is tall (0.6 wide, ~2 across)
+            // burnt a foe standing a block outside the fire (CI 42026188681)
+            AABB box = le.getBoundingBox();
+            if (FireBreath.reachesBox(j.x, j.y, j.z, axis.x, axis.y, axis.z, len, tan, box.minX, box.minY, box.minZ,
+                    box.maxX, box.maxY, box.maxZ))
                 hit.add(le);
         }
         scratch.clear();

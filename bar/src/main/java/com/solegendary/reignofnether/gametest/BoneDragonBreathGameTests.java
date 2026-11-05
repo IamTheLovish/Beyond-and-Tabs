@@ -264,7 +264,8 @@ public class BoneDragonBreathGameTests {
             burn.tick(tick, landedAt[0] + 1);
             spared(problems, spared, before, why);
             if (!problems.isEmpty() || burn.done(tick) || tick >= 245) {
-                burn.judge(problems);
+                if (problems.isEmpty())   // a spared foe burnt already fails it; its unread seconds are not "lost 0.0"
+                    burn.judge(problems);
                 return DragonDiveGameTests.finish(helper, problems, clean);
             }
             return false;
@@ -368,7 +369,8 @@ public class BoneDragonBreathGameTests {
             burn.tick(tick, 3);
             spared(problems, spared, before, why);
             if (!problems.isEmpty() || burn.done(tick) || tick >= 205) {
-                burn.judge(problems);
+                if (problems.isEmpty())   // a spared foe burnt already fails it; its unread seconds are not "lost 0.0"
+                    burn.judge(problems);
                 return DragonDiveGameTests.finish(helper, problems, clean);
             }
             return false;
