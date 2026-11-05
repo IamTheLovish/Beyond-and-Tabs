@@ -123,7 +123,10 @@ final class FormingFx {
     /*
      * The look, by the Fable critic's rounds (Nov 5; round 1 shape 3 - "equal-weight scattered particles"; round 2
      * shape 4, readability 3 - "the spark is not on the frame", "the settle is a hairline", "nothing survives far
-     * zoom"). Pieces are placed by their index in the phase, not at random, so the shape is the same at any frame rate.
+     * zoom"; round 3 shape 6, timing 6, readability 4 - "one vertical light pillar through the doorway that persists
+     * across all phases, thin and dim at the spark and wide and white at the settle, with flat rings climbing it").
+     * Pieces are placed by their index in the phase, and the pillar and rings on fixed moments of the timeline, never
+     * per frame, so the shape and brightness are the same at any frame rate.
      */
     private static void emit(F f, float t0, float t1) {
         float size = (float) Math.sqrt(f.scale);
@@ -131,6 +134,27 @@ final class FormingFx {
         boolean vanilla = level != null && f.portal;
         float h = f.portal ? f.dy1 + 1 - f.y : f.height;   // a portal's frame to its lintel; an ender's whole tower
         float top = f.y + h;
+        float cx = f.portal ? f.dx : f.x, cz = f.portal ? f.dz : f.z, foot = f.portal ? f.dy0 : top;
+        // 0. the pillar: a segment every 0.1 s up to the settle, growing from a dim thread to a white column
+        for (int j = 1; j <= 12; j++) {
+            float at = j * .1f;
+            if (t0 < at && at <= t1) {
+                float g = at / 1.3f;
+                BarFxClient.P seg = BarFxClient.add(BarFxClient.BEAM, cx, foot, cz, .14f, .08f + .52f * g * g,
+                    BarFxClient.scale(BarFxClient.mix(f.rim, f.core, g), .35f + .65f * g));
+                seg.x2 = cx; seg.y2 = top + 12; seg.z2 = cz; seg.steady = true;   // steady: no fade flicker between segments
+            }
+        }
+        // ...and three flat rings climbing it through the swirl, 0.15 s apart, bottom first
+        for (int j = 0; j < 3; j++) {
+            float at = .65f + .15f * j;
+            if (t0 < at && at <= t1) {
+                float ry = f.portal ? f.dy0 + .5f + j : f.y + h * (j + 1) / 3f;
+                BarFxClient.ring(cx, ry, cz, f.portal ? 1.8f : f.half * 1.2f + .5f, .45f, BarFxClient.mix(f.rim, f.core, j / 2f));
+            }
+        }
+        if (t0 < 1.45f && 1.45f <= t1)   // the settle's after-ring, a block up
+            BarFxClient.ring(cx, (f.portal ? f.dy0 : top) + 1, cz, 2, .35f, f.rim);
         // 1. spark
         int before = FormingTimeline.emitted(FormingTimeline.Phase.SPARK, t0, f.scale);
         int n = FormingTimeline.between(FormingTimeline.Phase.SPARK, t0, t1, f.scale);
@@ -139,10 +163,10 @@ final class FormingFx {
             int k = before + i;
             float u = Math.min(1, (k + .5f) / total);
             float[] p = walker(f, k, u);
-            BarFxClient.flash(p[0], p[1], p[2], .4f * size, .2f, BarFxClient.lighter(f.core, .5f));
+            BarFxClient.flash(p[0], p[1], p[2], .55f * size, .25f, BarFxClient.lighter(f.core, .5f));
             for (int j = 1; j <= 2; j++) {   // the trail, dimmer behind it
                 float[] q = walker(f, k, Math.max(0, u - .035f * j));
-                BarFxClient.flash(q[0], q[1], q[2], (.3f - .07f * j) * size, .15f, f.rim);
+                BarFxClient.flash(q[0], q[1], q[2], (.4f - .08f * j) * size, .2f, f.rim);
             }
             BarFxClient.sparks(p[0], p[1], p[2], 2, 1.4f, f.core, 0, 0);
         }
@@ -155,10 +179,12 @@ final class FormingFx {
             float glow = 1 - FormingTimeline.fillFront(tk);   // 0 at the frame's first light, 1 when the door is full
             if (k == 0)   // the spark's loop closed: one crisp ring on the ground
                 BarFxClient.ring(f.x, f.y, f.z, f.portal ? f.dw + 3 : f.half + 1.5f, .3f, f.rim);
-            if (f.portal) {   // a 3 x 4 grid in the doorway, violet to white
-                float a = -f.dw + (k % 3 + .5f) * (2 * f.dw / 3), py = f.dy0 + ((k / 3) % 4 + .5f) * (f.dy1 - f.dy0) / 4;
+            if (f.portal) {   // the doorway fills row by row from the sill, lavender at the bottom, white at the top
+                int rows = Math.max(1, Math.round(f.dy1 - f.dy0)), row = Math.min(rows - 1, (int) (glow * rows));
+                int fill = (k / 2) % (row + 1);   // every lit row keeps glowing while the next one comes
+                float a = -f.dw + (k % 2 + .5f) * f.dw, py = f.dy0 + fill + .5f;
                 float[] p = f.door(a, py);
-                BarFxClient.flash(p[0], p[1], p[2], (.4f + .25f * glow) * size, .15f, BarFxClient.mix(f.rim, f.core, glow));
+                BarFxClient.flash(p[0], p[1], p[2], .8f * size, .3f, BarFxClient.mix(f.rim, f.core, (fill + 1f) / rows));
                 if (vanilla && k % 2 == 0) {   // vanilla's portal particle travels from the offset to the given spot
                     float[] edge = f.door(k % 4 < 2 ? -f.dw - .5f : f.dw + .5f, py);
                     float[] mid = f.door(0, (f.dy0 + f.dy1) * .5f);
@@ -167,23 +193,19 @@ final class FormingFx {
             } else {   // an ender: rings of light climb the tower
                 float step = (float) Math.floor(glow * 7) / 7f;
                 float[] q = onSquare(f, f.half * (.4f + .6f * (1 - step)), frac(k * .618034f));
-                BarFxClient.flash(q[0], f.y + .4f + h * step, q[1], (.35f + .35f * step) * size, .3f, BarFxClient.mix(f.rim, f.core, step));
+                BarFxClient.flash(q[0], f.y + .4f + h * step, q[1], (.5f + .35f * step) * size, .35f, BarFxClient.mix(f.rim, f.core, step));
             }
         }
         // 3. swirl
         before = FormingTimeline.emitted(FormingTimeline.Phase.SWIRL, t0, f.scale);
         n = FormingTimeline.between(FormingTimeline.Phase.SWIRL, t0, t1, f.scale);
-        float cx = f.portal ? f.dx : f.x, cz = f.portal ? f.dz : f.z, y0 = f.portal ? f.dy0 : f.y + .3f;
+        float y0 = f.portal ? f.dy0 : f.y + .3f;
         float span = (f.portal ? f.dy1 - f.dy0 : h) + 2f, reach = f.portal ? Math.max(1.5f, f.dw + .5f) : Math.max(1.5f, f.half);
         for (int i = 0; i < n; i++) {
             int k = before + i;
             float tk = t0 + (i + .5f) / n * (t1 - t0);
             float rise = FormingTimeline.progress(FormingTimeline.Phase.SWIRL, tk);
             float rad = FormingTimeline.swirlRadius(tk) * reach, py = y0 + rise * span;
-            if (k % 12 == 11) {   // a flat ring rising and tightening with the strands
-                BarFxClient.ring(cx, py, cz, rad + .6f, .3f, BarFxClient.mix(f.rim, f.core, rise));
-                continue;
-            }
             double a = FormingTimeline.swirlAngle(tk) + (k % 2) * Math.PI;
             float px = cx + (float) Math.cos(a) * rad, pz = cz + (float) Math.sin(a) * rad;
             BarFxClient.flash(px, py, pz, .3f * size, .35f, k % 2 == 0 ? f.core : f.rim);
@@ -200,12 +222,12 @@ final class FormingFx {
                 BarFxClient.flash(cx, heartY, cz, Math.max(2.5f, f.half * .7f), .4f, f.rim);           // the halo
                 BarFxClient.flash(cx, heartY, cz, Math.max(1.3f, f.half * .35f), .3f, 0xFFFFFF);       // the white-hot core
                 BarFxClient.beam(cx, f.portal ? f.dy0 : top, cz, cx, top + 12, cz, .4f, 1.1f, f.core);  // the pillar
-                for (int r = 0; r < 3; r++)   // three stacked rings, the top one brightest
-                    BarFxClient.ring(f.x, f.y + .5f + r * 2, f.z, wide, .3f,
-                        r == 2 ? BarFxClient.lighter(f.rim, .6f) : r == 1 ? f.rim : BarFxClient.scale(f.rim, .7f));
+                BarFxClient.ring(cx, f.portal ? f.dy0 : top, cz, 3, .3f, 0xFFFFFF);   // a white ring on the doorway
+                BarFxClient.ring(f.x, top, f.z, wide, .5f, BarFxClient.lighter(f.rim, .4f));   // one wide ring: far zoom
                 float ey = f.portal ? f.dy1 + .5f : top;
                 for (int m = 0; m < 48; m++)   // embers thrown up from the lintel (an ender: its tip), falling
-                    ember(cx + BarFxClient.rnd(-f.dw, f.dw), ey, cz + BarFxClient.rnd(-.4f, .4f), f.ember);
+                    ember(cx + BarFxClient.rnd(-f.dw, f.dw), ey, cz + BarFxClient.rnd(-.4f, .4f),
+                        m % 3 == 0 ? BarFxClient.lighter(f.ember, .5f) : f.ember);
             } else if (!f.portal && (k == 3 || k == 6 || k == 9)) {   // an ender's tiers light top to bottom
                 float tier = 1 - (k - 3) / 3f * .33f;
                 BarFxClient.ring(f.x, f.y + h * tier, f.z, f.half * (1.4f - .4f * tier) + .5f, .4f, f.core);
@@ -217,12 +239,12 @@ final class FormingFx {
         }
     }
 
-    /** One ember: up and out, falling, gone in under 0.8 s. */
+    /** One ember: up and out, falling back, gone in under 1.4 s. */
     private static void ember(float x, float y, float z, int c) {
-        BarFxClient.P p = BarFxClient.add(BarFxClient.SPARK, x, y, z, BarFxClient.rnd(.55f, .75f), BarFxClient.rnd(.04f, .06f), c);
+        BarFxClient.P p = BarFxClient.add(BarFxClient.SPARK, x, y, z, BarFxClient.rnd(1f, 1.4f), BarFxClient.rnd(.04f, .06f), c);
         double a = BarFxClient.R.nextDouble() * Math.PI * 2;
-        float out = BarFxClient.rnd(1, 2.5f);
-        p.vx = (float) Math.cos(a) * out; p.vz = (float) Math.sin(a) * out; p.vy = BarFxClient.rnd(6, 9);
+        float out = BarFxClient.rnd(1, 3f);
+        p.vx = (float) Math.cos(a) * out; p.vz = (float) Math.sin(a) * out; p.vy = BarFxClient.rnd(7, 11);
     }
 
     /**
