@@ -70,6 +70,13 @@ public final class AnimState {
      */
     public static final int SP_TURN = AIM + 1;
 
+    /**
+     * The ground under the body ({@link GroundTilt}): the drawn pitch (degrees, + = nose up), roll (degrees, + = the
+     * unit's right side up) and drop (blocks, 0 or below: how far the body is drawn under the server's position so its
+     * feet stand on the ground), then the same three a tick ago (a frame blends them by the partial tick).
+     */
+    public static final int GROUND = SP_TURN + Life.SPRING, GROUND_PREV = GROUND + 3;
+
     /** Floats per unit (room left for foot IK). */
     public static final int STRIDE = 80;
 

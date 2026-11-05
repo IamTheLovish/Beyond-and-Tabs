@@ -5,6 +5,8 @@ import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.motion.AnimState;
+import com.solegendary.reignofnether.unit.modelling.motion.GroundTilt;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
@@ -44,8 +46,9 @@ import java.util.function.Supplier;
  * Each lane logs one "[Motion]" line (CI folds them into one notice): the server's walk (speed, its variation, stops,
  * yaw steps and reversals, rises, airborne ticks) and the packets (gaps between position packets, rotation-only
  * packets, teleports), then the drawn walk per jittery clock: speed cv / % of client ticks the unit stands still for
- * vanilla's lerp ("now"), vanilla's lerp tracked every tick ("e1") and the game's stamped playback ("buf", with its lag
- * behind the newest tick heard). The crowd adds what idle units do after arriving. The asserts only guard the measurement itself (the unit moved); the bounds come with
+ * vanilla's lerp ("now") and the game's stamped playback ("buf", with its lag behind the newest tick heard), and the
+ * position packets vanilla's lerp tracked every tick would cost ("e1 pos"). A ground lane adds where the drawn body's
+ * feet stand against its blocks ("gnd", step 3 A). The crowd adds what idle units do after arriving. The asserts only guard the measurement itself (the unit moved); the bounds come with
  * the fixes, from these numbers.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
@@ -492,9 +495,9 @@ public class MotionFluidityGameTests {
                     + " rise %.2f air %d;%s pos %d gaps %d/%d/%d/%d rot %d tp %d", what, s.length, mean,
                 mean > 0 ? Math.sqrt(var / Math.max(1, s.length)) / mean : 0, stops, maxYaw, reversals, maxDy, air,
                 snapPart, posPackets, gaps[0], gaps[1], gaps[2], gaps[3], rotPackets, teleports);
-            // the drawn walk per clock: vanilla's lerp (today), vanilla's lerp tracked every tick, and the game's stamped
-            // playback (UnitPlayback, "buf");
-            // each as speed cv / % ticks frozen / torso pitch deg / lag behind the newest known server tick
+            // the drawn walk per clock: vanilla's lerp (today) and the game's stamped playback (UnitPlayback, "buf"),
+            // each as speed cv / % ticks frozen / lag behind the newest known server tick; then, right after the server's
+            // part (CI cuts each line at 300 characters), the ground under the drawn body ("gnd", ground)
             double[] sx = new double[track.size()], sz = new double[track.size()];
             for (int k = 0; k < track.size(); k++) {
                 sx[k] = track.get(k)[0];
@@ -502,24 +505,63 @@ public class MotionFluidityGameTests {
             }
             int n = Math.max(1, track.size()), interval = mob.getType().updateInterval();
             StringBuilder client = new StringBuilder();
+            String groundPart = "";
             for (ClientView.Clock c : CLOCKS) {
                 if (c.p50Ms() == 0 && c.fixedMs() == 0)
                     continue;   // the steady clock: every option draws it evenly (UnitPlaybackTest's control)
                 long seed = 1234L + mob.getId() % 7;
                 ClientView.Smooth today = ClientView.smoothness(ClientView.replay(sent, n, c, seed, x0, y0, z0, yaw0),
                     from, to, mean, sx, sz);
-                ClientView.Smooth every = ClientView.smoothness(ClientView.replay(sent1, n, c, seed, x0, y0, z0, yaw0),
-                    from, to, mean, sx, sz);
-                ClientView.Smooth buffered = ClientView.smoothness(ClientView.replayStamped(sent, n, c, seed, interval,
-                    x0, y0, z0, yaw0), from, to, mean, sx, sz);
+                ClientView.Drawn drawnBuf = ClientView.replayStamped(sent, n, c, seed, interval, x0, y0, z0, yaw0);
+                ClientView.Smooth buffered = ClientView.smoothness(drawnBuf, from, to, mean, sx, sz);
                 // (y: the largest drawn yaw change in one client tick, degrees; r: the largest drawn rise in one)
-                client.append(String.format(Locale.ROOT, " | %s %.2f/%.1f y%.0f r%.2f e1 %.2f/%.1f buf %.2f/%.1f/%.1ft"
-                    + " y%.0f r%.2f", c.name(), today.cv(), today.frozenPct(), today.maxYawStep(), today.maxDy(), every.cv(),
-                    every.frozenPct(), buffered.cv(), buffered.frozenPct(), buffered.lagTicks(), buffered.maxYawStep(),
-                    buffered.maxDy()));
+                client.append(String.format(Locale.ROOT, " | %s %.2f/%.1f y%.0f r%.2f buf %.2f/%.1f/%.1ft y%.0f r%.2f",
+                    c.name(), today.cv(), today.frozenPct(), today.maxYawStep(), today.maxDy(), buffered.cv(),
+                    buffered.frozenPct(), buffered.lagTicks(), buffered.maxYawStep(), buffered.maxDy()));
+                if (c.name().equals("700u") && !(mob instanceof Unit u && u.isFlyingUnit()))
+                    groundPart = ground(drawnBuf, from, to);
             }
             long e1 = sent1.stream().filter(p -> p.hasPos() && p.tick() >= from && p.tick() < to).count();
-            ReignOfNether.LOGGER.warn(serverPart + client + " | e1 pos " + e1);
+            ReignOfNether.LOGGER.warn(serverPart + groundPart + client + " | e1 pos " + e1);
+        }
+
+        /**
+         * The ground under the drawn body (GroundTilt, step 3 A) over the walk's window, for the playback's drawn path:
+         * the four foot pads drawn as today (upright at the drawn position) and with the ground's tilt and drop, against
+         * this lane's real blocks - "gnd" the mean |gap| per pad, "f" the worst float, "s" the worst sink, each today >
+         * tilted, blocks.
+         */
+        private String ground(ClientView.Drawn d, int from, int to) {
+            GroundTilt.Ground g = GroundTilt.of(mob.level());
+            float[] s = new float[AnimState.STRIDE];
+            float[] target = new float[3];
+            double[] feet = new double[4], today = new double[4];
+            double sum = 0, sumToday = 0, pads = 0, padsToday = 0, floatMax = 0, floatToday = 0, sinkMax = 0,
+                sinkToday = 0;
+            float width = mob.getBbWidth();
+            boolean fresh = true;
+            for (int c = 0; c < d.x.length; c++) {
+                int at = Math.max(0, Math.min(d.serverTickAt[c], track.size() - 1));
+                boolean grounded = track.get(at)[4] == 1;
+                GroundTilt.target(g, d.x[c], d.y[c], d.z[c], d.yaw[c], width, grounded, target);
+                GroundTilt.step(s, 0, target, fresh);
+                fresh = false;
+                if (d.serverTickAt[c] < from || d.serverTickAt[c] >= to)
+                    continue;
+                GroundTilt.feet(g, d.x[c], d.y[c], d.z[c], d.yaw[c], width, GroundTilt.pitchAt(s, 0, 1f),
+                    GroundTilt.rollAt(s, 0, 1f), GroundTilt.dropAt(s, 0, 1f), feet);
+                GroundTilt.feet(g, d.x[c], d.y[c], d.z[c], d.yaw[c], width, 0f, 0f, 0f, today);
+                sum += feet[2];
+                pads += feet[3];
+                sumToday += today[2];
+                padsToday += today[3];
+                floatMax = Math.max(floatMax, feet[0]);
+                floatToday = Math.max(floatToday, today[0]);
+                sinkMax = Math.max(sinkMax, feet[1]);
+                sinkToday = Math.max(sinkToday, today[1]);
+            }
+            return String.format(Locale.ROOT, " gnd %.2f>%.2f f%.2f>%.2f s%.2f>%.2f;", sumToday / Math.max(1, padsToday),
+                sum / Math.max(1, pads), floatToday, floatMax, sinkToday, sinkMax);
         }
 
         /** After the idle mark: horizontal distance moved, degrees the body turned, position packets sent. */
