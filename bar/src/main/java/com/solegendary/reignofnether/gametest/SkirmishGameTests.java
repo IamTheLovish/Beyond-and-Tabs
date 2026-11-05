@@ -12610,9 +12610,15 @@ public class SkirmishGameTests {
         return total <= shard ? 0 : (total - 1 - shard) / RELOAD_SHARDS + 1;
     }
 
-    /** Where the reload test stands unit {@code slot} of a shard of {@code count}, arena-relative (y 2: on the floor). */
+    /**
+     * Where the reload test stands unit {@code slot} of a shard of {@code count}, arena-relative (y 2: on the floor): a
+     * square grid sized to the shard over x and z 2..14 of the test's own arena, so a growing roster tightens the grid
+     * instead of spilling past the arena's edge (four to a row 4 blocks apart did, from the 17th unit on).
+     */
     static BlockPos reloadSlot(int slot, int count) {
-        return new BlockPos(2 + (slot % 4) * 4, 2, 2 + (slot / 4) * 4);
+        int cols = Math.max(1, (int) Math.ceil(Math.sqrt(Math.max(1, count))));
+        int step = cols == 1 ? 0 : Math.max(1, 12 / (cols - 1));   // past 13 a row it spills, and the layout test says so
+        return new BlockPos(2 + (slot % cols) * step, 2, 2 + (slot / cols) * step);
     }
 
     static String goneWhy(ServerLevel level, net.minecraft.world.entity.Entity e) {
