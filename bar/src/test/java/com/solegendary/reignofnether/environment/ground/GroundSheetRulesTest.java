@@ -98,6 +98,20 @@ class GroundSheetRulesTest {
         }
     }
 
+    @Test
+    void everySheetSizeRepeatsAcrossManySheetsOnBothSidesOfTheOrigin() {
+        // carried over from #496's GiantLawnCellsTest repeat loop (x, z in -17..16, steps +N and -2N), now for every
+        // sheet size the pack may ship, so it spans several sheets each side of the origin, not one
+        for (int n : GroundSheetRules.SIZES)
+            for (int x = -17; x < 17; x++)
+                for (int z = -17; z < 17; z++) {
+                    int c = GroundSheetRules.cell(x, z, n);
+                    assertTrue(c >= 1 && c <= n * n, "n " + n + " (" + x + ", " + z + ") cell " + c);
+                    assertEquals(c, GroundSheetRules.cell(x + n, z, n), "n " + n + " (" + x + ", " + z + ") x + N");
+                    assertEquals(c, GroundSheetRules.cell(x, z - 2 * n, n), "n " + n + " (" + x + ", " + z + ") z - 2N");
+                }
+    }
+
     // ---- sprites -------------------------------------------------------------------------------------------------
 
     @Test
@@ -128,6 +142,10 @@ class GroundSheetRulesTest {
         assertFalse(GroundSheetRules.isTop("block/dirt", "block/dirt_path_side"));
         assertFalse(GroundSheetRules.isTop("block/dirt", "block/dirt_g4"));
         assertFalse(GroundSheetRules.isTop("block/coarse_dirt", "block/dirt"));
+        // carried over from #496's GiantLawnCellsTest: the item sprite of the same name is not the block's top
+        assertFalse(GroundSheetRules.isTop(grass, "item/grass_block_top"));
+        for (GroundSheetRules.Entry e : GroundSheetRules.TABLE)
+            assertFalse(GroundSheetRules.isTop(e.top(), e.top().replace("block/", "item/")), e.block());
     }
 
     @Test
