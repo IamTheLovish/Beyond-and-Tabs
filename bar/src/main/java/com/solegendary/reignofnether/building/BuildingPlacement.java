@@ -1653,6 +1653,17 @@ public class BuildingPlacement {
     }
 
     // if there aren't already too many animals nearby, spawn some random huntable animals
+    /** The centre column at the footprint's floor (minCorner's y): where "near the building" is measured on the
+     *  ground. The box centre sits half the box up - y14 on a 30-high Heartwood Hall - so a 10-block sphere round it
+     *  reached no ground at all and animals spawned against the kerb (#522 review N1). */
+    public static BlockPos groundCentre(BlockPos minCorner, BlockPos centrePos) {
+        return new BlockPos(centrePos.getX(), minCorner.getY(), centrePos.getZ());
+    }
+
+    public BlockPos groundCentre() {
+        return groundCentre(minCorner, centrePos);
+    }
+
     private void spawnHuntableAnimalsNearby(int range) {
         if (level.isClientSide() || level.getServer() == null) {
             return;
@@ -1661,15 +1672,15 @@ public class BuildingPlacement {
         final int MAX_RETRIES = 2;
 
         int numNearbyAnimals = 0;
-        for (Animal animal : MiscUtil.getEntitiesWithinRange(new Vector3d(centrePos.getX(),
-            centrePos.getY(),
-            centrePos.getZ()
+        for (Animal animal : MiscUtil.getEntitiesWithinRange(new Vector3d(groundCentre().getX(),
+            groundCentre().getY(),
+            groundCentre().getZ()
         ), range, Animal.class, level)) {
             if (ResourceSources.isHuntableAnimal(animal)) numNearbyAnimals++;
         }
-        int numNearbyChickens = MiscUtil.getEntitiesWithinRange(new Vector3d(centrePos.getX(),
-                centrePos.getY(),
-                centrePos.getZ()
+        int numNearbyChickens = MiscUtil.getEntitiesWithinRange(new Vector3d(groundCentre().getX(),
+                groundCentre().getY(),
+                groundCentre().getZ()
             ), range, Chicken.class, level)
             .size();
 

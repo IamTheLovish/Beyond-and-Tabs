@@ -794,7 +794,7 @@ public class BuildingServerEvents {
     }
 
     private static void moveAnimalsAwayFromBuildingFoundations(BuildingPlacement newBuilding) {
-        List<Mob> mobs = MiscUtil.getEntitiesWithinRange(newBuilding.centrePos.getCenter(), 10, Mob.class, newBuilding.level);
+        List<Mob> mobs = MiscUtil.getEntitiesWithinRange(newBuilding.groundCentre().getCenter(), 10, Mob.class, newBuilding.level);
         for (Mob mob : mobs) {
             if (ResourceSources.isHuntableAnimal(mob)) {
                 BlockPos bp = newBuilding.getClosestGroundPos(mob.getOnPos(), 3, true);
