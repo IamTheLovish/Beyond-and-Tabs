@@ -108,7 +108,7 @@ public class DisplaySettings {
         }
     }
 
-    /** Lawn sheet (environment/lawn/GiantLawnBakedModel): the grass top as one 4x4-block sheet. Read by the chunk
+    /** Lawn sheet (environment/lawn/GiantLawnBakedModel): the grass top as one 8x8-block sheet. Read by the chunk
      * mesher's threads; a change takes effect when the terrain is rebuilt. */
     public static boolean lawnSheet() {
         try {

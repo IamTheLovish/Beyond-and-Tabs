@@ -73,7 +73,7 @@ public class GiantLawnModelEvents {
             return;
         TextureAtlas atlas = evt.getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS);
         if (!quads.bake(atlas::getSprite)) {
-            ReignOfNether.LOGGER.info("[GiantLawn] no grass_block_top_g1..16 in the block atlas: lawn sheet off");
+            ReignOfNether.LOGGER.info("[GiantLawn] no grass_block_top_g1..g" + GiantLawnCells.CELLS + " in the block atlas: lawn sheet off");
             return;
         }
         BlockState state = Blocks.GRASS_BLOCK.defaultBlockState().setValue(BlockStateProperties.SNOWY, false);

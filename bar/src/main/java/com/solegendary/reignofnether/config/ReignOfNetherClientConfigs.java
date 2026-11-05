@@ -249,7 +249,7 @@ public class ReignOfNetherClientConfigs {
         GROUND_SCARS = BUILDER.define("ground_scars", true);
         BUILDER.comment("Path edges: a ragged grass fringe spills over paths, dirt, sand and gravel where they meet grass, so the border is not a straight tile line from the RTS camera. Built with the terrain (no per-frame cost); false = the plain square edges");
         PATH_EDGES = BUILDER.define("path_edges", true);
-        BUILDER.comment("Lawn sheet: the grass top is one texture over 4x4 blocks (a pack with the grass_block_top_g1..16 sprites), so its soft patches run across blocks and a field shows no per-block repeat. Built with the terrain (no per-frame cost); false = every block its own grass top. Takes effect when the terrain is rebuilt (F3+A)");
+        BUILDER.comment("Lawn sheet: the grass top is one texture over 8x8 blocks (a pack with the grass_block_top_g1..64 sprites), so its soft patches run across blocks and a field shows no per-block repeat. Built with the terrain (no per-frame cost); false = every block its own grass top. Takes effect when the terrain is rebuilt (F3+A)");
         LAWN_SHEET = BUILDER.define("lawn_sheet", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);

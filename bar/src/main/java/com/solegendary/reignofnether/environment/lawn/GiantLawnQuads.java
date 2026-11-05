@@ -16,25 +16,25 @@ import java.util.function.Function;
 /**
  * The sheet's sprites and the remapped grass-top quads of one resource reload, shared by every wrapped grass model.
  * Created with the wrappers (ModifyBakingResult) and filled at BakingCompleted (GiantLawnModelEvents), when the block
- * atlas is uploaded; until then, and for a pack without the sheet (grass_block_top_g1..16 missing from the atlas),
+ * atlas is uploaded; until then, and for a pack without the sheet (any of grass_block_top_g1..g64 missing from the atlas, a 4x4-sheet pack included),
  * {@link #ready} is false and the lawn draws its own tops.
  * <p>
  * The cache is keyed by the base model's quad LIST (a SimpleBakedModel hands out the same list every call, the
- * weighted grass model one of its six variants'): for each list with a lawn top, its 16 copies with that quad on each
+ * weighted grass model one of its six variants'): for each list with a lawn top, its CELLS (64) copies with that quad on each
  * cell's sprite, built once - the chunk mesher only looks them up. BakingCompleted warms it for every variant; a list
  * met later (another mod's model under ours) is built on first sight, and a model that makes new quads every call is
  * served uncached past {@link #MAX_LISTS} so the cache cannot grow without bound.
  */
 final class GiantLawnQuads {
 
-    /** The sheet cell (1..16) this block's top shows; absent = the block draws its own top. */
+    /** The sheet cell (1..CELLS) this block's top shows; absent = the block draws its own top. */
     static final ModelProperty<Integer> CELL = new ModelProperty<>();
 
     static final int MAX_LISTS = 1024;
 
     private final ModelData[] cellData = new ModelData[GiantLawnCells.CELLS + 1];
     private final ConcurrentHashMap<List<BakedQuad>, List<BakedQuad>[]> lists = new ConcurrentHashMap<>();
-    // index 1..16; null = no sheet in this pack
+    // index 1..CELLS; null = no sheet in this pack
     private volatile TextureAtlasSprite[] sheet = null;
 
     GiantLawnQuads() {

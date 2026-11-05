@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 /**
- * The model of a grass block (snowy=false) whose top is one cell of the 4x4-block lawn sheet (lovish, Nov 4: big soft
+ * The model of a grass block (snowy=false) whose top is one cell of the 8x8-block lawn sheet (lovish, Nov 4: big soft
  * patches that run across blocks, no per-block repeat). Athena's {@code athena:giant} loader cannot do it: it puts the
  * sheet on all six faces, and the grass block's sides must stay dirt + turf overlay. So, like the edge overlays:
  * <ul>

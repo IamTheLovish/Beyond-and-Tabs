@@ -1,19 +1,20 @@
 package com.solegendary.reignofnether.environment.lawn;
 
 /**
- * The pure rules of the giant lawn (lovish, Nov 4: the lawn's top is one 4x4-block sheet, so its soft patches run
- * across blocks and a field shows no per-block repeat). No Minecraft types here, so GiantLawnCellsTest checks them in
+ * The pure rules of the giant lawn (lovish, Nov 4: the lawn's top is one sheet across blocks, so its soft patches run
+ * across blocks and a field shows no per-block repeat; 4x4 in round 62, 8x8 since round 64, "8x8 sheet"). No Minecraft types here, so GiantLawnCellsTest checks them in
  * seconds; GiantLawnBakedModel / GiantLawnQuads apply them to the grass block's baked quads.
  * <p>
- * The sheet is written by tools/gen_blocks.py (GIANT): sprite {@code grass_block_top_g<i>}, i = 1 + column + row * 4,
+ * The sheet is written by tools/gen_blocks.py (write_lawn_sheet, LAWN_SHEET_BLOCKS = {@link #SIZE}; test_lawn_sheet_java
+ * ties the two): sprite {@code grass_block_top_g<i>}, i = 1 + column + row * SIZE,
  * the column along the sheet's u and the row along its v. Vanilla's grass_block up face has uv [0, 0, 16, 16] and no
  * rotation (nor do the pack's grass_block..grass_block_v6 blockstate variants), so u runs along +x and v along +z: the
- * block at (x, z) shows column floorMod(x, 4), row floorMod(z, 4), and the cells meet edge to edge.
+ * block at (x, z) shows column floorMod(x, SIZE), row floorMod(z, SIZE), and the cells meet edge to edge.
  */
 final class GiantLawnCells {
 
-    /** Blocks per side of the sheet. */
-    static final int SIZE = 4;
+    /** Blocks per side of the sheet: gen_blocks.LAWN_SHEET_BLOCKS (tools/test_lawn_sheet_java checks they agree). */
+    static final int SIZE = 8;
     /** Cells in the sheet, numbered 1..CELLS like the sprites. */
     static final int CELLS = SIZE * SIZE;
 
@@ -23,7 +24,7 @@ final class GiantLawnCells {
     private GiantLawnCells() {
     }
 
-    /** The sheet cell (1..16) a grass top at world column x, row z shows; floorMod, so negative coordinates continue
+    /** The sheet cell (1..CELLS) a grass top at world column x, row z shows; floorMod, so negative coordinates continue
      * the sheet without a mirror at the origin. */
     static int cell(int x, int z) {
         return 1 + Math.floorMod(x, SIZE) + Math.floorMod(z, SIZE) * SIZE;

@@ -13,10 +13,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The giant lawn (lovish, Nov 4: the lawn's top is one 4x4-block sheet, so its patches run across blocks and the
- * field has no per-block repeat). The pure rules behind GiantLawnBakedModel: which cell of the sheet a block's top
+ * The giant lawn (lovish, Nov 4: the lawn's top is one sheet across blocks, so its patches run across blocks and the
+ * field has no per-block repeat; 8x8 since round 64). The pure rules behind GiantLawnBakedModel: which cell of the sheet a block's top
  * shows, which sprites are the lawn top it replaces, and how a top quad's UVs move from its old sprite onto the cell's.
- * The sheet's cells are written by tools/gen_blocks.py (GIANT): sprite i = 1 + x + z * 4, x the sheet column (u), z the
+ * The sheet's cells are written by tools/gen_blocks.py (write_lawn_sheet): sprite i = 1 + x + z * 8, x the sheet column (u), z the
  * row (v); vanilla's up face maps u along +x and v along +z, so cell(x, z) must follow world x and z the same way.
  * Written before GiantLawnCells.
  */
@@ -24,50 +24,58 @@ class GiantLawnCellsTest {
 
     @Test
     void cellsFollowGenBlocksSheetOrder() {
+        assertEquals(8, GiantLawnCells.SIZE, "the 8x8 sheet the pack writes since round 64 (test_lawn_sheet_java)");
         assertEquals(1, GiantLawnCells.cell(0, 0));
         assertEquals(2, GiantLawnCells.cell(1, 0), "x is the sheet column");
-        assertEquals(4, GiantLawnCells.cell(3, 0));
-        assertEquals(5, GiantLawnCells.cell(0, 1), "z is the sheet row");
-        assertEquals(16, GiantLawnCells.cell(3, 3));
+        assertEquals(8, GiantLawnCells.cell(7, 0));
+        assertEquals(9, GiantLawnCells.cell(0, 1), "z is the sheet row");
+        assertEquals(64, GiantLawnCells.cell(7, 7));
+        // round 62's 4x4 layout read the 8-wide sheet's first two rows as four: not any more
+        assertEquals(5, GiantLawnCells.cell(4, 0), "the 5th column is cell 5, not the next row's start");
+        assertEquals(13, GiantLawnCells.cell(4, 1));
     }
 
     @Test
-    void cellsRepeatEveryFourBlocks() {
-        for (int x = -9; x < 9; x++)
-            for (int z = -9; z < 9; z++) {
-                assertEquals(GiantLawnCells.cell(x, z), GiantLawnCells.cell(x + 4, z), "x " + x + " z " + z);
-                assertEquals(GiantLawnCells.cell(x, z), GiantLawnCells.cell(x, z - 8), "x " + x + " z " + z);
+    void cellsRepeatEveryEightBlocks() {
+        for (int x = -17; x < 17; x++)
+            for (int z = -17; z < 17; z++) {
+                assertEquals(GiantLawnCells.cell(x, z), GiantLawnCells.cell(x + 8, z), "x " + x + " z " + z);
+                assertEquals(GiantLawnCells.cell(x, z), GiantLawnCells.cell(x, z - 16), "x " + x + " z " + z);
+                if (Math.floorMod(x, 8) != 0)
+                    assertEquals(GiantLawnCells.cell(x - 1, z) + 1, GiantLawnCells.cell(x, z), "x neighbours inside a row");
+                if (Math.floorMod(z, 8) != 0)
+                    assertEquals(GiantLawnCells.cell(x, z - 1) + 8, GiantLawnCells.cell(x, z), "z neighbours a row apart");
             }
     }
 
     @Test
     void negativeCoordinatesContinueTheSheetWithoutAMirror() {
         // -1 is the column left of 0, i.e. the sheet's last column: no flip at the world origin
-        assertEquals(4, GiantLawnCells.cell(-1, 0));
-        assertEquals(13, GiantLawnCells.cell(0, -1));
-        assertEquals(16, GiantLawnCells.cell(-1, -1));
-        assertEquals(1, GiantLawnCells.cell(-4, -4));
+        assertEquals(8, GiantLawnCells.cell(-1, 0));
+        assertEquals(57, GiantLawnCells.cell(0, -1));
+        assertEquals(64, GiantLawnCells.cell(-1, -1));
+        assertEquals(1, GiantLawnCells.cell(-8, -8));
         assertEquals(GiantLawnCells.cell(1_000_001, -3), GiantLawnCells.cell(1, 1));
         assertEquals(GiantLawnCells.cell(Integer.MIN_VALUE, Integer.MIN_VALUE), 1);
     }
 
     @Test
-    void everyCellOneToSixteenIsUsedOncePerSheet() {
+    void everyCellOneToSixtyFourIsUsedOncePerSheet() {
         Set<Integer> seen = new HashSet<>();
-        for (int x = 8; x < 12; x++)
-            for (int z = -4; z < 0; z++) {
+        for (int x = 16; x < 24; x++)
+            for (int z = -8; z < 0; z++) {
                 int c = GiantLawnCells.cell(x, z);
                 assertTrue(c >= 1 && c <= GiantLawnCells.CELLS, "cell " + c);
                 seen.add(c);
             }
-        assertEquals(16, seen.size());
-        assertEquals(16, GiantLawnCells.CELLS);
+        assertEquals(64, seen.size());
+        assertEquals(64, GiantLawnCells.CELLS);
     }
 
     @Test
     void sheetSpriteNames() {
         assertEquals("block/grass_block_top_g1", GiantLawnCells.sheetSprite(1));
-        assertEquals("block/grass_block_top_g16", GiantLawnCells.sheetSprite(16));
+        assertEquals("block/grass_block_top_g64", GiantLawnCells.sheetSprite(64));
     }
 
     @Test
@@ -81,7 +89,7 @@ class GiantLawnCellsTest {
         assertFalse(GiantLawnCells.isLawnTop("block/grass_block_snow"));
         assertFalse(GiantLawnCells.isLawnTop("block/dirt"));
         assertFalse(GiantLawnCells.isLawnTop("block/grass_block_top_g1"));
-        assertFalse(GiantLawnCells.isLawnTop("block/grass_block_top_g16"));
+        assertFalse(GiantLawnCells.isLawnTop("block/grass_block_top_g64"));
         assertFalse(GiantLawnCells.isLawnTop("item/grass_block_top"));
     }
 
