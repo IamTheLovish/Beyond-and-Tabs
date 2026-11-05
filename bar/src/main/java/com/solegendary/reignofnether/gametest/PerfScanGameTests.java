@@ -73,6 +73,56 @@ public class PerfScanGameTests {
         });
     }
 
+    /**
+     * The likely cause of the autofind flake, made deterministic: an enemy unit 10 blocks from the rider - inside a
+     * Skeleton's aggro range (12) - while it looks for its mount, as a neighbouring arena's units are (arena spots sit 21
+     * blocks apart, so a neighbour's units stand ~10 blocks from this test's rider). Unit.isIdle reads the unit's move
+     * goal only, not its MountGoal, so a rider on its way to a mount counts as idle and idle auto-aggression can take the
+     * enemy as its target. On its own glass pad (ArenaReady.pad, a free slot) so no real neighbour is near; the enemy has
+     * its AI off and does nothing. The rider must still mount the nearest spider.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void an_autofinding_rider_mounts_with_an_enemy_in_its_aggro_range(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = ArenaReady.pad(helper, 286);
+        SkeletonUnit rider = EntityRegistrar.SKELETON_UNIT.get().create(level);
+        SpiderUnit near = EntityRegistrar.SPIDER_UNIT.get().create(level);
+        SpiderUnit far = EntityRegistrar.SPIDER_UNIT.get().create(level);
+        var foe = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (rider == null || near == null || far == null || foe == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        rider.moveTo(pad.getX() + 3.5, pad.getY(), pad.getZ() + 2.5, 0, 0);
+        near.moveTo(pad.getX() + 7.5, pad.getY(), pad.getZ() + 2.5, 0, 0);
+        far.moveTo(pad.getX() + 14.5, pad.getY(), pad.getZ() + 2.5, 0, 0);
+        foe.moveTo(pad.getX() + 3.5, pad.getY(), pad.getZ() + 12.5, 0, 0);
+        for (var u : new net.minecraft.world.entity.Mob[] { rider, near, far })
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) u).setOwnerName("gametest_mount_aggro");
+        foe.setOwnerName("gametest_mount_aggro_foe");
+        foe.setNoAi(true);
+        for (var u : new net.minecraft.world.entity.Mob[] { rider, near, far, foe })
+            level.addFreshEntity(u);
+        rider.getMountGoal().autofind = true;
+        TestCleanup.entities(helper, java.util.List.of(rider, near, far, foe));
+        java.util.List<String> history = new java.util.ArrayList<>();
+        String[] last = { "" };
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 10 != 0)
+                return;
+            String now = mountState(level, rider, near, far);
+            if (!now.equals(last[0])) {
+                history.add("t" + helper.getTick() + " " + now);
+                last[0] = now;
+            }
+        });
+        helper.succeedWhen(() -> {
+            if (rider.getVehicle() != near)
+                helper.fail("with an enemy 10 blocks away the rider has not mounted the nearest spider; now "
+                    + mountState(level, rider, near, far) + "; history: " + String.join(" | ", history));
+        });
+    }
+
     /** What the mount test's failure needs to name: where the three are, the goal's state, what holds the rider. */
     static String mountState(ServerLevel level, SkeletonUnit rider, SpiderUnit near, SpiderUnit far) {
         var goal = rider.getMountGoal();
