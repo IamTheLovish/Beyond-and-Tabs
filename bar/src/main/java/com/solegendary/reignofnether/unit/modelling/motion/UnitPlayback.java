@@ -147,6 +147,17 @@ public final class UnitPlayback {
      */
     static final double BLINK_BLOCKS = 8.0, MAX_RUN = 2.0, MAX_FALL = 4.0, HEARD_SLACK = 2.0;
 
+    /**
+     * The most a unit's drawn body turns in one client tick (degrees): 360 a second, a 90-degree corner over 5 client
+     * ticks. Vanilla MoveControl turns a unit up to 90 degrees in one server tick at a path corner (4 such snaps a walk
+     * on the stepped lane for infantry and the War Mammoth), which the buffer drew as 57-62 degrees in one client tick:
+     * a flick (PR 2 of motion fluidity). A turn slower than this is drawn exactly as the server turned it; a faster one
+     * is drawn at this rate and ends on the server's facing (the gap closes at MAX_TURN a tick: 90 degrees in 5, 180 in
+     * 10). Head yaw and pitch close the same share of their gap each tick, so head, body and pitch stay together.
+     * Drawing only: the server's unit turns as before.
+     */
+    static final double MAX_TURN = 18.0;
+
     /** One unit's stamped positions and rotations (a short ring) and where it is drawn. */
     public static final class Track {
         static final int SIZE = 16;
@@ -166,6 +177,8 @@ public final class UnitPlayback {
         private final long[] heardTick = new long[HEARD];
         private final float[] heardAcross = new float[HEARD], heardUp = new float[HEARD];
         private int heardHead = -1, heardCount = 0;
+        // the facing last drawn (body yaw, head yaw, pitch; NaN: none yet), turned at most MAX_TURN a client tick
+        private double turnYaw = Double.NaN, turnHead, turnPitch;
 
         /** @param interval the unit type's tracker update interval (EntityType.updateInterval) */
         public Track(int interval) {
@@ -182,6 +195,7 @@ public final class UnitPlayback {
             count = 0;
             heardHead = -1;
             heardCount = 0;
+            turnYaw = Double.NaN;   // drawn straight at the seed's facing
             add(t, px, py, pz, pyaw, phead, ppitch);
         }
 
@@ -348,9 +362,23 @@ public final class UnitPlayback {
             out[0] = x[a] + (x[b] - x[a]) * f;
             out[1] = y[a] + (y[b] - y[a]) * f;
             out[2] = z[a] + (z[b] - z[a]) * f;
-            out[3] = yaw[a] + Mth.wrapDegrees(yaw[b] - yaw[a]) * (float) f;
-            out[4] = headYaw[a] + Mth.wrapDegrees(headYaw[b] - headYaw[a]) * (float) f;
-            out[5] = pitch[a] + (pitch[b] - pitch[a]) * f;
+            double toYaw = yaw[a] + Mth.wrapDegrees(yaw[b] - yaw[a]) * f;
+            double toHead = headYaw[a] + Mth.wrapDegrees(headYaw[b] - headYaw[a]) * f;
+            double toPitch = pitch[a] + (pitch[b] - pitch[a]) * f;
+            if (Double.isNaN(turnYaw)) {
+                turnYaw = toYaw; turnHead = toHead; turnPitch = toPitch;
+            } else {
+                // a turn faster than MAX_TURN a client tick (a path corner's one-tick snap) is drawn at MAX_TURN; head
+                // and pitch close the same share of their gap, so the three still move together
+                double gap = Mth.wrapDegrees(toYaw - turnYaw);
+                double share = Math.abs(gap) > MAX_TURN ? MAX_TURN / Math.abs(gap) : 1.0;
+                turnYaw = Mth.wrapDegrees(turnYaw + gap * share);
+                turnHead = Mth.wrapDegrees(turnHead + Mth.wrapDegrees(toHead - turnHead) * share);
+                turnPitch = turnPitch + (toPitch - turnPitch) * share;
+            }
+            out[3] = turnYaw;
+            out[4] = turnHead;
+            out[5] = turnPitch;
         }
     }
 }
