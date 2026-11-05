@@ -181,13 +181,13 @@ class CentralPortalTest(unittest.TestCase):
 
     def test_gate_mouth_open_to_the_rts_camera(self):
         """lovish, Nov 4 ("Ashborn: open gate mouth"): the mouth's outer two cells (x 0..1, z 6..8) are open to the
-        sky, so the RTS camera looks down into the dark mouth - at least 0.5 % of the building's RTS pixels land in it
-        (x <= 2, z 6..8, y <= 3). Shipped: the lintel and the T2 batter roofed it, "invisible from the RTS camera"
-        (critic A)."""
+        sky, so the RTS camera looks down into the dark mouth - at least 2 % of the building's RTS pixels land in it
+        (x <= 2, z 6..8, y <= 3; shipped 1.6 %, the open mouth 2.7 %). Shipped: the lintel and the T2 batter roofed it,
+        "invisible from the RTS camera" (critic A)."""
         roofed = sorted(q for q in self.solid if q[0] in (0, 1) and 6 <= q[2] <= 8 and q[1] >= 1)
         self.assertEqual(roofed, [])
         seen = sum(1 for h in self.rts.values() if h[0][0] <= 2 and 6 <= h[0][2] <= 8 and h[0][1] <= 3)
-        self.assertGreaterEqual(seen / max(1, len(self.rts)), 0.005, seen)
+        self.assertGreaterEqual(seen / max(1, len(self.rts)), 0.02, seen)
 
     def test_basalt_column_foot(self):
         """The plinth's piers on the two camera faces (west x 0, south z 14; y 1..3) are the kit's basalt columns (axis
