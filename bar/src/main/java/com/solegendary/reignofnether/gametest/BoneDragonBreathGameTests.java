@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.entities.GhastUnitFireball;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -338,6 +339,56 @@ public class BoneDragonBreathGameTests {
             if (burns[0].done(tick) && burns[1].done(tick) || tick >= 205) {
                 for (Burns b : burns)
                     b.judge(problems);
+                return done(helper, problems, clean, all);
+            }
+            return !problems.isEmpty() && done(helper, problems, clean, all);
+        });
+    }
+
+    /** This test's own sky floor: 11 or more from every other pad (ArenaReady.pad), nothing over it but sky. */
+    static final int THIN_PAD_Y = 312;
+
+    /**
+     * Over a floor one block thick - a bridge, a ledge over a cave - the flying dragon still breathes: only the void
+     * round a map ("Can't attack while out of bounds") disarms it. The Ghast's rule it inherits read the column from
+     * the sky down and disarmed it whenever the block two under the top one was air: stress 42070433882 found the
+     * dragon disarmed over the game-test arena's thin ground ("cooldown 66666456", "t10 disarmed") and never burning.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 220)
+    public static void bone_dragon_air_breath_burns_over_a_thin_floor(GameTestHelper helper) {
+        String owner = owner(helper, "thin"), foeOwner = owner + "_foe";
+        BlockPos stand = ArenaReady.pad(helper, THIN_PAD_Y);
+        double up = stand.getY() - helper.absolutePos(new BlockPos(0, 2, 0)).getY();
+        BoneDragonUnit dragon = dragon(helper, owner, 2.5, up + AIR_UP, 7.5, -90f);
+        Mob target = foe(helper, foeOwner, 7.5, up, 7.5);
+        List<Mob> all = new ArrayList<>();
+        for (Mob m : new Mob[] { dragon, target })
+            if (m != null)
+                all.add(m);
+        Runnable clean = TestCleanup.atEnd(helper, () -> all.forEach(Mob::discard));
+        if (all.size() != 2) {
+            clean.run();
+            helper.fail("could not create the thin-floor breath test units");
+            return;
+        }
+        EngagementStance.set(dragon, EngagementStance.HOLD_FIRE);
+        Burns burns = new Burns(target, "the foe on the thin floor under the flying dragon's aim");
+        DragonDiveGameTests.everyTick(helper, 210, tick -> {
+            List<String> problems = new ArrayList<>();
+            if (tick == 2) {
+                dragon.setHoldPosition(true);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
+            }
+            if (tick < 2)
+                return false;
+            if (tick % 20 == 12 && dragon.getTarget() != target)
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
+            if (tick == 30 && dragon.hasEffect(MobEffectRegistrar.DISARM.get()))
+                problems.add("the dragon was disarmed over a floor (\"out of bounds\"), the ground one block under its aim");
+            burns.tick(tick, 3);
+            if (burns.done(tick) || tick >= 205) {
+                if (problems.isEmpty())
+                    burns.judge(problems);
                 return done(helper, problems, clean, all);
             }
             return !problems.isEmpty() && done(helper, problems, clean, all);
