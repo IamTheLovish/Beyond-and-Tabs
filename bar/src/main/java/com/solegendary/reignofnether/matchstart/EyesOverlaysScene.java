@@ -58,8 +58,11 @@ import java.util.List;
  * frame-rate cost, measured before merge").
  * <p>
  * eyes.yml input {@code overlay_runes} (-Dbat.eyes.overlays.runes=N): the N of our units nearest the camera cast rune
- * circles (barfx/RuneFx) in turns from the first still on, each every {@link #RUNE_EVERY} ticks in the six factions'
+ * circles (barfx/RuneFx) in turns from the first still on, each every {@link #RUNE_EVERY} s in the six factions'
  * styles - a 100-caster fight, so about half are casting at any moment and the client's cap (RunePool.MAX) is reached.
+ * The casts go by the effects' own clock (RuneFxClient.clock), not client ticks: on a slow runner (a few frames a
+ * second) that clock is held back per frame, and casts on ticks restarted most circles mid draw-in (round 12's stills
+ * showed arcs where a game at full frame rate holds whole circles).
  * Adds the still 18_overlays_runes_close (zoom 15 over the centre squad) and a "[Eyes] 18_overlays runes" line per slice
  * and per zoom: the circles' draw time per frame (RuneFxClient's own counter) and how many were held.
  * <p>
@@ -89,13 +92,13 @@ final class EyesOverlaysScene {
         MIX_TYPE = count > 0 ? type : "";
         MIX_COUNT = MIX_TYPE.isEmpty() ? 0 : count;
     }
-    /** overlay_runes: how many of our units cast rune circles, and every how many client ticks each casts. */
+    /** overlay_runes: how many of our units cast rune circles, and every how many seconds (effect clock) each casts. */
     private static final int RUNES = Math.max(0, Math.min(SQUADS * PER_SQUAD, Integer.getInteger("bat.eyes.overlays.runes", 0)));
-    private static final int RUNE_EVERY = 60;
+    private static final float RUNE_EVERY = 3.0f;
     private static final byte[] RUNE_STYLES = { BarFx.F_SUNFORGED, BarFx.F_GRAVEBOUND, BarFx.F_HORDE, BarFx.F_VERDANT,
             BarFx.F_STORM, BarFx.F_BRASS };
     private static final List<LivingEntity> runeCasters = new ArrayList<>();
-    private static int runeTick = 0;
+    private static float[] runeNext = new float[0];   // each caster's next cast, on the effect clock
     private static long runeNs0 = 0;
     // per slice with runes: zoom asked, rune ms/frame, circles held at the end
     private static final List<double[]> runeRows = new ArrayList<>();
@@ -264,15 +267,22 @@ final class EyesOverlaysScene {
                 ours.add(le);
         ours.sort(Comparator.comparingDouble(le -> le.distanceToSqr(centre)));
         runeCasters.addAll(ours.subList(0, Math.min(RUNES, ours.size())));
-        ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes: {} casters, a cast every {} ticks each", runeCasters.size(), RUNE_EVERY);
+        ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes: {} casters, a cast every {} s each (effect clock)", runeCasters.size(), RUNE_EVERY);
     }
 
-    /** One client tick of the casters: each casts every RUNE_EVERY ticks, staggered, in the six styles in turn. */
+    /** One client tick of the casters: each casts every RUNE_EVERY s, staggered, in the six styles in turn. */
     private static void castRunes() {
-        runeTick++;
-        for (int k = 0; k < runeCasters.size(); k++)
-            if ((runeTick + k * 7) % RUNE_EVERY == 0)
+        float now = RuneFxClient.clock();
+        if (runeNext.length != runeCasters.size()) {
+            runeNext = new float[runeCasters.size()];
+            for (int k = 0; k < runeNext.length; k++)   // staggered as the old tick schedule: 7 ticks apart, mod 60
+                runeNext[k] = now + (k * 7 % 60) / 20f;
+        }
+        for (int k = 0; k < runeNext.length; k++)
+            if (now >= runeNext[k]) {
                 RuneFxClient.castLocal(runeCasters.get(k), RUNE_STYLES[k % RUNE_STYLES.length], RuneFx.CAST_TICKS);
+                runeNext[k] = Math.max(runeNext[k] + RUNE_EVERY, now);
+            }
     }
 
     private static void setUp(Minecraft mc) {
@@ -298,7 +308,7 @@ final class EyesOverlaysScene {
         ourHouse = null;
         results.clear();
         runeRows.clear();
-        runeTick = 0;
+        runeNext = new float[0];
         next(1);
     }
 

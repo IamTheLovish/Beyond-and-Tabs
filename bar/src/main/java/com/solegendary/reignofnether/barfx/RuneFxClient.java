@@ -70,7 +70,7 @@ public final class RuneFxClient {
     static final float SAG_PX = 0.4f;
     static final int SEG_MIN = 12;
     /** Slices over which the sweep's leading edge fades in. */
-    static final int FEATHER = 2;
+    static final int FEATHER = 3;
     /** The outer rim sits at this share of a ring cell's width. */
     static final float RIM_IN_CELL = 0.94f;
     /** The sigil over the head: its height in blocks (T1), its radius as a share of the circle's, rev/s. */
@@ -78,19 +78,19 @@ public final class RuneFxClient {
     /** The seed at the feet: half size in blocks, life in s. The hold's breath: base, depth, Hz. */
     static final float SEED_HALF = 0.5f, SEED_T = 0.25f, BREATH = 0.9f, BREATH_DEPTH = 0.1f, BREATH_HZ = 2;
     /** The underlay's alpha: it fills the ring, in the faction's {@link #DARK}. */
-    static final float UNDER_A = 0.32f;
+    static final float UNDER_A = 0.2f;
     /**
      * The rim per faction (F_* id): its core (light enough to read on sunlit grass, never pure hue, never pure white:
      * overlapping rims summed to white in round 9), its halo (the faction's hue), and the dark line under both.
      */
-    static final int[] CORE = {0xF4F8FF, 0xFFF2C0, 0xD0FF60, 0xFFB080, 0xB0FFB0, 0xA8F8FF, 0xD0B8FF, 0xFFC870};
-    static final int[] HALO = {0x8FB0FF, 0xFFE070, 0x7CE000, 0xFF2A00, 0x28C850, 0x30D8FF, 0x9050FF, 0xD07818};
+    static final int[] CORE = {0xF4F8FF, 0xFFF2C0, 0xD0FF60, 0xFFB080, 0xB0FFB0, 0xC8FCFF, 0xE2D0FF, 0xFFC870};
+    static final int[] HALO = {0x8FB0FF, 0xFFE070, 0x7CE000, 0xFF2A00, 0x28C850, 0x40E4FF, 0xA472FF, 0xD07818};
     static final int[] DARK = {0x202040, 0x3A1E00, 0x1A2A00, 0x3A0800, 0x0B3D1E, 0x002A3A, 0x1E0A40, 0x3A2400};
     /**
      * The rim core's half width: at least CORE_W blocks and CORE_PX screen pixels (RTS camera). The halo is HALO_K times
      * as wide, the dark line DARK_K times.
      */
-    static final float CORE_W = 0.05f, CORE_PX = 1.5f, HALO_K = 2.7f, DARK_K = 2.2f;
+    static final float CORE_W = 0.05f, CORE_PX = 2.0f, HALO_K = 2.7f, DARK_K = 2.2f;
     static final float CORE_A = 0.95f, HALO_A = 0.42f, DARK_A = 0.55f;
     /** The rim's core settles by SETTLE over the hold, from SETTLE_FROM s to SETTLE_TO s. */
     static final float SETTLE = 0.3f, SETTLE_FROM = 0.5f, SETTLE_TO = 1.3f;
@@ -186,6 +186,11 @@ public final class RuneFxClient {
         POOL.start(caster.getId(), (float) caster.getX(), (float) caster.getY(), (float) caster.getZ(), RuneFx.CAST_RADIUS,
             style, true, BarFxClient.clock, ticks);
         peak = Math.max(peak, POOL.count());
+    }
+
+    /** The effects' clock, seconds (BarFxClient's: held back on a slow frame): the eyes scene casts by it. */
+    public static float clock() {
+        return BarFxClient.clock;
     }
 
     /** Circles held now (the eyes scene logs it). */
