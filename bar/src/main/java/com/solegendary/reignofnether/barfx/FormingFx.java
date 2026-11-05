@@ -17,10 +17,12 @@ import java.util.List;
  *   <li>spark: two lights climb the frame's pillars from its feet and meet in the lintel's middle, trailing and
  *       shedding sparks (a game ender: four climb its corners); a wide ring on the ground;</li>
  *   <li>fill: the doorway lights row by row from the sill, violet to white, portal particles streaming in from the
- *       frame (an ender: rings climb the tower); a faint pillar rises through it from 0.35 s;</li>
- *   <li>swirl: two strands spiral up through the doorway, tightening, four flat rings lighting up the pillar;</li>
- *   <li>settle: the brightest moment - the doorway opens in a ring of light, a full pillar, a white-hot pulse, portal
- *       particles pulled in, a ground ring a beat later, and embers thrown up from the lintel that fall.</li>
+ *       frame (an ender: rings climb the tower); a faint tapered pillar grows through it from 0.35 s;</li>
+ *   <li>swirl: two strands spiral up through the doorway, four flat rings lighting the pillar (small and bright at the
+ *       foot, wider and dimmer up), rings of motes tightening as they rise;</li>
+ *   <li>settle: the pillar drops out for a beat, then the brightest moment at 1.35 s - a burst, the doorway opening in
+ *       a ring of light, two bright ground rings, the pillar back narrower, portal particles pulled in, and embers
+ *       thrown up from the lintel that fall.</li>
  * </ul>
  * One brightness order throughout: the pillar and pulse, then the rings and traced lines, then dim sparkle. A portal
  * forms in nether violet and throws lava-orange embers (the lit portal it becomes); a game ender in its faction's tint.
@@ -126,7 +128,9 @@ final class FormingFx {
      * zoom"; round 3 shape 6, timing 6, readability 4 - "one vertical light pillar through the doorway that persists
      * across all phases, thin and dim at the spark and wide and white at the settle, with flat rings climbing it";
      * round 4 lost the blind A/B to round 3 - the pillar was white from 0.6 s, so the swirl outshone the settle: the
-     * brightness order is the rule - build-up at half strength or less, full strength only at the arrival).
+     * brightness order is the rule - build-up at half strength or less, full strength only at the arrival; round 5
+     * beat round 3 but "the pillar ends in a hard cut, the same in every still", "the swirl is one thin arc", "the
+     * arrival does not land": a tapered growing column, rings that tighten as they rise, a beat before the burst).
      * Pieces are placed by their index in the phase, and the pillar and rings on fixed moments of the timeline, never
      * per frame, so the shape and brightness are the same at any frame rate.
      */
@@ -137,32 +141,76 @@ final class FormingFx {
         float h = f.portal ? f.dy1 + 1 - f.y : f.height;   // a portal's frame to its lintel; an ender's whole tower
         float top = f.y + h;
         float cx = f.portal ? f.dx : f.x, cz = f.portal ? f.dz : f.z, foot = f.portal ? f.dy0 : top;
-        // 0. the pillar: a segment every 0.1 s from 0.35 s to the settle, a thread at ~40% growing wider - never as
-        //    bright as the settle's own pillar
+        // 0. the pillar: from 0.35 s a tapered column of three stacked beams (wide and short at the foot, a thread at
+        //    the top) growing taller every 0.1 s, its moving tip a bloom, at under half strength; it drops out just
+        //    before the burst - the beat before the arrival
+        float full = top + 12 - foot;
         for (int j = 4; j <= 12; j++) {
             float at = j * .1f - .05f;
             if (t0 < at && at <= t1) {
-                float g = (at - .35f) / .95f;
-                BarFxClient.P seg = BarFxClient.add(BarFxClient.BEAM, cx, foot, cz, .14f, .25f + .45f * g,
-                    BarFxClient.scale(f.rim, .4f));
-                seg.x2 = cx; seg.y2 = top + 10; seg.z2 = cz; seg.steady = true;   // steady: no fade flicker between segments
+                float g = Math.min(1, (at - .35f) / .8f), len = 3 + (full - 3) * g;
+                int c = BarFxClient.scale(f.rim, .45f);
+                pillar(cx, foot, cz, len * .45f, .6f, c);
+                pillar(cx, foot, cz, len * .75f, .35f, c);
+                pillar(cx, foot, cz, len, .15f, BarFxClient.scale(f.rim, .3f));
+                BarFxClient.flash(cx, foot + len, cz, 1 - .6f * g, .14f, BarFxClient.scale(f.core, .6f));   // the tip's bloom
             }
         }
         if (t0 < .2f && .2f <= t1)   // the spark's first light reaches the ground: one wide ring, the far zoom's cue
             BarFxClient.ring(f.x, f.y, f.z, 7, .4f, BarFxClient.mix(f.rim, f.core, .5f));
-        // ...and four flat rings lighting up it, bottom to top, through the swirl
+        // ...four flat rings lighting up it through the swirl, bottom to top: small and bright at the foot, wider and
+        //    dimmer up the column
         for (int j = 0; j < 4; j++) {
             float at = .65f + .2f * j;
             if (t0 < at && at <= t1) {
                 float ry = f.portal ? f.dy0 + .3f + j * (f.dy1 + 1 - f.dy0) / 3f : f.y + h * (j + 1) / 4f;
-                BarFxClient.ring(cx, ry, cz, f.portal ? 1.6f : f.half * 1.1f + .5f, .5f,
-                    BarFxClient.scale(BarFxClient.mix(f.rim, f.core, j / 3f), .75f));
+                BarFxClient.ring(cx, ry, cz, f.portal ? 1 + .4f * j : f.half * (.8f + .15f * j) + .5f, .6f,
+                    BarFxClient.scale(BarFxClient.mix(f.core, f.rim, j / 3f), 1 - .17f * j));
             }
         }
-        if (t0 < 1.4f && 1.4f <= t1)   // the ground ring, a beat after the doorway opens
-            BarFxClient.ring(cx, f.portal ? f.dy0 : top, cz, 3, .3f, 0xFFFFFF);
-        if (t0 < 1.5f && 1.5f <= t1)   // and a lavender after-ring a block up
-            BarFxClient.ring(cx, (f.portal ? f.dy0 : top) + 1, cz, 2, .35f, f.rim);
+        // ...and three rings of motes that tighten as they rise, each turned 30 degrees on the last
+        for (int j = 0; j < 3; j++) {
+            float at = .65f + .2f * j;
+            if (t0 < at && at <= t1) {
+                float r0 = f.portal ? 1.4f : f.half * 1.1f, r1 = f.portal ? .4f : f.half * .35f;
+                float ry = f.portal ? f.dy0 + .2f + j : f.y + h * (.3f + .25f * j);
+                for (int m = 0; m < 24; m++) {
+                    double a = m * Math.PI / 12 + j * Math.PI / 6;
+                    float ca = (float) Math.cos(a), sa = (float) Math.sin(a);
+                    BarFxClient.P d = BarFxClient.flash(cx + ca * r0, ry, cz + sa * r0, .22f * size, .4f, m % 2 == 0 ? f.rim : f.core);
+                    d.vx = ca * (r1 - r0) / .4f; d.vz = sa * (r1 - r0) / .4f; d.vy = 2.5f;
+                }
+            }
+        }
+        // the arrival, after the pillar's beat: a burst, the pillar back narrower, the doorway opening, two ground
+        // rings (the brightest thing of all: the shape the far zoom keeps), embers
+        float heartY = f.portal ? (f.dy0 + f.dy1) * .5f : top, ground = f.portal ? f.dy0 : f.y;
+        if (t0 < 1.35f && 1.35f <= t1) {
+            BarFxClient.flash(cx, heartY, cz, 2.5f, .3f, BarFxClient.mix(f.rim, 0xFFFFFF, .6f));   // the burst
+            BarFxClient.flash(cx, heartY, cz, .9f, .25f, 0xFFFFFF);                                 // its white-hot core
+            BarFxClient.beam(cx, foot, cz, cx, top + 12, cz, .45f, .45f,
+                BarFxClient.scale(BarFxClient.mix(f.rim, f.core, .6f), .8f));                       // the pillar, back
+            int bright = BarFxClient.lighter(f.rim, .3f);
+            float r = f.portal ? 4 : Math.max(4, f.half + 1.5f);
+            BarFxClient.ring(cx, ground, cz, r, .4f, bright);
+            BarFxClient.ring(cx, ground, cz, r, .4f, bright);   // twice: additive, the brightest element
+            if (f.portal) {   // the doorway opens: a ring of light in its own plane, out to its edge in 0.25 s
+                float rr = Math.min(f.dw, (f.dy1 - f.dy0) * .5f) + .3f;
+                for (int m = 0; m < 16; m++) {
+                    double a = m * Math.PI / 8;
+                    float ca = (float) Math.cos(a) * rr / .25f, sa = (float) Math.sin(a) * rr / .25f;
+                    BarFxClient.P o = BarFxClient.flash(cx, heartY, cz, .3f, .3f, BarFxClient.mix(f.rim, 0xFFFFFF, m % 2 * .6f));
+                    o.vy = sa;
+                    if (f.alongX) o.vx = ca; else o.vz = ca;
+                }
+            }
+            float ey = f.portal ? f.dy1 + .5f : top;
+            for (int m = 0; m < 48; m++)   // embers thrown up from the lintel (an ender: its tip), falling
+                ember(cx + BarFxClient.rnd(-f.dw, f.dw), ey, cz + BarFxClient.rnd(-.4f, .4f),
+                    m % 3 == 0 ? BarFxClient.lighter(f.ember, .5f) : f.ember);
+        }
+        if (t0 < 1.4f && 1.4f <= t1)   // the second ground ring, wider, at half strength
+            BarFxClient.ring(cx, ground, cz, f.portal ? 6 : Math.max(6, f.half + 3), .4f, BarFxClient.scale(f.rim, .5f));
         // 1. spark
         int before = FormingTimeline.emitted(FormingTimeline.Phase.SPARK, t0, f.scale);
         int n = FormingTimeline.between(FormingTimeline.Phase.SPARK, t0, t1, f.scale);
@@ -204,7 +252,7 @@ final class FormingFx {
             } else {   // an ender: rings of light climb the tower
                 float step = (float) Math.floor(glow * 7) / 7f;
                 float[] q = onSquare(f, f.half * (.4f + .6f * (1 - step)), frac(k * .618034f));
-                BarFxClient.flash(q[0], f.y + .4f + h * step, q[1], (.5f + .35f * step) * size, .35f, BarFxClient.mix(f.rim, f.core, step));
+                BarFxClient.flash(q[0], f.y + .4f + h * step, q[1], (.3f + .25f * step) * size, .35f, BarFxClient.mix(f.rim, f.core, step));
             }
         }
         // 3. swirl
@@ -226,30 +274,9 @@ final class FormingFx {
         // 4. settle
         before = FormingTimeline.emitted(FormingTimeline.Phase.SETTLE, t0, f.scale);
         n = FormingTimeline.between(FormingTimeline.Phase.SETTLE, t0, t1, f.scale);
-        float heartY = f.portal ? (f.dy0 + f.dy1) * .5f : top, wide = Math.max(4, f.half * .8f);
         for (int i = 0; i < n; i++) {
             int k = before + i;
-            if (k == 0) {
-                BarFxClient.flash(cx, heartY, cz, 1.8f, .35f, f.rim);                                  // the halo
-                BarFxClient.flash(cx, heartY, cz, .9f, .3f, 0xFFFFFF);                                 // the white-hot core
-                BarFxClient.beam(cx, f.portal ? f.dy0 : top, cz, cx, top + 12, cz, .4f, .8f,
-                    BarFxClient.scale(BarFxClient.mix(f.rim, f.core, .6f), .9f));                      // the pillar
-                BarFxClient.ring(f.x, top, f.z, wide, .5f, BarFxClient.lighter(f.rim, .4f));   // one wide ring: far zoom
-                if (f.portal) {   // the doorway opens: a ring of light in its own plane, out to its edge in 0.25 s
-                    float rr = Math.min(f.dw, (f.dy1 - f.dy0) * .5f) + .3f;
-                    for (int m = 0; m < 16; m++) {
-                        double a = m * Math.PI / 8;
-                        float ca = (float) Math.cos(a) * rr / .25f, sa = (float) Math.sin(a) * rr / .25f;
-                        BarFxClient.P o = BarFxClient.flash(cx, heartY, cz, .3f, .3f, BarFxClient.mix(f.rim, 0xFFFFFF, m % 2 * .6f));
-                        o.vy = sa;
-                        if (f.alongX) o.vx = ca; else o.vz = ca;
-                    }
-                }
-                float ey = f.portal ? f.dy1 + .5f : top;
-                for (int m = 0; m < 48; m++)   // embers thrown up from the lintel (an ender: its tip), falling
-                    ember(cx + BarFxClient.rnd(-f.dw, f.dw), ey, cz + BarFxClient.rnd(-.4f, .4f),
-                        m % 3 == 0 ? BarFxClient.lighter(f.ember, .5f) : f.ember);
-            } else if (!f.portal && (k == 3 || k == 6 || k == 9)) {   // an ender's tiers light top to bottom
+            if (!f.portal && (k == 3 || k == 6 || k == 9)) {   // an ender's tiers light top to bottom
                 float tier = 1 - (k - 3) / 3f * .33f;
                 BarFxClient.ring(f.x, f.y + h * tier, f.z, f.half * (1.4f - .4f * tier) + .5f, .4f, f.core);
             } else if (vanilla) {   // the swirl drawn in: portal particles pulled from 3 blocks round into the doorway
@@ -259,6 +286,12 @@ final class FormingFx {
                 BarFxClient.sparks(f.x + BarFxClient.rnd(-1, 1), top, f.z + BarFxClient.rnd(-1, 1), 1, 1.6f, f.core, 0, 0);
             }
         }
+    }
+
+    /** One steady segment of the build-up pillar, {@code len} up from its foot (steady: no fade flicker between segments). */
+    private static void pillar(float x, float y, float z, float len, float width, int c) {
+        BarFxClient.P seg = BarFxClient.add(BarFxClient.BEAM, x, y, z, .14f, width, c);
+        seg.x2 = x; seg.y2 = y + len; seg.z2 = z; seg.steady = true;
     }
 
     /** One ember: up and out, falling back, gone in under 1.4 s. */
