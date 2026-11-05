@@ -821,6 +821,24 @@ public class FogOfWarServerEvents {
         return isBlockVisibleFor(player, (int) Math.floor(x), (int) Math.floor(z));
     }
 
+    // THROWAWAY stubs with main's behaviour (no fog rule on world effects), for the red of #510's test
+    public static void broadcastSeen(List<ServerPlayer> players, @javax.annotation.Nullable
+            net.minecraft.world.entity.player.Player except, double x, double y, double z, double radius,
+            net.minecraft.resources.ResourceKey<Level> dimension, Packet<?> packet) {
+        double r2 = radius * radius;
+        for (ServerPlayer sp : players) {
+            if (sp == except || sp.level().dimension() != dimension)
+                continue;
+            double dx = x - sp.getX(), dy = y - sp.getY(), dz = z - sp.getZ();
+            if (dx * dx + dy * dy + dz * dz < r2)
+                sp.connection.send(packet);
+        }
+    }
+
+    public static boolean effectSeenBy(ServerPlayer player, Packet<?> packet) {
+        return true;
+    }
+
     private static long blockLong(int x, int z) {
         return ((long) x << 32) | (z & 0xFFFFFFFFL);
     }
