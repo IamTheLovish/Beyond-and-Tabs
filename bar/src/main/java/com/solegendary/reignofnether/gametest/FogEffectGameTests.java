@@ -127,7 +127,10 @@ public class FogEffectGameTests {
                 sp.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);   // 6 blocks away: in every effect's range
                 stage[0] = "the player lists";
                 listed.add(sp);
-                inLevel.add(sp);
+                // the level's own list is read-only (red run 42084276870: "UnsupportedOperationException during the
+                // player lists at Collections$UnmodifiableCollection.add"); an explosion goes to the level's players,
+                // so the fake player joins the level as a player does
+                level.addNewPlayer(sp);
                 stage[0] = "the RTS side";
                 MatchLifecycleCases.side(name, -77_001);   // an RTS player: the fog applies to it
                 stage[0] = "the effects with fog off";
@@ -166,10 +169,9 @@ public class FogEffectGameTests {
                     .append(st[i].getMethodName()).append(':').append(st[i].getLineNumber());
             problems.add("threw " + e + " during " + stage[0] + " at " + frames);
         } finally {
-            try {   // (a list that refused the add refuses the remove too: the catch above has said so)
-                listed.remove(sp);
-                inLevel.remove(sp);
-            } catch (UnsupportedOperationException ignored) { }
+            listed.remove(sp);
+            if (inLevel.contains(sp))
+                level.removePlayerImmediately(sp, net.minecraft.world.entity.Entity.RemovalReason.DISCARDED);
             sp.connection = oldConnection;
             MatchLifecycleCases.forget(name);
             if (FogOfWarServerEvents.isEnabled() && !wasOn)
