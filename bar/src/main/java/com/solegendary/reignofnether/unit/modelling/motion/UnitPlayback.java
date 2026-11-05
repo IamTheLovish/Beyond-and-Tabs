@@ -133,13 +133,17 @@ public final class UnitPlayback {
      * tops out at 3.92). Kinematics.TELEPORT_BLOCKS (4) is a per-client-tick limit and was wrongly used here per packet
      * (r1 of #539: a Leaf Dash, 4 blocks a packet, was drawn held then popped).
      * <p>
-     * Faster than that is still motion when the server said the unit goes that fast: a unit thrown by a Ravager's roar
-     * flies 3-4.65 blocks a tick (follow-up to r2 of #539). The server sends its velocity (ClientboundSetEntityMotionPacket:
-     * at once when it is hurt, and every interval while it changes, after that interval's move packet), so the limit is
-     * decided when the move is drawn - 4-7 ticks later, with the velocity in hand - from the fastest velocity heard from
-     * the move's first tick to its last, times {@link #HEARD_SLACK}: a velocity is heard after that tick's drag (x 0.91
-     * in the air, x 0.546 on the ground, so the ticks before it moved up to 1.83 times as fast). A real teleport (an
-     * ability, a command) comes with no such velocity and stays a blink.
+     * Faster than that is still motion when the server said the unit goes that fast: a unit thrown by a Ravager unit's
+     * roar (RavagerUnit.strongKnockback, 6/d blocks a tick at d blocks off) flies 2-6 blocks a tick (follow-up to r2 of
+     * #539). The server sends its velocity (ClientboundSetEntityMotionPacket: every interval while it changes, just
+     * before that interval's move packet, and at the end of the pass when it is hurt), so the limit is decided when the
+     * move is drawn - 4-7 ticks later, with every velocity of its ticks in hand - from the fastest velocity heard over the
+     * move's own ticks (never further back: a velocity heard before a long stand says nothing about the teleport that
+     * ends it, r1 of #542), times {@link #HEARD_SLACK}. Without a new push a unit only slows, so the velocity heard at a
+     * move's first tick bounds it; the slack covers a push the server reports only at the interval's end (decayed by up
+     * to 0.91 x 0.91 in the air) and the packet's clamp at 3.9 blocks a tick an axis (a unit thrown at 6 is heard at 3.9).
+     * A real teleport (an ability, a command) comes with no such velocity and stays a blink; one within the same few
+     * ticks as a throw can still be drawn as part of it.
      */
     static final double BLINK_BLOCKS = 8.0, MAX_RUN = 2.0, MAX_FALL = 4.0, HEARD_SLACK = 2.0;
 
@@ -151,9 +155,9 @@ public final class UnitPlayback {
         private final int interval;
         private final double[] tick = new double[SIZE], x = new double[SIZE], y = new double[SIZE], z = new double[SIZE];
         private final float[] yaw = new float[SIZE], headYaw = new float[SIZE], pitch = new float[SIZE];
-        // a move past the walk and fall limits (into sample i): from which tick, over how many ticks, how far across and up
-        // or down; drawn as a blink unless a velocity heard over those ticks explains it ({@link #blink})
-        private final double[] from = new double[SIZE], ticksOf = new double[SIZE];
+        // a move past the walk and fall limits (into sample i): over how many ticks, how far across and up or down; drawn
+        // as a blink unless a velocity heard over those ticks explains it ({@link #blink})
+        private final double[] ticksOf = new double[SIZE];
         private final float[] across = new float[SIZE], rise = new float[SIZE];
         private final boolean[] far = new boolean[SIZE];
         private int head = -1, count = 0;
@@ -244,13 +248,12 @@ public final class UnitPlayback {
                 pyaw = yaw[l];   // a position-only packet: the unit still faces where its last stamp said
             if (!Float.isFinite(ppitch))
                 ppitch = pitch[l];
-            double ticks = Mth.clamp(t - tick[l], 1.0, interval), since = tick[l];
+            double ticks = Mth.clamp(t - tick[l], 1.0, interval);
             float a = (float) Math.hypot(px - x[l], pz - z[l]), r = (float) Math.abs(py - y[l]);
             boolean past = beyond(ticks, a, r, 0f, 0f);
             hold(t, l);
             add(t, px, py, pz, pyaw, headYaw[l], ppitch);
             far[head] = past;
-            from[head] = since;
             ticksOf[head] = ticks;
             across[head] = a;
             rise[head] = r;
@@ -275,9 +278,12 @@ public final class UnitPlayback {
             if (!far[b])
                 return false;
             float a = 0, r = 0;
+            // only velocities heard over the move's own ticks (at most an interval back): one heard before a long stand
+            // says nothing about a teleport that ends it (r1 of #542)
+            double since = tick[b] - ticksOf[b];
             for (int i = 0; i < heardCount; i++) {
                 int h = (heardHead - i + HEARD) % HEARD;
-                if (heardTick[h] >= from[b] && heardTick[h] <= tick[b]) {
+                if (heardTick[h] >= since && heardTick[h] <= tick[b]) {
                     a = Math.max(a, heardAcross[h]);
                     r = Math.max(r, heardUp[h]);
                 }
@@ -312,10 +318,11 @@ public final class UnitPlayback {
                 head = (head + 1) % SIZE;
                 count = Math.min(count + 1, SIZE);
                 tick[head] = t;
+                far[head] = false;   // a new sample; a move marks its own after
             }
-            // (the same tick again, or older: the newer packet wins)
+            // (the same tick again, or older: the newer packet wins - and keeps the move's blink mark: a head packet
+            // right after a teleport on the same tick must not turn the blink back into a slide, r1 of #542)
             x[head] = px; y[head] = py; z[head] = pz; yaw[head] = pyaw; headYaw[head] = phead; pitch[head] = ppitch;
-            far[head] = false;   // a move sets it after
         }
 
         /** Once a client tick: where to draw the unit, into {@code out} = x, y, z, yaw, head yaw, pitch. */
