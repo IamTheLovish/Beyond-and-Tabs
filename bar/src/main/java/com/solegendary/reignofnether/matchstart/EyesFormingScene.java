@@ -9,6 +9,8 @@ import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
+import com.solegendary.reignofnether.match.MatchPhase;
+import com.solegendary.reignofnether.match.MatchState;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 
 import net.minecraft.client.Minecraft;
@@ -45,7 +47,7 @@ final class EyesFormingScene {
     private static final float AT_SPARK = .15f, AT_FILL = .6f, AT_SWIRL = 1.05f, AT_SETTLE = 1.42f, AT_WHOLE = .9f;
 
     private static int phase = 0;
-    private static long phaseNanos = 0;
+    private static long phaseNanos = 0, playingNanos = 0;
     private static Vec3 centre, spireAt;
     private static volatile BuildingPlacement portal, spire;
     private static volatile String error = null;
@@ -74,7 +76,22 @@ final class EyesFormingScene {
             return true;
         }
         switch (phase) {
-            case 0 -> setUp(mc);
+            case 0 -> {   // the match on first: its start turns fog of war back on (run 41996488439 began in START_POSITIONS,
+                          // and the match's "new match: turning fog of war on" withheld the fourth forming), and seats our base
+                if (phaseNanos == 0)
+                    phaseNanos = System.nanoTime();
+                if (MatchState.live().phase() != MatchPhase.PLAYING) {
+                    if (seconds() < 180)
+                        return false;
+                    ReignOfNether.LOGGER.warn("[Eyes] 20_forming: the match never started - skipped");
+                    return true;
+                }
+                if (playingNanos == 0)
+                    playingNanos = System.nanoTime();
+                if ((System.nanoTime() - playingNanos) / 1e9 < 5)   // the battlefield forms and the starts are cleared
+                    return false;
+                setUp(mc);
+            }
             case 1 -> {   // the camera moved: wait for the ground, then stand the frames up
                 boolean loaded = EyesDirector.surfaceY(mc, (int) Math.floor(centre.x), (int) Math.floor(centre.z)) != Integer.MIN_VALUE
                     && EyesDirector.surfaceY(mc, (int) Math.floor(spireAt.x), (int) Math.floor(spireAt.z)) != Integer.MIN_VALUE;
