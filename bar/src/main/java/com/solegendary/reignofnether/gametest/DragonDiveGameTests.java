@@ -47,7 +47,7 @@ public class DragonDiveGameTests {
         boolean at(int tick);
     }
 
-    private static void everyTick(GameTestHelper helper, int ticks, Step step) {
+    static void everyTick(GameTestHelper helper, int ticks, Step step) {
         final boolean[] over = { false };
         for (int t = 1; t <= ticks; t++) {
             final int tick = t;
@@ -59,7 +59,7 @@ public class DragonDiveGameTests {
     }
 
     /** Ends the test (succeed when no problems, else fail with them) and says the steps are over. */
-    private static boolean finish(GameTestHelper helper, List<String> problems, Runnable clean) {
+    static boolean finish(GameTestHelper helper, List<String> problems, Runnable clean) {
         if (clean != null)
             clean.run();
         if (problems.isEmpty())
@@ -70,7 +70,7 @@ public class DragonDiveGameTests {
     }
 
     /** A 16x16 glass floor high over the arena: open sky to dive through. Returns the standing position's corner. */
-    private static BlockPos skyPad(GameTestHelper helper, int y) {
+    static BlockPos skyPad(GameTestHelper helper, int y) {
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
         // put back when the test ends, pass or fail: a pad left over another test's column is in its sky
         TestCleanup.BlockUndo pad = TestCleanup.blocks(helper);
@@ -80,7 +80,7 @@ public class DragonDiveGameTests {
         return new BlockPos(corner.getX(), y + 1, corner.getZ());
     }
 
-    private static Mob put(ServerLevel level, BlockPos pad, net.minecraft.world.entity.EntityType<? extends Mob> type,
+    static Mob put(ServerLevel level, BlockPos pad, net.minecraft.world.entity.EntityType<? extends Mob> type,
                            String owner, double x, double y, double z) {
         Mob m = type.create(level);
         if (m == null)
@@ -97,7 +97,7 @@ public class DragonDiveGameTests {
     }
 
     /** A worker that never fights (so every hurt is the dragon's) with a lot of health (so the blow can be measured). */
-    private static Mob sturdyWorker(ServerLevel level, BlockPos pad, String owner, double x, double z) {
+    static Mob sturdyWorker(ServerLevel level, BlockPos pad, String owner, double x, double z) {
         Mob m = put(level, pad, EntityRegistrar.VILLAGER_UNIT.get(), owner, x, 0, z);
         if (m != null) {
             AttributeInstance hp = m.getAttribute(Attributes.MAX_HEALTH);

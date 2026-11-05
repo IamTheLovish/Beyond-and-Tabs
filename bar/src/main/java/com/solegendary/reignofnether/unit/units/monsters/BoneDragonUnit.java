@@ -477,6 +477,14 @@ public class BoneDragonUnit extends GhastUnit {
         return hit.size();
     }
 
+    /**
+     * SIGNATURE STUB for the red run (tests first): one burn of the breath aimed at {@code aim}. Here it is the old
+     * one-tick breath along the flat direction to the aim; the next commit makes it the cone from the jaws.
+     */
+    public int breathPulse(ServerLevel sl, Vec3 aim) {
+        return breathe(sl, new Vec3(aim.x - getX(), 0, aim.z - getZ()));
+    }
+
     @Override
     public void tick() {
         super.tick();
