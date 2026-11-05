@@ -101,4 +101,9 @@ public class InfernalPortal extends ProductionBuilding implements NetherConverti
     public double getStartingNetherRange(BuildingPlacement placement) {
         return 3;
     }
+
+    @Override
+    public boolean formsWhenBuilt() {
+        return true;   // a portal-type moment: it forms (barfx/PortalForming)
+    }
 }
