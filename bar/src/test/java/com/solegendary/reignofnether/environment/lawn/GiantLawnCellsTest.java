@@ -55,7 +55,8 @@ class GiantLawnCellsTest {
         assertEquals(57, GiantLawnCells.cell(0, -1));
         assertEquals(64, GiantLawnCells.cell(-1, -1));
         assertEquals(1, GiantLawnCells.cell(-8, -8));
-        assertEquals(GiantLawnCells.cell(1_000_001, -3), GiantLawnCells.cell(1, 1));
+        // 1_000_001 = 125_000 sheets + 1, and -3 is row 5 of the sheet above (floorMod(-3, 8) = 5)
+        assertEquals(GiantLawnCells.cell(1_000_001, -3), GiantLawnCells.cell(1, 5));
         assertEquals(GiantLawnCells.cell(Integer.MIN_VALUE, Integer.MIN_VALUE), 1);
     }
 
