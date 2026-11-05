@@ -178,7 +178,9 @@ public class PerfTickGatesGameTests {
         });
     }
 
-    static final int RELEASED_HOLD = 30, RELEASED_WATCH = 10, RELEASED_TRIES = 6;
+    static final int RELEASED_HOLD = 30, RELEASED_WATCH = 50, RELEASED_TRIES = 3;
+    /** What the released-window test writes into MinecraftServer.tickTimes after the hold: 1 ms, a healthy tick. */
+    static final long RELEASED_HEALTHY_TICK_NS = 1_000_000L;
 
     /**
      * A hold that ends without a snapshot leaves the window to the periodic report, and the ticks after it - not
@@ -188,8 +190,12 @@ public class PerfTickGatesGameTests {
      * The rule, whatever the runner's speed: a window never holds more tick times than ticks it measured
      * (Sys.windowMsTicks() <= Sys.windowTicks()), checked on each tick after the hold while measuring is off. A busy
      * runner keeps measuring on by itself (the slow-server rule, tick p95 >= 25 ms: the first red of this test,
-     * 42015339793, measured 110-150 ticks), which is not the case under test: the hold is tried again, and the test says
-     * so if measuring never went off. Its own batch: no other holder.
+     * 42015339793, measured 110-150 ticks; under a full shard's load it stayed on through every retried hold and the
+     * test failed "the server is slow", main e2ed7cab and five PR builds, Nov 5). So after the hold the test makes the
+     * server read healthy, whatever its real speed: it writes a 1 ms tick into every slot of MinecraftServer.tickTimes,
+     * which the slow-server rule reads every 20 ticks, until measuring goes off. Those slots are rewritten with real
+     * times within 100 ticks; its own batch, so no other test reads them meanwhile. The assertion is unchanged. The test
+     * still says so if measuring never went off (a lag capture or /rts-perf holding it on).
      */
     @GameTest(template = ARENA, timeoutTicks = RELEASED_TRIES * (RELEASED_HOLD + RELEASED_WATCH + 5) + 60, batch = "perf_sys_released")
     public static void a_released_sys_window_does_not_count_the_ticks_after_its_hold(GameTestHelper helper) {
@@ -212,6 +218,8 @@ public class PerfTickGatesGameTests {
                 offTicks[0] = 0;
                 phase[0] = 2;
             } else if (phase[0] == 2) {
+                if (offTicks[0] < 2)   // the server reads healthy: the slow-server rule lets measuring go off
+                    java.util.Arrays.fill(helper.getLevel().getServer().tickTimes, RELEASED_HEALTHY_TICK_NS);
                 int ticks = Sys.windowTicks(), msTicks = Sys.windowMsTicks();
                 if (!Sys.isMeasuring()) {
                     offTicks[0]++;
@@ -230,11 +238,12 @@ public class PerfTickGatesGameTests {
                         + " {} ticks / {} tick times", offTicks[0], RELEASED_HOLD, ticks, msTicks);
                     helper.succeed();
                 } else if (++tries[0] < RELEASED_TRIES) {
-                    phase[0] = 0;   // measuring stayed on (a slow runner): not the case under test, hold again
+                    phase[0] = 0;   // measuring stayed on: not the case under test, hold again
                 } else {
                     phase[0] = 3;
-                    helper.fail("measuring never went off after a hold in " + RELEASED_TRIES + " tries (the server is slow: tick p95"
-                        + " >= 25 ms), so the case under test never happened");
+                    helper.fail("measuring never went off after a hold in " + RELEASED_TRIES + " tries, " + RELEASED_WATCH
+                        + " ticks each with a healthy tick history (a lag capture or /rts-perf holding it on?), so the case under"
+                        + " test never happened");
                 }
             }
         });
