@@ -34,9 +34,10 @@ public class UnitActionFogGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
 
-    static Mob target(Mob unit) {
+    /** The unit's attack target: its target goal's, else the mob's own. */
+    static Entity target(Mob unit) {
         Entity t = ((Unit) unit).getTargetGoal().getTarget();
-        return t instanceof Mob m ? m : unit.getTarget();
+        return t != null ? t : unit.getTarget();
     }
 
     /**
