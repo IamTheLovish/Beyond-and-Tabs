@@ -32,8 +32,13 @@ const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
 const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;
 // torch, lantern and fire light (vanilla's block light)
 const vec3 BLOCK_LIGHT = vec3(1.00, 0.70, 0.40) * 1.60;
-// share of the sun bounced off the ground onto vertical faces (about the ground's albedo times the sun's spread)
+// share of the sun bounced off the ground onto vertical faces (about the ground's albedo times the sun's spread). It
+// came with slice 2's material maps (Oct 30), so MATERIALS 0 draws slice 1's walls without it
+#if MATERIALS == 1
 const float GROUND_BOUNCE = 0.20;
+#else
+const float GROUND_BOUNCE = 0.0;
+#endif
 // so the darkest cave is never pure black
 const vec3 MIN_LIGHT = vec3(0.012);
 // the sky's fill under a sky light of 0 as a share of the open sky's: the fill falls off with the sky light linearly
@@ -89,8 +94,8 @@ vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, flo
     vec3 light = sunArriving(shadow, levels, sunColour) * (facing * mix(1.0, texAo, 0.5));
     float upness = dot(n, up);
     light += skyColour * ((0.75 + 0.25 * upness) * mix(SKY_FILL_FLOOR, 1.0, sky) * ao * texAo);
-    // light bounced off the sunlit ground onto walls (block critic vs the Complementary benchmark, Oct 30: our wall
-    // faces sat at ~1/3 of the tops - quartz sides 68 vs the benchmark's 126 - so every block's shaded side read near
+    // light bounced off the sunlit ground onto walls (block critic vs the old benchmark screenshot, Oct 30: our
+    // wall faces sat at ~1/3 of the tops - quartz sides 68 vs the screenshot's 126 - so every block's shaded side read near
     // black). Only faces that look sideways or down take it, so a building's cast shadow on the ground (the judged
     // shadow / lit band) is untouched; it carries the sun's colour, dimmed by the sky light so caves stay dark
     light += sunColour * (GROUND_BOUNCE * clamp(1.0 - upness, 0.0, 1.0) * sky * ao * texAo);

@@ -63,10 +63,17 @@ Material readMaterial(vec4 nTex, vec4 sTex, vec3 albedo, vec3 geomNormal, vec3 t
     m.normal = geomNormal;
     if (mapNormal && dot(tangent, tangent) > 1e-6 && dot(bitangent, bitangent) > 1e-6) {
         // re-orthogonalise against the interpolated normal: on a smooth entity the three drift apart across a face
-        vec3 t = normalize(tangent - geomNormal * dot(geomNormal, tangent));
-        vec3 b = normalize(bitangent - geomNormal * dot(geomNormal, bitangent) - t * dot(t, bitangent));
-        vec3 tn = decodeNormal(nTex);
-        m.normal = normalize(t * tn.x + b * tn.y + geomNormal * tn.z);
+        // a tangent along the normal (a degenerate quad) leaves nothing to normalise: keep the vertex normal
+        vec3 t = tangent - geomNormal * dot(geomNormal, tangent);
+        if (dot(t, t) > 1e-8) {
+            t = normalize(t);
+            vec3 b = bitangent - geomNormal * dot(geomNormal, bitangent) - t * dot(t, bitangent);
+            if (dot(b, b) > 1e-8) {
+                b = normalize(b);
+                vec3 tn = decodeNormal(nTex);
+                m.normal = normalize(t * tn.x + b * tn.y + geomNormal * tn.z);
+            }
+        }
     }
 
     float smoothness = sTex.r;
@@ -100,7 +107,11 @@ vec3 sunSpecular(Material m, vec3 v, vec3 l) {
     if (nl <= 0.0)
         return vec3(0.0);
     float nv = max(dot(n, v), 1e-3);
-    vec3 h = normalize(v + l);
+    // the half vector; the eye straight opposite the sun leaves none, and then no highlight reaches the eye anyway
+    vec3 hv = v + l;
+    if (dot(hv, hv) < 1e-8)
+        return vec3(0.0);
+    vec3 h = normalize(hv);
     float nh = max(dot(n, h), 0.0);
     float a2 = m.roughness * m.roughness;
     float q = nh * nh * (a2 - 1.0) + 1.0;
