@@ -50,6 +50,8 @@ final class EyesFormingScene {
     private static long phaseNanos = 0, playingNanos = 0;
     private static Vec3 centre, spireAt;
     private static volatile BuildingPlacement portal, spire;
+    /** The next replay, sent once the live forming is over. */
+    private static BuildingPlacement pending = null;
     private static volatile String error = null;
     /** FormingFx's started count before the last trigger: the next still waits for a newer forming. */
     private static int before = 0;
@@ -74,6 +76,13 @@ final class EyesFormingScene {
         if (error != null) {
             ReignOfNether.LOGGER.warn("[Eyes] 20_forming: ending early ({})", error);
             return true;
+        }
+        if (pending != null) {   // a phase's replay waits for the last forming to end: no still mixes two (Fable round 1)
+            if (BarFxClient.liveFormings() > 0 && seconds() < 5)
+                return false;
+            replay(mc, pending);
+            pending = null;
+            return false;
         }
         switch (phase) {
             case 0 -> {   // the match on first: its start turns fog of war back on (run 41996488439 began in START_POSITIONS,
@@ -125,9 +134,9 @@ final class EyesFormingScene {
                 ReignOfNether.LOGGER.info("[Eyes] {}: forming age {} s at the shot, {} live", nextShot,
                     String.format("%.2f", BarFxClient.newestFormingAge()), BarFxClient.liveFormings());
                 switch (phase) {
-                    case 3 -> { replay(mc, portal); await("20_forming_fill", AT_FILL, 4); }
-                    case 4 -> { replay(mc, portal); await("20_forming_swirl", AT_SWIRL, 5); }
-                    case 5 -> { replay(mc, portal); await("20_forming_settle", AT_SETTLE, 6); }
+                    case 3 -> { pending = portal; await("20_forming_fill", AT_FILL, 4); }
+                    case 4 -> { pending = portal; await("20_forming_swirl", AT_SWIRL, 5); }
+                    case 5 -> { pending = portal; await("20_forming_settle", AT_SETTLE, 6); }
                     case 6 -> next(7);
                     case 8 -> {
                         OrthoviewClientEvents.centreCameraOnPosInstant(centre);
