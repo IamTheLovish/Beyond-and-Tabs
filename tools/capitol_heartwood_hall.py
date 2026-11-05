@@ -30,8 +30,8 @@ overgrown air temple; ref 106 organic arches):
     trunk's foot flaring over the top step); its hollow heart is the centre spawn's
     column (a verdant froglight glows in its roof), and the spawn walks out by doorways on the axes and out of any of
     the four arches; four BOUGHS break out through the roof, one on each side, each its own shape;
-  - SURFACE ROOTS: low mats of mangrove roots round each garden corner by a MOONWELL (a water cauldron between bare
-    calcite kerbs);
+  - each garden corner a mossy stone PIER with a lantern, a low moss mat round its foot, by a MOONWELL (a water
+    cauldron between bare calcite kerbs);
   - the STAG-DRYAD FACE is carved in the trunk just over the roof on the two sides the RTS camera sees (a birch blaze,
     glowing eyes in the bark, dark brows), its ANTLERS branch out of the brow toward the crown as the tree's own boughs;
   - a BLOSSOM CROWN of uneven lobes (Nov 2026, after two blind massing rounds: the round tiered canopy read as "a
@@ -418,20 +418,25 @@ def canopy(c):
             continue
         for ddx, ddy, ddz in ((0, 1, 0), (-1, 0, 0), (0, 0, 1)):
             q = (x + ddx, y + ddy, z + ddz)
-            if q[1] < H and max(abs(q[0]), abs(q[2])) <= 5 and in_hull(*q) and not in_face_zone(*q):
+            # a bough's end high in the crown is capped even just past the lobes' outline: two bare ends at y25 read
+            # from the RTS camera as "two dark pits ... eyes or damage" in the crown's top (Fable critic round 7)
+            high = y >= CROWN_FOOT + 3
+            if q[1] < H and max(abs(q[0]), abs(q[2])) <= 5 and (in_hull(*q) or high) and not in_face_zone(*q):
                 leaf(c, *q, name="cherry_leaves")
 
 
 def roots(c):
     """Surface roots at the garden corners: a low mat of mangrove roots round each corner's foot, side roots creeping
     along the garden edge, moss beyond them. The arcs that climbed the corner piers read as "crate stacks" at every
-    corner, as cubes (Fable critic A, Nov 4) and as logs on their side (Fable critic, round 1, Nov 5)."""
+    corner, as cubes (Fable critic A, Nov 4) and as logs on their side (Fable critic, round 1, Nov 5); the mangrove
+    root mats that followed as "rooted-dirt/mud cubes ... crates" (round 7). So each corner is a mossy stone pier
+    with a lantern on it, the roots a low moss mat round its foot: the plot's frame is stone, the accents green."""
     for (sx, sz) in CORNERS:
-        for k, j, y in ((7, 7, 1), (7, 7, 2), (6, 7, 1), (7, 6, 1), (6, 6, 1)):
-            c.set(sx * k, y, sz * j, "mangrove_roots", **DRY)
-        c.set(sx * 7, 0, sz * 7, "rooted_dirt")
-        c.set(sx * 7, 1, sz * 5, "mangrove_roots", **DRY)
-        c.set(sx * 5, 1, sz * 7, "mangrove_roots", **DRY)
+        c.set(sx * 7, 0, sz * 7, MSB)
+        c.set(sx * 7, 1, sz * 7, MSB)
+        c.set(sx * 7, 2, sz * 7, "lantern", **LANTERN)
+        for k, j in ((6, 7), (7, 6), (6, 6), (7, 5), (5, 7)):
+            c.set(sx * k, 1, sz * j, "moss_carpet")
         c.set(sx * 7, 1, sz * 4, "moss_carpet")
         c.set(sx * 4, 1, sz * 7, "moss_carpet")
 
