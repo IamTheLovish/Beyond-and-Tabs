@@ -163,12 +163,12 @@ KW = 8                                   # the keep's wall top; the crown's tier
 GATE = (7, 8)                            # the deep gate in the keep's south face (z 2..3, y 1..3)
 
 
-COURT = "tuff"                           # the court's mid grey (camera 0.34 from above; polished andesite read 0.45)
-PATH = [(x, z) for x in (4, 5) for z in range(3, 7)] + [(x, 4) for x in (6, 7, 8)]
+COURT = "stone_bricks"                   # the court's mid grey (0.44 from above on the Nov stills; tuff read 0.19)
+PATH = [(5, z) for z in range(3, 7)] + [(x, 4) for x in (6, 7, 8)]   # 1 wide: gate -> spawn -> south steps
 
 
 def floor_l1(r):
-    """Layer 0: a tuff court in the mids (Fable critic B, Nov 4: the polished andesite court was the lightest plane of
+    """Layer 0: a stone-brick court in the mids (Fable critic B, Nov 4: the polished andesite court was the lightest plane of
     the building, 0.56 on the noon still, over the keep's own south face), a pale polished andesite path from the gate
     over the spawn cells to the south steps, dark oak under the gate and the arches (the shadow the RTS camera sees
     through them), the start type's steps across the south edge."""
@@ -177,7 +177,7 @@ def floor_l1(r):
             r.set(x, 0, z, "polished_andesite" if (x, z) in PATH else COURT)
     for x, z in [(x, z) for x in GATE for z in (KZ1 - 1, KZ1)] + [(1, 1), (3, 1), (5, 1), (1, 2), (8, 5)]:
         r.set(x, 0, z, DARK)
-    for x in range(1, 9):
+    for x in range(2, 8):                   # six steps: the start type needs >= 6 in layer 0
         r.st(x, 0, SZ - 1, "north", name=START_TYPE)
 
 
