@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Placeholder skins and portraits for the seven T1 siege lobbers (design/siege_t1.md) until Itachi 1 draws them.
+"""Placeholder skins and portraits for the seven T1 siege lobbers (design/siege_t1.md) and the T2 siege units on the same
+frame until they are drawn.
 
 Each one is our own Bombard Crew skin (tools' earlier pass; the Brassworks' from the Mortar Crawler) recoloured into
 the faction's palette: every pixel's brightness is mapped onto a three-stop ramp (shadow, cloth, highlight), alpha
@@ -24,6 +25,8 @@ LOBBERS = {
     "powder_monkey": ("bombard_crew", (30, 34, 40), (150, 140, 120), (220, 210, 186)),     # striped deck shirt
     "thunderstone_monk": ("bombard_crew", (24, 22, 56), (64, 60, 140), (90, 196, 150)),    # indigo robes, jade
     "steam_lobber": ("mortar_crawler", (40, 34, 26), (176, 138, 58), (230, 200, 120)),     # brass and soot
+    # not a lobber: Sunforged's T2 Sunlance Trebuchet (design/defences_tiers.md) on the same frame, until its engine is drawn
+    "sunlance_trebuchet": ("bombard_crew", (84, 64, 28), (236, 230, 214), (255, 214, 96)),   # white stone and sun gold
 }
 
 

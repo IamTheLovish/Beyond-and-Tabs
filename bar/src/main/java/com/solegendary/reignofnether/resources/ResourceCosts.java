@@ -306,6 +306,7 @@ public class ResourceCosts {
     public static final ResourceCost GREAT_FORGE = new ResourceCost(ID, "GREAT_FORGE");
     // big-units (design/big_units.md)
     public static final ResourceCost ORIFLAMME_ELEPHANT = new ResourceCost(ID, "ORIFLAMME_ELEPHANT");
+    public static final ResourceCost SUNLANCE_TREBUCHET = new ResourceCost(ID, "SUNLANCE_TREBUCHET");
     public static final ResourceCost GOREHORN_RHINO = new ResourceCost(ID, "GOREHORN_RHINO");
     public static final ResourceCost OSSUARY_BEHEMOTH = new ResourceCost(ID, "OSSUARY_BEHEMOTH");
     public static final ResourceCost MOSSBACK_BISON = new ResourceCost(ID, "MOSSBACK_BISON");
@@ -641,6 +642,7 @@ public class ResourceCosts {
         IRON_LEVIATHAN_ENGINE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.IRON_LEVIATHAN_ENGINE);
         GREAT_FORGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.GREAT_FORGE);
         ORIFLAMME_ELEPHANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ORIFLAMME_ELEPHANT);
+        SUNLANCE_TREBUCHET.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUNLANCE_TREBUCHET);
         GOREHORN_RHINO.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GOREHORN_RHINO);
         OSSUARY_BEHEMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OSSUARY_BEHEMOTH);
         MOSSBACK_BISON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOSSBACK_BISON);

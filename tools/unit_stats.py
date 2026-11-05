@@ -145,6 +145,7 @@ ROSTER = [
     # aura, a lane charge through buildings, growth from wrecks, carrying infantry), so 'beast' is exempt from the tier
     # medians and is never a faction's "T2 heavy" for the T3 cost rule
     ('Sunforged', 't2', 'villagers/OriflammeElephantUnit', 'beast'),
+    ('Sunforged', 't2', 'villagers/SunlanceTrebuchetUnit', 'artillery'),
     ('Horde', 't2', 'piglins/GorehornRhinoUnit', 'beast'),
     ('Gravebound', 't2', 'monsters/OssuaryBehemothUnit', 'beast'),
     ('Verdant', 't2', 'verdant/MossbackBisonUnit', 'beast'),

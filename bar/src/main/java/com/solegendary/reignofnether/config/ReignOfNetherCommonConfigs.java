@@ -124,6 +124,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.IRON_LEVIATHAN_ENGINE.define(BUILDER);
         // big-units: the T2 beasts (design/big_units.md)
         UnitCosts.ORIFLAMME_ELEPHANT.define(BUILDER);
+        UnitCosts.SUNLANCE_TREBUCHET.define(BUILDER);
         UnitCosts.GOREHORN_RHINO.define(BUILDER);
         UnitCosts.OSSUARY_BEHEMOTH.define(BUILDER);
         UnitCosts.MOSSBACK_BISON.define(BUILDER);
@@ -559,6 +560,8 @@ public class ReignOfNetherCommonConfigs {
         // (1.9x the Siege Ox), 540M/490E rhino (2.2x the Wither Skeleton), 550M/400E behemoth (1.9x the Warden: it grows),
         // 465M/460E bison (2x the Stag Lancer)
         public static final ResourceCostConfigEntry ORIFLAMME_ELEPHANT = ResourceCostConfigEntry.Unit(720,100,320,80,9, ResourceCosts.ORIFLAMME_ELEPHANT, "Oriflamme Elephant Config");
+        // Sunforged's T2 siege (design/defences_tiers.md): 180 metal / 270 energy, 40 s - the same job and price as Gravebound's
+        public static final ResourceCostConfigEntry SUNLANCE_TREBUCHET = ResourceCostConfigEntry.Unit(150,100,60,40,3, ResourceCosts.SUNLANCE_TREBUCHET, "Sunlance Trebuchet Config");
         public static final ResourceCostConfigEntry GOREHORN_RHINO = ResourceCostConfigEntry.Unit(500,60,220,70,7, ResourceCosts.GOREHORN_RHINO, "Gorehorn Rhino Config");
         public static final ResourceCostConfigEntry OSSUARY_BEHEMOTH = ResourceCostConfigEntry.Unit(500,0,250,70,7, ResourceCosts.OSSUARY_BEHEMOTH, "Ossuary Behemoth Config");
         public static final ResourceCostConfigEntry MOSSBACK_BISON = ResourceCostConfigEntry.Unit(420,80,190,60,6, ResourceCosts.MOSSBACK_BISON, "Mossback Bison Config");
