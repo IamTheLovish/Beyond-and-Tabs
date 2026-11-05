@@ -75,6 +75,51 @@ class MausoleumTest(unittest.TestCase):
         floor = [q for q, v in self.b.blocks.items() if (q[0], q[2]) in corner and q[1] == 0 and v[0] not in S.AIR]
         self.assertLessEqual(len(floor), 0.10 * len(corner), len(floor))
 
+    # ---- the Fable critics' fixes (Nov 4, eyes 41792408905: 6 / 10; critic-a.md, critic-c.md F5) ----
+    def _solid(self):
+        return {q: v[0] for q, v in self.b.blocks.items() if v[0] not in S.AIR}
+
+    def test_crossing_spire_leads(self):
+        """The crossing's spire tops the arms' needles by at least 4 (critic A fix 1: the crossing lantern at y 21 was
+        one pixel over the arm skulls at y 20 - "the needles are equal posts", the skyline did not climb to the
+        middle)."""
+        s = self._solid()
+        top = max(y for (x, y, z) in s if (x, z) == (7, 7))
+        arms = max(y for (x, y, z) in s if max(abs(x - 7), abs(z - 7)) >= 3 and min(abs(x - 7), abs(z - 7)) == 0)
+        self.assertGreaterEqual(top - arms, 4, (top, arms))
+
+    def test_corners_are_a_blight_lawn(self):
+        """The cross's re-entrant corners (cells 3+ from both axes) are the Gravebound BLIGHT at layer 0 - podzol,
+        coarse dirt, soul soil, rooted dirt, with graves laid flat in it - on at least 90 % of their cells, and still
+        nothing above layer 0 (critic A fix 2: the empty corners made the capitol look like a T2 building and the
+        headstones float; the blight aura is the faction's ground and was not drawn)."""
+        s = self._solid()
+        corner = [(x, z) for x in range(15) for z in range(15) if min(abs(x - 7), abs(z - 7)) >= 3]
+        blight = ("podzol", "coarse_dirt", "soul_soil", "rooted_dirt", "deepslate_tile_wall", "deepslate_brick_slab",
+                  "bone_block")
+        lawn = [c for c in corner if s.get((c[0], 0, c[1]), "") in blight]
+        self.assertGreaterEqual(len(lawn) / len(corner), 0.90, len(lawn))
+        above = sorted(q for q in s if (q[0], q[2]) in set(corner) and q[1] >= 1)
+        self.assertEqual(above[:5], [])
+
+    def test_crossing_cap_is_bone_not_snow(self):
+        """The crossing's top course (ring 2, y 14) and the spire's cap block are bone (cream, the kit's own accent on
+        the ribs and skulls), not polished diorite (critic A fix 3: the white crossing read as "a snow cap / white box",
+        the Art method's calcite / diorite snow): no full polished diorite block at y >= 14."""
+        s = self._solid()
+        snow = sorted(q for q, n in s.items() if q[1] >= 14 and n == "polished_diorite")
+        self.assertEqual(snow, [])
+        cornice = [q for q, n in s.items() if q[1] == 14 and max(abs(q[0] - 7), abs(q[2] - 7)) == 2 and n == "bone_block"]
+        self.assertGreaterEqual(len(cornice), 8, cornice)
+
+    def test_one_strong_cold_light_on_the_crossing(self):
+        """A full-strength cold light in the crossing's spire (a sea lantern, light 15, |d| <= 1, y >= 17), so at dusk
+        the Gravebound capitol is a dark mass with a cold top and the Ashborn one a dark mass with a warm top (critic C
+        F5: the two dark capitols were dusk twins; five soul lanterns, light 10, did not read from the RTS camera)."""
+        s = self._solid()
+        cold = [q for q, n in s.items() if n == "sea_lantern" and q[1] >= 17 and max(abs(q[0] - 7), abs(q[2] - 7)) <= 1]
+        self.assertTrue(cold)
+
     def test_shipped_is_the_generator_and_keeps_the_game_rules(self):
         """mausoleum.nbt (data and assets) is what tools/capitol_mausoleum.py draws, and its check() passes."""
         import capitol_mausoleum as M
