@@ -1156,7 +1156,8 @@ public class BotPlayer {
         } else {
             int n = workers.isEmpty() ? 0 : patchFailures.merge(patch, 1, Integer::sum);   // no worker = not the patch's fault
             placeFailed(level.getGameTime(), kit.extractor(), "no valid footprint over the patch at " + patch.toShortString()
-                + (workers.isEmpty() ? " (no workers)" : "") + (n >= PATCH_GIVE_UP ? " - given up" : ""));
+                + (workers.isEmpty() ? " (no workers)" : "") + (n >= PATCH_GIVE_UP ? " - given up" : "")
+                + (workers.isEmpty() ? "" : " | DIAG " + footprintDiag(level, patch)));
         }
         return ok;
     }
@@ -1164,6 +1165,38 @@ public class BotPlayer {
     /** The origins placeExtractorImpl tries over a patch centre, in order (public: the footprint game test walks the same list). */
     public static final int[] EXTRACTOR_DY = { 0, -1, 1 };
     public static final int[][] EXTRACTOR_OFFSETS = { {-2, -2}, {-1, -2}, {-2, -1}, {-3, -2}, {-2, -3}, {-1, -1}, {-3, -3}, {-1, -3}, {-3, -1} };
+
+    /** DIAG (throwaway/diag-513): why each origin over the patch is refused, and the patch column. */
+    String footprintDiag(ServerLevel level, BlockPos patch) {
+        java.util.Map<String, Integer> why = new java.util.TreeMap<>();
+        for (int dy : EXTRACTOR_DY)
+            for (int[] o : EXTRACTOR_OFFSETS) {
+                BlockPos origin = new BlockPos(patch.getX() + o[0], patch.getY() + dy, patch.getZ() + o[1]);
+                String e = BuildingValidators.getPlacementValidityError(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true);
+                why.merge(e == null ? "VALID" : e.replace("building.reignofnether.", ""), 1, Integer::sum);
+            }
+        StringBuilder col = new StringBuilder();
+        for (int y = patch.getY() - 2; y <= patch.getY() + 3; y++) {
+            var st = level.getBlockState(new BlockPos(patch.getX(), y, patch.getZ()));
+            col.append(' ').append(y).append('=').append(net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(st.getBlock()).getPath());
+        }
+        int wet = 0, steps = 0;
+        int[] ys = new int[49];
+        int k = 0;
+        for (int dx = -3; dx <= 3; dx++)
+            for (int dz = -3; dz <= 3; dz++) {
+                int x = patch.getX() + dx, z = patch.getZ() + dz;
+                if (!level.getBlockState(new BlockPos(x, patch.getY(), z)).getFluidState().isEmpty()
+                        || !level.getBlockState(new BlockPos(x, patch.getY() + 1, z)).getFluidState().isEmpty()) wet++;
+                int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+                ys[k++] = top - patch.getY();
+                if (top != patch.getY()) steps++;
+            }
+        return why + " col" + col + " pad7x7 wet " + wet + ", off-height " + steps + " dy " + java.util.Arrays.toString(ys)
+            + ", buildings within 10: " + BuildingServerEvents.getBuildings().stream()
+                .filter(bp -> !bp.isDestroyedServerside && bp.originPos.distSqr(patch) < 100)
+                .map(bp -> bp.getBuilding().name + "@" + bp.originPos.toShortString()).toList();
+    }
 
     boolean placeExtractorImpl(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
         if (workers.isEmpty())
