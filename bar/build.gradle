@@ -5,6 +5,16 @@ buildscript {
         maven { url = 'https://maven.parchmentmc.org' }
         mavenCentral()
     }
+    // The three ranges below made every CI build ask each Maven for its newest version (Gradle re-checks dynamic and
+    // changing modules after 24 h, and the restored Gradle cache is older than that), so a Maven outage failed builds
+    // whose jars were already cached: Nov 5 ~07:30-08:30Z, parchment's maven-metadata.xml, 17 stress runners lost.
+    // Keep the cached answer for 30 days instead: the same versions, no lookup while the cache has them.
+    configurations.classpath {
+        resolutionStrategy {
+            cacheDynamicVersionsFor 30, 'days'
+            cacheChangingModulesFor 30, 'days'
+        }
+    }
     dependencies {
         classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
         classpath 'org.spongepowered:mixingradle:0.7.+'
