@@ -19,12 +19,13 @@ import org.joml.Matrix4f;
  * was about 1 px on screen, grass blades cut it, Verdant and Sunforged sank into sunlit grass, and 48 overlapping
  * circles made a haze at zoom 45. So the rim is now drawn as geometry, not texture. One cast, by layer:
  * <ul>
- *   <li>the dark ground ({@link BarFxRenderTypes#RUNES_SHADE}): an underlay inside the ring ({@link #UNDER_A}) and a
- *       dark line under the rim ({@link #DARK}): additive light can only brighten, so every faction gets a darker ground
- *       to stand on;</li>
+ *   <li>the dark ground ({@link BarFxRenderTypes#RUNES_SHADE}): an underlay filling the ring ({@link #UNDER_A}) and a
+ *       darker line under the rim, both in the faction's dark ({@link #DARK}): additive light can only brighten, so every
+ *       faction gets a darker ground to stand on;</li>
  *   <li>the rim: a stroke of light ({@link #stroke}) with a near-white core ({@link #CORE}) in a faction halo
  *       ({@link #HALO}), its width set in screen pixels as well as blocks ({@link #CORE_PX}) so it never falls under
- *       3 px at any zoom; inside it the faction's rune ring from the atlas, with its glyph band. Both sweep in over
+ *       3 px at any zoom, settling a little over the hold ({@link #SETTLE}); a thinner inner line ({@link #INNER_R}) the
+ *       second weight; between them the faction's rune ring from the atlas, with its glyph band. All sweep in over
  *       {@link #DRAW_IN} s from the camera's far side (the sweep's straight edge sits behind the unit), the leading
  *       edge feathered and a glyph riding the tip, a seed of light at the feet the moment it starts; the ring turns
  *       ({@link #RING_SPIN}) and the rim breathes so the hold keeps moving;</li>
@@ -36,7 +37,8 @@ import org.joml.Matrix4f;
  *       of light from the head;</li>
  *   <li>a glyph band at the waist ({@link #TIER_H}, {@link #TIER_R}) sweeping up after the release, turning against
  *       the ground ring; and the faction's sigil over the head ({@link #SIGIL_H}) in a ring of its own light: the one
- *       shape that names the faction is never under the unit, it grows in with the draw-in, spins, and shrinks away;</li>
+ *       shape that names the faction is never under the unit, it grows in with the draw-in, spins, and shrinks away
+ *       (its ring in the faction's hue: a white one read as a selection marker);</li>
  *   <li>motes in the faction's own shape and way of moving, kept below {@link #RISE} blocks so they stay with their
  *       caster (stars rise, ash sinks, embers are thrown, petals spiral, pixels climb lines, sparks zigzag, cogs orbit at
  *       head height);</li>
@@ -66,20 +68,14 @@ public final class RuneFxClient {
     static final float SIGIL_H = 2.45f, SIGIL_R = 0.38f, SIGIL_TURN = 0.25f;
     /** The seed at the feet: half size in blocks, life in s. The hold's breath: base, depth, Hz. */
     static final float SEED_HALF = 0.5f, SEED_T = 0.25f, BREATH = 0.9f, BREATH_DEPTH = 0.1f, BREATH_HZ = 2;
-    /** The underlay: its radius as a share of the circle's (inside the ring), its alpha. */
-    static final float UNDER_R = 0.85f, UNDER_A = 0.18f;
-    /**
-     * The underlay's tint per faction (F_* id): its hue at value 0.25 (tools/rune_preview.py under_tint); Gravebound's a
-     * dark violet, so its chartreuse stands off Verdant's green.
-     */
-    static final float[][] UNDER_RGB = {{0.227f, 0.227f, 0.25f}, {0.25f, 0.225f, 0.157f}, {0.165f, 0.04f, 0.23f},
-        {0.25f, 0.073f, 0.025f}, {0.059f, 0.25f, 0.12f}, {0, 0.221f, 0.25f}, {0.151f, 0.09f, 0.25f}, {0.25f, 0.181f, 0.06f}};
+    /** The underlay's alpha: it fills the ring, in the faction's {@link #DARK}. */
+    static final float UNDER_A = 0.32f;
     /**
      * The rim per faction (F_* id): its core (light enough to read on sunlit grass, never pure hue), its halo (the
      * faction's hue), and the dark line under both.
      */
-    static final int[] CORE = {0xFFFFFF, 0xFFF1B0, 0xE2FF6A, 0xFFB080, 0x9CFFC8, 0xA8F8FF, 0xD0B8FF, 0xFFE0A0};
-    static final int[] HALO = {0xC8C8FF, 0xFF9A2E, 0x8FD000, 0xFF2A00, 0x2AE890, 0x00D8F0, 0x9050FF, 0xE0A020};
+    static final int[] CORE = {0xFFFFFF, 0xFFFFF0, 0xD0FF60, 0xFFB080, 0x9CFFC8, 0xA8F8FF, 0xD0B8FF, 0xFFC870};
+    static final int[] HALO = {0xC8C8FF, 0xFFE070, 0x7CE000, 0xFF2A00, 0x2AE890, 0x00D8F0, 0x9050FF, 0xE08A10};
     static final int[] DARK = {0x202040, 0x3A1E00, 0x1A2A00, 0x3A0800, 0x0B3D1E, 0x002A3A, 0x1E0A40, 0x3A2400};
     /**
      * The rim core's half width: at least CORE_W blocks and CORE_PX screen pixels (RTS camera). The halo is HALO_K times
@@ -87,12 +83,22 @@ public final class RuneFxClient {
      */
     static final float CORE_W = 0.05f, CORE_PX = 1.5f, HALO_K = 3, DARK_K = 2.2f;
     static final float CORE_A = 0.95f, HALO_A = 0.35f, DARK_A = 0.55f;
+    /** The rim's core settles by SETTLE over the hold, from SETTLE_FROM s to SETTLE_TO s. */
+    static final float SETTLE = 0.3f, SETTLE_FROM = 0.5f, SETTLE_TO = 1.3f;
+    /** The hold's beat: from BEAT_FROM s, every BEAT_EVERY s the core brightens by BEAT, fading over BEAT_T s. */
+    static final float BEAT_FROM = 0.5f, BEAT_EVERY = 0.4f, BEAT_T = 0.1f, BEAT = 0.25f;
+    /** The underlay reaches this share of the rim's radius (its soft edge just past the rim). */
+    static final float UNDER_R = 1.1f;
+    /** The inner line: its radius as a share of the rim's, its width as a share of the core's, its alpha. */
+    static final float INNER_R = 0.68f, INNER_W = 0.6f, INNER_A = 0.75f;
+    /** The sigil's ring of light (in the faction's halo hue): its alpha as a share of the sigil's. */
+    static final float SIGIL_RING_A = 0.6f;
     /** Blocks the ground layer is drawn toward the RTS camera (its orthographic view: only the depth changes). */
     static final float PULL = 1.0f;
     /** RTS zoom: the details fade out from LOD_FROM to LOD_TO. */
     static final float LOD_FROM = 33, LOD_TO = 45;
     /** Past zoom 30 the circle grows with the zoom, up to this. */
-    static final float SCALE_MAX = 1.5f;
+    static final float SCALE_MAX = 1.2f;
     static final float RING_A = 1.0f, SIGIL_A = 0.95f, FLASH_T = 0.1f;
     /** The white burst at the feet at the release: half size in blocks, life in s, alpha. */
     static final float BURST_HALF = 0.6f, BURST_T = 0.1f, BURST_A = 0.8f;
@@ -108,10 +114,10 @@ public final class RuneFxClient {
     static final float TIER_H = 0.8f, TIER_R = 0.62f, TIER_AT = 0.3f, TIER_A = 0.7f, TIER_SPIN = -0.2f;
     static final float TIER_RISE = 0.12f;
     static final float PILLAR_FROM = 2.0f, PILLAR_H = 2.5f, PILLAR_HW = 0.125f, PILLAR_A = 0.5f, PILLAR_T = 0.12f;
-    static final int MOTES = 24;
+    static final int MOTES = 14;
     /** Motes run this much faster than the cast's clock (short lives). */
     static final float MOTE_SPEED = 2;
-    static final float MOTE_A = 1.0f, MOTE_HALF = 0.19f, RISE = 1.5f;
+    static final float MOTE_A = 1.0f, MOTE_HALF = 0.26f, RISE = 1.5f;
     /** Brassworks' cogs: this many orbiting at head height (blocks, T1), at a share of the radius, rev/s, half size. */
     static final int COGS = 10;
     static final float COG_H = 1.6f, COG_R = 0.75f, COG_SPIN = 0.6f, COG_HALF = 0.216f;
@@ -276,10 +282,11 @@ public final class RuneFxClient {
             return;
         float rr = R * (1 + 0.12f * ending(i, clock, s));
         float reveal = Math.min(1, (clock - POOL.born[i]) / DRAW_IN);
-        float[] c = UNDER_RGB[f];
+        int d = DARK[f];
         float gx = POOL.x[i] + px, gy = POOL.y[i] + 0.04f + py, gz = POOL.z[i] + pz;
-        fan(vc, m, gx, gy, gz, rr * UNDER_R, 16, reveal, sweepStart, FEATHER, 0, f * CELL_U + 3.5f * GLYPH_U,
-            V_FX + 1.5f * GLYPH_V, GLYPH_U / 2 - EU, GLYPH_V / 2 - EV, c[0], c[1], c[2], UNDER_A * s);
+        fan(vc, m, gx, gy, gz, rr * UNDER_R, 16, reveal, sweepStart, FEATHER, 0, f * CELL_U + 3.5f * GLYPH_U, V_FX + 1.5f * GLYPH_V,
+            GLYPH_U / 2 - EU, GLYPH_V / 2 - EV, ((d >> 16) & 255) / 255f, ((d >> 8) & 255) / 255f, (d & 255) / 255f,
+            UNDER_A * s);
         stroke(vc, m, gx, gy + 0.01f, gz, rr, wc * DARK_K, DARK_SEG, reveal, DARK[f], DARK_A * s);
     }
 
@@ -307,8 +314,14 @@ public final class RuneFxClient {
         if (near > 0.01f)
             fan(vc, m, gx, gy, gz, rr / RIM_IN_CELL, RING_SEG, reveal, sweepStart, FEATHER, t * RING_SPIN * tau,
                 u0 + CELL_U / 2, CELL_V / 2, CELL_U / 2, CELL_V / 2, 1, 1, 1, RING_A * sl * breath * near);
-        stroke(vc, m, gx, gy, gz, rr, wc * HALO_K, STROKE_SEG, reveal, HALO[f], HALO_A * sl * (1 + flash));
-        stroke(vc, m, gx, gy, gz, rr, wc, STROKE_SEG, reveal, CORE[f], Math.min(1, CORE_A * sl * breath + 0.5f * flash * sl));
+        stroke(vc, m, gx, gy, gz, rr, wc * HALO_K, STROKE_SEG, reveal, HALO[f], HALO_A * sl * (1 + 0.5f * flash));
+        float settle = 1 - SETTLE * Math.max(0, Math.min(1, (t - SETTLE_FROM) / (SETTLE_TO - SETTLE_FROM)));
+        if (t > BEAT_FROM)   // the hold's beat: the hold is never still
+            settle *= 1 + BEAT * Math.max(0, 1 - frac((t - BEAT_FROM) / BEAT_EVERY) * BEAT_EVERY / BEAT_T);
+        stroke(vc, m, gx, gy, gz, rr, wc, STROKE_SEG, reveal, CORE[f],
+            Math.min(1, CORE_A * sl * breath * settle + 0.5f * flash * sl));
+        if (near > 0.01f)   // the inner line: the second weight under the rim
+            stroke(vc, m, gx, gy, gz, rr * INNER_R, wc * INNER_W, STROKE_SEG, reveal, CORE[f], INNER_A * sl * near);
         if (t < DRAW_IN && near > 0.01f) {   // the glyph riding the sweep's tip: the circle is being written
             double a = sweepStart + reveal * tau;
             int g = POOL.id[i] & 15;
@@ -337,7 +350,7 @@ public final class RuneFxClient {
             float sa = SIGIL_A * sl * Math.min(1, ks * 1.5f) * near, sr = R * SIGIL_R * ks;
             disc(vc, m, cx, cy + SIGIL_H * sc, cz, sr / RIM_IN_CELL, SIGIL_SEG, t * SIGIL_TURN * tau,
                 u0 + CELL_U / 2, V_SIGIL + CELL_V / 2, CELL_U / 2, CELL_V / 2, sa);
-            stroke(vc, m, cx, cy + SIGIL_H * sc, cz, sr * 1.04f, wc * 0.8f, SIGIL_SEG, 1, CORE[f], sa * 0.8f);
+            stroke(vc, m, cx, cy + SIGIL_H * sc, cz, sr * 1.04f, wc * 0.8f, SIGIL_SEG, 1, HALO[f], sa * SIGIL_RING_A);
         }
         // the column of light from the head, at the release only
         if (rel >= 0 && rel < PILLAR_T) {

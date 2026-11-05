@@ -717,7 +717,7 @@ MOTE_HALF7, MOTE_A7 = 0.19, 1.0
 
 
 def radius_for(style, zoom):
-    base, top = {'v7': (CAST_RADIUS7, SCALE_MAX7), 'v8': (CAST_RADIUS7, SCALE_MAX8)}.get(style, (CAST_RADIUS, 2.0))
+    base, top = {'v7': (CAST_RADIUS7, SCALE_MAX7), 'v8': (CAST_RADIUS7, SCALE_MAX8), 'v9': (CAST_RADIUS7, SCALE_MAX8)}.get(style, (CAST_RADIUS, 2.0))
     return base * max(1.0, min(top, zoom / 30))
 
 
@@ -877,6 +877,105 @@ def v8(fr, f, P, t, life=1.5, R=CAST_RADIUS7, cid=0):
         sr = R * SIGIL_R6 * k_s
         fr.disc(fr.cell(f, 1), cx, cy + SIGIL_H6 * sc, cz, sr / RIM_IN_CELL, t * SIGIL_SPIN7 * TAU, sa, 1, 16)
         fr.stroke(cx, cy + SIGIL_H6 * sc, cz, sr * 1.04, wc * 0.8, HALO7[f], sa * SIGIL_RING_A8)
+    p_from, p_h, p_hw, p_a, p_t = PILLAR4
+    if 0 <= rel < p_t:
+        fr.beam(fr.small(f, 'beam'), (cx, cy + p_from * sc, cz), p_h * sc, p_hw * sc,
+                p_a * flash_scale * s_light * (1 - rel / p_t) * near, 0.0)
+    ma = s_light * min(1, max(0, (t - 0.2) / 0.2)) * MOTE_A7 * near
+    if ma > 0.01:
+        keep, RISE = RISE, RISE5
+        keep_n, MOTES = MOTES, MOTES8
+        try:
+            if f == 7:
+                for k in range(10):
+                    ang = TAU * (k / 10 + t * 0.6)
+                    fr.billboard(fr.small(f, 'mote'), (cx + math.cos(ang) * R * 0.75, cy + 1.6 * sc,
+                                                       cz + math.sin(ang) * R * 0.75), 0.18 * 1.2, ma)
+            else:
+                for k in range(MOTES8):
+                    x, y, z, half, a = mote(f, k, t * MOTE_SPEED4, cid, R)
+                    fr.billboard(fr.small(f, 'mote'), (cx + x, cy + y, cz + z), MOTE_HALF8 * max(1, math.sqrt(sc)),
+                                 ma * a)
+        finally:
+            RISE = keep
+            MOTES = keep_n
+
+
+# v9 (round 8: v8 beat v7 on the dense army, 32 = 32): the hold beats (+25 % every 0.4 s), the release flares the halo
+# half as much (Storm and Horde whited out), the yellows pulled apart (Sunforged white with a gold glow, Brassworks
+# amber, Gravebound greener), the underlay's soft edge just past the rim.
+CORE9 = {**CORE7, 1: 0xFFFFF0, 2: 0xD0FF60, 7: 0xFFC870}
+HALO9 = {**HALO7, 1: 0xFFE070, 2: 0x7CE000, 7: 0xE08A10}
+BEAT9 = (0.5, 0.4, 0.1, 0.25)
+UNDER_R9 = 1.1
+
+
+def v9(fr, f, P, t, life=1.5, R=CAST_RADIUS7, cid=0):
+    global RISE, MOTES
+    s = strength(t, life)
+    if s <= 0.01:
+        return
+    s_light = s * crowd.get(cid, 1.0)
+    zoom = 1080 / fr.cam.ppb
+    near = min(1.0, max(0.0, (LOD7[1] - zoom) / (LOD7[1] - LOD7[0])))
+    wc = max(CORE_W7[0], CORE_W7[1] / fr.cam.ppb)
+    sc = R / CAST_RADIUS7
+    ending = max(0, 1 - (life - t) / FADE)
+    grow = 1 + 0.12 * ending
+    breath = BREATH6[0] + BREATH6[1] * math.sin(t * TAU * BREATH6[2])
+    rel = t - DRAW_IN
+    flash = flash_scale * (max(0, 1 - rel / FLASH_T4) if rel >= 0 else 0)
+    cx, cy, cz = P[0], P[1] + 0.05, P[2]
+    reveal = min(1, t / DRAW_IN)
+    a0 = sweep_start(fr.cam)
+    rr = R * grow
+    # the dark ground: the underlay, and a dark line under the rim (alpha blended)
+    fr.disc(fr.small(f, 'shade'), cx, cy - 0.01, cz, rr * UNDER_R9, 0, UNDER8 * s, reveal, 16, shade=True, start=a0,
+            feather=FEATHER, tint=tuple(float(c) for c in gen.rgb(DARK7[f])), pull=PULL7)
+    fr.stroke(cx, cy, cz, rr, wc * DARK_K7, DARK7[f], DARK_A7 * s, reveal, a0, 24, shade=True, pull=PULL7)
+    if t < SEED6[1]:
+        fr.billboard(fr.small(f, 'spark'), (cx, cy + 0.15, cz), SEED6[0] * max(1, sc), 1 - t / SEED6[1])
+    if near > 0.01:   # the rune ring's detail inside the rim
+        fr.disc(fr.cell(f, 0), cx, cy, cz, rr / RIM_IN_CELL, t * RING_SPIN4 * TAU, RING_A5 * s_light * breath * near,
+                reveal, start=a0, feather=FEATHER, pull=PULL7)
+    fr.stroke(cx, cy, cz, rr, wc * HALO_K7, HALO9[f], HALO_A7 * s_light * (1 + 0.5 * flash), reveal, a0, pull=PULL7)
+    settle = 1 - SETTLE8[2] * min(1.0, max(0.0, (t - SETTLE8[0]) / (SETTLE8[1] - SETTLE8[0])))
+    b0, every, bt, amt = BEAT9
+    if t > b0:   # the hold's beat
+        settle *= 1 + amt * max(0.0, 1 - (((t - b0) / every) % 1) * every / bt)
+    fr.stroke(cx, cy, cz, rr, wc, CORE9[f], min(1.0, CORE_A7 * s_light * breath * settle + 0.5 * flash * s_light),
+              reveal, a0, pull=PULL7)
+    if near > 0.01:   # the inner line: the second weight under the rim
+        fr.stroke(cx, cy, cz, rr * INNER8[0], wc * INNER8[1], CORE9[f], INNER8[2] * s_light * near, reveal, a0,
+                  pull=PULL7)
+    if t < DRAW_IN and near > 0.01:
+        ang = a0 + reveal * TAU
+        fr.billboard(fr.small(f, 'glyph', cid & 15), (cx + math.cos(ang) * rr * 0.92, cy + 0.25, cz + math.sin(ang) * rr * 0.92),
+                     TIP_HALF * max(1, sc), s_light * near)
+    p0, p1, pt = PULSE7
+    if 0 <= rel < pt:   # the release: the rim thrown out
+        q = rel / pt
+        rp = rr * (p0 + (p1 - p0) * ease(q))
+        fr.stroke(cx, cy + 0.02, cz, rp, wc * HALO_K7, HALO9[f], HALO_A7 * (1 - q) * s_light, pull=PULL7)
+        fr.stroke(cx, cy + 0.02, cz, rp, wc, CORE9[f], (1 - q) * s_light, pull=PULL7)
+    bh, bt, ba = BURST7
+    if 0 <= rel < bt:
+        fr.billboard(fr.small(f, 'spark'), (cx, cy + 0.15, cz), bh * max(1, sc), ba * flash_scale * (1 - rel / bt))
+    if near <= 0.01:
+        return
+    for k, (h, rs, at, ta, spin, kind) in enumerate(TIERS6):
+        rise = ease((t - at) / 0.12)
+        a = ta * s_light * rise * near
+        if a > 0.01:
+            fr.disc(fr.cell(f, 3), cx, cy + h * sc * rise, cz, R * rs * grow / RIM_IN_CELL, t * spin * TAU + k, a, 1, 24)
+    grow_in = ease((t - 0.08) / 0.22)
+    shrink = min(1, max(0, (life - t) / 0.4))
+    k_s = grow_in * shrink
+    if k_s > 0.01:
+        sa = SIGIL_A * s_light * min(1, k_s * 1.5) * near
+        sr = R * SIGIL_R6 * k_s
+        fr.disc(fr.cell(f, 1), cx, cy + SIGIL_H6 * sc, cz, sr / RIM_IN_CELL, t * SIGIL_SPIN7 * TAU, sa, 1, 16)
+        fr.stroke(cx, cy + SIGIL_H6 * sc, cz, sr * 1.04, wc * 0.8, HALO9[f], sa * SIGIL_RING_A8)
     p_from, p_h, p_hw, p_a, p_t = PILLAR4
     if 0 <= rel < p_t:
         fr.beam(fr.small(f, 'beam'), (cx, cy + p_from * sc, cz), p_h * sc, p_hw * sc,
@@ -1143,7 +1242,7 @@ def scene_army(at, draw, out, style, zoom=15, seed=12):
         (caster if kind == 'c' else soldier)(fr, P, col)
     tufts(fr, 4)
     R = radius_for(style, zoom)
-    cr, cmin = CROWD7 if style in ('v7', 'v8') else (4.0, 0.55)
+    cr, cmin = CROWD7 if style in ('v7', 'v8', 'v9') else (4.0, 0.55)
     global flash_scale
     flashing = sum(1 for _, _, t, _ in casts if 0 <= t - DRAW_IN < FLASH_T)
     flash_scale = min(1.0, 3.0 / max(1, flashing))
@@ -1162,12 +1261,12 @@ def scene_army(at, draw, out, style, zoom=15, seed=12):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('outdir')
-    ap.add_argument('--style', default='v2', choices=['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8'])
+    ap.add_argument('--style', default='v2', choices=['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'v9'])
     ap.add_argument('--tag', default='')
     args = ap.parse_args()
     os.makedirs(args.outdir, exist_ok=True)
     at = gen.atlas()
-    draw = {'v1': v1, 'v2': v2, 'v3': v3, 'v4': v4, 'v5': v5, 'v6': v6, 'v7': v7, 'v8': v8}[args.style]
+    draw = {'v1': v1, 'v2': v2, 'v3': v3, 'v4': v4, 'v5': v5, 'v6': v6, 'v7': v7, 'v8': v8, 'v9': v9}[args.style]
     tag = args.tag or args.style
     scene_lineup(at, draw, os.path.join(args.outdir, f'{tag}_1_lineup_zoom15.png'))
     scene_timing(at, draw, os.path.join(args.outdir, f'{tag}_2_timing_storm.png'), 6)
