@@ -55,28 +55,95 @@ public class UnitFormations {
             double x = moveBp.getX() + 0.5 + rx * across + fx * along;
             double z = moveBp.getZ() + 0.5 + rz * across + fz * along;
             BlockPos cell = new BlockPos(Mth.floor(x), moveBp.getY(), Mth.floor(z));
-            // a rotated lattice floors two points into one cell, or two wide units' cells a block apart, now and
-            // then: take the nearest cell that keeps a full spacing (as a square) from every cell already placed
-            if (!fits(cell, taken, spacing)) {
-                BlockPos free = null;
-                search:
-                for (int ring = 1; ring <= 2 * spacing + 1; ring++)   // enough for 100 titans at 45 degrees (simulated)
-                    for (int dx = -ring; dx <= ring; dx++)
-                        for (int dz = -ring; dz <= ring; dz++) {
-                            if (Math.max(Math.abs(dx), Math.abs(dz)) != ring)
-                                continue;
-                            BlockPos c = cell.offset(dx, 0, dz);
-                            if (fits(c, taken, spacing)) {
-                                free = c;
-                                break search;
-                            }
-                        }
-                cell = free != null ? free : cell;
-            }
+            cell = place(cell, taken, spacing);
             taken.add(cell);
             cells.add(cell);
         }
         return cells;
+    }
+
+    /**
+     * A rotated lattice floors two points into one cell, or two wide units' cells a block apart, now and then: the nearest
+     * cell that keeps a full spacing (as a square) from every cell already placed.
+     */
+    private static BlockPos place(BlockPos cell, List<BlockPos> taken, int spacing) {
+        if (fits(cell, taken, spacing))
+            return cell;
+        for (int ring = 1; ring <= 2 * spacing + 1; ring++)   // enough for 100 titans at 45 degrees (simulated)
+            for (int dx = -ring; dx <= ring; dx++)
+                for (int dz = -ring; dz <= ring; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring)
+                        continue;
+                    BlockPos c = cell.offset(dx, 0, dz);
+                    if (fits(c, taken, spacing))
+                        return c;
+                }
+        return cell;
+    }
+
+    /** Length of curve one unit takes on a ring or arc: a chord this long keeps a full square spacing at any angle. */
+    private static double curveStep(int spacing) {
+        return (spacing + 1) * Math.sqrt(2);
+    }
+
+    /** {@code count} cells evenly round the circle of {@code radius} on {@code centre}; a group too big for it widens it. */
+    public static List<BlockPos> ringSlots(int count, int spacing, BlockPos centre, double radius) {
+        double r = Math.max(radius, count * curveStep(spacing) / (2 * Math.PI));
+        return onCurve(count, spacing, centre, r, 0, 2 * Math.PI / Math.max(1, count));
+    }
+
+    /**
+     * {@code count} cells along the half circle of {@code radius} on {@code centre} that bulges toward (dirX, dirZ), flank to
+     * flank with the middle slot leading; a group too big for it widens it.
+     */
+    public static List<BlockPos> arcSlots(int count, int spacing, BlockPos centre, double radius, double dirX, double dirZ) {
+        double r = Math.max(radius, count * curveStep(spacing) / Math.PI);
+        double len = Math.sqrt(dirX * dirX + dirZ * dirZ);
+        double facing = len < 1.0E-4 ? Math.PI / 2 : Math.atan2(dirZ, dirX);   // default: south, as slots()
+        double step = count > 1 ? Math.PI / (count - 1) : 0;
+        return onCurve(count, spacing, centre, r, facing - step * (count - 1) / 2.0, step);
+    }
+
+    private static List<BlockPos> onCurve(int count, int spacing, BlockPos centre, double radius, double start, double step) {
+        List<BlockPos> cells = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            double angle = start + i * step;
+            cells.add(place(new BlockPos(Mth.floor(centre.getX() + 0.5 + radius * Math.cos(angle)), centre.getY(),
+                Mth.floor(centre.getZ() + 0.5 + radius * Math.sin(angle))), cells, spacing));
+        }
+        return cells;
+    }
+
+    /**
+     * Which slot each unit takes (result[unit] = slot index, one slot per unit) so no two straight paths cross. From index
+     * order it swaps any two units whose swap shortens their paths: crossing paths always do (two sides of a triangle
+     * beat the third), so it ends with none, and a group already in place stays put.
+     */
+    public static int[] uncrossed(double[][] units, double[][] slots) {
+        int n = units.length;
+        int[] pick = new int[n];
+        for (int i = 0; i < n; i++)
+            pick[i] = i;
+        boolean swapped = true;
+        while (swapped) {
+            swapped = false;
+            for (int i = 0; i < n; i++)
+                for (int j = i + 1; j < n; j++) {
+                    double now = dist(units[i], slots[pick[i]]) + dist(units[j], slots[pick[j]]);
+                    double then = dist(units[i], slots[pick[j]]) + dist(units[j], slots[pick[i]]);
+                    if (then < now - 1.0E-9) {
+                        int t = pick[i];
+                        pick[i] = pick[j];
+                        pick[j] = t;
+                        swapped = true;
+                    }
+                }
+        }
+        return pick;
+    }
+
+    private static double dist(double[] a, double[] b) {
+        return Math.hypot(a[0] - b[0], a[1] - b[1]);
     }
 
     /** Whether a cell keeps a full spacing (Chebyshev, so bodies on a square lattice never touch) from every placed cell. */
