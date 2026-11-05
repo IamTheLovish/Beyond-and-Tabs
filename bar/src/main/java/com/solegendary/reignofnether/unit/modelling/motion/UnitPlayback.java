@@ -143,13 +143,16 @@ public final class UnitPlayback {
             return count > 0;
         }
 
-        /** A position packet stamped with server tick {@code t} (yaw: the packet's, or the yaw it has). */
+        /** A position packet stamped with server tick {@code t} (yaw: the packet's, or NaN for a position-only one). */
         public void moved(long t, double px, double py, double pz, float pyaw) {
             if (!seeded()) {
-                seed(t, px, py, pz, pyaw);
+                if (Float.isFinite(pyaw))
+                    seed(t, px, py, pz, pyaw);
                 return;
             }
             int l = head;
+            if (!Float.isFinite(pyaw))
+                pyaw = yaw[l];   // a position-only packet: the unit still faces where its last stamp said
             double jump = Math.max(Math.hypot(px - x[l], pz - z[l]), Math.abs(py - y[l]));
             if (jump > Kinematics.TELEPORT_BLOCKS) {
                 // a blink: held where it was until the tick it jumped, never drawn sliding across

@@ -63,8 +63,6 @@ public class MotionFluidityGameTests {
     static final int WALK_TICKS = 420;
     /** Ticks the crowd is watched standing, after it arrived. */
     static final int IDLE_TICKS = 100;
-    /** The buffered option's playback, in server ticks beyond the unit's own update interval (the model's best trade). */
-    static final double BUFFER_MARGIN = 0.5;
 
     static final ClientView.Clock[] CLOCKS = {
         ClientView.Clock.steady(),
@@ -447,7 +445,8 @@ public class MotionFluidityGameTests {
                     + " %d/%d/%d/%d), %d rot-only, %d teleports (whole walk: %d rot-only)", what, s.length, mean,
                 mean > 0 ? Math.sqrt(var / Math.max(1, s.length)) / mean : 0, stops, maxYaw, reversals, maxDy, air,
                 posPackets, gaps[0], gaps[1], gaps[2], gaps[3], rotPackets, teleports, rotOnly));
-            // the drawn walk per clock: today (vanilla, its own interval), tracked every tick, and the stamped buffer;
+            // the drawn walk per clock: vanilla's lerp (today), vanilla's lerp tracked every tick, and the game's stamped
+            // playback (UnitPlayback, "buf");
             // each as speed cv / % ticks frozen / torso pitch deg / lag behind the newest known server tick
             double[] sx = new double[track.size()], sz = new double[track.size()];
             for (int k = 0; k < track.size(); k++) {
@@ -462,8 +461,8 @@ public class MotionFluidityGameTests {
                     from, to, mean, sx, sz);
                 ClientView.Smooth every = ClientView.smoothness(ClientView.replay(sent1, n, c, seed, x0, y0, z0, yaw0),
                     from, to, mean, sx, sz);
-                ClientView.Smooth buffered = ClientView.smoothness(ClientView.replayBuffered(sent, n, c, seed, interval,
-                    BUFFER_MARGIN, x0, y0, z0, yaw0), from, to, mean, sx, sz);
+                ClientView.Smooth buffered = ClientView.smoothness(ClientView.replayStamped(sent, n, c, seed, interval,
+                    x0, y0, z0, yaw0), from, to, mean, sx, sz);
                 client.append(" | ").append(c.name()).append(" now ").append(today.brief()).append(" e1 ")
                     .append(every.brief()).append(" buf ").append(buffered.brief());
             }

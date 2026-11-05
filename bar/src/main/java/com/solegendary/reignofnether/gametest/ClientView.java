@@ -113,63 +113,40 @@ final class ClientView {
     }
 
     /**
-     * The same packets drawn by a candidate fix (not in the game: a model, to weigh the options): the server stamps every
-     * tick with its number (a tiny clock packet at the tick's start, so each move packet is known to belong to the tick
-     * it came after) and the client draws each unit from its last few stamped positions at a playback time that runs
-     * steadily {@code interval + margin} server ticks behind the newest tick it has heard of - a late or bunched
-     * packet lands in the buffer before it is drawn. The playback clock follows the server's measured tick rate (an
-     * average over client ticks) and is pulled 10% a tick toward its place; 20 ticks off, it jumps there. A unit
-     * that stood still gets a held sample one interval before it moves again, so it starts on time, not early.
+     * The same packets drawn by the game's stamped playback (UnitPlayback, lovish's pick "A: Smooth buffer"): every
+     * server tick's stamp reaches the client first (UnitClockClientboundPacket goes out at the tick's start), each move
+     * packet is filed in the unit's Track under the newest stamp, as UnitPlaybackMixin files it (a rotation-only packet
+     * as a turn, a position-only one without a yaw), and each client tick the Clock moves on and the Track is drawn.
      */
-    static Drawn replayBuffered(List<Sent> sent, int serverTicks, Clock clock, long seed, int interval, double margin,
-                                double x0, double y0, double z0, float yaw0) {
+    static Drawn replayStamped(List<Sent> sent, int serverTicks, Clock clock, long seed, int interval,
+                               double x0, double y0, double z0, float yaw0) {
         double[] at = clock.sendTimes(serverTicks, seed);
         final double phase = 17.0;
         int lastClientTick = (int) Math.ceil((at[serverTicks - 1] - phase) / 50.0) + 6;
         Drawn d = new Drawn(lastClientTick + 1);
-        List<double[]> buf = new ArrayList<>();   // tick, x, y, z, yaw
-        buf.add(new double[] { -interval, x0, y0, z0, yaw0 });
-        int next = 0, newestTick = -1, prevNewest = -1, clockTick = 0;
-        double est = Double.NaN, rate = 1.0;
+        com.solegendary.reignofnether.unit.modelling.motion.UnitPlayback.Clock heard =
+            new com.solegendary.reignofnether.unit.modelling.motion.UnitPlayback.Clock();
+        com.solegendary.reignofnether.unit.modelling.motion.UnitPlayback.Track track =
+            new com.solegendary.reignofnether.unit.modelling.motion.UnitPlayback.Track(interval);
+        heard.heard(0);
+        track.seed(-interval, x0, y0, z0, yaw0);
+        double[] out = { x0, y0, z0, yaw0 };
+        int next = 0, clockTick = 0, newestTick = 0;
         for (int c = 0; c <= lastClientTick; c++) {
-            // the clock packets of every server tick that started before this client tick, then its move packets
-            while (clockTick < serverTicks && Math.ceil((at[clockTick] - phase) / 50.0) <= c)
-                newestTick = clockTick++;
-            while (next < sent.size() && sent.get(next).tick() <= newestTick) {
-                Sent p = sent.get(next++);
-                double[] last = buf.get(buf.size() - 1);
-                if (p.tick() - last[0] > interval)
-                    buf.add(new double[] { p.tick() - interval, last[1], last[2], last[3], last[4] });
-                buf.add(p.hasPos() ? new double[] { p.tick(), p.x(), p.y(), p.z(), p.hasRot() ? p.yaw() : last[4] }
-                    : new double[] { p.tick(), last[1], last[2], last[3], p.yaw() });
-                while (buf.size() > 12)
-                    buf.remove(0);
-            }
-            if (newestTick >= 0) {
-                if (Double.isNaN(est)) {
-                    est = newestTick;
-                    prevNewest = newestTick;
+            while (clockTick < serverTicks && Math.ceil((at[clockTick] - phase) / 50.0) <= c) {
+                newestTick = clockTick;
+                heard.heard(clockTick++);
+                while (next < sent.size() && sent.get(next).tick() <= newestTick) {
+                    Sent p = sent.get(next++);
+                    if (p.hasPos())
+                        track.moved(p.tick(), p.x(), p.y(), p.z(), p.hasRot() ? p.yaw() : Float.NaN);
+                    else
+                        track.turned(p.tick(), p.yaw());
                 }
-                rate += 0.04 * ((newestTick - prevNewest) - rate);
-                prevNewest = newestTick;
-                est += rate;
-                double err = newestTick - est;
-                est = Math.abs(err) > 20 ? newestTick : est + 0.1 * err;
             }
-            double play = Double.isNaN(est) ? -interval : est - (interval + margin);
-            double[] a = buf.get(0), b = a;
-            for (double[] s : buf) {
-                b = s;
-                if (s[0] >= play)
-                    break;
-                a = s;
-            }
-            double f = b[0] > a[0] ? Mth.clamp((play - a[0]) / (b[0] - a[0]), 0, 1) : 1;
-            d.x[c] = a[1] + (b[1] - a[1]) * f;
-            d.y[c] = a[2] + (b[2] - a[2]) * f;
-            d.z[c] = a[3] + (b[3] - a[3]) * f;
-            d.yaw[c] = (float) (a[4] + Mth.wrapDegrees(b[4] - a[4]) * f);
-            d.serverTickAt[c] = newestTick;
+            heard.clientTick();
+            track.draw(heard, out);
+            d.x[c] = out[0]; d.y[c] = out[1]; d.z[c] = out[2]; d.yaw[c] = (float) out[3]; d.serverTickAt[c] = newestTick;
         }
         return d;
     }

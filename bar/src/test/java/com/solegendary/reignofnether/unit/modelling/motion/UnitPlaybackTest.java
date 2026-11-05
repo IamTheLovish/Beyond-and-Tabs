@@ -286,6 +286,28 @@ class UnitPlaybackTest {
             "after a one-second hitch the unit leaps %.1f walk steps in one client tick (bound %.1f)", worst, MAX_CATCH_UP));
     }
 
+    /**
+     * A position-only packet (the unit moved, its facing did not change by a 256th of a turn) carries no yaw; the
+     * client glue passes NaN, and the unit keeps facing where its last stamp said - never NaN, never snapped.
+     */
+    @Test
+    void a_position_only_packet_keeps_the_stamped_facing() {
+        UnitPlayback.Clock clock = new UnitPlayback.Clock();
+        UnitPlayback.Track track = new UnitPlayback.Track(INTERVAL);
+        clock.heard(0);
+        track.seed(0, 0, 0, 0, 30f);
+        double[] out = new double[4];
+        for (int k = 1; k <= 30; k++) {
+            clock.heard(k);
+            if (k % INTERVAL == 0)
+                track.moved(k, SPEED * k, 0, 0, Float.NaN);
+            clock.clientTick();
+            track.draw(clock, out);
+            assertTrue(Double.isFinite(out[0]) && Math.abs(out[3] - 30.0) < 1e-3,
+                "tick " + k + ": drawn at x " + out[0] + ", facing " + out[3] + " (stamped 30)");
+        }
+    }
+
     /** A jump of more than {@link Kinematics#TELEPORT_BLOCKS} (a blink) is drawn as a jump, never as a slide across. */
     @Test
     void a_teleport_is_drawn_as_a_jump_not_a_slide() {
