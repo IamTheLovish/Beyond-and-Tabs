@@ -239,7 +239,7 @@ public class MotionFluidityGameTests {
                     }
                 ordered[0] = (int) helper.getTick();
                 for (Mob m : made)
-                    probes.add(new Probe(level, m, gx, gz));
+                    probes.add(new Probe(level, m, gx, gz).arriveWithin(6));
                 UnitServerEvents.addActionItem(owner, UnitAction.MOVE, -1, made.stream().mapToInt(Mob::getId).toArray(),
                     BlockPos.containing(gx, PAD_Y + 1, gz), BlockPos.ZERO);
                 return;
@@ -316,6 +316,9 @@ public class MotionFluidityGameTests {
         final float yaw0;
         int tick = 0, teleports = 0, rotOnly = 0, idleFrom = -1;
         boolean done = false;
+        // how near the goal the walk's window ends: 3 blocks on a lane; in the crowd, which spreads round one point, 6 -
+        // so a unit standing there while the others arrive is not counted as stopping on the way
+        double arrive = 3;
 
         Probe(ServerLevel level, Mob mob, double gx, double gz) {
             this.mob = mob;
@@ -376,9 +379,14 @@ public class MotionFluidityGameTests {
 
         int ticks() { return tick; }
 
+        Probe arriveWithin(double blocks) {
+            arrive = blocks;
+            return this;
+        }
+
         void markIdle() { idleFrom = tick; }
 
-        /** The walk's window: from 5 ticks after the first step, until 3 blocks short of the goal (or the idle mark). */
+        /** The walk's window: from 5 ticks after the first step, until {@code arrive} blocks short of the goal (or the idle mark). */
         int[] window() {
             int from = -1, to = idleFrom >= 0 ? idleFrom : track.size();
             for (int k = 1; k < to; k++) {
@@ -386,7 +394,7 @@ public class MotionFluidityGameTests {
                 if (from < 0 && Math.hypot(b[0] - a[0], b[2] - a[2]) > 0.02)
                     from = k + 5;
                 double l = Math.hypot(gx - b[0], gz - b[2]);
-                if (from >= 0 && l < 3) {
+                if (from >= 0 && l < arrive) {
                     to = k;
                     break;
                 }
