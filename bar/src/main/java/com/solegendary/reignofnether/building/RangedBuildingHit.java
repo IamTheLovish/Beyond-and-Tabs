@@ -55,6 +55,11 @@ public final class RangedBuildingHit {
             * BuildingDamage.RANGED_MULT;
     }
 
+    /** Ranged hits units of this type have landed on buildings since the server started (the log line, the tests). */
+    public static synchronized int hits(EntityType<?> type) {
+        return HITS.getInt(EntityType.getKey(type).getPath());
+    }
+
     private static synchronized void count(Entity shooter) {
         HITS.addTo(EntityType.getKey(shooter.getType()).getPath(), 1);
         if (++sinceLog >= LOG_EVERY) {

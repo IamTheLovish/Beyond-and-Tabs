@@ -113,6 +113,14 @@ public class ArcherBuildingGameTests {
             int[] firstHit = { -1, 0 };   // the tick of the first lost health, the health then
             int before = bp.getHealth();
             boolean[] ordered = { false }, over = { false };
+            // the state trail every verdict prints: ticks with a building target, times it was let go, the lowest and
+            // highest the shooter flew above the pad, its nearest and furthest from the tower's centre, ranged hits it
+            // landed on buildings (RangedBuildingHit), and every effect it carried
+            int[] trail = { 0, 0, Integer.MAX_VALUE, Integer.MIN_VALUE };
+            double[] reach = { Double.MAX_VALUE, 0 };
+            boolean[] hadTarget = { false };
+            int hitsBefore = com.solegendary.reignofnether.building.RangedBuildingHit.hits(type);
+            java.util.Set<String> effects = new java.util.TreeSet<>();
             watch[0] = () -> {
                 if (over[0])
                     return;
@@ -124,6 +132,25 @@ public class ArcherBuildingGameTests {
                     ordered[0] = true;
                     return;
                 }
+                boolean targeted = au.getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.RangedAttackBuildingGoal<?> g
+                    ? g.getBuildingTarget() != null
+                    : au.getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal m && m.getBuildingTarget() != null;
+                if (targeted)
+                    trail[0]++;
+                else if (hadTarget[0])
+                    trail[1]++;
+                hadTarget[0] = targeted;
+                int up = (int) Math.floor(shooter.getY() - (RaidGameTests.PAD_Y + 1));
+                trail[2] = Math.min(trail[2], up);
+                trail[3] = Math.max(trail[3], up);
+                double flat = Math.sqrt(shooter.distanceToSqr(bp.centrePos.getX() + 0.5, shooter.getY(), bp.centrePos.getZ() + 0.5));
+                reach[0] = Math.min(reach[0], flat);
+                reach[1] = Math.max(reach[1], flat);
+                for (var e : shooter.getActiveEffects())
+                    effects.add(e.getEffect().getDescriptionId().replace("effect.", ""));
+                String state = String.format(Locale.ROOT, "trail: building target %d ticks, let go %d times, %d to %d above the pad, %.1f to %.1f"
+                    + " from the tower's centre, %d ranged hits landed, effects %s", trail[0], trail[1], trail[2], trail[3], reach[0], reach[1],
+                    com.solegendary.reignofnether.building.RangedBuildingHit.hits(type) - hitsBefore, effects.isEmpty() ? "none" : String.join(" ", effects));
                 int health = bp.getHealth();
                 String verdict = null;
                 if (firstHit[0] < 0) {
@@ -135,7 +162,7 @@ public class ArcherBuildingGameTests {
                             + before + "; canAttackBuildings " + au.canAttackBuildings() + ", building goal "
                             + (au.getAttackBuildingGoal() == null ? "none" : au.getAttackBuildingGoal().getClass().getSimpleName())
                             + ", " + String.format(Locale.ROOT, "%.1f", Math.sqrt(shooter.distanceToSqr(bp.centrePos.getX() + 0.5,
-                                shooter.getY(), bp.centrePos.getZ() + 0.5))) + " blocks from its centre, alive " + shooter.isAlive() + ")";
+                                shooter.getY(), bp.centrePos.getZ() + 0.5))) + " blocks from its centre, alive " + shooter.isAlive() + "); " + state;
                     }
                     if (verdict == null)
                         return;
@@ -148,13 +175,13 @@ public class ArcherBuildingGameTests {
                     int lost = firstHit[1] - health;
                     int shots = WINDOW_TICKS / Math.max(1, (int) au.getAttackCooldown()) + 1;
                     float cap = shots * perHit * 1.5f + (float) (2 * bp.getHealthPerBlock());
-                    ReignOfNether.LOGGER.info("[ArcherBuilding] GameTest {}: first hit after {} ticks, {} health in the next {} s ({} per hit, at most {} shots, cap {})",
+                    ReignOfNether.LOGGER.info("[ArcherBuilding] GameTest {}: first hit after {} ticks, {} health in the next {} s ({} per hit, at most {} shots, cap {}); {}",
                         name, firstHit[0] - start, lost, WINDOW_TICKS / 20, String.format(Locale.ROOT, "%.1f", perHit), shots,
-                        String.format(Locale.ROOT, "%.1f", cap));
+                        String.format(Locale.ROOT, "%.1f", cap), state);
                     if (lost > cap)
                         verdict = "the " + name + " took " + lost + " health off the tower in " + WINDOW_TICKS / 20 + " s: an archer chips ("
                             + String.format(Locale.ROOT, "%.1f", perHit) + " a hit, at most " + shots + " shots, cap "
-                            + String.format(Locale.ROOT, "%.1f", cap) + "), it does not siege";
+                            + String.format(Locale.ROOT, "%.1f", cap) + "), it does not siege; " + state;
                 }
                 shooter.discard();
                 BuildingServerEvents.getBuildings().remove(bp);
