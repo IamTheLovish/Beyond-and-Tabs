@@ -25,7 +25,7 @@ public class RocketRackModel {
     /** Where the hinge sits behind the torso at rest. */
     public static final float HINGE_Y = 9.5F, HINGE_Z = 3.5F;
     /** Rest tilt (the top leans back against the crew), and the extra tilt forward at full lift and back at full recoil, radians. */
-    public static final float REST_TILT = -0.12F, LIFT_TILT = 0.30F, RECOIL_TILT = 0.45F;
+    public static final float REST_TILT = -0.12F, LIFT_TILT = 0.62F, RECOIL_TILT = 0.30F;
     /** How far a full recoil shoves the rack straight back, in model pixels. */
     public static final float RECOIL_SHOVE = 1.6F;
 
