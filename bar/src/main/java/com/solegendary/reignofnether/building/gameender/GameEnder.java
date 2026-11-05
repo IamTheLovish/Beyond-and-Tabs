@@ -74,4 +74,9 @@ public abstract class GameEnder extends Building {
                 || ResearchClient.hasCheat("modifythephasevariance"),
             tip, this);
     }
+
+    @Override
+    public boolean formsWhenBuilt() {
+        return true;   // a portal-type moment: it forms (barfx/PortalForming)
+    }
 }

@@ -96,6 +96,48 @@ class ShaderPack(unittest.TestCase):
         self.assertIsNotNone(m)
         self.assertGreaterEqual(float(m.group(1)), 1.0)
 
+    def test_plants_cast_a_faint_shadow_never_a_dark_star(self):
+        # lovish (Nov 5, buttons): "Try faint shadow + lit side". Grass, flowers and crops cast no shadow since Oct 28
+        # (hard shadows read as dark stars under every tuft). Now they cast PLANT_SHADOW of the sun's light; no constant
+        # = the old pack, nothing cast. Two-sided at noon on open ground: the ground under a tuft keeps at least 0.80 of
+        # the open lawn (slice 1's judged band for grass tufts, design/own_shader_pack.md in PR #385: "luma under a tuft
+        # at least 0.8x the open lawn beside it (no dark stars)") and is at least 8% darker, or the shadow does not show
+        def code(*path):
+            return spc.code_of(read(*path))
+        light = code("lib", "light.glsl")
+        k = spc.float_const(code("lib", "settings.glsl"), "PLANT_SHADOW", 0.0)
+        ndl = math.sin(math.radians(60.0))
+        under = spc.noon_light(light, 1.0, ndl, 1.0 - k) / spc.noon_light(light, 1.0, ndl)
+        self.assertTrue(0.80 <= under <= 0.92, "ground under a tuft at %.3f of the open lawn" % under)
+        # the shadow pass draws the plants with that opacity, and the lookup lets the rest of the sun through (the code
+        # itself, comments stripped: a comment quoting a line does not run)
+        self.assertIn("casterOpacity = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? PLANT_SHADOW : 1.0;", code("shadow.vsh"))
+        self.assertIn("gl_FragData[0] = vec4(casterOpacity, casterOpacity, casterOpacity, 1.0);", code("shadow.fsh"))
+        lookup = code("lib", "shadow.glsl")
+        self.assertIn("return 1.0 - texture2D(shadowcolor0, uv).r;", lookup)
+        self.assertIn("? 1.0 : casterThrough(uv);", lookup)
+        self.assertIn("through += casterThrough(", lookup)
+        self.assertIn("return through / blockers;", lookup)
+
+    def test_plants_have_a_lit_and_a_shaded_side(self):
+        # the same answer: a plant's planes take a normal PLANT_SIDE of the way from up toward the face the camera sees
+        # (0 = lit as the ground, the old pack). At noon (sun ~60 degrees up) a plane facing the sun reads 1.00-1.10 of
+        # the open lawn and one facing away 0.75-0.90: a lit side and a shaded side, never a dark plane
+        fsh = spc.code_of(read("program", "lit.fsh"))
+        light = spc.code_of(read("lib", "light.glsl"))
+        s = spc.float_const(fsh, "PLANT_SIDE", 0.0)
+        self.assertIn("n = normalize(mix(geomN, face, PLANT_SIDE));", fsh)
+        sun = (math.cos(math.radians(60.0)), math.sin(math.radians(60.0)))      # (toward the sun's azimuth, up)
+        lawn = spc.noon_light(light, 1.0, sun[1])
+        sides = []
+        for facing in (1.0, -1.0):
+            n = (s * facing, 1.0 - s)
+            length = math.hypot(*n)
+            n = (n[0] / length, n[1] / length)
+            sides.append(spc.noon_light(light, n[1], n[0] * sun[0] + n[1] * sun[1]) / lawn)
+        self.assertTrue(1.00 <= sides[0] <= 1.10, "sunlit side at %.3f of the lawn" % sides[0])
+        self.assertTrue(0.75 <= sides[1] <= 0.90, "shaded side at %.3f of the lawn" % sides[1])
+
     def test_grade_matches_the_mods_enchanted_look(self):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's
         # final.fsh copies the Enchanted column of WorldLookPass (#326); until #326 is on this branch there is no third
@@ -112,7 +154,7 @@ class ShaderPack(unittest.TestCase):
 
     def test_material_maps_reach_the_lit_draws_but_not_water(self):
         # slice 2 reads our _n / _s maps through one switch (lib/pbrswitch.glsl): terrain, entities, block entities and
-        # the hand pass LIT_PBR; water keeps slice 1's surface until slice 4 (design/own_shader_pack.md)
+        # the hand pass LIT_PBR. Water has no _n / _s maps and its own surface (lib/water.glsl), so it stays out
         switch = read("lib", "pbrswitch.glsl")
         self.assertIn("!defined LIT_WATER", switch)
         for name in ("gbuffers_terrain.fsh", "gbuffers_entities.fsh", "gbuffers_block.fsh", "gbuffers_hand.fsh"):
@@ -141,6 +183,151 @@ class ShaderPack(unittest.TestCase):
             self.assertIn("const float EXPOSURE = %s;" % exposure, final, materials)
             self.assertNotIn("BOUNCE", terrain, materials)
             self.assertEqual("uniform sampler2D normals;" in terrain, materials == 1)
+
+    def test_water_has_its_own_surface_with_a_fallback(self):
+        """Changed in slice 4 (claude/shader-water): this guard used to pin water to slice 1's plain surface ("water
+        keeps slice 1's surface until slice 4"). Slice 4 is here, so it now pins the new contract instead: water is
+        its own block id, gbuffers_water reads the opaque depth under it (depthtex1) to set its opacity from the
+        path through the water, and WATER_REALISM 0 still compiles to slice 1's one fixed alpha for an A/B."""
+        props = read("block.properties")
+        self.assertRegex(props, r"(?m)^block\.10002=water\b")
+        settings = read("lib", "settings.glsl")
+        self.assertIn("#define ID_WATER 10002.0", settings)
+        self.assertRegex(settings, r"(?m)^#define WATER_REALISM 1 // \[0 1\]")
+        water = spc.expand(os.path.join(spc.SHADERS, "gbuffers_water.fsh"))
+        self.assertIn("uniform sampler2D depthtex1;", water)
+        self.assertIn("waterOpacity(", water)
+        plain = spc.with_options(water, {"WATER_REALISM": "0"})
+        self.assertIn("#define WATER_REALISM 0", plain)
+        self.assertIn("WATER_REALISM", spc.OPTION_VARIANTS[1])
+        # the slice 1 path survives: the texture's own alpha, written unless the realistic surface replaces it
+        self.assertIn("float alpha = tex.a;", water)
+
+    def test_units_in_a_ford_stay_readable(self):
+        """Readability through the water (slice 4: "units crossing a river stay readable", the 12 river stills).
+
+        Units are entities: the loader draws them before translucent terrain, so they are in depthtex1 and the water
+        layer lies over their submerged part with the path from the surface down to the unit, not to the bed - a leg
+        in a ford is only a short path deep. A model of the opacity curve from lib/water.glsl's own constants: half a
+        block of path (a unit wading) keeps at least 65% of the unit's colour, a 1-block ford shows the bed, and only
+        3+ blocks settle into the palette's opaque teal-blue. The foam band stays a few pixels thin, and the caustics
+        multiply by one number per pixel (composite). The water's hue (test_water_turns_the_bed_turquoise) moves a
+        wading unit's team colour by at most a tenth."""
+        import math
+        src = read("lib", "water.glsl")
+
+        def const(name):
+            return float(re.search(r"const float %s = ([0-9.]+);" % name, src).group(1))
+
+        k, deep = const("WATER_EXTINCTION"), const("WATER_DEEP_OPACITY")
+
+        def opacity(path):
+            return deep * (1.0 - math.exp(-k * path))
+
+        self.assertLessEqual(opacity(0.5), 0.35)          # a unit wading: its team colour keeps >= 65%
+        self.assertLessEqual(opacity(1.1), 0.62)          # a 1-block ford at the RTS tilt: the bed shows
+        self.assertGreaterEqual(opacity(3.3), 0.85)       # 3 blocks deep: open water, the palette's dark teal
+        self.assertLessEqual(const("FOAM_WIDTH"), 0.3)    # ~4 px at the default zoom
+        self.assertLessEqual(const("FOAM_OPACITY"), 0.6)
+        comp = read("composite.fsh")
+        self.assertRegex(comp, r"lit \*= max\(1\.0 \+ \(water\.g - 0\.5\) / CAUSTIC_ENCODE, 0\.0\);")
+        # the water layer's data goes to colortex5 from gbuffers_water only (after colortex1, slice 3's sky share): the
+        # directive the loader reads is the preprocessed program's
+        water = spc.preprocess(spc.expand(os.path.join(spc.SHADERS, "gbuffers_water.fsh")))
+        terrain = spc.preprocess(spc.expand(os.path.join(spc.SHADERS, "gbuffers_terrain.fsh")))
+        self.assertEqual(re.findall(r"/\* DRAWBUFFERS:(\d+) \*/", water), ["015"])
+        self.assertEqual(re.findall(r"/\* DRAWBUFFERS:(\d+) \*/", terrain), ["01"])
+        self.assertIn("uniform sampler2D colortex5;", comp)
+
+    def test_water_turns_the_bed_turquoise(self):
+        # Fable critic, round 1: under one alpha a sand bed a block down read "grey-khaki, could pass for a gravel slab".
+        # Composite gives what shows through the water its hue over the path (lib/water.glsl's waterHue: red taken
+        # first, luma kept) on the pixel's transmitted share. The GLSL's own lines are pinned and its constants read:
+        water = read("lib", "water.glsl")
+        comp = read("composite.fsh")
+        lit = read("program", "lit.fsh")
+        self.assertIn("vec3 t = exp(-WATER_ABSORPTION * max(path, 0.0));", water)
+        self.assertIn("return t / max(dot(t, LUMA), 1e-3);", water)
+        self.assertIn("lit *= mix(vec3(1.0), waterHue(path), 1.0 - waterOpacity(path));", comp)
+        self.assertIn("gl_FragData[2] = vec4(waterPathEncode(path),", lit)
+        sigma = spc.vec3_const(water, "WATER_ABSORPTION")
+        k, deep = spc.float_const(water, "WATER_EXTINCTION"), spc.float_const(water, "WATER_DEEP_OPACITY")
+        base, top = spc.float_const(water, "WATER_PATH_BASE"), spc.float_const(water, "WATER_PATH_MAX")
+        luma = (0.2126, 0.7152, 0.0722)
+
+        def seen(colour, path):              # composite's tint on a colour that shows through `path` blocks
+            t = [math.exp(-s * path) for s in sigma]
+            hue = [x / sum(a * b for a, b in zip(t, luma)) for x in t]
+            share = 1.0 - deep * (1.0 - math.exp(-k * path))
+            return [c * (1.0 + (h - 1.0) * share) for c, h in zip(colour, hue)]
+
+        sand = (0.60, 0.50, 0.33)            # lit sand, linear
+        for path in (0.0, 0.5, 1.1, 3.3, 8.0):
+            out = seen(sand, path)
+            # the hue alone: the luma of what shows is unchanged (readability is waterOpacity's)
+            self.assertAlmostEqual(sum(a * b for a, b in zip(out, luma)), sum(a * b for a, b in zip(sand, luma)),
+                                   delta=0.02 * sum(a * b for a, b in zip(sand, luma)))
+        ford = seen(sand, 1.1)
+        # a clear shift (the look itself is the Fable critic's call): the wading bound below caps it - with the tint on the
+        # transmitted share, a 1-block ford can turn at most ~1.45x as far as half a block does
+        self.assertGreaterEqual((ford[2] / ford[0]) / (sand[2] / sand[0]), 1.15, "a 1-block ford's bed is not bluer")
+        for team in ((0.8, 0.1, 0.1), (0.1, 0.2, 0.8), (0.9, 0.8, 0.1)):
+            wading = seen(team, 0.5)
+            self.assertTrue(all(abs(w / c - 1.0) <= 0.10 for w, c in zip(wading, team)), (team, wading))
+        # the path survives the water layer's 8 bits and stays above composite's water flag (r > 0.5)
+        self.assertGreater(base, 0.5)
+        self.assertLessEqual(top / ((1.0 - base) * 255.0), 0.07)    # one step <= 0.07 blocks
+
+    def test_water_body_has_no_seams_and_leans_to_the_palette(self):
+        # Fable critic, rounds 1 and 2: a grid of seams across the pond (the water texture's per-block pattern) and a
+        # grey body with a black far bank. The water reads its texture's average and the ripples draw the detail; the
+        # body is lifted toward the palette's #3A6A8C, blue most (a measured step, lib/water.glsl)
+        lit = read("program", "lit.fsh")
+        water = read("lib", "water.glsl")
+        self.assertIn("vec4 tex = texture2D(texture, texcoord, waterBody > 0.5 ? WATER_TEXTURE_BIAS : 0.0);", lit)
+        self.assertGreaterEqual(spc.float_const(water, "WATER_TEXTURE_BIAS"), 4.0)   # mip 4+: 128 px down to 8 or less
+        self.assertIn("c *= WATER_BODY_GAIN * mix(SHALLOW_TINT,", lit)
+        gain = spc.vec3_const(water, "WATER_BODY_GAIN")
+        self.assertTrue(1.0 <= gain[0] <= gain[1] <= gain[2], gain)
+        # never past the measured gap (linear 1.7 / 3.0 / 4.0 from (44, 63, 72) to (58, 106, 140) on screen)
+        self.assertTrue(all(g <= cap for g, cap in zip(gain, (1.7, 3.0, 4.0))), gain)
+
+    def test_no_two_passes_give_one_buffer_two_formats(self):
+        # the loader takes one format and one clear colour per colortex, from whichever file it reads last: two passes
+        # that use one buffer for different data (slice 3's half-resolution occlusion and slice 4's water layer once
+        # both claimed colortex2) would silently corrupt one of them
+        seen = {}
+        for dirpath, _, files in os.walk(spc.SHADERS):
+            for n in sorted(files):
+                if not n.endswith((".vsh", ".fsh", ".glsl")):
+                    continue
+                with open(os.path.join(dirpath, n), encoding="utf-8") as f:
+                    src = f.read()
+                for buf, kind, value in re.findall(
+                        r"const (?:int|vec4) colortex(\d+)(Format|ClearColor) = ([^;]+);", src):
+                    seen.setdefault((buf, kind), {}).setdefault(re.sub(r"\s+", "", value), []).append(n)
+        for (buf, kind), values in sorted(seen.items()):
+            self.assertEqual(len(values), 1, "colortex%s%s: %s" % (buf, kind, values))
+
+    def test_reflections_march_only_where_they_show(self):
+        """Screen-space reflections (composite.fsh) cost a 16-step march per water pixel; the budget (slice 4: +1.0 ms
+        in all on a 3070 Ti at 1080p) only allows it where the mirror is visible. Fresnel for water at the RTS camera's
+        ~65 degrees down, with the ripples' steepest tilt (~0.17 rad more), stays under the march's threshold, so from
+        above the march never runs; a grazing first-person view passes it."""
+        import math
+        comp = read("composite.fsh")
+        water = read("lib", "water.glsl")
+        threshold = float(re.search(r"const float SSR_MIN_FRESNEL = ([0-9.]+);", comp).group(1))
+        f0 = float(re.search(r"const float WATER_F0 = ([0-9.]+);", water).group(1))
+
+        def fresnel(off_normal_deg):
+            return f0 + (1.0 - f0) * (1.0 - math.cos(math.radians(off_normal_deg))) ** 5
+
+        self.assertLess(fresnel(25.0 + math.degrees(0.17)), threshold)   # the RTS view: no march
+        self.assertGreater(fresnel(80.0), threshold)                     # first person near the horizon: mirror
+        settings = read("lib", "settings.glsl")
+        self.assertRegex(settings, r"(?m)^#define SSR 1 // \[0 1\]")
+        self.assertRegex(settings, r"(?m)^#define CAUSTICS 1 // \[0 1\]")
 
     def test_noon_light_leaves_open_ground_its_colour(self):
         # lib/light.glsl aims open ground at noon to come out at its albedo. Itachi 1 measured the lawn under the pack
