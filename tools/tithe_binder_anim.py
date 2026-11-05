@@ -50,7 +50,7 @@ DRIVE = 6.0                            # deg per px/tick^2
 CLAMP = {"hem_front": (0.0, 40.0), "hem_back": (-40.0, 0.0), "hem_b": (-40.0, 40.0), "tatter": (-60.0, 10.0),
          "lantern": (-6.0, 25.0), "cape": (-50.0, 5.0), "shackle": (-80.0, 80.0)}
 GRAVITY = 1.28                         # px/tick^2 (0.08 blocks/tick^2) - falling weapons at death
-DEATH_DROP = 10.9                      # px: the crumple lands the robe on the ground (r6 slump: tithe_binder_poses.py death_t30 lands at -10.86)
+DEATH_DROP = 10.5                      # px: the crumple lands the robe on the ground (r6b = r5's crumple: tithe_binder_poses.py death_t30 lands at -10.47)
 HUB = (0.0, 27.0 + G.LIFT, 0.0)        # where the soul chains leave the ribs
 LANTERN = (0.0, 23.0 + G.LIFT, -6.5)    # the lantern's core at rest (the bind's orb flies into it)
 RING_PIVOT, RING_R, RING_TILT = G.RING_PIVOT, G.RING["r"], G.RING_TILT
@@ -94,7 +94,7 @@ LATERAL, ARC_UP = 16.0, (8.0, 6.0)     # px: the arc's control points off the be
 VICTIM_R = 5.0                         # px: the tip stops 2 px inside a victim of this radius (r3: at its centre)
 HUB_R = 6.0                            # px: a soul chain leaves the ribs this far out toward its weapon
 WEAVE = (12.0, 6.0, 10.0)              # r4 idle conductor weave: arm x, arm z, forearm x amplitudes (sheet 5, 3, 0)
-CLIP_TICKS = {"idle": 60, "fidget": 30, "move": 50, "volley": 60, "bind": 32, "hit": 16, "death": 50}
+CLIP_TICKS = {"idle": 60, "fidget": 20, "move": 50, "volley": 60, "bind": 32, "hit": 16, "death": 50}
 TATTERS = ("tatter_f", "tatter_b", "tatter_l", "tatter_r")
 
 
@@ -328,19 +328,29 @@ def body_targets(st, clip, t, inp):
         last = st["last_release"]
         b = st["bearing"]
         sb, cb = math.sin(math.radians(b)), math.cos(math.radians(b))
+        # r6b: the strike pose is held for the first third of the release train, then eases off (the factor 1 ->
+        # 0.55 at two thirds -> 0.27 at the last release -> 0 at fe; with the -11 lean: -11 to ~-6 by t31 at N = 10,
+        # the way r5 softened) - r6's flat hold read as a stiff freeze
+        L = max(1, last - VOLLEY_RELEASE)
+        hold = keys(t, [(VOLLEY_RELEASE, 1.0), (VOLLEY_RELEASE + L / 3.0, 1.0), (VOLLEY_RELEASE + 2 * L / 3.0, 0.55),
+                        (last, 0.27), (fe, 0.0)])
+
+        def held(pre, strike, end=0.0):
+            """Keys up to the strike (t13), then the strike value eased toward `end` by `hold`."""
+            return keys(t, pre + [(VOLLEY_RELEASE, strike)]) if t <= VOLLEY_RELEASE else end + (strike - end) * hold
         back = lambda d: [d * sb, 0.0, d * cb]                      # noqa: E731  (away from the target, px)
         # r6: the strike pose is HELD through the release train (to `last`), the caster pulsing 1 px per release,
         # then recovers over 12 ticks (r5 popped back to rest by t16 and idled while the weapons dripped out)
-        hy = keys(t, [(0, 0), (4, 0), (8, -2), (10, 3), (12, 3), (13, -1), (last, -1), (fe, 0)])
+        hy = held([(0, 0), (4, 0), (8, -2), (10, 3), (12, 3)], -1)
         rel = [VOLLEY_RELEASE + RELEASE_GAP * o for o in st["order"].values()]
         since = [t - r for r in rel if 0 <= t - r < 2]
         if since:
             hy -= HOVER_PULSE * (1.0 - min(since) / 2.0)
-        hb = keys(t, [(0, 0), (4, 0), (8, 1), (10, 3), (12, 3), (13, -4), (last, -4), (fe, 0)])
+        hb = held([(0, 0), (4, 0), (8, 1), (10, 3), (12, 3)], -4)
         put("hover", off=[back(hb)[0], hy, back(hb)[2]])
-        by = keys(t, [(0, 0), (4, b), (8, b + 8), (10, b + 25), (12, b + 25), (13, b - 15), (last, b - 15), (fe, b)])
-        put("body", rot=[keys(t, [(0, 0), (4, 0), (8, -6), (10, 14), (12, 14), (13, -11), (last, -11), (fe, 0)]), by, 0])
-        put("head", rot=[keys(t, [(0, 0), (8, 0), (10, -20), (12, -20), (13, -8), (last, -8), (fe + 2, 0)]), b - by, 0])
+        by = held([(0, 0), (4, b), (8, b + 8), (10, b + 25), (12, b + 25)], b - 15, b)
+        put("body", rot=[held([(0, 0), (4, 0), (8, -6), (10, 14), (12, 14)], -11), by, 0])
+        put("head", rot=[held([(0, 0), (8, 0), (10, -20), (12, -20)], -8), b - by, 0])
         # the whip: through to delta 40 at t13, then down to 20 (abs 40) for the release train, so the whip circles
         # run under the ring (r5 clearance: at delta 40 the circling hand came within 0.8 px of the spokes)
         put("right_arm", rot=[keys(t, [(0, 0), (8, 0), (10, 180), (12, 180), (13, 40), (15, 20),
@@ -359,16 +369,15 @@ def body_targets(st, clip, t, inp):
         put("left_arm", rot=[keys(t, [(0, 0), (4, 30), (10, 47), (max(last + 2, 15), 47), (fe, 0)]), 0, 0])
         put("left_forearm", rot=[keys(t, [(0, 0), (10, -30), (max(last + 2, 15), -30), (fe, 0)]), 0, 0])
         put("mantle", off=[0, keys(t, [(0, 0), (8, 0), (10, 1), (12, 1), (13, 0)]), 0])
-        ch["tatter"] = keys(t, [(0, 0), (8, 4), (10, -8), (12, -8), (13, -15), (last, -15), (fe, 0)])
-        ch["cape"] = keys(t, [(0, 0), (8, 2), (10, -6), (12, -6), (13, -12), (last, -12), (fe, 0)])
-        tl = keys(t, [(0, 0), (4, 0), (8, 12), (12, 12), (13, -18), (last, -18), (fe, 0)])
+        ch["tatter"] = held([(0, 0), (8, 4), (10, -8), (12, -8)], -15)
+        ch["cape"] = held([(0, 0), (8, 2), (10, -6), (12, -6)], -12)
+        tl = held([(0, 0), (4, 0), (8, 12), (12, 12)], -18)
         ch["ring_tilt"] = [tl * cb, -tl * sb]                        # dips toward the target's bearing
-        ro = keys(t, [(0, 0), (4, 0), (8, 4), (12, 4), (13, -5), (last, -5), (fe, 0)])
-        ch["ring_off"] = [back(ro)[0], keys(t, [(0, 0), (4, 0), (8, 1), (12, 1), (13, -2), (last, -2), (fe, 0)]),
-                          back(ro)[2]]
+        ro = held([(0, 0), (4, 0), (8, 4), (12, 4)], -5)
+        ch["ring_off"] = [back(ro)[0], held([(0, 0), (4, 0), (8, 1), (12, 1)], -2), back(ro)[2]]
         # the spin peaks at the snap and decays across the release train (each release takes some of it)
         ch["ring_spin"] = keys(t, [(0, 0.6), (10, 6.0), (13, 6.0), (last, 1.5), (fe, 0.6)])
-        ch["cock"] = keys(t, [(0, 0), (8, 25), (12, 25), (13, 10), (last, 10), (fe, 0)])
+        ch["cock"] = held([(0, 0), (8, 25), (12, 25)], 10)
         ch["spoke_scale"] = keys(t, [(0, 1.0), (4, 1.0), (8, CONTRACT), (12, CONTRACT), (13, FLARE), (16, 1.0)])
         released = len([k for k, o in st["order"].items() if VOLLEY_RELEASE + RELEASE_GAP * o <= t])
         ch["lantern"] = keys(t, [(0, 1.0), (10, 1.6), (last, 1.6), (fe, 1.0)])
@@ -415,18 +424,20 @@ def body_targets(st, clip, t, inp):
             fall = -DEATH_DROP + keys(t, [(16, -1.5), (19, -1.5), (21, 0.0), (33, 0.0), (35, -1.0), (37, 0.4), (40, 0.0)])
         put("hover", off=[0, fall, 0])
         # r5: the slumped hood rolls and turns (it read as an upright red crate)
-        put("head", rot=[keys(t, [(0, 0), (3, 35), (6, 35), (16, 35), (19, 28), (33, -21)]),
-                         0, keys(t, [(0, 0), (19, 0), (33, 8), (36, 12), (40, 8)])])
+        # r6b: r5's forward crumple back (the blind A/B preferred it to r6's sideways slump), made contact-clean:
+        # head yaw 0 (r5 15) and roll 12 (r5 22), the chest moved 1 px forward as it folds, the right arm out 12
+        put("head", rot=[keys(t, [(0, 0), (3, 35), (6, 35), (16, 35), (19, 28), (33, -36)]),
+                         0, keys(t, [(0, 0), (19, 0), (33, 12), (36, 16), (40, 12)])])
         # r6: a sideways slump (body roll 18, less fold: the r5 -26 / -40 fold read as a red crate with the hood on
         # top, and put the chest into the waist)
-        put("body", rot=[keys(t, [(0, 0), (3, 8), (6, 8), (16, 8), (17, -8), (19, -8), (33, -20)]), 0,
-                         keys(t, [(0, 0), (19, 0), (33, 18)])])
-        put("chest", rot=[keys(t, [(0, 0), (3, 6), (6, 6), (16, 6), (17, -4), (19, -4), (33, -18)]), 0, 0])
+        put("body", rot=[keys(t, [(0, 0), (3, 8), (6, 8), (16, 8), (17, -8), (19, -8), (33, -26)]), 0, 0])
+        put("chest", rot=[keys(t, [(0, 0), (3, 6), (6, 6), (16, 6), (17, -4), (19, -4), (33, -40)]), 0, 0],
+            off=[0, 0, keys(t, [(0, 0), (19, 0), (33, -1)])])
         # the arms fall limp and IN, along the body (r3: the left hand poked out from under the hood at t30)
-        put("right_arm", rot=[keys(t, [(0, 0), (6, 0), (19, 0), (33, 30)]), 0,
-                              keys(t, [(0, 0), (3, -58), (6, -58), (16, -58), (19, -40), (33, 5)])])
+        put("right_arm", rot=[keys(t, [(0, 0), (6, 0), (19, 0), (33, 20)]), 0,
+                              keys(t, [(0, 0), (3, -58), (6, -58), (16, -58), (19, -40), (33, -12)])])
         put("left_arm", rot=[keys(t, [(0, 0), (6, 0), (19, 0), (33, 30)]), 0,
-                             keys(t, [(0, 0), (3, 58), (6, 58), (16, 58), (19, 40), (33, 5)])])
+                             keys(t, [(0, 0), (3, 58), (6, 58), (16, 58), (19, 40), (33, -10)])])
         for side in ("right", "left"):
             put(side + "_forearm", rot=[keys(t, [(0, 0), (3, -25), (19, -25), (33, -35)]), 0, 0])
         fold = keys(t, [(0, 0.0), (19, 0.0), (33, 1.0)])
@@ -817,7 +828,7 @@ def weapon_fall(st, s, k, t, flying, hidden):
 # ------------------------------------------------------------------ clips as runs --------------------------------
 CLIPS = {
     "idle": dict(clip="idle", n=10, ticks=60),
-    "fidget": dict(clip="fidget", n=10, ticks=30),
+    "fidget": dict(clip="fidget", n=10, ticks=20),       # r6b: 20 (the spin is back to 0.6 at t20)
     "move": dict(clip="move", n=10, ticks=50),
     # r4: the victim 5 blocks out at a 30-deg bearing to the front-right, so the turn to the target shows
     "volley_N5": dict(clip="volley", n=5, ticks=60, target=[-40.0, 20.0, -69.28]),
