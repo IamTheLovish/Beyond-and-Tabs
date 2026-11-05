@@ -74,6 +74,63 @@ public class PerfGoalsGameTests {
         });
     }
 
+    /**
+     * A GameTest's held [Goals] window counts every tick it was open. The periodic report (ServerTickProfile, every
+     * LOG_EVERY_TICKS ticks: Sys.report(), which ran GoalTimes.report()) restarted the window a test opened with
+     * GoalTimes.snapshot(), so it kept only its tail: the_goals_line_counts_the_goal_calls_of_every_unit read "timed 16
+     * times in 60 ticks ... [Goals] 3 ticks" (#488's pair, Nov 5). Held for longer than the report's interval, the window
+     * must still count every tick (2 of slack). Its own batch: no other test's snapshot in the window.
+     */
+    @GameTest(template = ARENA, timeoutTicks = com.solegendary.reignofnether.perf.ServerTickProfile.LOG_EVERY_TICKS + 120,
+        batch = "perf_goals_window")
+    public static void a_held_goals_window_counts_every_tick_across_the_periodic_report(GameTestHelper helper) {
+        BlockPos pad = ArenaReady.pad(helper, 215);
+        String owner = "gametest_goals_window_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        List<Entity> made = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {   // a few idle units, so the window has goal calls to write a line about
+            VindicatorUnit v = EntityRegistrar.VINDICATOR_UNIT.get().create(helper.getLevel());
+            if (v == null) {
+                cleanUp(made);
+                helper.fail("could not create the units");
+                return;
+            }
+            v.moveTo(pad.getX() + 1.5 + i * 2.5, pad.getY(), pad.getZ() + 1.5, 0, 0);
+            v.setOwnerName(owner);
+            helper.getLevel().addFreshEntity(v);
+            made.add(v);
+        }
+        Object hold = new Object();
+        TestCleanup.atEnd(helper, () -> {
+            Sys.force(hold, false);
+            cleanUp(made);
+        });
+        int span = com.solegendary.reignofnether.perf.ServerTickProfile.LOG_EVERY_TICKS + 20;
+        long[] from = { -1 };
+        helper.runAfterDelay(10, () -> {
+            Sys.force(hold, true);
+            GoalTimes.snapshot();   // a fresh window from here
+            from[0] = helper.getTick();
+        });
+        helper.runAfterDelay(10 + span, () -> {
+            long open = helper.getTick() - from[0];
+            String line = GoalTimes.snapshot();
+            Sys.force(hold, false);
+            ReignOfNether.LOGGER.info("[GoalsWindow] GameTest: window open {} ticks: {}", open, line);
+            java.util.regex.Matcher m = line == null ? null : java.util.regex.Pattern.compile("\\[Goals\\] (\\d+) ticks").matcher(line);
+            if (m == null || !m.find()) {
+                helper.fail("no [Goals] line came back after " + open + " ticks: " + line);
+                return;
+            }
+            int ticks = Integer.parseInt(m.group(1));
+            if (ticks < open - 2)
+                helper.fail("the held [Goals] window counted " + ticks + " of the " + open + " ticks it was open (the periodic"
+                    + " report every " + com.solegendary.reignofnether.perf.ServerTickProfile.LOG_EVERY_TICKS
+                    + " ticks restarted it): " + line);
+            else
+                helper.succeed();
+        });
+    }
+
     private static void cleanUp(List<Entity> made) {
         for (Entity e : made) {
             UnitServerEvents.clearQueuedActions(e.getId());

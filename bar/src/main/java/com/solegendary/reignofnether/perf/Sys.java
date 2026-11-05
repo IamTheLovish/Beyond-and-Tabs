@@ -100,7 +100,16 @@ public final class Sys {
     /** Who is forcing measuring on right now ({@link #force}); forced = not empty. */
     private static final java.util.Set<Object> HOLDERS = new java.util.HashSet<>();
     private static int captureRefs = 0;
+    /**
+     * The window's whole-tick time (MinecraftServer.tickTimes) and how many of its ticks that covers. A tick's time is
+     * only in tickTimes from the next tick on, so it is added one tick late and only when that tick was measured in this
+     * window ({@link #lastTickCounted}); adding tickTimes[tick - 1] to the current tick paired every window with the tick
+     * before it (a_300_unit_window_accounts_for_the_tick: a slow tick just before the window read as "elsewhere").
+     */
     private static double windowTickMs = 0;
+    private static int windowMsTicks = 0;
+    /** The tick that just ended was measured in the current window: its time is owed to it. */
+    private static boolean lastTickCounted = false;
     /** The last [Sys] line written (tests and the lag-capture summary read it). */
     public static volatile String lastLine = null;
     /** The share of the mean tick that the timed sections (ours and vanilla) covered in the last line written (tests). */
@@ -168,21 +177,27 @@ public final class Sys {
     private static void refresh() {
         boolean now = forced || captureRefs > 0 || slow;
         if (now && !on) {
-            TIMER.reset();
+            newWindow();
             GoalTimes.newWindow();
-            windowTickMs = 0;
         }
         on = now;
     }
 
-    /** End of a server tick (ServerTickProfile, server thread): closes the tick and re-checks whether to measure. */
-    static void onServerTickEnd(MinecraftServer server, double lastTickMs) {
+    /**
+     * End of a server tick (ServerTickProfile, server thread): closes the tick and re-checks whether to measure.
+     * {@code previousTickMs} is the whole time of the tick BEFORE this one (tickTimes[tick - 1]).
+     */
+    static void onServerTickEnd(MinecraftServer server, double previousTickMs) {
         serverThread = Thread.currentThread();
+        if (lastTickCounted)
+            addTickMs(previousTickMs);
         if (on) {
             TIMER.tickEnd();
             GoalTimes.tickEnd();
-            windowTickMs += lastTickMs;
         }
+        // owed only for a tick that was measured: once measuring stops (a hold released without a snapshot) the ticks
+        // after it are not the window's (review round 3 on #490: they diluted the live [Sys] line's mean)
+        lastTickCounted = on;
         if (server.getTickCount() % EVALUATE_EVERY_TICKS != 0)
             return;
         double[] sorted = ServerTickProfile.sortedMs(server.tickTimes);
@@ -200,6 +215,11 @@ public final class Sys {
      * and starts a new window. Returns the line, or null when there was nothing to say.
      */
     static String report() {
+        // a GameTest holds the timer (force): the window is the holder's, and its snapshot writes the line. Restarting
+        // it here cut the holder's window to its tail (a_300_unit_window_accounts_for_the_tick: "[Sys] 48 ticks" of
+        // 100, "covers only 87% of the tick"; "no [Sys] line came back" when the report fell on its last tick)
+        if (forced)
+            return null;
         String line = null;
         if (TIMER.ticks >= MIN_TICKS) {
             line = write();
@@ -207,10 +227,20 @@ public final class Sys {
         } else {
             GcLog.takeSysWindowMs();
         }
-        TIMER.reset();
-        windowTickMs = 0;
+        // the tick that just ended is in this window but its time is not known yet: its mean is over the ticks before it
+        newWindow();
         GoalTimes.report();   // the [Goals] line: which goals the aiGoals time goes to
         return line;
+    }
+
+    /** Ticks measured in the current window (GameTests: whether a window was cut short). */
+    public static int windowTicks() {
+        return TIMER.ticks;
+    }
+
+    /** Ticks of the current window whose whole-tick time is in its mean (tests: never more than windowTicks). */
+    public static int windowMsTicks() {
+        return windowMsTicks;
     }
 
     /**
@@ -220,14 +250,31 @@ public final class Sys {
     public static String snapshot() {
         if (TIMER.ticks == 0)
             return null;
+        // called during a tick: the last measured tick has ended and its time is in tickTimes now
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (lastTickCounted && server != null) {
+            addTickMs(server.tickTimes[Math.floorMod(server.getTickCount() - 1, server.tickTimes.length)] / 1.0e6);
+            lastTickCounted = false;
+        }
         String line = write();
-        TIMER.reset();
-        windowTickMs = 0;
+        newWindow();
         return line;
     }
 
+    private static void addTickMs(double ms) {
+        windowTickMs += ms;
+        windowMsTicks++;
+    }
+
+    private static void newWindow() {
+        TIMER.reset();
+        windowTickMs = 0;
+        windowMsTicks = 0;
+        lastTickCounted = false;
+    }
+
     private static String write() {
-        double meanMs = windowTickMs / TIMER.ticks;
+        double meanMs = windowMsTicks == 0 ? 0 : windowTickMs / windowMsTicks;
         String line = SysReport.line("[Sys]", "tick", NAMES, TIMER, meanMs, VANILLA_FROM, GcLog.takeSysWindowMs());
         lastCovered = meanMs <= 0 ? 0 : TIMER.totalSelfNs() / 1.0e6 / TIMER.ticks / meanMs;
         lastLine = line;
@@ -254,10 +301,9 @@ public final class Sys {
         HOLDERS.clear();
         captureRefs = 0;
         slow = false;
-        windowTickMs = 0;
         Arrays.fill(PUSHED, null);
         TickGates.onServerStopping();
-        TIMER.reset();
+        newWindow();
         GoalTimes.onServerStopping();
     }
 }
