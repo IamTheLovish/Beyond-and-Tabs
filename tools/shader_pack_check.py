@@ -185,19 +185,24 @@ def float_const(source, name, default=None):
 LUMA = (0.2126, 0.7152, 0.0722)
 
 
+def code_of(source):
+    """A shader's source without its comments, every run of whitespace one space: the lines the GPU runs, so a test that
+    looks for a statement is not satisfied by a comment quoting it."""
+    source = re.sub(r"/\*.*?\*/", " ", source, flags=re.S)
+    source = re.sub(r"//[^\n]*", " ", source)
+    return re.sub(r"\s+", " ", source)
+
+
 def noon_light(light_source, upness, ndl, sun_through=1.0):
     """Luma of lib/light.glsl's surfaceLight at the lobby's noon (the high-sun row) for a face in full sky light with
     no ambient occlusion: `upness` its normal's dot with up, `ndl` with the sun, `sun_through` the shadow (1 = lit).
-    Mirrors sunFacing (Lambert eased halfway to its square root), the fill's (0.75 + 0.25 x upness), the ground bounce
-    on faces that look sideways and MIN_LIGHT."""
+    Mirrors sunFacing (Lambert eased halfway to its square root), the fill's (0.75 + 0.25 x upness) and MIN_LIGHT."""
     def lum(v):
         return sum(a * b for a, b in zip(v, LUMA))
     sun, sky = lum(vec3_const(light_source, "SUN_HIGH")), lum(vec3_const(light_source, "SKY_HIGH"))
-    bounce = float_const(light_source, "GROUND_BOUNCE", 0.0)
     ndl = max(ndl, 0.0)
     facing = 0.5 * (ndl + ndl ** 0.5)
-    return (sun * facing * sun_through + sky * (0.75 + 0.25 * upness)
-            + sun * bounce * min(max(1.0 - upness, 0.0), 1.0) + lum(vec3_const(light_source, "MIN_LIGHT")))
+    return sun * facing * sun_through + sky * (0.75 + 0.25 * upness) + lum(vec3_const(light_source, "MIN_LIGHT"))
 
 
 def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_height=1080.0):

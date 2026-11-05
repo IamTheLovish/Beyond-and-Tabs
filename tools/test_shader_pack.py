@@ -97,25 +97,33 @@ class ShaderPack(unittest.TestCase):
         # lovish (Nov 5, buttons): "Try faint shadow + lit side". Grass, flowers and crops cast no shadow since Oct 28
         # (hard shadows read as dark stars under every tuft). Now they cast PLANT_SHADOW of the sun's light; no constant
         # = the old pack, nothing cast. Two-sided at noon on open ground: the ground under a tuft keeps at least 0.80 of
-        # the open lawn (design/own_shader_pack.md: "luma under a tuft at least 0.8x the open lawn beside it") and is at
-        # least 8% darker, or the shadow does not show
-        settings = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
-        light = open(os.path.join(spc.SHADERS, "lib", "light.glsl"), encoding="utf-8").read()
-        k = spc.float_const(settings, "PLANT_SHADOW", 0.0)
+        # the open lawn (slice 1's judged band for grass tufts, design/own_shader_pack.md in PR #385: "luma under a tuft
+        # at least 0.8x the open lawn beside it (no dark stars)") and is at least 8% darker, or the shadow does not show
+        def code(*path):
+            return spc.code_of(open(os.path.join(spc.SHADERS, *path), encoding="utf-8").read())
+        light = code("lib", "light.glsl")
+        k = spc.float_const(code("lib", "settings.glsl"), "PLANT_SHADOW", 0.0)
         ndl = math.sin(math.radians(60.0))
         under = spc.noon_light(light, 1.0, ndl, 1.0 - k) / spc.noon_light(light, 1.0, ndl)
         self.assertTrue(0.80 <= under <= 0.92, "ground under a tuft at %.3f of the open lawn" % under)
-        # the shadow pass draws the plants with that opacity, and the lookup lets the rest of the sun through
-        self.assertIn("PLANT_SHADOW", open(os.path.join(spc.SHADERS, "shadow.vsh"), encoding="utf-8").read())
-        self.assertIn("shadowcolor0", open(os.path.join(spc.SHADERS, "lib", "shadow.glsl"), encoding="utf-8").read())
+        # the shadow pass draws the plants with that opacity, and the lookup lets the rest of the sun through (the code
+        # itself, comments stripped: a comment quoting a line does not run)
+        self.assertIn("casterOpacity = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? PLANT_SHADOW : 1.0;", code("shadow.vsh"))
+        self.assertIn("gl_FragData[0] = vec4(casterOpacity, casterOpacity, casterOpacity, 1.0);", code("shadow.fsh"))
+        lookup = code("lib", "shadow.glsl")
+        self.assertIn("return 1.0 - texture2D(shadowcolor0, uv).r;", lookup)
+        self.assertIn("? 1.0 : casterThrough(uv);", lookup)
+        self.assertIn("through += casterThrough(", lookup)
+        self.assertIn("return through / blockers;", lookup)
 
     def test_plants_have_a_lit_and_a_shaded_side(self):
         # the same answer: a plant's planes take a normal PLANT_SIDE of the way from up toward the face the camera sees
         # (0 = lit as the ground, the old pack). At noon (sun ~60 degrees up) a plane facing the sun reads 1.00-1.10 of
         # the open lawn and one facing away 0.75-0.90: a lit side and a shaded side, never a dark plane
-        fsh = open(os.path.join(spc.SHADERS, "program", "lit.fsh"), encoding="utf-8").read()
-        light = open(os.path.join(spc.SHADERS, "lib", "light.glsl"), encoding="utf-8").read()
+        fsh = spc.code_of(open(os.path.join(spc.SHADERS, "program", "lit.fsh"), encoding="utf-8").read())
+        light = spc.code_of(open(os.path.join(spc.SHADERS, "lib", "light.glsl"), encoding="utf-8").read())
         s = spc.float_const(fsh, "PLANT_SIDE", 0.0)
+        self.assertIn("n = normalize(mix(geomN, face, PLANT_SIDE));", fsh)
         sun = (math.cos(math.radians(60.0)), math.sin(math.radians(60.0)))      # (toward the sun's azimuth, up)
         lawn = spc.noon_light(light, 1.0, sun[1])
         sides = []
