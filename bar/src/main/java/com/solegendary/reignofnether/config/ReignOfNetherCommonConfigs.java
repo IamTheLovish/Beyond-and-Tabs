@@ -135,6 +135,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.FIELD_MASON.define(BUILDER);
         UnitCosts.BONESETTER.define(BUILDER);
         UnitCosts.WRECKER.define(BUILDER);
+        UnitCosts.VOODOO_SHAMAN.define(BUILDER);
         UnitCosts.ROOTWARDEN.define(BUILDER);
         UnitCosts.SALVAGER.define(BUILDER);
         UnitCosts.JADE_MENDER.define(BUILDER);
@@ -571,6 +572,10 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry FIELD_MASON = ResourceCostConfigEntry.Unit(150,60,37,32,2, ResourceCosts.FIELD_MASON, "Field Mason Config");
         public static final ResourceCostConfigEntry BONESETTER = ResourceCostConfigEntry.Unit(150,54,24,28,2, ResourceCosts.BONESETTER, "Bonesetter Config");
         public static final ResourceCostConfigEntry WRECKER = ResourceCostConfigEntry.Unit(150,66,40,32,2, ResourceCosts.WRECKER, "Wrecker Config");
+        // the Horde's essence caster (design/essence_casters.md): tier 1, priced as tier 1 (lovish, Oct 30; Nov 3 for the
+        // Shaman: "115 / 120, like all T1") - 115 metal / 120 energy after bakeValues, the same for every race's caster,
+        // under both tier-2 lines (BarFx 120, UnitIconTier 180)
+        public static final ResourceCostConfigEntry VOODOO_SHAMAN = ResourceCostConfigEntry.Unit(0,80,90,40,3, ResourceCosts.VOODOO_SHAMAN, "Voodoo Shaman Config");
         public static final ResourceCostConfigEntry ROOTWARDEN = ResourceCostConfigEntry.Unit(150,60,32,30,2, ResourceCosts.ROOTWARDEN, "Rootwarden Config");
         public static final ResourceCostConfigEntry SALVAGER = ResourceCostConfigEntry.Unit(150,60,32,30,2, ResourceCosts.SALVAGER, "Salvager Config");
         public static final ResourceCostConfigEntry JADE_MENDER = ResourceCostConfigEntry.Unit(150,73,23,30,2, ResourceCosts.JADE_MENDER, "Jade Mender Config");
