@@ -70,7 +70,7 @@ public class MountOrderGameTests {
         // the player's Mount order: the Mount Spider ability on the spider
         new UnitActionItem(OWNER, UnitAction.MOUNT_SPIDER, spider.getId(), new int[] { rider.getId() }).action(level);
         // a unit with a Mount order is busy: never idle until it is up - else idle auto-aggression may take a passing
-        // enemy, and the HUD's idle-army button would pick a unit the player just gave an order
+        // enemy (Unit.isIdle gates it)
         String[] idle = { rider.isIdle() ? "right after the order, " + state(rider, spider, foe) : null };
 
         List<String> history = new ArrayList<>();
@@ -108,8 +108,85 @@ public class MountOrderGameTests {
         });
     }
 
+    /**
+     * The Mount Spider cursor sends whichever spider the player clicks, an enemy's too, and a rider mounts only its own
+     * side's (MountGoal.tick). Ordered onto an enemy's spider, the rider must drop the order - not stand "going to its
+     * mount" for good, never idle and so never fighting back (Mode A review round 1 on #507, blocker 1).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void a_mount_order_on_an_enemys_spider_is_dropped(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = ArenaReady.pad(helper, 232);
+        SkeletonUnit rider = EntityRegistrar.SKELETON_UNIT.get().create(level);
+        SpiderUnit spider = EntityRegistrar.SPIDER_UNIT.get().create(level);
+        if (rider == null || spider == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        rider.moveTo(pad.getX() + 2.5, pad.getY(), pad.getZ() + 2.5, 0, 0);
+        spider.moveTo(pad.getX() + 8.5, pad.getY(), pad.getZ() + 2.5, 0, 0);
+        rider.setOwnerName(OWNER);
+        spider.setOwnerName(FOE);
+        spider.setNoAi(true);
+        for (var u : List.of(rider, spider))
+            level.addFreshEntity(u);
+        TestCleanup.entities(helper, List.of(rider, spider));
+        new UnitActionItem(OWNER, UnitAction.MOUNT_SPIDER, spider.getId(), new int[] { rider.getId() }).action(level);
+        helper.runAfterDelay(100, () -> {
+            List<String> problems = new ArrayList<>();
+            if (rider.getVehicle() == spider)
+                problems.add("the rider mounted an enemy's spider");
+            // (dropped, it may well fight the spider: that is the point - only the order must be gone)
+            if (rider.getMountGoal().getTarget() != null)
+                problems.add("5 s after a Mount order on an enemy's spider the rider still holds it: " + state(rider, spider, spider));
+            TerrainGameTests.finish(helper, problems);
+        });
+    }
+
+    /**
+     * A spider walled in (stone 3 blocks out on every side, a roof): no way to it. The rider must give the Mount order
+     * up as a plain move gives up an unreachable target (MoveToTargetBlockGoal.GIVE_UP_AFTER_STUCK_REPATHS), within
+     * the 30 s the move tests allow - not stand "going to its mount" for good (review round 1 on #507, blocker 2).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 900)
+    public static void a_mount_order_on_a_walled_in_spider_is_given_up(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = ArenaReady.pad(helper, 232);
+        TestCleanup.BlockUndo box = TestCleanup.blocks(helper);
+        BlockPos at = pad.offset(11, 0, 8);
+        for (int dx = -3; dx <= 3; dx++)
+            for (int dz = -3; dz <= 3; dz++)
+                for (int dy = 0; dy <= 3; dy++)
+                    if (Math.abs(dx) == 3 || Math.abs(dz) == 3 || dy == 3)
+                        box.set(at.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+        SkeletonUnit rider = EntityRegistrar.SKELETON_UNIT.get().create(level);
+        SpiderUnit spider = EntityRegistrar.SPIDER_UNIT.get().create(level);
+        if (rider == null || spider == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        rider.moveTo(pad.getX() + 2.5, pad.getY(), pad.getZ() + 8.5, 0, 0);
+        spider.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        rider.setOwnerName(OWNER);
+        spider.setOwnerName(OWNER);
+        spider.setNoAi(true);
+        for (var u : List.of(rider, spider))
+            level.addFreshEntity(u);
+        TestCleanup.entities(helper, List.of(rider, spider));
+        new UnitActionItem(OWNER, UnitAction.MOUNT_SPIDER, spider.getId(), new int[] { rider.getId() }).action(level);
+        helper.runAfterDelay(600, () -> {
+            List<String> problems = new ArrayList<>();
+            if (rider.getVehicle() == spider)
+                problems.add("the rider reached a walled-in spider (the box is open: nothing tested)");
+            else if (rider.getMountGoal().getTarget() != null || !rider.isIdle())
+                problems.add("30 s after a Mount order on a walled-in spider the rider still holds it: " + state(rider, spider, spider)
+                    + ", last unreachable " + rider.getMountGoal().getLastUnreachableTarget());
+            TerrainGameTests.finish(helper, problems);
+        });
+    }
+
     /** Where the three are, the mount goal's state and the rider's attack target. */
-    static String state(SkeletonUnit rider, SpiderUnit spider, VillagerUnit foe) {
+    static String state(SkeletonUnit rider, SpiderUnit spider, net.minecraft.world.entity.Mob foe) {
         var goal = rider.getMountGoal();
         BlockPos mt = goal.getMoveTarget();
         LivingEntity target = goal.getTarget();
