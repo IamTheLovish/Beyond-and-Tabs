@@ -62,7 +62,7 @@ import oshi.util.tuples.Pair;
 import javax.annotation.Nullable;
 import java.util.*;
 
-public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, HeroUnit, KeyframeAnimated, RangeIndicator {
+public class WretchedWraithUnit extends Monster implements Unit, MountingUnit, AttackerUnit, HeroUnit, KeyframeAnimated, RangeIndicator {
     public final Abilities ABILITIES = new Abilities(
         List.of(
             new Pair<>(new ChillingScreech(), Keybindings.abilitySlot1),
@@ -122,6 +122,7 @@ public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, H
     public Goal getAttackGoal() {return attackGoal;}
     public ReturnResourcesGoal getReturnResourcesGoal() {return returnResourcesGoal;}
     public int getMaxResources() {return maxResources;}
+    @Override
     public MountGoal getMountGoal() {return mountGoal;}
 
     private EnemySearchBehaviour attackSearchBehaviour = EnemySearchBehaviour.NONE;

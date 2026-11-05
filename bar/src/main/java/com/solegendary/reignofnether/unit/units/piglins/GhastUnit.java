@@ -16,6 +16,7 @@ import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
 import com.solegendary.reignofnether.unit.controls.FlyingUnitMoveControl;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.MountingUnit;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -65,7 +66,7 @@ import java.util.List;
 
 import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
-public class GhastUnit extends Ghast implements Unit, AttackerUnit, RangedAttackerUnit {
+public class GhastUnit extends Ghast implements Unit, MountingUnit, AttackerUnit, RangedAttackerUnit {
     final static public float attackRange = 30; // only used by ranged units or melee building attackers
 
     public static final Abilities ABILITIES = new Abilities();
@@ -108,6 +109,7 @@ public class GhastUnit extends Ghast implements Unit, AttackerUnit, RangedAttack
     public SelectedTargetGoal<? extends LivingEntity> getTargetGoal() {return targetGoal;}
     public ReturnResourcesGoal getReturnResourcesGoal() {return returnResourcesGoal;}
     public int getMaxResources() {return maxResources;}
+    @Override
     public MountGoal getMountGoal() {return mountGoal;}
 
     private MoveToTargetBlockGoal moveGoal;

@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.time.NightUtils;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.MountingUnit;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -52,7 +53,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class StrayUnit extends Stray implements Unit, AttackerUnit, RangedAttackerUnit {
+public class StrayUnit extends Stray implements Unit, MountingUnit, AttackerUnit, RangedAttackerUnit {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new MountSpider(), Keybindings.abilitySlot1);
@@ -99,6 +100,7 @@ public class StrayUnit extends Stray implements Unit, AttackerUnit, RangedAttack
     public Goal getAttackGoal() {return attackGoal;}
     public ReturnResourcesGoal getReturnResourcesGoal() {return returnResourcesGoal;}
     public int getMaxResources() {return maxResources;}
+    @Override
     public MountGoal getMountGoal() {return mountGoal;}
 
     private EnemySearchBehaviour attackSearchBehaviour = EnemySearchBehaviour.NONE;

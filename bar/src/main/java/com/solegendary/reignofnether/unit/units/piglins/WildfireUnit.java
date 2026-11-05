@@ -72,7 +72,7 @@ import java.util.Set;
 
 import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
-public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAttackerUnit, HeroUnit, KeyframeAnimated, RangeIndicator {
+public class WildfireUnit extends Blaze implements Unit, MountingUnit, AttackerUnit, RangedAttackerUnit, HeroUnit, KeyframeAnimated, RangeIndicator {
     public final Abilities ABILITIES = new Abilities(
             List.of(
                     new Pair<>(new MoltenBomb(), Keybindings.abilitySlot1),
@@ -132,6 +132,7 @@ public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAtt
     public Goal getAttackGoal() {return attackGoal;}
     public ReturnResourcesGoal getReturnResourcesGoal() {return returnResourcesGoal;}
     public int getMaxResources() {return maxResources;}
+    @Override
     public MountGoal getMountGoal() {return mountGoal;}
 
     private EnemySearchBehaviour attackSearchBehaviour = EnemySearchBehaviour.NONE;

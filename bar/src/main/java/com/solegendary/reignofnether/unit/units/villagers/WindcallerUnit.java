@@ -22,6 +22,7 @@ import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
 import com.solegendary.reignofnether.unit.controls.FlyingUnitMoveControl;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.MountingUnit;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.KeyframeAnimated;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
@@ -70,7 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, KeyframeAnimated, RangeIndicator,
+public class WindcallerUnit extends Pillager implements Unit, MountingUnit, AttackerUnit, RangedAttackerUnit, KeyframeAnimated, RangeIndicator,
         com.solegendary.reignofnether.unit.interfaces.WindAntiAir {   // its gust is wind-type AA: grounds the Celestial Dragon
     public static final Abilities ABILITIES = new Abilities();
     static {
@@ -119,6 +120,7 @@ public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, Rang
     public Goal getAttackGoal() {return attackGoal;}
     public ReturnResourcesGoal getReturnResourcesGoal() {return returnResourcesGoal;}
     public int getMaxResources() {return maxResources;}
+    @Override
     public MountGoal getMountGoal() {return mountGoal;}
 
     private EnemySearchBehaviour attackSearchBehaviour = EnemySearchBehaviour.NONE;

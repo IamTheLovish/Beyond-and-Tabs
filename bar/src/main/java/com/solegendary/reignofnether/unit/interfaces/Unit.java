@@ -908,8 +908,8 @@ public interface Unit {
     }
 
     /**
-     * Nothing to do: not moving (or stuck at its move target), following, attacking, building, gathering, using an
-     * item or casting. Asked of busy units far more often than of idle ones - the command queues' executor every tick
+     * Nothing to do: not moving (or stuck at its move target), following, going to a mount, attacking, building,
+     * gathering, using an item or casting. Asked of busy units far more often than of idle ones - the command queues' executor every tick
      * for each unit with orders waiting, AttackerUnit.tick every few ticks per unit - so the cheapest disqualifiers
      * come first and a busy unit answers after a field read or two; the scan of every goal for a casting spell (an
      * iterator over the goal set) runs last, only for a unit that looks idle otherwise. Same answer as the old
@@ -918,6 +918,9 @@ public interface Unit {
     default boolean isIdle() {
         Mob mob = (Mob) this;
         if (this.getFollowTarget() != null)
+            return false;
+        // a Mount order is an order, like a move order: on its way to its mount the unit is busy (#507)
+        if (MountingUnit.isGoingToMount(this))
             return false;
         BlockPos moveTarget = this.getMoveGoal().getMoveTarget();
         if (moveTarget != null) {
