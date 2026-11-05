@@ -961,6 +961,26 @@ def make_stinger(faction):
     return f
 
 
+def s_portal_forming(rng, v):
+    """The forming moment (barfx/PortalForming, lovish Nov 5: a portal or a game ender forms instead of switching on):
+    a rising charge that tightens as the light fills inward - two voices gliding up two octaves, a flutter that
+    quickens, a breath of air rising with them, a few sparks at the start - then the settle at 1.3 s, where the client's
+    swirl lands: a soft low thump and an open fifth that rings out. Original, from these formulas only."""
+    rise = 1.3
+    t = t_axis(rise)
+    swell = (t / rise) ** 1.6
+    f = sweep(98, 392, rise)
+    flutter = 1 + 0.35 * np.sin(2 * np.pi * np.cumsum(sweep(3, 16, rise)) / SR)
+    voice = sine(f, rise) + 0.6 * sine(f * 1.5 * 1.004, rise) + 0.18 * saw(f * 2, rise, 12)
+    charge = lp(voice, 2400) * flutter * swell
+    air = moving_bp(noise(rng, rise), sweep(400, 5200, rise), 2.0) * swell
+    sparks = crackle(rng, 0.4, 260, 2500, 9000) * env_exp(0.4, 0.14)
+    thump = drum(55, 0.7, rng, drop=1.5, tau=0.22, snap=0.08)
+    fifth = chime(note_hz(-12), 1.2, rng, decay=0.7) + 0.6 * chime(note_hz(-5), 1.2, rng, decay=0.6)
+    body = mix((charge, 0, 0.55), (air, 0, 0.25), (sparks, 0, 0.5), (thump, rise - 0.02, 0.7), (fifth, rise, 0.45),
+               (silence(2.4), 0, 0))
+    return reverb(body, rng, 1.4, 0.3, 3500)
+
 # ================================================================ table
 # key -> (category, variations, generator). Keep in step with sounds/Sfx.java (the GameTest checks the files).
 
@@ -1021,6 +1041,7 @@ add("startpos_tick", "ui", 1, s_startpos_tick)
 add("startpos_end", "ui", 1, s_startpos_end)
 for _f in MOTIFS:
     add("stinger_" + _f, "announcer", 1, make_stinger(_f))
+add("portal_forming", "buildings", 1, s_portal_forming)   # last: Sfx.PORTAL_FORMING is the enum's last entry
 
 SUBTITLES = {
     "shot_bow": "Bow fires", "shot_gun": "Musket fires", "shot_fire": "Fireball launched", "shot_heavy": "Heavy shot",
@@ -1035,6 +1056,7 @@ SUBTITLES = {
     "gameender_aim": "Game ender takes aim", "gameender_strike": "Game ender strikes",
     "gameender_intercept": "Strike intercepted", "startpos_begin": "Choose start positions",
     "startpos_place": "Start position placed", "startpos_tick": "Countdown", "startpos_end": "Start positions locked",
+    "portal_forming": "Portal forms",
 }
 FACTION_NAMES = {"sunforged": "White Angel", "gravebound": "Death", "horde": "Horde", "verdant": "Verdant",
                  "tide": "Tidewrought", "storm": "Stormcallers", "brass": "Brassworks"}

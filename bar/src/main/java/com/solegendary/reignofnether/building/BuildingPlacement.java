@@ -171,6 +171,8 @@ public class BuildingPlacement {
 
     protected long tickAgeAfterBuilt = 0; // not saved
     public long tickAge = 0; // not saved
+    /** The forming moment played (barfx/PortalForming): once per activation. Not saved - a loaded building is built already. */
+    public boolean formingShown = false;
 
     public final BlockPos minCorner;
     // not final: an in-place upgrade to a taller structure (BuildingLevels) raises the top, so selection boxes and
@@ -1318,6 +1320,8 @@ public class BuildingPlacement {
             RTSPlayer rtsPlayer = PlayerServerEvents.getRTSPlayer(ownerName);
             if (rtsPlayer != null)
                 rtsPlayer.scores.addToScore(RTSPlayerScoresEnum.TOTAL_BUILDINGS_CONSTRUCTED);
+            // a portal or a game ender forms over ~1.6 s instead of switching on at once (once; fog-filtered per player)
+            com.solegendary.reignofnether.barfx.PortalForming.onBuilt(this);
         } else {
             TutorialClientEvents.updateStage();
             com.solegendary.reignofnether.hud.NotificationClientEvents.onBuildingBuilt(this);
