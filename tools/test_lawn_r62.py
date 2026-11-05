@@ -13,6 +13,10 @@ Since lovish's answer (Nov 5 ~05:00Z, "Yes, measure what ships") these read the 
 - 60% at 2-8 screen px (speckle; bench 27%)              -> under 50%
 and the round 61 gains stay: saturation >= 0.58, a lawn not darker than round 61b (L >= 0.34).
 
+Since lovish's answer (Nov 5 ~05:00Z, "Yes, as the player sees it") the calm-patch and speckle shares read the
+sheet TIMES the world colour field (postfx/GrassTint, sim.world_tint) - the big soft drifts live there, not in the
+8-block sheet; bands unchanged.
+
 Run: python3 -m unittest tools/test_lawn_r62.py
 """
 import os
@@ -40,6 +44,16 @@ def field():
         m = sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS)   # 32 texels per block
         _C["f"] = np.clip(np.tile(m, (3, 3, 1)) * sim.hex_rgb(sim.LAWN_TINT), 0, 1)
     return _C["f"]
+
+
+def world():
+    """the shipped sheet tiled 3 x 3 (24 x 24 blocks) times the world colour field (GrassTint, blended per vertex):
+    the lawn as the player sees it."""
+    if "w" not in _C:
+        _H, alb = sheet()
+        m = sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS)
+        _C["w"] = np.clip(np.tile(m, (3, 3, 1)) * sim.world_tint(3 * gen_blocks.LAWN_SHEET_BLOCKS), 0, 1)
+    return _C["w"]
 
 
 def band_share(L, lo, hi, wavelength=False):
@@ -76,12 +90,12 @@ class LawnSheetRound62Test(unittest.TestCase):
         lovish said (Nov 4 16:53 ET) "The grass looks blotchy"; shown r65's candidates (B = those patches at half
         amplitude, D = A + B + C) he chose (~17:05 ET) "D, and lower both floors". D measures ~0.10 at the test mip,
         so the floor is 0.08 by his choice; the ceiling 0.30 (patches never the main pattern - blotches) stays."""
-        share = band_share(sim.luma(field()), 64, 1e9, wavelength=True)
+        share = band_share(sim.luma(world()), 64, 1e9, wavelength=True)
         self.assertGreaterEqual(share, 0.08)
         self.assertLessEqual(share, 0.30)
 
     def test_not_speckle(self):
-        self.assertLess(band_share(sim.luma(field()), 2, 8), 0.50)
+        self.assertLess(band_share(sim.luma(world()), 2, 8), 0.50)
 
     def test_saturated_and_not_dark(self):
         m = sim.measure(field())

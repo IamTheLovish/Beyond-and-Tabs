@@ -109,6 +109,18 @@ def sheet_mip(gain=False):
     return _C[key]
 
 
+def world_mip(gain=False):
+    """variant 1's mip tiled 3 x 3 (24 x 24 blocks) times the world colour field (GrassTint, per vertex), as the
+    player sees it (lovish Nov 5: calm patches and speckle are measured on this)."""
+    key = ("world", gain)
+    if key not in _C:
+        _H, alb = variants(256)[0]
+        m = sim.box_mip(alb, gen_blocks.LAWN_SHEET_BLOCKS * 32)
+        f = np.tile(m, (3, 3, 1)) * sim.world_tint(3 * gen_blocks.LAWN_SHEET_BLOCKS)
+        _C[key] = np.clip(f * LAWN_GAIN if gain else f, 0, 1)
+    return _C[key]
+
+
 def band_share(L, lo, hi, wavelength=False):
     """test_lawn_r62's measure: the share of the luma variance in features lo..hi px across (half-wavelength; or the
     full wavelength), from the power spectrum."""
@@ -194,9 +206,9 @@ class LawnSheetRound64Test(unittest.TestCase):
         self.assertGreaterEqual(float(west[dark].mean() - east[dark].mean()), 0.02)
 
     def test_rounds_62_63_bands_on_the_8x8_sheet(self):
-        """test_lawn_r62/r63 mip the sheet to a fixed 128 px (32 texels per block of the 4-block sheet they were
-        written for), so they keep measuring lawn_sheet's default 4-block cut of the same recipe; the pack's 8 x 8
-        sheet is held to the SAME bands here at 32 texels per block (3 x 3 sheets, as they tile): near-black
+        """test_lawn_r62/r63's bands re-stated on variant 1 of the pack's 8 x 8 sheet at 32 texels per block (3 x 3
+        sheets, as they tile; since lovish's "Yes, measure what ships", Nov 5, r62/r63 read this sheet too); speckle
+        and the 2+ block share on the sheet times the world colour field ("Yes, as the player sees it"): near-black
         < 0.5% under our gain, speckle 0.40-0.50, 2+ block share 0.08-0.30 (floor 0.15 -> 0.08 with test_lawn_r62's
         on lovish's "D, and lower both floors", Nov 4 ~17:05 ET), fine grain (under 0.2 block over
         0.25-0.6 block), saturation >= 0.58 and L >= 0.34 under our gain, worn soil 0.3-8% (floor 1% -> 0.3% with
@@ -207,11 +219,12 @@ class LawnSheetRound64Test(unittest.TestCase):
         L, Lg = sim.luma(f3), sim.luma(g3)
         with self.subTest("no holes under our shader"):
             self.assertLess(float((Lg < 0.15).mean()), 0.005)
-        with self.subTest("speckle band"):
-            self.assertGreaterEqual(band_share(Lg, 2, 8), 0.40)
-            self.assertLess(band_share(Lg, 2, 8), 0.50)
-        with self.subTest("block-scale band"):
-            share = band_share(L, 64, 1e9, wavelength=True)
+        with self.subTest("speckle band (sheet x world field)"):
+            Lwg = sim.luma(world_mip(gain=True))
+            self.assertGreaterEqual(band_share(Lwg, 2, 8), 0.40)
+            self.assertLess(band_share(Lwg, 2, 8), 0.50)
+        with self.subTest("block-scale band (sheet x world field)"):
+            share = band_share(sim.luma(world_mip()), 64, 1e9, wavelength=True)
             self.assertGreaterEqual(share, 0.08)
             self.assertLessEqual(share, 0.30)
         with self.subTest("fine grain"):

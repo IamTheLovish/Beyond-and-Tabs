@@ -78,6 +78,27 @@ def tile(textures, blocks, px, tint=None, seed=0, rotate=True):
     return np.clip(field, 0, 1)
 
 
+def world_tint(blocks, px=32, base=LAWN_TINT):
+    """The lawn's world colour as the game draws it, 0..1 RGB of shape (blocks * px, blocks * px, 3): postfx/GrassTint
+    on the battlefield grass colour per block (tools/grass_tint_preview.py, an exact port that reads the Java file's
+    constants), blended per vertex corner as Embeddium does (each corner the mean of the four blocks sharing it,
+    bilinear across the face). Multiply an UNTINTED albedo field by it to see texture + world field together, as the
+    player does (lovish Nov 5: the calm-patch and speckle checks measure that)."""
+    import grass_tint_preview as gtp
+    k = gtp.constants()
+    rgb = int(base, 16)
+    bx, bz = np.meshgrid(np.arange(blocks + 2) - 1.0, np.arange(blocks + 2) - 1.0)
+    blk = gtp.apply(rgb, bx, bz, 1, k) / 255.0          # GrassTint.GRASS = 1; rows are z, columns x
+    corner = 0.25 * (blk[:-1, :-1] + blk[1:, :-1] + blk[:-1, 1:] + blk[1:, 1:])
+    t = (np.arange(blocks * px) + 0.5) / px
+    bi = np.floor(t).astype(int)
+    fr = t - bi
+    fx, fz = fr[None, :, None], fr[:, None, None]
+    a, b = corner[bi][:, bi], corner[bi][:, bi + 1]
+    c, d = corner[bi + 1][:, bi], corner[bi + 1][:, bi + 1]
+    return (a * (1 - fx) + b * fx) * (1 - fz) + (c * (1 - fx) + d * fx) * fz
+
+
 def luma(rgb):
     return rgb[..., 0] * 0.2126 + rgb[..., 1] * 0.7152 + rgb[..., 2] * 0.0722
 

@@ -41,9 +41,9 @@ class LawnRound65Test(unittest.TestCase):
         self.assertLess(float(scorch.mean()), 0.0005)
 
     def test_patches_not_blotchy(self):
-        """2+ block wavelengths carry no more than 0.18 of the luma variance (3 x 3 sheets, plain lane); the band's
-        floor 0.08 is test_lawn_r62's."""
-        L = sim.luma(np.tile(r64.sheet_mip(), (3, 3, 1)))
+        """2+ block wavelengths carry no more than 0.18 of the luma variance (3 x 3 sheets times the world colour
+        field, plain lane - lovish Nov 5: "Yes, as the player sees it"); the band's floor 0.08 is test_lawn_r62's."""
+        L = sim.luma(r64.world_mip())
         self.assertLessEqual(r64.band_share(L, 64, 1e9, wavelength=True), 0.18)
 
     def test_clover_leaves_clear_of_the_block_edge(self):

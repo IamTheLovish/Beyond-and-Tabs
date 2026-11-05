@@ -28,6 +28,10 @@ Since lovish's answer (Nov 5 ~05:00Z, "Yes, measure what ships") the sheet check
 (gen_blocks.LAWN_SHEET_BLOCKS) at 32 texels per block, not the 4-block default cut; bands unchanged. The flower
 count keeps its 4 x 4-block window (the density it was written for).
 
+Since lovish's answer (Nov 5 ~05:00Z, "Yes, as the player sees it") the calm-patch and speckle shares read the
+sheet TIMES the world colour field (postfx/GrassTint, sim.world_tint) - the big soft drifts live there, not in the
+8-block sheet; bands unchanged.
+
 Run: python3 -m unittest tools/test_lawn_r63.py
 """
 import os
@@ -56,6 +60,17 @@ def field(gain=True):
         _H, alb = sheet()
         m = sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS)   # 32 texels per block
         f = np.tile(m, (3, 3, 1)) * sim.hex_rgb(sim.LAWN_TINT)
+        _C[key] = np.clip(f * LAWN_GAIN if gain else f, 0, 1)
+    return _C[key]
+
+
+def world(gain=True):
+    """the shipped sheet tiled 3 x 3 times the world colour field (GrassTint, per vertex): what the player sees."""
+    key = "wg" if gain else "w"
+    if key not in _C:
+        _H, alb = sheet()
+        m = sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS)
+        f = np.tile(m, (3, 3, 1)) * sim.world_tint(3 * gen_blocks.LAWN_SHEET_BLOCKS)
         _C[key] = np.clip(f * LAWN_GAIN if gain else f, 0, 1)
     return _C[key]
 
@@ -117,7 +132,7 @@ class LawnSheetRound63Test(unittest.TestCase):
         self.assertGreaterEqual(float(away[dark].mean() - toward[dark].mean()), 0.02)
 
     def test_speckle_band(self):
-        share = band_share(sim.luma(field()), 2, 8)
+        share = band_share(sim.luma(world()), 2, 8)
         self.assertGreaterEqual(share, 0.40)
         self.assertLess(share, 0.50)
 
@@ -126,7 +141,7 @@ class LawnSheetRound63Test(unittest.TestCase):
         ground"), never blotches that read as cloud shadow. test_lawn_r62's band: floor 0.15 -> 0.08 with it on
         lovish's "D, and lower both floors" (Nov 4 ~17:05 ET, after "The grass looks blotchy" at 16:53 - see
         test_lawn_r62 for the history); the ceiling 0.30 stays."""
-        share = band_share(sim.luma(field(gain=False)), 64, 1e9, wavelength=True)
+        share = band_share(sim.luma(world(gain=False)), 64, 1e9, wavelength=True)
         self.assertGreaterEqual(share, 0.08)
         self.assertLessEqual(share, 0.30)
 
