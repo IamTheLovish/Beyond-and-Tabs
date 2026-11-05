@@ -182,6 +182,24 @@ def float_const(source, name, default=None):
     return float(m.group(1))
 
 
+def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_height=1080.0):
+    """lib/ao.glsl's aoDepthTolerance in blocks, evaluated from the GLSL itself: the `return` under its
+    `if (aoOrtho(projection))` (the RTS view) or the one after it (first person), with the file's float constants filled
+    in and the RTS view's projection[1][1] = 2 / zoom (zoom = blocks of view height)."""
+    m = re.search(r"float aoDepthTolerance\([^)]*\) \{\s*if \(aoOrtho\(projection\)\)\s*return ([^;]*);\s*return ([^;]*);"
+                  r"\s*\}", ao_source)
+    if not m:
+        raise ValueError("lib/ao.glsl's aoDepthTolerance is not `if (aoOrtho(projection)) return ...; return ...;`")
+    expr = (m.group(1) if ortho else m.group(2)).replace("projection[1][1]", "p11")
+    consts = dict(re.findall(r"const float (\w+) = (-?\d+(?:\.\d+)?);", ao_source))
+    expr = re.sub(r"\b[A-Z][A-Z0-9_]*\b", lambda c: consts[c.group(0)], expr)
+    if re.search(r"[^\w\s.,()+\-*/]", expr) or set(re.findall(r"[A-Za-z_]\w*", expr)) - {
+            "max", "base", "viewDepth", "viewHeight", "p11"}:
+        raise ValueError("cannot evaluate %r" % expr)
+    return eval(expr, {"__builtins__": {}}, {"max": max, "base": base, "viewDepth": view_depth,
+                                            "viewHeight": view_height, "p11": 2.0 / zoom})
+
+
 def _smoothstep(a, b, x):
     t = min(max((x - a) / (b - a), 0.0), 1.0)
     return t * t * (3.0 - 2.0 * t)

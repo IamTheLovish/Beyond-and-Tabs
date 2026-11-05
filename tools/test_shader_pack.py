@@ -6,11 +6,18 @@ PCs; a GLSL typo there costs a ten-minute eyes run and shows as "no shader pack"
 """
 import math
 import os
+import re
 import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
 import shader_pack_check as spc  # noqa: E402
+
+
+def read(*parts):
+    """A pack file's text (a path under shaders/), closed after reading."""
+    with open(os.path.join(spc.SHADERS, *parts), encoding="utf-8") as f:
+        return f.read()
 
 
 class ShaderPack(unittest.TestCase):
@@ -25,17 +32,78 @@ class ShaderPack(unittest.TestCase):
 
     def test_the_loader_reads_our_settings(self):
         # the sun tilt lovish picked (Oct 29) and the shadow map's size, where every program sees them
-        src = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+        src = read("lib", "settings.glsl")
         self.assertIn("const float sunPathRotation = 30.0;", src)
         self.assertIn("const int shadowMapResolution = 2048;", src)
+
+    def test_ambient_occlusion_takes_only_the_sky_share(self):
+        # slice 3 (lib/ao.glsl): every program that writes colour also writes colortex1, the sky's share of the light,
+        # so composite.fsh darkens creases in the fill alone; overlays and water write 0 (an unlit program left out
+        # would take the ground's occlusion onto a selection ring)
+        for name in spc.programs():
+            if not name.startswith("gbuffers_") or not name.endswith(".fsh"):
+                continue
+            src = spc.expand(os.path.join(spc.SHADERS, name))
+            if "orthoView())\n        discard;" in src and "SKY" in src:
+                continue                    # the sky: nothing drawn in the RTS view, depth 1 elsewhere
+            self.assertIn("/* DRAWBUFFERS:01 */", src, name)
+            self.assertIn("gl_FragData[1]", src, name)
+        props = read("shaders.properties")
+        self.assertIn("scale.deferred=0.5", props)
+        comp = read("composite.fsh")
+        self.assertIn("lit *= 1.0 - skyShare * (1.0 - occlusionAt(", comp)
+
+    def test_ao_depth_tolerance_is_safe_in_the_rts_view(self):
+        # the blur (deferred1) and the upsampling (composite) let a neighbour share a pixel's occlusion only within a
+        # depth tolerance. In the RTS view the depth comes from a camera plane inside the scene and goes negative behind
+        # it (down to the near plane, -2750), so a term in the depth would reach 0 (a division by zero) or turn the
+        # weights round. Both passes take aoDepthTolerance, whose RTS branch reads no depth and whose first-person term
+        # never drops below the base. spc.ao_depth_tolerance evaluates the function's own two `return` expressions (the
+        # RTS one under `if (aoOrtho(projection))`, then the first-person one), so every number below is the GLSL's
+        ao = read("lib", "ao.glsl")
+        bases = []
+        for name in ("deferred1.fsh", "composite.fsh"):
+            src = read(name)
+            self.assertEqual(len(re.findall(r"\btolerance = ", src)), 1, name)
+            arg = re.search(r"\btolerance = aoDepthTolerance\(([\w.]+),", src).group(1)
+            bases.append(float(arg) if re.match(r"[\d.]+$", arg) else spc.float_const(src, arg))
+        blur = bases[0]
+        for base in bases:
+            for depth in (-2750.0, -500.0, -25.0, -12.5, 0.0, 40.0, 300.0):
+                self.assertGreater(spc.ao_depth_tolerance(ao, base, depth, False), 0.0)
+                self.assertEqual(spc.ao_depth_tolerance(ao, base, depth, True),
+                                 spc.ao_depth_tolerance(ao, base, 40.0, True))
+            for height in (720.0, 1080.0, 2160.0):
+                # the default view (zoom 30): under the 1 block of depth between a unit's silhouette and the ground
+                # behind it at 65 degrees (1-2.2 blocks), so a unit's occlusion never spreads onto that ground
+                self.assertLess(spc.ao_depth_tolerance(ao, base, 40.0, True, 30.0, height), 1.0)
+                # flat ground at the configured tilts (camera_pitch_close 55 .. _far 75 degrees) still blends at every
+                # zoom: a neighbour two half-resolution pixels away (the blur's reach; the upsampling's is one) keeps
+                # at least half its weight
+                reach = 2.0 if base == blur else 1.0
+                for zoom in (10.0, 30.0, 90.0, 200.0):
+                    for pitch in (55.0, 75.0):
+                        cell = zoom / (height * spc.float_const(ao, "AO_SCALE"))
+                        gap = reach * cell / math.tan(math.radians(pitch))
+                        tol = spc.ao_depth_tolerance(ao, base, 40.0, True, zoom, height)
+                        self.assertGreaterEqual(1.0 - gap / tol, 0.5, (base, height, zoom, pitch))
+
+    def test_lit_ground_never_blooms(self):
+        # slice 3's judged number: zero bloom on a plain noon lawn. The light table puts sunlit ground at its albedo
+        # (under 1 in linear light), so the threshold must stay at or above 1
+        comp = read("composite.fsh")
+        m = re.search(r"const float BLOOM_THRESHOLD = ([\d.]+);", comp)
+        self.assertIsNotNone(m)
+        self.assertGreaterEqual(float(m.group(1)), 1.0)
 
     def test_grade_matches_the_mods_enchanted_look(self):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's
         # final.fsh copies the Enchanted column of WorldLookPass (#326); until #326 is on this branch there is no third
         # column to compare and the test skips
-        java = open(os.path.join(spc.ROOT, "..", "..", "bar", "src", "main", "java", "com", "solegendary",
-                                 "reignofnether", "postfx", "WorldLookPass.java"), encoding="utf-8").read()
-        fsh = open(os.path.join(spc.SHADERS, "final.fsh"), encoding="utf-8").read()
+        with open(os.path.join(spc.ROOT, "..", "..", "bar", "src", "main", "java", "com", "solegendary",
+                               "reignofnether", "postfx", "WorldLookPass.java"), encoding="utf-8") as f:
+            java = f.read()
+        fsh = read("final.fsh")
         pairs = spc.enchanted_pairs(java, fsh)
         if pairs is None:
             self.skipTest("WorldLookPass has no Enchanted column yet (#326)")
@@ -45,13 +113,13 @@ class ShaderPack(unittest.TestCase):
     def test_material_maps_reach_the_lit_draws_but_not_water(self):
         # slice 2 reads our _n / _s maps through one switch (lib/pbrswitch.glsl): terrain, entities, block entities and
         # the hand pass LIT_PBR; water keeps slice 1's surface until slice 4 (design/own_shader_pack.md)
-        switch = open(os.path.join(spc.SHADERS, "lib", "pbrswitch.glsl"), encoding="utf-8").read()
+        switch = read("lib", "pbrswitch.glsl")
         self.assertIn("!defined LIT_WATER", switch)
         for name in ("gbuffers_terrain.fsh", "gbuffers_entities.fsh", "gbuffers_block.fsh", "gbuffers_hand.fsh"):
             src = spc.expand(os.path.join(spc.SHADERS, name))
             self.assertIn("uniform sampler2D normals;", src, name)
             self.assertIn("uniform sampler2D specular;", src, name)
-        self.assertIn("#define LIT_WATER", open(os.path.join(spc.SHADERS, "gbuffers_water.fsh"), encoding="utf-8").read())
+        self.assertIn("#define LIT_WATER", read("gbuffers_water.fsh"))
         # and after the preprocessor (what the GPU compiles) the water pass binds no material maps at all, while
         # terrain keeps them - so this check cannot pass by the preprocessor dropping everything
         terrain = spc.preprocess(spc.expand(os.path.join(spc.SHADERS, "gbuffers_terrain.fsh")))
@@ -82,9 +150,10 @@ class ShaderPack(unittest.TestCase):
         # lobby's noon (6000, the 30 degree tilt) puts the sun ~60 degrees up: an up face in full sky light, unshadowed,
         # takes the sun through sunFacing and the fill through surfaceLight's side share, plus MIN_LIGHT. The test reads
         # those constants and checks the two formulas still use them (review of #506: a change there must go red)
-        src = open(os.path.join(spc.SHADERS, "lib", "light.glsl"), encoding="utf-8").read()
+        src = read("lib", "light.glsl")
         self.assertIn("return mix(ndl, sqrt(ndl), SUN_FACING_EASE);", src)
         self.assertIn("(SKY_FILL_SIDE + (1.0 - SKY_FILL_SIDE) * upness)", src)
+        self.assertIn("light += skyFill(n, levels, ao, texAo, skyColour);", src)   # surfaceLight's fill is skyFill
         ease, side = spc.float_const(src, "SUN_FACING_EASE"), spc.float_const(src, "SKY_FILL_SIDE")
         sun, sky = spc.vec3_const(src, "SUN_HIGH"), spc.vec3_const(src, "SKY_HIGH")
         floor = spc.vec3_const(src, "MIN_LIGHT")
@@ -100,7 +169,7 @@ class ShaderPack(unittest.TestCase):
         # palette's darkest sunlit ground is dirt and paths at 0.30 luma (the lawn 0.33-0.43). The old bell peaked at
         # 0.25 and still gave 0.9 of the tint at 0.30 - the larger half of the lawn's olive pull. Deep shade (0.15)
         # keeps the tone
-        src = open(os.path.join(spc.SHADERS, "final.fsh"), encoding="utf-8").read()
+        src = read("final.fsh")
         for lc in (0.30, 0.35, 0.40, 0.45, 0.50):
             self.assertLessEqual(spc.split_tone_shadows(src, lc), 0.05, "sunlit ground at luma %.2f is tinted" % lc)
         self.assertGreaterEqual(spc.split_tone_shadows(src, 0.15), 0.5, "deep shade lost the warm tone")

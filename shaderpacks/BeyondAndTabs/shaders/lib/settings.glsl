@@ -18,8 +18,18 @@ const float shadowDistance = 160.0; // [96.0 128.0 160.0 224.0]
 // draw casters in that box, not out to the render distance (the fit never looks past the box)
 const float shadowDistanceRenderMul = 1.0;
 const bool shadowHardwareFiltering = false;
+// soft shadows (slice 3, lib/shadow.glsl): sharp at the caster's foot, softer the farther the shadow falls, as the
+// sun's disc makes them. Off: slice 1's crisp edge everywhere
+#define SOFT_SHADOWS 1 // [0 1]
 // vanilla's per-vertex ambient occlusion, kept (it arrives in the vertex colour's alpha: separateAo)
 const float ambientOcclusionLevel = 1.0;
+// screen-space ambient occlusion (slice 3: deferred.fsh, deferred1.fsh, applied in composite.fsh): building bases,
+// wall creases and unit feet shut out part of the sky, so they lose part of the sky's fill (never the sun's light)
+#define AO 1 // [0 1]
+// how strongly: 1 = the response tuned on a model of the RTS camera (lib/ao.glsl has the numbers)
+#define AO_STRENGTH 1.0 // [0.5 0.75 1.0 1.25 1.5]
+// bloom (slice 3, composite.fsh -> final.fsh): a small halo round lanterns, glows and glints; lit ground never blooms
+#define BLOOM 1 // [0 1]
 
 // distance haze strength, as the mod's own haze setting (1 = the Enchanted look's)
 #define HAZE_STRENGTH 1.0 // [0.0 0.5 1.0 1.5 2.0]
