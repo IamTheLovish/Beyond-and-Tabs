@@ -212,6 +212,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.SAPPER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SapperRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.DEPLOYED_TURRET_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RifleSquadRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOMBARD_SHELL.get(), (ctx) -> new ThrownItemRenderer<>(ctx, 1.5F, false));
+        evt.registerEntityRenderer(EntityRegistrar.ROCKET_SHELL.get(), (ctx) -> new ThrownItemRenderer<>(ctx, 1.5F, false));
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);
         // slice 2: the Bearer and the Watcher keep their vanilla bodies (witch with a lantern, grey parrot)
         evt.registerEntityRenderer(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MoonwellBearerRenderer::new);

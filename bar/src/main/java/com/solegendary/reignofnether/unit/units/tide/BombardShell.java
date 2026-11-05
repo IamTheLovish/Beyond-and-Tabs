@@ -72,7 +72,12 @@ public class BombardShell extends ThrowableItemProjectile {
     }
 
     public BombardShell(Level level, LivingEntity shooter, float damage) {
-        super(EntityRegistrar.BOMBARD_SHELL.get(), shooter, level);
+        this(EntityRegistrar.BOMBARD_SHELL.get(), level, shooter, damage);
+    }
+
+    /** For the shells that are this one with a different look and flight (unit/units/storm/RocketShell): their own entity type, the same rules. */
+    protected BombardShell(EntityType<? extends BombardShell> type, Level level, LivingEntity shooter, float damage) {
+        super(type, shooter, level);
         this.damage = damage;
         if (shooter instanceof Unit u && u.getOwnerName() != null)
             this.ownerName = u.getOwnerName();

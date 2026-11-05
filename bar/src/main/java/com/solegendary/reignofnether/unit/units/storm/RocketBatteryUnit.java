@@ -370,8 +370,13 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         return true;
     }
 
-    /** One rocket of a volley; the first lands on the aim itself, the rest scatter round it. */
-    void fireRocket(double x, double y, double z, boolean first) {
+    /** The ticks the launch animation has left (counts down from {@link RocketLaunchPose#TOTAL_TICKS} when a volley goes). STUB. */
+    public int getLaunchTicks() {
+        return 0;
+    }
+
+    /** One rocket of a volley; the first lands on the aim itself, the rest scatter round it. Public for the game test. */
+    public void fireRocket(double x, double y, double z, boolean first) {
         if (!isAlive() || !(level() instanceof ServerLevel sl))
             return;
         double tx = x, tz = z;
