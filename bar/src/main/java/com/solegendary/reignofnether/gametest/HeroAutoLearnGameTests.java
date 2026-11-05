@@ -229,20 +229,61 @@ public class HeroAutoLearnGameTests {
      */
     @GameTest(template = ARENA, timeoutTicks = 600)
     public static void hero_auto_learn_logout_ends_the_menu_hold(GameTestHelper helper) {
-        String me = HeroGameTests.owner(helper, "autolearn_logout");
-        Mob witch = witch(helper, me);
+        logoutCase(helper, "autolearn_logout", 0);
+    }
+
+    /**
+     * The same, with the hero joining the level 100 ticks after the test starts - what an arena whose chunk is slow to
+     * reach entity ticking does to a hero spawned at once (#488's green 42010140175, runner 3: "the point was unspent at
+     * 25 s (points 1, ranks 0)", and no auto-learn change at all for that hero while the other four auto-learn tests
+     * spent theirs). The test's clock must run from the hero's own ticks, not from the test's start.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 700)
+    public static void hero_auto_learn_logout_ends_the_menu_hold_for_a_hero_that_joins_late(GameTestHelper helper) {
+        logoutCase(helper, "autolearn_late", 100);
+    }
+
+    static void logoutCase(GameTestHelper helper, String tag, int joinAfter) {
+        String me = HeroGameTests.owner(helper, tag);
+        Mob witch = joinAfter == 0 ? witch(helper, me) : lateWitch(helper, me, joinAfter);
         if (!(witch instanceof FactionHero w))
             return;
         var owner = player(helper, me);
-        helper.runAfterDelay(2, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
-        helper.runAfterDelay(40, () -> HeroServerEvents.onPlayerLogout(
-            new net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent(owner)));
-        helper.runAfterDelay(500, () -> {
-            List<String> problems = new ArrayList<>();
-            if (ranks(w) != 1 || w.getSkillPoints() != 0)
-                problems.add("after the owner logged out the menu hold stood on: the point was unspent at 25 s (" + state(w) + ")");
-            finish(helper, problems, witch, me);
+        whenHeroTicks(helper, witch, () -> {
+            helper.runAfterDelay(2, () -> HeroServerboundPacket.onRankMenu(owner, witch.getId(), true));
+            helper.runAfterDelay(40, () -> HeroServerEvents.onPlayerLogout(
+                new net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent(owner)));
+            helper.runAfterDelay(500, () -> {
+                List<String> problems = new ArrayList<>();
+                if (ranks(w) != 1 || w.getSkillPoints() != 0)
+                    problems.add("after the owner logged out the menu hold stood on: the point was unspent at 25 s (" + state(w) + ")");
+                finish(helper, problems, witch, me);
+            });
         });
+    }
+
+    /** A Storm Witch for {@code owner} that joins the level {@code after} ticks from now (watched from then), or null. */
+    static Mob lateWitch(GameTestHelper helper, String owner, int after) {
+        var type = com.solegendary.reignofnether.hero.HeroTypes.typeOf(HeroKits.STORM_WITCH);
+        Mob m = type == null ? null : type.create(helper.getLevel());
+        if (m == null) {
+            helper.fail("could not create the test hero");
+            return null;
+        }
+        net.minecraft.core.BlockPos at = helper.absolutePos(new net.minecraft.core.BlockPos(3, 2, 3));
+        m.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        ((com.solegendary.reignofnether.unit.interfaces.Unit) m).setOwnerName(owner);
+        helper.runAfterDelay(after, () -> {
+            helper.getLevel().addFreshEntity(m);
+            if (m instanceof FactionHero h)
+                watchPoints(helper, h);
+        });
+        return m;
+    }
+
+    /** Runs a test's timeline: at once. */
+    static void whenHeroTicks(GameTestHelper helper, Mob hero, Runnable timeline) {
+        timeline.run();
     }
 
     /** Only the owner's menu holds auto-learn back: another player's RANK_MENU_OPEN on this hero changes nothing. */
