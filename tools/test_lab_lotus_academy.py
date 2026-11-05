@@ -89,11 +89,13 @@ class LotusAcademyTest(unittest.TestCase):
         self.assertEqual(bad, [])
 
     def test_l1_owns_more_of_the_camera_than_the_yard(self):
-        """From the RTS camera's real rays, jade roofs are the largest material (>= 40 % of the building's hits) and
-        the court floor (y 0, z >= 4) is under 15 %: shipped 35 % / 21 % (the yard competes)."""
+        """From the RTS camera's real rays, the roofs - jade and their dark oak eave stairs - are the largest material
+        (>= 40 % of the building's hits) and the court floor (y 0, z >= 4) is under 15 %: shipped 35 % / 21 % (the yard
+        competes). Definition re-set Nov 4 (its own commit): the dark oak hem the Fable critics asked for on every eave
+        is the roofs' edge, so its stairs count as roof; the band is unchanged and the shipped L1 still fails it."""
         hits = G.shoot(self.lv[0], "rts", step=4)
         n = max(1, len(hits))
-        jade = sum(1 for h in hits.values() if h[1].startswith(JADE)) / n
+        jade = sum(1 for h in hits.values() if h[1].startswith(JADE) or h[1] == "dark_oak_stairs") / n
         yard = sum(1 for h in hits.values() if h[0][1] == 0 and h[0][2] >= 4) / n
         self.assertGreaterEqual(jade, 0.40, (jade, yard))
         self.assertLess(yard, 0.15, (jade, yard))
