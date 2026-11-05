@@ -147,6 +147,8 @@ public class BoneDragonUnit extends GhastUnit {
     /** Client: the jaws (x, y, z) and their forward direction, from the posed model (BoneDragonRenderer), and when. */
     public final double[] clientJaws = new double[6];
     public long clientJawsAt = Long.MIN_VALUE;
+    /** Client: where BreathFx last drew the jaws (NaN before the first): it spawns along the path between ticks. */
+    public final double[] clientJawsLast = { Double.NaN, Double.NaN, Double.NaN };
     /** Client: the dragons breathing now (BreathFx draws them; entries leave when the breath ends or the entity goes). */
     public static final java.util.Set<BoneDragonUnit> CLIENT_BREATHING =
         java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
