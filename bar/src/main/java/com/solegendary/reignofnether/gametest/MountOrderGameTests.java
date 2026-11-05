@@ -132,13 +132,27 @@ public class MountOrderGameTests {
             level.addFreshEntity(u);
         TestCleanup.entities(helper, List.of(rider, spider));
         new UnitActionItem(OWNER, UnitAction.MOUNT_SPIDER, spider.getId(), new int[] { rider.getId() }).action(level);
+        // the setup check: the order took (the rider set off for the spider)
+        boolean took = rider.getMountGoal().getTarget() == spider;
+        List<String> history = new ArrayList<>();
+        String[] last = { "" };
+        helper.onEachTick(() -> {
+            String now = state(rider, spider, spider);
+            if (!now.equals(last[0]) && history.size() < 40) {
+                history.add("t" + helper.getTick() + " " + now);
+                last[0] = now;
+            }
+        });
         helper.runAfterDelay(100, () -> {
             List<String> problems = new ArrayList<>();
+            if (!took)
+                problems.add("the Mount order on the enemy's spider did not take (nothing tested): " + history);
             if (rider.getVehicle() == spider)
                 problems.add("the rider mounted an enemy's spider");
             // (dropped, it may well fight the spider: that is the point - only the order must be gone)
             if (rider.getMountGoal().getTarget() != null)
-                problems.add("5 s after a Mount order on an enemy's spider the rider still holds it: " + state(rider, spider, spider));
+                problems.add("5 s after a Mount order on an enemy's spider the rider still holds it: " + state(rider, spider, spider)
+                    + "; history: " + String.join(" | ", history));
             TerrainGameTests.finish(helper, problems);
         });
     }
