@@ -15,7 +15,7 @@ public final class RocketLaunchPose {
     private RocketLaunchPose() { }
 
     /** Rockets per volley and the ticks between two of them (RocketBatteryUnit.VOLLEY_ROCKETS / VOLLEY_GAP_TICKS). */
-    public static final int ROCKETS = 4, GAP = 3;
+    public static final int ROCKETS = 4, GAP = 5;
     /** Ticks between the order to fire and the first rocket: the wind-up (RocketBatteryUnit schedules every rocket after it). */
     public static final int WINDUP = 5;
     /** How long one rocket's kick rings out. */

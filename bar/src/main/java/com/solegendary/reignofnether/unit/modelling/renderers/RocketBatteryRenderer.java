@@ -28,7 +28,7 @@ public class RocketBatteryRenderer extends AbstractVillagerUnitRenderer<RocketBa
      * (runs 42056293582 / 42056297739: "the crew is a statue"). A positive turn about X leans the crew FORWARD, as with
      * every vanilla pitching mob (dolphin, phantom).
      */
-    private static final float LEAN_BACK_DEG = 14.0F, LEAN_FORWARD_DEG = 7.0F;
+    private static final float LEAN_BACK_DEG = 18.0F, LEAN_FORWARD_DEG = 12.0F;
 
     public RocketBatteryRenderer(EntityRendererProvider.Context context) {
         super(context, new RocketBatteryModel(context.bakeLayer(VillagerUnitModel.LAYER_LOCATION)), 0.5F);

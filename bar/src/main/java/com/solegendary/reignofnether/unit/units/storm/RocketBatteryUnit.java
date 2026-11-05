@@ -200,7 +200,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
     /** Rockets per volley, the spread round the aimed spot and the ticks between two rockets of one volley. */
     public static final int VOLLEY_ROCKETS = 4;
     public static final float VOLLEY_SPREAD = 3.0f;
-    public static final int VOLLEY_GAP_TICKS = 3;
+    public static final int VOLLEY_GAP_TICKS = 5;
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
 
@@ -356,8 +356,11 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         fireVolley(x, y, z);
     }
 
-    /** Where a rocket leaves: this far in front of the crew's centre and this high above its feet (the rack's mouth swung up). */
-    private static final double MOUTH_FORWARD = 0.2, MOUTH_HEIGHT = 1.55;
+    /**
+     * Where a rocket leaves: this far in front of the crew's centre (negative: behind it) and this high above its feet - the
+     * top of the rack over the shoulder, not inside the head (round 2's critic: the rocket "springs from above the cap").
+     */
+    private static final double MOUTH_FORWARD = -0.12, MOUTH_HEIGHT = 1.85;
 
     /**
      * Fires a volley at (x, y, z) unless it is inside {@link #MIN_RANGE} or still setting up (unit/SetUp): the launch
@@ -404,8 +407,9 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         shell.aimAt(tx, y, tz);
         sl.addFreshEntity(shell);
         // an orange muzzle blast and a puff of smoke at the mouth (the firework's white star burst read as "levelled up")
-        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, mx, my, mz, 7, 0.08, 0.08, 0.08, 0.06);
-        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, mx, my, mz, 2, 0.1, 0.1, 0.1, 0.02);
+        // a few sparks thrown well clear (7 slow ones sat on the crew and read as the crew on fire), a light puff, no black smoke
+        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, mx, my, mz, 3, 0.05, 0.05, 0.05, 0.16);
+        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.CLOUD, mx, my, mz, 2, 0.08, 0.08, 0.08, 0.04);
         sl.playSound(null, blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.NEUTRAL, first ? 1.4F : 1.0F,
             (first ? 0.8F : 0.9F) + getRandom().nextFloat() * (first ? 0.2F : 0.3F));
     }

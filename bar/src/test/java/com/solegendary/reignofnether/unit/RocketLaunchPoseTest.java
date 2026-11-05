@@ -9,16 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * The Rocket Battery's launch animation (replacing the mortar crews' lob pose): a wind-up (the rack swings up, the crew
  * leans into the shot), then the crew is thrown back by each rocket and the rack settles. The volley is a 5-tick
- * wind-up and four rockets three ticks apart; every number the tests pin is from that, not read back from the curves.
+ * wind-up and four rockets five ticks apart; every number the tests pin is from that, not read back from the curves.
  */
 class RocketLaunchPoseTest {
 
     @Test
     void theAnimationLastsFromTheOrderThroughTheWindupToTheLastKickRingingOut() {
         assertEquals(4, RocketLaunchPose.ROCKETS);
-        assertEquals(3, RocketLaunchPose.GAP);
+        assertEquals(5, RocketLaunchPose.GAP);
         assertEquals(5, RocketLaunchPose.WINDUP);
-        assertEquals(5 + 3 * 3 + RocketLaunchPose.KICK_TICKS, RocketLaunchPose.TOTAL_TICKS);
+        assertEquals(5 + 3 * 5 + RocketLaunchPose.KICK_TICKS, RocketLaunchPose.TOTAL_TICKS);
     }
 
     @Test

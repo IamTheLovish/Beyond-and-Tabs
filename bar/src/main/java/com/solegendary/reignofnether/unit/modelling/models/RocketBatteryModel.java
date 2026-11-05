@@ -31,12 +31,12 @@ public class RocketBatteryModel extends VillagerUnitModel<RocketBatteryUnit> {
         this.crossedArms.visible = false;
         this.rightArm.visible = true;
         this.leftArm.visible = true;
-        this.rightArm.xRot = Mth.lerp(brace, this.rightArm.xRot, -1.35F) + recoil * 0.5F;
-        this.leftArm.xRot = Mth.lerp(brace, this.leftArm.xRot, -1.2F) + recoil * 0.5F;
+        this.rightArm.xRot = Mth.lerp(brace, this.rightArm.xRot, -1.35F) + recoil * 0.9F;
+        this.leftArm.xRot = Mth.lerp(brace, this.leftArm.xRot, -1.2F) + recoil * 0.9F;
         this.rightArm.yRot = Mth.lerp(brace, this.rightArm.yRot, -0.25F);
         this.leftArm.yRot = Mth.lerp(brace, this.leftArm.yRot, 0.25F);
         this.rightArm.zRot = Mth.lerp(brace, this.rightArm.zRot, 0.0F);
         this.leftArm.zRot = Mth.lerp(brace, this.leftArm.zRot, 0.0F);
-        this.head.xRot -= recoil * 0.25F;   // the kick throws the head up
+        this.head.xRot += RocketLaunchPose.windup(age) * 0.2F - recoil * 0.35F;   // the head drops to the sight in the wind-up, the kick throws it up
     }
 }

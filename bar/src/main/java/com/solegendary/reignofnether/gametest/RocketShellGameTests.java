@@ -107,7 +107,7 @@ public class RocketShellGameTests {
     // ------------------------------------------------------------------------------------------------ 1. which entity
 
     /**
-     * A volley from a Rocket Battery is four rockets, three ticks apart after the wind-up, and every one is a RocketShell of the rocket
+     * A volley from a Rocket Battery is four rockets, five ticks apart after the wind-up, and every one is a RocketShell of the rocket
      * entity type - none a BombardShell.
      */
     @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
