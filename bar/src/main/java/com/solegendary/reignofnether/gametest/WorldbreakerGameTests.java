@@ -76,6 +76,8 @@ public class WorldbreakerGameTests {
             problems.add("the telegraph should be at least 0.5 s and readable: " + Earthsplitter.TELEGRAPH_TICKS + " ticks");
         if (Earthsplitter.SLOW_TICKS > 30)
             problems.add("the slow is longer than 1.5 s: " + Earthsplitter.SLOW_TICKS + " ticks");
+        wb.setHoldPosition(true);
+        helper.onEachTick(() -> wb.setHoldPosition(true));   // the cast clears hold; an idle wb would walk to off (6.4 blocks, inside aggro 12) and add a normal blow (CI: 95 vs the exact 70)
         helper.runAfterDelay(4, () -> {
             float[] hp = { on1.getHealth(), on2.getHealth(), off.getHealth(), beyond.getHealth(), friend.getHealth() };
             split.use(level, wb, helper.absolutePos(new BlockPos(14, 2, 8)));
@@ -235,6 +237,7 @@ public class WorldbreakerGameTests {
             if (m instanceof Unit u)
                 u.setHoldPosition(true);   // not NoAi: a frozen mob ignores the throw
         wb.setHoldPosition(true);
+        helper.onEachTick(() -> wb.setHoldPosition(true));   // startRampage -> Unit.fullResetBehaviours clears hold (Unit.java:852); keep wb planted after the charge so AC-6 reads the charge, not an idle swing at the off-lane foe; top level: onEachTick inside a delayed callback NPEs the test server
         List<String> problems = new ArrayList<>();
         if (WorldbreakerUnit.RAMPAGE_TICKS != 60)
             problems.add("the charge should last 60 ticks (3 s): " + WorldbreakerUnit.RAMPAGE_TICKS);
@@ -243,7 +246,6 @@ public class WorldbreakerGameTests {
             Vec3[] before = { in1.position(), in2.position(), off.position() };
             float[] hp = { in1.getHealth(), in2.getHealth(), off.getHealth() };
             rampage.use(wb.level(), wb, helper.absolutePos(new BlockPos(13, 2, 8)));
-            helper.onEachTick(() -> wb.setHoldPosition(true));   // startRampage -> Unit.fullResetBehaviours clears hold (Unit.java:852); keep wb planted after the charge so AC-6 reads the charge, not an idle swing at the off-lane foe
             if (!wb.isRampaging())
                 problems.add("Rampage did not start a charge");
             if (rampage.isOffCooldown(wb))
