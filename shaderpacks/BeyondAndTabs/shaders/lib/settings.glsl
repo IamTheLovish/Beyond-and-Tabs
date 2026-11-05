@@ -60,7 +60,7 @@ const float ambientOcclusionLevel = 1.0;
 
 // plants and leaves move in the wind (lib/wind.glsl): gusts rolling across the lawn, leaves shimmering. Off: still
 #define WIND 1 // [0 1]
-// how far they move: 1 = a grass tuft's top ~0.12 block at a full gust
+// how far they move: 1 = a grass tuft's top ~0.08 block at a full gust
 #define WIND_STRENGTH 1.0 // [0.5 0.75 1.0 1.5 2.0]
 // cloud shadows (lib/clouds.glsl): soft patches drifting with the wind that take up to 30% of the sun, never the sky
 #define CLOUD_SHADOWS 1 // [0 1]

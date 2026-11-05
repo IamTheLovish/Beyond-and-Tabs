@@ -26,10 +26,21 @@ const float WIND_L2 = 17.0;            // the ripple
 const float WIND_V2 = 10.0;
 const float WIND_FLUTTER_HZ = 1.6;
 
-// the top of a grass tuft at a full gust moves ~0.13 block (a few pixels at the default zoom: alive, never smeared);
-// a leaf block shimmers ~0.035 at most - the tree limbs' tips (WindField) move about 0.09 at the average wind
-const float PLANT_SWAY = 0.10;
-const float LEAF_SWAY = 0.030;
+// Fable critic, wind round 1 (Nov 5): at the RTS camera's ~30 px a block the sway read as every tuft jittering on
+// its own, not as gusts rolling across the field. So the gust leans on the slow swell (6.3 s a wave, the ripple's
+// share 0.4 -> 0.2), the per-plant flutter is a whisper, a canopy's leaves flutter nearly in step, and a gust shows
+// as a sheen on the plants it bends (GUST_SHEEN) - a wave you can see from above, not a pixel's jitter.
+// The top of a grass tuft at a full gust moves ~0.08 block (~2.5 px at the default zoom); a leaf block ~0.02
+const float PLANT_SWAY = 0.08;
+const float PLANT_FLUTTER = 0.05;      // the flutter's share of a plant's sway (was 0.15)
+const float LEAF_SWAY = 0.018;
+const float LEAF_PHASE = 0.2;          // the leaves' flutter phase changes 5x slower across space than a plant's: a
+                                       // canopy moves as one, not block by block
+const float WIND_RIPPLE = 0.2;         // the 17-block ripple's share of a gust (1.7 s a wave: the fast part)
+// a plant brightens as a gust bends it and dims in the lull, by at most this much: from above, gusts roll across
+// the field as soft light bands 41 blocks apart. +-0.7 x 0.07 = at most 5% of a tuft's colour; ground and units keep
+// theirs (plants only)
+const float GUST_SHEEN = 0.07;
 
 float windHeading(float t) {
     return WIND_HEADING + WIND_TURN * sin(WIND_TWO_PI * t / WIND_TURN_PERIOD);
@@ -40,7 +51,13 @@ float windGust(vec2 xz, float t, vec2 dir) {
     float d = dot(xz, dir);
     float swell = sin(WIND_TWO_PI * (d - t * WIND_V1) / WIND_L1);
     float ripple = sin(WIND_TWO_PI * (d - t * WIND_V2) / WIND_L2 + 1.7);
-    return 0.3 + 0.7 * (0.6 * swell + 0.4 * ripple);
+    return 0.3 + 0.7 * ((1.0 - WIND_RIPPLE) * swell + WIND_RIPPLE * ripple);
+}
+
+// the gust (-0.4 .. 1, mean 0.3) at world position wp now: the plants' sheen (lit.vsh -> lit.fsh)
+float windGustAt(vec3 wp) {
+    float heading = windHeading(frameTimeCounter);
+    return windGust(wp.xz, frameTimeCounter, vec2(cos(heading), sin(heading)));
 }
 
 // the offset (blocks) of a vertex at world position wp. plant: how much of a plant's sway this vertex takes (0 at a
@@ -59,12 +76,14 @@ vec3 windOffset(vec3 wp, float plant, float leaf) {
 
     vec3 off = vec3(0.0);
     // plants: lean along the wind with the gust, a little flutter both ways; a pushed stem dips a touch
-    float h = PLANT_SWAY * plant * (g + 0.15 * flutter);
+    float h = PLANT_SWAY * plant * (g + PLANT_FLUTTER * flutter);
     off.xz += dir * h + side * (PLANT_SWAY * plant * 0.08 * across);
     off.y -= 0.15 * abs(h);
-    // leaves: a small shimmer about their rest, stronger as a gust passes
+    // leaves: a small shimmer about their rest, stronger as a gust passes, nearly in step across a canopy
     float s = LEAF_SWAY * leaf * (0.35 + 0.65 * clamp(g, 0.0, 1.0));
-    off += vec3(dir * flutter + side * (0.5 * across), 0.4 * across * flutter) * s;
+    float leafFlutter = sin(WIND_TWO_PI * WIND_FLUTTER_HZ * t + phase * LEAF_PHASE);
+    float leafAcross = sin(WIND_TWO_PI * WIND_FLUTTER_HZ * 0.73 * t + phase * LEAF_PHASE * 1.31);
+    off += vec3(dir * leafFlutter + side * (0.5 * leafAcross), 0.4 * leafAcross * leafFlutter) * s;
     return off * WIND_STRENGTH;
 }
 

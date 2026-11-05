@@ -25,6 +25,7 @@ varying vec3 viewPos;
 varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
+varying float gust;                    // the wind's gust on a plant (lib/wind.glsl: 0.3 = calm, no sheen)
 varying float asDrawn;
 varying float waterBody;              // 1 on water itself (block.properties), 0 on glass, ice and the rest of
                                        // the translucent terrain
@@ -54,12 +55,15 @@ vec2 windShare() {
 void main() {
     gl_Position = ftransform();
     viewPos = (gl_ModelViewMatrix * gl_Vertex).xyz;
+    gust = 0.3;
 #if defined LIT_TERRAIN && WIND == 1
     // terrain's model space has the world's axes, offset per chunk: an offset in blocks adds to the vertex as it is.
     // The moved position is the one lit and shadowed, so a swaying tuft is shaded where it is drawn
     vec2 share = windShare();
     if (share.x + share.y > 0.0) {
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
+        if (share.x > 0.0)
+            gust = windGustAt(playerPos + cameraPosition);
         vec4 moved = gl_Vertex + vec4(windOffset(playerPos + cameraPosition, share.x, share.y), 0.0);
         gl_Position = gl_ModelViewProjectionMatrix * moved;
         viewPos = (gl_ModelViewMatrix * moved).xyz;

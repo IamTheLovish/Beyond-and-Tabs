@@ -15,8 +15,10 @@
 #include "/lib/pbrswitch.glsl"
 // cameraPosition and frameTimeCounter, declared once for the water, the wind and the clouds
 #include "/lib/world.glsl"
-#if CLOUD_SHADOWS == 1
+#if WIND == 1 || CLOUD_SHADOWS == 1
 #include "/lib/wind.glsl"
+#endif
+#if CLOUD_SHADOWS == 1
 #include "/lib/clouds.glsl"
 #endif
 #ifdef LIT_PBR
@@ -53,6 +55,7 @@ varying vec3 viewPos;
 varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
+varying float gust;                    // lit.vsh: the wind's gust on a plant (0.3 = calm)
 varying float asDrawn;
 varying float waterBody;
 #ifdef LIT_PBR
@@ -93,6 +96,10 @@ void main() {
 #endif
     vec4 tex = texture2D(texture, texcoord, lodBias);   // one read, one bias
     vec3 albedo = tex.rgb * glcolor.rgb;
+#if WIND == 1
+    // a gust's sheen on the plants it bends (lib/wind.glsl GUST_SHEEN): from above, the waves roll across the field
+    albedo *= 1.0 + GUST_SHEEN * (gust - 0.3) * foliage;
+#endif
 #if defined LIT_TERRAIN || defined LIT_WATER
     float ao = glcolor.a;              // separateAo: the vertex AO, not an alpha
     float alpha = tex.a;
