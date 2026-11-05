@@ -59,6 +59,14 @@ public class FogSnapshotGameTests {
     static final long HANG_TEST_LIMIT_NS = FogChunkSnapshot.MAX_CHUNK_WAIT_NS + 50_000_000_000L;
     /** The GameTest timeout of the three real-time tests: far over their real-time limits, which fail them first. */
     static final int REAL_TIME_TEST_TIMEOUT_TICKS = 2_000_000;
+    /**
+     * The hung-barrier test's own GameTest timeout. Vanilla's GameTestHelper.onEachTick books one run-at entry per tick
+     * left until the timeout, and the test walks that whole map every tick: at 2,000,000 the server slowed to ~20-25
+     * ticks a second for this test (#515's green), so its chunks' light took up to ~20 s of the 60 s. At the fastest
+     * rate the idle test server has shown (~3200 ticks a second, diag 41947114455) 400,000 ticks are still ~125 s,
+     * over {@link #HANG_TEST_LIMIT_NS}, so the real-time limit always fails it first.
+     */
+    static final int HANG_TEST_TIMEOUT_TICKS = 400_000;
     /** Level compareFiles reads live chunks from, to say on a light mismatch which side the world now matches. */
     static ServerLevel diagLevel = null;
 
@@ -356,7 +364,7 @@ public class FogSnapshotGameTests {
      * (flake-stress 41943918735 on main, 2 of 3 runners, "Didn't succeed or fail within 20000 ticks"; the third ran
      * 13000 ticks in 13 s and passed).
      */
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = REAL_TIME_TEST_TIMEOUT_TICKS, batch = "fog_snapshot_hang")
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = HANG_TEST_TIMEOUT_TICKS, batch = "fog_snapshot_hang")
     public static void capture_bounded_when_barrier_hangs(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(new BlockPos(1, 2, 1));
