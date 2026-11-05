@@ -136,7 +136,8 @@ public class PerfScanGameTests {
             || level.getBlockState(rider.blockPosition().above()).is(net.minecraft.world.level.block.Blocks.COBWEB);
         return String.format(java.util.Locale.ROOT,
             "rider %s%s at %.1f,%.1f,%.1f vehicle %s | near at %.1f,%.1f,%.1f d %.2f passengers %d alive %s | far passengers %d"
-                + " | goal autofind %s target %s moveTarget %s running %s unreachable %s | attack %s | webbed %s",
+                + " | goal autofind %s target %s moveTarget %s running %s unreachable %s | attack %s | webbed %s"
+                + " | rider ticks %d entity-ticking %s",
             rider.isAlive() ? "alive" : "DEAD", rider.isRemoved() ? " REMOVED" : "",
             rider.getX(), rider.getY(), rider.getZ(),
             rider.getVehicle() == null ? "none" : rider.getVehicle() == near ? "near" : rider.getVehicle() == far ? "far" : rider.getVehicle().getType().toShortString(),
@@ -144,7 +145,10 @@ public class PerfScanGameTests {
             far.getPassengers().size(),
             goal.autofind, targetName, mt == null ? "none" : mt.toShortString(), goal.isGoalRunning(),
             goal.getLastUnreachableTarget() == null ? "none" : goal.getLastUnreachableTarget().toShortString(),
-            attackName, webbed);
+            attackName, webbed,
+            // a rider whose autofind stays on with no target for many ticks never ran MountGoal.tick (it either picks
+            // a mount or stops): is it ticking at all? (green 42128205694: 100 ticks so, never moving, at x 191.5)
+            rider.tickCount, level.isPositionEntityTicking(rider.blockPosition()));
     }
 
     /**
