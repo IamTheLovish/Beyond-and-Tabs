@@ -2195,7 +2195,9 @@ public final class EyesDirector {
                 // ledge, and a ghoul spawned at the unit's y inside the next rise suffocated), and the battery is ORDERED
                 // to shell that spot: the run of Nov 5 (42045632661) showed it never picking the NoAI dummies by itself,
                 // so the clip held a battery standing still. The clip window is [mark - 4 s, mark + 6 s], so the still
-                // comes 2.5 s after the order - the rockets are in the air then - not 5 s, after the volley is over
+                // comes 4.75 s after the order: the battery turns and aims for ~2.3 s, the four rockets leave over a second and land ~1 s
+                // later (run 42056297739: at +50 ticks the clip ended on the first rocket, the tour moves on after the still), so the
+                // window [still - 4 s, still] holds the whole volley and its impacts
                 boolean artillery = names.length > 6;
                 int dummyX = (int) Math.floor(unit.getX()) + dummyAt, dummyZ = (int) Math.floor(unit.getZ());
                 int dummyY = artillery ? mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, dummyX, dummyZ) : (int) Math.floor(unit.getY());
@@ -2209,7 +2211,7 @@ public final class EyesDirector {
                     UnitClientEvents.sendUnitCommandManual(UnitAction.ATTACK_GROUND, -1, new int[] { closeUpId }, at);
                     ReignOfNether.LOGGER.info("[Eyes] {}: ordered to attack the ground at {}", names[3], at.toShortString());
                 }
-                closeUpAt = ticks + (artillery ? 50 : 100);   // several swings / throws inside the clip
+                closeUpAt = ticks + (artillery ? 95 : 100);   // several swings / throws inside the clip
             }
             closeUpPhase++;
         }
