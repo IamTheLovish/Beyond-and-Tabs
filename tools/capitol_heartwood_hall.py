@@ -245,15 +245,16 @@ def face(c, o):
                                                                          # strategy zoom", Fable critic round 4)
         c.st(o, 3, s, 13 + LIFT, inward(o), "top", name=BARK_S)         # the brows, jutting over the eyes
         c.put(o, 2, s, 13 + LIFT, WOOD, axis="y")
-        c.put(o, 2, s, 14 + LIFT, LOG, axis="y")                        # the burrs
-        # the antlers: up out of the burr, out along the trunk's face, up, out, up - a stepped beam of five logs in
-        # the trunk's own bark (pale birch antlers beside the blaze made the trunk's foot "a checkered crate knot",
-        # Fable critic round 5: two woods only, the dark tree and the pale blaze)
-        c.put(o, 2, s, 15 + LIFT, LOG, axis="y")
-        c.put(o, 2, 2 * s, 15 + LIFT, LOG, axis=along_axis)
-        c.put(o, 2, 2 * s, 16 + LIFT, LOG, axis="y")
-        c.put(o, 2, 3 * s, 16 + LIFT, LOG, axis=along_axis)
-        c.put(o, 2, 3 * s, 17 + LIFT, LOG, axis="y")
+        c.put(o, 2, s, 14 + LIFT, WOOD, axis="y")                       # the burrs
+        # the antlers: up out of the burr, out along the trunk's face, up, out - a stepped beam of four in the trunk's
+        # own bark (pale birch antlers beside the blaze made the trunk's foot "a checkered crate knot", Fable critic
+        # round 5: two woods only, the dark tree and the pale blaze). Bark all round (wood, not logs): the logs'
+        # end-grain tops showed from the RTS camera as "log end-grain squares ... the crate look" at the roof's apex,
+        # and a fifth tine up to y16 hid the trunk ("only ~3 trunk blocks show", round 7)
+        c.put(o, 2, s, 15 + LIFT, WOOD, axis="y")
+        c.put(o, 2, 2 * s, 15 + LIFT, WOOD, axis=along_axis)
+        c.put(o, 2, 2 * s, 16 + LIFT, WOOD, axis="y")
+        c.put(o, 2, 3 * s, 16 + LIFT, WOOD, axis=along_axis)
 
 
 def boughs(c):
