@@ -120,4 +120,9 @@ public class CentralPortal extends ProductionBuilding implements NetherConvertin
         Block block = placement.getLevel().getBlockState(worldBp).getBlock();
         return block != Blocks.OBSIDIAN && block != Blocks.NETHER_PORTAL;
     }
+
+    @Override
+    public boolean formsWhenBuilt() {
+        return true;   // a portal-type moment: it forms (barfx/PortalForming)
+    }
 }

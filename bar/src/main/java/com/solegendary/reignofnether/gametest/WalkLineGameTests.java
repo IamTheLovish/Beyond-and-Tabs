@@ -295,6 +295,107 @@ public class WalkLineGameTests {
         }
     }
 
+    /**
+     * Review round 1 on #512: a Vindicator's move goal sits in its targetSelector, which ticks before the goalSelector's
+     * RandomLookAroundUnitGoal, so a running glance overwrote whatever the move goal aimed the head at, every tick, and
+     * the idle body followed the head away from the line while the RTS path was pending (both reds were the Vindicator;
+     * the Ravager, whose move goal is in the goalSelector, never failed). Deterministic: the unit faces the line, a glance
+     * 90 degrees off it is running (forced: start, then aimed and lengthened), and an RTS move order lands the same tick.
+     * From the next tick no glance may run while the move goal has a target or a pending path, and until the path
+     * arrives the body stays near the bearing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = SETUP + 200, batch = BATCH_RTS)
+    public static void a_glance_does_not_run_while_a_vindicator_waits_for_its_rts_path(GameTestHelper helper) {
+        TestCleanup.rtsPathfinding(helper);
+        Pad pad = Pad.lay(helper, 7);
+        ServerLevel level = pad.level;
+        String owner = "gametest_walk_glance_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        List<Mob> made = new ArrayList<>();
+        TestCleanup.atEnd(helper, () -> {
+            for (Mob m : made) {
+                UnitServerEvents.clearQueuedActions(m.getId());
+                m.discard();
+            }
+        });
+        final double sx = pad.x0 + START_X, sz = pad.z0 + START_Z;
+        final double gx = sx + 30, gz = sz;   // straight east: bearing -90
+        helper.runAfterDelay(SETUP, () -> {
+            Mob m = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+            if (m == null)
+                throw new GameTestAssertException("could not create the Vindicator");
+            m.moveTo(sx, PAD_Y + 1, sz, -90, 0);
+            m.setYHeadRot(-90);
+            m.yBodyRot = -90;
+            ((Unit) m).setOwnerName(owner);
+            level.addFreshEntity(m);
+            made.add(m);
+        });
+        int[] ordered = { -1 };
+        net.minecraft.world.entity.ai.goal.WrappedGoal[] glance = { null };
+        List<String> problems = new ArrayList<>();
+        StringBuilder trace = new StringBuilder();
+        helper.onEachTick(() -> {
+            if (made.isEmpty() || !problems.isEmpty())
+                return;
+            Mob m = made.get(0);
+            if (ordered[0] < 0) {
+                if (m.tickCount < ArenaReady.TICKS) {
+                    if (helper.getTick() > SETUP + 150)
+                        throw new GameTestAssertException("the unit was not ticking: " + ArenaReady.describe(level, made));
+                    m.setYRot(-90);
+                    m.setYHeadRot(-90);
+                    m.yBodyRot = -90;
+                    return;
+                }
+                for (var w : m.goalSelector.getAvailableGoals())
+                    if (w.getGoal() instanceof com.solegendary.reignofnether.unit.goals.RandomLookAroundUnitGoal)
+                        glance[0] = w;
+                if (glance[0] == null)
+                    throw new GameTestAssertException("the Vindicator has no RandomLookAroundUnitGoal in its goalSelector");
+                if (!glance[0].isRunning())
+                    glance[0].start();
+                aimGlance(glance[0].getGoal(), 0, 1, 40);   // south: 90 degrees off the line, for 40 ticks
+                ordered[0] = (int) helper.getTick();
+                UnitServerEvents.addActionItem(owner, UnitAction.MOVE, -1, new int[] { m.getId() },
+                    BlockPos.containing(gx, PAD_Y + 1, gz), BlockPos.ZERO);
+                return;
+            }
+            int t = (int) helper.getTick() - ordered[0];
+            var move = ((Unit) m).getMoveGoal();
+            boolean waiting = move != null && (move.getMoveTarget() != null || move.isPathPending());
+            boolean pending = move != null && move.isPathPending();
+            float off = Mth.wrapDegrees(m.yBodyRot - (-90f));
+            trace.append(String.format(Locale.ROOT, " t%d:%.0f%s%s", t, m.yBodyRot, pending ? "p" : "", glance[0].isRunning() ? "g" : ""));
+            if (t >= 3 && waiting && glance[0].isRunning())   // GoalSelector.tick (which stops goals) runs every other tick
+                problems.add("t" + t + ": the glance still runs while the move goal " + (pending ? "waits for its RTS path" : "has a target"));
+            else if (pending && Math.abs(off) > 30)
+                problems.add("t" + t + ": the body faces " + String.format(Locale.ROOT, "%.0f", m.yBodyRot)
+                    + " while the RTS path is pending, " + String.format(Locale.ROOT, "%.0f", off) + " deg off the bearing -90");
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems) + " | trace" + trace);
+            else if (t >= 40 || (!pending && m.position().distanceTo(new net.minecraft.world.phys.Vec3(sx, m.getY(), sz)) > 2)) {
+                ReignOfNether.LOGGER.warn("[Walk] glance vs RTS order, Vindicator: kept to the bearing |" + trace);
+                helper.succeed();
+            }
+        });
+    }
+
+    /** Points a running RandomLookAroundUnitGoal's glance along (relX, relZ) for {@code ticks} (its fields are private). */
+    static void aimGlance(net.minecraft.world.entity.ai.goal.Goal goal, double relX, double relZ, int ticks) {
+        try {
+            for (String[] f : new String[][] { { "relX", String.valueOf(relX) }, { "relZ", String.valueOf(relZ) } }) {
+                var field = goal.getClass().getDeclaredField(f[0]);
+                field.setAccessible(true);
+                field.setDouble(goal, Double.parseDouble(f[1]));
+            }
+            var lt = goal.getClass().getDeclaredField("lookTime");
+            lt.setAccessible(true);
+            lt.setInt(goal, ticks);
+        } catch (ReflectiveOperationException e) {
+            throw new GameTestAssertException("could not aim the glance: " + e);
+        }
+    }
+
     // one walk on its own pad: a unit of `type` ordered from START to GOAL, judged as above
     private static void walk(GameTestHelper helper, String what, Supplier<? extends EntityType<? extends Mob>> type,
                              int index, boolean rts, Consumer<Pad> build) {
@@ -352,7 +453,24 @@ public class WalkLineGameTests {
             // MC yaw: 0 = south (+z), -90 = east (+x)
             float bearing = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90f;
             float off = Mth.wrapDegrees(m.yBodyRot - bearing);
-            if (t % 4 == 0)
+            if (t <= 24) {
+                // The RTS-pathing walk failed in mixed shard runs on the first steps alone: the body turned AWAY from
+                // the line (yaw -90 -> -100 at t16, then -78 = the bearing for the rest; run 41823559236). Cause: a
+                // random glance (RandomLookAroundUnitGoal) kept running while the RTS path was pending, and the
+                // Vindicator's move goal sits in its targetSelector, so the glance overwrote its look every tick and
+                // the idle body followed it (review round 1 on #512; a_glance_does_not_run_while_a_vindicator_waits_
+                // for_its_rts_path). Every tick of the start is still traced: where it stands, on the ground or not,
+                // and the path's next node (index of count, and which Path object).
+                net.minecraft.world.level.pathfinder.Path path = m.getNavigation().getPath();
+                String node = "none";
+                if (path != null && !path.isDone()) {
+                    var n = path.getNextNode();
+                    node = String.format(Locale.ROOT, "%d/%d@%d,%d#%x", path.getNextNodeIndex(), path.getNodeCount(),
+                        n.x - pad.x0, n.z - pad.z0, System.identityHashCode(path) & 0xffff);
+                }
+                trace.append(String.format(Locale.ROOT, " t%d:%.0f/%.0f[%.2f,%.2f%s %s]", t, m.yBodyRot, bearing,
+                    m.getX() - pad.x0, m.getZ() - pad.z0, m.onGround() ? "" : " air", node));
+            } else if (t % 4 == 0)
                 trace.append(String.format(Locale.ROOT, " t%d:%.0f/%.0f", t, m.yBodyRot, bearing));
             AABB body = m.getBoundingBox();
             for (AABB k : pad.keepOff)
