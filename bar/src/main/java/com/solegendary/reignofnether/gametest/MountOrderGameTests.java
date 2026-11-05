@@ -69,6 +69,9 @@ public class MountOrderGameTests {
         foe.getMoveGoal().setMoveTarget(pad.offset(15, -1, 8));
         // the player's Mount order: the Mount Spider ability on the spider
         new UnitActionItem(OWNER, UnitAction.MOUNT_SPIDER, spider.getId(), new int[] { rider.getId() }).action(level);
+        // a unit with a Mount order is busy: never idle until it is up - else idle auto-aggression may take a passing
+        // enemy, and the HUD's idle-army button would pick a unit the player just gave an order
+        String[] idle = { rider.isIdle() ? "right after the order, " + state(rider, spider, foe) : null };
 
         List<String> history = new ArrayList<>();
         String[] last = { "" };
@@ -80,6 +83,8 @@ public class MountOrderGameTests {
                 foe.getMoveGoal().setMoveTarget(pad.offset(0, -1, 8));
             else if (foe.getMoveGoal().getMoveTarget() == null && foe.position().x < pad.getX() + 2)
                 foe.getMoveGoal().setMoveTarget(pad.offset(15, -1, 8));
+            if (idle[0] == null && rider.isIdle())
+                idle[0] = "t" + helper.getTick() + " " + state(rider, spider, foe);
             if (tookFoe[0] == null && (rider.getTarget() == foe || rider.getTargetGoal().getTarget() == foe))
                 tookFoe[0] = "t" + helper.getTick() + " " + state(rider, spider, foe);
             if (helper.getTick() % 10 != 0)
@@ -91,6 +96,9 @@ public class MountOrderGameTests {
             }
         });
         helper.succeedWhen(() -> {
+            if (idle[0] != null)
+                helper.fail("ordered to mount, the rider counted as idle before it was up: " + idle[0]
+                    + "; history: " + String.join(" | ", history));
             if (tookFoe[0] != null)
                 helper.fail("ordered to mount, the rider took the enemy walking past as its target: " + tookFoe[0]
                     + "; history: " + String.join(" | ", history));
