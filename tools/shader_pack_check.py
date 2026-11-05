@@ -161,6 +161,25 @@ def enchanted_pairs(java, fsh):
     return pairs
 
 
+def float_const(source, name, default=None):
+    """A `const float NAME = x;` from a shader's source; `default` when the source has none."""
+    m = re.search(r"const float %s = (-?\d+(?:\.\d+)?);" % name, source)
+    if not m:
+        if default is None:
+            raise ValueError("no const float %s" % name)
+        return default
+    return float(m.group(1))
+
+
+def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_height=1080.0):
+    """lib/ao.glsl's aoDepthTolerance in blocks: the RTS view's ortho projection has [1][1] = 2 / zoom (zoom = blocks of
+    view height), so one half-resolution pixel spans zoom / (view_height x AO_SCALE) blocks at every depth."""
+    if ortho:
+        cell = zoom / max(view_height * float_const(ao_source, "AO_SCALE"), 1.0)
+        return base + float_const(ao_source, "AO_DEPTH_PER_CELL") * cell
+    return base + float_const(ao_source, "AO_DEPTH_WIDEN") * max(view_depth, 0.0)
+
+
 def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 

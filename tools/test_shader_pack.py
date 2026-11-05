@@ -4,6 +4,7 @@ The pack (shaderpacks/BeyondAndTabs, design/own_shader_pack.md) is only ever run
 PCs; a GLSL typo there costs a ten-minute eyes run and shows as "no shader pack" in the stills. CI installs glslang
 (build.yml, job ruff); without it the compile test is skipped and only the header checks run.
 """
+import math
 import os
 import re
 import sys
@@ -45,6 +46,44 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("scale.deferred=0.5", props)
         comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
         self.assertIn("lit *= 1.0 - skyShare * (1.0 - occlusionAt(", comp)
+
+    def test_ao_depth_tolerance_is_safe_in_the_rts_view(self):
+        # the blur (deferred1) and the upsampling (composite) let a neighbour share a pixel's occlusion only within a
+        # depth tolerance. In the RTS view the depth comes from a camera plane inside the scene and goes negative behind
+        # it (down to the near plane, -2750), so a term in the depth would reach 0 (a division by zero) or turn the
+        # weights round. Both passes take aoDepthTolerance, whose RTS branch reads no depth and whose first-person term
+        # never drops below the base
+        ao = open(os.path.join(spc.SHADERS, "lib", "ao.glsl"), encoding="utf-8").read()
+        for name, var in (("deferred1.fsh", "centre.y"), ("composite.fsh", "viewDepth")):
+            src = open(os.path.join(spc.SHADERS, name), encoding="utf-8").read()
+            self.assertRegex(src, r"tolerance = aoDepthTolerance\(", name)
+            self.assertEqual(len(re.findall(r"\btolerance = ", src)), 1, name)
+        body = re.search(r"float aoDepthTolerance\([^)]*\) \{(.*?)\n\}", ao, re.S).group(1)
+        rts, first_person = re.findall(r"return ([^;]*);", body)
+        self.assertIn("if (aoOrtho(projection))", body)
+        self.assertNotIn("viewDepth", rts)
+        self.assertIn("max(viewDepth, 0.0)", first_person)
+        blur = spc.float_const(open(os.path.join(spc.SHADERS, "deferred1.fsh"), encoding="utf-8").read(),
+                               "AO_DEPTH_TOLERANCE")
+        for base in (blur, 0.25):
+            for depth in (-2750.0, -500.0, -25.0, -12.5, 0.0, 40.0, 300.0):
+                self.assertGreater(spc.ao_depth_tolerance(ao, base, depth, False), 0.0)
+                self.assertEqual(spc.ao_depth_tolerance(ao, base, depth, True),
+                                 spc.ao_depth_tolerance(ao, base, 40.0, True))
+            for height in (720.0, 1080.0, 2160.0):
+                # the default view (zoom 30): under the 1 block of depth between a unit's silhouette and the ground
+                # behind it at 65 degrees (1-2.2 blocks), so a unit's occlusion never spreads onto that ground
+                self.assertLess(spc.ao_depth_tolerance(ao, base, 40.0, True, 30.0, height), 1.0)
+                # flat ground at the configured tilts (camera_pitch_close 55 .. _far 75 degrees) still blends at every
+                # zoom: a neighbour two half-resolution pixels away (the blur's reach; the upsampling's is one) keeps
+                # at least half its weight
+                reach = 2.0 if base == blur else 1.0
+                for zoom in (10.0, 30.0, 90.0, 200.0):
+                    for pitch in (55.0, 75.0):
+                        cell = zoom / (height * spc.float_const(ao, "AO_SCALE"))
+                        gap = reach * cell / math.tan(math.radians(pitch))
+                        tol = spc.ao_depth_tolerance(ao, base, 40.0, True, zoom, height)
+                        self.assertGreaterEqual(1.0 - gap / tol, 0.5, (base, height, zoom, pitch))
 
     def test_lit_ground_never_blooms(self):
         # slice 3's judged number: zero bloom on a plain noon lawn. The light table puts sunlit ground at its albedo

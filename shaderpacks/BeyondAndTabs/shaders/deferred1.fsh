@@ -4,13 +4,15 @@
 //
 // Ambient occlusion, step 2 of 3 (lib/ao.glsl): a 4x4 blur at half resolution over deferred.fsh's result, the same
 // 4x4 tile its rotations repeat in, so the 16 rotations average into one smooth value. A neighbour counts less the
-// further its depth is from the pixel's (half a block in the RTS view, a little more with distance in first person):
-// the occlusion at a unit's feet stays on the ground at its feet and does not smear onto the unit or the far ground.
+// further its depth is from the pixel's, by aoDepthTolerance (lib/ao.glsl): half a block plus the ground's slope over two
+// pixels, 0.61 blocks at the RTS view's default zoom: the occlusion at a unit's feet stays on the ground at its feet and
+// does not smear onto the unit or the far ground.
 
 #include "/lib/settings.glsl"
 #include "/lib/ao.glsl"
 
 uniform sampler2D colortex2;
+uniform mat4 gbufferProjection;
 uniform float viewWidth;
 uniform float viewHeight;
 
@@ -26,7 +28,7 @@ void main() {
         return;
     }
     vec2 centre = texture2D(colortex2, aoCellUv(cell, viewSize)).rg;
-    float tolerance = AO_DEPTH_TOLERANCE + 0.02 * centre.y;
+    float tolerance = aoDepthTolerance(AO_DEPTH_TOLERANCE, centre.y, gbufferProjection, viewHeight);
     float sum = 0.0;
     float weights = 0.0;
     for (int y = -2; y < 2; y++) {

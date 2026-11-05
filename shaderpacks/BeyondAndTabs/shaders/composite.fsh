@@ -75,15 +75,16 @@ float rtsHazeStart() {
 }
 
 // the blurred occlusion back at full resolution: of the four half-resolution neighbours, bilinear weights times how
-// near each one's depth is to this pixel's, so the value never crosses a silhouette (a unit's edge keeps its own)
+// near each one's depth is to this pixel's (aoDepthTolerance, a quarter block plus the slope), so the value never
+// crosses a silhouette (a unit's edge keeps its own). A pixel no neighbour is near in depth (a sliver thinner than a
+// half-resolution pixel, a fence post's edge) takes no occlusion rather than the surface behind it
 float occlusionAt(float viewDepth) {
     vec2 viewSize = vec2(viewWidth, viewHeight);
     vec2 h = gl_FragCoord.xy * AO_SCALE - 0.5;
     vec2 base = floor(h) + 0.5;
     vec2 f = fract(h);
-    float tolerance = 0.25 + 0.02 * viewDepth;
+    float tolerance = aoDepthTolerance(0.25, viewDepth, gbufferProjection, viewHeight);
     float sum = 0.0, weights = 0.0;
-    float nearest = 1.0, nearestGap = 1e9;
     for (int i = 0; i < 4; i++) {
         vec2 o = vec2(float(i - 2 * (i / 2)), float(i / 2));
         vec2 s = texture2D(colortex3, aoCellUv(base + o, viewSize)).rg;
@@ -92,12 +93,8 @@ float occlusionAt(float viewDepth) {
         float w = b.x * b.y * max(1.0 - gap / tolerance, 0.0);
         sum += s.x * w;
         weights += w;
-        if (gap < nearestGap) {
-            nearestGap = gap;
-            nearest = s.x;
-        }
     }
-    return weights > 1e-3 ? sum / weights : nearest;
+    return weights > 1e-3 ? sum / weights : 1.0;
 }
 
 /* DRAWBUFFERS:04 */
