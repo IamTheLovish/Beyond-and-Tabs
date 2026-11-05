@@ -8,6 +8,8 @@ No test tied the two; these do, by reading the Java source (no game boot needed)
 - GiantLawnCells.SIZE == gen_blocks.LAWN_SHEET_BLOCKS
 - the Java's sheet sprite prefix is the generator's variant-1 name: block/grass_block_top_g<cell>
 - the Java's cell rule is 1 + floorMod(x, SIZE) + floorMod(z, SIZE) * SIZE, the generator's 1 + x + z * N
+- and the generator writes in that order: write_lawn_sheet names cell 1 + x + z * N the block cut from image column x
+  (u) and row z (v) - its source, read like the Java's (review round 2: the generator's order was pinned nowhere)
 
 If #504's GroundSheetRules replaces GiantLawnCells (it sizes the sheet from the sprite count), point these at it.
 
@@ -50,6 +52,13 @@ class LawnSheetJavaSizeTest(unittest.TestCase):
 
     def test_java_cell_rule_is_the_generators_row_major_order(self):
         self.assertIn("return 1 + Math.floorMod(x, SIZE) + Math.floorMod(z, SIZE) * SIZE;", java())
+
+    def test_generator_writes_cells_in_the_same_row_major_order(self):
+        import inspect
+        src = inspect.getsource(gen_blocks.write_lawn_sheet)
+        self.assertIn("lawn_sheet_sprite(variant, 1 + x + z * blocks)", src)
+        # cell (x, z) is the block at image column x (u) and image row z (v): rows are the first array axis
+        self.assertIn("sl = (slice(z * res, (z + 1) * res), slice(x * res, (x + 1) * res))", src)
 
 
 if __name__ == "__main__":
