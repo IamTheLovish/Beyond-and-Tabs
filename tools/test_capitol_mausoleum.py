@@ -65,15 +65,21 @@ class MausoleumTest(unittest.TestCase):
     def test_the_cross_is_the_outline(self):
         """lovish: the capitols must not share the square stepped-pyramid outline. Two critics on every round: the
         corner towers, buttresses and podium between the arms drew the square / diamond from the RTS camera. Nothing
-        stands above layer 0 in the cross's re-entrant corners (cells 3+ from both axes), and at most a few
-        headstones (<= 10 %) sit in layer 0 there - the field's own lawn shows (layer 0 sits a block over the field)."""
+        stands above layer 0 in the cross's re-entrant corners (cells 3+ from both axes), and layer 0 there is ground
+        only - the blight lawn and graves laid flat in it, no podium, wall or paving block. Re-set Nov 4 in its own
+        commit (was: at most 10 % of the corners' layer 0 drawn, the field's own lawn showing): Fable critic A fix 2 -
+        the empty corners made the capitol read as a T2 building with floating headstones, and the faction's BLIGHT
+        ground (podzol, coarse dirt, soul soil) belongs there; the cross stays the outline above the ground."""
         R = 7
         corner = {(x, z) for x in range(15) for z in range(15) if min(abs(x - R), abs(z - R)) >= 3}
         above = sorted({(x, y, z) for (x, y, z), v in self.b.blocks.items()
                         if (x, z) in corner and y >= 1 and v[0] not in S.AIR})
         self.assertEqual(above[:5], [], "%d blocks stand in the corners" % len(above))
-        floor = [q for q, v in self.b.blocks.items() if (q[0], q[2]) in corner and q[1] == 0 and v[0] not in S.AIR]
-        self.assertLessEqual(len(floor), 0.10 * len(corner), len(floor))
+        ground = ("podzol", "coarse_dirt", "soul_soil", "rooted_dirt", "moss_block", "deepslate_tile_wall",
+                  "deepslate_brick_slab", "bone_block")
+        floor = sorted({v[0] for q, v in self.b.blocks.items() if (q[0], q[2]) in corner and q[1] == 0
+                        and v[0] not in S.AIR and v[0] not in ground})
+        self.assertEqual(floor, [])
 
     # ---- the Fable critics' fixes (Nov 4, eyes 41792408905: 6 / 10; critic-a.md, critic-c.md F5) ----
     def _solid(self):
