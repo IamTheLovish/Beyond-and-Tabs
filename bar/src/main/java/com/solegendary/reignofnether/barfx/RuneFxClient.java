@@ -42,7 +42,7 @@ import org.joml.Matrix4f;
  *       (its ring in the faction's hue: a white one read as a selection marker);</li>
  *   <li>motes in the faction's own shape and way of moving, kept below {@link #RISE} blocks so they stay with their
  *       caster (stars rise, ash sinks, embers are thrown, petals spiral, pixels climb lines, sparks zigzag, cogs orbit at
- *       head height);</li>
+ *       chest height);</li>
  *   <li>the last {@link #FADE} s of the cast time fade it with a slight swell; an early end (its caster died) fades in
  *       {@link RunePool#END_FADE} s.</li>
  * </ul>
@@ -81,9 +81,10 @@ public final class RuneFxClient {
     static final float UNDER_A = 0.2f;
     /**
      * The rim per faction (F_* id): its core (light enough to read on sunlit grass, never pure hue, never pure white:
-     * overlapping rims summed to white in round 9), its halo (the faction's hue), and the dark line under both.
+     * overlapping rims summed to white in round 9; round 13: neutral's and Sunforged's cores blew out to white, so they
+     * keep their hue), its halo (the faction's hue), and the dark line under both.
      */
-    static final int[] CORE = {0xF4F8FF, 0xFFF2C0, 0xD0FF60, 0xFFB080, 0xB0FFB0, 0xC8FCFF, 0xE2D0FF, 0xFFC870};
+    static final int[] CORE = {0xDCE6FF, 0xFFE896, 0xD0FF60, 0xFFB080, 0xB0FFB0, 0xC8FCFF, 0xE2D0FF, 0xFFC870};
     static final int[] HALO = {0x8FB0FF, 0xFFE070, 0x7CE000, 0xFF2A00, 0x28C850, 0x40E4FF, 0xA472FF, 0xD07818};
     static final int[] DARK = {0x202040, 0x3A1E00, 0x1A2A00, 0x3A0800, 0x0B3D1E, 0x002A3A, 0x1E0A40, 0x3A2400};
     /**
@@ -91,7 +92,7 @@ public final class RuneFxClient {
      * as wide, the dark line DARK_K times.
      */
     static final float CORE_W = 0.05f, CORE_PX = 2.0f, HALO_K = 2.7f, DARK_K = 2.2f;
-    static final float CORE_A = 0.95f, HALO_A = 0.42f, DARK_A = 0.55f;
+    static final float CORE_A = 0.95f, HALO_A = 0.36f, DARK_A = 0.55f;
     /** The rim's core settles by SETTLE over the hold, from SETTLE_FROM s to SETTLE_TO s. */
     static final float SETTLE = 0.3f, SETTLE_FROM = 0.5f, SETTLE_TO = 1.3f;
     /** The hold's beat: from BEAT_FROM s, every BEAT_EVERY s the core brightens by BEAT, fading over BEAT_T s. */
@@ -120,9 +121,12 @@ public final class RuneFxClient {
     static final float TIP_HALF = 0.16f;
     /**
      * Others within this many blocks dim a circle's light to 1 / sqrt(1 + n), not below CROWD_MIN (round 11: at .6 a
-     * dense army's rings read as thin faint arcs; at .75 in round 9 they summed toward white).
+     * dense army's rings read as thin faint arcs; at .75 in round 9 they summed toward white). With CROWD_N or more
+     * others that close, the circle also draws at CROWD_SHRINK of its radius (round 13: in a dense block the rings
+     * stacked into one soup; not smaller, round 12 wanted the rim clear of the unit's base).
      */
-    static final float CROWD_R = 3, CROWD_MIN = 0.78f;
+    static final float CROWD_R = 3, CROWD_MIN = 0.78f, CROWD_SHRINK = 0.9f;
+    static final int CROWD_N = 3;
     /** How many circles may flash at full strength in one frame; past it every flash is dimmed to share that much. */
     static final float FLASH_CAP = 3;
     /** The rim thrown out at the release: from this share of the circle's radius to PULSE_TO over PULSE_T s. */
@@ -131,13 +135,17 @@ public final class RuneFxClient {
     static final float TIER_H = 0.8f, TIER_R = 0.62f, TIER_AT = 0.3f, TIER_A = 0.7f, TIER_SPIN = -0.2f;
     static final float TIER_RISE = 0.12f;
     static final float PILLAR_FROM = 2.0f, PILLAR_H = 2.5f, PILLAR_HW = 0.125f, PILLAR_A = 0.5f, PILLAR_T = 0.12f;
-    static final int MOTES = 12;
+    /** Motes per circle (round 13: 12 cluttered a dense army). */
+    static final int MOTES = 8;
     /** Motes run this much faster than the cast's clock (short lives). */
     static final float MOTE_SPEED = 2;
     static final float MOTE_A = 1.0f, MOTE_HALF = 0.26f, RISE = 1.5f;
-    /** Brassworks' cogs: this many orbiting at head height (blocks, T1), at a share of the radius, rev/s, half size. */
-    static final int COGS = 10;
-    static final float COG_H = 1.6f, COG_R = 0.75f, COG_SPIN = 0.6f, COG_HALF = 0.216f;
+    /**
+     * Brassworks' cogs: this many orbiting at chest height (blocks, T1), at a share of the radius, rev/s, half size (round
+     * 13: ten at head height and .75 of the radius drifted over the neighbours).
+     */
+    static final int COGS = 6;
+    static final float COG_H = 1.2f, COG_R = 0.6f, COG_SPIN = 0.6f, COG_HALF = 0.216f;
 
     // the atlas: 2048 x 1152. Per faction column of 256: ring (y 0), sigil (256), 16 glyphs of 64 (512), the glyph band
     // tier (768), then at y 1024 the plain tier ring (128) | mote, beam over spark, shade (64 each)
@@ -258,6 +266,8 @@ public final class RuneFxClient {
                         n++;
                 }
                 CROWD[i] = Math.max(CROWD_MIN, 1 / (float) Math.sqrt(1 + n));
+                if (n >= CROWD_N)
+                    RADIUS[i] *= CROWD_SHRINK;
             }
         }
         return shown;
@@ -515,13 +525,13 @@ public final class RuneFxClient {
             case 3 -> {   // Horde: embers thrown up and out, falling back
                 u = frac(t * 0.9f + ph);
                 turn = ph * 3.1f;
-                r = R * (0.35f + 0.85f * u);
+                r = R * (0.35f + 0.6f * u);
                 y = sc * (2.6f * u - 2.0f * u * u) + 0.1f;
             }
             case 4 -> {   // Verdant: petals on a wide slow spiral
                 u = frac(t * 0.45f + ph);
                 turn = ph + t * 0.25f + 0.4f * u;
-                r = R * (0.7f + 0.35f * (float) Math.sin(6.2831855f * (u + ph)));
+                r = R * (0.65f + 0.25f * (float) Math.sin(6.2831855f * (u + ph)));
                 y = RISE * sc * u;
             }
             case 5 -> {   // Light Grid: pixels climbing straight lines
