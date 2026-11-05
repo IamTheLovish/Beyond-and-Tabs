@@ -5,14 +5,17 @@ Our own designs, drawn from stroke rules: one rune alphabet per faction, so the 
 in black and white, and its hue (FactionTraits.upgradeGlow) agrees with the faction's other light. Nothing is traced
 or copied from another work.
 
-Atlas (2048 x 768, RGBA, colours baked in, alpha = brightness for the additive pass):
+Atlas (2048 x 1152, RGBA, colours baked in, alpha = brightness for the additive pass):
   column f = the BarFx.F_* faction id (0 neutral, 1 Sunforged, 2 Gravebound, 3 Horde, 4 Verdant, 5 Light Grid in the
   old Tidewrought slot, 6 Stormcallers, 7 Brassworks), 256 px wide;
-  row 0 (y 0-255)    the outer ring: a crisp rim at the real radius, the glyph band, the faction's band ornament;
-  row 1 (y 256-511)  the inner sigil (the counter-rotating layer);
-  rows y 512-767     16 floating glyphs of 64 px (4 x 4; RuneFx uses the first GLYPHS).
-Each cell: a bright, near-white core line plus a blurred halo in the faction hue (BAT readability: core 3-4 px and
-halo 6-10 px at zoom 30). RuneFxClient maps the cells with RuneFx.ringUv / sigilUv / glyphUv.
+  row 0 (y 0-255)      the outer ring: a crisp rim at the real radius, the glyph band, the faction's band ornament;
+  row 1 (y 256-511)    the inner sigil (the counter-rotating layer, heavier strokes);
+  rows y 512-767       16 floating glyphs of 64 px (4 x 4);
+  row y 768-1023       the glyph band: two fine rims and twelve glyphs, the centre empty (a tier, the release ring);
+  rows y 1024-1151     a plain ring (128) | the faction's mote, the beam strip (64) over a soft spark, the underlay's
+                       soft disc (64, white, tinted dark by the vertex colour: the only cell not added as light).
+Each cell: a core line in the faction's light tint plus a blurred halo in its hue (BAT readability: core 3-4 px and
+halo 6-10 px at zoom 30). RuneFxClient maps the cells; tools/rune_preview.py renders them offline.
 
   python tools/gen_rune_textures.py            # writes the atlas into the mod's assets
   python tools/gen_rune_textures.py --mock DIR # also three concept stills (grass, scale, timing) into DIR
@@ -36,14 +39,18 @@ OUT = os.path.join(os.path.dirname(__file__), '..', 'bar', 'src', 'main', 'resou
 # F_* id -> (name, hue, accent). Hues = FactionTraits.upgradeGlow; the accent lights the glyphs and sigil.
 FACTIONS = [
     ('neutral', 0xE8E8FF, 0xFFFFFF),
-    ('sunforged', 0xFFD96A, 0xFFF4C8),
-    ('gravebound', 0x7CFF6A, 0xD8FFE0),
-    ('horde', 0xFF7A2A, 0xFFD08A),
-    ('verdant', 0xA8FF8A, 0xFF9EC8),
-    ('lightgrid', 0x5CE8FF, 0xE0FCFF),
-    ('stormcallers', 0x9C82FF, 0xD8E4FF),
-    ('brassworks', 0xFFA040, 0xFFE0B0),
+    ('sunforged', 0xFFE6A0, 0xFFFFFF),     # pale cream-gold, white core: the brightest, least saturated warm
+    ('gravebound', 0x8FD000, 0xC8FF1E),    # acid chartreuse over a violet underglow (apart from Verdant's emerald)
+    ('horde', 0xFF2A00, 0xFF5A1E),         # red-orange, its core orange too (a gold core read as Brassworks)
+    ('verdant', 0x2FC860, 0xB8FFD0),       # emerald (a value step under Gravebound's acid), white-gold blossoms
+    ('lightgrid', 0x00B8D0, 0x7FF4FF),     # cyan core, never white
+    ('stormcallers', 0x7A3CFF, 0xB48CFF),  # violet, never white (a white ring reads as a selection circle)
+    ('brassworks', 0xE0A020, 0xF0C060),    # amber, and dimmer (GAIN): the darkest warm
 ]
+
+
+# brightness per faction (alpha scale on its light cells): Brassworks sits a value step under Sunforged and Horde
+GAIN = [1.0, 0.85, 1.0, 1.0, 0.85, 0.85, 0.8, 0.85]
 
 
 def rgb(c):
@@ -53,13 +60,15 @@ def rgb(c):
 class Pen:
     """Strokes on a supersampled square canvas, in cell units (0..size)."""
 
-    def __init__(self, size):
+    def __init__(self, size, wmul=1.0):
         self.size = size
+        self.wmul = wmul
         self.img = Image.new('L', (size * SS, size * SS), 0)
         self.d = ImageDraw.Draw(self.img)
 
     def line(self, pts, w):
         p = [(x * SS, y * SS) for x, y in pts]
+        w *= self.wmul
         self.d.line(p, fill=255, width=max(1, int(round(w * SS))), joint='curve')
         r = w * SS / 2
         for x, y in (p[0], p[-1]):
@@ -84,10 +93,10 @@ def bake(core, hue, accent_core=None, glow_r=7.0, glow=0.65):
     halo = np.asarray(g, dtype=np.float32) / 255.0
     halo = np.clip(halo * 1.8, 0, 1)
     a = np.clip(core + glow * halo, 0, 1)
-    hot = np.clip(core * 0.6, 0, 1)[..., None]
+    hot = np.clip(core * 0.75, 0, 1)[..., None]
     base = rgb(hue)[None, None, :]
     top = (rgb(accent_core) if accent_core is not None else np.ones(3, np.float32))[None, None, :]
-    col = base * (1 - hot) + (base * 0.5 + top * 0.5) * hot
+    col = base * (1 - hot) + top * hot     # the core line in the faction's light tint, the halo in its hue
     out = np.concatenate([col, a[..., None]], axis=2)
     return (np.clip(out, 0, 1) * 255).astype(np.uint8)
 
@@ -316,7 +325,7 @@ def ring_cell(f, seed=11):
 def sigil_cell(f):
     c = CELL / 2
     R = CELL * 0.40
-    pen = Pen(CELL)
+    pen = Pen(CELL, 1.5)   # heavier than the ring: drawn smaller (0.44 of it), it must still read at zoom 30
 
     def polar(r, a):
         return c + r * math.cos(a), c + r * math.sin(a)
@@ -398,13 +407,135 @@ def glyph_sheet(f, seed=5):
     return sheet
 
 
+def halo_cell(f, seed=23):
+    """A floating band: two fine rims and twelve small glyphs between them, the centre empty (the stacked rings)."""
+    rng = random.Random(seed * 37 + f)
+    c = CELL / 2
+    R = CELL * 0.47
+    r_in = CELL * 0.34
+    pen = Pen(CELL)
+
+    def polar(r, a):
+        return c + r * math.cos(a), c + r * math.sin(a)
+
+    if f == 2:   # Gravebound: the rims broken like the ground ring's
+        for i in range(9):
+            a0 = 2 * math.pi * i / 9 + 0.1
+            pen.circle(c, c, R, 3.0, a0, a0 + 2 * math.pi / 9 - 0.2)
+            pen.circle(c, c, r_in, 2.2, a0 + 0.3, a0 + 2 * math.pi / 9 - 0.05)
+    elif f == 7:  # Brassworks: a toothed outer rim
+        pen.circle(c, c, R - 3, 2.4)
+        for i in range(36):
+            a0, a1 = 2 * math.pi * (i - 0.2) / 36, 2 * math.pi * (i + 0.2) / 36
+            pen.line([polar(R - 3, a0), polar(R + 2, a0), polar(R + 2, a1), polar(R - 3, a1)], 2.2)
+        pen.circle(c, c, r_in, 2.2)
+    elif f == 6:  # Stormcallers: segmented rims
+        for i in range(12):
+            a0 = 2 * math.pi * i / 12 + 0.08
+            pen.circle(c, c, R, 3.0, a0, a0 + 2 * math.pi / 12 - 0.16)
+        pen.circle(c, c, r_in, 2.0)
+    else:
+        pen.circle(c, c, R, 3.0)
+        pen.circle(c, c, r_in, 2.2)
+    n = 12
+    rm, hh = (R + r_in) / 2, (R - r_in) / 2 * 0.62
+    for i in range(n):
+        a = 2 * math.pi * (i + 0.5) / n
+        g = glyph(f, rng)
+
+        def place(u, v, a=a):
+            r = rm + v * hh
+            return c + r * math.cos(a) - u * hh * 0.8 * math.sin(a), c + r * math.sin(a) + u * hh * 0.8 * math.cos(a)
+        draw_glyph(pen, f, g, place, WIDTH[f] * 2.4)
+    return pen.mask()
+
+
+def mote_cell(f):
+    """The faction's mote, the small shape its motes are made of (64 px): star, ash, ember, petal, pixel, spark, cog."""
+    pen = Pen(GLYPH)
+    c = GLYPH / 2
+    if f == 1:    # Sunforged: a four-point star
+        for a in (0, math.pi / 2):
+            pen.line([(c - 22 * math.cos(a), c - 22 * math.sin(a)), (c + 22 * math.cos(a), c + 22 * math.sin(a))], 3)
+        pen.dot(c, c, 6)
+    elif f == 2:  # Gravebound: an ash flake
+        pen.line([(c - 10, c - 4), (c + 2, c - 12), (c + 12, c + 3), (c - 2, c + 11), (c - 10, c - 4)], 4)
+    elif f == 3:  # Horde: an ember, a teardrop with its tail up
+        pen.dot(c, c + 5, 9)
+        pen.line([(c, c + 5), (c, c - 18)], 5)
+    elif f == 4:  # Verdant: a petal
+        pts = [(c + 18 * math.cos(a) * 0.5, c + 18 * math.sin(a)) for a in [2 * math.pi * i / 24 for i in range(25)]]
+        pen.line(pts, 4)
+        pen.line([(c, c - 14), (c, c + 14)], 2)
+    elif f == 5:  # Light Grid: a square pixel
+        pen.line([(c - 9, c - 9), (c + 9, c - 9), (c + 9, c + 9), (c - 9, c + 9), (c - 9, c - 9)], 5)
+        pen.dot(c, c, 5)
+    elif f == 6:  # Stormcallers: a forked spark
+        pen.line([(c - 4, c - 22), (c + 6, c - 4), (c - 6, c + 4), (c + 4, c + 22)], 3.4)
+    elif f == 7:  # Brassworks: a cog
+        pen.circle(c, c, 11, 4)
+        for i in range(8):
+            a = 2 * math.pi * i / 8
+            pen.line([(c + 11 * math.cos(a), c + 11 * math.sin(a)), (c + 18 * math.cos(a), c + 18 * math.sin(a))], 4.5)
+    else:
+        pen.dot(c, c, 9)
+    return pen.mask()
+
+
+def beam_cell():
+    """A column of light across its width (64 x 64): white core, soft edges; the length fade is the vertex alpha's."""
+    x = (np.arange(GLYPH, dtype=np.float32) + 0.5) / GLYPH * 2 - 1
+    core = np.clip(1 - np.abs(x) / 0.18, 0, 1) ** 1.5
+    soft = np.exp(-(x / 0.5) ** 2)
+    return np.tile(np.clip(core * 0.9 + soft * 0.55, 0, 1)[None, :], (GLYPH, 1))
+
+
+def spark_cell():
+    """A soft round spark (64 px): the generic glow dot."""
+    yy, xx = np.mgrid[0:GLYPH, 0:GLYPH].astype(np.float32)
+    d = np.sqrt((xx - GLYPH / 2 + 0.5) ** 2 + (yy - GLYPH / 2 + 0.5) ** 2) / (GLYPH / 2)
+    return np.clip(np.exp(-(d / 0.32) ** 2) * 1.2, 0, 1)
+
+
+def tier_cell():
+    """A plain ring (128 px), one clean stroke: the upper tiers of the stacked column."""
+    pen = Pen(2 * GLYPH)
+    pen.circle(GLYPH, GLYPH, GLYPH * 0.94, 5.0)
+    return pen.mask()
+
+
+def shade_cell():
+    """A soft-edged disc (64 px) for the dark underlay: flat to 0.75 of its radius, then easing out."""
+    yy, xx = np.mgrid[0:GLYPH, 0:GLYPH].astype(np.float32)
+    d = np.sqrt((xx - GLYPH / 2 + 0.5) ** 2 + (yy - GLYPH / 2 + 0.5) ** 2) / (GLYPH / 2)
+    return np.clip((1 - d) / 0.25, 0, 1)
+
+
+ROW_HALO = 2 * CELL + GLYPH * 4   # y 768: the halo bands (the lowest tier, with glyphs)
+ROW_FX = ROW_HALO + CELL          # y 1024, 128 high: tier ring (128) | mote, beam (64) over spark, shade (64)
+
+
 def atlas():
-    out = np.zeros((CELL * 2 + GLYPH * 4, CELL * len(FACTIONS), 4), np.uint8)
+    out = np.zeros((ROW_FX + 2 * GLYPH, CELL * len(FACTIONS), 4), np.uint8)
     for f, (_, hue, acc) in enumerate(FACTIONS):
         x = f * CELL
-        out[0:CELL, x:x + CELL] = bake(ring_cell(f), hue)
+        out[0:CELL, x:x + CELL] = bake(ring_cell(f), hue, acc)
         out[CELL:2 * CELL, x:x + CELL] = bake(sigil_cell(f), hue, acc)
-        out[2 * CELL:, x:x + CELL] = bake(glyph_sheet(f), hue, acc, glow_r=3.0)
+        out[2 * CELL:ROW_HALO, x:x + CELL] = bake(glyph_sheet(f), hue, acc, glow_r=3.0)
+        out[ROW_HALO:ROW_FX, x:x + CELL] = bake(halo_cell(f), hue, acc, glow_r=5.0)
+        out[ROW_FX:ROW_FX + 2 * GLYPH, x:x + 2 * GLYPH] = bake(tier_cell(), hue, acc, glow_r=3.0)
+        y0, y1 = ROW_FX, ROW_FX + GLYPH
+        out[y0:y1, x + 2 * GLYPH:x + 3 * GLYPH] = bake(mote_cell(f), hue, acc, glow_r=2.0 if f == 7 else 4.0)
+        out[y0:y1, x + 3 * GLYPH:x + 4 * GLYPH] = bake(beam_cell(), hue, acc, glow_r=0.1, glow=0.0)
+        out[y1:y1 + GLYPH, x + 2 * GLYPH:x + 3 * GLYPH] = bake(spark_cell(), hue, acc, glow_r=2.0, glow=0.3)
+        sh = shade_cell()
+        # white: the vertex colour tints it (black, or Gravebound's violet)
+        out[y1:y1 + GLYPH, x + 3 * GLYPH:x + 4 * GLYPH] = np.dstack([np.ones_like(sh)] * 3 + [sh]) * 255
+        if GAIN[f] != 1:   # every light cell but the underlay's disc
+            col = out[:, x:x + CELL]
+            keep = col[y1:y1 + GLYPH, 3 * GLYPH:4 * GLYPH, 3].copy()
+            col[..., 3] = (col[..., 3].astype(np.float32) * GAIN[f]).astype(np.uint8)
+            col[y1:y1 + GLYPH, 3 * GLYPH:4 * GLYPH, 3] = keep
     return out
 
 

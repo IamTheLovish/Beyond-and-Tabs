@@ -36,7 +36,10 @@ public final class BarFxRenderTypes extends RenderType {
                     .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
                     .setTransparencyState(LIGHTNING_TRANSPARENCY).createCompositeState(false));
 
-    /** The rune atlas (tools/gen_rune_textures.py): rings, sigils and glyphs per faction, colours baked in. */
+    /**
+     * The rune atlas (tools/gen_rune_textures.py): rings, sigils, glyphs, the stacked bands and the small sprites (mote,
+     * beam, spark, the underlay's soft disc) per faction, colours baked in.
+     */
     public static final ResourceLocation RUNE_ATLAS = new ResourceLocation("reignofnether", "textures/fx/rune_atlas.png");
 
     /** Rune circles (RuneFxClient): the atlas, linear filtered, added on top like the other light. */
@@ -46,4 +49,16 @@ public final class BarFxRenderTypes extends RenderType {
                     .setTextureState(new TextureStateShard(RUNE_ATLAS, true, false)).setCullState(NO_CULL)
                     .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
                     .setTransparencyState(LIGHTNING_TRANSPARENCY).createCompositeState(false));
+
+    /**
+     * The rune circles' dark underlay, drawn before {@link #RUNES}: the atlas's soft disc in black at a low alpha,
+     * ordinarily blended. Additive light can only brighten, so on sunlit grass a green rune loses to the grass; a
+     * slightly darker ground under it is the contrast the light needs.
+     */
+    public static final RenderType RUNES_SHADE = create("reignofnether_barfx_runes_shade", DefaultVertexFormat.POSITION_COLOR_TEX,
+            VertexFormat.Mode.QUADS, 1 << 14, false, false,
+            CompositeState.builder().setShaderState(new ShaderStateShard(GameRenderer::getPositionColorTexShader))
+                    .setTextureState(new TextureStateShard(RUNE_ATLAS, true, false)).setCullState(NO_CULL)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY).createCompositeState(false));
 }
