@@ -115,15 +115,20 @@ public class FogEffectGameTests {
         Recorder rec = new Recorder(sp);
         List<ServerPlayer> listed = level.getServer().getPlayerList().getPlayers();
         List<ServerPlayer> inLevel = level.players();
+        String[] stage = { "setup" };
         try {
             if (wasOn || size <= com.solegendary.reignofnether.worldborder.WorldBorderServerEvents.RTS_OPTIMIZED_BORDER) {
                 problems.add("the test level already has fog on or a small border; cannot run the effects");
             } else {
+                stage[0] = "the connection swap";
                 sp.connection = rec;
                 sp.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);   // 6 blocks away: in every effect's range
+                stage[0] = "the player lists";
                 listed.add(sp);
                 inLevel.add(sp);
+                stage[0] = "the RTS side";
                 MatchLifecycleCases.side(name, -77_001);   // an RTS player: the fog applies to it
+                stage[0] = "the effects with fog off";
 
                 fire(level, at);   // fog off: the control, the recorder sees all four
                 String control = got(rec);
@@ -131,9 +136,12 @@ public class FogEffectGameTests {
                     problems.add("with fog off the player got only [" + control + "], expected all four (the recorder or the setup is wrong)");
 
                 rec.sent.clear();
+                stage[0] = "fitting the border";
                 if (!FogOfWarServerEvents.fitBorderForMatch(level, at.getX(), at.getZ(), 320, 420 + 35, true))
                     problems.add("no border was fitted (fog can't be turned on)");
+                stage[0] = "turning fog on";
                 FogOfWarServerEvents.setEnabled(true);
+                stage[0] = "the effects with fog on";
                 if (!FogOfWarServerEvents.isEnabled())
                     problems.add("fog did not turn on");
                 else if (!FogOfWarServerEvents.isFogActiveFor(sp))
@@ -146,9 +154,20 @@ public class FogEffectGameTests {
                         problems.add("under fog, with no vision of the spot, the player was still sent [" + leaked + "]");
                 }
             }
+        } catch (RuntimeException e) {
+            // name where it threw: a bare "java.lang.UnsupportedOperationException" (red run 41992398136, attempt 2)
+            // said nothing about which step
+            StringBuilder at = new StringBuilder();
+            StackTraceElement[] st = e.getStackTrace();
+            for (int i = 0; i < Math.min(6, st.length); i++)
+                at.append(i == 0 ? "" : " < ").append(st[i].getClassName().replaceAll(".*\\.", "")).append('.')
+                    .append(st[i].getMethodName()).append(':').append(st[i].getLineNumber());
+            problems.add("threw " + e + " during " + stage[0] + " at " + at);
         } finally {
-            listed.remove(sp);
-            inLevel.remove(sp);
+            try {   // (a list that refused the add refuses the remove too: the catch above has said so)
+                listed.remove(sp);
+                inLevel.remove(sp);
+            } catch (UnsupportedOperationException ignored) { }
             sp.connection = oldConnection;
             MatchLifecycleCases.forget(name);
             if (FogOfWarServerEvents.isEnabled() && !wasOn)
