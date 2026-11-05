@@ -1,0 +1,93 @@
+[08:08:52] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[08:08:53] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[08:08:53] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[08:08:54] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[08:08:54] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+[08:09:04] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[08:09:05] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[08:09:12] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[08:09:20] [Worker-ResourceReload-2/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[08:09:20] [Worker-ResourceReload-2/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[08:09:27] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[08:09:28] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[08:10:00] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[08:10:30] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[08:11:00] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[08:11:00] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793866260405
+[08:11:00] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[08:11:04] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793866264463
+[08:11:04] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/VNR, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[08:11:04] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[08:11:06] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[08:11:20] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[08:11:20] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[08:11:36] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 117 s left (client tick 277, camera at [-221, 88, 10]); our slot -213, 3; a bot's start 227, 3; markers: 2 boxes, 3 frames drawn; team 0 (mine) fill built (33634 columns, 1834 quads), 364 perimeter heights known; team 1 fill built (915 columns, 159 quads), 51 perimeter heights known
+[08:11:39] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 115 s left, zoom 36.0, camera at [-220, 88, 10]; markers: 2 boxes, 13 frames drawn; team 0 (mine) fill built (37247 columns, 1998 quads), 463 perimeter heights known; team 1 fill built (915 columns, 159 quads), 51 perimeter heights known
+[08:11:39] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793866299361
+[08:11:39] [IO-Worker-4/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[08:11:41] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 113 s left, zoom 60.0, camera at [-218, 88, 8]; markers: 2 boxes, 20 frames drawn; team 0 (mine) fill built (37247 columns, 1998 quads), 463 perimeter heights known; team 1 fill built (915 columns, 159 quads), 51 perimeter heights known
+[08:11:41] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793866301255
+[08:11:41] [IO-Worker-4/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[08:11:43] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 111 s left, zoom 100.0, camera at [-217, 88, 7]; markers: 2 boxes, 25 frames drawn; team 0 (mine) fill built (37247 columns, 1998 quads), 463 perimeter heights known; team 1 fill built (915 columns, 159 quads), 51 perimeter heights known
+[08:11:43] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793866303062
+[08:11:43] [IO-Worker-4/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[08:11:47] [Render thread/INFO]: [Eyes] 01f: eye at [227, 69, 23] y 70 looking at the start 227, 3 (20 blocks away; ground there 71); 106 s left; markers: 2 boxes, 46 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (40266 columns, 2466 quads), 493 perimeter heights known
+[08:11:47] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793866307814
+[08:11:48] [IO-Worker-2/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[08:11:48] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[08:11:50] [Render thread/INFO]: [Eyes] 01e: start placed at -213, 3 with 104 s left; the phase ends 3 s later
+[08:11:51] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 102 s left, zoom 36.0, camera at [-221, 93, 11]; markers: 2 boxes, 58 frames drawn; team 0 (mine) fill built (37247 columns, 1998 quads), 463 perimeter heights known; team 1 fill built (915 columns, 159 quads), 51 perimeter heights known
+[08:11:51] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793866311562
+[08:11:51] [IO-Worker-8/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[08:12:19] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[08:12:22] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793866342191
+[08:12:22] [Server thread/INFO]: [Eyes] ground 0:30 round [-222, 11]: {minecraft:blue_stained_glass=10, minecraft:calcite=2, minecraft:diorite_wall=4, minecraft:dirt=4, minecraft:grass_block=2164, minecraft:lantern=12, minecraft:lapis_block=6, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=7, minecraft:quartz_pillar=6, minecraft:raw_iron_block=11, minecraft:smooth_quartz=83, minecraft:smooth_quartz_stairs=44, minecraft:stone_brick_stairs=8}
+[08:12:22] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793866342467
+[08:12:22] [Render thread/INFO]: [Eyes] 15 structures: ambient life off for the structure photos
+[08:12:22] [Render thread/INFO]: [Eyes] 15 structures: site axis (1, 1) from the capitol -212, 79, 3 (the wall's ring round 8, 4, radius 280: a 64-wide pad here keeps 49 blocks from it)
+[08:12:22] [Render thread/INFO]: [Eyes] 15_ground_sampler: fog of war off for the structure photos
+[08:12:22] [Server thread/INFO]: [Eyes] 15 structures: fog of war off, day time 6000 (noon)
+[08:12:22] [Server thread/INFO]: [Eyes] 15_ground_sampler: pad x -190..-145, z 29..66 keeps 72.5 blocks from the arena wall's ring (centre 8, 4, radius 280)
+[08:12:22] [IO-Worker-9/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[08:12:22] [Render thread/INFO]: [Eyes] 15_ground_sampler: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/ground_sampler.nbt' 30x5x22 placed at -182, 71, 37 (pad centre -167, 71, 48)
+[08:12:23] [IO-Worker-8/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[08:12:29] [Render thread/INFO]: [Eyes] 15_ground_sampler_rts: aimed at -167, 73, 48 - the camera at -175, 95, 56 looks at -167, 48 (28 frames, 6.2 s in the phase)
+[08:12:29] [Render thread/INFO]: [Eyes] 15_ground_sampler_rts: the structure's box holds 1448 non-air blocks on the client
+[08:12:29] [Server thread/INFO]: [Eyes] 15_ground_sampler_rts: ... and 1448 on the server
+[08:12:29] [Render thread/INFO]: [Eyes] clip-mark 15_ground_sampler_rts 1793866349185
+[08:12:29] [IO-Worker-9/INFO]: [Eyes] 15_ground_sampler_rts: Saved screenshot as bat_eyes_15_ground_sampler_rts.png
+[08:12:47] [Render thread/INFO]: [Eyes] 15_ground_sampler_rts_close: aimed at -167, 73, 48 - the camera at -175, 95, 56 looks at -167, 48 (25 frames, 4.6 s in the phase)
+[08:12:47] [Render thread/INFO]: [Eyes] 15_ground_sampler_rts_close: the structure's box holds 1448 non-air blocks on the client
+[08:12:47] [Render thread/INFO]: [Eyes] clip-mark 15_ground_sampler_rts_close 1793866367351
+[08:12:47] [Server thread/INFO]: [Eyes] 15_ground_sampler_rts_close: ... and 1448 on the server
+[08:12:47] [IO-Worker-10/INFO]: [Eyes] 15_ground_sampler_rts_close: Saved screenshot as bat_eyes_15_ground_sampler_rts_close.png
+[08:12:49] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[08:12:52] [Render thread/INFO]: [Eyes] clip-mark 15_ground_sampler_34 1793866372496
+[08:12:52] [IO-Worker-10/INFO]: [Eyes] 15_ground_sampler_34: Saved screenshot as bat_eyes_15_ground_sampler_34.png
+[08:12:57] [Render thread/INFO]: [Eyes] clip-mark 15_ground_sampler_front 1793866377576
+[08:12:57] [Render thread/INFO]: [Eyes] 15_ground_sampler_close: standing at -170.5, 74.6, 51.5 (direction -1, 1 from the middle), eye 1.62 over the aim, pitch 18 down
+[08:12:58] [IO-Worker-2/INFO]: [Eyes] 15_ground_sampler_front: Saved screenshot as bat_eyes_15_ground_sampler_front.png
+[08:13:03] [Render thread/INFO]: [Eyes] 15_ground_sampler_close: aimed at -167, 73, 48 - the camera at -171, 75, 52 looks at -167, 48 (25 frames, 5.9 s in the phase)
+[08:13:03] [Render thread/INFO]: [Eyes] 15_ground_sampler_close: the structure's box holds 1448 non-air blocks on the client
+[08:13:03] [Render thread/INFO]: [Eyes] clip-mark 15_ground_sampler_close 1793866383429
+[08:13:03] [Server thread/INFO]: [Eyes] 15_ground_sampler_close: ... and 1448 on the server
+[08:13:03] [IO-Worker-8/INFO]: [Eyes] 15_ground_sampler_close: Saved screenshot as bat_eyes_15_ground_sampler_close.png
+[08:13:08] [Render thread/INFO]: [Eyes] 15_ground_sampler_dusk: the last drawn frame saw day time 13000
+[08:13:08] [Render thread/INFO]: [Eyes] clip-mark 15_ground_sampler_dusk 1793866388119
+[08:13:08] [IO-Worker-8/INFO]: [Eyes] 15_ground_sampler_dusk: Saved screenshot as bat_eyes_15_ground_sampler_dusk.png
+[08:13:13] [Render thread/INFO]: [Eyes] 15_ground_sampler_golden_rts: aimed at -167, 73, 48 - the camera at -175, 95, 56 looks at -167, 48 (26 frames, 5.1 s in the phase)
+[08:13:13] [Render thread/INFO]: [Eyes] 15_ground_sampler_golden_rts: the structure's box holds 1448 non-air blocks on the client
+[08:13:13] [Server thread/INFO]: [Eyes] 15_ground_sampler_golden_rts: ... and 1448 on the server
+[08:13:13] [Render thread/INFO]: [Eyes] clip-mark 15_ground_sampler_golden_rts 1793866393214
+[08:13:13] [IO-Worker-10/INFO]: [Eyes] 15_ground_sampler_golden_rts: Saved screenshot as bat_eyes_15_ground_sampler_golden_rts.png
+[08:13:18] [Render thread/INFO]: [Eyes] clip-mark 15_ground_sampler_rts_army 1793866398407
+[08:13:18] [IO-Worker-10/INFO]: [Eyes] 15_ground_sampler_rts_army: Saved screenshot as bat_eyes_15_ground_sampler_rts_army.png
+[08:13:19] [Render thread/INFO]: [Eyes] step 15 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[08:13:20] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[08:13:20] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[08:13:20] [Render thread/INFO]: [Eyes] tour complete
