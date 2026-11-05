@@ -14,6 +14,12 @@ sys.path.insert(0, os.path.dirname(__file__))
 import shader_pack_check as spc  # noqa: E402
 
 
+def read(*parts):
+    """A pack file's text (a path under shaders/), closed after reading."""
+    with open(os.path.join(spc.SHADERS, *parts), encoding="utf-8") as f:
+        return f.read()
+
+
 class ShaderPack(unittest.TestCase):
     def test_every_file_is_ours_and_clean_room(self):
         self.assertEqual(spc.header_problems(), [])
@@ -26,7 +32,7 @@ class ShaderPack(unittest.TestCase):
 
     def test_the_loader_reads_our_settings(self):
         # the sun tilt lovish picked (Oct 29) and the shadow map's size, where every program sees them
-        src = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+        src = read("lib", "settings.glsl")
         self.assertIn("const float sunPathRotation = 30.0;", src)
         self.assertIn("const int shadowMapResolution = 2048;", src)
 
@@ -42,9 +48,9 @@ class ShaderPack(unittest.TestCase):
                 continue                    # the sky: nothing drawn in the RTS view, depth 1 elsewhere
             self.assertIn("/* DRAWBUFFERS:01 */", src, name)
             self.assertIn("gl_FragData[1]", src, name)
-        props = open(os.path.join(spc.SHADERS, "shaders.properties"), encoding="utf-8").read()
+        props = read("shaders.properties")
         self.assertIn("scale.deferred=0.5", props)
-        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        comp = read("composite.fsh")
         self.assertIn("lit *= 1.0 - skyShare * (1.0 - occlusionAt(", comp)
 
     def test_ao_depth_tolerance_is_safe_in_the_rts_view(self):
@@ -52,20 +58,17 @@ class ShaderPack(unittest.TestCase):
         # depth tolerance. In the RTS view the depth comes from a camera plane inside the scene and goes negative behind
         # it (down to the near plane, -2750), so a term in the depth would reach 0 (a division by zero) or turn the
         # weights round. Both passes take aoDepthTolerance, whose RTS branch reads no depth and whose first-person term
-        # never drops below the base
-        ao = open(os.path.join(spc.SHADERS, "lib", "ao.glsl"), encoding="utf-8").read()
-        for name, var in (("deferred1.fsh", "centre.y"), ("composite.fsh", "viewDepth")):
-            src = open(os.path.join(spc.SHADERS, name), encoding="utf-8").read()
-            self.assertRegex(src, r"tolerance = aoDepthTolerance\(", name)
+        # never drops below the base. spc.ao_depth_tolerance evaluates the function's own two `return` expressions (the
+        # RTS one under `if (aoOrtho(projection))`, then the first-person one), so every number below is the GLSL's
+        ao = read("lib", "ao.glsl")
+        bases = []
+        for name in ("deferred1.fsh", "composite.fsh"):
+            src = read(name)
             self.assertEqual(len(re.findall(r"\btolerance = ", src)), 1, name)
-        body = re.search(r"float aoDepthTolerance\([^)]*\) \{(.*?)\n\}", ao, re.S).group(1)
-        rts, first_person = re.findall(r"return ([^;]*);", body)
-        self.assertIn("if (aoOrtho(projection))", body)
-        self.assertNotIn("viewDepth", rts)
-        self.assertIn("max(viewDepth, 0.0)", first_person)
-        blur = spc.float_const(open(os.path.join(spc.SHADERS, "deferred1.fsh"), encoding="utf-8").read(),
-                               "AO_DEPTH_TOLERANCE")
-        for base in (blur, 0.25):
+            arg = re.search(r"\btolerance = aoDepthTolerance\(([\w.]+),", src).group(1)
+            bases.append(float(arg) if re.match(r"[\d.]+$", arg) else spc.float_const(src, arg))
+        blur = bases[0]
+        for base in bases:
             for depth in (-2750.0, -500.0, -25.0, -12.5, 0.0, 40.0, 300.0):
                 self.assertGreater(spc.ao_depth_tolerance(ao, base, depth, False), 0.0)
                 self.assertEqual(spc.ao_depth_tolerance(ao, base, depth, True),
@@ -88,7 +91,7 @@ class ShaderPack(unittest.TestCase):
     def test_lit_ground_never_blooms(self):
         # slice 3's judged number: zero bloom on a plain noon lawn. The light table puts sunlit ground at its albedo
         # (under 1 in linear light), so the threshold must stay at or above 1
-        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        comp = read("composite.fsh")
         m = re.search(r"const float BLOOM_THRESHOLD = ([\d.]+);", comp)
         self.assertIsNotNone(m)
         self.assertGreaterEqual(float(m.group(1)), 1.0)
@@ -139,9 +142,10 @@ class ShaderPack(unittest.TestCase):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's
         # final.fsh copies the Enchanted column of WorldLookPass (#326); until #326 is on this branch there is no third
         # column to compare and the test skips
-        java = open(os.path.join(spc.ROOT, "..", "..", "bar", "src", "main", "java", "com", "solegendary",
-                                 "reignofnether", "postfx", "WorldLookPass.java"), encoding="utf-8").read()
-        fsh = open(os.path.join(spc.SHADERS, "final.fsh"), encoding="utf-8").read()
+        with open(os.path.join(spc.ROOT, "..", "..", "bar", "src", "main", "java", "com", "solegendary",
+                               "reignofnether", "postfx", "WorldLookPass.java"), encoding="utf-8") as f:
+            java = f.read()
+        fsh = read("final.fsh")
         pairs = spc.enchanted_pairs(java, fsh)
         if pairs is None:
             self.skipTest("WorldLookPass has no Enchanted column yet (#326)")
@@ -151,13 +155,13 @@ class ShaderPack(unittest.TestCase):
     def test_material_maps_reach_the_lit_draws_but_not_water(self):
         # slice 2 reads our _n / _s maps through one switch (lib/pbrswitch.glsl): terrain, entities, block entities and
         # the hand pass LIT_PBR; water keeps slice 1's surface until slice 4 (design/own_shader_pack.md)
-        switch = open(os.path.join(spc.SHADERS, "lib", "pbrswitch.glsl"), encoding="utf-8").read()
+        switch = read("lib", "pbrswitch.glsl")
         self.assertIn("!defined LIT_WATER", switch)
         for name in ("gbuffers_terrain.fsh", "gbuffers_entities.fsh", "gbuffers_block.fsh", "gbuffers_hand.fsh"):
             src = spc.expand(os.path.join(spc.SHADERS, name))
             self.assertIn("uniform sampler2D normals;", src, name)
             self.assertIn("uniform sampler2D specular;", src, name)
-        self.assertIn("#define LIT_WATER", open(os.path.join(spc.SHADERS, "gbuffers_water.fsh"), encoding="utf-8").read())
+        self.assertIn("#define LIT_WATER", read("gbuffers_water.fsh"))
         # and after the preprocessor (what the GPU compiles) the water pass binds no material maps at all, while
         # terrain keeps them - so this check cannot pass by the preprocessor dropping everything
         terrain = spc.preprocess(spc.expand(os.path.join(spc.SHADERS, "gbuffers_terrain.fsh")))
@@ -179,6 +183,38 @@ class ShaderPack(unittest.TestCase):
             self.assertIn("const float EXPOSURE = %s;" % exposure, final, materials)
             self.assertNotIn("BOUNCE", terrain, materials)
             self.assertEqual("uniform sampler2D normals;" in terrain, materials == 1)
+
+    def test_noon_light_leaves_open_ground_its_colour(self):
+        # lib/light.glsl aims open ground at noon to come out at its albedo. Itachi 1 measured the lawn under the pack
+        # (eyes 41759309261 vs the plain lane 41759297367, same build, ground sampler, noon): every sunlit ground
+        # material lost ~17% of its blue against its red, and the green lawn read olive. A warm sun is fine; the sun and
+        # the sky's fill together on open ground must stay white, or every colour on the field turns toward yellow. The
+        # lobby's noon (6000, the 30 degree tilt) puts the sun ~60 degrees up: an up face in full sky light, unshadowed,
+        # takes the sun through sunFacing and the fill through surfaceLight's side share, plus MIN_LIGHT. The test reads
+        # those constants and checks the two formulas still use them (review of #506: a change there must go red)
+        src = read("lib", "light.glsl")
+        self.assertIn("return mix(ndl, sqrt(ndl), SUN_FACING_EASE);", src)
+        self.assertIn("(SKY_FILL_SIDE + (1.0 - SKY_FILL_SIDE) * upness)", src)
+        self.assertIn("light += skyFill(n, levels, ao, texAo, skyColour);", src)   # surfaceLight's fill is skyFill
+        ease, side = spc.float_const(src, "SUN_FACING_EASE"), spc.float_const(src, "SKY_FILL_SIDE")
+        sun, sky = spc.vec3_const(src, "SUN_HIGH"), spc.vec3_const(src, "SKY_HIGH")
+        floor = spc.vec3_const(src, "MIN_LIGHT")
+        ndl = math.sin(math.radians(60.0))
+        facing = ndl + (math.sqrt(ndl) - ndl) * ease
+        fill = side + (1.0 - side) * 1.0
+        light = [s * facing + k * fill + m for s, k, m in zip(sun, sky, floor)]
+        self.assertLessEqual(max(light) / min(light), 1.02, "noon light on open ground %s is not white" % light)
+        self.assertTrue(0.97 <= sum(light) / 3 <= 1.03, "noon light on open ground %s is not the albedo's level" % light)
+
+    def test_split_tone_leaves_the_lit_ground_neutral(self):
+        # final.fsh's warm shadow tint (the Enchanted mood) belongs to the dark tones, never the sunlit field: the
+        # palette's darkest sunlit ground is dirt and paths at 0.30 luma (the lawn 0.33-0.43). The old bell peaked at
+        # 0.25 and still gave 0.9 of the tint at 0.30 - the larger half of the lawn's olive pull. Deep shade (0.15)
+        # keeps the tone
+        src = read("final.fsh")
+        for lc in (0.30, 0.35, 0.40, 0.45, 0.50):
+            self.assertLessEqual(spc.split_tone_shadows(src, lc), 0.05, "sunlit ground at luma %.2f is tinted" % lc)
+        self.assertGreaterEqual(spc.split_tone_shadows(src, 0.15), 0.5, "deep shade lost the warm tone")
 
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
     def test_every_program_compiles(self):
