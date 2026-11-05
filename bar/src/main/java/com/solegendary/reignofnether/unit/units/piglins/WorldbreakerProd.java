@@ -76,7 +76,7 @@ public class WorldbreakerProd extends ProductionItem implements IUnitProductionI
             List.of(
                 Component.translatable("entity.reignofnether.worldbreaker_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.worldbreaker_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.worldbreaker_unit.tooltip2").getVisualOrderText()
