@@ -236,6 +236,20 @@ class ShaderPack(unittest.TestCase):
         self.assertGreater(base, 0.5)
         self.assertLessEqual(top / ((1.0 - base) * 255.0), 0.07)    # one step <= 0.07 blocks
 
+    def test_water_body_has_no_seams_and_leans_to_the_palette(self):
+        # Fable critic, rounds 1 and 2: a grid of seams across the pond (the water texture's per-block pattern) and a
+        # grey body with a black far bank. The water reads its texture's average and the ripples draw the detail; the
+        # body is lifted toward the palette's #3A6A8C, blue most (a measured step, lib/water.glsl)
+        lit = read("program", "lit.fsh")
+        water = read("lib", "water.glsl")
+        self.assertIn("vec4 tex = texture2D(texture, texcoord, waterBody > 0.5 ? WATER_TEXTURE_BIAS : 0.0);", lit)
+        self.assertGreaterEqual(spc.float_const(water, "WATER_TEXTURE_BIAS"), 4.0)   # mip 4+: 128 px down to 8 or less
+        self.assertIn("c *= WATER_BODY_GAIN * mix(SHALLOW_TINT,", lit)
+        gain = spc.vec3_const(water, "WATER_BODY_GAIN")
+        self.assertTrue(1.0 <= gain[0] <= gain[1] <= gain[2], gain)
+        # never past the measured gap (linear 1.7 / 3.0 / 4.0 from (44, 63, 72) to (58, 106, 140) on screen)
+        self.assertTrue(all(g <= cap for g, cap in zip(gain, (1.7, 3.0, 4.0))), gain)
+
     def test_no_two_passes_give_one_buffer_two_formats(self):
         # the loader takes one format and one clear colour per colortex, from whichever file it reads last: two passes
         # that use one buffer for different data (slice 3's half-resolution occlusion and slice 4's water layer once

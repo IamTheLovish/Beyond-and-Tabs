@@ -65,7 +65,13 @@ varying vec3 vB;
 /* DRAWBUFFERS:01 */
 #endif
 void main() {
+#ifdef WATER_SURFACE
+    // water takes its texture's average colour (WATER_TEXTURE_BIAS, lib/water.glsl) and the world-space ripples draw
+    // the detail: the texture's own per-block pattern tiled a grid of seams across a pond (Fable critic, rounds 1, 2)
+    vec4 tex = texture2D(texture, texcoord, waterBody > 0.5 ? WATER_TEXTURE_BIAS : 0.0);
+#else
     vec4 tex = texture2D(texture, texcoord);
+#endif
     vec3 albedo = tex.rgb * glcolor.rgb;
 #if defined LIT_TERRAIN || defined LIT_WATER
     float ao = glcolor.a;              // separateAo: the vertex AO, not an alpha
@@ -162,7 +168,7 @@ void main() {
         // the lit water colour (slice 1's, which the palette was tuned on) is what deep water settles to; the bed
         // already drawn under it shows through by what is left
         float a = waterOpacity(path);
-        c *= mix(SHALLOW_TINT, vec3(1.0), smoothstep(0.0, SHALLOW_TINT_PATH, path));
+        c *= WATER_BODY_GAIN * mix(SHALLOW_TINT, vec3(1.0), smoothstep(0.0, SHALLOW_TINT_PATH, path));
 
         // the ripples, on the top surface only (a waterfall's side keeps its face): world xz, so they stay put as the
         // camera pans

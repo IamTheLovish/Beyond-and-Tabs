@@ -21,6 +21,13 @@ const float WATER_DEEP_OPACITY = 0.92;
 // hue ~196 over a shallow bed, back to the biome's own colour by ~2 blocks of path - inside the palette's 195-210
 const vec3 SHALLOW_TINT = vec3(0.90, 1.06, 0.96);
 const float SHALLOW_TINT_PATH = 2.0;
+// the water body's colour, lifted toward the palette's #3A6A8C (58, 106, 140 on screen). Measured on the eyes stills
+// (terrain sampler, rts_close, the far bank seen through the water): (44, 63, 72) - a grey, dark slate, which read as a
+// black band and a grey pond (Fable critic, rounds 1 and 2). The gap in linear light is ~1.7 / 3.0 / 4.0; tone mapping
+// and the grade sit between, so this is half of it in log (round 3), to be measured again
+const vec3 WATER_BODY_GAIN = vec3(1.30, 1.73, 2.00);
+// the texture's average for the water body: its smallest mip (the loader clamps the bias to the atlas's last level)
+const float WATER_TEXTURE_BIAS = 6.0;
 // the path used where nothing opaque lies behind the water (a waterfall over the void, the map's edge): deep
 const float WATER_NO_BED = 64.0;
 
