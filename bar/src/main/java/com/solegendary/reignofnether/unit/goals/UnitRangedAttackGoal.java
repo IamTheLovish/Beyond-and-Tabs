@@ -20,7 +20,7 @@ import java.util.EnumSet;
 // - accepts an attack windup param
 // - can start animations when the attack is winding up
 
-public class UnitRangedAttackGoal<T extends net.minecraft.world.entity.Mob> extends Goal {
+public class UnitRangedAttackGoal<T extends net.minecraft.world.entity.Mob> extends Goal implements RangedCooldown {
 
     private final int VELOCITY = 20;
     private static final int LOS_CHECK_INTERVAL = 5; // recompute raycast at most every N ticks

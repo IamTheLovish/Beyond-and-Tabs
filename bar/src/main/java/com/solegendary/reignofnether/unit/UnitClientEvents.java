@@ -1872,7 +1872,9 @@ public class UnitClientEvents {
                     }
                 } else {
                     ((AttackerUnit) entity).setUnitAttackTarget(null);
-                    ((MeleeAttackBuildingGoal) ((AttackerUnit) entity).getAttackBuildingGoal()).stopAttacking();
+                    // a Militia with its bow holds a ranged building goal (MilitiaUnit.getAttackBuildingGoal)
+                    if (((AttackerUnit) entity).getAttackBuildingGoal() instanceof MeleeAttackBuildingGoal mabg)
+                        mabg.stopAttacking();
                 }
             }
         }

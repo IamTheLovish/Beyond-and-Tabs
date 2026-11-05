@@ -7,7 +7,7 @@ package com.solegendary.reignofnether.building;
  * It is applied once, where a unit's own damage becomes building damage:
  * <ul>
  *   <li>{@link #MELEE_MULT} - what {@code Building.getMeleeDamageMult} returns. Every melee blow
- *       ({@code MeleeAttackBuildingGoal}), every archer's arrow ({@code AbstractArrowMixin}) and the Warden's sonic boom
+ *       ({@code MeleeAttackBuildingGoal}), every ranged unit's shot ({@code RangedBuildingHit}, x {@link #RANGED_MULT}) and the Warden's sonic boom
  *       ({@code BuildingPlacement.getMagicDamageMult}) multiply a unit's damage by it, so they all follow.</li>
  *   <li>{@link #unit(float)} - the unit-caused hits that do not go through that multiplier: a Creeper's, Pillager's and
  *       Ghast's explosion ({@code BuildingServerEvents.onExplosion}) and a Bombard Crew's shell
@@ -29,6 +29,13 @@ public final class BuildingDamage {
 
     /** What a unit's damage is multiplied by on a building, melee and arrows (the base rate and the global multiplier). */
     public static final float MELEE_MULT = BASE_MELEE_MULT * GLOBAL_MULT;
+
+    /**
+     * A ranged shot's share of a melee blow on a building: arrows, tridents and hit-scan bolts are weak against stone.
+     * Applied on top of {@link #MELEE_MULT} by {@link RangedBuildingHit}, the one place a ranged unit's shot becomes
+     * building damage (it was AbstractArrowMixin's ARROW_BUILDING_MULT, the same 0.5).
+     */
+    public static final float RANGED_MULT = 0.5f;
 
     /** A unit-caused hit that has no melee multiplier of its own, scaled by {@link #GLOBAL_MULT}. */
     public static float unit(float damage) {

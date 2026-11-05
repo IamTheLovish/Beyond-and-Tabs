@@ -30,7 +30,7 @@ import java.util.Random;
 
 // can also be used for generic projectile attacks as long as the mob 'technically' is holding a bow, eg. Blazes and ghasts
 
-public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends Goal {
+public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends Goal implements RangedCooldown {
     private final Random random = new Random();
 
     private final T mob;

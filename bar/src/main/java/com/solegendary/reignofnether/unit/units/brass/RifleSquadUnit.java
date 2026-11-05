@@ -177,6 +177,7 @@ public class RifleSquadUnit extends Pillager implements Unit, AttackerUnit, Rang
     public void setFogRevealDuration(int duration) { fogRevealDuration = duration; }
 
     private UnitRangedAttackGoal<? extends LivingEntity> attackGoal;
+    private RangedAttackBuildingGoal<?> attackBuildingGoal;   // muskets chip buildings too (RangedBuildingHit, lovish Nov 5)
 
     private Abilities abilities = ABILITIES.clone();
     private final List<ItemStack> items = new ArrayList<>();
@@ -187,8 +188,8 @@ public class RifleSquadUnit extends Pillager implements Unit, AttackerUnit, Rang
         updateAbilityButtons();
     }
 
-    public boolean canAttackBuildings() { return false; }
-    public Goal getAttackBuildingGoal() { return null; }
+    public boolean canAttackBuildings() { return getAttackBuildingGoal() != null; }
+    public Goal getAttackBuildingGoal() { return attackBuildingGoal; }
 
     @Override
     public boolean removeWhenFarAway(double d) {
@@ -260,6 +261,7 @@ public class RifleSquadUnit extends Pillager implements Unit, AttackerUnit, Rang
         this.garrisonGoal = new GarrisonGoal(this);
         this.itemGoal = new UnitItemGoal(this);
         this.attackGoal = new UnitRangedAttackGoal<>(this, ATTACK_WINDUP_TICKS);
+        this.attackBuildingGoal = new RangedAttackBuildingGoal<>(this, this.attackGoal);
         this.returnResourcesGoal = new ReturnResourcesGoal(this);
     }
 
@@ -304,15 +306,29 @@ public class RifleSquadUnit extends Pillager implements Unit, AttackerUnit, Rang
         // a projectile hit with the squad as both projectile and owner: the mixin takes the damage from
         // getUnitAttackDamage and applies ranged armour
         boolean hurt = target.hurt(damageSources().mobProjectile(this, this), getUnitAttackDamage());
+        shotFx(sl, new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ()),
+            com.solegendary.reignofnether.barfx.BarFx.AT_UNIT);
+        return hurt;
+    }
+
+    // a building's block (RangedAttackBuildingGoal): the same musket shot at a point, the block under it takes the hit
+    @Override
+    public void performUnitRangedAttack(double x, double y, double z, float velocity) {
+        if (!(level() instanceof ServerLevel sl) || this.hasEffect(MobEffectRegistrar.DISARM.get()))
+            return;
+        shotFx(sl, new Vec3(x, y, z), com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING);
+        com.solegendary.reignofnether.building.RangedBuildingHit.hit(this, BlockPos.containing(x, y - 0.5, z));
+    }
+
+    /** The musket shot's look and crack, from the squad to {@code to}. */
+    private void shotFx(ServerLevel sl, Vec3 to, byte at) {
         Vec3 from = new Vec3(getX(), getEyeY() - 0.2, getZ());
-        Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
         com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW,
             com.solegendary.reignofnether.barfx.BarFx.W_GUN, this);   // the musket crack (sounds.SfxClient)
         com.solegendary.reignofnether.barfx.BarFx.impact(sl, to, to.subtract(from), com.solegendary.reignofnether.barfx.BarFx.K_ARROW,
-            com.solegendary.reignofnether.barfx.BarFx.AT_UNIT, 0.5f, this);
+            at, 0.5f, this);
         Vec3 muzzle = from.add(to.subtract(from).normalize().scale(0.8));
         sl.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, 4, 0.1, 0.1, 0.1, 0.02);
-        return hurt;
     }
 
     // dwarves of the guild, not illagers: healing heals and raid/bad-omen logic leaves it alone

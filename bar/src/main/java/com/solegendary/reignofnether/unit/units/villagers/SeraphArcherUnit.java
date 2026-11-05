@@ -6,6 +6,8 @@ import com.solegendary.reignofnether.fogofwar.FogOfWarClientboundPacket;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
+import com.solegendary.reignofnether.building.RangedBuildingHit;
+import com.solegendary.reignofnether.unit.goals.RangedAttackBuildingGoal;
 import com.solegendary.reignofnether.unit.goals.UnitRangedAttackGoal;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
@@ -58,6 +60,7 @@ public class SeraphArcherUnit extends AngelUnit implements AttackerUnit, RangedA
     static final int ATTACK_WINDUP_TICKS = 4;
 
     private UnitRangedAttackGoal<? extends LivingEntity> attackGoal;
+    private RangedAttackBuildingGoal<?> attackBuildingGoal;   // its bolts chip buildings too (RangedBuildingHit, lovish Nov 5)
     private BlockPos attackMoveTarget = null;
     private EnemySearchBehaviour attackSearchBehaviour = EnemySearchBehaviour.NONE;
 
@@ -107,9 +110,9 @@ public class SeraphArcherUnit extends AngelUnit implements AttackerUnit, RangedA
     public boolean getWillRetaliate() {return willRetaliate;}
     public boolean getAggressiveWhenIdle() {return aggressiveWhenIdle;}
     public BlockPos getAttackMoveTarget() { return attackMoveTarget; }
-    public boolean canAttackBuildings() {return false;}
+    public boolean canAttackBuildings() {return getAttackBuildingGoal() != null;}
     public Goal getAttackGoal() { return attackGoal; }
-    public Goal getAttackBuildingGoal() { return null; }
+    public Goal getAttackBuildingGoal() { return attackBuildingGoal; }
     public void setAttackMoveTarget(@Nullable BlockPos bp) { this.attackMoveTarget = bp; }
     public EnemySearchBehaviour getEnemySearchBehaviour() { return attackSearchBehaviour; }
     public void setEnemySearchBehaviour(EnemySearchBehaviour behaviour) { attackSearchBehaviour = behaviour; }
@@ -141,17 +144,31 @@ public class SeraphArcherUnit extends AngelUnit implements AttackerUnit, RangedA
             return false;
         // the seraph as both projectile and owner: the mixin takes getUnitAttackDamage and applies ranged armour
         boolean hurt = target.hurt(damageSources().mobProjectile(this, this), getUnitAttackDamage());
+        boltFx(sl, new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ()));
+        return hurt;
+    }
+
+    // a building's block (RangedAttackBuildingGoal): the same bolt at a point, the block under it takes the hit
+    @Override
+    public void performUnitRangedAttack(double x, double y, double z, float velocity) {
+        if (!(level() instanceof ServerLevel sl) || this.hasEffect(MobEffectRegistrar.DISARM.get()))
+            return;
+        boltFx(sl, new Vec3(x, y, z));
+        RangedBuildingHit.hit(this, BlockPos.containing(x, y - 0.5, z));
+    }
+
+    /** The bolt of light's look and sound, from the seraph to {@code to}. */
+    private void boltFx(ServerLevel sl, Vec3 to) {
         Vec3 from = new Vec3(getX(), getY() + getBbHeight() * 0.6, getZ());
-        Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
         BarFx.shot(sl, from, to, BarFx.K_ARROW, this);
         sl.playSound(null, blockPosition(), SoundEvents.ARROW_SHOOT, SoundSource.NEUTRAL, 0.8f, 1.5f);
-        return hurt;
     }
 
     @Override
     public void initialiseGoals() {
         super.initialiseGoals();
         this.attackGoal = new UnitRangedAttackGoal<>(this, ATTACK_WINDUP_TICKS);
+        this.attackBuildingGoal = new RangedAttackBuildingGoal<>(this, this.attackGoal);
     }
 
     @Override

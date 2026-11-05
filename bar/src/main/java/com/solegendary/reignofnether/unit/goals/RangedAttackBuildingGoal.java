@@ -24,7 +24,7 @@ import java.util.Random;
 public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
     private final T mob;
     private BlockPos blockTarget = null;
-    private UnitBowAttackGoal<?> bowAttackGoal = null;
+    private RangedCooldown shotGoal = null;   // the bow goal or the hit-scan goal: it paces the shots
     private UnitCrossbowAttackGoal<?> cbowAttackGoal = null;
     private BuildingPlacement buildingTarget = null;
     public boolean forced = false;
@@ -42,9 +42,11 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
         return cachedFlyingMoveGoal;
     }
 
-    public RangedAttackBuildingGoal(T mob, UnitBowAttackGoal<?> bowAttackGoal) {
+    /** A shooter whose shot is {@link RangedAttackerUnit#performUnitRangedAttack(double, double, double, float)} at a
+     *  point: arrows and shells (UnitBowAttackGoal) and hit-scan bolts (UnitRangedAttackGoal). */
+    public RangedAttackBuildingGoal(T mob, RangedCooldown shotGoal) {
         this.mob = mob;
-        this.bowAttackGoal = bowAttackGoal;
+        this.shotGoal = shotGoal;
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
@@ -117,6 +119,11 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
         return buildingTarget;
     }
 
+    /** The block of the building the next shot aims at (null when there is none). */
+    public BlockPos getBlockTarget() {
+        return blockTarget;
+    }
+
     public boolean canUse() {
         return this.blockTarget != null;
     }
@@ -167,15 +174,15 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
                     this.stopMoving();
             }
             if (distToTarget <= attackRange) { // start drawing bowstring
-                if (bowAttackGoal != null) {
+                if (shotGoal != null) {
                     // artillery set-up (unit/SetUp): hold the shot, and the cooldown, until it has stood still
-                    if (bowAttackGoal.getAttackCooldown() <= 0 && com.solegendary.reignofnether.unit.SetUp.isSetUp(this.mob)) {
+                    if (shotGoal.getAttackCooldown() <= 0 && com.solegendary.reignofnether.unit.SetUp.isSetUp(this.mob)) {
                         if (mob instanceof RangedAttackerUnit rangedAttackerUnit) {
                             rangedAttackerUnit.performUnitRangedAttack(tx, ty, tz, 20);
                             if (!mob.level().isClientSide() && buildingTarget != null)
                                 FogOfWarClientboundPacket.revealRangedUnit(buildingTarget.ownerName, mob.getId());
                         }
-                        bowAttackGoal.setToMaxAttackCooldown();
+                        shotGoal.setToMaxAttackCooldown();
                         setNextBlockTarget();
                     }
                 }
