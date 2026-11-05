@@ -1,7 +1,9 @@
 plugins {
     id 'eclipse'
     id 'idea'
-    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    // pinned to what '[6.0,6.2)' resolved to (newest in range on Nov 5): a range makes every build ask the Forge Maven
+    // for its version list, so a Maven outage fails a build whose plugin is already cached
+    id 'net.minecraftforge.gradle' version '6.0.54'
 }
 
 version = mod_version

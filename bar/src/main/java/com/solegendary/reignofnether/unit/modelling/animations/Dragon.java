@@ -182,11 +182,12 @@ public final class Dragon {
     /** Per-entity smoothed state: [glide 0..1, bank deg, last age, the bite's SWING moment (age), last attackTime
      *  seen, hover, the last swing actually seen (age), whether the running bite was foreseen (1) or not (0),
      *  the filtered heading (deg), the bank's velocity (deg/tick), the tail's two lagged banks, heading-seeded flag,
-     *  climb, the beat phase (beats), flare, take-off, the smoothed speed, the smoothed braking, perched]. */
+     *  climb, the beat phase (beats), flare, take-off, the smoothed speed, the smoothed braking, perched, braking,
+     *  speed seeded, the breath phase (cycles; -1 until the first frame seeds it)]. */
     private static final Map<LivingEntity, float[]> STATE = new WeakHashMap<>();
     public static final int ST_BANK = 1, ST_HEADING = 8, ST_BANK_VEL = 9, ST_TAIL_A = 10, ST_TAIL_B = 11, ST_SEEDED = 12,
         ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_SPEED = 17, ST_BRAKE = 18, ST_PERCH = 19,
-        ST_BRAKING = 20, ST_SPEED_SEEDED = 21, ST_LEN = 22;
+        ST_BRAKING = 20, ST_SPEED_SEEDED = 21, ST_BREATH = 22, ST_LEN = 23;
     /** The glide weight and the hover weight (state slots 0 and 5). */
     public static final int ST_GLIDE = 0, ST_HOVER = 5;
 
@@ -378,12 +379,33 @@ public final class Dragon {
     }
 
     /** A fresh per-entity state (see STATE). */
+    /** The breath's period (ticks): it quickens on the wing. */
+    static float breathPeriod(Params P, float glide) {
+        return P.breathTicks * (1f - 0.3f * glide);
+    }
+
+    /**
+     * The breath's phase (cycles) this frame, from last frame's ({@code prev}; negative = not seeded yet) and the
+     * frame's elapsed ticks {@code dt}. The phase is STATE, moved by dt / period, so a change of glide changes the
+     * breath's speed and never its position: as (age + offset) / period it moved by age * d(1 / period) each frame,
+     * several whole cycles a tick an hour into a match (#303's bug, fixed there for the army and the bison). The
+     * first frame seeds it where that stateless form puts it, so a still pose (tools/dragon_poses.py) and a dragon
+     * that just came into view agree.
+     */
+    public static float breathPhase(float prev, float age, float dt, int id, Params P, float glide) {
+        float period = breathPeriod(P, glide);
+        if (!(prev >= 0f))
+            return Life.advance(0f, (age + Life.offset(id)) / period);
+        return Life.advance(prev, dt / period);
+    }
+
     public static float[] newState(float age) {
         float[] st = new float[ST_LEN];
         st[2] = age;
         st[3] = -1000f;
         st[5] = 1f;
         st[6] = -1000f;
+        st[ST_BREATH] = -1f;
         return st;
     }
 
@@ -501,8 +523,9 @@ public final class Dragon {
         }
         st[4] = attackTime;
 
+        st[ST_BREATH] = breathPhase(st[ST_BREATH], age, dt, id, P, glide);
         pose(r, P, id, st[ST_PHASE], age, glide, idle, bank, st[ST_TAIL_A], st[ST_TAIL_B], climb, st[ST_FLARE], takeoff,
-            perch, age - st[3], e.hurtTime, e.deathTime, netHeadYaw, headPitch);
+            perch, age - st[3], e.hurtTime, e.deathTime, netHeadYaw, headPitch, st[ST_BREATH]);
         // the neck's follow-through: braking, the head carries on and dips (x < 0 drops a forward part's nose)
         dsl(r.head, -brakeNod(P, st[ST_BRAKE]) * (1f - perch), 0f, 0f);
     }
@@ -516,6 +539,15 @@ public final class Dragon {
     public static void pose(Rig r, Params P, int id, float ph, float age, float glide, float idle, float bank,
                             float tailA, float tailB, float climb, float flare, float takeoff, float perch, float attackT,
                             int hurtTime, int deathTime, float netHeadYaw, float headPitch) {
+        // a still pose: the breath where the stateless form puts it (what tools/dragon_poses.py draws)
+        pose(r, P, id, ph, age, glide, idle, bank, tailA, tailB, climb, flare, takeoff, perch, attackT, hurtTime,
+            deathTime, netHeadYaw, headPitch, breathPhase(-1f, age, 0f, id, P, glide));
+    }
+
+    /** {@link #pose} with the breath's phase (cycles) as state: the animated rig's, from {@link #breathPhase}. */
+    public static void pose(Rig r, Params P, int id, float ph, float age, float glide, float idle, float bank,
+                            float tailA, float tailB, float climb, float flare, float takeoff, float perch, float attackT,
+                            int hurtTime, int deathTime, float netHeadYaw, float headPitch, float breathPh) {
         float off = Life.offset(id);
         float T = beatTicks(P, idle, takeoff, climb);
         // the glide weight: the cruise rhythm (only cruising), and the speed's own glide with a corrective beat
@@ -619,7 +651,7 @@ public final class Dragon {
         dsl(r.body, pitch0 + statePitch, 0, roll);
 
         // ---- breath, always: the ribcage swells, the neck base lifts, the head stays level -------------------------
-        float br = Life.breath(age, id, P.breathTicks * (1f - 0.3f * glide));
+        float br = Life.breathAt(breathPh);
         float swell = 0.5f + 0.5f * br;
         ModelPart ribs = r.ribs != null ? r.ribs : r.body;
         if (ribs != null) {

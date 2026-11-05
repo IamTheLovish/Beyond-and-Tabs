@@ -92,23 +92,24 @@ public class FallenHeroClientboundPacket {
         ctx.get().enqueueWork(() -> {
             DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
                 () -> () -> {
-                    HeroClientEvents.addFallenHero(new HeroUnitSave(
-                        uuid,
-                        name,
-                        ownerName,
-                        experience,
-                        skillPoints,
-                        0,
-                        ability1Rank,
-                        ability2Rank,
-                        ability3Rank,
-                        ability4Rank,
-                        items
-                    ));
+                    deliver(HeroClientEvents::addFallenHero,
+                        com.solegendary.reignofnether.hud.NotificationClientEvents::onHeroFallen);
                     success.set(true);
                 });
         });
         ctx.get().setPacketHandled(true);
         return success.get();
+    }
+
+    /**
+     * What the client does with a fallen hero, with both receivers passed in: the fallen-heroes roster (revival at
+     * the hero's lab) and the "Hero fallen" alert. The handler passes HeroClientEvents and NotificationClientEvents;
+     * HeroFallenAlertGameTests passes its own, so dropping either delivery is a red test (review round 1 on #508: the
+     * alert's call could be deleted with every test still green).
+     */
+    public void deliver(java.util.function.Consumer<HeroUnitSave> roster, HeroFallenNews.Listener alert) {
+        roster.accept(new HeroUnitSave(uuid, name, ownerName, experience, skillPoints, 0,
+            ability1Rank, ability2Rank, ability3Rank, ability4Rank, items));
+        alert.heroFallen(ownerName, name, uuid);
     }
 }

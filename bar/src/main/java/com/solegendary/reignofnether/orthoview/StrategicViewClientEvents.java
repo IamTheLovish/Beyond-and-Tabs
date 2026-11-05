@@ -730,9 +730,18 @@ public class StrategicViewClientEvents {
         } else if (ringW > 0f) {
             drawShape(bb, mat, shape, sx, sy, r + ICON_OUTLINE_W + ringW, ringCol);
         }
+        // a flyer keeps its role shape and spreads a pair of swept wings behind it (role icons, backlog 12): 16 flying
+        // unit classes read as their attack role alone. Drawn first so the shape covers the wing roots; 8 triangles.
+        if (!commander && UnitIconTier.isFlyer(entity))
+            wings(bb, mat, sx, sy, r, fill);
         // the dark edge under every icon, so a pale team colour still reads on snow or bright grass
         drawShape(bb, mat, shape, sx, sy, r + ICON_OUTLINE_W, ICON_OUTLINE);
         drawShape(bb, mat, shape, sx, sy, r, fill);
+        // tier pips outside the shape, under it: 2 for T2, 3 for T3 (UnitIconTier.pips); size alone was the only tier mark
+        int pips = commander ? 0 : UnitIconTier.pips(tier);
+        float below = sy + r + ICON_OUTLINE_W + ringW;
+        if (pips > 0)
+            below = tierPips(bb, mat, sx, below + 1f, r, pips);
 
         // an owned army unit that has stood still for 10 s (hud/IdleArmy) carries a pulsing amber diamond on its
         // top-right edge on a dark shadow: hundreds of same-size icons all looked busy, and rows of idle units sat
@@ -760,7 +769,7 @@ public class StrategicViewClientEvents {
         if (hp < 0.999f) {
             float bw = r * 2 + 2;
             float bx = sx - bw / 2;
-            float by = sy + r + ICON_OUTLINE_W + ringW + 1;
+            float by = below + 1;   // under the pips when there are any
             rect(bb, mat, bx - 0.5f, by - 0.5f, bx + bw + 0.5f, by + 2f, 0xC0000000);
             int hpCol = hp > 0.6f ? 0xFF3CD23C : hp > 0.3f ? 0xFFE6C832 : 0xFFE03C32;
             rect(bb, mat, bx, by, bx + bw * Mth.clamp(hp, 0f, 1f), by + 1.5f, hpCol);
@@ -768,6 +777,36 @@ public class StrategicViewClientEvents {
     }
 
     private enum Shape { SQUARE, TRIANGLE, CIRCLE, DIAMOND, STAR }
+
+    /** Swept wings behind a flyer's shape: each a thin quad from the centre out and down, on a dark edge. */
+    private static void wings(BufferBuilder bb, Matrix4f mat, float cx, float cy, float r, int fill) {
+        float span = r * 1.9f, drop = r * 0.75f, root = r * 0.35f, t = Math.max(1.2f, r * 0.5f), e = ICON_OUTLINE_W;
+        for (int side = -1; side <= 1; side += 2) {
+            float ax = cx, ay = cy - root, bx = cx + side * span, by = cy + drop;
+            // the dark edge: the same arm a little longer and thicker
+            quad(bb, mat, ax, ay - e, bx + side * e, by - e, bx + side * e, by + t + e, ax, ay + t + e, ICON_OUTLINE);
+            quad(bb, mat, ax, ay, bx, by, bx, by + t, ax, ay + t, fill);
+        }
+    }
+
+    /** {@code n} square pips centred under an icon from {@code top}; returns the y just under them. 4 triangles a pip. */
+    private static float tierPips(BufferBuilder bb, Matrix4f mat, float cx, float top, float r, int n) {
+        float p = Math.max(1.3f, r * 0.32f), gap = Math.max(0.8f, p * 0.6f), e = 0.8f;
+        float w = n * p + (n - 1) * gap, x = cx - w / 2;
+        for (int i = 0; i < n; i++, x += p + gap) {
+            rect(bb, mat, x - e, top - e, x + p + e, top + p + e, ICON_OUTLINE);
+            rect(bb, mat, x, top, x + p, top + p, PIP_COLOUR);
+        }
+        return top + p + e;
+    }
+
+    private static final int PIP_COLOUR = 0xFFF2F2F2;
+
+    private static void quad(BufferBuilder bb, Matrix4f mat, float x1, float y1, float x2, float y2, float x3, float y3,
+                             float x4, float y4, int argb) {
+        tri(bb, mat, x1, y1, x2, y2, x3, y3, argb);
+        tri(bb, mat, x1, y1, x3, y3, x4, y4, argb);
+    }
 
     /** Icon radius (gui px) of a T1 unit at Icon size 1; UnitIconTier.iconSize scales it per tier. */
     private static final float ICON_BASE_R = 3.6f;
