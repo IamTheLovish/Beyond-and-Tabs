@@ -44,14 +44,14 @@ public final class BreathFx {
     private static final Minecraft MC = Minecraft.getInstance();
     /** Per tick: core tongues, body tongues, body puffs, soul-smoke, splash tongues, pool flames, embers; licks on at
      *  most LICKS_MAX units. */
-    static final int CORES = 3, BODY = 4, PUFFS = 4, SMOKES = 2, SPLASH = 12, POOL = 2, EMBERS = 4, LICKS_MAX = 6;
+    static final int CORES = 3, BODY = 4, PUFFS = 4, SMOKES = 2, SPLASH = 20, POOL = 1, EMBERS = 4, LICKS_MAX = 6;
     /** The jaws the renderer found are trusted this many client ticks (an undrawn dragon's are guessed instead). */
     static final long JAWS_FRESH = 3;
     // soul-fire, cyan to cobalt only (Fable round 4: lilac merges with the wings); each flame fades from its first
     // colour to its second over its life
     static final int CORE = 0xF4FFFF, CORE_END = 0xBFEFFF, BODY_C = 0x3F8DFF, BODY_END = 0x1A3FD6, SMOKE = 0x2A2F52,
-        SMOKE_END = 0x1A1E36, MUZZLE = 0xFFFFFF, SPLASH_C = 0x9FE8FF, SPLASH_END = 0x1332C8, POOL_C = 0x6FD8FF,
-        POOL_END = 0x1E4BD8, HOT = 0x7FD6FF, GLOW = 0x1E4BFF, EMBER = 0xC8F0FF, SCORCH = 0x0A1A2E, LICK = 0x8FE0FF,
+        SMOKE_END = 0x1A1E36, MUZZLE = 0xFFFFFF, SPLASH_C = 0xC9F2FF, SPLASH_END = 0x3B8CFF, POOL_C = 0x6FB8FF,
+        POOL_END = 0x1E4BD8, HOT = 0x7FD6FF, GLOW = 0x1E4BFF, EMBER = 0xC8F0FF, SCORCH = 0x101C40, LICK = 0x8FE0FF,
         LICK_END = 0x2A6DFF, LIT = 0x66B8FF;
 
     private static final double[] V = new double[3];
@@ -138,6 +138,12 @@ public final class BreathFx {
         }
         if (!BarFxClient.visible(jx, jy, jz) && !BarFxClient.visible(ax, ay, az))
             return;
+        // where the jaws were last tick (Fable round 6: sub-tick fill): stream flames are born along the path between,
+        // so a turning dragon's stream never steps
+        boolean fresh = Double.isNaN(d.clientJawsLast[0]) || t == 0;
+        float ljx = fresh ? jx : (float) d.clientJawsLast[0], ljy = fresh ? jy : (float) d.clientJawsLast[1];
+        float ljz = fresh ? jz : (float) d.clientJawsLast[2];
+        d.clientJawsLast[0] = jx; d.clientJawsLast[1] = jy; d.clientJawsLast[2] = jz;
         float zs = BarFxClient.ortho ? Math.max(1f, Math.min(2.5f, BarFxClient.zoom / 30f)) : 1f;
         double tan = FireBreath.tanHalf(landed);
         float sx = ax - jx, sy = ay - jy, sz = az - jz;
@@ -170,8 +176,9 @@ public final class BreathFx {
             // 16-20 blocks a second, or what it takes to reach the ground in its life (a dragon 12 up)
             float k = Math.max(rnd(16f, 20f), dv / .5f) / (float) Math.sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
             float lead = rnd(0, .05f), size = (puff ? .4f : .3f) * zs;
-            BarFxClient.P p = flame(jx + (float) V[0] * k * lead, jy + (float) V[1] * k * lead, jz + (float) V[2] * k * lead,
-                rnd(.45f, .6f), size, BODY_C, BODY_END, (float) V[0] * k + px * wobble, (float) V[1] * k,
+            float back = rnd(0, 1);
+            BarFxClient.P p = flame(jx + (ljx - jx) * back + (float) V[0] * k * lead, jy + (ljy - jy) * back + (float) V[1] * k * lead,
+                jz + (ljz - jz) * back + (float) V[2] * k * lead, rnd(.45f, .6f), size, BODY_C, BODY_END, (float) V[0] * k + px * wobble, (float) V[1] * k,
                 (float) V[2] * k + pz * wobble, Math.max(2.5f, Math.min(5f, 1.2f * zs / size)), ay, swell * .7f, true);
             if (puff) {
                 p.tex = 6 + BarFxClient.R.nextInt(2);
@@ -198,10 +205,12 @@ public final class BreathFx {
         // flung in a random cone, a dark scorch; the units standing in it lit, with flames licking up them
         for (int i = 0; i < SPLASH; i++) {
             double a = BarFxClient.R.nextDouble() * Math.PI * 2;
-            float sp = rnd(4f, 7f), r0 = rnd(0, .3f) * far;
-            BarFxClient.P p = flame(ax + (float) Math.cos(a) * r0, ay + .2f, az + (float) Math.sin(a) * r0, rnd(.35f, .6f),
-                .3f * zs, SPLASH_C, SPLASH_END, (float) Math.cos(a) * sp, .5f, (float) Math.sin(a) * sp, 2f, Float.NaN,
-                swell * .45f, true);
+            float sp = rnd(6f, 10f), r0 = rnd(0, .3f) * far;
+            // radial along the ground, pushed on in the breath's own direction: it splashes forward, not up
+            float fx = sx / dv * 4f, fz = sz / dv * 4f;
+            BarFxClient.P p = flame(ax + (float) Math.cos(a) * r0, ay + .2f, az + (float) Math.sin(a) * r0, rnd(.4f, .6f),
+                .3f * zs, SPLASH_C, SPLASH_END, (float) Math.cos(a) * sp + fx, .1f, (float) Math.sin(a) * sp + fz, 2.2f,
+                Float.NaN, swell * .45f, true);
             p.tex = BarFxClient.R.nextInt(6);
             p.stretch = 3f;
         }
@@ -213,7 +222,8 @@ public final class BreathFx {
             p.stretch = 2f;
         }
         if (t % 2 == 0) {
-            flame(ax, ay + .3f, az, .3f, 1.25f * zs, HOT, HOT, 0, 0, 0, 1f, Float.NaN, .5f * swell, false);
+            float pulse = .45f + .15f * (float) Math.sin(now() * Math.PI * 2 * 3 / 20);   // 3 Hz: the hit twinkles from far
+            flame(ax, ay + .3f, az, .3f, 1.5f * zs, HOT, HOT, 0, 0, 0, 1f, Float.NaN, pulse * swell, false);
             flame(ax, ay + .3f, az, .4f, 2f * zs, GLOW, GLOW, 0, 0, 0, 1f, Float.NaN, .25f * swell, false);
         }
         for (int i = 0; i < EMBERS; i++) {
@@ -224,8 +234,8 @@ public final class BreathFx {
             p.vx = (float) Math.cos(a) * sp * (1 - up * .5f); p.vz = (float) Math.sin(a) * sp * (1 - up * .5f); p.vy = sp * up;
         }
         if (t % 5 == 0) {
-            BarFxClient.P sc = BarFxClient.add(BarFxClient.DECAL, ax, ay + .02f, az, 4f, 3f, SCORCH);
-            sc.alpha = .35f;
+            BarFxClient.P sc = BarFxClient.add(BarFxClient.DECAL, ax, ay + .02f, az, 4f, 2f, SCORCH);
+            sc.alpha = .3f;   // a burn, never darker than the dragon's own shadow
             sc.spin = rnd(0, 6.28f);
         }
         if (t % 2 == 0) {
