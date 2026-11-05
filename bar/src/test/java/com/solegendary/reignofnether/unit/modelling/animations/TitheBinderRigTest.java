@@ -32,8 +32,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * of warm-up, the same inputs), must land on every sampled number within 0.01 (degrees, px, alpha / glow / scale):
  * every bone delta, every docked slot, every flying / falling weapon (state, pommel, world rotation, scale), the hidden
  * parts, the body alpha, the lantern glow, every soul-chain ribbon (r4: hub, ctrl, end, width) and the fx (the count
- * halo; the bind's lash, orb, flash, forge line). Then the API's shape (one state, one pose, reused,
- * no allocation per step) and the DSL -> ModelPart sign mapping of tools/dsl_to_game.py ((x, y, z) degrees ->
+ * halo; the bind's lash, orb, flash, forge line; r5: impact flashes, flight streaks). Then the API's shape (one
+ * state, one pose, reused, no allocation per step) and the DSL -> ModelPart sign mapping of tools/dsl_to_game.py ((x, y, z) degrees ->
  * (-x, +y, -z) radians; offsets y down) on three bones and one slot.
  */
 class TitheBinderRigTest {
@@ -215,6 +215,13 @@ class TitheBinderRigTest {
                 d.nearAngle(w + "rot[" + i + "]", f.getAsJsonArray("rot").get(i).getAsDouble(), got.flyRot[k][i]);
             }
             d.near(w + "scale", f.get("scale").getAsDouble(), got.flyScale[k]);
+            // r5: the streak (the last positions, oldest first); the driver omits it for a falling weapon
+            JsonArray trail = f.has("trail") ? f.getAsJsonArray("trail") : new JsonArray();
+            d.same(w + "trail count", Integer.toString(trail.size()), Integer.toString(got.flyTrailN[k]));
+            for (int j = 0; j < Math.min(trail.size(), got.flyTrailN[k]); j++)
+                for (int i = 0; i < 3; i++)
+                    d.near(w + "trail[" + j + "][" + i + "]", trail.get(j).getAsJsonArray().get(i).getAsDouble(),
+                        got.flyTrail[k][j][i]);
         }
         // hidden parts, alpha, lantern
         TreeSet<String> wantHidden = new TreeSet<>(), gotHidden = new TreeSet<>();
@@ -244,16 +251,28 @@ class TitheBinderRigTest {
         // fx: the count halo, and the bind's lash / orb / flash / forge line
         JsonObject fx = want.getAsJsonObject("fx");
         d.same(at + " fx.halo", Integer.toString(fx.get("halo").getAsInt()), Integer.toString(got.halo));
-        fxPoint(d, at + " fx.lash", fx, "lash", 0, got.lashOn, got.lashA);
-        fxPoint(d, at + " fx.lash", fx, "lash", 1, got.lashOn, got.lashB);
+        fxPoint(d, at + " fx.lash", fx, "lash", 0, got.lashOn, got.lashA);       // r5: [a, ctrl, b]
+        fxPoint(d, at + " fx.lash", fx, "lash", 1, got.lashOn, got.lashCtrl);
+        fxPoint(d, at + " fx.lash", fx, "lash", 2, got.lashOn, got.lashB);
         fxPoint(d, at + " fx.orb", fx, "orb", -1, got.orbOn, got.orb);
         fxPoint(d, at + " fx.flash", fx, "flash", -1, got.flashOn, got.flash);
         fxPoint(d, at + " fx.forge", fx, "forge", 0, got.forgeOn, got.forgeA);
         fxPoint(d, at + " fx.forge", fx, "forge", 1, got.forgeOn, got.forgeB);
+        // r5 impact flashes: [victim-surface point, age], in the driver's order
+        JsonArray impacts = fx.has("impacts") ? fx.getAsJsonArray("impacts") : new JsonArray();
+        d.same(at + " fx.impacts count", Integer.toString(impacts.size()), Integer.toString(got.impacts));
+        for (int j = 0; j < Math.min(impacts.size(), got.impacts); j++) {
+            JsonArray im = impacts.get(j).getAsJsonArray();
+            for (int i = 0; i < 3; i++)
+                d.near(at + " fx.impacts[" + j + "][" + i + "]", im.get(0).getAsJsonArray().get(i).getAsDouble(),
+                    got.impactPos[j][i]);
+            d.same(at + " fx.impacts[" + j + "] age", Integer.toString(im.get(1).getAsInt()),
+                Integer.toString(got.impactAge[j]));
+        }
         for (String key : fx.keySet())
             d.truth(at + " fx key " + key + " is ported",
                 key.equals("halo") || key.equals("lash") || key.equals("orb") || key.equals("flash")
-                    || key.equals("forge"));
+                    || key.equals("forge") || key.equals("impacts"));
     }
 
     /** One fx point: fx[key] (a point) or fx[key][end] (a segment end); absent in the driver = off in the rig. */
