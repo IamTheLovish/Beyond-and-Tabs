@@ -127,6 +127,61 @@ class JadePagodaTest(unittest.TestCase):
         floating = sorted(q for q in self.solid if q[1] >= 6 and not any(f in self.solid for f in faces(q)))
         self.assertEqual(floating, [])
 
+    # ---- the Fable critics' fixes (Nov 4, eyes 41792408905: 6 / 10; critic-a.md, critic-c.md F1 F2 F4 F6 F7) ----
+    def test_paper_screens_are_pale(self):
+        """The storeys' paper screens are pale (white stained glass), not red glass: red glass beside the red posts read
+        as one maroon mass and passed no light, so the top storey was dead at dusk (critic A fix 1)."""
+        red = sorted(q for q, n in self.solid.items() if n == "red_stained_glass")
+        self.assertEqual(red, [])
+        self.assertGreaterEqual(sum(1 for n in self.solid.values() if n == "white_stained_glass"), 20)
+
+    def test_every_roof_has_a_dark_second_course(self):
+        """Each roof's second course (the stairs one up on the band, y 7 and y 13) is the dark gap stair, so with the
+        gap ring under it every roof shows a 2-cell dark ring from above and the tiers part (critic A fix 2: the
+        1-cell gap ring was too thin at 30 px a block; three teal tiers merged into one pyramid)."""
+        jade = sorted(q for q, n in self.solid.items() if q[1] in (7, 13) and n == JADE_FAMILY[0] + "_stairs")
+        self.assertEqual(jade, [])
+
+    def test_eaves_sweep_as_stair_runs(self):
+        """The eave sweeps up to each corner as a run of stairs, not stepping full cubes: one above each lip (y 7,
+        y 13) only the four corner lifts are full jade blocks (critic C F6: "the eave tips are 1-cell jade cubes
+        stepping down", a crenellated pixel edge at RTS zoom; shipped 12 per roof)."""
+        for y in (7, 13):
+            cubes = sorted(q for q, n in self.solid.items() if q[1] == y and n == JADE_FAMILY[0])
+            self.assertLessEqual(len(cubes), 4, "y%d %s" % (y, cubes))
+
+    def test_garden_is_moss_not_the_shared_grey(self):
+        """The garden floor (y 0 outside the terrace) is the Stormcallers' GARDEN - moss, mossy stone, grass - with
+        no andesite and no polished andesite (critic C F2: five buildings of three factions stood on the same grey
+        yard); stone-brick flags only as the starting type's stepping stones."""
+        garden = {q: n for q, n in self.solid.items() if q[1] == 0 and _ring(q) >= 6 and n != "stone_bricks"}
+        grey = sorted({n for n in garden.values() if "andesite" in n})
+        self.assertEqual(grey, [])
+        green = sum(1 for n in garden.values() if "moss" in n or n == "grass_block")
+        self.assertGreaterEqual(green / max(1, len(garden)), 0.6, green)
+
+    def test_no_pink_and_no_black_heads_at_the_corners(self):
+        """No cherry pink at all (lovish, Nov 4: the garden trees "Azalea instead"; critic C F4: pink is the Verdant
+        crown's and the academy's lotus) and no black dragon heads on the guardians (critic A fix 4: base-corner
+        noise - "four black cubes with faces")."""
+        bad = sorted({n for n in self.solid.values() if "cherry" in n or "pink" in n or n == "dragon_head"})
+        self.assertEqual(bad, [])
+
+    def test_plan_is_a_rectangle_under_squares(self):
+        """lovish, Nov 4 ("Pagoda: new plan"), critic C F7: the first roof is a long rectangle (its outline from
+        above at least 1.3 x as wide as deep) under square upper roofs (y >= 12: as wide as deep), so the plan no
+        longer twins the Ashborn capitol's concentric squares. Shipped: 13 x 13 under 9 x 9 under 5 x 5."""
+        def extent(cells):
+            xs = [q[0] for q in cells]
+            zs = [q[2] for q in cells]
+            return max(xs) - min(xs) + 1, max(zs) - min(zs) + 1
+        roof1 = [q for q, n in self.solid.items() if q[1] in (5, 6) and n.startswith(JADE_FAMILY)]
+        w, d = extent(roof1)
+        self.assertGreaterEqual(max(w, d) / min(w, d), 1.3, (w, d))
+        upper = [q for q, n in self.solid.items() if q[1] == 12 and n.startswith(JADE_FAMILY)]
+        w2, d2 = extent(upper)
+        self.assertEqual(w2, d2, (w2, d2))
+
     def test_shipped_structure_is_the_generator_build(self):
         with tempfile.TemporaryDirectory() as d:
             out = os.path.join(d, "jp.nbt")
