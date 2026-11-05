@@ -72,6 +72,7 @@ public final class BarFxClient {
         float rate, acc;               // emitters
         boolean crater;
         boolean steady;                // beams: hold full brightness, fade only at the very end (nano beams)
+        boolean blend;                 // BREATH: drawn alpha-blended with the smoke (a body of colour), not added as light
     }
 
     static final List<P> live = new ArrayList<>(), decals = new ArrayList<>();
@@ -116,7 +117,7 @@ public final class BarFxClient {
     private static void init(P p, int kind, float x, float y, float z, float life, float size, int color) {
         p.kind = kind; p.x = x; p.y = y; p.z = z; p.born = clock; p.life = Math.max(.01f, life); p.size = size; p.color = color;
         p.vx = p.vy = p.vz = 0; p.grow = 1; p.spin = 0; p.alpha = 1; p.ground = Float.NaN; p.groundKey = Integer.MIN_VALUE;
-        p.steady = false; p.crater = false; p.x2 = p.y2 = p.z2 = 0;
+        p.steady = false; p.crater = false; p.blend = false; p.x2 = p.y2 = p.z2 = 0;
     }
 
     /**
@@ -1128,12 +1129,15 @@ public final class BarFxClient {
         buffers.endBatch(BarFxRenderTypes.SOLID);
         // 3. smoke
         begin(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
-        for (P p : live) if (p.kind == SMOKE && near(p.x, p.y, p.z, 4)) drawSmoke(p, (clock - p.born) / p.life);
+        for (P p : live) {
+            if (p.kind == SMOKE && near(p.x, p.y, p.z, 4)) drawSmoke(p, (clock - p.born) / p.life);
+            else if (p.kind == BREATH && p.blend && near(p.x, p.y, p.z, p.size * p.grow + 2)) drawLight(p, (clock - p.born) / p.life);
+        }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
         // 4. light: flashes, fire, sparks, beams, rings
         begin(buffers, BarFxRenderTypes.ADDITIVE, mat);
         for (P p : live) {
-            if (p.kind == SMOKE || p.kind == DEBRIS || p.kind == EMITTER || p.kind == DELAY) continue;
+            if (p.kind == SMOKE || p.kind == DEBRIS || p.kind == EMITTER || p.kind == DELAY || (p.kind == BREATH && p.blend)) continue;
             if (p.kind != BEAM && !near(p.x, p.y, p.z, p.size + 2)) continue;
             drawLight(p, (clock - p.born) / p.life);
         }
@@ -1267,7 +1271,7 @@ public final class BarFxClient {
                 float r = p.size * (1 + (p.grow - 1) * Math.min(1, k * 1.5f));
                 int c = mix(p.color, p.color2, k);
                 float a = p.alpha * (k < .06f ? k / .06f : 1) * (1 - k) * (1 - k * .35f);
-                softDisc(p.x, p.y, p.z, r, c, a, c, 0, 8, p.born * 7 + k * 1.5f, .3f);
+                softDisc(p.x, p.y, p.z, r, c, a, c, 0, 8, p.spin + p.born * 7 + k * 1.5f, .3f);
             }
             case SPARK -> {
                 float sp = (float) Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
