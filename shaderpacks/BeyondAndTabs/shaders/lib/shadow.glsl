@@ -1,7 +1,7 @@
 // Beyond and Tabs shader pack - GPL v2 or later (see LICENSE). Original work, written clean-room; not derived from
 // any other shader pack.
 //
-// Sun (or moon) shadow lookup: 1 = lit, 0 = in shadow.
+// Sun (or moon) shadow lookup: 1 = lit, 0 = in shadow; under a plant 1 - PLANT_SHADOW (a faint shadow, Nov 5).
 // Slice 1 drew crisp shadows: four depth comparisons blended by the sample's position between texels, so an edge is
 // smooth rather than stair-stepped. Slice 3 (SOFT_SHADOWS) softens them as real sunlight does: the sun is a disc, not
 // a point, so a shadow's edge blurs in proportion to how far the shadow falls from its caster. A wall's shadow is sharp
@@ -18,6 +18,9 @@
 // Needs lib/shadowfit.glsl, and the fit computed in the vertex shader (it is the same for every vertex of a frame).
 
 uniform sampler2D shadowtex0;
+// red: how much of the sun the nearest caster at that texel takes (shadow.fsh): 1 for a solid caster, PLANT_SHADOW
+// for grass, flowers and crops, so a plant's shadow lets the rest of the sun through
+uniform sampler2D shadowcolor0;
 
 // a world-space normal offset and a depth bias, both in shadow texels, so neither depends on the zoom: a fitted map
 // at zoom 10 has a texel of ~1/40 block, the loader's whole box ~1/6
@@ -36,8 +39,13 @@ const float PENUMBRA_MIN_TEXELS = 0.75;
 // edge-on to the sun and gets little sun anyway; capping it keeps a far tap from passing behind the caster
 const float SHADOW_MAX_SLOPE = 3.0;
 
+// the sun let through at one texel: all of it in front of the nearest caster, behind it what that caster lets pass
+float casterThrough(vec2 uv) {
+    return 1.0 - texture2D(shadowcolor0, uv).r;
+}
+
 float shadowTap(vec2 uv, float depth) {
-    return depth <= texture2D(shadowtex0, uv).r ? 1.0 : 0.0;
+    return depth <= texture2D(shadowtex0, uv).r ? 1.0 : casterThrough(uv);
 }
 
 // slice 1's lookup: four comparisons blended by position between the texels
@@ -70,6 +78,7 @@ float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, flo
     float searchUv = max(0.5 * SHADOW_SEARCH_BLOCKS * SUN_SPREAD / blocksPerUv, 1.5 * texel);
     float blockers = 0.0;
     float blockerDepth = 0.0;
+    float through = 0.0;
     for (int i = 0; i < 8; i++) {
         vec2 o = shadowSpiral(i, 8, turn) * searchUv;
         float receiver = s.z + dot(slope, o) * blocksPerUv * depthPerBlock;
@@ -77,15 +86,17 @@ float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, flo
         if (d < receiver) {
             blockers += 1.0;
             blockerDepth += d;
+            through += casterThrough(s.xy + o);
         }
     }
     if (blockers < 0.5)
         return 1.0;
     float gap = max(s.z - blockerDepth / blockers, 0.0) / depthPerBlock;          // blocks from caster to receiver
     float radiusUv = max(0.5 * gap * SUN_SPREAD / blocksPerUv, PENUMBRA_MIN_TEXELS * texel);
-    // every search tap blocked and the penumbra inside the searched disc: deep inside the shadow
+    // every search tap blocked and the penumbra inside the searched disc: deep inside the shadow, which lets through
+    // what its casters do (nothing under a wall, most of the sun under a plant)
     if (blockers > 7.5 && radiusUv < searchUv * 0.5)
-        return 0.0;
+        return through / blockers;
     float lit = 0.0;
     for (int i = 0; i < 12; i++) {
         vec2 o = shadowSpiral(i, 12, turn) * radiusUv;
