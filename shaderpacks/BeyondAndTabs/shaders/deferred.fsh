@@ -46,7 +46,9 @@ void main() {
     vec3 pu = posAt(uv + vec2(0.0, px.y)) - p, pd = p - posAt(uv - vec2(0.0, px.y));
     vec3 dx = abs(pr.z) < abs(pl.z) ? pr : pl;
     vec3 dy = abs(pu.z) < abs(pd.z) ? pu : pd;
-    vec3 n = normalize(cross(dx, dy));
+    // (an edge-on pixel in first person can give no plane: then no normal, and nothing counts as rising above it)
+    vec3 c = cross(dx, dy);
+    vec3 n = c / max(length(c), 1e-6);
     bool ortho = aoOrtho(gbufferProjection);
     vec3 toEye = ortho ? vec3(0.0, 0.0, 1.0) : -p;
     if (dot(n, toEye) < 0.0)

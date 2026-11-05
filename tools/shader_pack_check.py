@@ -200,6 +200,15 @@ def noon_light(light_source, upness, ndl, sun_through=1.0):
             + sun * bounce * min(max(1.0 - upness, 0.0), 1.0) + lum(vec3_const(light_source, "MIN_LIGHT")))
 
 
+def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_height=1080.0):
+    """lib/ao.glsl's aoDepthTolerance in blocks: the RTS view's ortho projection has [1][1] = 2 / zoom (zoom = blocks of
+    view height), so one half-resolution pixel spans zoom / (view_height x AO_SCALE) blocks at every depth."""
+    if ortho:
+        cell = zoom / max(view_height * float_const(ao_source, "AO_SCALE"), 1.0)
+        return base + float_const(ao_source, "AO_DEPTH_PER_CELL") * cell
+    return base + float_const(ao_source, "AO_DEPTH_WIDEN") * max(view_depth, 0.0)
+
+
 def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 

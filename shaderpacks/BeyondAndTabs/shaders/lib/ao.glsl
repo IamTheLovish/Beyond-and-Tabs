@@ -1,7 +1,7 @@
 // Beyond and Tabs shader pack - GPL v2 or later (see LICENSE). Original work, written clean-room; not derived from
 // any other shader pack.
 //
-// Slice 3's ambient occlusion (design/own_shader_pack.md), shared by its three steps:
+// Slice 3's ambient occlusion (design/own_shader_pack.md, in PR #385), shared by its three steps:
 //   deferred.fsh   after the opaque world is drawn (before water): how much of the sky each pixel's surface sees,
 //                  from the depth buffer, at half resolution (8 taps a pixel, rotated in a 4x4 pattern);
 //   deferred1.fsh  a 4x4 blur that stops at depth edges (it averages the 16 rotations back into a smooth result
@@ -37,6 +37,25 @@ const int AO_TAPS = 8;
 
 bool aoOrtho(mat4 projection) {
     return projection[2][3] == 0.0 && projection[3][3] == 1.0;
+}
+
+// how far apart in view depth (blocks) two pixels may be and still share their occlusion, in deferred1's blur and
+// composite's upsampling; `base` is the pass's own allowance. A neighbour also differs in depth by the ground's slope
+// across the pixels between them, so the allowance widens by what one half-resolution pixel spans:
+//   RTS view (orthographic): zoom / (half the screen height) blocks at every depth, so the tolerance never reads the
+//     depth. That depth is measured from a camera plane that sits inside the scene and goes negative behind it
+//     (OrthoviewClientEvents: SCENE_NEAREST -500); a term in the depth would vanish or turn negative there. At the
+//     default view (zoom 30, 1080 px) the blur's 0.5 becomes 0.61 blocks, under the 1-2.2 blocks of depth between a
+//     unit's silhouette and the ground behind it, so a unit's occlusion stays its own; sloped ground still blends at
+//     every zoom (tools/test_shader_pack.py)
+//   first person: a pixel spans more the farther it is, AO_DEPTH_WIDEN per block of distance (never below `base`)
+const float AO_DEPTH_PER_CELL = 2.0;   // blocks of tolerance per block one half-resolution pixel spans (RTS view)
+const float AO_DEPTH_WIDEN = 0.02;     // blocks of tolerance per block of distance (first person)
+
+float aoDepthTolerance(float base, float viewDepth, mat4 projection, float viewHeight) {
+    if (aoOrtho(projection))
+        return base + AO_DEPTH_PER_CELL * 2.0 / max(projection[1][1] * viewHeight * AO_SCALE, 1.0);
+    return base + AO_DEPTH_WIDEN * max(viewDepth, 0.0);
 }
 
 vec3 aoViewPos(mat4 projectionInverse, vec2 uv, float depth) {

@@ -28,7 +28,8 @@ const float SPLIT_TONE = 1.2;
 // 1.0 -> 1.12 (slice 3, Oct 30, lovish: "richer saturation ... pop", then "hyper realism"): the richer colour a good
 // camera or slide film gives a sunny day, never cartoon. The boost is guarded (grade()): greys get none, skin and the
 // strongest colours (team colours, spell glows, overlays) little, so it lands on the lawn, roofs, wood and water.
-// #326's WorldLookPass Enchanted column should take the same value (and the guards) when it lands
+// The mod's no-pack grade (WorldLookPass) keeps its own values: #326 was closed and lovish chose (Nov 5) to leave the
+// no-pack look as it is, so without the pack the colour stays as before
 const float SATURATION = 1.12;
 const float VIGNETTE = 0.16;
 // 0.95 -> 1.05 with the material maps on (Oct 30): with slice 2's materials the noon lawn read 0.315 on the block
