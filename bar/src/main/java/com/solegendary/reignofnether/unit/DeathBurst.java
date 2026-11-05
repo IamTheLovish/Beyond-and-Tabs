@@ -106,8 +106,7 @@ public final class DeathBurst {
         LivingEntity dead = evt.getEntity();
         if (!(dead.level() instanceof ServerLevel level) || !burstsOnDeath(dead))
             return;
-        if (dead instanceof Unit u && GarrisonableBuildingAddon.getGarrison(u) != null)
-            return;   // inside a building: the walls take it
+        // STUB (throwaway/red-burst-garrison): no garrison rule - a garrisoned machine bursts too
         burst(level, dead);
     }
 
