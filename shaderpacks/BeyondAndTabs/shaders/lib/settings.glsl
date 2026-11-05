@@ -18,8 +18,22 @@ const float shadowDistance = 160.0; // [96.0 128.0 160.0 224.0]
 // draw casters in that box, not out to the render distance (the fit never looks past the box)
 const float shadowDistanceRenderMul = 1.0;
 const bool shadowHardwareFiltering = false;
+// soft shadows (slice 3, lib/shadow.glsl): sharp at the caster's foot, softer the farther the shadow falls, as the
+// sun's disc makes them. Off: slice 1's crisp edge everywhere
+#define SOFT_SHADOWS 1 // [0 1]
+// how much of the sun a plant's shadow takes (grass, flowers, crops: ID_FOLIAGE). lovish, Nov 5: "Try faint shadow +
+// lit side"; from Oct 28 they cast none, as hard shadows read as dark stars under every tuft. 0.30 leaves the ground
+// under a tuft at ~0.82 of the open lawn at noon (tools/test_shader_pack.py holds 0.80-0.92)
+const float PLANT_SHADOW = 0.30;
 // vanilla's per-vertex ambient occlusion, kept (it arrives in the vertex colour's alpha: separateAo)
 const float ambientOcclusionLevel = 1.0;
+// screen-space ambient occlusion (slice 3: deferred.fsh, deferred1.fsh, applied in composite.fsh): building bases,
+// wall creases and unit feet shut out part of the sky, so they lose part of the sky's fill (never the sun's light)
+#define AO 1 // [0 1]
+// how strongly: 1 = the response tuned on a model of the RTS camera (lib/ao.glsl has the numbers)
+#define AO_STRENGTH 1.0 // [0.5 0.75 1.0 1.25 1.5]
+// bloom (slice 3, composite.fsh -> final.fsh): a small halo round lanterns, glows and glints; lit ground never blooms
+#define BLOOM 1 // [0 1]
 
 // distance haze strength, as the mod's own haze setting (1 = the Enchanted look's)
 #define HAZE_STRENGTH 1.0 // [0.0 0.5 1.0 1.5 2.0]
@@ -32,5 +46,18 @@ const float ambientOcclusionLevel = 1.0;
 // A/B; only the near-neutral highlight tint (lovish, Oct 30) stays either way
 #define MATERIALS 1 // [0 1]
 
+// realistic water (slice 4, lib/water.glsl): opacity from the depth of water under each pixel - clear over a shallow
+// bed, the palette's dark teal-blue over deep water. Off: slice 1's one fixed alpha, for an A/B
+#define WATER_REALISM 1 // [0 1]
+// the ripples on water: their steepness (0 = a still mirror, 1 = gentle, 2 = a breezy day)
+#define WATER_WAVES 1.0 // [0.0 0.5 1.0 1.5 2.0]
+// sunlight focused by the ripples into moving bright lines on the bed under shallow water
+#define CAUSTICS 1 // [0 1]
+// screen-space reflections on water (composite.fsh): the banks, trees and buildings mirrored where the surface
+// reflects strongly - a grazing first-person view. The march runs only where Fresnel passes 4%, which the RTS
+// camera's ~65 degrees down never reaches (water there is ~2% mirror), so from above it costs one fetch per pixel
+#define SSR 1 // [0 1]
+
 // block ids from block.properties
 #define ID_FOLIAGE 10001.0
+#define ID_WATER 10002.0

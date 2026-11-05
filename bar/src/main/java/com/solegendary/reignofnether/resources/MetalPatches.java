@@ -331,10 +331,24 @@ public final class MetalPatches {
         top = Math.min(top, level.getMaxBuildHeight() - 1);
         int min = level.getMinBuildHeight();
         p.set(x, top, z);
-        while (p.getY() > min && (!level.getBlockState(p).isSolidRender(level, p)
-                || !level.getBlockState(p).getFluidState().isEmpty()))
+        while (p.getY() > min && !isGround(level, p))
             p.move(0, -1, 0);
         return p.getY();
+    }
+
+    /**
+     * Real ground for a patch: solid-render, no fluid, and not part of a tree. A log is solid-render, so a patch stamped
+     * where a tree stood was recorded on the trunk's top log and its pad levelled there, ~7 blocks above the workers'
+     * ground with 4 blocks of fill under it (CI 41930006194: eight builders at y 75 under a site at y 82). Logs and
+     * stems (#minecraft:logs holds the nether stems too) and huge-mushroom blocks are what the pad clears, not what it
+     * stands on.
+     */
+    private static boolean isGround(ServerLevel level, BlockPos p) {
+        BlockState s = level.getBlockState(p);
+        if (!s.isSolidRender(level, p) || !s.getFluidState().isEmpty())
+            return false;
+        return !s.is(net.minecraft.tags.BlockTags.LOGS) && !s.is(Blocks.MUSHROOM_STEM)
+            && !s.is(Blocks.BROWN_MUSHROOM_BLOCK) && !s.is(Blocks.RED_MUSHROOM_BLOCK);
     }
 
     /**
