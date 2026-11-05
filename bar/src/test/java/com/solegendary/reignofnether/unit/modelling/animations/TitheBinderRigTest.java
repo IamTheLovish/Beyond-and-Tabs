@@ -33,15 +33,19 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * every bone delta, every docked slot, every flying / falling weapon (state, pommel, world rotation, scale), the hidden
  * parts, the body alpha, the lantern glow, every soul-chain ribbon (r4: hub, ctrl, end, width) and the fx (the count
  * halo; the bind's lash, orb, flash, forge line; r5: impact flashes, flight streaks). Then the API's shape (one
- * state, one pose, reused, no allocation per step) and the DSL -> ModelPart sign mapping of tools/dsl_to_game.py ((x, y, z) degrees ->
- * (-x, +y, -z) radians; offsets y down) on three bones and one slot.
+ * state, one pose, reused, no allocation per step) and the DSL -> ModelPart sign mapping of tools/dsl_to_game.py
+ * ((x, y, z) degrees -> (-x, +y, -z) radians; offsets y down) on three bones and one slot. r6: a dense fixture
+ * (design/fixtures/tithe_binder_dense.json, tools/tithe_binder_dense.py) checks every tick of the short events the
+ * every-5th-tick sampling steps over (the hit's t0-5, the bind's flash t14-18, the volley's impact flashes).
  */
 class TitheBinderRigTest {
 
     private static final Path FIXTURE = Paths.get("..", "design", "fixtures", "tithe_binder_clips.json");
+    /** Every tick of the short events (tools/tithe_binder_dense.py, from the driver's own run()). */
+    private static final Path DENSE = Paths.get("..", "design", "fixtures", "tithe_binder_dense.json");
     private static final double EPS = 0.01;
     private static final int WARM = 40, SEED = 1;
-    private static JsonObject clips;
+    private static JsonObject clips, dense;
 
     /** tools/tithe_binder_anim.py CLIPS: name -> clip, N, ticks, target (DSL px). */
     private static final Map<String, Object[]> RUNS = new HashMap<>();
@@ -63,6 +67,9 @@ class TitheBinderRigTest {
     static void load() throws IOException {
         try (Reader r = Files.newBufferedReader(FIXTURE)) {
             clips = JsonParser.parseReader(r).getAsJsonObject().getAsJsonObject("clips");
+        }
+        try (Reader r = Files.newBufferedReader(DENSE)) {
+            dense = JsonParser.parseReader(r).getAsJsonObject().getAsJsonObject("clips");
         }
     }
 
@@ -119,13 +126,57 @@ class TitheBinderRigTest {
         check("death");
     }
 
+    // ------------------------------------------------------------------ dense: every tick of the short events
+
+    /** The hit's t0-5: the kicks, the t1-2 flinch peak, spoke kick and lantern gutter, the t1-3 halo dip. */
+    @Test
+    void hit_every_tick_t0_5_matches_the_driver() {
+        JsonObject poses = dense.getAsJsonObject("hit").getAsJsonObject("poses");
+        for (int t = 0; t <= 5; t++)
+            assertTrue(poses.has(Integer.toString(t)), "dense hit has t" + t);
+        assertEquals(0.0, poses.getAsJsonObject("1").get("lantern").getAsDouble(), "the gutter is in the fixture");
+        assertTrue(poses.getAsJsonObject("3").getAsJsonObject("fx").has("halo_dip"), "the halo dip is in the fixture");
+        check("hit", dense, "dense hit");
+    }
+
+    /** The bind's t14-18: the lash whip, the orb's overshoot, the flash (t16-17), the forge line's start. */
+    @Test
+    void bind_every_tick_t14_18_matches_the_driver() {
+        JsonObject poses = dense.getAsJsonObject("bind").getAsJsonObject("poses");
+        for (int t = 14; t <= 18; t++)
+            assertTrue(poses.has(Integer.toString(t)), "dense bind has t" + t);
+        assertTrue(poses.getAsJsonObject("16").getAsJsonObject("fx").has("flash"), "the flash is in the fixture");
+        assertTrue(poses.getAsJsonObject("17").getAsJsonObject("fx").has("flash"), "the flash is in the fixture");
+        check("bind", dense, "dense bind");
+    }
+
+    /** The volley's snap (t12-14) and its first two impact flashes, every age 0-3 (t20-27). */
+    @Test
+    void volley_impacts_every_tick_match_the_driver() {
+        JsonObject poses = dense.getAsJsonObject("volley_N10").getAsJsonObject("poses");
+        boolean[] ages = new boolean[4];
+        for (int t = 20; t <= 27; t++) {
+            JsonObject fx = poses.getAsJsonObject(Integer.toString(t)).getAsJsonObject("fx");
+            if (fx.has("impacts"))
+                for (JsonElement im : fx.getAsJsonArray("impacts"))
+                    ages[im.getAsJsonArray().get(1).getAsInt()] = true;
+        }
+        for (int a = 0; a < 4; a++)
+            assertTrue(ages[a], "an impact of age " + a + " is in the fixture");
+        check("volley_N10", dense, "dense volley_N10");
+    }
+
     /** Runs one clip the way the driver's run() does and compares every sampled tick. */
     private static void check(String name) {
+        check(name, clips, name);
+    }
+
+    private static void check(String name, JsonObject fixture, String label) {
         Object[] run = RUNS.get(name);
         TitheBinderRig.Clip clip = (TitheBinderRig.Clip) run[0];
         int n = (Integer) run[1], ticks = (Integer) run[2];
         double[] target = (double[]) run[3];
-        JsonObject want = clips.getAsJsonObject(name);
+        JsonObject want = fixture.getAsJsonObject(name);
         assertEquals(n, want.get("n").getAsInt(), name + ": N");
         assertEquals(ticks, want.get("ticks").getAsInt(), name + ": ticks");
         JsonObject poses = want.getAsJsonObject("poses");
@@ -139,7 +190,7 @@ class TitheBinderRigTest {
             in.speed = 0.0;
             TitheBinderRig.step(st, in, pose);
         }
-        Diff d = new Diff(name);
+        Diff d = new Diff(label);
         int sampled = 0;
         for (int t = 0; t < ticks; t++) {
             in.clip = clip;
@@ -153,8 +204,8 @@ class TitheBinderRigTest {
             sampled++;
             compare(d, "t" + t, p.getAsJsonObject(), pose);
         }
-        assertEquals(poses.size(), sampled, name + ": every sampled tick reached");
-        System.out.println("TitheBinderRigTest " + name + ": " + sampled + " poses, " + d.values + " values, "
+        assertEquals(poses.size(), sampled, label + ": every sampled tick reached");
+        System.out.println("TitheBinderRigTest " + label + ": " + sampled + " poses, " + d.values + " values, "
             + d.bad + " off by more than " + EPS);
         assertTrue(d.bad == 0, d.report());
     }
@@ -269,10 +320,12 @@ class TitheBinderRigTest {
             d.same(at + " fx.impacts[" + j + "] age", Integer.toString(im.get(1).getAsInt()),
                 Integer.toString(got.impactAge[j]));
         }
+        // r6: the halo dips on a hit (absent = 0)
+        d.near(at + " fx.halo_dip", fx.has("halo_dip") ? fx.get("halo_dip").getAsDouble() : 0.0, got.haloDip);
         for (String key : fx.keySet())
             d.truth(at + " fx key " + key + " is ported",
                 key.equals("halo") || key.equals("lash") || key.equals("orb") || key.equals("flash")
-                    || key.equals("forge") || key.equals("impacts"));
+                    || key.equals("forge") || key.equals("impacts") || key.equals("halo_dip"));
     }
 
     /** One fx point: fx[key] (a point) or fx[key][end] (a segment end); absent in the driver = off in the rig. */

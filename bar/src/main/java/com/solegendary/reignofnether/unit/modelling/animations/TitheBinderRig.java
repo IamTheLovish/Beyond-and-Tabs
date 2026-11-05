@@ -45,7 +45,7 @@ public final class TitheBinderRig {
     static final double LANTERN_LO = -6.0, LANTERN_HI = 25.0, CAPE_LO = -50.0, CAPE_HI = 5.0;
     static final double SHACKLE_LO = -80.0, SHACKLE_HI = 80.0;
     static final double GRAVITY = 1.28;                          // px/tick^2: falling weapons at death
-    static final double DEATH_DROP = 10.5;                       // px: the crumple lands the robe on the ground
+    static final double DEATH_DROP = 10.9;                       // px: the crumple lands the robe (r6 slump)
     /** tools/gen_tithe_binder.py: LIFT 5, RING r 18 at y 36 + LIFT, RING_TILT -6, BASE_YAW -18. */
     static final double LIFT = 5.0, RING_R = 18.0, RING_TILT = -6.0, BASE_YAW = -18.0;
     static final double[] RING_PIVOT = {0.0, 36.0 + LIFT, 0.0};
@@ -77,11 +77,18 @@ public final class TitheBinderRig {
     static final double K_KICK = 0.10, C_KICK = 0.30;
     static final double SWAY_PHASE = 137.5;
     static final double MOVE_TILT = 10.0;
-    static final int MOVE_LAG = 3;
     static final int IMPACT_TICKS = 4;
     static final double IMPACT_R = 6.0;
     static final double LASH_SAG = 3.0;
     static final int TRAIL = 3;
+    // r6: the wheel grows with N (pommel radius, docked spoke size at N = 1; N = 10 is the model's own), the hover
+    // pulse per release, the move's ring tilt spring, the tatter flutter, the shackle swing drive, the halo dip
+    static final double RING_R_MIN = 15.0, SPOKE_MIN = 0.6;
+    static final double HOVER_PULSE = 1.0;
+    static final double K_RMOVE = 0.15, C_RMOVE = 0.35;
+    static final double FLUTTER = 9.0, FLUTTER_T = 24.0;
+    static final double SHACKLE_DRIVE = 0.8;
+    static final double HALO_DIP = 2.0;
 
     /** The bones the driver moves (DSL names = the generated TitheBinderModel's). Pose.rot / Pose.off index these. */
     public static final String[] BONES = {"hover", "body", "chest", "mantle", "head", "right_arm", "left_arm",
@@ -105,7 +112,7 @@ public final class TitheBinderRig {
     // the driver's springs dict, by name
     static final int S_HEM_1 = 0, S_HEM_1_B = 3, S_LANTERN_CHAIN = 6, S_CAPE = 7, S_BODY_LEAN = 8,
         S_TILT_X = 9, S_TILT_Z = 10, S_R_SHACKLE_X = 11, S_R_SHACKLE_Z = 12, S_L_SHACKLE_X = 13,
-        S_L_SHACKLE_Z = 14, S_TATTER = 15, SPRINGS = 19;
+        S_L_SHACKLE_Z = 14, S_TATTER = 15, S_RING_MOVE = 19, SPRINGS = 20;
     private static final double NO_LO = Double.NEGATIVE_INFINITY, NO_HI = Double.POSITIVE_INFINITY;
     private static final int NO_GROUND = Integer.MIN_VALUE;
 
@@ -117,6 +124,16 @@ public final class TitheBinderRig {
             if (BONES[i].equals(name))
                 return i;
         return -1;
+    }
+
+    /** ring_r_n: the pommel radius for N bound weapons (r6). */
+    static double ringRN(int n) {
+        return RING_R_MIN + (RING_R - RING_R_MIN) * (Math.max(1, Math.min(10, n)) - 1) / 9.0;
+    }
+
+    /** spoke_n: the docked spoke size (part scale on the model's N = 10 geometry) for N bound weapons (r6). */
+    static double spokeN(int n) {
+        return SPOKE_MIN + (1.0 - SPOKE_MIN) * (Math.max(1, Math.min(10, n)) - 1) / 9.0;
     }
 
     /** Easing: smoothstep s(x) = x x (3 - 2 x), clamped. */
@@ -202,8 +219,12 @@ public final class TitheBinderRig {
         final double[][] surf = new double[MAX_WEAPONS + 1][3];
         final double[][][] hist = new double[MAX_WEAPONS + 1][TRAIL][3];
         final int[] histN = new int[MAX_WEAPONS + 1];
-        /** r5: the last MOVE_LAG speeds (oldest first). */
-        final double[] vHist = new double[MOVE_LAG];
+        /** r6: the wheel's size for the count (radius offset, spoke scale), the bind's old count, the shackle
+         *  chains' last arm + forearm x per side (the driver's arm_prev). */
+        double nOff, nScale = 1.0;
+        int nPrev;
+        final double[] armPrev = new double[2];
+        final boolean[] armPrevSet = new boolean[2];
         /** The flight's cubic, fixed at release (the driver's D["P"]): [sling_end, P1, P2, P3]. */
         final double[][][] path = new double[MAX_WEAPONS + 1][4][3];
         // the volley's release order (-1: not in it), its last release / end, the target and its bearing
@@ -220,7 +241,8 @@ public final class TitheBinderRig {
         final double[] ringM = new double[9], ringO = new double[3], hub = new double[3];
         // this tick's channels (the driver's ch dict)
         double chTatter, chCape, chTilt0, chTilt1, chRingSpin, chCock, chLantern, chAlpha, chLeanTarget, chSpeed;
-        double chRattle, chTrail, chLeanKick, chTiltKick, chPitchKick, chTatterKick, chSpokeScale;
+        double chRattle, chTrail, chLeanKick, chTiltKick, chPitchKick, chTatterKick, chSpokeScale, chRingMove,
+            chHaloDip;
         boolean chTatterHold, chHitKick;
         final double[] chRingOff = new double[3], chTatterAdd = new double[4];
         // scratch
@@ -241,6 +263,7 @@ public final class TitheBinderRig {
             this.seed = seed;
             double r = lcg(this);
             this.n = n;
+            this.nPrev = n;
             for (int k = 1; k <= n; k++)
                 newSlot(this, k, BASE_YAW + 360.0 / n * (k - 1), M_DOCKED);
             bob = breath = look = 0.0;
@@ -298,6 +321,8 @@ public final class TitheBinderRig {
         public final double[] ribbonWidth = new double[MAX_WEAPONS];
         /** fx.halo: the count halo's lit dots (docked + flying non-shattered; in death N minus one per 2 ticks). */
         public int halo;
+        /** r6 fx.halo_dip: px the count halo dips (hit t1-3), 0 otherwise. */
+        public double haloDip;
         /** Bind fx (model px): the lash lantern -> corpse (t0-15), the soul orb, the flash, the forge line. */
         public boolean lashOn, orbOn, flashOn, forgeOn;
         public final double[] lashA = new double[3], lashCtrl = new double[3], lashB = new double[3],
@@ -307,6 +332,7 @@ public final class TitheBinderRig {
         void clear() {
             lashOn = orbOn = flashOn = forgeOn = false;
             halo = 0;
+            haloDip = 0.0;
             impacts = 0;
             Arrays.fill(flyTrailN, 0);
             for (int b = 0; b < BONES.length; b++) {
@@ -566,7 +592,7 @@ public final class TitheBinderRig {
 
     /** slot_world: a slot's pommel in model space from this tick's ring transform; the angle includes the spin. */
     static void slotWorld(State st, double angle, double radial, double[] out) {
-        double a = Math.toRadians(angle), r = RING_R + radial;
+        double a = Math.toRadians(angle), r = RING_R + (radial + st.nOff);      // r6: + the N radius offset
         double px = -Math.sin(a) * r, py = 0.0, pz = -Math.cos(a) * r;
         double[] m = st.ringM;
         for (int i = 0; i < 3; i++)
@@ -611,6 +637,8 @@ public final class TitheBinderRig {
         st.chSpeed = 0.0;
         st.chRattle = st.chTrail = st.chLeanKick = st.chTiltKick = st.chPitchKick = st.chTatterKick = 0.0;
         st.chTatterHold = false;
+        st.chRingMove = 0.0;
+        st.chHaloDip = 0.0;
         st.chSpokeScale = 1.0;
         st.chHitKick = false;
         // ---- the idle layer (always on, faded by the clips that own the body)
@@ -619,6 +647,8 @@ public final class TitheBinderRig {
             idleW = 1.0 - K.of(0, 0.0).k(4, 1.0).k(st.fEnd, 1.0).k(st.fEnd + 6, 0.0).at(t);
         if (clip == Clip.DEATH)
             idleW = 1.0 - K.of(0, 0.0).k(3, 1.0).at(t);
+        if (clip == Clip.MOVE)
+            idleW = 1.0 - 0.8 * in.speed;                                   // r6: the weave gives way to the sweep
         double bob = st.bob, br = st.breath, look = st.look;
         double amp = 2.0 - 0.5 * st.speed;
         off(o, HOVER, 0, amp * Math.sin(bob) * idleW, 0);
@@ -635,7 +665,7 @@ public final class TitheBinderRig {
         rot(o, R_HAND, curl, 0, 0);
         rot(o, L_HAND, curl, 0, 0);
         for (int i = 0; i < 4; i++)
-            st.chTatterAdd[i] = 4 * Math.sin(2 * Math.PI * st.tick / 30.0 + i * Math.PI / 2) * idleW;
+            st.chTatterAdd[i] = FLUTTER * Math.sin(2 * Math.PI * st.tick / FLUTTER_T + i * Math.PI / 2);
 
         if (clip == Clip.FIDGET) {     // "counting": the wheel spins one fast turn, its spokes flare, a rattle
             st.chRingSpin = K.of(0, 0.6).k(8, 12.0).k(20, 0.6).at(t);
@@ -646,22 +676,17 @@ public final class TitheBinderRig {
         if (clip == Clip.MOVE) {
             double v = in.speed;
             st.chSpeed = v;
-            st.chLeanTarget = -10.0 * v;
+            st.chLeanTarget = -14.0 * v;                // r6: a deeper lean, the arms swept back, cloth trailing
             off(o, HOVER, 0, -2.0 * v, 0);
-            rot(o, HEAD, 10 * v, 0, 0);
+            rot(o, HEAD, 14 * v, 0, 0);
             for (int side = 0; side < 2; side++) {
-                rot(o, side == 0 ? R_ARM : L_ARM, -40 * v, 0, 0);
-                rot(o, side == 0 ? R_FORE : L_FORE, -25 * v, 0, 0);
-                rot(o, side == 0 ? R_HAND : L_HAND, -15 * v, 0, 0);
+                rot(o, side == 0 ? R_ARM : L_ARM, -55 * v, 0, 0);
+                rot(o, side == 0 ? R_FORE : L_FORE, -30 * v, 0, 0);
+                rot(o, side == 0 ? R_HAND : L_HAND, -20 * v, 0, 0);
             }
-            st.chTatter = -35.0 * v + 6 * Math.sin(2 * Math.PI * t / 12.0) * v;
-            st.chCape = -30.0 * v;
-            double vLag = st.vHist[0];        // r5: the ring tilts BACK 10 and lags the speed by MOVE_LAG ticks
-            st.chTilt0 = MOVE_TILT * vLag;
-            st.chTilt1 = 0.0;
-            st.chRingOff[0] = 0.0;
-            st.chRingOff[1] = 0.0;
-            st.chRingOff[2] = 2.0 * vLag;
+            st.chTatter = -45.0 * v + 6 * Math.sin(2 * Math.PI * t / 12.0) * v;
+            st.chCape = -35.0 * v;
+            st.chRingMove = MOVE_TILT * v;              // r6: through the ring_move spring (lags, no pop)
             st.chRingSpin = 0.6 + 0.6 * v;
             st.chTrail = 10.0 * v;
         }
@@ -673,17 +698,32 @@ public final class TitheBinderRig {
             int hold = Math.max(last + 2, 15);
             double b = st.bearing;
             double sb = Math.sin(Math.toRadians(b)), cb = Math.cos(Math.toRadians(b));   // "back" = (sb, 0, cb)
-            double hy = K.of(0, 0).k(4, 0).k(8, -2).k(10, 3).k(12, 3).k(13, -1).k(fe, 0).at(t);
-            double hb = K.of(0, 0).k(4, 0).k(8, 1).k(10, 3).k(12, 3).k(13, -4).k(fe, 0).at(t);
+            // r6: the strike pose is HELD through the release train (to last), the caster pulsing 1 px per
+            // release, then recovers over 12 ticks
+            double hy = K.of(0, 0).k(4, 0).k(8, -2).k(10, 3).k(12, 3).k(13, -1).k(last, -1).k(fe, 0).at(t);
+            int since = Integer.MAX_VALUE;
+            for (int k = 1; k <= MAX_WEAPONS; k++) {
+                if (st.orderOf[k] < 0)
+                    continue;
+                int d = t - (VOLLEY_RELEASE + RELEASE_GAP * st.orderOf[k]);
+                if (0 <= d && d < 2 && d < since)
+                    since = d;
+            }
+            if (since != Integer.MAX_VALUE)
+                hy -= HOVER_PULSE * (1.0 - since / 2.0);
+            double hb = K.of(0, 0).k(4, 0).k(8, 1).k(10, 3).k(12, 3).k(13, -4).k(last, -4).k(fe, 0).at(t);
             off(o, HOVER, hb * sb, hy, hb * cb);
-            double by = K.of(0, 0).k(4, b).k(8, b + 8).k(10, b + 25).k(12, b + 25).k(13, b - 15).k(fe, b).at(t);
-            rot(o, BODY, K.of(0, 0).k(4, 0).k(8, -6).k(10, 14).k(12, 14).k(13, -11).k(fe, 0).at(t), by, 0);
-            rot(o, HEAD, K.of(0, 0).k(8, 0).k(10, -20).k(12, -20).k(13, 0).k(fe + 2, 0).at(t), b - by, 0);
+            double by = K.of(0, 0).k(4, b).k(8, b + 8).k(10, b + 25).k(12, b + 25).k(13, b - 15).k(last, b - 15)
+                .k(fe, b).at(t);
+            rot(o, BODY, K.of(0, 0).k(4, 0).k(8, -6).k(10, 14).k(12, 14).k(13, -11).k(last, -11).k(fe, 0).at(t),
+                by, 0);
+            rot(o, HEAD, K.of(0, 0).k(8, 0).k(10, -20).k(12, -20).k(13, -8).k(last, -8).k(fe + 2, 0).at(t),
+                b - by, 0);
             // the whip: delta 40 at t13, then 20 (abs 40) for the release train, circling under the ring; the outward
             // z only once the arm is up
             rot(o, R_ARM, K.of(0, 0).k(8, 0).k(10, 180).k(12, 180).k(13, 40).k(15, 20).k(hold, 20).k(fe, 0).at(t), 0,
                 K.of(0, 0).k(9, 0).k(10, 42).k(12, 42).k(13, 0).at(t));
-            double fx = K.of(0, 0).k(8, -10).k(10, 25).k(12, 25).k(13, -25).k(fe, 0).at(t);
+            double fx = K.of(0, 0).k(8, -10).k(10, 50).k(12, 50).k(13, -25).k(fe, 0).at(t);   // r6: abs 85
             double fz = 0.0;
             if (n >= 3 && 13 < t && t <= last + 1) {        // one crack of the whip per release
                 double ph = 2 * Math.PI * (t - VOLLEY_RELEASE) / (double) RELEASE_GAP;
@@ -696,17 +736,18 @@ public final class TitheBinderRig {
             rot(o, L_ARM, K.of(0, 0).k(4, 30).k(10, 47).k(hold, 47).k(fe, 0).at(t), 0, 0);
             rot(o, L_FORE, K.of(0, 0).k(10, -30).k(hold, -30).k(fe, 0).at(t), 0, 0);
             off(o, MANTLE, 0, K.of(0, 0).k(8, 0).k(10, 1).k(12, 1).k(13, 0).at(t), 0);
-            st.chTatter = K.of(0, 0).k(8, 4).k(10, -8).k(12, -8).k(13, -15).k(fe, 0).at(t);
-            st.chCape = K.of(0, 0).k(8, 2).k(10, -6).k(12, -6).k(13, -12).k(fe, 0).at(t);
-            double tl = K.of(0, 0).k(4, 0).k(8, 12).k(12, 12).k(13, -18).k(fe, 0).at(t);
+            st.chTatter = K.of(0, 0).k(8, 4).k(10, -8).k(12, -8).k(13, -15).k(last, -15).k(fe, 0).at(t);
+            st.chCape = K.of(0, 0).k(8, 2).k(10, -6).k(12, -6).k(13, -12).k(last, -12).k(fe, 0).at(t);
+            double tl = K.of(0, 0).k(4, 0).k(8, 12).k(12, 12).k(13, -18).k(last, -18).k(fe, 0).at(t);
             st.chTilt0 = tl * cb;                                          // dips toward the target's bearing
             st.chTilt1 = -tl * sb;
-            double ro = K.of(0, 0).k(4, 0).k(8, 4).k(12, 4).k(13, -5).k(fe, 0).at(t);
+            double ro = K.of(0, 0).k(4, 0).k(8, 4).k(12, 4).k(13, -5).k(last, -5).k(fe, 0).at(t);
             st.chRingOff[0] = ro * sb;
-            st.chRingOff[1] = K.of(0, 0).k(4, 0).k(8, 1).k(12, 1).k(13, -2).k(fe, 0).at(t);
+            st.chRingOff[1] = K.of(0, 0).k(4, 0).k(8, 1).k(12, 1).k(13, -2).k(last, -2).k(fe, 0).at(t);
             st.chRingOff[2] = ro * cb;
-            st.chRingSpin = K.of(0, 0.6).k(10, 6.0).k(last, 6.0).k(last + 15, 0.6).at(t);
-            st.chCock = K.of(0, 0).k(8, 25).k(12, 25).k(13, 10).k(fe, 0).at(t);
+            // the spin peaks at the snap and decays across the release train
+            st.chRingSpin = K.of(0, 0.6).k(10, 6.0).k(13, 6.0).k(last, 1.5).k(fe, 0.6).at(t);
+            st.chCock = K.of(0, 0).k(8, 25).k(12, 25).k(13, 10).k(last, 10).k(fe, 0).at(t);
             st.chSpokeScale = K.of(0, 1.0).k(4, 1.0).k(8, CONTRACT).k(12, CONTRACT).k(13, FLARE).k(16, 1.0).at(t);
             int released = 0;
             for (int k = 1; k <= MAX_WEAPONS; k++)
@@ -736,12 +777,13 @@ public final class TitheBinderRig {
             st.chLantern = K.of(0, 1.8).k(16, 2.0).k(17, 2.0).k(31, 1.0).at(t);
         }
 
-        if (clip == Clip.HIT) {        // sheet 5.5
-            double on = t >= 0 ? 1.0 : 0.0;
-            off(o, HOVER, 0, K.of(0, -3).k(2, -3).k(8, 0).at(t) * on, 0);
-            rot(o, HEAD, K.of(0, 15).k(2, 15).k(8, 0).at(t), 0, 0);
-            st.chLeanKick = t == 0 ? 12.0 : 0.0;
-            st.chTiltKick = t == 0 ? 18.0 : 0.0;
+        if (clip == Clip.HIT) {        // sheet 5.5; r6: keyed, the peak at t1-2, settled by t11
+            off(o, HOVER, 0, K.of(0, 0).k(1, -3).k(3, -3).k(8, 0).at(t), K.of(0, 0).k(1, 2).k(3, 2).k(9, 0).at(t));
+            rot(o, BODY, K.of(0, 0).k(1, 18).k(2, 18).k(5, 4).k(8, -2).k(11, 0).at(t), 0, 0);
+            rot(o, HEAD, K.of(0, 0).k(1, 15).k(2, 15).k(8, 0).at(t), 0, 0);
+            st.chTilt0 = K.of(0, 0).k(1, 18).k(3, 14).k(7, -3).k(11, 0).at(t);
+            st.chTilt1 = 0.0;
+            st.chHaloDip = 1 <= t && t <= 3 ? HALO_DIP : 0.0;
             st.chRattle = t == 0 ? 15.0 : 0.0;
             st.chPitchKick = t == 0 ? 30.0 : 0.0;
             st.chTatterKick = t == 0 ? -6.0 : 0.0;
@@ -762,15 +804,17 @@ public final class TitheBinderRig {
             }
             off(o, HOVER, 0, fall, 0);
             // r5: the slumped hood rolls and turns
-            rot(o, HEAD, K.of(0, 0).k(3, 35).k(6, 35).k(16, 35).k(19, 28).k(33, -36).at(t),
-                K.of(0, 0).k(19, 0).k(33, 15).at(t), K.of(0, 0).k(19, 0).k(33, 22).k(36, 26).k(40, 22).at(t));
-            rot(o, BODY, K.of(0, 0).k(3, 8).k(6, 8).k(16, 8).k(17, -8).k(19, -8).k(33, -26).at(t), 0, 0);
-            rot(o, CHEST, K.of(0, 0).k(3, 6).k(6, 6).k(16, 6).k(17, -4).k(19, -4).k(33, -40).at(t), 0, 0);
+            rot(o, HEAD, K.of(0, 0).k(3, 35).k(6, 35).k(16, 35).k(19, 28).k(33, -21).at(t), 0,
+                K.of(0, 0).k(19, 0).k(33, 8).k(36, 12).k(40, 8).at(t));
+            // r6: a sideways slump (body roll 18, less fold)
+            rot(o, BODY, K.of(0, 0).k(3, 8).k(6, 8).k(16, 8).k(17, -8).k(19, -8).k(33, -20).at(t), 0,
+                K.of(0, 0).k(19, 0).k(33, 18).at(t));
+            rot(o, CHEST, K.of(0, 0).k(3, 6).k(6, 6).k(16, 6).k(17, -4).k(19, -4).k(33, -18).at(t), 0, 0);
             // the arms fall limp and IN, along the body
-            rot(o, R_ARM, K.of(0, 0).k(6, 0).k(19, 0).k(33, 20).at(t), 0,
-                K.of(0, 0).k(3, -58).k(6, -58).k(16, -58).k(19, -40).k(33, 10).at(t));
-            rot(o, L_ARM, K.of(0, 0).k(6, 0).k(19, 0).k(33, 20).at(t), 0,
-                K.of(0, 0).k(3, 58).k(6, 58).k(16, 58).k(19, 40).k(33, -10).at(t));
+            rot(o, R_ARM, K.of(0, 0).k(6, 0).k(19, 0).k(33, 30).at(t), 0,
+                K.of(0, 0).k(3, -58).k(6, -58).k(16, -58).k(19, -40).k(33, 5).at(t));
+            rot(o, L_ARM, K.of(0, 0).k(6, 0).k(19, 0).k(33, 30).at(t), 0,
+                K.of(0, 0).k(3, 58).k(6, 58).k(16, 58).k(19, 40).k(33, 5).at(t));
             for (int side = 0; side < 2; side++)
                 rot(o, side == 0 ? R_FORE : L_FORE, K.of(0, 0).k(3, -25).k(19, -25).k(33, -35).at(t), 0, 0);
             double fold = K.of(0, 0.0).k(19, 0.0).k(33, 1.0).at(t);
@@ -833,6 +877,7 @@ public final class TitheBinderRig {
             st.bearing = bearing;
         }
         if (clip == Clip.BIND && n < MAX_WEAPONS) {
+            st.nPrev = n;
             int k = n + 1;
             newSlot(st, k, BASE_YAW + 360.0 / k * (k - 1), M_FORGING);
             st.n = k;
@@ -854,9 +899,6 @@ public final class TitheBinderRig {
         double v = clip == Clip.MOVE ? in.speed : 0.0;
         // ---- phases (kept as state; the move shortens the bob to 40 ticks)
         st.speed = v;
-        for (int i = 0; i + 1 < MOVE_LAG; i++)
-            st.vHist[i] = st.vHist[i + 1];
-        st.vHist[MOVE_LAG - 1] = v;
         st.bob = pmod(st.bob + 2 * Math.PI / (60.0 - 20.0 * v), 2 * Math.PI);
         st.breath = pmod(st.breath + 2 * Math.PI / 80.0, 2 * Math.PI);
         st.look = pmod(st.look + 2 * Math.PI / 160.0, 2 * Math.PI);
@@ -884,6 +926,7 @@ public final class TitheBinderRig {
             om[S_BODY_LEAN] = 0.0;
         }
         spring(th, om, S_BODY_LEAN, st.chLeanTarget, K_LEAN, C_LEAN, 0.0, NO_LO, NO_HI);
+        spring(th, om, S_RING_MOVE, st.chRingMove, K_RMOVE, C_RMOVE, 0.0, NO_LO, NO_HI);
         out.rot[BODY][0] += th[S_BODY_LEAN];
         double bodyX = out.rot[BODY][0];
         double lean = bodyX + out.rot[CHEST][0];
@@ -917,7 +960,12 @@ public final class TitheBinderRig {
             double tx = -(lean + arm[0] + fore[0]);
             double tz = -arm[2];
             int sx = side == 0 ? S_R_SHACKLE_X : S_L_SHACKLE_X, sz = side == 0 ? S_R_SHACKLE_Z : S_L_SHACKLE_Z;
-            spring(th, om, sx, tx, K_CHAIN, C_CHAIN, driveX, SHACKLE_LO, SHACKLE_HI);
+            double af = arm[0] + fore[0];
+            double afPrev = st.armPrevSet[side] ? st.armPrev[side] : af;
+            st.armPrev[side] = af;
+            st.armPrevSet[side] = true;
+            double swing = -SHACKLE_DRIVE * (af - afPrev);              // r6: kicked back by the arm's own swing
+            spring(th, om, sx, tx, K_CHAIN, C_CHAIN, driveX + swing, SHACKLE_LO, SHACKLE_HI);
             spring(th, om, sz, tz, K_CHAIN, C_CHAIN, driveZ, SHACKLE_LO, SHACKLE_HI);
             double[] sh = out.rot[side == 0 ? R_SHACKLE : L_SHACKLE];
             sh[0] = th[sx];
@@ -930,9 +978,10 @@ public final class TitheBinderRig {
         // the tilt: the clip's keyed tilt + a spring perturbation (kicked by hits, driven by the root's acceleration)
         if (st.chTiltKick != 0.0)
             om[S_TILT_X] += st.chTiltKick * 0.6;
-        spring(th, om, S_TILT_X, 0.0, K_TILT, C_TILT, -0.5 * driveX, NO_LO, NO_HI);
-        spring(th, om, S_TILT_Z, 0.0, K_TILT, C_TILT, -0.5 * driveZ, NO_LO, NO_HI);
-        double tilt0 = st.chTilt0 + th[S_TILT_X], tilt1 = st.chTilt1 + th[S_TILT_Z];
+        spring(th, om, S_TILT_X, 0.0, K_TILT, C_TILT, -0.2 * driveX, NO_LO, NO_HI);   // r6: 0.2 (r5 0.5: a pop)
+        spring(th, om, S_TILT_Z, 0.0, K_TILT, C_TILT, -0.2 * driveZ, NO_LO, NO_HI);
+        double tilt0 = st.chTilt0 + th[S_TILT_X] + th[S_RING_MOVE], tilt1 = st.chTilt1 + th[S_TILT_Z];
+        st.chRingOff[2] = st.chRingOff[2] + 0.2 * th[S_RING_MOVE];
         out.rot[RING][0] = tilt0;                     // r4: the ring carries the tilt only; spin in the slots
         out.rot[RING][1] = 0.0;
         out.rot[RING][2] = tilt1;
@@ -942,6 +991,11 @@ public final class TitheBinderRig {
             st.ringO[i] = RING_PIVOT[i] + (hov[i] + st.chRingOff[i]);
             st.hub[i] = HUB[i] + hov[i];
         }
+        // ---- r6: the wheel's size for the current count (the bind eases old -> new over its forge, t18-28)
+        int nFrom = clip == Clip.BIND ? st.nPrev : n;
+        double uN = clip == Clip.BIND ? smooth((t - 18) / 10.0) : 1.0;
+        st.nOff = (ringRN(nFrom) + (ringRN(n) - ringRN(nFrom)) * uN) - RING_R;
+        st.nScale = spokeN(nFrom) + (spokeN(n) - spokeN(nFrom)) * uN;
         // ---- every slot
         for (int k = 1; k <= n; k++) {
             if (clip == Clip.BIND) {
@@ -982,7 +1036,7 @@ public final class TitheBinderRig {
                     out.weaponHidden[k] = true;
                 } else {
                     double g = smooth((t - 18) / 6.0);
-                    st.forge[k] = 0.4 + 0.6 * g;                            // sheet 5.4: outline 0.4 -> 1
+                    st.forge[k] = (0.4 + 0.6 * g) * st.nScale;              // sheet 5.4: outline 0.4 -> 1
                     st.hasForge[k] = true;
                     if (t >= 24) {
                         st.mode[k] = M_DOCKED;
@@ -993,11 +1047,12 @@ public final class TitheBinderRig {
             if ((mode == M_DOCKED || mode == M_FORGING) && !out.weaponHidden[k]) {
                 out.slotOn[k] = true;
                 out.slotAngle[k] = st.angle[k] + st.ringYaw;
-                out.slotRadial[k] = radial;
+                out.slotRadial[k] = radial + st.nOff;
                 out.slotY[k] = st.dropTh[k];
                 out.slotPitch[k] = pitch;
                 out.slotRoll[k] = roll;
-                out.slotScale[k] = mode == M_FORGING ? (st.hasForge[k] ? st.forge[k] : 1.0) : st.chSpokeScale;
+                out.slotScale[k] = mode == M_FORGING ? (st.hasForge[k] ? st.forge[k] : 1.0)
+                    : st.chSpokeScale * st.nScale;
                 if (clip != Clip.DEATH || t < 6) {
                     double[] end = st.va, hub = st.vi, ctrl = st.vj;
                     slotWorld(st, st.angle[k] + st.ringYaw, radial, end);
@@ -1020,6 +1075,7 @@ public final class TitheBinderRig {
         } else {
             out.halo = Math.max(0, n - Math.max(0, (t - 6) / 2 + 1));
         }
+        out.haloDip = st.chHaloDip;
         out.alpha = st.chAlpha;
         out.lantern = st.chLantern;
         if (st.chLantern < 0.5)
@@ -1136,7 +1192,8 @@ public final class TitheBinderRig {
             qFromMat(st.md, st.q0[k]);
             st.histN[k] = 0;
         }
-        double scale = 1.0 + (FLIGHT_SCALE - 1.0) * smooth((tau + 1) / (double) (SLING + 1));
+        double s0 = st.nScale;
+        double scale = s0 + (FLIGHT_SCALE - s0) * smooth((tau + 1) / (double) (SLING + 1));
         int kind = SPIN_KIND[k];
         double rate = SPIN_RATE[k];
         double[] hub = st.vi, ctrl = st.vj, pos = st.vf, q = st.qa;
@@ -1212,7 +1269,7 @@ public final class TitheBinderRig {
             qSlerp(st.qEnd[k], qd, e, st.qd);
             qFromAxis(tangent[0], tangent[1], tangent[2], 360.0 * e, tumble);
             qMul(st.qd, tumble, q);
-            scale = FLIGHT_SCALE + (1.0 - FLIGHT_SCALE) * e;
+            scale = FLIGHT_SCALE + (s0 - FLIGHT_SCALE) * e;
             state = FLY_REEL;
             sagCtrl(hub, pos, 3.0, ctrl);
             if (u >= 1.0) {
