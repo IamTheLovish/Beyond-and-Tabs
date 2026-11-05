@@ -26,7 +26,7 @@ and the clover layer sprites (grass_clover_layer_1..8, a floating cutout plane a
 
 Since lovish's answer (Nov 5 ~05:00Z, "Yes, measure what ships") the sheet checks read the SHIPPED 8 x 8 sheet
 (gen_blocks.LAWN_SHEET_BLOCKS) at 32 texels per block, not the 4-block default cut; bands unchanged. The flower
-count keeps its 4 x 4-block window (the density it was written for).
+count reads one whole shipped sheet with its floors scaled by the area (same specks per block).
 
 Since lovish's answer (Nov 5 ~05:00Z, "Yes, as the player sees it") the calm-patch and speckle shares read the
 sheet TIMES the world colour field (postfx/GrassTint, sim.world_tint) - the big soft drifts live there, not in the
@@ -178,15 +178,16 @@ class LawnSheetRound63Test(unittest.TestCase):
 
     def test_flower_specks(self):
         """under the biome tint a flower cannot be white - only the brightest thing on the sheet (albedo G 1): the
-        top 0.5% of one sheet's mip forms 8+ specks of 2+ px, 4+ of them 5+ px (the buttercups, 0.1 block = 7 mip
-        px), none a blotch over 30 px."""
+        top 0.5% of one sheet's mip forms 8+ specks of 2+ px, 4+ of them 5+ px per 4 x 4 blocks (the buttercups,
+        0.1 block = 7 mip px), none a blotch over 30 px. On the shipped 8 x 8 sheet the counts scale with its area
+        (x4: 32+ and 16+), so the density asked for is the 4-block sheet's."""
         _H, alb = sheet()
-        n = 128                                      # one 4 x 4-block window: the density this count was written for
-        f = np.clip(sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS)[:n, :n] * sim.hex_rgb(sim.LAWN_TINT), 0, 1)
+        f = np.clip(sim.box_mip(alb, 32 * gen_blocks.LAWN_SHEET_BLOCKS) * sim.hex_rgb(sim.LAWN_TINT), 0, 1)
         L = sim.luma(f)
+        area = (gen_blocks.LAWN_SHEET_BLOCKS / 4) ** 2
         sizes = [s for s in components(L > np.percentile(L, 99.5)) if s >= 2]
-        self.assertGreaterEqual(len(sizes), 8)
-        self.assertGreaterEqual(sum(1 for s in sizes if s >= 5), 4)
+        self.assertGreaterEqual(len(sizes), 8 * area)
+        self.assertGreaterEqual(sum(1 for s in sizes if s >= 5), 4 * area)
         self.assertLessEqual(max(sizes), 30)
 
     def test_sheet_wraps_seamlessly(self):
