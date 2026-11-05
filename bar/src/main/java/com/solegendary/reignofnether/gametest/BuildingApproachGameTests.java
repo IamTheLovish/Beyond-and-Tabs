@@ -166,7 +166,8 @@ public class BuildingApproachGameTests {
 
     /**
      * Review round 1 on #514: a carpet, a bottom slab or a few layers of snow on the ground round a site is ground a
-     * unit stands on, not a wall: on flat ground covered with each, the approach is the nearest ring cell.
+     * unit stands on, not a wall. Round 2: only the ring's near side (-x) is covered and the rest is bare, so a rule that
+     * counts a low block as a wall picks a bare cell further round, and the right rule the near covered cell.
      */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void carpet_slab_or_snow_on_the_ground_is_still_ground_to_stand_on(GameTestHelper helper) {
@@ -187,16 +188,47 @@ public class BuildingApproachGameTests {
                 for (int z = z0 - 3; z <= z1 + 3; z++)
                     for (int k = -2; k <= 3; k++)
                         level.setBlock(new BlockPos(x, y + k, z), k <= 0 ? Blocks.STONE.defaultBlockState()
-                            : k == 1 && !site.isPosInsideBuilding(new BlockPos(x, y, z)) ? cover
+                            : k == 1 && x == x0 - 1 ? cover   // the near side of the ring only
                             : Blocks.AIR.defaultBlockState(), 2);
             BlockPos cell = site.getClosestGroundPos(new BlockPos(x0 - 6, y, zMid), 1, false);
             if (cell.getX() != x0 - 1 || cell.getZ() != zMid || cell.getY() != y)
-                problems.add(cover.getBlock().getDescriptionId() + " on the ground: approach " + cell.toShortString()
-                    + ", expected the nearest ring cell " + (x0 - 1) + ", " + y + ", " + zMid);
+                problems.add(cover.getBlock().getDescriptionId() + " on the near side: approach " + cell.toShortString()
+                    + ", expected the nearest ring cell " + (x0 - 1) + ", " + y + ", " + zMid + " (covered, standable)");
         }
         if (problems.isEmpty())
             helper.succeed();
         else
             helper.fail(String.join("; ", problems));
+    }
+
+    /**
+     * Review round 2 on #514: a bottom slab floating at head height over a ring cell (ground one below the cell, the cell
+     * itself air) is a ceiling, not standing room: with only the near side roofed so, the approach is a bare cell.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void a_slab_at_head_height_over_a_ring_cell_is_no_room_to_stand(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BuildingPlacement site = site(helper, "ceiling");
+        if (site == null)
+            return;
+        int x0 = site.minCorner.getX(), x1 = site.maxCorner.getX(), z0 = site.minCorner.getZ(), z1 = site.maxCorner.getZ();
+        int y = site.minCorner.getY();
+        int zMid = (z0 + z1) / 2;
+        for (int x = x0 - 3; x <= x1 + 3; x++)
+            for (int z = z0 - 3; z <= z1 + 3; z++)
+                for (int k = -2; k <= 3; k++)
+                    level.setBlock(new BlockPos(x, y + k, z), k <= -1 ? Blocks.STONE.defaultBlockState()
+                        : k == 1 && x == x0 - 1 ? Blocks.STONE_SLAB.defaultBlockState()   // a bottom slab at head height
+                        : Blocks.AIR.defaultBlockState(), 2);
+        BlockPos cell = site.getClosestGroundPos(new BlockPos(x0 - 6, y, zMid), 1, false);
+        boolean onRing = (cell.getX() == x0 - 1 || cell.getX() == x1 + 1 || cell.getZ() == z0 - 1 || cell.getZ() == z1 + 1)
+            && !site.isPosInsideBuilding(cell);
+        if (!onRing)
+            helper.fail("the approach " + cell.toShortString() + " is not on the ring round " + x0 + ".." + x1 + " x " + z0 + ".." + z1);
+        else if (cell.getX() == x0 - 1)
+            helper.fail("the approach " + cell.toShortString() + " is under the slab at head height (y " + (y + 1)
+                + "); a bare ring cell was free");
+        else
+            helper.succeed();
     }
 }

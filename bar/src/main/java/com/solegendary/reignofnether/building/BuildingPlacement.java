@@ -632,14 +632,12 @@ public class BuildingPlacement {
      * that blocks a body: a collision box reaching above half a block.
      */
     private boolean standableAt(BlockPos bp, BlockState atBp, BlockState below) {
-        BlockPos up = bp.above();
-        BlockState atUp = level.getBlockState(up);
-        if (blocksBody(atUp, up))
-            return false;   // both ways need the cell above free for the body
-        if (!blocksBody(atBp, bp))   // feet in the cell: a floor under it, or a low block in it
-            return !atBp.getCollisionShape(level, bp).isEmpty() || !below.getCollisionShape(level, bp.below()).isEmpty();
-        BlockPos up2 = bp.above(2);   // the cell is a floor: feet on it, the next two free
-        return !blocksBody(level.getBlockState(up2), up2);
+        // STUB (throwaway/red-514c): e1339036's rule - any collision box above the floor counts as a wall
+        boolean c0 = !atBp.getCollisionShape(level, bp).isEmpty();
+        boolean c1 = !level.getBlockState(bp.above()).getCollisionShape(level, bp.above()).isEmpty();
+        if (c0)
+            return !c1 && level.getBlockState(bp.above(2)).getCollisionShape(level, bp.above(2)).isEmpty();
+        return !c1 && !level.getBlockState(bp.below()).getCollisionShape(level, bp.below()).isEmpty();
     }
 
     /** A collision box reaching above half a block: not a carpet, a bottom slab or a few layers of snow. */
