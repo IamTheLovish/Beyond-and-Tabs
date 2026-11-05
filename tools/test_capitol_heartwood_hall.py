@@ -165,6 +165,18 @@ class HeartwoodHallTest(unittest.TestCase):
                 sides.add(("x+" if dx > 0 else "x-") if abs(dx) >= abs(dz) else ("z+" if dz > 0 else "z-"))
         self.assertGreaterEqual(len(sides), 3, sides)
 
+    def test_roots_are_bark_lines_not_cube_stacks(self):
+        """The roots that arch from the hall's corner piers into the garden read as lines from the RTS camera: every
+        bark cell outside the walls (ring >= 5) up to the parapet (y <= 8) is an oak log lying along its arc (axis x or
+        z), so the camera sees bark on top, never a pale log end. Shipped: full oak_wood cubes standing on end - "four
+        diagonal stacks of full oak_wood cubes ... a zipper of pale-topped cubes - the crate stacks" (Fable critic A,
+        Nov 4, 4/10: the most distracting element on the still)."""
+        cells = [(q, n, pr) for q, (n, pr) in self.b.blocks.items()
+                 if n in ("oak_log", "oak_wood") and _ring(q) >= 5 and q[1] <= 8]
+        self.assertTrue(cells, "no roots outside the walls")
+        bad = [(q, n, pr.get("axis")) for q, n, pr in cells if n != "oak_log" or pr.get("axis") not in ("x", "z")]
+        self.assertEqual(bad, [], "%d of %d root cells are cubes or stand on end" % (len(bad), len(cells)))
+
     def test_data_and_assets_copies_match(self):
         with open(NBT, "rb") as f, open(NBT_ASSETS, "rb") as g:
             self.assertEqual(f.read(), g.read())
