@@ -555,6 +555,7 @@ public final class BarFx {
         com.solegendary.reignofnether.sounds.Sfx.clearServerState();
         QUEUE.clear();
         LAST_NANO.clear();
+        RuneFx.clearAll();
         muteExplosions = 0;
     }
 }

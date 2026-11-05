@@ -159,6 +159,7 @@ public final class BarFxClient {
     public static void clear() {
         live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; craterCount = 0; shakeAmt = 0;
         DomeFx.clear();
+        RuneFxClient.clear();
     }
 
     // ------------------------------------------------------------------ events from the server
@@ -174,6 +175,7 @@ public final class BarFxClient {
                 // (SfxClient does its own fog and distance checks and rate limits)
                 com.solegendary.reignofnether.sounds.SfxClient.onFx(e);
                 if (e.type == BarFx.DOME) { DomeFx.ingest(e, clock); continue; }   // kept even off screen: it lasts seconds
+                if (e.type == BarFx.RUNE) { RuneFxClient.ingest(e, clock); continue; }   // fog-filtered on the server; lit test when drawn
                 if (e.type == BarFx.SFX || !visible(e.x, e.y, e.z)) continue;
                 switch (e.type) {
                     case BarFx.SHOT -> { if (!busy || R.nextInt(3) == 0) shot(e.kind, BarFx.shotFaction(e.flags), e.x, e.y, e.z, e.a, e.b, e.c); }
@@ -1110,6 +1112,8 @@ public final class BarFxClient {
         // barriers (DomeFx) are drawn first: the light below sits on top of them
         if (!DomeFx.isEmpty())
             DomeFx.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
+        // rune circles (RuneFxClient) lie on the ground under the light below
+        RuneFxClient.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
         if (live.isEmpty() && decals.isEmpty()) return;
 
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
