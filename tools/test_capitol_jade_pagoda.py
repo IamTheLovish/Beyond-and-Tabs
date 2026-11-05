@@ -144,7 +144,9 @@ class JadePagodaTest(unittest.TestCase):
         """Each roof's second course (the stairs one up on the band, y 7 and y 13) is the dark gap stair, so with the
         gap ring under it every roof shows a 2-cell dark ring from above and the tiers part (critic A fix 2: the
         1-cell gap ring was too thin at 30 px a block; three teal tiers merged into one pyramid)."""
-        jade = sorted(q for q, n in self.solid.items() if q[1] in (7, 13) and n == JADE_FAMILY[0] + "_stairs")
+        inside = {7: (6, 4), 13: (3, 3)}      # inside each roof's lip (the eave's own sweep stairs sit on the lip)
+        jade = sorted(q for q, n in self.solid.items() if q[1] in inside and n == JADE_FAMILY[0] + "_stairs"
+                      and abs(q[0] - C) <= inside[q[1]][0] and abs(q[2] - C) <= inside[q[1]][1])
         self.assertEqual(jade, [])
 
     def test_eaves_sweep_as_stair_runs(self):
