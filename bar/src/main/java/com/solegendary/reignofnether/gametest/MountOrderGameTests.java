@@ -153,6 +153,7 @@ public class MountOrderGameTests {
             if (rider.getMountGoal().getTarget() != null)
                 problems.add("5 s after a Mount order on an enemy's spider the rider still holds it: " + state(rider, spider, spider)
                     + "; history: " + String.join(" | ", history));
+            problems.add("DIAG (throwaway only) took " + took + "; history: " + String.join(" | ", history));
             TerrainGameTests.finish(helper, problems);
         });
     }
