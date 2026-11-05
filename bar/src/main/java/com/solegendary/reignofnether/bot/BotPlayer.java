@@ -1052,6 +1052,9 @@ public class BotPlayer {
     /** Workers stranded at the last think (BotStranded; public for the game test's [T2Snap] line). */
     public int strandedNow = 0;
 
+    final java.util.Map<Integer, java.util.ArrayDeque<String>> strandDiagHist = new java.util.HashMap<>();
+    final java.util.Set<Integer> strandDiagSeen = new java.util.HashSet<>();
+
     /** Takes this think's stranded workers out of {@code workers}; each is walked home every BotStranded.RESCUE_EVERY_TICKS. */
     void dropStranded(long gameTime, List<LivingEntity> workers, BuildingPlacement capitol) {
         java.util.Set<Integer> alive = new java.util.HashSet<>();
@@ -1064,8 +1067,30 @@ public class BotPlayer {
             boolean ordered = goal.getBuildingTarget() != null;
             // at the capitol is home, not stranded (a rescued worker that reached it, or one waiting beside it)
             boolean atHome = capitol.isPosInsideBuilding(w.getOnPos(), 3);
-            if (stranded.sample(w.getId(), w.getX(), w.getZ(), ordered, atHome || (ordered && goal.isBuilding()), gameTime))
+            // DIAG (throwaway/diag-stranded): a y history per worker, and one line when a worker first strands
+            java.util.ArrayDeque<String> hist = strandDiagHist.computeIfAbsent(w.getId(), k -> new java.util.ArrayDeque<>());
+            if (gameTime % 100 < 20) {   // about every 5 s (the think is once a second)
+                hist.addLast((gameTime / 20) + "s:" + w.blockPosition().getX() + "," + w.blockPosition().getY() + "," + w.blockPosition().getZ()
+                    + (goal.getBuildingTarget() != null ? ">" + goal.getBuildingTarget().getBuilding().name : ""));
+                while (hist.size() > 16) hist.removeFirst();
+            }
+            if (stranded.sample(w.getId(), w.getX(), w.getZ(), ordered, atHome || (ordered && goal.isBuilding()), gameTime)) {
                 out.add(w);
+                if (strandDiagSeen.add(w.getId())) {
+                    String path = "home null";
+                    if (home != null) {
+                        net.minecraft.world.level.pathfinder.Path p = ((net.minecraft.world.entity.Mob) w).getNavigation().createPath(home, 1);
+                        path = p == null ? "no path home" : ("path home " + p.getNodeCount() + " nodes, reaches " + p.canReach()
+                            + ", ends " + (p.getEndNode() == null ? "?" : p.getEndNode().asBlockPos().toShortString()));
+                    }
+                    var below = w.level().getBlockState(w.blockPosition().below());
+                    ReignOfNether.LOGGER.warn("[ChunkWait] gametest-stranded {} worker {} at {} (on {} {}, in water {}), home {}, target {} approach {}; {}; history {}",
+                        name, w.getId(), w.blockPosition().toShortString(), below.getBlock().getDescriptionId(), w.onGround() ? "ground" : "air",
+                        w.isInWater(), home == null ? "?" : home.toShortString(),
+                        goal.getBuildingTarget() == null ? "none" : goal.getBuildingTarget().getBuilding().name + "@" + goal.getBuildingTarget().originPos.toShortString(),
+                        goal.getMoveTarget() == null ? "none" : goal.getMoveTarget().toShortString(), path, String.join(" ", hist));
+                }
+            }
         }
         stranded.retain(alive);
         strandedNow = out.size();
