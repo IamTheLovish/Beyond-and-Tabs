@@ -44,7 +44,7 @@ public final class BreathFx {
     private static final Minecraft MC = Minecraft.getInstance();
     /** Per tick: core tongues, body tongues, body puffs, soul-smoke, splash tongues, pool flames, embers; licks on at
      *  most LICKS_MAX units. */
-    static final int CORES = 3, BODY = 4, PUFFS = 4, SMOKES = 2, SPLASH = 20, POOL = 1, EMBERS = 4, LICKS_MAX = 6;
+    static final int CORES = 3, BODY = 4, PUFFS = 4, SMOKES = 2, SPLASH = 20, POOL = 1, EMBERS = 8, LICKS_MAX = 6;
     /** The jaws the renderer found are trusted this many client ticks (an undrawn dragon's are guessed instead). */
     static final long JAWS_FRESH = 3;
     // soul-fire, cyan to cobalt only (Fable round 4: lilac merges with the wings); each flame fades from its first
@@ -52,7 +52,7 @@ public final class BreathFx {
     static final int CORE = 0xF4FFFF, CORE_END = 0xBFEFFF, BODY_C = 0x3F8DFF, BODY_END = 0x1A3FD6, SMOKE = 0x2A2F52,
         SMOKE_END = 0x1A1E36, MUZZLE = 0xFFFFFF, SPLASH_C = 0xC9F2FF, SPLASH_END = 0x3B8CFF, POOL_C = 0x6FB8FF,
         POOL_END = 0x1E4BD8, HOT = 0x7FD6FF, GLOW = 0x1E4BFF, EMBER = 0xC8F0FF, SCORCH = 0x101C40, LICK = 0x8FE0FF,
-        LICK_END = 0x2A6DFF, LIT = 0x66B8FF;
+        LICK_END = 0x2A6DFF, LIT = 0x66B8FF, SHEATH = 0x3F8CFF, HIT = 0xEAF6FF;
 
     private static final double[] V = new double[3];
     private static final List<BoneDragonUnit> TICKING = new ArrayList<>();
@@ -200,6 +200,12 @@ public final class BreathFx {
             p.rate = rnd(-1f, 1f);
         }
         BarFxClient.flash(jx, jy, jz, .75f * zs * swell, .1f, MUZZLE);
+        // a glow sheath along the jet (Fable round 7: "a pencil beam that vanishes at zoom 60"): the stream's silhouette
+        for (int i = 1; i <= 3; i++) {
+            float f = i / 4f;
+            flame(jx + sx * f, jy + sy * f, jz + sz * f, .1f, (.6f + far * f * .5f) * zs, SHEATH, SHEATH, 0, 0, 0, 1f,
+                Float.NaN, .3f * swell, false);
+        }
         // the impact (round 4: "a firework / glass shatter", "a speck at zoom 60"): tongues hugging the ground outward,
         // a pool of flames licking up where it has burnt, a hot spot and a wide glow that read from far, a few embers
         // flung in a random cone, a dark scorch; the units standing in it lit, with flames licking up them
@@ -217,7 +223,7 @@ public final class BreathFx {
         for (int i = 0; i < POOL; i++) {
             double r = 2.8 * Math.sqrt(BarFxClient.R.nextDouble()), a = BarFxClient.R.nextDouble() * Math.PI * 2;
             BarFxClient.P p = flame(ax + (float) (Math.cos(a) * r), ay + rnd(0, .6f), az + (float) (Math.sin(a) * r),
-                rnd(.8f, 1.2f), rnd(.25f, .4f) * zs, POOL_C, POOL_END, 0, rnd(1f, 1.6f), 0, 1.4f, Float.NaN, swell * .7f, false);
+                rnd(1.5f, 2.5f), rnd(.25f, .4f) * zs, POOL_C, POOL_END, 0, rnd(.4f, .8f), 0, 1.4f, Float.NaN, swell * .7f, false);
             p.tex = BarFxClient.R.nextInt(6);
             p.stretch = 2f;
         }
@@ -247,6 +253,9 @@ public final class BreathFx {
                 float w = le.getBbWidth() * .5f, h = le.getBbHeight();
                 flame((float) le.getX(), (float) le.getY() + h * .5f, (float) le.getZ(), .15f, Math.max(w, h * .5f) * 1.2f,
                     LIT, LIT, 0, 0, 0, 1f, Float.NaN, .3f * swell, false);
+                if (FireBreath.pulse(t))   // the server burns on these ticks: the unit flashes as it is hit
+                    flame((float) le.getX(), (float) le.getY() + h * .5f, (float) le.getZ(), .1f, 1.5f * zs, HIT, HIT, 0, 0, 0,
+                        1f, Float.NaN, .6f * swell, false);
                 for (int j = 0; j < 2; j++) {
                     BarFxClient.P p = flame((float) le.getX() + rnd(-w, w), (float) le.getY() + h * rnd(.6f, 1f),
                         (float) le.getZ() + rnd(-w, w), .5f, .2f * zs, LICK, LICK_END, 0, rnd(1.2f, 2f), 0, 1.6f, Float.NaN,
