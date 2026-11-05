@@ -782,5 +782,9 @@
     "sfx.stinger_brass": {
         "subtitle": "sounds.reignofnether.sfx.stinger_brass",
         "sounds": [ "reignofnether:sfx/stinger_brass_1" ]
+    },
+    "sfx.portal_forming": {
+        "subtitle": "sounds.reignofnether.sfx.portal_forming",
+        "sounds": [ "reignofnether:sfx/portal_forming_1" ]
     }
 }

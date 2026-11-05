@@ -156,9 +156,23 @@ public final class BarFxClient {
         return DomeFx.count();
     }
 
+    /** How many forming moments (FormingFx) the client plays right now, and the newest one's age (-1: none): eyes logs. */
+    public static int liveFormings() {
+        return FormingFx.count();
+    }
+
+    public static float newestFormingAge() {
+        return FormingFx.newestAge(clock);
+    }
+
+    public static int formingsStarted() {
+        return FormingFx.started();
+    }
+
     public static void clear() {
         live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; craterCount = 0; shakeAmt = 0;
         DomeFx.clear();
+        FormingFx.clear();
     }
 
     // ------------------------------------------------------------------ events from the server
@@ -174,6 +188,7 @@ public final class BarFxClient {
                 // (SfxClient does its own fog and distance checks and rate limits)
                 com.solegendary.reignofnether.sounds.SfxClient.onFx(e);
                 if (e.type == BarFx.DOME) { DomeFx.ingest(e, clock); continue; }   // kept even off screen: it lasts seconds
+                if (e.type == BarFx.FORMING) { FormingFx.ingest(e, clock); continue; }   // the same: ~1.6 s, spawns when near
                 if (e.type == BarFx.SFX || !visible(e.x, e.y, e.z)) continue;
                 switch (e.type) {
                     case BarFx.SHOT -> { if (!busy || R.nextInt(3) == 0) shot(e.kind, BarFx.shotFaction(e.flags), e.x, e.y, e.z, e.a, e.b, e.c); }
@@ -1107,6 +1122,9 @@ public final class BarFxClient {
         scorchCount = sc;
         craterCount = cc;
 
+        // forming moments (FormingFx) emit this frame's pieces into the lists drawn below
+        if (!FormingFx.isEmpty())
+            FormingFx.step(clock);
         // barriers (DomeFx) are drawn first: the light below sits on top of them
         if (!DomeFx.isEmpty())
             DomeFx.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);

@@ -521,8 +521,8 @@ public final class BarFx {
 
     /**
      * Does a fogged player see this event (network/Audience.canSee)? Its spot, or either end of a shot or beam
-     * (BAR shows a shell flying into your sight from a shooter you cannot see), or any corner of a collapsing
-     * building. Like a vanilla particle (ServerLevelParticleMixin), never through the fog.
+     * (BAR shows a shell flying into your sight from a shooter you cannot see), or any corner of a collapsing or
+     * forming building. Like a vanilla particle (ServerLevelParticleMixin), never through the fog.
      */
     static boolean seenBy(ServerPlayer player, Event e) {
         return visibleTo((x, z) -> Audience.canSee(player, x, z), e);
@@ -539,7 +539,8 @@ public final class BarFx {
             return true;
         return switch (e.type) {
             case SHOT, NANO -> sight.canSee(e.a, e.c);   // a, c = the far end's x, z
-            case COLLAPSE -> sight.canSee(e.x - e.a, e.z - e.a) || sight.canSee(e.x + e.a, e.z - e.a)
+            // a building's footprint: any corner in sight shows it (a collapse, a portal forming)
+            case COLLAPSE, FORMING -> sight.canSee(e.x - e.a, e.z - e.a) || sight.canSee(e.x + e.a, e.z - e.a)
                 || sight.canSee(e.x - e.a, e.z + e.a) || sight.canSee(e.x + e.a, e.z + e.a);
             default -> false;
         };

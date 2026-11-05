@@ -82,4 +82,9 @@ public class EndPortal extends ProductionBuilding {
             level.setBlockAndUpdate(centrePos.above().south().west(), Blocks.END_PORTAL.defaultBlockState());
         }
     }
+
+    @Override
+    public boolean formsWhenBuilt() {
+        return true;   // a portal-type moment: it forms (barfx/PortalForming)
+    }
 }

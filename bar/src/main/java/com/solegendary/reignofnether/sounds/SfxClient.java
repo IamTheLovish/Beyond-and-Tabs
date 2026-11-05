@@ -126,6 +126,10 @@ public final class SfxClient {
                     else if (life <= 24)
                         playAt(Sfx.RECLAIM_TICK, e.x, e.y, e.z, 1f, 1f);
                 }
+                // a portal or a game ender forms: one charge-and-settle per activation (the server sent it only to those
+                // whose fog shows the site); a game ender's is a little deeper
+                case BarFx.FORMING -> playAt(Sfx.PORTAL_FORMING, e.x, e.y + 1, e.z, Math.min(1f, 0.7f + e.a / 12f),
+                    e.kind == BarFx.FS_ENDER ? 0.85f : 1f);
                 default -> { }
             }
         } catch (Exception ignored) { }

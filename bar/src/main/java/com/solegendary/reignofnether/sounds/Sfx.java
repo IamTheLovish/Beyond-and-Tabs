@@ -105,7 +105,10 @@ public enum Sfx {
     STINGER_VERDANT("stinger_verdant", Category.ANNOUNCER, 0.7f, 40),
     STINGER_TIDE("stinger_tide", Category.ANNOUNCER, 0.7f, 40),
     STINGER_STORM("stinger_storm", Category.ANNOUNCER, 0.7f, 40),
-    STINGER_BRASS("stinger_brass", Category.ANNOUNCER, 0.7f, 40);
+    STINGER_BRASS("stinger_brass", Category.ANNOUNCER, 0.7f, 40),
+    // ---- the forming moment (barfx/PortalForming): a portal or a game ender forms - a rising charge, then a settle.
+    // At the END: the BarFx SFX event carries the ordinal
+    PORTAL_FORMING("portal_forming", Category.BUILDINGS, 0.9f, 10);
 
     /** The five volume groups of the Sound settings page (ANNOUNCER shares the announcer voice's volume). */
     public enum Category { UNITS, BUILDINGS, ABILITIES, ANNOUNCER, UI }

@@ -83,4 +83,9 @@ public abstract class AbstractPortal extends ProductionBuilding implements Nethe
     public double getStartingNetherRange(BuildingPlacement placement) {
         return 3;
     }
+
+    @Override
+    public boolean formsWhenBuilt() {
+        return true;   // a portal-type moment: it forms (barfx/PortalForming)
+    }
 }
