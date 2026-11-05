@@ -137,10 +137,37 @@ public final class UnitPlayback {
             head = -1;
             count = 0;
             add(t, px, py, pz, pyaw);
+            drawn[0] = px; drawn[1] = py; drawn[2] = pz; drawn[3] = pyaw;
         }
 
         public boolean seeded() {
             return count > 0;
+        }
+
+        /** What a move packet carries (ClientboundMoveEntityPacket.hasPosition / hasRotation; a teleport: both). */
+        public static final int POS = 1, ROT = 2;
+        // today's rule: where the unit was drawn last (the entity's own position and yaw), the newest head yaw and pitch
+        private final double[] drawn = new double[4];
+        private float headNow = Float.NaN, pitchNow = 0f;
+
+        /**
+         * One move or teleport packet as the client glue hands it over, stamped with server tick {@code t}; {@code kind}
+         * says what it carries ({@link #POS} | {@link #ROT}). ClientPacketListener fills in what a packet lacks from the
+         * entity: a rotation-only packet comes with the drawn position, a position-only one with the drawn yaw and pitch.
+         * Today's rule (UnitPlaybackMixin's, here so a test can run it): the kind is guessed from equal values - the
+         * drawn position means a turn, the drawn yaw a position-only move; head yaw and pitch follow the newest packet.
+         */
+        public void packet(long t, int kind, double px, double py, double pz, float pyaw, float ppitch) {
+            pitchNow = ppitch;
+            if (px == drawn[0] && py == drawn[1] && pz == drawn[2])
+                turned(t, pyaw);
+            else
+                moved(t, px, py, pz, pyaw == (float) drawn[3] ? Float.NaN : pyaw);
+        }
+
+        /** A head-rotation packet (ClientboundRotateHeadPacket) stamped with server tick {@code t}. */
+        public void head(long t, float headYaw) {
+            headNow = headYaw;
         }
 
         /** A position packet stamped with server tick {@code t} (yaw: the packet's, or NaN for a position-only one). */
@@ -186,7 +213,7 @@ public final class UnitPlayback {
             count = Math.min(count + 1, SIZE);
         }
 
-        /** Once a client tick: where to draw the unit, into {@code out} = x, y, z, yaw. */
+        /** Once a client tick: where to draw the unit, into {@code out} = x, y, z, yaw, head yaw, pitch. */
         public void draw(Clock clock, double[] out) {
             if (!seeded())
                 return;
@@ -208,6 +235,9 @@ public final class UnitPlayback {
             out[1] = y[a] + (y[b] - y[a]) * f;
             out[2] = z[a] + (z[b] - z[a]) * f;
             out[3] = yaw[a] + Mth.wrapDegrees(yaw[b] - yaw[a]) * (float) f;
+            out[4] = Float.isNaN(headNow) ? out[3] : headNow;
+            out[5] = pitchNow;
+            drawn[0] = out[0]; drawn[1] = out[1]; drawn[2] = out[2]; drawn[3] = (float) out[3];
         }
     }
 }

@@ -115,8 +115,9 @@ final class ClientView {
     /**
      * The same packets drawn by the game's stamped playback (UnitPlayback, lovish's pick "A: Smooth buffer"): every
      * server tick's stamp reaches the client first (UnitClockClientboundPacket goes out at the tick's start), each move
-     * packet is filed in the unit's Track under the newest stamp, as UnitPlaybackMixin files it (a rotation-only packet
-     * as a turn, a position-only one without a yaw), and each client tick the Clock moves on and the Track is drawn.
+     * packet goes to the unit's Track under the newest stamp the way the client glue hands it over (Track.packet, with
+     * what it carries and the rest filled in from the drawn entity), and each client tick the Clock moves on and the
+     * Track is drawn.
      */
     static Drawn replayStamped(List<Sent> sent, int serverTicks, Clock clock, long seed, int interval,
                                double x0, double y0, double z0, float yaw0) {
@@ -130,18 +131,19 @@ final class ClientView {
             new com.solegendary.reignofnether.unit.modelling.motion.UnitPlayback.Track(interval);
         heard.heard(0);
         track.seed(-interval, x0, y0, z0, yaw0);
-        double[] out = { x0, y0, z0, yaw0 };
+        double[] out = { x0, y0, z0, yaw0, yaw0, 0 };   // the entity as the client holds it: where it was drawn last
         int next = 0, clockTick = 0, newestTick = 0;
         for (int c = 0; c <= lastClientTick; c++) {
             while (clockTick < serverTicks && Math.ceil((at[clockTick] - phase) / 50.0) <= c) {
                 newestTick = clockTick;
                 heard.heard(clockTick++);
                 while (next < sent.size() && sent.get(next).tick() <= newestTick) {
+                    // as ClientPacketListener hands a packet on: what it lacks filled in from the entity
                     Sent p = sent.get(next++);
-                    if (p.hasPos())
-                        track.moved(p.tick(), p.x(), p.y(), p.z(), p.hasRot() ? p.yaw() : Float.NaN);
-                    else
-                        track.turned(p.tick(), p.yaw());
+                    int kind = (p.hasPos() ? com.solegendary.reignofnether.unit.modelling.motion.UnitPlayback.Track.POS : 0)
+                        | (p.hasRot() ? com.solegendary.reignofnether.unit.modelling.motion.UnitPlayback.Track.ROT : 0);
+                    track.packet(p.tick(), kind, p.hasPos() ? p.x() : out[0], p.hasPos() ? p.y() : out[1],
+                        p.hasPos() ? p.z() : out[2], p.hasRot() ? p.yaw() : (float) out[3], (float) out[5]);
                 }
             }
             heard.clientTick();
