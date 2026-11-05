@@ -58,6 +58,50 @@ def with_macros(source, macros):
     return "\n".join(lines[:1] + extra + lines[1:])
 
 
+def _condition(expr, defines):
+    """A #if / #elif condition as the GLSL preprocessor reads it: `defined X` / `defined(X)`, X == n, !, &&, ||."""
+    expr = re.sub(r"defined\s*\(?\s*(\w+)\s*\)?", lambda m: "1" if m.group(1) in defines else "0", expr)
+    expr = re.sub(r"\b[A-Za-z_]\w*\b", lambda m: defines.get(m.group(0)) or "0", expr)
+    expr = expr.replace("&&", " and ").replace("||", " or ")
+    expr = re.sub(r"!(?!=)", " not ", expr)
+    if re.search(r"[^\w\s.()=<>!+\-*/]", expr):
+        raise ValueError("cannot read #if %r" % expr)
+    return bool(eval(expr, {"__builtins__": {}}, {}))
+
+
+def preprocess(source):
+    """An expanded program with its #define / #if / #ifdef / #ifndef / #elif / #else / #endif applied: the lines the
+    GPU compiles. Enough for this pack's own directives (integer options, `defined`, &&, ||, !)."""
+    defines, out, stack = {}, [], []          # stack: (this branch is on, a branch of this #if was taken, outer on)
+    for line in source.split("\n"):
+        d = re.match(r"\s*#\s*(\w+)\s*(.*)", line)
+        word, rest = (d.group(1), d.group(2).split("//")[0].strip()) if d else (None, "")
+        on = all(s[0] for s in stack)
+        if word in ("if", "ifdef", "ifndef"):
+            if word == "if":
+                c = on and _condition(rest, defines)
+            else:
+                c = on and ((rest in defines) == (word == "ifdef"))
+            stack.append((c, c, on))
+        elif word == "elif":
+            _, taken, outer = stack.pop()
+            c = outer and not taken and _condition(rest, defines)
+            stack.append((c, taken or c, outer))
+        elif word == "else":
+            _, taken, outer = stack.pop()
+            stack.append((outer and not taken, True, outer))
+        elif word == "endif":
+            stack.pop()
+        elif not on:
+            continue
+        elif word == "define":
+            name, _, value = rest.partition(" ")
+            defines[name] = value.strip() or "1"
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
 def compile_errors(glslang, name, source):
     """glslang's complaints about one program ('' when it compiles)."""
     stage = "vert" if name.endswith(".vsh") else "frag"
