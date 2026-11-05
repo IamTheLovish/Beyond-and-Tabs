@@ -1,0 +1,37 @@
+(2539 first-launch config/mod-loading notices filtered out)
+[16:41:09] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[16:41:17] [Render thread/ERROR]: Failed to verify authentication
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+[16:41:25] [Worker-ResourceReload-2/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_pattern.png
+[16:41:25] [Worker-ResourceReload-2/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_nopattern.png
+[16:41:29] [Worker-ResourceReload-0/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[16:41:29] [Worker-ResourceReload-0/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[16:41:33] [Worker-ResourceReload-0/WARN]: Missing textures in model supplementaries:confetti_popper#inventory:
+[16:41:34] [Render thread/WARN]: Missing sound for event: minecraft:item.goat_horn.play
+[16:41:34] [Render thread/WARN]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[16:41:35] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+[16:41:35] [Render thread/WARN]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find sampler named Sampler2 in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named IViewRotMat in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named FogShape in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader supplementaries:static_noise could not find sampler named Sampler1 in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader supplementaries:spherify could not find sampler named Sampler1 in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseSpeed in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseScale in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named Intensity in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named CameraPos in the specified shader program.
+[16:41:35] [Render thread/WARN]: Shader reignofnether:bat_mist could not find uniform named Height in the specified shader program.
+[16:41:38] [Render thread/WARN]: Game took 38.696 seconds to start
+[16:43:11] [Render thread/WARN]: Initial datapack load took 1.785 s
+[16:43:14] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-0 absolute]
+[16:43:14] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-15 absolute]
+[16:43:21] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[16:43:26] [Render thread/WARN]: Time from main menu to in-game was 14.897669 seconds
+[16:43:26] [Render thread/WARN]: Total time to load game and open world was 53.593666 seconds
+[16:43:28] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2042ms or 40 ticks behind
+[16:46:36] [Render thread/WARN]: [Eyes] 07q_squire_bow_close: no MilitiaUnit:bow left in the army (the battle took them); summoned a stand-in at -223 70 16
+[16:46:48] [Render thread/WARN]: [Eyes] 07t_bone_dragon_close: no BoneDragonUnit left in the army (the battle took them); summoned a stand-in at -223 70 16
+[16:47:01] [Render thread/WARN]: [Eyes] 07w_mossback_bison_close: no MossbackBisonUnit left in the army (the battle took them); summoned a stand-in at -223 70 16
+[16:47:13] [Render thread/WARN]: [Eyes] 07zm_rocket_battery_close: no RocketBatteryUnit left in the army (the battle took them); summoned a stand-in at -223 70 16
+[16:49:15] [Render thread/WARN]: [Eyes] 17_fog: gave up - fog on the client false, 12 marchers (border 720 -> 720, fog on the server: true, 24 other units cleared off the route)
+[16:49:17] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
