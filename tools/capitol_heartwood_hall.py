@@ -232,8 +232,8 @@ def legs_and_trunk(c):
 def face(c, o):
     """The stag-dryad carved on the trunk's face o (the Root Spring's spirit at the capitol's scale), three wide on
     ring 2, y10-13 sitting on the trunk's flare over the roof: a pale birch blaze down the middle, verdant froglight
-    eyes (warm ochre froglight) in the bark under jutting dark-oak brows - and the antlers rising out of the burrs as the tree's own birch
-    boughs, toward the crown, in stripped birch logs only. Fable critics: the five-wide mask (cheeks, brow sweeps,
+    eyes (warm ochre froglight) in the bark under jutting dark-oak brows - and the antlers rising out of the burrs as
+    the tree's own boughs, toward the crown, in its dark bark. Fable critics: the five-wide mask (cheeks, brow sweeps,
     leafy ears) read as "a crate hut" round the trunk (round 2), and birch stairs and fences - plank textures - as "a
     pile of birch planks, a noisy crate" (round 3), so the face is the trunk's own bark with a blaze, eyes and brows."""
     along_axis = "x" if o[0] == 0 else "z"
@@ -247,24 +247,25 @@ def face(c, o):
                                                                          # strategy zoom", Fable critic round 4)
         c.st(o, 3, s, 13 + LIFT, inward(o), "top", name=BARK_S)         # the brows, jutting over the eyes
         c.put(o, 2, s, 13 + LIFT, WOOD, axis="y")
-        c.put(o, 2, s, 14 + LIFT, BIRCH, axis="y")                      # the burrs
-        # the antlers: up out of the burr, out along the trunk's face, up, out, up - a stepped beam of five logs
-        c.put(o, 2, s, 15 + LIFT, BIRCH, axis="y")
-        c.put(o, 2, 2 * s, 15 + LIFT, BIRCH, axis=along_axis)
-        c.put(o, 2, 2 * s, 16 + LIFT, BIRCH, axis="y")
-        c.put(o, 2, 3 * s, 16 + LIFT, BIRCH, axis=along_axis)
-        c.put(o, 2, 3 * s, 17 + LIFT, BIRCH, axis="y")
+        c.put(o, 2, s, 14 + LIFT, LOG, axis="y")                        # the burrs
+        # the antlers: up out of the burr, out along the trunk's face, up, out, up - a stepped beam of five logs in
+        # the trunk's own bark (pale birch antlers beside the blaze made the trunk's foot "a checkered crate knot",
+        # Fable critic round 5: two woods only, the dark tree and the pale blaze)
+        c.put(o, 2, s, 15 + LIFT, LOG, axis="y")
+        c.put(o, 2, 2 * s, 15 + LIFT, LOG, axis=along_axis)
+        c.put(o, 2, 2 * s, 16 + LIFT, LOG, axis="y")
+        c.put(o, 2, 3 * s, 16 + LIFT, LOG, axis=along_axis)
+        c.put(o, 2, 3 * s, 17 + LIFT, LOG, axis="y")
 
 
 def boughs(c):
     """The boughs that carry the crown (horizontal bark on the diagonals, clear of the faces): to ring 4 under its
-    rim, ring 3 under its middle, ring 2 under its top."""
+    rim, ring 3 under its middle, ring 2 under its top - each only where the crown's leaves stand over it."""
     for (sx, sz) in CORNERS:
-        for k in (2, 3, 4):
-            c.set(sx * k, CROWN_FOOT, sz * k, WOOD, axis="y")
-        for k in (2, 3):
-            c.set(sx * k, CROWN_FOOT + 3, sz * k, WOOD, axis="y")
-        c.set(sx * 2, CROWN_FOOT + 6, sz * 2, WOOD, axis="y")
+        for k, y in ((2, CROWN_FOOT), (3, CROWN_FOOT), (4, CROWN_FOOT), (2, CROWN_FOOT + 3), (3, CROWN_FOOT + 3),
+                     (2, CROWN_FOOT + 6)):
+            if in_hull(sx * k, y + 1, sz * k):                   # under leaves (bare on the small south-west lobe,
+                c.set(sx * k, y, sz * k, WOOD, axis="y")         # it read as wood "through the gaps", round 5)
 
 
 # The boughs that break out through the roof (lovish, Nov 5: "with branches coming out of the roof"), as waypoints
@@ -273,11 +274,13 @@ def boughs(c):
 # The tips stand off the stag-dryad's faces from the RTS camera (a blossom in front of the west face hid it);
 # blossoms over the eaves read as "shrubs resting on the roof" (Fable critic round 3), and two arms alike at one
 # height as "a T-cross / scarecrow" (round 4) - so the south bough crawls out along the roof (lying on its second step)
-# and rises low, the west one climbs high, and each blossom is its own size (BLOSSOMS).
+# and rises low, the west one climbs on a diagonal (a post with a square elbow read as "a candelabra", round 5),
+# and each blossom is its own size (BLOSSOMS).
 # Four, each its own shape (four alike read as a chapel's ribs). Fable critic round 1: limbs "poking out over the hall
 # walls" are what delivers "branches coming out of the roof" - the roof that now shows keeps the temple's stone share.
 ROOF_BOUGHS = (("south", ((2, -1, 6), (2, -1, 8), (3, -2, 8), (3, -2, 9), (4, -2, 9), (5, -3, 11), (6, -3, 13))),
-               ("west", ((2, 1, 6), (2, 1, 8), (3, 2, 8), (3, 2, 9), (4, 2, 10), (5, 2, 11), (5, 3, 13), (6, 3, 15))),
+               ("west", ((2, 1, 6), (2, 1, 8), (3, 2, 8), (3, 2, 9), (4, 2, 10), (4, 3, 11), (5, 3, 12), (6, 3, 13),
+                         (6, 4, 14))),
                ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (4, -1, 10), (5, -2, 12), (6, -2, 14))),
                ("north", ((2, -1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (3, 0, 11), (4, -1, 13), (4, -1, 16),
                           (4, -2, 18))))
@@ -382,6 +385,18 @@ LOBES = ((3, 22, -3, 3.8, 2.6, 3.8), (-1, 21, 1, 2.7, 1.9, 2.7), (3, 21, 3, 3.2,
          (-1, 25, 1, 2.4, 1.8, 2.4))      # wraps the trunk's camera side, which showed bare through the crown
 
 
+def in_hull(x, y, z):
+    """Inside a lobe's smooth outline (the ragged edge aside)."""
+    return any(((x - lx) / (rx + .4)) ** 2 + ((y - ly) / (ry + .4)) ** 2 + ((z - lz) / (rz + .4)) ** 2 <= 1
+               for lx, ly, lz, rx, ry, rz in LOBES)
+
+
+def hidden(x, y, z):
+    """The RTS camera (looking down from the south-west: it sees tops, west and south faces) cannot see the cell: the
+    lobes' outline covers it on all three of those faces."""
+    return in_hull(x, y + 1, z) and in_hull(x - 1, y, z) and in_hull(x, y, z + 1)
+
+
 def canopy(c):
     """The blossom crown: overlapping lobes of cherry leaves (a flowering azalea leaf in every few cells so the pink is
     a blossom, not a paint), each lobe carried on its own bough from the trunk. Glowing fruit (ochre and verdant
@@ -400,15 +415,26 @@ def canopy(c):
                 if e > 1 - (0.25 if h % 5 == 0 else 0) or in_face_zone(dx, y, dz):
                     continue                                     # a ragged edge, not a ball
                 belly = y < ly - 0.5 * ry                         # the lobe's shaded underside
-                if belly and e > 0.55 and h % 9 == 0 and c.get(dx, y, dz)[0] == "air":
+                if belly and e > 0.55 and h % 9 == 0 and hidden(dx, y, dz) and c.get(dx, y, dz)[0] == "air":
                     c.set(dx, y, dz, ("ochre_froglight", "shroomlight", "verdant_froglight")[h % 3],
                           **({} if h % 3 == 1 else {"axis": "y"}))   # glowing fruit in the underside
                     continue
-                # the green only under the lobe (a cell whose cell above is in it too): green at a lobe's rim showed
-                # from the RTS camera as "moss patches reading as holes" (Fable critic round 4)
-                above = ((dx - lx) / (rx + .4)) ** 2 + ((y + 1 - ly) / (ry + .4)) ** 2 + ((dz - lz) / (rz + .4)) ** 2
-                green = belly and above <= 1 - (0.25 if h % 5 == 0 else 0)
+                # the green and the fruit only where the camera cannot see them: at a lobe's rim they showed from the
+                # RTS camera as "moss patches reading as holes" (Fable critic round 4) and "holes and noise" (round 5)
+                green = belly and hidden(dx, y, dz)
                 leaf(c, dx, y, dz, ("flowering_azalea_leaves" if h % 2 else "azalea_leaves") if green else "cherry_leaves")
+    # cap the gaps: wood in the crown shows through to the RTS camera as "holes and noise" (Fable critic round 5) - a
+    # cherry leaf on each face it sees (hidden()), inside the lobes' outline
+    for (rx_, y, rz_), (name, _) in list(c.rig.b.items()):
+        x, z = rx_ - R, rz_ - R
+        if y < CROWN_FOOT or max(abs(x), abs(z)) > 5:
+            continue
+        if not name.endswith(("_log", "_wood")):
+            continue
+        for ddx, ddy, ddz in ((0, 1, 0), (-1, 0, 0), (0, 0, 1)):
+            q = (x + ddx, y + ddy, z + ddz)
+            if q[1] < H and max(abs(q[0]), abs(q[2])) <= 5 and in_hull(*q) and not in_face_zone(*q):
+                leaf(c, *q, name="cherry_leaves")
 
 
 def roots(c):
