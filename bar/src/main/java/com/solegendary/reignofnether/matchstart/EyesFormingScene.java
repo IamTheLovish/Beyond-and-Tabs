@@ -7,6 +7,8 @@ import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
+import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
+import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 
 import net.minecraft.client.Minecraft;
@@ -160,6 +162,18 @@ final class EyesFormingScene {
         }
         centre = new Vec3(Math.floor(home.getX() + dirX * OFFSET) + 0.5, home.getY(), Math.floor(home.getZ() + dirZ * OFFSET) + 0.5);
         spireAt = centre.add(dirX * 22, 0, dirZ * 22);
+        // a photo booth, not a match: the site is beyond our base's vision, and the server's fog filter withheld both
+        // the frame's blocks and the forming itself (the fog rule working: run 41982195607, "no forming reached the
+        // client in 15 s"), so fog of war goes off on both sides, as for scene 15
+        if (FogOfWarClientEvents.isEnabled())
+            FogOfWarClientEvents.setEnabled(false);
+        var server = mc.getSingleplayerServer();
+        server.execute(() -> {
+            if (FogOfWarServerEvents.isEnabled())
+                FogOfWarServerEvents.setEnabled(false);
+            ReignOfNether.LOGGER.info("[Eyes] 20_forming: fog of war {}",
+                FogOfWarServerEvents.isEnabled() ? "STILL ON (force-fog rule)" : "off");
+        });
         EyesDirector.setZoom(ZOOM_MID);
         OrthoviewClientEvents.centreCameraOnPosInstant(centre);
         next(1);
