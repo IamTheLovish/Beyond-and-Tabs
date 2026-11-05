@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.perf.ServerTickProfile;
 import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.perf.TickGates;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
@@ -92,6 +93,158 @@ public class PerfTickGatesGameTests {
             else
                 helper.succeed();
         });
+    }
+
+    /**
+     * A GameTest's measuring window (Sys.force, then Sys.snapshot) counts every tick it was open. The periodic [Sys]
+     * report (every ServerTickProfile.LOG_EVERY_TICKS ticks) restarted the shared window, so a window that crossed it
+     * counted only its tail: a_300_unit_window_accounts_for_the_tick read "[Sys] 48 ticks" of its 100 and failed "the
+     * timed sections cover only 87% of the tick" (PR 488, run 41624764514), and "no [Sys] line came back" when the
+     * report fell on its last tick (PR 409, run 41599940498); PerfPushGameTests had worked round it with lifetime
+     * counters. Held for longer than the report's interval, the window must still count every tick. Its own batch: no
+     * other test's snapshot in the window.
+     */
+    @GameTest(template = ARENA, timeoutTicks = ServerTickProfile.LOG_EVERY_TICKS + 120, batch = "perf_sys_window")
+    public static void a_held_sys_window_counts_every_tick_across_the_periodic_report(GameTestHelper helper) {
+        Object hold = new Object();
+        TestCleanup.atEnd(helper, () -> Sys.force(hold, false));
+        int span = ServerTickProfile.LOG_EVERY_TICKS + 20;
+        long[] from = { -1 };
+        helper.runAfterDelay(10, () -> {
+            Sys.force(hold, true);
+            Sys.snapshot();   // a fresh window from here
+            from[0] = helper.getTick();
+        });
+        helper.runAfterDelay(10 + span, () -> {
+            int ticks = Sys.windowTicks();
+            long open = helper.getTick() - from[0];
+            String line = Sys.snapshot();
+            Sys.force(hold, false);
+            ReignOfNether.LOGGER.info("[SysWindow] GameTest: window open {} ticks, measured {}: {}", open, ticks, line);
+            if (ticks < open - 2)
+                helper.fail("the held [Sys] window counted " + ticks + " of the " + open + " ticks it was open (the periodic report"
+                    + " every " + ServerTickProfile.LOG_EVERY_TICKS + " ticks restarted it): " + line);
+            else
+                helper.succeed();
+        });
+    }
+
+    static final long SPIKE_BEFORE_MS = 2000, SPIKE_INSIDE_MS = 500;
+    static final int TICK_MS_WINDOW = 20;
+
+    /**
+     * A [Sys] window's mean tick is the time of ITS OWN ticks. Sys was handed MinecraftServer.tickTimes[tick - 1], the
+     * previous tick's time, at each tick's end and added it to the current tick's window: the mean counted the tick before
+     * the window opened and missed its last tick, so a slow tick just before a held window (a GC, the batch setting up)
+     * landed in "elsewhere" and dragged the coverage down (a_300_unit_window_accounts_for_the_tick: "[Sys] 100 ticks ...
+     * cover only 80%", flake-stress 41810956897). An untimed stall in the tick before the window must not count; one
+     * inside it must. Its own batch: the stalls hold up nothing else.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "perf_sys_tick_ms")
+    public static void a_sys_window_counts_its_own_ticks_time_not_the_tick_before_it(GameTestHelper helper) {
+        Object hold = new Object();
+        TestCleanup.atEnd(helper, () -> Sys.force(hold, false));
+        helper.runAfterDelay(39, () -> spin(SPIKE_BEFORE_MS));   // the tick before the window
+        helper.runAfterDelay(40, () -> {
+            Sys.force(hold, true);
+            Sys.snapshot();   // a fresh window from here
+        });
+        helper.runAfterDelay(50, () -> spin(SPIKE_INSIDE_MS));   // a tick inside it
+        helper.runAfterDelay(40 + TICK_MS_WINDOW, () -> {
+            String line = Sys.snapshot();
+            Sys.force(hold, false);
+            ReignOfNether.LOGGER.info("[SysWindow] GameTest tick ms: stall {} ms before the window, {} ms inside it: {}",
+                SPIKE_BEFORE_MS, SPIKE_INSIDE_MS, line);
+            java.util.regex.Matcher m = line == null ? null
+                : java.util.regex.Pattern.compile("\\[Sys\\] (\\d+) ticks, mean ([0-9.]+) ms/tick").matcher(line);
+            if (m == null || !m.find()) {
+                helper.fail("no [Sys] line came back: " + line);
+                return;
+            }
+            int ticks = Integer.parseInt(m.group(1));
+            double mean = Double.parseDouble(m.group(2));
+            double inside = SPIKE_INSIDE_MS / (double) TICK_MS_WINDOW;
+            double before = SPIKE_BEFORE_MS / (double) TICK_MS_WINDOW;
+            if (ticks != TICK_MS_WINDOW)
+                helper.fail("the window counted " + ticks + " of its " + TICK_MS_WINDOW + " ticks (cut, not the case under test): " + line);
+            else if (mean >= inside + before / 2)
+                helper.fail(String.format(Locale.ROOT, "the window's mean tick %.1f ms counted the %d ms stall in the tick before it opened"
+                    + " (its own ticks: about %.0f ms plus idle): %s", mean, SPIKE_BEFORE_MS, inside, line));
+            else if (mean < inside * 0.8)
+                helper.fail(String.format(Locale.ROOT, "the window's mean tick %.1f ms missed the %d ms stall inside it: %s", mean,
+                    SPIKE_INSIDE_MS, line));
+            else
+                helper.succeed();
+        });
+    }
+
+    static final int RELEASED_HOLD = 30, RELEASED_WATCH = 10, RELEASED_TRIES = 6;
+
+    /**
+     * A hold that ends without a snapshot leaves the window to the periodic report, and the ticks after it - not
+     * measured - must not book their time into it. Review round 3 on #490 (af6b658c): Sys kept owing "the last tick's
+     * time" after measuring stopped, so every later tick added its time to the window until the report and the live
+     * [Sys] line's mean was diluted by up to ~180 unmeasured ticks (ours and vanilla's share inflated, elsewhere near 0).
+     * The rule, whatever the runner's speed: a window never holds more tick times than ticks it measured
+     * (Sys.windowMsTicks() <= Sys.windowTicks()), checked on each tick after the hold while measuring is off. A busy
+     * runner keeps measuring on by itself (the slow-server rule, tick p95 >= 25 ms: the first red of this test,
+     * 42015339793, measured 110-150 ticks), which is not the case under test: the hold is tried again, and the test says
+     * so if measuring never went off. Its own batch: no other holder.
+     */
+    @GameTest(template = ARENA, timeoutTicks = RELEASED_TRIES * (RELEASED_HOLD + RELEASED_WATCH + 5) + 60, batch = "perf_sys_released")
+    public static void a_released_sys_window_does_not_count_the_ticks_after_its_hold(GameTestHelper helper) {
+        Object hold = new Object();
+        TestCleanup.atEnd(helper, () -> Sys.force(hold, false));
+        int[] phase = { 0 }, tries = { 0 }, offTicks = { 0 };
+        long[] at = { -1 };
+        helper.onEachTick(() -> {
+            long tick = helper.getTick();
+            if (phase[0] == 0) {   // hold the timer for RELEASED_HOLD ticks
+                Sys.force(hold, true);
+                Sys.snapshot();   // a fresh window from here
+                at[0] = tick;
+                phase[0] = 1;
+            } else if (phase[0] == 1) {
+                if (tick < at[0] + RELEASED_HOLD)
+                    return;
+                Sys.force(hold, false);   // released without a snapshot
+                at[0] = tick;
+                offTicks[0] = 0;
+                phase[0] = 2;
+            } else if (phase[0] == 2) {
+                int ticks = Sys.windowTicks(), msTicks = Sys.windowMsTicks();
+                if (!Sys.isMeasuring()) {
+                    offTicks[0]++;
+                    if (msTicks > ticks) {
+                        phase[0] = 3;
+                        helper.fail("the released [Sys] window holds the time of " + msTicks + " ticks but measured " + ticks
+                            + ": " + offTicks[0] + " unmeasured tick(s) after the hold booked their time into it");
+                        return;
+                    }
+                }
+                if (tick < at[0] + RELEASED_WATCH)
+                    return;
+                if (offTicks[0] >= 2) {
+                    phase[0] = 3;
+                    ReignOfNether.LOGGER.info("[SysWindow] GameTest released: {} unmeasured ticks watched after a {}-tick hold, window"
+                        + " {} ticks / {} tick times", offTicks[0], RELEASED_HOLD, ticks, msTicks);
+                    helper.succeed();
+                } else if (++tries[0] < RELEASED_TRIES) {
+                    phase[0] = 0;   // measuring stayed on (a slow runner): not the case under test, hold again
+                } else {
+                    phase[0] = 3;
+                    helper.fail("measuring never went off after a hold in " + RELEASED_TRIES + " tries (the server is slow: tick p95"
+                        + " >= 25 ms), so the case under test never happened");
+                }
+            }
+        });
+    }
+
+    /** Busy for the given milliseconds, outside every timed section (the GameTest's own tick work). */
+    private static void spin(long ms) {
+        long end = System.nanoTime() + ms * 1_000_000L;
+        while (System.nanoTime() < end)
+            Thread.onSpinWait();
     }
 
     /** 40 idle units call Entity.move at most 160 times in 40 ticks: one full travel in 10 each (1600 without F1). */
