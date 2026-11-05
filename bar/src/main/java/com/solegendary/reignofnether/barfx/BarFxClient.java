@@ -75,6 +75,7 @@ public final class BarFxClient {
         boolean blend;                 // BREATH: drawn alpha-blended with the smoke (a body of colour), not added as light
         float drag;                    // BREATH: slows in flight (per second), so a flame leaves the jaws fast, lands slow
         float stretch;                 // BREATH: drawn up to this many times longer along its motion (a tongue, not a ball)
+        int tex = -1;                  // BREATH: a frame of the flame atlas (BarFxRenderTypes.FLAME_*), -1 = untextured
     }
 
     static final List<P> live = new ArrayList<>(), decals = new ArrayList<>();
@@ -119,7 +120,7 @@ public final class BarFxClient {
     private static void init(P p, int kind, float x, float y, float z, float life, float size, int color) {
         p.kind = kind; p.x = x; p.y = y; p.z = z; p.born = clock; p.life = Math.max(.01f, life); p.size = size; p.color = color;
         p.vx = p.vy = p.vz = 0; p.grow = 1; p.spin = 0; p.alpha = 1; p.ground = Float.NaN; p.groundKey = Integer.MIN_VALUE;
-        p.steady = false; p.crater = false; p.blend = false; p.drag = 0; p.stretch = 1; p.x2 = p.y2 = p.z2 = 0;
+        p.steady = false; p.crater = false; p.blend = false; p.drag = 0; p.stretch = 1; p.tex = -1; p.x2 = p.y2 = p.z2 = 0;
     }
 
     /**
@@ -1133,17 +1134,29 @@ public final class BarFxClient {
         begin(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
         for (P p : live) {
             if (p.kind == SMOKE && near(p.x, p.y, p.z, 4)) drawSmoke(p, (clock - p.born) / p.life);
-            else if (p.kind == BREATH && p.blend && near(p.x, p.y, p.z, p.size * p.grow + 2)) drawLight(p, (clock - p.born) / p.life);
+            else if (p.kind == BREATH && p.blend && p.tex < 0 && near(p.x, p.y, p.z, p.size * p.grow + 2)) drawLight(p, (clock - p.born) / p.life);
         }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
+        // 3b. textured breath flames, alpha blended (the body of a dragon's breath)
+        begin(buffers, BarFxRenderTypes.FLAME_BLEND, mat);
+        for (P p : live)
+            if (p.kind == BREATH && p.blend && p.tex >= 0 && near(p.x, p.y, p.z, p.size * p.grow * p.stretch + 2))
+                drawFlame(p, (clock - p.born) / p.life);
+        buffers.endBatch(BarFxRenderTypes.FLAME_BLEND);
         // 4. light: flashes, fire, sparks, beams, rings
         begin(buffers, BarFxRenderTypes.ADDITIVE, mat);
         for (P p : live) {
-            if (p.kind == SMOKE || p.kind == DEBRIS || p.kind == EMITTER || p.kind == DELAY || (p.kind == BREATH && p.blend)) continue;
+            if (p.kind == SMOKE || p.kind == DEBRIS || p.kind == EMITTER || p.kind == DELAY || (p.kind == BREATH && (p.blend || p.tex >= 0))) continue;
             if (p.kind != BEAM && !near(p.x, p.y, p.z, p.size + 2)) continue;
             drawLight(p, (clock - p.born) / p.life);
         }
         buffers.endBatch(BarFxRenderTypes.ADDITIVE);
+        // 4b. textured breath flames added as light (the hot core of a dragon's breath)
+        begin(buffers, BarFxRenderTypes.FLAME_ADD, mat);
+        for (P p : live)
+            if (p.kind == BREATH && !p.blend && p.tex >= 0 && near(p.x, p.y, p.z, p.size * p.grow * p.stretch + 2))
+                drawFlame(p, (clock - p.born) / p.life);
+        buffers.endBatch(BarFxRenderTypes.FLAME_ADD);
         vc = null;
     }
 
@@ -1259,6 +1272,44 @@ public final class BarFxClient {
             }
             px = qx; py = qy; pz = qz;
         }
+    }
+
+    static void vt(float x, float y, float z, int rgb, float a, float u, float v) {
+        vc.vertex(mat, x - camX, y - camY, z - camZ)
+                .color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, Math.max(0, Math.min(1, a)))
+                .uv(u, v).endVertex();
+    }
+
+    /**
+     * A breath flame with a frame of the flame atlas: one camera-facing quad, laid along the particle's motion on the
+     * screen (the tongue frames' head is +u) and up to p.stretch times longer than wide; a puff frame (6-7), or a
+     * flame that has stopped, turns by its spin instead. Colour, size and fade as drawLight's BREATH.
+     */
+    static void drawFlame(P p, float k) {
+        float r = p.size * (1 + (p.grow - 1) * Math.min(1, k * 1.5f)) * 1.3f;   // the frame's flame fills ~3/4 of it
+        int c = mix(p.color, p.color2, k);
+        float a = p.alpha * (k < .06f ? k / .06f : 1) * (1 - k) * (1 - k * .35f);
+        if (a < .004f) return;
+        float sp = (float) Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+        float ux = 0, uy = 0, len = 1;
+        if (p.tex < 6 && sp > .5f) {
+            ux = (p.vx * leftX + p.vy * leftY + p.vz * leftZ) / sp;
+            uy = (p.vx * upX + p.vy * upY + p.vz * upZ) / sp;
+            float ul = (float) Math.sqrt(ux * ux + uy * uy);
+            if (ul > .2f) { ux /= ul; uy /= ul; len = Math.max(1, Math.min(p.stretch, 1 + sp / 8)); } else { ux = 0; uy = 0; }
+        }
+        if (ux == 0 && uy == 0) {
+            float an = p.spin + k * .8f;
+            ux = (float) Math.cos(an); uy = (float) Math.sin(an);
+        }
+        // the long axis on the screen (+u of the frame), and the short one square to it
+        float mx = (leftX * ux + upX * uy) * r * len, my = (leftY * ux + upY * uy) * r * len, mz = (leftZ * ux + upZ * uy) * r * len;
+        float nx = (-leftX * uy + upX * ux) * r, ny = (-leftY * uy + upY * ux) * r, nz = (-leftZ * uy + upZ * ux) * r;
+        float u0 = (p.tex % 4) * .25f, v0 = (p.tex / 4) * .5f, u1 = u0 + .25f, v1 = v0 + .5f;
+        vt(p.x - mx - nx, p.y - my - ny, p.z - mz - nz, c, a, u0, v1);
+        vt(p.x + mx - nx, p.y + my - ny, p.z + mz - nz, c, a, u1, v1);
+        vt(p.x + mx + nx, p.y + my + ny, p.z + mz + nz, c, a, u1, v0);
+        vt(p.x - mx + nx, p.y - my + ny, p.z - mz + nz, c, a, u0, v0);
     }
 
     /** Soft camera-facing ribbon from p1 to p2: bright along its middle, fading to nothing at the sides. */
