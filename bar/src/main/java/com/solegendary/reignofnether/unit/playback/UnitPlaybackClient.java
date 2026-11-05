@@ -30,24 +30,15 @@ public final class UnitPlaybackClient {
 
     // What the move or teleport packet being handled carries (UnitPlayback.Track.POS | ROT), set by
     // UnitPlaybackPacketMixin just before ClientPacketListener calls lerpTo, on the main thread; -1: none (a lerpTo
-    // from elsewhere). A teleport's own position too: vanilla hands lerpTo the drawn position when it is within 1/32.
+    // from elsewhere).
     private static int packetKind = -1;
-    private static boolean teleport;
-    private static double teleportX, teleportY, teleportZ;
 
-    /** A move packet is being handed to lerpTo (ClientboundMoveEntityPacket.hasPosition / hasRotation). */
+    /**
+     * A move packet (ClientboundMoveEntityPacket.hasPosition / hasRotation) or a teleport packet (both) is being handed to
+     * lerpTo.
+     */
     public static void moving(boolean hasPosition, boolean hasRotation) {
         packetKind = (hasPosition ? UnitPlayback.Track.POS : 0) | (hasRotation ? UnitPlayback.Track.ROT : 0);
-        teleport = false;
-    }
-
-    /** A teleport packet is being handed to lerpTo: it carries all, at its own position. */
-    public static void teleporting(double x, double y, double z) {
-        packetKind = UnitPlayback.Track.POS | UnitPlayback.Track.ROT;
-        teleport = true;
-        teleportX = x;
-        teleportY = y;
-        teleportZ = z;
     }
 
     /** What the packet now being handled carries, once (-1: lerpTo was not called for a packet). */
@@ -56,15 +47,6 @@ public final class UnitPlaybackClient {
         packetKind = -1;
         return kind;
     }
-
-    /** Whether the packet whose kind was just taken is a teleport (its own position: teleportX() on). */
-    public static boolean wasTeleport() {
-        return teleport;
-    }
-
-    public static double teleportX() { return teleportX; }
-    public static double teleportY() { return teleportY; }
-    public static double teleportZ() { return teleportZ; }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {

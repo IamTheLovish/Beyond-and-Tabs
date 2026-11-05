@@ -93,6 +93,11 @@ class UnitPlaybackTest {
         return Math.round(v * 4096.0) / 4096.0;
     }
 
+    /** A velocity axis as ClientboundSetEntityMotionPacket sends it: clamped to 3.9 blocks a tick, in 8000ths. */
+    static double qv(double v) {
+        return (int) (Mth.clamp(v, -3.9, 3.9) * 8000.0) / 8000.0;
+    }
+
     /** A yaw or pitch as the tracker sends it (a byte: 256ths of a turn). */
     static float qa(double deg) {
         return (float) (Math.round(deg * 256.0 / 360.0) * 360.0 / 256.0);
@@ -108,7 +113,19 @@ class UnitPlaybackTest {
      * {@link UnitPlayback.Track#head} - then the playback clock moves on and the unit is drawn.
      */
     static Drawn replay(double[] at, IntFunction<double[]> truth, Set<Integer> rotOnly) {
-        final int POS = UnitPlayback.Track.POS, ROT = UnitPlayback.Track.ROT, HEAD = 8;
+        return replay(at, truth, rotOnly, null, Set.of());
+    }
+
+    /**
+     * As {@link #replay(double[], IntFunction, Set)}, with the unit's velocity heard too: {@code velocity.apply(k)} is its
+     * velocity {vx, vy, vz} after server tick k. ServerEntity sends it (ClientboundSetEntityMotionPacket: each axis
+     * clamped to 3.9 blocks a tick, in 8000ths) every {@link #INTERVAL}th tick when it changed - before that tick's move
+     * packet (sendChanges builds the move packet first and sends it after), as unit types track deltas - and on every
+     * tick in {@code hurt} (hurtMarked) at the end of the pass. The client hands it to {@link UnitPlayback.Track#motion}.
+     */
+    static Drawn replay(double[] at, IntFunction<double[]> truth, Set<Integer> rotOnly, IntFunction<double[]> velocity,
+                        Set<Integer> hurt) {
+        final int POS = UnitPlayback.Track.POS, ROT = UnitPlayback.Track.ROT, HEAD = 8, MOTION = 16;
         int ticks = at.length;
         final double phase = 17.0, transitMs = 1.0;
         // arrival ms, server tick, kind (0 a stamp, POS | ROT a move packet, HEAD a head packet), x, z, y, yaw, pitch
@@ -116,10 +133,19 @@ class UnitPlaybackTest {
         double[] p0 = full(truth.apply(0));
         double[] sent = p0.clone();
         float sentHead = qa(p0[3]);
+        double[] sentV = { 0.0, 0.0, 0.0 };
         for (int k = 1; k < ticks; k++) {
             double send = at[k] + transitMs;
             events.add(new Object[] { send, k, 0, 0.0, 0.0, 0.0, 0f, 0f });
             double[] p = full(truth.apply(k));
+            if (velocity != null && k % INTERVAL == 0) {   // the interval's velocity: before its move packet
+                double[] v = velocity.apply(k);
+                double[] heard = { qv(v[0]), qv(v[1]), qv(v[2]) };
+                if (!java.util.Arrays.equals(heard, sentV)) {
+                    events.add(new Object[] { send + 0.005, k, MOTION, heard[0], heard[1], heard[2], 0f, 0f });
+                    sentV = heard;
+                }
+            }
             if (k % INTERVAL == 0) {
                 boolean moved = Math.abs(q(p[0]) - q(sent[0])) > 0 || Math.abs(q(p[2]) - q(sent[2])) > 0
                     || Math.abs(q(p[1]) - q(sent[1])) > 0 || k % 60 == 0;
@@ -138,6 +164,12 @@ class UnitPlaybackTest {
                 }
             } else if (rotOnly.contains(k)) {
                 events.add(new Object[] { send + 0.01, k, ROT, 0.0, 0.0, 0.0, -80f, 0f });
+            }
+            if (velocity != null && hurt.contains(k)) {   // a hurt's velocity: at the end of the tracker's pass
+                double[] v = velocity.apply(k);
+                double[] heard = { qv(v[0]), qv(v[1]), qv(v[2]) };
+                events.add(new Object[] { send + 0.03, k, MOTION, heard[0], heard[1], heard[2], 0f, 0f });
+                sentV = heard;
             }
         }
         UnitPlayback.Clock clock = new UnitPlayback.Clock();
@@ -160,6 +192,8 @@ class UnitPlaybackTest {
                     clock.heard(k);
                 } else if (kind == HEAD) {
                     track.head(k, (float) ev[6]);
+                } else if (kind == MOTION) {
+                    track.motion(k, (double) ev[3], (double) ev[4], (double) ev[5]);
                 } else {
                     boolean pos = (kind & POS) != 0, rot = (kind & ROT) != 0;
                     track.packet(k, kind, pos ? (double) ev[3] : out[0], pos ? (double) ev[5] : out[1],
@@ -372,6 +406,74 @@ class UnitPlaybackTest {
         assertTrue(between == 0, between + " client ticks drew the unit sliding across an 8-block blink");
     }
 
+    /**
+     * A teleport stays a jump with the unit's velocity heard (units track deltas: the server sends the walk's velocity
+     * with its moves): heard velocity explains a fast move only up to {@link UnitPlayback#HEARD_SLACK} times itself, so
+     * an 8-block blink by a walking unit (0.25 a tick heard) is still drawn as a jump, never a slide across.
+     */
+    @Test
+    void a_teleport_with_the_walks_velocity_heard_is_still_drawn_as_a_jump() {
+        IntFunction<double[]> blink = k -> new double[] { SPEED * k + (k >= 150 ? 8.0 : 0.0), 0 };
+        // a walk's velocity wavers a little, so it is sent every interval (ServerEntity sends it only when it changed)
+        IntFunction<double[]> walking = k -> new double[] { SPEED + 0.001 * (k % 2), 0, 0 };
+        Drawn d = replay(steady(260), blink, Set.of(), walking, Set.of());
+        double from = SPEED * 149, to = SPEED * 150 + 8.0;
+        int between = 0;
+        for (double x : d.x())
+            if (x > from + 1.0 && x < to - 1.0)
+                between++;
+        assertTrue(between == 0, between + " client ticks drew the walking unit sliding across an 8-block blink");
+    }
+
+    /** Client ticks that drew the unit more than a block inside the span (from, to) along x: a slide across a blink. */
+    static int across(Drawn d, double from, double to) {
+        int between = 0;
+        for (double x : d.x())
+            if (x > from + 1.0 && x < to - 1.0)
+                between++;
+        return between;
+    }
+
+    /**
+     * r1 of #542 (Eris.14): a blink that also turns the unit sends a head packet on the same tick, after the move
+     * (ServerEntity.sendChanges: the head rotation goes out when the head yaw changed). Track.head files it under the
+     * move's own tick, overwriting that sample - which cleared its blink mark, so the blink was drawn sliding again. It
+     * stays a jump, with and without the walk's velocity heard.
+     */
+    @Test
+    void a_teleport_that_turns_the_unit_is_still_drawn_as_a_jump() {
+        IntFunction<double[]> blinkTurn = k -> new double[] { SPEED * k + (k >= 150 ? 8.0 : 0.0), 0, 0,
+            k >= 150 ? 0 : -90, 0 };
+        IntFunction<double[]> walking = k -> new double[] { SPEED + 0.001 * (k % 2), 0, 0 };
+        double from = SPEED * 149, to = SPEED * 150 + 8.0;
+        int quiet = across(replay(steady(260), blinkTurn, Set.of()), from, to);
+        int heard = across(replay(steady(260), blinkTurn, Set.of(), walking, Set.of()), from, to);
+        assertTrue(quiet == 0 && heard == 0, String.format(Locale.ROOT, "an 8-block blink that turns the unit is drawn"
+            + " sliding across for %d client ticks (%d with the walk's velocity heard)", quiet, heard));
+    }
+
+    /**
+     * r1 of #542 (Eris.14): a velocity explains only the move of the ticks it was heard in. A standing unit hit into a
+     * wall is heard moving 3 blocks a tick (the hurt's packet), the wall stops it at once, and an ability teleports it
+     * 10 blocks 4 to 10 ticks later: its last sample is from long before, so a window reaching back to it held the old
+     * velocity and drew the teleport as a slide. Drawn as a jump at every delay.
+     */
+    @Test
+    void a_teleport_after_a_stale_velocity_is_still_drawn_as_a_jump() {
+        final int hit = 100;
+        StringBuilder bad = new StringBuilder();
+        for (int delay = 4; delay <= 10; delay++) {
+            final int at = hit + delay;
+            IntFunction<double[]> truth = k -> new double[] { SPEED * Math.min(k, 60) + (k >= at ? 10.0 : 0.0), 0 };
+            IntFunction<double[]> velocity = k -> new double[] { k <= 60 ? SPEED : k == hit ? 3.0 : 0.0, 0, 0 };
+            Drawn d = replay(steady(220), truth, Set.of(), velocity, Set.of(hit));
+            int between = across(d, SPEED * 60, SPEED * 60 + 10.0);
+            if (between > 0)
+                bad.append(String.format(Locale.ROOT, " %d ticks after: %d client ticks;", delay, between));
+        }
+        assertTrue(bad.length() == 0, "a 10-block teleport is drawn sliding across, on a velocity heard before it:" + bad);
+    }
+
     /** One client tick's horizontal move, the largest over the client ticks that show server ticks [from, to). */
     static double worstStep(Drawn d, int from, int to) {
         double worst = 0;
@@ -432,6 +534,55 @@ class UnitPlaybackTest {
                 worst = Math.max(worst, d.y()[c - 1] - d.y()[c]);
         assertTrue(worst <= 1.5 * fastest, String.format(Locale.ROOT, "a fall of %.0f blocks is drawn dropping %.2f blocks"
             + " in one client tick (its fastest tick %.2f, bound %.2f)", -fall[end], worst, fastest, 1.5 * fastest));
+    }
+
+    /**
+     * Follow-up to r2 of #539 (Eris.14): a Ravager unit's roar (RavagerUnit.roar: every non-friendly unit within
+     * ROAR_RANGE 5 is pushed by strongKnockback ROAR_KNOCKBACK/d = 6/d blocks a tick away - d its distance - and 0.2 up,
+     * both times 1 - its knockback resistance, here 0; then hurt by a generic source, which adds no knockback but marks
+     * it hurt) throws a unit near it faster than any walk: 6 blocks a tick at 1 block, 4 at 1.5, 2 at 3. In the air:
+     * drag x 0.91 a tick, vy (vy - 0.08) x 0.98; landed: friction x 0.546 down to the walk. A 3-tick packet then carries
+     * more than 8 blocks, which the blink rule took for a teleport - held, then popped - though the server sends the
+     * velocity: the hurt's motion packet at once, and every interval while it changes. Drawn as a throw: no client tick
+     * moves more than 1.5 times the fastest server tick, with the hurt packet and with only the interval packets (a push
+     * whose hurt was refused), at several distances and headings.
+     */
+    @Test
+    void a_ravager_roar_throw_is_drawn_as_a_throw_not_held_and_popped() {
+        final int roar = 101, n = 220;
+        StringBuilder bad = new StringBuilder();
+        for (boolean hurtSent : new boolean[] { true, false }) {
+            for (double dist : new double[] { 1.0, 1.5, 3.0 }) {
+                double[] along = new double[n], up = new double[n], vAlong = new double[n], vUp = new double[n];
+                double h = 0, y = 0, vh = SPEED, vy = 0, fastest = 0;
+                boolean ground = true;
+                for (int k = 1; k < n; k++) {
+                    if (k <= roar) {
+                        h += SPEED;   // walking; pushed at the end of the roar's tick, thrown from the next
+                        if (k == roar) { vh = SPEED + 6.0 / dist; vy = 0.2; ground = false; }
+                    } else {
+                        h += vh;
+                        y += vy;
+                        if (y <= 0) { y = 0; vy = 0; ground = true; }
+                        vh = ground ? Math.max(SPEED, vh * 0.546) : vh * 0.91;
+                        vy = ground ? 0 : (vy - 0.08) * 0.98;
+                    }
+                    along[k] = h; up[k] = y; vAlong[k] = vh; vUp[k] = vy;
+                    fastest = Math.max(fastest, along[k] - along[k - 1]);
+                }
+                for (double deg : new double[] { 0, 30, 60, 77 }) {
+                    double c = Math.cos(Math.toRadians(deg)), s = Math.sin(Math.toRadians(deg));
+                    IntFunction<double[]> truth = k -> new double[] { along[k] * c, along[k] * s, up[k], -90, 0 };
+                    IntFunction<double[]> velocity = k -> new double[] { vAlong[k] * c, vUp[k], vAlong[k] * s };
+                    Drawn d = replay(steady(n), truth, Set.of(), velocity, hurtSent ? Set.of(roar) : Set.of());
+                    double worst = worstStep(d, roar - 5, roar + 40);
+                    if (worst > 1.5 * fastest)
+                        bad.append(String.format(Locale.ROOT, " %s, %.1f blocks off, heading %.0f: %.2f (bound %.2f);",
+                            hurtSent ? "hurt" : "push only", dist, deg, worst, 1.5 * fastest));
+                }
+            }
+        }
+        assertTrue(bad.length() == 0, "a roar's throw is drawn held, then popped (largest client tick):" + bad);
     }
 
     /**

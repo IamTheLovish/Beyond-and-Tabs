@@ -132,8 +132,20 @@ public final class UnitPlayback {
      * blocks a tick across the ground (a Leaf Dash is 1.33), {@link #MAX_FALL} down or up (vanilla's falling speed
      * tops out at 3.92). Kinematics.TELEPORT_BLOCKS (4) is a per-client-tick limit and was wrongly used here per packet
      * (r1 of #539: a Leaf Dash, 4 blocks a packet, was drawn held then popped).
+     * <p>
+     * Faster than that is still motion when the server said the unit goes that fast: a unit thrown by a Ravager unit's
+     * roar (RavagerUnit.strongKnockback, 6/d blocks a tick at d blocks off) flies 2-6 blocks a tick (follow-up to r2 of
+     * #539). The server sends its velocity (ClientboundSetEntityMotionPacket: every interval while it changes, just
+     * before that interval's move packet, and at the end of the pass when it is hurt), so the limit is decided when the
+     * move is drawn - 4-7 ticks later, with every velocity of its ticks in hand - from the fastest velocity heard over the
+     * move's own ticks (never further back: a velocity heard before a long stand says nothing about the teleport that
+     * ends it, r1 of #542), times {@link #HEARD_SLACK}. Without a new push a unit only slows, so the velocity heard at a
+     * move's first tick bounds it; the slack covers a push the server reports only at the interval's end (decayed by up
+     * to 0.91 x 0.91 in the air) and the packet's clamp at 3.9 blocks a tick an axis (a unit thrown at 6 is heard at 3.9).
+     * A real teleport (an ability, a command) comes with no such velocity and stays a blink; one within the same few
+     * ticks as a throw can still be drawn as part of it.
      */
-    static final double BLINK_BLOCKS = 8.0, MAX_RUN = 2.0, MAX_FALL = 4.0;
+    static final double BLINK_BLOCKS = 8.0, MAX_RUN = 2.0, MAX_FALL = 4.0, HEARD_SLACK = 2.0;
 
     /** One unit's stamped positions and rotations (a short ring) and where it is drawn. */
     public static final class Track {
@@ -143,7 +155,17 @@ public final class UnitPlayback {
         private final int interval;
         private final double[] tick = new double[SIZE], x = new double[SIZE], y = new double[SIZE], z = new double[SIZE];
         private final float[] yaw = new float[SIZE], headYaw = new float[SIZE], pitch = new float[SIZE];
+        // a move past the walk and fall limits (into sample i): over how many ticks, how far across and up or down; drawn
+        // as a blink unless a velocity heard over those ticks explains it ({@link #blink})
+        private final double[] ticksOf = new double[SIZE];
+        private final float[] across = new float[SIZE], rise = new float[SIZE];
+        private final boolean[] far = new boolean[SIZE];
         private int head = -1, count = 0;
+        // the velocities heard (ClientboundSetEntityMotionPacket): server tick, speed across, speed up or down
+        static final int HEARD = 16;
+        private final long[] heardTick = new long[HEARD];
+        private final float[] heardAcross = new float[HEARD], heardUp = new float[HEARD];
+        private int heardHead = -1, heardCount = 0;
 
         /** @param interval the unit type's tracker update interval (EntityType.updateInterval) */
         public Track(int interval) {
@@ -158,6 +180,8 @@ public final class UnitPlayback {
         public void seed(long t, double px, double py, double pz, float pyaw, float phead, float ppitch) {
             head = -1;
             count = 0;
+            heardHead = -1;
+            heardCount = 0;
             add(t, px, py, pz, pyaw, phead, ppitch);
         }
 
@@ -189,6 +213,24 @@ public final class UnitPlayback {
             add(t, x[l], y[l], z[l], yaw[l], phead, pitch[l]);
         }
 
+        /**
+         * A velocity packet (ClientboundSetEntityMotionPacket, blocks a tick) stamped with server tick {@code t}: a move
+         * past the walk and fall limits that it explains is drawn as motion, not as a blink ({@link #HEARD_SLACK}).
+         */
+        public void motion(long t, double vx, double vy, double vz) {
+            float across = (float) Math.hypot(vx, vz), up = (float) Math.abs(vy);
+            if (heardCount > 0 && heardTick[heardHead] == t) {   // a second one the same tick (hurt, then the interval's)
+                heardAcross[heardHead] = Math.max(heardAcross[heardHead], across);
+                heardUp[heardHead] = Math.max(heardUp[heardHead], up);
+                return;
+            }
+            heardHead = (heardHead + 1) % HEARD;
+            heardCount = Math.min(heardCount + 1, HEARD);
+            heardTick[heardHead] = t;
+            heardAcross[heardHead] = across;
+            heardUp[heardHead] = up;
+        }
+
         /** A position packet stamped with server tick {@code t} (yaw: the packet's, or NaN for a position-only one). */
         public void moved(long t, double px, double py, double pz, float pyaw) {
             moved(t, px, py, pz, pyaw, Float.NaN);
@@ -207,14 +249,46 @@ public final class UnitPlayback {
             if (!Float.isFinite(ppitch))
                 ppitch = pitch[l];
             double ticks = Mth.clamp(t - tick[l], 1.0, interval);
-            if (Math.hypot(px - x[l], pz - z[l]) > Math.max(BLINK_BLOCKS, MAX_RUN * ticks)
-                    || Math.abs(py - y[l]) > Math.max(BLINK_BLOCKS, MAX_FALL * ticks)) {
-                // a blink: held where it was until the tick it jumped, never drawn sliding across
-                add(Math.max(tick[l], t - 1e-3), x[l], y[l], z[l], yaw[l], headYaw[l], pitch[l]);
-            } else {
-                hold(t, l);
-            }
+            float a = (float) Math.hypot(px - x[l], pz - z[l]), r = (float) Math.abs(py - y[l]);
+            boolean past = beyond(ticks, a, r, 0f, 0f);
+            hold(t, l);
             add(t, px, py, pz, pyaw, headYaw[l], ppitch);
+            far[head] = past;
+            ticksOf[head] = ticks;
+            across[head] = a;
+            rise[head] = r;
+        }
+
+        /**
+         * Whether a move {@code a} blocks across and {@code r} up or down in {@code ticks} is past what the unit could
+         * cover: {@link #BLINK_BLOCKS}, and the walk and fall limits - or {@link #HEARD_SLACK} times the speeds heard
+         * ({@code heardA} across, {@code heardR} up or down), when faster.
+         */
+        private static boolean beyond(double ticks, float a, float r, float heardA, float heardR) {
+            return a > Math.max(BLINK_BLOCKS, Math.max(MAX_RUN, HEARD_SLACK * heardA) * ticks)
+                || r > Math.max(BLINK_BLOCKS, Math.max(MAX_FALL, HEARD_SLACK * heardR) * ticks);
+        }
+
+        /**
+         * Whether the move into sample {@code b} is drawn as a blink - held where it was until its tick, never drawn
+         * sliding across: past the walk and fall limits, and faster than {@link #HEARD_SLACK} times the fastest velocity
+         * heard from its first tick to its last.
+         */
+        private boolean blink(int b) {
+            if (!far[b])
+                return false;
+            float a = 0, r = 0;
+            // only velocities heard over the move's own ticks (at most an interval back): one heard before a long stand
+            // says nothing about a teleport that ends it (r1 of #542)
+            double since = tick[b] - ticksOf[b];
+            for (int i = 0; i < heardCount; i++) {
+                int h = (heardHead - i + HEARD) % HEARD;
+                if (heardTick[h] >= since && heardTick[h] <= tick[b]) {
+                    a = Math.max(a, heardAcross[h]);
+                    r = Math.max(r, heardUp[h]);
+                }
+            }
+            return beyond(ticksOf[b], across[b], rise[b], a, r);
         }
 
         /** A rotation-only packet stamped with server tick {@code t}: the unit turned where it stands. */
@@ -244,8 +318,10 @@ public final class UnitPlayback {
                 head = (head + 1) % SIZE;
                 count = Math.min(count + 1, SIZE);
                 tick[head] = t;
+                far[head] = false;   // a new sample; a move marks its own after
             }
-            // (the same tick again, or older: the newer packet wins)
+            // (the same tick again, or older: the newer packet wins - and keeps the move's blink mark: a head packet
+            // right after a teleport on the same tick must not turn the blink back into a slide, r1 of #542)
             x[head] = px; y[head] = py; z[head] = pz; yaw[head] = pyaw; headYaw[head] = phead; pitch[head] = ppitch;
         }
 
@@ -267,6 +343,8 @@ public final class UnitPlayback {
                 }
             }
             double f = b != a && tick[b] > tick[a] ? Mth.clamp((play - tick[a]) / (tick[b] - tick[a]), 0.0, 1.0) : 1.0;
+            if (b != a && f < 1.0 && blink(b))
+                f = 0.0;   // a blink: held where it was until the tick it jumped, never drawn sliding across
             out[0] = x[a] + (x[b] - x[a]) * f;
             out[1] = y[a] + (y[b] - y[a]) * f;
             out[2] = z[a] + (z[b] - z[a]) * f;
