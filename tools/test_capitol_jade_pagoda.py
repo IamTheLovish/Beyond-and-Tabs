@@ -26,7 +26,8 @@ AMBIENCE = os.path.join(ROOT, "bar", "src", "main", "java", "com", "solegendary"
                         "BuildingAmbienceClientEvents.java")
 C = 7
 JADE_FAMILY = ("waxed_oxidized_cut_copper",)
-WALLS = ("stripped_mangrove_log", "red_stained_glass", "dark_oak_planks", "dark_oak_log")
+WALLS = ("stripped_mangrove_log", "red_stained_glass", "white_stained_glass", "dark_oak_planks", "dark_oak_log")
+# white_stained_glass: the paper screens since Nov 4 (Fable critic A fix 1; definition re-set in its own commit)
 COOL = ("amethyst", "purple", "magenta", "blue", "cyan", "light_blue")   # team-like cool hues (BAT - Readable at any zoom)
 
 
@@ -110,12 +111,16 @@ class JadePagodaTest(unittest.TestCase):
         self.assertGreaterEqual(dark, 0.06, (light, dark))
 
     def test_crown_is_one_gold_leader(self):
-        """One gold leader a size class over everything near it: a 3 x 3 gold cap or more over the centre and no gold
-        on the top roof's corners (round 1's five equal gold squares read as "dice-five", critics a / b)."""
-        top = max(q[1] for q in self.solid)
-        gold = [q for q, n in self.solid.items() if n == "gold_block" and q[1] >= top - 5]
-        self.assertGreaterEqual(sum(1 for q in gold if _ring(q) <= 1), 9, gold)
-        self.assertEqual([q for q in gold if _ring(q) > 1], [])
+        """One gold leader: the crown's thin gold spire on the centre column (1-2 cells) is the only gold above the
+        verandah - no gold cap and no gold eave corners. Re-set Nov 4 in its own commit (was: a 3 x 3 gold cap or more,
+        no gold on the top roof's corners): Fable critic C F1 - a gold apex cube is the Sunforged's (the barracks' 2 x 2
+        x 2 crown), the pagoda and the academy put the same gold cube on top, so factions blur from the RTS camera;
+        critic A fix 3 - nine gold squares (the cap and eight eave corners) and the crown did not lead. Still guards
+        round 1's "dice-five": no gold on any roof corner. Red on the shipped pagoda (a 3 x 3 cap, gold corners)."""
+        gold = [q for q, n in self.solid.items() if n == "gold_block" and q[1] >= 6]
+        spire = [q for q in gold if (q[0], q[2]) == (C, C)]
+        self.assertTrue(1 <= len(spire) <= 2, gold)
+        self.assertEqual(sorted(set(gold) - set(spire)), [])
 
     def test_nothing_floats_on_the_roofs(self):
         """Every block of the roofs and crown (y >= 6) touches another block by a face: round 3's rising corner arms
