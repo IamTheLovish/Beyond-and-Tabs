@@ -1,6 +1,9 @@
 package com.solegendary.reignofnether.matchstart;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.barfx.BarFx;
+import com.solegendary.reignofnether.barfx.RuneFx;
+import com.solegendary.reignofnether.barfx.RuneFxClient;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
@@ -54,6 +57,12 @@ import java.util.List;
  * frame cost weighed on the same scene before and after it changes (lovish, Oct 30: a rounder Bone Dragon on "a small
  * frame-rate cost, measured before merge").
  * <p>
+ * eyes.yml input {@code overlay_runes} (-Dbat.eyes.overlays.runes=N): the N of our units nearest the camera cast rune
+ * circles (barfx/RuneFx) in turns from the first still on, each every {@link #RUNE_EVERY} ticks in the six factions'
+ * styles - a 100-caster fight, so about half are casting at any moment and the client's cap (RunePool.MAX) is reached.
+ * Adds the still 18_overlays_runes_close (zoom 15 over the centre squad) and a "[Eyes] 18_overlays runes" line per slice
+ * and per zoom: the circles' draw time per frame (RuneFxClient's own counter) and how many were held.
+ * <p>
  * Wall-clock timeline, like scenes 16 and 17 (a shader-lane client runs a few ticks a second).
  */
 final class EyesOverlaysScene {
@@ -80,6 +89,17 @@ final class EyesOverlaysScene {
         MIX_TYPE = count > 0 ? type : "";
         MIX_COUNT = MIX_TYPE.isEmpty() ? 0 : count;
     }
+    /** overlay_runes: how many of our units cast rune circles, and every how many client ticks each casts. */
+    private static final int RUNES = Math.max(0, Math.min(SQUADS * PER_SQUAD, Integer.getInteger("bat.eyes.overlays.runes", 0)));
+    private static final int RUNE_EVERY = 60;
+    private static final byte[] RUNE_STYLES = { BarFx.F_SUNFORGED, BarFx.F_GRAVEBOUND, BarFx.F_HORDE, BarFx.F_VERDANT,
+            BarFx.F_STORM, BarFx.F_BRASS };
+    private static final List<LivingEntity> runeCasters = new ArrayList<>();
+    private static int runeTick = 0;
+    private static long runeNs0 = 0;
+    // per slice with runes: zoom asked, rune ms/frame, circles held at the end
+    private static final List<double[]> runeRows = new ArrayList<>();
+    private static final int ZOOM_RUNES_CLOSE = 15;
     private static final int ZOOM_NORMAL = 30, ZOOM_MID = 45, ZOOM_CROWD = 60, ZOOM_STRATEGIC = 200;
     private static final int[] ZOOMS = { ZOOM_NORMAL, ZOOM_CROWD, ZOOM_STRATEGIC };
     private static final int[] ORDER = { ZOOM_NORMAL, ZOOM_CROWD, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_CROWD, ZOOM_NORMAL,
@@ -126,6 +146,8 @@ final class EyesOverlaysScene {
             ReignOfNether.LOGGER.warn("[Eyes] 18_overlays: no level or player - skipped");
             return true;
         }
+        if (RUNES > 0 && phase >= 5)
+            castRunes();
         switch (phase) {
             case 0 -> setUp(mc);
             case 1 -> {   // the camera moved: wait for the ground under every squad (the server summons only on loaded ground)
@@ -168,6 +190,7 @@ final class EyesOverlaysScene {
                     ReignOfNether.LOGGER.info("[Eyes] 18_overlays: {} client-only houses placed, {} buildings known to the client",
                             placed, BuildingClientEvents.getBuildings().size());
                     selectUnits(mc);
+                    pickRuneCasters();
                     EyesDirector.setZoom(ZOOM_MID);
                     OrthoviewClientEvents.centreCameraOnPosInstant(centre);
                     next(5);
@@ -179,6 +202,22 @@ final class EyesOverlaysScene {
                 EyesDirector.shot(mc, "18_overlays_mid");
                 ReignOfNether.LOGGER.info("[Eyes] 18_overlays_mid: zoom {}, {} selected, {}", Math.round(OrthoviewClientEvents.getZoom()),
                         UnitClientEvents.getSelectedUnits().size(), scene());
+                if (RUNES > 0) {   // the runes up close first
+                    EyesDirector.setZoom(ZOOM_RUNES_CLOSE);
+                    OrthoviewClientEvents.centreCameraOnPosInstant(centre);
+                    next(9);
+                    return false;
+                }
+                selectHouse(mc);
+                next(6);
+            }
+            case 9 -> {   // still (overlay_runes): rune circles up close over the centre squad
+                if (seconds() < 4)
+                    return false;
+                EyesDirector.shot(mc, "18_overlays_runes_close");
+                ReignOfNether.LOGGER.info("[Eyes] 18_overlays_runes_close: zoom {}, {} casters, {} circles held (peak {})",
+                        Math.round(OrthoviewClientEvents.getZoom()), runeCasters.size(), RuneFxClient.live(), RuneFxClient.peak());
+                EyesDirector.setZoom(ZOOM_MID);
                 selectHouse(mc);
                 next(6);
             }
@@ -214,6 +253,28 @@ final class EyesOverlaysScene {
         return false;
     }
 
+    /** overlay_runes: our RUNES units nearest the centre, in the order they will cast. */
+    private static void pickRuneCasters() {
+        runeCasters.clear();
+        if (RUNES <= 0)
+            return;
+        List<LivingEntity> ours = new ArrayList<>();
+        for (LivingEntity le : UnitClientEvents.getAllUnits())
+            if (le instanceof Unit u && le.isAlive() && me.equals(u.getOwnerName()))
+                ours.add(le);
+        ours.sort(Comparator.comparingDouble(le -> le.distanceToSqr(centre)));
+        runeCasters.addAll(ours.subList(0, Math.min(RUNES, ours.size())));
+        ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes: {} casters, a cast every {} ticks each", runeCasters.size(), RUNE_EVERY);
+    }
+
+    /** One client tick of the casters: each casts every RUNE_EVERY ticks, staggered, in the six styles in turn. */
+    private static void castRunes() {
+        runeTick++;
+        for (int k = 0; k < runeCasters.size(); k++)
+            if ((runeTick + k * 7) % RUNE_EVERY == 0)
+                RuneFxClient.castLocal(runeCasters.get(k), RUNE_STYLES[k % RUNE_STYLES.length], RuneFx.CAST_TICKS);
+    }
+
     private static void setUp(Minecraft mc) {
         if (!OrthoviewClientEvents.isEnabled())
             OrthoviewClientEvents.toggleEnable();
@@ -236,6 +297,8 @@ final class EyesOverlaysScene {
         placed = 0;
         ourHouse = null;
         results.clear();
+        runeRows.clear();
+        runeTick = 0;
         next(1);
     }
 
@@ -397,6 +460,7 @@ final class EyesOverlaysScene {
             sliceFrames0 = FrameParts.framesLifetime();
             for (int k = 0; k < SECTIONS.length; k++)
                 sliceNs0[k] = FrameParts.frameSectionLifetimeNs(SECTIONS[k]);
+            runeNs0 = RuneFxClient.renderNanos();
             frames.clear();
             frameCursor = mc.getFrameTimer().getLogEnd();
             return true;
@@ -441,6 +505,12 @@ final class EyesOverlaysScene {
             parts.append(k == 0 ? "" : ", ").append(FrameParts.name(SECTIONS[k])).append(' ').append(f2(row[7 + k]));
         }
         results.add(row);
+        if (RUNES > 0) {
+            double runeMs = (RuneFxClient.renderNanos() - runeNs0) / 1e6 / n;
+            runeRows.add(new double[] { ORDER[slice], runeMs, RuneFxClient.live() });
+            ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes slice {}/{}: zoom {}, {} casters, {} circles held: {} ms/frame",
+                    slice + 1, ORDER.length, ORDER[slice], runeCasters.size(), RuneFxClient.live(), String.format("%.3f", runeMs));
+        }
         ReignOfNether.LOGGER.info("[Eyes] 18_overlays slice {}/{}: zoom {} (reached {}, {}), {} frames: p50 {} ms, p95 {} ms, "
                         + "max {} ms | ms/frame: {}", slice + 1, ORDER.length, ORDER[slice], Math.round(row[1]),
                 row[2] > 0 ? "strategic" : "normal", n, f1(row[4]), f1(row[5]), f1(row[6]), parts);
@@ -469,6 +539,20 @@ final class EyesOverlaysScene {
             ReignOfNether.LOGGER.info("[Eyes] 18_overlays zoom {} (medians of {} slices; {}): frame p50 {} ms, p95 {} ms | "
                             + "ms/frame: {} | overlays+HUD (no bodies) {} ms", zoom, rows.size(), scene(), f1(median(rows, 4)),
                     f1(median(rows, 5)), parts, f2(ours));
+        }
+        runeSummary();
+    }
+
+    private static void runeSummary() {
+        for (int zoom : ZOOMS) {
+            List<double[]> rows = new ArrayList<>();
+            for (double[] r : runeRows)
+                if ((int) r[0] == zoom)
+                    rows.add(r);
+            if (!rows.isEmpty())
+                ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes zoom {} (medians of {} slices): {} casters, {} circles held, "
+                        + "{} ms/frame (peak held {})", zoom, rows.size(), runeCasters.size(), Math.round(median(rows, 2)),
+                        String.format("%.3f", median(rows, 1)), RuneFxClient.peak());
         }
     }
 
