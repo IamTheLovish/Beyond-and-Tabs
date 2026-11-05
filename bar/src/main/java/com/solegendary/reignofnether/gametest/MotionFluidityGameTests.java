@@ -41,11 +41,11 @@ import java.util.function.Supplier;
  * tick times of lovish's own 500-599 and 700-799 unit windows (server logs, Oct 31 - Nov 3), and a server stuck at
  * 14.5 TPS (his Oct 29 770-unit game).
  * <p>
- * Each lane logs two "[Motion]" lines (CI folds them into one notice): the server's walk (speed, its variation, stops,
- * yaw steps and reversals, rises, airborne ticks) and the packets (intervals between position packets, rotation-only
- * packets, teleports), then the drawn walk per clock (speed variation, the share of client ticks the unit stands still,
- * the largest tick over the mean, the torso pitch the living army's lean takes from those speeds). The crowd adds what
- * idle units do after arriving. The asserts only guard the measurement itself (the unit moved); the bounds come with
+ * Each lane logs one "[Motion]" line (CI folds them into one notice): the server's walk (speed, its variation, stops,
+ * yaw steps and reversals, rises, airborne ticks) and the packets (gaps between position packets, rotation-only
+ * packets, teleports), then the drawn walk per jittery clock: speed cv / % of client ticks the unit stands still for
+ * vanilla's lerp ("now"), vanilla's lerp tracked every tick ("e1") and the game's stamped playback ("buf", with its lag
+ * behind the newest tick heard). The crowd adds what idle units do after arriving. The asserts only guard the measurement itself (the unit moved); the bounds come with
  * the fixes, from these numbers.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
@@ -140,8 +140,9 @@ public class MotionFluidityGameTests {
                     Mob m = made.get(i);
                     int lane = i == 0 ? FLAT_Z : STEP_Z;
                     probes[i] = new Probe(level, m, pad.x0 + GOAL_X + 0.5, pad.z0 + lane + 0.5);
+                    // a flyer's order names the ground block (FlyingMoveToTargetGoal ignores an AIR target)
                     UnitServerEvents.addActionItem(owner, UnitAction.MOVE, -1, new int[] { m.getId() },
-                        new BlockPos(pad.x0 + GOAL_X, PAD_Y + 1, pad.z0 + lane), BlockPos.ZERO);
+                        new BlockPos(pad.x0 + GOAL_X, PAD_Y + (flyer ? 0 : 1), pad.z0 + lane), BlockPos.ZERO);
                 }
                 return;
             }
@@ -440,11 +441,12 @@ public class MotionFluidityGameTests {
                     gaps[Math.min(4, Math.max(1, p.tick() - lastPos)) - 1]++;
                 lastPos = p.tick();
             }
-            ReignOfNether.LOGGER.warn(String.format(Locale.ROOT, "[Motion] %s server: %d ticks walked, speed %.3f b/t cv %.2f,"
-                    + " %d stops; yaw step max %.1f, %d reversals; rise max %.2f/t, %d airborne | packets %d pos (gaps 1/2/3/4+:"
-                    + " %d/%d/%d/%d), %d rot-only, %d teleports (whole walk: %d rot-only)", what, s.length, mean,
+            // one line a walk (CI folds every "[Motion]" line into ONE notice: a shard keeps only its first 10, ~4 KB each):
+            // the server's walk, then the drawn walk per jittery clock
+            String serverPart = String.format(Locale.ROOT, "[Motion] %s: %dt %.3fb/t cv %.2f stops %d; yaw max %.0f rev %d;"
+                    + " rise %.2f air %d; pos %d gaps %d/%d/%d/%d rot %d tp %d", what, s.length, mean,
                 mean > 0 ? Math.sqrt(var / Math.max(1, s.length)) / mean : 0, stops, maxYaw, reversals, maxDy, air,
-                posPackets, gaps[0], gaps[1], gaps[2], gaps[3], rotPackets, teleports, rotOnly));
+                posPackets, gaps[0], gaps[1], gaps[2], gaps[3], rotPackets, teleports);
             // the drawn walk per clock: vanilla's lerp (today), vanilla's lerp tracked every tick, and the game's stamped
             // playback (UnitPlayback, "buf");
             // each as speed cv / % ticks frozen / torso pitch deg / lag behind the newest known server tick
@@ -456,6 +458,8 @@ public class MotionFluidityGameTests {
             int n = Math.max(1, track.size()), interval = mob.getType().updateInterval();
             StringBuilder client = new StringBuilder();
             for (ClientView.Clock c : CLOCKS) {
+                if (c.p50Ms() == 0 && c.fixedMs() == 0)
+                    continue;   // the steady clock: every option draws it evenly (UnitPlaybackTest's control)
                 long seed = 1234L + mob.getId() % 7;
                 ClientView.Smooth today = ClientView.smoothness(ClientView.replay(sent, n, c, seed, x0, y0, z0, yaw0),
                     from, to, mean, sx, sz);
@@ -463,12 +467,12 @@ public class MotionFluidityGameTests {
                     from, to, mean, sx, sz);
                 ClientView.Smooth buffered = ClientView.smoothness(ClientView.replayStamped(sent, n, c, seed, interval,
                     x0, y0, z0, yaw0), from, to, mean, sx, sz);
-                client.append(" | ").append(c.name()).append(" now ").append(today.brief()).append(" e1 ")
-                    .append(every.brief()).append(" buf ").append(buffered.brief());
+                client.append(String.format(Locale.ROOT, " | %s %.2f/%.1f e1 %.2f/%.1f buf %.2f/%.1f/%.1ft", c.name(),
+                    today.cv(), today.frozenPct(), every.cv(), every.frozenPct(), buffered.cv(), buffered.frozenPct(),
+                    buffered.lagTicks()));
             }
-            ReignOfNether.LOGGER.warn("[Motion] " + what + " client (cv/frz/pitch/lag):" + client + String.format(Locale.ROOT,
-                " | e1 pos packets %d vs %d", sent1.stream().filter(p -> p.hasPos() && p.tick() >= from && p.tick() < to).count(),
-                posPackets));
+            long e1 = sent1.stream().filter(p -> p.hasPos() && p.tick() >= from && p.tick() < to).count();
+            ReignOfNether.LOGGER.warn(serverPart + client + " | e1 pos " + e1);
         }
 
         /** After the idle mark: horizontal distance moved, degrees the body turned, position packets sent. */
