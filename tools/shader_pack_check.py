@@ -161,6 +161,17 @@ def enchanted_pairs(java, fsh):
     return pairs
 
 
+def vec3_const(source, name):
+    """A `const vec3 NAME = vec3(r, g, b) [* k];` (or `vec3(x)`) from a shader's source, as three floats."""
+    m = re.search(r"const vec3 %s = vec3\(([^)]*)\)\s*(?:\*\s*(-?\d+(?:\.\d+)?))?\s*;" % name, source)
+    if not m:
+        raise ValueError("no const vec3 %s" % name)
+    xs = _numbers(m.group(1))
+    xs = xs * 3 if len(xs) == 1 else xs
+    k = float(m.group(2)) if m.group(2) else 1.0
+    return [x * k for x in xs]
+
+
 def float_const(source, name, default=None):
     """A `const float NAME = x;` from a shader's source; `default` when the source has none."""
     m = re.search(r"const float %s = (-?\d+(?:\.\d+)?);" % name, source)
@@ -187,6 +198,24 @@ def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_heigh
         raise ValueError("cannot evaluate %r" % expr)
     return eval(expr, {"__builtins__": {}}, {"max": max, "base": base, "viewDepth": view_depth,
                                             "viewHeight": view_height, "p11": 2.0 / zoom})
+
+
+def _smoothstep(a, b, x):
+    t = min(max((x - a) / (b - a), 0.0), 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def split_tone_shadows(source, lc):
+    """final.fsh's split-tone shadow weight at luma lc: its own `float shadows = ...;` line, with the file's float
+    constants filled in, evaluated as GLSL would (smoothstep only)."""
+    m = re.search(r"float shadows = ([^;]*);", source)
+    if not m:
+        raise ValueError("final.fsh has no `float shadows = ...;` line")
+    consts = {k: v for k, v in re.findall(r"const float (\w+) = (-?\d+(?:\.\d+)?);", source)}
+    expr = re.sub(r"\b[A-Z][A-Z0-9_]*\b", lambda c: consts[c.group(0)], m.group(1))
+    if re.search(r"[^\w\s.,()+\-*]", expr) or set(re.findall(r"[A-Za-z_]\w*", expr)) - {"smoothstep", "lc"}:
+        raise ValueError("cannot evaluate %r" % expr)
+    return eval(expr, {"__builtins__": {}}, {"smoothstep": _smoothstep, "lc": lc})
 
 
 def find_glslang(given=None):
