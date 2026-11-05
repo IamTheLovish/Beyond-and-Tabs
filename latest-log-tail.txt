@@ -1,0 +1,200 @@
+[10:59:41] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_pickd_golden_rts: aimed at -165, 78, -46 - the camera at -171, 96, -39 looks at -165, -45 (79 frames, 5.0 s in the phase)
+[10:59:41] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_pickd_golden_rts: the structure's box holds 571 non-air blocks on the client
+[10:59:41] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_pickd_golden_rts 1793876381997
+[10:59:41] [Server thread/INFO]: [Eyes] 15_lotus_academy_l3_pickd_golden_rts: ... and 571 on the server
+[10:59:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-166, 71, -53)]
+[10:59:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-164, 71, -53)]
+[10:59:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-166, 71, -39)]
+[10:59:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-164, 71, -39)]
+[10:59:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-172, 71, -47)]
+[10:59:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-172, 71, -45)]
+[10:59:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-158, 71, -47)]
+[10:59:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-158, 71, -45)]
+[10:59:42] [IO-Worker-4/INFO]: [Eyes] 15_lotus_academy_l3_pickd_golden_rts: Saved screenshot as bat_eyes_15_lotus_academy_l3_pickd_golden_rts.png
+[10:59:43] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[10:59:47] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_pickd_rts_army 1793876387045
+[10:59:47] [Server thread/INFO]: [Offline: Killed 8 entities]
+[10:59:47] [Render thread/INFO]: [Sfx] 457 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 2
+[10:59:47] [Server thread/INFO]: [Eyes] 15_lotus_academy_r3: pad x -177..-153, z -58..-34 keeps 85.1 blocks from the arena wall's ring (centre 10, -2, radius 280)
+[10:59:47] [Render thread/INFO]: [System] [CHAT] 
+[10:59:47] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[10:59:47] [Render thread/INFO]: [System] [CHAT] 
+[10:59:47] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/lotus_academy_r3.nbt' 9x16x9 placed at -169, 71, -50 (pad centre -165, 71, -46)
+[10:59:47] [IO-Worker-12/INFO]: [Eyes] 15_lotus_academy_l3_pickd_rts_army: Saved screenshot as bat_eyes_15_lotus_academy_l3_pickd_rts_army.png
+[10:59:47] [Render thread/INFO]: [Frame] p50 73.5 ms (14 fps), p95 110.6 ms, max 154.3 ms over 240 frames; RTS view, zoom 30, 13 units known
+[10:59:47] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 8.0 ms, p95 17.1 ms; per unit 13.7 us anim, 1306.0 us render (anim 1%); RTS view, zoom 30, detail on, over 82 frames
+[10:59:47] [Render thread/INFO]: [FrameParts] 153 frames, mean 65.4 ms/frame; ours 7.0 ms (11%): unitBodies 5.65 (max 23.3, 4.3/f) | entityShadows 0.56 (max 6.6, 13/f) | markersWreck 0.37 (max 3.3, 1.0/f) | unitOverlays 0.12 (max 3.2, 11/f) | buildingBoxes 0.08 (max 5.1, 1.0/f) | markersMapWorld 0.07 (max 0.1, 1.0/f) | worldFx 0.05 (max 5.4, 11/f) | bars 0.02 (max 0.4, 22/f) (+16 smaller); elsewhere 58.5 ms; 0 section re-mesh requests/s
+[10:59:47] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.1, 9.6/t)
+[10:59:50] [Server thread/INFO]: [Tick] p50 4.9 ms, p95 10.3 ms, max 20.5 ms over the last 100 ticks; 12 units, 10 buildings, 1 players
+[10:59:50] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[10:59:52] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_rts: aimed at -165, 76, -46 - the camera at -172, 96, -38 looks at -165, -45 (80 frames, 5.0 s in the phase)
+[10:59:52] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_rts: the structure's box holds 475 non-air blocks on the client
+[10:59:52] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_r3_rts 1793876392245
+[10:59:52] [Server thread/INFO]: [Eyes] 15_lotus_academy_r3_rts: ... and 475 on the server
+[10:59:52] [IO-Worker-12/INFO]: [Eyes] 15_lotus_academy_r3_rts: Saved screenshot as bat_eyes_15_lotus_academy_r3_rts.png
+[10:59:57] [Render thread/INFO]: [Frame] p50 60.1 ms (17 fps), p95 80.3 ms, max 97.3 ms over 240 frames; RTS view, zoom 30, 5 units known
+[10:59:57] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 7.9 ms, p95 17.2 ms; per unit 8.4 us anim, 1105.3 us render (anim 1%); RTS view, zoom 30, detail on, over 34 frames
+[10:59:57] [Render thread/INFO]: [FrameParts] 166 frames, mean 60.1 ms/frame; ours 2.9 ms (5%): unitBodies 1.76 (max 18.9, 1.6/f) | markersWreck 0.62 (max 3.5, 1.0/f) | entityShadows 0.16 (max 3.0, 15/f) | worldFx 0.11 (max 0.7, 11/f) | buildingBoxes 0.07 (max 3.0, 1.0/f) | markersMapWorld 0.06 (max 0.2, 1.0/f) | unitOverlays 0.03 (max 0.2, 11/f) (+17 smaller); elsewhere 57.3 ms; 0 section re-mesh requests/s
+[10:59:57] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[10:59:57] [Render thread/INFO]: [ShaderBench] 15_lotus_academy_r3_rts: 60 frames, p50 57.58 ms, p95 78.11 ms, mean 60.34 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[10:59:59] [Render thread/INFO]: [Sfx] 243 ticks, played/asked: units 1/8 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[11:00:00] [Server thread/INFO]: [Tick] p50 5.3 ms, p95 10.1 ms, max 58.4 ms over the last 100 ticks; 13 units, 11 buildings, 1 players
+[11:00:00] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[11:00:01] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_rts_close: aimed at -165, 76, -46 - the camera at -172, 96, -38 looks at -165, -45 (74 frames, 4.0 s in the phase)
+[11:00:01] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_rts_close: the structure's box holds 475 non-air blocks on the client
+[11:00:01] [Server thread/INFO]: [Eyes] 15_lotus_academy_r3_rts_close: ... and 475 on the server
+[11:00:01] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_r3_rts_close 1793876401962
+[11:00:01] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[11:00:02] [IO-Worker-11/INFO]: [Eyes] 15_lotus_academy_r3_rts_close: Saved screenshot as bat_eyes_15_lotus_academy_r3_rts_close.png
+[11:00:07] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_r3_34 1793876407039
+[11:00:07] [IO-Worker-2/INFO]: [Eyes] 15_lotus_academy_r3_34: Saved screenshot as bat_eyes_15_lotus_academy_r3_34.png
+[11:00:07] [Render thread/INFO]: [Frame] p50 56.7 ms (18 fps), p95 112.5 ms, max 189.7 ms over 240 frames; first-person view, zoom 23, 5 units known
+[11:00:07] [Render thread/INFO]: [FrameParts] 134 frames, mean 74.6 ms/frame; ours 0.6 ms (1%): markersWreck 0.37 (max 3.6, 1.0/f) | markersRange 0.09 (max 6.2, 1.0/f) | entityShadows 0.04 (max 3.1, 7.6/f) | markersMapWorld 0.04 (max 0.1, 0.6/f) | unitOverlays 0.03 (max 0.1, 11/f) (+18 smaller); elsewhere 74.0 ms; 0 section re-mesh requests/s
+[11:00:07] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[11:00:10] [Server thread/INFO]: [Tick] p50 6.0 ms, p95 10.0 ms, max 15.1 ms over the last 100 ticks; 14 units, 12 buildings, 1 players
+[11:00:10] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[11:00:12] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_r3_front 1793876412094
+[11:00:12] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_close: standing at -168.0, 76.6, -42.0 (direction -1, 1 from the middle), eye 4.62 over the aim, pitch 43 down
+[11:00:12] [IO-Worker-2/INFO]: [Eyes] 15_lotus_academy_r3_front: Saved screenshot as bat_eyes_15_lotus_academy_r3_front.png
+[11:00:13] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[11:00:17] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_close: aimed at -165, 72, -46 - the camera at -168, 77, -42 looks at -165, -45 (57 frames, 5.0 s in the phase)
+[11:00:17] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_close: the structure's box holds 475 non-air blocks on the client
+[11:00:17] [Server thread/INFO]: [Eyes] 15_lotus_academy_r3_close: ... and 475 on the server
+[11:00:17] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_r3_close 1793876417130
+[11:00:17] [Render thread/INFO]: [System] [CHAT] 
+[11:00:17] [Render thread/INFO]: [System] [CHAT] Night falls...
+[11:00:17] [Render thread/INFO]: [System] [CHAT] 
+[11:00:17] [IO-Worker-11/INFO]: [Eyes] 15_lotus_academy_r3_close: Saved screenshot as bat_eyes_15_lotus_academy_r3_close.png
+[11:00:17] [Render thread/INFO]: [Frame] p50 86.2 ms (12 fps), p95 115.9 ms, max 189.7 ms over 240 frames; first-person view, zoom 23, 5 units known
+[11:00:17] [Render thread/INFO]: [FrameParts] 110 frames, mean 91.1 ms/frame; ours 0.2 ms (0%): markersRange 0.11 (max 3.2, 1.0/f) | unitOverlays 0.03 (max 0.1, 11/f) (+18 smaller); elsewhere 90.9 ms; 0 section re-mesh requests/s
+[11:00:17] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[11:00:19] [Render thread/INFO]: [Sfx] 400 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 1
+[11:00:20] [Server thread/INFO]: [Tick] p50 6.4 ms, p95 10.9 ms, max 13.9 ms over the last 100 ticks; 16 units, 12 buildings, 1 players
+[11:00:20] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[11:00:20] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_dusk: the last drawn frame saw day time 13000
+[11:00:20] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_r3_dusk 1793876420945
+[11:00:20] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[11:00:21] [IO-Worker-10/INFO]: [Eyes] 15_lotus_academy_r3_dusk: Saved screenshot as bat_eyes_15_lotus_academy_r3_dusk.png
+[11:00:22] [Render thread/INFO]: [Clock] tick 3611: 60 frames over 4532 ms; old clock (game time) advanced 3199.62 with 16 steps back, new clock advanced 90.62 with 0 steps back
+[11:00:22] [Render thread/INFO]: [Clock] frames (ms,old,new): 0,8600.780,3611.780 97,8800.700,3613.700 204,9000.820,3615.820 324,9300.240,3618.240 418,9500.140,3620.140 510,9601.000,3622.000 604,9800.860,3623.860 699,10000.760,3625.760 812,10201.000,3628.000 915,10500.060,3630.060 1012,10700.020,3632.020 1105,10800.880,3633.880 1201,11000.800,3635.800 1298,11200.740,3637.740 1393,11400.640,3639.640 1492,11600.600,3641.600 1587,11800.520,3643.520 1699,12000.740,3645.740 1797,12200.700,3647.700 1895,12400.680,3649.680 1992,12600.600,3651.600 2089,12800.560,3653.560 2188,13000.520,3655.520 2287,13000.500,3657.500 2383,13000.440,3659.440 2494,13000.600,3661.600 2572,13000.120,3663.120 2681,13000.260,3665.260 2751,13000.700,3666.700 2820,12800.120,3668.120 2881,12700.380,3669.380 2934,12600.440,3670.440 2994,12500.640,3671.640 3049,12400.720,3672.720 3105,12300.860,3673.860 3163,12201.000,3675.000 3218,12000.080,3676.080 3275,11900.260,3677.260 3327,11800.300,3678.300 3384,11800.440,3679.440 3436,11800.480,3680.480 3507,11800.880,3681.880 3580,11800.300,3683.300 3633,11800.420,3684.420 3692,11800.600,3685.600 3744,11800.640,3686.640 3802,11800.800,3687.800 3859,11800.940,3688.940 3911,11800.980,3689.980 3972,11800.140,3691.140 4024,11800.240,3692.240 4083,11800.440,3693.440 4135,11800.480,3694.480 4196,11800.680,3695.680 4252,11800.800,3696.800 4309,11800.940,3697.940 4369,11800.080,3699.080 4420,11800.160,3700.160 4480,11800.360,3701.360 4532,11800.400,3702.400
+[11:00:25] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_golden_rts: aimed at -165, 76, -46 - the camera at -169, 89, -41 looks at -165, -45 (87 frames, 5.0 s in the phase)
+[11:00:25] [Render thread/INFO]: [Eyes] 15_lotus_academy_r3_golden_rts: the structure's box holds 475 non-air blocks on the client
+[11:00:25] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_r3_golden_rts 1793876425969
+[11:00:25] [Server thread/INFO]: [Eyes] 15_lotus_academy_r3_golden_rts: ... and 475 on the server
+[11:00:25] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-166, 71, -53)]
+[11:00:25] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-164, 71, -53)]
+[11:00:25] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-166, 71, -39)]
+[11:00:25] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-164, 71, -39)]
+[11:00:25] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-172, 71, -47)]
+[11:00:25] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-172, 71, -45)]
+[11:00:25] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-158, 71, -47)]
+[11:00:25] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-158, 71, -45)]
+[11:00:26] [IO-Worker-10/INFO]: [Eyes] 15_lotus_academy_r3_golden_rts: Saved screenshot as bat_eyes_15_lotus_academy_r3_golden_rts.png
+[11:00:27] [Render thread/INFO]: [Frame] p50 82.0 ms (12 fps), p95 106.2 ms, max 157.6 ms over 240 frames; RTS view, zoom 30, 13 units known
+[11:00:27] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 7.0 ms, p95 17.4 ms; per unit 25.2 us anim, 1323.8 us render (anim 2%); RTS view, zoom 30, detail on, over 25 frames
+[11:00:27] [Render thread/INFO]: [FrameParts] 145 frames, mean 68.8 ms/frame; ours 2.8 ms (4%): unitBodies 1.91 (max 18.1, 1.4/f) | markersWreck 0.45 (max 3.6, 1.0/f) | entityShadows 0.19 (max 3.5, 12/f) | markersMapWorld 0.06 (max 0.2, 0.8/f) | unitOverlays 0.05 (max 0.2, 11/f) | markersRange 0.04 (max 2.1, 1.0/f) | buildingBoxes 0.04 (max 3.0, 0.8/f) | worldMarkers 0.03 (max 3.0, 12/f) | markersMetal 0.02 (max 3.0, 2.0/f) (+15 smaller); elsewhere 66.0 ms; 0 section re-mesh requests/s
+[11:00:27] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[11:00:30] [Server thread/INFO]: [Tick] p50 5.5 ms, p95 8.7 ms, max 12.5 ms over the last 100 ticks; 24 units, 13 buildings, 1 players
+[11:00:30] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[11:00:30] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_r3_rts_army 1793876430998
+[11:00:31] [Server thread/INFO]: [Offline: Killed 8 entities]
+[11:00:31] [Render thread/INFO]: [Sfx] 236 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 2
+[11:00:31] [Server thread/INFO]: [Eyes] 15_lotus_academy_l3_r3: pad x -177..-153, z -58..-34 keeps 85.1 blocks from the arena wall's ring (centre 10, -2, radius 280)
+[11:00:31] [Render thread/INFO]: [System] [CHAT] 
+[11:00:31] [Render thread/INFO]: [System] [CHAT] Disabled fog of war for all players
+[11:00:31] [Render thread/INFO]: [System] [CHAT] 
+[11:00:31] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/lotus_academy_l3_r3.nbt' 9x22x9 placed at -169, 71, -50 (pad centre -165, 71, -46)
+[11:00:31] [IO-Worker-2/INFO]: [Eyes] 15_lotus_academy_r3_rts_army: Saved screenshot as bat_eyes_15_lotus_academy_r3_rts_army.png
+[11:00:36] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_rts: aimed at -165, 78, -46 - the camera at -169, 89, -41 looks at -165, -45 (80 frames, 5.0 s in the phase)
+[11:00:36] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_rts: the structure's box holds 577 non-air blocks on the client
+[11:00:36] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_r3_rts 1793876436206
+[11:00:36] [Server thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_rts: ... and 577 on the server
+[11:00:36] [IO-Worker-2/INFO]: [Eyes] 15_lotus_academy_l3_r3_rts: Saved screenshot as bat_eyes_15_lotus_academy_l3_r3_rts.png
+[11:00:37] [Render thread/INFO]: [Frame] p50 59.2 ms (17 fps), p95 76.9 ms, max 130.3 ms over 240 frames; RTS view, zoom 30, 5 units known
+[11:00:37] [Render thread/INFO]: [Anim] 8 units/frame (max 8): animation p50 0.1 ms, p95 0.1 ms; unit render p50 7.8 ms, p95 16.3 ms; per unit 16.4 us anim, 1185.5 us render (anim 1%); RTS view, zoom 30, detail on, over 95 frames
+[11:00:37] [Render thread/INFO]: [FrameParts] 159 frames, mean 63.0 ms/frame; ours 7.3 ms (12%): unitBodies 5.59 (max 19.5, 4.7/f) | markersWreck 0.84 (max 8.8, 1.0/f) | entityShadows 0.39 (max 3.6, 19/f) | worldFx 0.15 (max 2.9, 11/f) | unitOverlays 0.10 (max 3.2, 11/f) | markersMapWorld 0.08 (max 2.1, 1.0/f) | bars 0.04 (max 3.2, 22/f) | buildingBoxes 0.03 (max 0.1, 1.0/f) (+16 smaller); elsewhere 55.7 ms; 0 section re-mesh requests/s
+[11:00:37] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[11:00:40] [Server thread/INFO]: [Tick] p50 4.6 ms, p95 8.8 ms, max 15.9 ms over the last 100 ticks; 18 units, 13 buildings, 1 players
+[11:00:40] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[11:00:41] [Render thread/INFO]: [ShaderBench] 15_lotus_academy_l3_r3_rts: 60 frames, p50 57.25 ms, p95 60.41 ms, mean 56.37 ms; shader pack off; 1600x900; fps cap 120, vsync on
+[11:00:43] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[11:00:45] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_rts_close: aimed at -165, 78, -46 - the camera at -169, 89, -41 looks at -165, -45 (72 frames, 4.0 s in the phase)
+[11:00:45] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_rts_close: the structure's box holds 577 non-air blocks on the client
+[11:00:45] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_r3_rts_close 1793876445721
+[11:00:45] [Server thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_rts_close: ... and 577 on the server
+[11:00:45] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[11:00:46] [IO-Worker-2/INFO]: [Eyes] 15_lotus_academy_l3_r3_rts_close: Saved screenshot as bat_eyes_15_lotus_academy_l3_r3_rts_close.png
+[11:00:47] [Render thread/INFO]: [Frame] p50 57.2 ms (17 fps), p95 97.1 ms, max 136.0 ms over 240 frames; first-person view, zoom 26, 5 units known
+[11:00:47] [Render thread/INFO]: [FrameParts] 162 frames, mean 61.8 ms/frame; ours 1.0 ms (2%): markersWreck 0.71 (max 5.8, 1.0/f) | markersMapWorld 0.07 (max 2.1, 0.9/f) | buildingBoxes 0.06 (max 3.0, 0.9/f) | unitOverlays 0.03 (max 0.2, 11/f) | entityShadows 0.03 (max 0.1, 13/f) | buildingDecor 0.03 (max 3.0, 4.0/f) | worldMarkers 0.02 (max 2.5, 12/f) | markersRange 0.02 (max 0.2, 1.0/f) (+15 smaller); elsewhere 60.8 ms; 0 section re-mesh requests/s
+[11:00:47] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[11:00:50] [Server thread/INFO]: [Tick] p50 5.8 ms, p95 10.4 ms, max 19.3 ms over the last 100 ticks; 18 units, 14 buildings, 1 players
+[11:00:50] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[11:00:50] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_r3_34 1793876450800
+[11:00:51] [IO-Worker-10/INFO]: [Eyes] 15_lotus_academy_l3_r3_34: Saved screenshot as bat_eyes_15_lotus_academy_l3_r3_34.png
+[11:00:52] [Render thread/INFO]: [Sfx] 424 ticks, played/asked: units 1/8 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[11:00:55] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_r3_front 1793876455894
+[11:00:55] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_close: standing at -168.0, 76.6, -42.0 (direction -1, 1 from the middle), eye 4.62 over the aim, pitch 43 down
+[11:00:56] [IO-Worker-2/INFO]: [Eyes] 15_lotus_academy_l3_r3_front: Saved screenshot as bat_eyes_15_lotus_academy_l3_r3_front.png
+[11:00:57] [Render thread/INFO]: [Frame] p50 83.9 ms (12 fps), p95 110.5 ms, max 136.0 ms over 240 frames; first-person view, zoom 26, 5 units known
+[11:00:57] [Render thread/INFO]: [FrameParts] 105 frames, mean 95.0 ms/frame; ours 0.1 ms (0%): markersRange 0.05 (max 0.2, 1.0/f) | unitOverlays 0.03 (max 0.0, 11/f) (+18 smaller); elsewhere 94.9 ms; 0 section re-mesh requests/s
+[11:00:57] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[11:01:00] [Server thread/INFO]: [Tick] p50 6.0 ms, p95 9.9 ms, max 22.9 ms over the last 100 ticks; 19 units, 15 buildings, 1 players
+[11:01:00] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[11:01:00] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_close: aimed at -165, 72, -46 - the camera at -168, 77, -42 looks at -165, -45 (56 frames, 5.1 s in the phase)
+[11:01:00] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_close: the structure's box holds 577 non-air blocks on the client
+[11:01:00] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_r3_close 1793876460985
+[11:01:00] [Server thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_close: ... and 577 on the server
+[11:01:01] [Render thread/INFO]: [System] [CHAT] 
+[11:01:01] [Render thread/INFO]: [System] [CHAT] Night falls...
+[11:01:01] [Render thread/INFO]: [System] [CHAT] 
+[11:01:01] [IO-Worker-12/INFO]: [Eyes] 15_lotus_academy_l3_r3_close: Saved screenshot as bat_eyes_15_lotus_academy_l3_r3_close.png
+[11:01:04] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_dusk: the last drawn frame saw day time 13000
+[11:01:04] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_r3_dusk 1793876464872
+[11:01:04] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[11:01:05] [IO-Worker-11/INFO]: [Eyes] 15_lotus_academy_l3_r3_dusk: Saved screenshot as bat_eyes_15_lotus_academy_l3_r3_dusk.png
+[11:01:07] [Render thread/INFO]: [Frame] p50 91.9 ms (11 fps), p95 120.7 ms, max 158.3 ms over 240 frames; RTS view, zoom 30, 5 units known
+[11:01:07] [Render thread/INFO]: [FrameParts] 120 frames, mean 83.5 ms/frame; ours 0.7 ms (1%): markersWreck 0.37 (max 5.3, 1.0/f) | markersMapWorld 0.12 (max 6.3, 0.4/f) | markersRange 0.06 (max 0.2, 1.0/f) | entityShadows 0.05 (max 3.9, 6.1/f) | bars 0.03 (max 3.0, 22/f) | unitOverlays 0.03 (max 0.0, 11/f) | markersMetal 0.03 (max 3.0, 2.0/f) (+16 smaller); elsewhere 82.8 ms; 0 section re-mesh requests/s
+[11:01:07] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[11:01:09] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_golden_rts: aimed at -165, 78, -46 - the camera at -171, 96, -39 looks at -165, -45 (86 frames, 5.0 s in the phase)
+[11:01:09] [Render thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_golden_rts: the structure's box holds 577 non-air blocks on the client
+[11:01:09] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_r3_golden_rts 1793876469917
+[11:01:09] [Server thread/INFO]: [Eyes] 15_lotus_academy_l3_r3_golden_rts: ... and 577 on the server
+[11:01:09] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-166, 71, -53)]
+[11:01:09] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-164, 71, -53)]
+[11:01:09] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-166, 71, -39)]
+[11:01:09] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-164, 71, -39)]
+[11:01:09] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-172, 71, -47)]
+[11:01:09] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-172, 71, -45)]
+[11:01:09] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-158, 71, -47)]
+[11:01:09] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-158, 71, -45)]
+[11:01:10] [Server thread/INFO]: [Tick] p50 4.4 ms, p95 8.2 ms, max 15.3 ms over the last 100 ticks; 28 units, 15 buildings, 1 players
+[11:01:10] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[11:01:10] [IO-Worker-11/INFO]: [Eyes] 15_lotus_academy_l3_r3_golden_rts: Saved screenshot as bat_eyes_15_lotus_academy_l3_r3_golden_rts.png
+[11:01:13] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[11:01:14] [Render thread/INFO]: [Eyes] clip-mark 15_lotus_academy_l3_r3_rts_army 1793876474919
+[11:01:14] [Server thread/INFO]: [Offline: Killed 8 entities]
+[11:01:15] [Render thread/INFO]: [Sfx] 455 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[11:01:15] [IO-Worker-4/INFO]: [Eyes] 15_lotus_academy_l3_r3_rts_army: Saved screenshot as bat_eyes_15_lotus_academy_l3_r3_rts_army.png
+[11:01:16] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[11:01:16] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[11:01:16] [Render thread/INFO]: [Eyes] tour complete
+[11:01:16] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[11:01:17] [Render thread/INFO]: Stopping!
+[11:01:17] [Server thread/INFO]: Offline lost connection: Disconnected
+[11:01:17] [Server thread/INFO]: Offline left the game
+[11:01:17] [Server thread/INFO]: Player logged out: Offline, id: 2
+[11:01:17] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[11:01:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[11:01:17] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1337|0
+[11:01:17] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1564|610|0
+[11:01:17] [Server thread/INFO]: Stopping server
+[11:01:17] [Server thread/INFO]: Saving players
+[11:01:17] [Server thread/INFO]: Saving worlds
+[11:01:17] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[11:01:17] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[11:01:17] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[11:01:17] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[11:01:17] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[11:01:17] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[11:01:17] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[11:01:17] [Render thread/INFO]: Stopping worker threads
