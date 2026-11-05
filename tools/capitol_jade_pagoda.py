@@ -74,8 +74,7 @@ DRY = dict(waterlogged="false")
 JADE, JADE_ST, JADE_SLAB = "waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs", "waxed_oxidized_cut_copper_slab"
 OAK, OAK_LOG, OAK_ST, OAK_SLAB = "dark_oak_planks", "dark_oak_log", "dark_oak_stairs", "dark_oak_slab"
 RED = "stripped_mangrove_log"      # red lacquer posts
-PAPER = "white_stained_glass"      # paper screens, lit from inside: pale (Fable critic A, Nov 4 - red glass beside the
-                                   # red posts read as one maroon mass and passed no light at dusk)
+PAPER = "red_stained_glass"        # paper screens, lit from inside
 GOLD = "gold_block"
 SB_ST, SB_SLAB, SB_WALL = "stone_brick_stairs", "stone_brick_slab", "stone_brick_wall"
 SKULL_CORNER = {(-1, 1): "2", (-1, -1): "6", (1, -1): "10", (1, 1): "14"}   # standing-head rotation out of a corner
@@ -84,28 +83,6 @@ SKULL_CORNER = {(-1, 1): "2", (-1, -1): "6", (1, -1): "10", (1, 1): "14"}   # st
 # BuildingAmbienceClientEvents.CAPITOL_SPOTS["jade_pagoda"]: Fx.SPARK over the crown rod and four halo crystals
 SPARK_SPOTS = ((7.5, 21.9, 7.5), (5.5, 18.5, 5.5), (9.5, 18.5, 5.5), (5.5, 18.5, 9.5), (9.5, 18.5, 9.5))
 STARTING_TYPES = {"polished_andesite", "stone_bricks"}   # JadePagoda.startingBlockTypes
-
-# THE PLAN, Nov 4 (lovish: "Pagoda: new plan"; Fable critic C F7 - the pagoda and the Ashborn capitol were the same
-# three nested squares in flat black): a long hall under a RECTANGULAR first roof, square storeys and roofs above it.
-# Half-widths (x, z) of the rectangles, from the centre cell:
-LIP1 = (7, 5)                      # the first roof's lip: 15 x 11, to the box's east and west edges
-STEP = (6, 4)                      # the stone-brick step round the terrace
-VER = (5, 3)                       # the verandah's colonnade, on the jade step
-HALL = (4, 2)                      # the hall's wall (its beam carries the first roof's band)
-
-
-def rsides(A, B):
-    """(o, a, tm) for each side of the A x B rectangle: the side's distance from the centre and its half-length."""
-    for o in O4.values():
-        yield (o, B, A) if o[0] == 0 else (o, A, B)
-
-
-def rcells(A, B, inner=None):
-    """The cells of the A x B rectangle, without the inner (A', B') one when given."""
-    for dx in range(-A, A + 1):
-        for dz in range(-B, B + 1):
-            if inner is None or abs(dx) > inner[0] or abs(dz) > inner[1]:
-                yield dx, dz
 
 
 def rod(c, dx, y, dz, facing="up"):
@@ -121,41 +98,39 @@ def chime(c, dx, y, dz, links=1):
 
 # ======================================================================================================= ground
 def garden(c):
-    """The ground outside the terrace: no kerb, no road. Round the terrace's step a raked ring (moss, mossy cobblestone
-    and mossy stone bricks - real gravel would fall), stone-brick flags at the foot of each stair (the instant
-    foundation, layer 0); beyond it moss, grass and mossy stone, so whichever way the base grows the capitol's ground
-    runs into it. Nov 4 (Fable critic C F2): the Stormcallers' ground is the GARDEN - the andesite rings were the
-    same grey yard four other buildings of three factions stood on."""
-    SA, SB = STEP
-    for dx in range(-R, R + 1):
-        for dz in range(-R, R + 1):
-            if abs(dx) <= SA and abs(dz) <= SB:
-                continue
-            h = hsh(dx, dz)
-            raked = abs(dx) <= SA + 1 and abs(dz) <= SB + 1
-            if raked:
-                name = ("moss_block", "mossy_cobblestone", "moss_block", "mossy_stone_bricks", "moss_block",
-                        "mossy_cobblestone")[h % 6]
-                if min(abs(dx), abs(dz)) <= 1:
-                    name = "stone_bricks"                      # the flags at the foot of each stair
-            else:
-                name = ("moss_block", "grass_block", "mossy_cobblestone", "grass_block", "moss_block", "stone_bricks",
-                        "grass_block", "mossy_cobblestone")[h % 8]
-            c.set(dx, 0, dz, name, **({"snowy": "false"} if name == "grass_block" else {}))
-    # the dressing (y1): moss carpet and azalea bushes on the soft cells of the raked ring north and south, between
-    # the stairs and the corners - single cells with ground round them (no pockets); no pink petals (pink is the
-    # Verdant crown's and the academy's lotus, critic C F4). East and west the ring lies under the first roof's eave.
-    for dx in range(-SA, SA + 1):
-        for dz in (-(SB + 1), SB + 1):
-            if not 2 <= abs(dx) <= 5:
-                continue
-            h = hsh(dx, dz)
-            if c.get(dx, 0, dz)[0] not in ("grass_block", "moss_block"):
-                continue
-            if h % 5 == 2:
-                c.set(dx, 1, dz, "flowering_azalea")
-            elif h % 5 in (0, 3):
-                c.set(dx, 1, dz, "moss_carpet")
+    """Rings 6-7 at ground level: no kerb, no road. Ring 6 is the raked zen ground (stone and polished andesite in
+    rings - real gravel would fall), stepping-stone flags of stone bricks (the instant foundation, layer 0) and moss;
+    ring 7 breaks up into moss, grass and blossom, so whichever way the base grows the capitol's ground runs into it."""
+    for dx, dz in c.cells(R, 6):
+        ring = max(abs(dx), abs(dz))
+        t = min(abs(dx), abs(dz))
+        h = hsh(dx, dz)
+        if ring == 6:
+            name = ("andesite", "polished_andesite", "stone_bricks", "andesite", "moss_block", "polished_andesite")[h % 6]
+            if t <= 1:
+                name = "stone_bricks"                      # the flags at the foot of each stair
+        else:
+            name = ("moss_block", "grass_block", "andesite", "grass_block", "moss_block", "stone_bricks",
+                    "grass_block", "mossy_cobblestone")[h % 8]
+        c.set(dx, 0, dz, name, **({"snowy": "false"} if name == "grass_block" else {}))
+    # the dressing (y1): petals, moss, azalea bushes on the soft cells of ring 6 between the stairs and the
+    # guardians - single cells with ground round them (no pockets). Ring 7 belongs to the torii (t <= 3), the
+    # blossom trees (t = 4), the stone lanterns (t = 5) and the guardians (t >= 6)
+    for dx, dz in c.cells(6, 6):
+        t = min(abs(dx), abs(dz))
+        if t <= 1 or t >= 6:
+            continue
+        h = hsh(dx, dz)
+        k = h % 5
+        under = c.get(dx, 0, dz)[0]
+        if under not in ("grass_block", "moss_block"):
+            continue
+        if k in (0, 1):
+            c.set(dx, 1, dz, "pink_petals", facing="north", flower_amount=str(2 + h % 3))
+        elif k == 2:
+            c.set(dx, 1, dz, "flowering_azalea")
+        elif k == 3:
+            c.set(dx, 1, dz, "moss_carpet")
 
 
 def torii(c, o):
@@ -182,37 +157,27 @@ def stone_lantern(c, dx, dz):
 
 
 def blossom_tree(c, x, z):
-    """A small flowering tree in the garden: a dark oak trunk, a two-cell azalea canopy over it (persistent leaves, so
-    they never decay). One cell wide with open ground round it: never a pocket. Azalea, not cherry (lovish, Nov 4:
-    "Azalea instead" - pink is the Verdant crown's): green with blossom, it reads green from the RTS camera."""
+    """A small blossom tree in the garden: a dark oak trunk, a two-cell cherry canopy over it (persistent leaves, so
+    they never decay), petals at its foot. One cell wide with open ground round it: never a pocket."""
     leaf = dict(distance="1", persistent="true", waterlogged="false")
     c.set(x, 1, z, OAK_LOG, axis="y")
     c.set(x, 2, z, OAK_LOG, axis="y")
-    c.set(x, 3, z, "flowering_azalea_leaves", **leaf)
-    c.set(x, 4, z, "azalea_leaves", **dict(leaf, distance="2"))   # its true distance (on a leaf, not the log)
+    c.set(x, 3, z, "cherry_leaves", **leaf)
+    c.set(x, 4, z, "cherry_leaves", **dict(leaf, distance="2"))   # its true distance (on a leaf, not the log)
 
 
 # ===================================================================================================== terrace
 def terrace(c):
-    """The stepped terrace, a rectangle under the long hall: polished andesite under it (the instant foundation) and
-    stone bricks under the step, a moulded stone-brick step round it, a jade step (the verandah's floor), the hall floor
-    of dark oak with a jade cross running in to a gold heart."""
-    for dx, dz in rcells(*STEP):
-        inside = abs(dx) <= VER[0] and abs(dz) <= VER[1]
-        c.set(dx, 0, dz, "polished_andesite" if inside else "stone_bricks")
-    for dx, dz in rcells(*VER):
-        c.set(dx, 1, dz, "stone")
-    for o, a, tm in rsides(*STEP):
-        for t in range(-tm, tm + 1):
-            c.st(o, a, t, 1, inward(o), name=SB_ST)
-    for o, a, tm in rsides(*VER):
-        for t in range(-tm, tm + 1):
-            c.st(o, a, t, 2, inward(o), name=JADE_ST)
-    for dx, dz in rcells(*HALL):
-        c.set(dx, 2, dz, OAK)
-    for o, a, tm in rsides(*HALL):
-        for k in range(1, a + 1):
-            c.put(o, k, 0, 2, JADE)
+    """The stepped terrace: polished andesite under it all (the instant foundation), a moulded stone-brick step on
+    ring 5, a jade step on ring 4, the hall floor of dark oak with a jade cross running in to a gold heart."""
+    c.disc(5, 0, "polished_andesite")
+    c.disc(4, 1, "stone")
+    c.ring_stairs(5, 1, name=SB_ST)
+    c.ring_stairs(4, 2, name=JADE_ST)
+    c.disc(3, 2, OAK)
+    for o in O4.values():
+        for a in (1, 2, 3):
+            c.put(o, a, 0, 2, JADE)
     c.set(0, 2, 0, GOLD)
     for (sx, sz) in CORNERS:
         guardian(c, sx, sz)
@@ -225,38 +190,35 @@ def guardian(c, sx, sz):
     x, z = sx * R, sz * R
     c.set(x, 1, z, "chiseled_stone_bricks")
     c.stair(x, 2, z, "east" if sx < 0 else "west", name=JADE_ST)
-    c.set(x, 3, z, JADE)               # the head: jade, not a black dragon head (Fable critic A: base-corner noise)
+    c.set(x, 3, z, "dragon_head", rotation=SKULL_CORNER[(sx, sz)])
     c.stair(x - sx, 1, z, "east" if sx < 0 else "west", name=JADE_ST)     # the forepaws, either side
     c.stair(x, 1, z - sz, "south" if sz < 0 else "north", name=JADE_ST)
 
 
 # ======================================================================================================== pagoda
 def ground_storey(c):
-    """The verandah (red columns on the jade step, under the first roof's overhang) round the long hall: a door three
-    wide on every side, so the spawn cell in the middle walks straight out whichever way the base lies."""
-    for o, a, tm in rsides(*VER):
-        cols = (-tm, -2, 2, tm) if tm >= 4 else (-tm, tm)
-        for t in range(-tm, tm + 1):
-            if t in cols:              # stone bases, red lacquer shafts, gold capitals (under the eave)
-                c.put(o, a, t, 2, "chiseled_stone_bricks")
-                for y in (3, 4):
-                    c.put(o, a, t, y, RED, axis="y")
-                c.put(o, a, t, 5, GOLD)
-            else:
-                c.put(o, a, t, 5, OAK_SLAB, type="top", **DRY)       # the architrave, a slab so it reads thin
-    for o, a, tm in rsides(*HALL):
-        # the hall wall: a dark oak dado, paper screens over it; the door with stair shoulders
-        for t in range(-tm + 1, tm):
-            if abs(t) >= 2:
-                c.put(o, a, t, 3, OAK)
-                c.put(o, a, t, 4, PAPER)
-                c.put(o, a, t, 5, PAPER)
-            elif t:
-                c.st(o, a, t, 5, along(o, t), "top", OAK_ST)
-            c.put(o, a, t, 6, OAK)                                    # the beam the first roof's band sits on
+    """The verandah (red columns on ring 4, under the first roof's 1-block overhang) round the hall (ring 3): a door
+    three wide on every side, so the spawn cell in the middle walks straight out whichever way the base lies."""
+    for o in O4.values():
+        # the colonnade: stone bases, red lacquer shafts, gold capitals, a dark-oak architrave between them
+        for t in (-4, -2, 2, 4):
+            c.put(o, 4, t, 2, "chiseled_stone_bricks")
+            for y in (3, 4):
+                c.put(o, 4, t, y, RED, axis="y")
+            c.put(o, 4, t, 5, GOLD)
+        for t in (-3, -1, 0, 1, 3):
+            c.put(o, 4, t, 5, OAK_SLAB, type="top", **DRY)             # the architrave, a slab so it reads thin
+        # the hall wall on ring 3: a dark oak dado, red paper screens over it; the door with stair shoulders
+        for s in (-1, 1):
+            c.put(o, 3, 2 * s, 3, OAK)
+            c.put(o, 3, 2 * s, 4, PAPER)
+            c.put(o, 3, 2 * s, 5, PAPER)
+            c.st(o, 3, s, 5, along(o, s), "top", OAK_ST)
+        for t in range(-3, 4):
+            c.put(o, 3, t, 6, OAK)                                    # the beam the first roof's band sits on
     for (sx, sz) in CORNERS:
         for y in range(3, 7):
-            c.set(sx * HALL[0], y, sz * HALL[1], RED, axis="y")
+            c.set(sx * 3, y, sz * 3, RED, axis="y")
 
 
 def storey(c, k, y0, y1):
@@ -284,43 +246,50 @@ STYLE = dict(value="jade", horn=2, sweep=True)
 GAP, GAP_ST = "polished_blackstone", "polished_blackstone_stairs"
 
 
-def roof(c, A, B, y, course=True, flare=False):
-    """One pagoda roof (the kit's motif) with its lip on the A x B rectangle at y (a square when A == B):
-    - the CURVE: the lip is a jade stair (low edge out) along the middle of each side, and over the two cells next to
-      each corner a second stair climbs on the lip so the eave sweeps up as a stair run to the corner - a jade block
-      under an upturned jade slab tip (Nov 4, Fable critic C F6: the sweep's full cubes read as a crenellated pixel
-      edge; critic A fix 3: no gold on the corners, gold is the crown's spire alone);
-    - the ring inside the lip is the flat band (jade, on the storey's beam below) and with `course` a second stair
-      course climbs onto it one up in the dark gap stair: with the BLACKSTONE GAP ring inside the band each roof shows
-      a 2-cell dark ring from the RTS camera and the tiers part (critic A fix 2: the 1-cell gap was too thin);
-    - `flare` (squares only): the corner tip flares one cell past the outline as a solid jade wedge with an upturned
-      slab;
+def roof(c, L, y, course=True, gold=True, flare=False):
+    """One pagoda roof (the kit's motif) with its lip on ring L at y:
+    - the CURVE: the lip is a jade stair (low edge out) along the middle of each side, but the two cells next to each
+      corner lift a block (a jade block under a slab) and the corner itself is a gold block under an upturned jade
+      slab tip - so the eave sags in the middle and sweeps up to its corners;
+    - ring L-1 is the flat band (jade, sitting on the storey's beam below) and with `course` a second jade stair
+      course climbs onto ring L-1 one up; the ring inside it, at the next storey's foot, is a BLACKSTONE GAP: from the
+      RTS camera each roof is a jade roof round a dark ring, so the tiers part (round 1, all jade, nested into one
+      green pyramid; round 2's dark oak read as brown fields - critics a / b);
+    - with STYLE sweep the eave rises one block over its last two cells and two at the corner;
+    - `gold`: the corner under the tip is gold (not on the top roof: five gold squares there read as dice-five);
+      `flare`: the corner tip flares one cell past the square outline as a solid jade wedge with an upturned slab;
     - dark-oak rafter ends under the lip, and a chime under each corner (placed last, see chimes())."""
-    sw = STYLE["sweep"] and min(A, B) >= 3
-    for o, a, tm in rsides(A, B):
-        for t in range(-tm + 1, tm):
-            c.st(o, a, t, y, inward(o), name=JADE_ST)
-            if sw and abs(t) >= tm - 2:
-                c.st(o, a, t, y + 1, inward(o), name=JADE_ST)
-                if abs(t) == tm - 1:
-                    c.put(o, a, t, y + 2, JADE_SLAB, type="bottom", **DRY)
-            if min(A, B) >= 3 and abs(t) % 2 == 0 and abs(t) < tm - 1:
-                c.st(o, a, t, y - 1, inward(o), "top", OAK_ST)         # rafter ends, every other cell
-    if min(A, B) >= 2:
-        for dx, dz in rcells(A - 1, B - 1, inner=(A - 3, B - 3)):
-            c.set(dx, y, dz, JADE)                                       # the band
-        if min(A, B) >= 3:
-            for dx, dz in rcells(A - 2, B - 2, inner=(A - 3, B - 3)):
-                c.set(dx, y, dz, GAP)                                    # the gap ring at the storey's foot
-    lift = 1 if STYLE["sweep"] else 0
+    jade = STYLE["value"] == "jade"
+    sw = STYLE["sweep"] and L >= 3
+    for o in O4.values():
+        for t in range(-L + 1, L):
+            if L >= 3 and abs(t) == L - 1:
+                c.put(o, L, t, y, JADE)
+                if sw:
+                    c.put(o, L, t, y + 1, JADE)
+                c.put(o, L, t, y + 1 + sw, JADE_SLAB, type="bottom", **DRY)
+            elif sw and abs(t) == L - 2:
+                c.put(o, L, t, y, JADE)
+                c.st(o, L, t, y + 1, inward(o), name=JADE_ST)
+            else:
+                c.st(o, L, t, y, inward(o), name=JADE_ST)
+            if L >= 3 and abs(t) % 2 == 0 and abs(t) < L - 1:
+                c.st(o, L, t, y - 1, inward(o), "top", OAK_ST)         # rafter ends, every other cell
+    if L >= 2:
+        if jade:
+            c.disc(L - 1, y, JADE, k0=max(L - 2, 0))
+            if L >= 3 and L - 2 >= 1 and L - 2 < L - 1:
+                c.disc(L - 2, y, GAP, k0=L - 2)                        # the gap ring at the storey's foot
+        else:
+            c.disc(L - 1, y, OAK if L >= 3 else JADE, k0=max(L - 2, 0))   # the band: dark where the camera sees it
+    lift = 1 if (STYLE["sweep"]) else 0
     for (sx, sz) in CORNERS:
-        x, z = sx * A, sz * B
-        c.set(x, y, z, JADE)
+        x, z = sx * L, sz * L
+        c.set(x, y, z, GOLD if gold else JADE)
         if lift:
             c.set(x, y + 1, z, JADE)
         c.set(x, y + 1 + lift, z, JADE_SLAB, type="bottom", **DRY)
-        if flare and A == B:
-            L = A
+        if flare:
             # the flared tip (round 4): a solid jade wedge one cell out, face-joined to the corner (the diagonal cell
             # and its two side cells at the corner tip's height) with an upturned slab on its point - round 3's
             # diagonal arm cells touched nothing and read as floating dots (both blind critics)
@@ -332,12 +301,13 @@ def roof(c, A, B, y, course=True, flare=False):
             if c.get(sx * (L + 1), ty + 1, sz * (L + 1))[0] == "air":
                 c.set(sx * (L + 1), ty + 1, sz * (L + 1), JADE_SLAB, type="bottom", **DRY)
         CHIMES.append((x, y - 1, z))
-    if course and min(A, B) >= 3:
-        # the second course: dark stairs climbing onto the band, so the roof pitches twice and its dark ring is two
-        # cells deep; its corners stay open for the chimes of the roof above
-        for o, a, tm in rsides(A - 1, B - 1):
-            for t in range(-tm + 1, tm):
-                c.st(o, a, t, y + 1, inward(o), name=GAP_ST)
+    if course and L >= 3:
+        # the second course: stairs climbing onto the band, so the roof pitches twice (the curve read from the side);
+        # its corners stay open for the chimes of the roof above (the axis lanterns are gone: two lantern dots and
+        # the red storey's V read as a face, round 1)
+        for o in O4.values():
+            for t in range(-L + 2, L - 1):
+                c.st(o, L - 1, t, y + 1, inward(o), name=JADE_ST if jade else OAK_ST)
 
 
 def chimes(c):
@@ -365,27 +335,22 @@ def pagoda(c):
     The centre column stays open from the hall floor (y3) to y9: getIndoorSpawnPoint walks down from the box's
     mid-height (y10) and must land on the floor, so the hall is an atrium up into storey 2."""
     ground_storey(c)
-    roof(c, LIP1[0], LIP1[1], 6)                               # the long first roof, lip 15 x 11 @ y6, no flare
-                                                               # (its east and west lips are the box's edges)
-    for t in (-1, 0, 1):                                       # beams over the hall under storey 2's east / west walls
-        for sx in (-1, 1):
-            c.set(sx * 3, 6, t, OAK)
-    storey(c, 3, 7, 11)                                        # storey 2, square, shows y7-11
+    roof(c, 6, 6, flare=STYLE["horn"] >= 2)                   # lip 6 @ y6, band rings 4-5, course ring 5 @ y7
+    storey(c, 3, 7, 11)                                        # storey 2 on the hall's walls, shows y7-11
     c.disc(2, 10, OAK)                                         # the atrium's ceiling
     c.set(0, 10, 0, "pearlescent_froglight", axis="y")         # the hall's light, over the spawn
-    roof(c, 4, 4, 12, flare=True)                              # lip 4 @ y12, band ring 3, course ring 3 @ y13
+    roof(c, 4, 12, flare=True)                                 # lip 4 @ y12, band ring 3, course ring 3 @ y13
     jade = STYLE["value"] == "jade"
     c.disc(2, 12, GAP if jade else OAK, k0=2)
     c.ring_stairs(2, 13, name=GAP_ST if jade else OAK_ST)      # course 2: ring 2 @ y13, against storey 3
     storey(c, 1, 12, 16)
     for y in (14, 15, 16):
         c.set(0, y, 0, "pearlescent_froglight", axis="y")      # glows through the paper of storey 3
-    roof(c, 2, 2, 17, course=False, flare=True)               # lip 2 @ y17, the band ring 1; jade corners
-    # the crown: a 3 x 3 jade cap with a thin two-high gold spire and the storm's lightning rod on it, over the top
-    # roof's four jade tips, which carry small rods. Nov 4 (Fable critic C F1): the cap was gold - a gold apex cube is
-    # the Sunforged's, and three buildings of two factions put one on top; the Stormcallers' top is the rod (the
-    # violet-glass and amethyst halo went earlier: purple is a cool team hue)
-    c.disc(1, 18, JADE)                                        # the jade cap
+    roof(c, 2, 17, course=False, gold=False, flare=True)      # lip 2 @ y17, the band ring 1; jade corners
+    # the crown: ONE gold leader - a 3 x 3 gold cap with a two-high gold spire and a lightning rod on it, a size class
+    # over the top roof's four jade tips, which carry small rods (the violet-glass and amethyst halo is gone: purple
+    # is a cool team hue in a fixed palette, both baseline and massing critics)
+    c.disc(1, 18, GOLD)                                        # the gold cap, 3 x 3: the one leader
     for y in (19, 20):
         c.set(0, y, 0, GOLD)
     rod(c, 0, 21, 0)
@@ -401,11 +366,12 @@ def build():
     c = tc.Cap(R, H)
     CHIMES.clear()
     garden(c)
-    for o in (O4["north"], O4["south"]):     # east and west the long first roof runs to the box's edge
+    for o in O4.values():
         torii(c, o)
         for s in (-1, 1):
             x, z = c.side(o, R, 5 * s)
             stone_lantern(c, x, z)
+    for o in O4.values():
         x, z = c.side(o, R, 4)
         blossom_tree(c, x, z)
     terrace(c)
