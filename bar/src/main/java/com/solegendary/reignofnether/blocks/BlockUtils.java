@@ -11,58 +11,93 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.SlabType;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 public class BlockUtils {
 
     private static final Random RANDOM = new Random();
 
+    /**
+     * A tree's wood: every block tagged {@code minecraft:logs} (logs, wood, stripped, stems, hyphae) plus the huge
+     * mushrooms' stem and caps. Tag check only - this runs per client tick on the RTS camera's ground probe
+     * (OrthoviewClientEvents), per block of a flyer's descent (FlyingMoveToTargetGoal) and per neighbour of a felled
+     * log; it used to build a 23-block list and collect the state's tag stream into a set on every call.
+     */
     public static boolean isLogBlock(BlockState bs) {
-        return List.of(Blocks.OAK_LOG, Blocks.BIRCH_LOG, Blocks.ACACIA_LOG, Blocks.DARK_OAK_LOG, Blocks.JUNGLE_LOG, Blocks.MANGROVE_LOG, Blocks.SPRUCE_LOG, Blocks.CHERRY_LOG,
-                        Blocks.OAK_WOOD, Blocks.BIRCH_WOOD, Blocks.ACACIA_WOOD, Blocks.DARK_OAK_WOOD, Blocks.JUNGLE_WOOD, Blocks.MANGROVE_WOOD, Blocks.SPRUCE_WOOD, Blocks.CHERRY_WOOD,
-                        Blocks.CRIMSON_STEM, Blocks.WARPED_STEM, Blocks.MUSHROOM_STEM, Blocks.RED_MUSHROOM_BLOCK, Blocks.BROWN_MUSHROOM_BLOCK, Blocks.CRIMSON_HYPHAE, Blocks.WARPED_HYPHAE)
-                .contains(bs.getBlock()) || bs.getTags().collect(Collectors.toSet()).contains(BlockTags.LOGS);
+        return bs.is(BlockTags.LOGS) || bs.is(Blocks.MUSHROOM_STEM)
+            || bs.is(Blocks.RED_MUSHROOM_BLOCK) || bs.is(Blocks.BROWN_MUSHROOM_BLOCK);
     }
+
+    /** Our falling logs and stems (BlockRegistrar.fallingLog / fallingNetherStem) are the only FallingRotatedPillarBlocks. */
     public static boolean isFallingLogBlock(BlockState bs) {
-        return List.of(
-                        BlockRegistrar.FALLING_OAK_LOG.get(),
-                        BlockRegistrar.FALLING_BIRCH_LOG.get(),
-                        BlockRegistrar.FALLING_ACACIA_LOG.get(),
-                        BlockRegistrar.FALLING_DARK_OAK_LOG.get(),
-                        BlockRegistrar.FALLING_JUNGLE_LOG.get(),
-                        BlockRegistrar.FALLING_MANGROVE_LOG.get(),
-                        BlockRegistrar.FALLING_SPRUCE_LOG.get(),
-                        BlockRegistrar.FALLING_CHERRY_LOG.get(),
-                        BlockRegistrar.FALLING_CRIMSON_STEM.get(),
-                        BlockRegistrar.FALLING_WARPED_STEM.get())
-                .contains(bs.getBlock());
+        return bs.getBlock() instanceof FallingRotatedPillarBlock;
     }
 
+    /**
+     * The falling log that stands in for a vanilla log when a tree is cut (ResourcesServerEvents.fellAdjacentLogs),
+     * or null for wood that has none (sway limbs, mushroom blocks). One table, read both ways by {@link #getFallingLog}
+     * and {@link #getNonFallingLog}; built on first use because the registry objects resolve after registration.
+     */
+    private static final class FallingLogs {
+        static final Map<Block, Block> FALLING_OF = Map.ofEntries(
+            Map.entry(Blocks.OAK_LOG, BlockRegistrar.FALLING_OAK_LOG.get()),
+            Map.entry(Blocks.OAK_WOOD, BlockRegistrar.FALLING_OAK_LOG.get()),
+            Map.entry(Blocks.SPRUCE_LOG, BlockRegistrar.FALLING_SPRUCE_LOG.get()),
+            Map.entry(Blocks.SPRUCE_WOOD, BlockRegistrar.FALLING_SPRUCE_LOG.get()),
+            Map.entry(Blocks.BIRCH_LOG, BlockRegistrar.FALLING_BIRCH_LOG.get()),
+            Map.entry(Blocks.BIRCH_WOOD, BlockRegistrar.FALLING_BIRCH_LOG.get()),
+            Map.entry(Blocks.JUNGLE_LOG, BlockRegistrar.FALLING_JUNGLE_LOG.get()),
+            Map.entry(Blocks.JUNGLE_WOOD, BlockRegistrar.FALLING_JUNGLE_LOG.get()),
+            Map.entry(Blocks.ACACIA_LOG, BlockRegistrar.FALLING_ACACIA_LOG.get()),
+            Map.entry(Blocks.ACACIA_WOOD, BlockRegistrar.FALLING_ACACIA_LOG.get()),
+            Map.entry(Blocks.DARK_OAK_LOG, BlockRegistrar.FALLING_DARK_OAK_LOG.get()),
+            Map.entry(Blocks.DARK_OAK_WOOD, BlockRegistrar.FALLING_DARK_OAK_LOG.get()),
+            Map.entry(Blocks.MANGROVE_LOG, BlockRegistrar.FALLING_MANGROVE_LOG.get()),
+            Map.entry(Blocks.MANGROVE_WOOD, BlockRegistrar.FALLING_MANGROVE_LOG.get()),
+            Map.entry(Blocks.CHERRY_LOG, BlockRegistrar.FALLING_CHERRY_LOG.get()),
+            Map.entry(Blocks.CHERRY_WOOD, BlockRegistrar.FALLING_CHERRY_LOG.get()),
+            Map.entry(Blocks.WARPED_STEM, BlockRegistrar.FALLING_WARPED_STEM.get()),
+            Map.entry(Blocks.WARPED_HYPHAE, BlockRegistrar.FALLING_WARPED_STEM.get()),
+            Map.entry(Blocks.CRIMSON_STEM, BlockRegistrar.FALLING_CRIMSON_STEM.get()),
+            Map.entry(Blocks.CRIMSON_HYPHAE, BlockRegistrar.FALLING_CRIMSON_STEM.get()));
+        // the plain log each falling block stands for (the _LOG, not the _WOOD, as before)
+        static final Map<Block, Block> LOG_OF = Map.of(
+            BlockRegistrar.FALLING_OAK_LOG.get(), Blocks.OAK_LOG,
+            BlockRegistrar.FALLING_SPRUCE_LOG.get(), Blocks.SPRUCE_LOG,
+            BlockRegistrar.FALLING_BIRCH_LOG.get(), Blocks.BIRCH_LOG,
+            BlockRegistrar.FALLING_JUNGLE_LOG.get(), Blocks.JUNGLE_LOG,
+            BlockRegistrar.FALLING_ACACIA_LOG.get(), Blocks.ACACIA_LOG,
+            BlockRegistrar.FALLING_DARK_OAK_LOG.get(), Blocks.DARK_OAK_LOG,
+            BlockRegistrar.FALLING_MANGROVE_LOG.get(), Blocks.MANGROVE_LOG,
+            BlockRegistrar.FALLING_CHERRY_LOG.get(), Blocks.CHERRY_LOG,
+            BlockRegistrar.FALLING_WARPED_STEM.get(), Blocks.WARPED_STEM,
+            BlockRegistrar.FALLING_CRIMSON_STEM.get(), Blocks.CRIMSON_STEM);
+    }
+
+    /** The falling block for a log state, keeping its axis; null when that wood does not fall. */
+    public static BlockState getFallingLog(BlockState bs) {
+        Block falling = FallingLogs.FALLING_OF.get(bs.getBlock());
+        return falling == null ? null : withAxisOf(falling.defaultBlockState(), bs);
+    }
+
+    /** The plain log a falling log stands for, keeping its axis; any other state comes back unchanged. */
     public static BlockState getNonFallingLog(BlockState bs) {
-        BlockState nonFallingLogBlock = bs;
-        if (bs.getBlock() == BlockRegistrar.FALLING_OAK_LOG.get()) nonFallingLogBlock = Blocks.OAK_LOG.defaultBlockState();
-        else if (bs.getBlock() == BlockRegistrar.FALLING_BIRCH_LOG.get()) nonFallingLogBlock = Blocks.BIRCH_LOG.defaultBlockState();
-        else if (bs.getBlock() == BlockRegistrar.FALLING_ACACIA_LOG.get()) nonFallingLogBlock = Blocks.ACACIA_LOG.defaultBlockState();
-        else if (bs.getBlock() == BlockRegistrar.FALLING_DARK_OAK_LOG.get()) nonFallingLogBlock = Blocks.DARK_OAK_LOG.defaultBlockState();
-        else if (bs.getBlock() == BlockRegistrar.FALLING_JUNGLE_LOG.get()) nonFallingLogBlock = Blocks.JUNGLE_LOG.defaultBlockState();
-        else if (bs.getBlock() == BlockRegistrar.FALLING_MANGROVE_LOG.get()) nonFallingLogBlock = Blocks.MANGROVE_LOG.defaultBlockState();
-        else if (bs.getBlock() == BlockRegistrar.FALLING_SPRUCE_LOG.get()) nonFallingLogBlock = Blocks.SPRUCE_LOG.defaultBlockState();
-        else if (bs.getBlock() == BlockRegistrar.FALLING_CHERRY_LOG.get()) nonFallingLogBlock = Blocks.CHERRY_LOG.defaultBlockState();
-        else if (bs.getBlock() == BlockRegistrar.FALLING_CRIMSON_STEM.get()) nonFallingLogBlock = Blocks.CRIMSON_STEM.defaultBlockState();
-        else if (bs.getBlock() == BlockRegistrar.FALLING_WARPED_STEM.get()) nonFallingLogBlock = Blocks.WARPED_STEM.defaultBlockState();
-        return nonFallingLogBlock;
+        Block log = FallingLogs.LOG_OF.get(bs.getBlock());
+        return log == null ? bs : withAxisOf(log.defaultBlockState(), bs);
     }
 
+    private static BlockState withAxisOf(BlockState state, BlockState from) {
+        if (state.hasProperty(BlockStateProperties.AXIS) && from.hasProperty(BlockStateProperties.AXIS))
+            return state.setValue(BlockStateProperties.AXIS, from.getValue(BlockStateProperties.AXIS));
+        return state;
+    }
+
+    /** Leaves: the {@code minecraft:leaves} tag, our decayable wart blocks and the huge mushrooms' caps. */
     public static boolean isLeafBlock(BlockState bs) {
-        if (bs.is(BlockTags.LEAVES))
-            return true;
-        return List.of(Blocks.OAK_LEAVES, Blocks.BIRCH_LEAVES, Blocks.ACACIA_LEAVES, Blocks.DARK_OAK_LEAVES, Blocks.JUNGLE_LEAVES, Blocks.MANGROVE_LEAVES, Blocks.SPRUCE_LEAVES, Blocks.CHERRY_LEAVES,
-                        BlockRegistrar.DECAYABLE_NETHER_WART_BLOCK.get(), BlockRegistrar.DECAYABLE_WARPED_WART_BLOCK.get(),
-                        Blocks.RED_MUSHROOM_BLOCK, Blocks.BROWN_MUSHROOM_BLOCK)
-                .contains(bs.getBlock());
+        return bs.is(BlockTags.LEAVES)
+            || bs.is(BlockRegistrar.DECAYABLE_NETHER_WART_BLOCK.get()) || bs.is(BlockRegistrar.DECAYABLE_WARPED_WART_BLOCK.get())
+            || bs.is(Blocks.RED_MUSHROOM_BLOCK) || bs.is(Blocks.BROWN_MUSHROOM_BLOCK);
     }
 
     public static boolean isBottomSlab(BlockState bs) {

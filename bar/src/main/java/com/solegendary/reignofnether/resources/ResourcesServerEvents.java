@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.resources;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.solegendary.reignofnether.blocks.BlockUtils;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
@@ -11,7 +12,6 @@ import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
-import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
 import com.solegendary.reignofnether.scenario.ScenarioRole;
@@ -31,10 +31,8 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
@@ -287,56 +285,53 @@ public class ResourcesServerEvents {
         }
 
         if (isLogBlock(evt.getState()) && !BuildingUtils.isPosInsideAnyBuilding(false, evt.getPos())) {
-            fellAdjacentLogs(evt.getPos(), new ArrayList<>(), (Level) evt.getLevel());
+            fellAdjacentLogs(evt.getPos(), (Level) evt.getLevel());
         }
     }
 
-    // if a tree is touched, destroy any adjacent logs that are above the ground after some time to avoid leaving
-    // tall trees behind
-    public static void fellAdjacentLogs(BlockPos bp, ArrayList<BlockPos> bpsExcluded, Level level) {
+    /**
+     * The 17 neighbours a felled log takes with it: the four sides and four diagonals on its own level, the block above
+     * and that block's eight neighbours - a trunk, its branches and a leaning crown, never anything below.
+     */
+    private static final int[][] FELL_NEIGHBOURS = {
+        {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, 1}, {-1, 0, -1},
+        {0, 1, 0}, {1, 1, 0}, {-1, 1, 0}, {0, 1, 1}, {0, 1, -1}, {1, 1, 1}, {1, 1, -1}, {-1, 1, 1}, {-1, 1, -1},
+    };
+
+    /**
+     * A log at {@code bp} was cut: every log reachable from it through {@link #FELL_NEIGHBOURS} (same level or above,
+     * never below) becomes its falling block, so no tree is left standing on air; a reachable log that has no falling
+     * block or stands inside a building is left as it is but still carries the walk on. The cut block itself is the
+     * caller's (the gather goal destroys it; a player's break event removes it right after).
+     * <p>
+     * Walked breadth-first with a set, once per block: the recursive version it replaces walked every log twice (it
+     * recursed from each neighbour, then again after the if), checked "seen" with a List scan (quadratic over a big
+     * trunk) and had no depth bound, so a long log structure could have overflowed the stack.
+     */
+    public static void fellAdjacentLogs(BlockPos bp, Level level) {
         if (SandboxServer.isAnyoneASandboxPlayer())
             return;
-
         if (!level.getGameRules().getRule(GameRuleRegistrar.LOG_FALLING).get())
             return;
 
-        BlockState bs = level.getBlockState(bp);
-
-        List<BlockPos> bpsAdj = List.of(bp.north(),
-            bp.south(),
-            bp.east(),
-            bp.west(),
-            bp.above(),
-            bp.above().north(),
-            bp.above().south(),
-            bp.above().east(),
-            bp.above().west(),
-            bp.north().east(),
-            bp.north().west(),
-            bp.south().east(),
-            bp.south().west(),
-            bp.above().north().east(),
-            bp.above().north().west(),
-            bp.above().south().east(),
-            bp.above().south().west()
-        );
-
-        for (BlockPos bpAdj : bpsAdj) {
-            BlockState bsAdj = level.getBlockState(bpAdj);
-            if (isLogBlock(bsAdj) && !bpsExcluded.contains(bpAdj)) {
-                Block fallingLogBlock = FALLING_LOGS.get(bsAdj.getBlock());
-                if (fallingLogBlock != null && !BuildingUtils.isPosInsideAnyBuilding(level.isClientSide(), bpAdj)) {
-                    if (bsAdj.hasProperty(BlockStateProperties.AXIS)) {
-                        level.setBlockAndUpdate(bpAdj, fallingLogBlock.defaultBlockState()
-                                .setValue(BlockStateProperties.AXIS, bsAdj.getValue(BlockStateProperties.AXIS)));
-                    } else {
-                        level.setBlockAndUpdate(bpAdj, fallingLogBlock.defaultBlockState());
-                    }
-                    bpsExcluded.add(bpAdj);
-                    fellAdjacentLogs(bpAdj, bpsExcluded, level);
-                }
-                bpsExcluded.add(bpAdj);
-                fellAdjacentLogs(bpAdj, bpsExcluded, level);
+        Set<BlockPos> seen = new HashSet<>();
+        ArrayDeque<BlockPos> open = new ArrayDeque<>();
+        seen.add(bp);
+        open.add(bp);
+        while (!open.isEmpty()) {
+            BlockPos at = open.poll();
+            for (int[] d : FELL_NEIGHBOURS) {
+                BlockPos next = at.offset(d[0], d[1], d[2]);
+                if (seen.contains(next))
+                    continue;
+                BlockState bs = level.getBlockState(next);
+                if (!isLogBlock(bs))
+                    continue;
+                seen.add(next);
+                open.add(next);
+                BlockState falling = BlockUtils.getFallingLog(bs);
+                if (falling != null && !BuildingUtils.isPosInsideAnyBuilding(level.isClientSide(), next))
+                    level.setBlockAndUpdate(next, falling);
             }
         }
     }
@@ -459,46 +454,4 @@ public class ResourcesServerEvents {
             return 1;
         }
     }
-
-    private static final Map<Block, Block> FALLING_LOGS = new HashMap<>();
-    static {
-        FALLING_LOGS.put(Blocks.OAK_LOG, BlockRegistrar.FALLING_OAK_LOG.get());
-        FALLING_LOGS.put(Blocks.SPRUCE_LOG, BlockRegistrar.FALLING_SPRUCE_LOG.get());
-        FALLING_LOGS.put(Blocks.BIRCH_LOG, BlockRegistrar.FALLING_BIRCH_LOG.get());
-        FALLING_LOGS.put(Blocks.JUNGLE_LOG, BlockRegistrar.FALLING_JUNGLE_LOG.get());
-        FALLING_LOGS.put(Blocks.ACACIA_LOG, BlockRegistrar.FALLING_ACACIA_LOG.get());
-        FALLING_LOGS.put(Blocks.DARK_OAK_LOG, BlockRegistrar.FALLING_DARK_OAK_LOG.get());
-        FALLING_LOGS.put(Blocks.MANGROVE_LOG, BlockRegistrar.FALLING_MANGROVE_LOG.get());
-        FALLING_LOGS.put(Blocks.CHERRY_LOG, BlockRegistrar.FALLING_CHERRY_LOG.get());
-        FALLING_LOGS.put(Blocks.OAK_WOOD, BlockRegistrar.FALLING_OAK_LOG.get());
-        FALLING_LOGS.put(Blocks.SPRUCE_WOOD, BlockRegistrar.FALLING_SPRUCE_LOG.get());
-        FALLING_LOGS.put(Blocks.BIRCH_WOOD, BlockRegistrar.FALLING_BIRCH_LOG.get());
-        FALLING_LOGS.put(Blocks.JUNGLE_WOOD, BlockRegistrar.FALLING_JUNGLE_LOG.get());
-        FALLING_LOGS.put(Blocks.ACACIA_WOOD, BlockRegistrar.FALLING_ACACIA_LOG.get());
-        FALLING_LOGS.put(Blocks.DARK_OAK_WOOD, BlockRegistrar.FALLING_DARK_OAK_LOG.get());
-        FALLING_LOGS.put(Blocks.MANGROVE_WOOD, BlockRegistrar.FALLING_MANGROVE_LOG.get());
-        FALLING_LOGS.put(Blocks.CHERRY_WOOD, BlockRegistrar.FALLING_CHERRY_LOG.get());
-        FALLING_LOGS.put(Blocks.WARPED_STEM, BlockRegistrar.FALLING_WARPED_STEM.get());
-        FALLING_LOGS.put(Blocks.WARPED_HYPHAE, BlockRegistrar.FALLING_WARPED_STEM.get());
-        FALLING_LOGS.put(Blocks.CRIMSON_STEM, BlockRegistrar.FALLING_CRIMSON_STEM.get());
-        FALLING_LOGS.put(Blocks.CRIMSON_HYPHAE, BlockRegistrar.FALLING_CRIMSON_STEM.get());
-    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -2884,6 +2884,7 @@
   "notification.reignofnether.commander_attacked.piglins": "The Warlord is under attack!",
   "notification.reignofnether.ally_needs_help": "Ally needs help: %s's commander is under attack",
   "notification.reignofnether.unit_lost": "Unit lost",
+  "notification.reignofnether.hero_fallen": "Hero fallen: %s - revive it at its lab",
   "notification.reignofnether.unit_lost.monsters": "A servant returns to the grave",
   "notification.reignofnether.unit_lost.villagers": "A soldier has fallen",
   "notification.reignofnether.unit_lost.piglins": "A warrior has fallen",
