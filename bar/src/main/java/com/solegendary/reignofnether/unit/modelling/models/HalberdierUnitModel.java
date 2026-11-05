@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.HumanBase;
 import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierAnim;
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel;
@@ -218,23 +219,21 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         IDLE.sample((t / HalberdierAnim.IDLE_TICKS) % 1f, rotA, movA);
         // the walk by the stride's phase: WALK_PHASE cycles per vanilla cycle so the planted foot does not slide for
         // the stride the keys were built on
-        if (attack > 0f) {   // main's behaviour (the red proof): the thrust replaces the walk
-            THRUST.sample(attack, rotB, movB);
-            float k = 1f - smooth(Math.min(1f, Math.min(attack / IDLE_FADE, (1f - attack) / IDLE_FADE)));
-            for (int i = 0; i < BONES.length; i++)
-                for (int a = 0; a < 3; a++) {
-                    rotA[i][a] = rotB[i][a] + (rotA[i][a] - READY_ROT[i][a]) * k;
-                    movA[i][a] = movB[i][a] + (movA[i][a] - READY_MOVE[i][a]) * k;
-                }
-        } else if (amt > 0f) {
+        float wk = 0f;
+        if (amt > 0f) {
             float q = (limbSwing * 0.6662f / Mth.TWO_PI * WALK_PHASE) % 1f;
             WALK.sample(q < 0f ? q + 1f : q, rotB, movB);
-            float wk = smooth(amt);
+            wk = smooth(amt);
             for (int i = 0; i < BONES.length; i++)
                 for (int a = 0; a < 3; a++) {
                     rotA[i][a] += (rotB[i][a] - rotA[i][a]) * wk;
                     movA[i][a] += (movB[i][a] - movA[i][a]) * wk;
                 }
+        }
+        if (attack > 0f) {
+            THRUST.sample(attack, rotB, movB);
+            HumanBase.actOver(rotA, movA, rotB, movB, READY_ROT, READY_MOVE, LOWER,
+                1f - smooth(Math.min(1f, Math.min(attack / IDLE_FADE, (1f - attack) / IDLE_FADE))), wk);
         }
         for (int i = 0; i < BONES.length; i++) {
             dsl(parts[i], rotA[i][0], rotA[i][1], rotA[i][2], 1f);
