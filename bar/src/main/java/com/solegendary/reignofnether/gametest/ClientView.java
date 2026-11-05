@@ -112,11 +112,72 @@ final class ClientView {
         return d;
     }
 
+    /**
+     * The same packets drawn by a candidate fix (not in the game: a model, to weigh the options): the server stamps every
+     * tick with its number (a tiny clock packet at the tick's start, so each move packet is known to belong to the tick
+     * it came after) and the client draws each unit from its last few stamped positions at a playback time that runs
+     * steadily {@code interval + margin} server ticks behind the newest tick it has heard of - a late or bunched
+     * packet lands in the buffer before it is drawn. The playback clock follows the server's measured tick rate (an
+     * average over client ticks) and is pulled 10% a tick toward its place; 20 ticks off, it jumps there. A unit
+     * that stood still gets a held sample one interval before it moves again, so it starts on time, not early.
+     */
+    static Drawn replayBuffered(List<Sent> sent, int serverTicks, Clock clock, long seed, int interval, double margin,
+                                double x0, double y0, double z0, float yaw0) {
+        double[] at = clock.sendTimes(serverTicks, seed);
+        final double phase = 17.0;
+        int lastClientTick = (int) Math.ceil((at[serverTicks - 1] - phase) / 50.0) + 6;
+        Drawn d = new Drawn(lastClientTick + 1);
+        List<double[]> buf = new ArrayList<>();   // tick, x, y, z, yaw
+        buf.add(new double[] { -interval, x0, y0, z0, yaw0 });
+        int next = 0, newestTick = -1, prevNewest = -1, clockTick = 0;
+        double est = Double.NaN, rate = 1.0;
+        for (int c = 0; c <= lastClientTick; c++) {
+            // the clock packets of every server tick that started before this client tick, then its move packets
+            while (clockTick < serverTicks && Math.ceil((at[clockTick] - phase) / 50.0) <= c)
+                newestTick = clockTick++;
+            while (next < sent.size() && sent.get(next).tick() <= newestTick) {
+                Sent p = sent.get(next++);
+                double[] last = buf.get(buf.size() - 1);
+                if (p.tick() - last[0] > interval)
+                    buf.add(new double[] { p.tick() - interval, last[1], last[2], last[3], last[4] });
+                buf.add(p.hasPos() ? new double[] { p.tick(), p.x(), p.y(), p.z(), p.hasRot() ? p.yaw() : last[4] }
+                    : new double[] { p.tick(), last[1], last[2], last[3], p.yaw() });
+                while (buf.size() > 12)
+                    buf.remove(0);
+            }
+            if (newestTick >= 0) {
+                if (Double.isNaN(est)) {
+                    est = newestTick;
+                    prevNewest = newestTick;
+                }
+                rate += 0.04 * ((newestTick - prevNewest) - rate);
+                prevNewest = newestTick;
+                est += rate;
+                double err = newestTick - est;
+                est = Math.abs(err) > 20 ? newestTick : est + 0.1 * err;
+            }
+            double play = Double.isNaN(est) ? -interval : est - (interval + margin);
+            double[] a = buf.get(0), b = a;
+            for (double[] s : buf) {
+                b = s;
+                if (s[0] >= play)
+                    break;
+                a = s;
+            }
+            double f = b[0] > a[0] ? Mth.clamp((play - a[0]) / (b[0] - a[0]), 0, 1) : 1;
+            d.x[c] = a[1] + (b[1] - a[1]) * f;
+            d.y[c] = a[2] + (b[2] - a[2]) * f;
+            d.z[c] = a[3] + (b[3] - a[3]) * f;
+            d.yaw[c] = (float) (a[4] + Mth.wrapDegrees(b[4] - a[4]) * f);
+            d.serverTickAt[c] = newestTick;
+        }
+        return d;
+    }
+
     /** The drawn walk's smoothness between two server ticks of the walk (the server's own judged window). */
-    record Smooth(double cv, double frozenPct, double jumpRatio, double pitchDeg, double maxDy, int ticks) {
+    record Smooth(double cv, double frozenPct, double jumpRatio, double pitchDeg, double maxDy, double lagTicks, int ticks) {
         String brief() {
-            return String.format(Locale.ROOT, "cv %.2f frz %.1f%% jmp %.1f pitch %.1f dy %.2f", cv, frozenPct, jumpRatio,
-                pitchDeg, maxDy);
+            return String.format(Locale.ROOT, "%.2f/%.1f/%.1f/%.1f", cv, frozenPct, pitchDeg, lagTicks);
         }
     }
 
@@ -126,9 +187,15 @@ final class ClientView {
      * the mean, the mean body pitch the living army's lean would give those speeds (Kinematics.step's ACCEL ->
      * PITCH_PER_ACCEL, clamped to PITCH_MAX_DEG: the twitch a hitch puts in the torso), and the largest rise in a tick.
      */
-    static Smooth smoothness(Drawn d, int from, int to, double serverMeanSpeed) {
+    static Smooth smoothness(Drawn d, int from, int to, double serverMeanSpeed, double[] serverX, double[] serverZ) {
         List<Double> speeds = new ArrayList<>();
-        double maxDy = 0;
+        double maxDy = 0, lagSum = 0;
+        int lagN = 0;
+        // the walk's direction, start to end of the window: the lag is how far behind the newest known server position
+        // the drawn unit is, along it, in ticks of the walk's mean speed
+        int f0 = Math.max(0, Math.min(from, serverX.length - 1)), t0 = Math.max(0, Math.min(to - 1, serverX.length - 1));
+        double wx = serverX[t0] - serverX[f0], wz = serverZ[t0] - serverZ[f0], wl = Math.sqrt(wx * wx + wz * wz);
+        if (wl > 1e-6) { wx /= wl; wz /= wl; }
         float[] slab = new float[AnimState.STRIDE];
         double pitchSum = 0;
         int pitchN = 0;
@@ -138,6 +205,11 @@ final class ClientView {
                 continue;
             double dx = d.x[c] - d.x[c - 1], dz = d.z[c] - d.z[c - 1];
             speeds.add(Math.sqrt(dx * dx + dz * dz));
+            int newest = Math.min(d.serverTickAt[c], serverX.length - 1);
+            if (newest >= 0 && serverMeanSpeed > 1e-6 && wl > 1e-6) {
+                lagSum += ((serverX[newest] - d.x[c]) * wx + (serverZ[newest] - d.z[c]) * wz) / serverMeanSpeed;
+                lagN++;
+            }
             maxDy = Math.max(maxDy, d.y[c] - d.y[c - 1]);
             Kinematics.step(slab, 0, (float) dx, (float) (d.y[c] - d.y[c - 1]), (float) dz, 0f, 20f, 20f, false, fresh);
             if (!fresh) {
@@ -147,8 +219,9 @@ final class ClientView {
             }
             fresh = false;
         }
+        double lag = lagN > 0 ? lagSum / lagN : Double.NaN;
         if (speeds.size() < 4)
-            return new Smooth(Double.NaN, Double.NaN, Double.NaN, Double.NaN, maxDy, speeds.size());
+            return new Smooth(Double.NaN, Double.NaN, Double.NaN, Double.NaN, maxDy, lag, speeds.size());
         double[] s = speeds.stream().mapToDouble(Double::doubleValue).toArray();
         double mean = Arrays.stream(s).average().orElse(0), var = 0, max = 0;
         int frozen = 0;
@@ -160,6 +233,6 @@ final class ClientView {
         }
         double cv = mean > 1e-6 ? Math.sqrt(var / s.length) / mean : Double.NaN;
         return new Smooth(cv, 100.0 * frozen / s.length, serverMeanSpeed > 1e-6 ? max / serverMeanSpeed : Double.NaN,
-            pitchN > 0 ? pitchSum / pitchN : 0, maxDy, s.length);
+            pitchN > 0 ? pitchSum / pitchN : 0, maxDy, lag, s.length);
     }
 }

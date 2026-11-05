@@ -90,8 +90,8 @@ fi
 # draws it under four match-server clocks, two notices (server, client: a notice keeps ~4 KB) - only in a shard that
 # ran those measurements
 if grep -q "\[Motion\]" gametest.log; then
-  grep -oE "\[Motion\].*" gametest.log | grep -v " client:" | head -14 | cut -c1-300 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Motion server]"} {printf "%%0A%s", $0} END{print ""}' || true
-  grep -oE "\[Motion\].* client:.*" gametest.log | head -14 | cut -c1-300 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Motion client]"} {printf "%%0A%s", $0} END{print ""}' || true
+  grep -oE "\[Motion\].*" gametest.log | grep -v " client " | head -14 | cut -c1-300 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Motion server]"} {printf "%%0A%s", $0} END{print ""}' || true
+  grep -oE "\[Motion\].* client .*" gametest.log | head -14 | cut -c1-340 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Motion client]"} {printf "%%0A%s", $0} END{print ""}' || true
 fi
 # how fast a pile of units spreads (gametest/PerfPushGameTests): the tick it passed, so a flake-stress run shows the
 # margin to the 400-tick timeout (the Oct 27 flake). Last of the notices: a full shard, already at the 10-notice limit,

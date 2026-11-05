@@ -63,6 +63,8 @@ public class MotionFluidityGameTests {
     static final int WALK_TICKS = 420;
     /** Ticks the crowd is watched standing, after it arrived. */
     static final int IDLE_TICKS = 100;
+    /** The buffered option's playback, in server ticks beyond the unit's own update interval (the model's best trade). */
+    static final double BUFFER_MARGIN = 0.5;
 
     static final ClientView.Clock[] CLOCKS = {
         ClientView.Clock.steady(),
@@ -306,6 +308,10 @@ public class MotionFluidityGameTests {
         final ServerEntity tracker;
         final VecDeltaCodec codec = new VecDeltaCodec();
         final List<ClientView.Sent> sent = new ArrayList<>();
+        // option "every tick": the same unit tracked as the dragons are (updateInterval 1), its packets on their own
+        final ServerEntity everyTick;
+        final VecDeltaCodec codec1 = new VecDeltaCodec();
+        final List<ClientView.Sent> sent1 = new ArrayList<>();
         final List<double[]> track = new ArrayList<>();   // x, y, z, body yaw, on ground (1/0), per tick
         final double x0, y0, z0;
         final float yaw0;
@@ -321,28 +327,40 @@ public class MotionFluidityGameTests {
             this.z0 = mob.getZ();
             this.yaw0 = mob.getYRot();
             codec.setBase(mob.position());
+            codec1.setBase(mob.position());
             EntityType<?> type = mob.getType();
-            this.tracker = new ServerEntity(level, mob, type.updateInterval(), type.trackDeltas(), packet -> {
-                if (packet instanceof ClientboundMoveEntityPacket p) {
-                    if (p.hasPosition()) {
-                        Vec3 v = codec.decode(p.getXa(), p.getYa(), p.getZa());
-                        codec.setBase(v);
-                        sent.add(new ClientView.Sent(tick, true, v.x, v.y, v.z, p.hasRotation(), p.getyRot() * 360f / 256f));
-                    } else if (p.hasRotation()) {
+            this.tracker = new ServerEntity(level, mob, type.updateInterval(), type.trackDeltas(),
+                packet -> record(packet, codec, sent, true));
+            this.everyTick = new ServerEntity(level, mob, 1, type.trackDeltas(), packet -> record(packet, codec1, sent1, false));
+        }
+
+        /** One packet as the client decodes it (ClientPacketListener.handleMoveEntity / handleTeleportEntity). */
+        private void record(net.minecraft.network.protocol.Packet<?> packet, VecDeltaCodec c, List<ClientView.Sent> into,
+                            boolean count) {
+            if (packet instanceof ClientboundMoveEntityPacket p) {
+                if (p.hasPosition()) {
+                    Vec3 v = c.decode(p.getXa(), p.getYa(), p.getZa());
+                    c.setBase(v);
+                    into.add(new ClientView.Sent(tick, true, v.x, v.y, v.z, p.hasRotation(), p.getyRot() * 360f / 256f));
+                } else if (p.hasRotation()) {
+                    if (count)
                         rotOnly++;
-                        sent.add(new ClientView.Sent(tick, false, 0, 0, 0, true, p.getyRot() * 360f / 256f));
-                    }
-                } else if (packet instanceof ClientboundTeleportEntityPacket p) {
-                    teleports++;
-                    codec.setBase(new Vec3(p.getX(), p.getY(), p.getZ()));
-                    sent.add(new ClientView.Sent(tick, true, p.getX(), p.getY(), p.getZ(), true, p.getyRot() * 360f / 256f));
+                    into.add(new ClientView.Sent(tick, false, 0, 0, 0, true, p.getyRot() * 360f / 256f));
                 }
-            });
+            } else if (packet instanceof ClientboundTeleportEntityPacket p) {
+                if (count)
+                    teleports++;
+                c.setBase(new Vec3(p.getX(), p.getY(), p.getZ()));
+                into.add(new ClientView.Sent(tick, true, p.getX(), p.getY(), p.getZ(), true, p.getyRot() * 360f / 256f));
+            }
         }
 
         /** Once per server tick, after the entities ticked (the real tracker runs at the next tick's start). */
         void tick() {
+            // the game's own cadence first: a tracker's pass clears the knockback flag (hasImpulse) and the dirty data
+            // that make it send off its cadence, and an every-tick tracker needs neither
             tracker.sendChanges();
+            everyTick.sendChanges();
             track.add(new double[] { mob.getX(), mob.getY(), mob.getZ(), mob.yBodyRot, mob.onGround() ? 1 : 0 });
             tick++;
         }
@@ -429,13 +447,29 @@ public class MotionFluidityGameTests {
                     + " %d/%d/%d/%d), %d rot-only, %d teleports (whole walk: %d rot-only)", what, s.length, mean,
                 mean > 0 ? Math.sqrt(var / Math.max(1, s.length)) / mean : 0, stops, maxYaw, reversals, maxDy, air,
                 posPackets, gaps[0], gaps[1], gaps[2], gaps[3], rotPackets, teleports, rotOnly));
+            // the drawn walk per clock: today (vanilla, its own interval), tracked every tick, and the stamped buffer;
+            // each as speed cv / % ticks frozen / torso pitch deg / lag behind the newest known server tick
+            double[] sx = new double[track.size()], sz = new double[track.size()];
+            for (int k = 0; k < track.size(); k++) {
+                sx[k] = track.get(k)[0];
+                sz[k] = track.get(k)[2];
+            }
+            int n = Math.max(1, track.size()), interval = mob.getType().updateInterval();
             StringBuilder client = new StringBuilder();
             for (ClientView.Clock c : CLOCKS) {
-                ClientView.Drawn d = ClientView.replay(sent, Math.max(1, track.size()), c, 1234L + mob.getId() % 7, x0, y0, z0, yaw0);
-                ClientView.Smooth sm = ClientView.smoothness(d, from, to, mean);
-                client.append(" | ").append(c.name()).append(' ').append(sm.brief());
+                long seed = 1234L + mob.getId() % 7;
+                ClientView.Smooth today = ClientView.smoothness(ClientView.replay(sent, n, c, seed, x0, y0, z0, yaw0),
+                    from, to, mean, sx, sz);
+                ClientView.Smooth every = ClientView.smoothness(ClientView.replay(sent1, n, c, seed, x0, y0, z0, yaw0),
+                    from, to, mean, sx, sz);
+                ClientView.Smooth buffered = ClientView.smoothness(ClientView.replayBuffered(sent, n, c, seed, interval,
+                    BUFFER_MARGIN, x0, y0, z0, yaw0), from, to, mean, sx, sz);
+                client.append(" | ").append(c.name()).append(" now ").append(today.brief()).append(" e1 ")
+                    .append(every.brief()).append(" buf ").append(buffered.brief());
             }
-            ReignOfNether.LOGGER.warn("[Motion] " + what + " client:" + client);
+            ReignOfNether.LOGGER.warn("[Motion] " + what + " client (cv/frz/pitch/lag):" + client + String.format(Locale.ROOT,
+                " | e1 pos packets %d vs %d", sent1.stream().filter(p -> p.hasPos() && p.tick() >= from && p.tick() < to).count(),
+                posPackets));
         }
 
         /** After the idle mark: horizontal distance moved, degrees the body turned, position packets sent. */
