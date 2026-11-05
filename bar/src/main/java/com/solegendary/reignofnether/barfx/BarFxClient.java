@@ -1057,6 +1057,29 @@ public final class BarFxClient {
 
     // ------------------------------------------------------------------ frame: step + draw
 
+    /** This frame's camera, for every pass that draws (the rune circles' ground pass runs before the frame's step). */
+    private static void camera(Camera camera) {
+        Vec3 cp = camera.getPosition();
+        camX = (float) cp.x; camY = (float) cp.y; camZ = (float) cp.z;
+        Vector3f look = camera.getLookVector(), left = camera.getLeftVector(), up = camera.getUpVector();
+        lookX = look.x(); lookY = look.y(); lookZ = look.z();
+        leftX = left.x(); leftY = left.y(); leftZ = left.z();
+        upX = up.x(); upY = up.y(); upZ = up.z();
+        ortho = OrthoviewClientEvents.isEnabled();
+        zoom = OrthoviewClientEvents.getZoom();
+    }
+
+    /**
+     * Before the entities (RenderLevelStageEvent AFTER_CUTOUT_BLOCKS): the rune circles' ground layer, so the units
+     * stand over it. On the clock of the last step (one frame old; the light above draws on the same clock).
+     */
+    public static void onRenderGround(PoseStack poseStack, Camera camera, float partialTick) {
+        if (MC.level == null || MC.level != lastLevel)
+            return;
+        camera(camera);
+        RuneFxClient.renderGround(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
+    }
+
     public static void onRenderFrame(PoseStack poseStack, Camera camera, float partialTick) {
         ClientLevel level = MC.level;
         if (level == null) { if (!live.isEmpty() || !decals.isEmpty()) clear(); lastLevel = null; return; }
@@ -1069,15 +1092,7 @@ public final class BarFxClient {
         clock += dt;
         shakeAmt *= (float) Math.exp(-dt * 5);
 
-        // camera
-        Vec3 cp = camera.getPosition();
-        camX = (float) cp.x; camY = (float) cp.y; camZ = (float) cp.z;
-        Vector3f look = camera.getLookVector(), left = camera.getLeftVector(), up = camera.getUpVector();
-        lookX = look.x(); lookY = look.y(); lookZ = look.z();
-        leftX = left.x(); leftY = left.y(); leftZ = left.z();
-        upX = up.x(); upY = up.y(); upZ = up.z();
-        ortho = OrthoviewClientEvents.isEnabled();
-        zoom = OrthoviewClientEvents.getZoom();
+        camera(camera);
 
         trailAcc += dt;
         if (trailAcc >= 1 / 30f) {
@@ -1112,7 +1127,7 @@ public final class BarFxClient {
         // barriers (DomeFx) are drawn first: the light below sits on top of them
         if (!DomeFx.isEmpty())
             DomeFx.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
-        // rune circles (RuneFxClient) lie on the ground under the light below
+        // rune circles (RuneFxClient): their light above the ground (the ground layer drew before the entities)
         RuneFxClient.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
         if (live.isEmpty() && decals.isEmpty()) return;
 

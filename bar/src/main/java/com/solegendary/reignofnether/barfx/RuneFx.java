@@ -36,8 +36,11 @@ public final class RuneFx {
     public static final int CAST_TICKS = 30;
     /** The most circles live at once in one level (a 100-caster fight shows 48; each start past it is dropped). */
     public static final int MAX_LIVE = 48;
-    /** A T1 caster's circle, in blocks: about twice its footprint, ~115 px across at zoom 30. */
-    public static final float CAST_RADIUS = 1.3f;
+    /**
+     * A T1 caster's circle, in blocks: under twice its footprint (round 9: a dense army's circles overlapped), ~80 px
+     * across at zoom 30.
+     */
+    public static final float CAST_RADIUS = 1.15f;
 
     /** A live circle: its level, when it ends, and where it started (the end event's spot when its entity is gone). */
     private record Live(ResourceKey<Level> dim, long endsAt, float x, float y, float z) { }

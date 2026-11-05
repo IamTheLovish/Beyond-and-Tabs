@@ -14,7 +14,7 @@ import org.joml.Matrix4f;
  * Rune magic, the client half (RuneFx is the server's): every {@link BarFx#RUNE} event becomes a rune circle in
  * {@link #POOL}, drawn each frame as textured geometry from the atlas tools/gen_rune_textures.py makes (one column per
  * faction, F_* id). The look went through blind rounds of a fresh critic against lovish's reference sheet
- * (tools/rune_preview.py renders it offline with these same numbers; keep the two in step). One cast, by layer:
+ * (tools/rune_preview.py renders it offline, up to v9; from round 9 on the in-game eyes stills are the judge).
  * The first in-game round (eyes stills of a 505-unit army) found what the offline preview hid: the textured rim
  * was about 1 px on screen, grass blades cut it, Verdant and Sunforged sank into sunlit grass, and 48 overlapping
  * circles made a haze at zoom 45. So the rim is now drawn as geometry, not texture. One cast, by layer:
@@ -29,9 +29,9 @@ import org.joml.Matrix4f;
  *       {@link #DRAW_IN} s from the camera's far side (the sweep's straight edge sits behind the unit), the leading
  *       edge feathered and a glyph riding the tip, a seed of light at the feet the moment it starts; the ring turns
  *       ({@link #RING_SPIN}) and the rim breathes so the hold keeps moving;</li>
- *   <li>the ground layer is drawn {@link #PULL} blocks toward the RTS camera: in its orthographic view that moves
- *       only the depth, so grass blades no longer cut the rim while the units (deeper than that past it) still hide
- *       what is behind them;</li>
+ *   <li>the ground layer is drawn before the entities ({@link #renderGround}), so every unit stands over its circle,
+ *       and {@link #PULL} blocks toward the RTS camera: in its orthographic view that moves only the depth, so grass
+ *       blades no longer cut the rim;</li>
  *   <li>the release, at the end of the draw-in: the rim flares for {@link #FLASH_T} s, is thrown out to
  *       {@link #PULSE_TO} x and fades (the moment, readable at any zoom), a white burst at the feet and a thin column
  *       of light from the head;</li>
@@ -48,8 +48,9 @@ import org.joml.Matrix4f;
  * At RTS zoom past {@link #LOD_FROM} the details (atlas ring, band, sigil, motes, column) fade out; past
  * {@link #LOD_TO}, where a circle is a few pixels wide, only the rim, its dark line and the release are drawn. A circle
  * with others within {@link #CROWD_R} blocks dims its light (not below {@link #CROWD_MIN}); when many casters release at
- * once their flashes are dimmed together ({@link #FLASH_CAP}) so a big fight does not strobe. Two batches for all
- * circles, no allocation per frame (fixed pool and scratch arrays, a reused BlockPos), a following circle rides on its
+ * once their flashes are dimmed together ({@link #FLASH_CAP}) so a big fight does not strobe. A ring's slices follow
+ * its size on screen ({@link #segs}). Two batches for the ground of all circles and one for the light above, no
+ * allocation per frame (fixed pool and scratch arrays, a reused BlockPos), a following circle rides on its
  * caster (interpolated), drawn only in lit chunks (fog of war) and near the camera. At RTS zoom past 30 it grows with
  * the zoom (up to {@link #SCALE_MAX} x). Client only.
  */
@@ -60,6 +61,12 @@ public final class RuneFxClient {
     static final float DRAW_IN = 0.3f, FADE = 0.35f, SIGIL_DELAY = 0.08f;
     static final float RING_SPIN = 0.17f;
     static final int RING_SEG = 32, SIGIL_SEG = 16, TIER_SEG = 24, STROKE_SEG = 32, DARK_SEG = 24;
+    /**
+     * A ring's slices are sized on screen ({@link #segs}): one per SEG_PX pixels of its rim, at least SEG_MIN, never more
+     * than asked (the chord sags under half a pixel). A circle 7 px across at zoom 200 needs 12, not 32.
+     */
+    static final float SEG_PX = 8;
+    static final int SEG_MIN = 12;
     /** Slices over which the sweep's leading edge fades in. */
     static final int FEATHER = 2;
     /** The outer rim sits at this share of a ring cell's width. */
@@ -71,17 +78,17 @@ public final class RuneFxClient {
     /** The underlay's alpha: it fills the ring, in the faction's {@link #DARK}. */
     static final float UNDER_A = 0.32f;
     /**
-     * The rim per faction (F_* id): its core (light enough to read on sunlit grass, never pure hue), its halo (the
-     * faction's hue), and the dark line under both.
+     * The rim per faction (F_* id): its core (light enough to read on sunlit grass, never pure hue, never pure white:
+     * overlapping rims summed to white in round 9), its halo (the faction's hue), and the dark line under both.
      */
-    static final int[] CORE = {0xFFFFFF, 0xFFFFF0, 0xD0FF60, 0xFFB080, 0x9CFFC8, 0xA8F8FF, 0xD0B8FF, 0xFFC870};
-    static final int[] HALO = {0xC8C8FF, 0xFFE070, 0x7CE000, 0xFF2A00, 0x2AE890, 0x00D8F0, 0x9050FF, 0xE08A10};
+    static final int[] CORE = {0xE4ECFF, 0xFFF2C0, 0xD0FF60, 0xFFB080, 0xB0FFB0, 0xA8F8FF, 0xD0B8FF, 0xFFC870};
+    static final int[] HALO = {0xC8C8FF, 0xFFE070, 0x7CE000, 0xFF2A00, 0x28C850, 0x30D8FF, 0x9050FF, 0xD07818};
     static final int[] DARK = {0x202040, 0x3A1E00, 0x1A2A00, 0x3A0800, 0x0B3D1E, 0x002A3A, 0x1E0A40, 0x3A2400};
     /**
      * The rim core's half width: at least CORE_W blocks and CORE_PX screen pixels (RTS camera). The halo is HALO_K times
      * as wide, the dark line DARK_K times.
      */
-    static final float CORE_W = 0.05f, CORE_PX = 1.5f, HALO_K = 3, DARK_K = 2.2f;
+    static final float CORE_W = 0.05f, CORE_PX = 1.5f, HALO_K = 2.4f, DARK_K = 2.2f;
     static final float CORE_A = 0.95f, HALO_A = 0.35f, DARK_A = 0.55f;
     /** The rim's core settles by SETTLE over the hold, from SETTLE_FROM s to SETTLE_TO s. */
     static final float SETTLE = 0.3f, SETTLE_FROM = 0.5f, SETTLE_TO = 1.3f;
@@ -90,13 +97,13 @@ public final class RuneFxClient {
     /** The underlay reaches this share of the rim's radius (its soft edge just past the rim). */
     static final float UNDER_R = 1.1f;
     /** The inner line: its radius as a share of the rim's, its width as a share of the core's, its alpha. */
-    static final float INNER_R = 0.68f, INNER_W = 0.6f, INNER_A = 0.75f;
+    static final float INNER_R = 0.62f, INNER_W = 0.6f, INNER_A = 0.75f;
     /** The sigil's ring of light (in the faction's halo hue): its alpha as a share of the sigil's. */
     static final float SIGIL_RING_A = 0.6f;
     /** Blocks the ground layer is drawn toward the RTS camera (its orthographic view: only the depth changes). */
     static final float PULL = 1.0f;
     /** RTS zoom: the details fade out from LOD_FROM to LOD_TO. */
-    static final float LOD_FROM = 33, LOD_TO = 45;
+    static final float LOD_FROM = 24, LOD_TO = 36;
     /** Past zoom 30 the circle grows with the zoom, up to this. */
     static final float SCALE_MAX = 1.2f;
     static final float RING_A = 1.0f, SIGIL_A = 0.95f, FLASH_T = 0.1f;
@@ -105,7 +112,7 @@ public final class RuneFxClient {
     /** The glyph riding the sweep's tip: half size in blocks. */
     static final float TIP_HALF = 0.16f;
     /** Others within this many blocks dim a circle's light to 1 / sqrt(1 + n), not below CROWD_MIN. */
-    static final float CROWD_R = 3, CROWD_MIN = 0.75f;
+    static final float CROWD_R = 3, CROWD_MIN = 0.6f;
     /** How many circles may flash at full strength in one frame; past it every flash is dimmed to share that much. */
     static final float FLASH_CAP = 3;
     /** The rim thrown out at the release: from this share of the circle's radius to PULSE_TO over PULSE_T s. */
@@ -114,7 +121,7 @@ public final class RuneFxClient {
     static final float TIER_H = 0.8f, TIER_R = 0.62f, TIER_AT = 0.3f, TIER_A = 0.7f, TIER_SPIN = -0.2f;
     static final float TIER_RISE = 0.12f;
     static final float PILLAR_FROM = 2.0f, PILLAR_H = 2.5f, PILLAR_HW = 0.125f, PILLAR_A = 0.5f, PILLAR_T = 0.12f;
-    static final int MOTES = 14;
+    static final int MOTES = 8;
     /** Motes run this much faster than the cast's clock (short lives). */
     static final float MOTE_SPEED = 2;
     static final float MOTE_A = 1.0f, MOTE_HALF = 0.26f, RISE = 1.5f;
@@ -138,7 +145,7 @@ public final class RuneFxClient {
     private static final float[] RADIUS = new float[RunePool.MAX], CROWD = new float[RunePool.MAX];
     private static float flashScale = 1, sweepStart = (float) (-Math.PI / 2);
     // this frame's: detail (1 close .. 0 far), the rim core's half width, the ground layer's pull toward the camera
-    private static float near = 1, wc = CORE_W, px, py, pz;
+    private static float near = 1, wc = CORE_W, bpp, px, py, pz;
     private static float mx, my, mz, ma;   // mote()'s answer
     private static long renderNanos = 0, renderFrames = 0;
     private static int peak = 0;
@@ -180,23 +187,28 @@ public final class RuneFxClient {
     public static long renderFrames() { return renderFrames; }
     public static int peak() { return peak; }
 
-    /** Draws every live circle: the underlays in one batch, then the light in one additive batch. After the domes. */
-    static void render(MultiBufferSource.BufferSource buffers, Matrix4f mat, float clock, float partialTick) {
+    /** The circles the ground pass drew this frame, and its clock: the air pass draws on the same state. */
+    private static boolean prepared = false;
+    private static float frameClock;
+    private static int shown = 0;
+
+    /** This frame's shared state: the zoom's level of detail and widths, which circles show, their crowd dimming. */
+    private static int prepare(float clock, float partialTick) {
         POOL.prune(clock);
+        shown = 0;
         if (POOL.count == 0)
-            return;
-        long t0 = System.nanoTime();
+            return 0;
         Minecraft mc = Minecraft.getInstance();
         boolean ortho = BarFxClient.ortho;
         float scale = ortho ? Math.max(1, Math.min(SCALE_MAX, BarFxClient.zoom / 30f)) : 1;
         near = ortho ? Math.max(0, Math.min(1, (LOD_TO - BarFxClient.zoom) / (LOD_TO - LOD_FROM))) : 1;
-        float bpp = ortho ? BarFxClient.zoom / Math.max(1, mc.getWindow().getHeight()) : 0;   // blocks per pixel
+        bpp = ortho ? BarFxClient.zoom / Math.max(1, mc.getWindow().getHeight()) : 0;   // blocks per pixel
         wc = Math.max(CORE_W, CORE_PX * bpp);
         float pull = ortho ? PULL : 0;
         px = -BarFxClient.lookX * pull;
         py = -BarFxClient.lookY * pull;
         pz = -BarFxClient.lookZ * pull;
-        int shown = 0, flashing = 0;
+        int flashing = 0;
         for (int i = 0; i < POOL.count; i++) {
             SHOWN[i] = false;
             if (!POOL.aliveAt(i, clock))
@@ -218,7 +230,7 @@ public final class RuneFxClient {
             if (rel >= 0 && rel < FLASH_T)
                 flashing++;
         }
-        if (shown > 0) {
+        if (shown > 0) {   // (the crowd and the flash share)
             flashScale = Math.min(1, FLASH_CAP / Math.max(1, flashing));
             sweepStart = (float) Math.atan2(BarFxClient.lookZ, BarFxClient.lookX);
             for (int i = 0; i < POOL.count; i++) {
@@ -234,6 +246,19 @@ public final class RuneFxClient {
                 }
                 CROWD[i] = Math.max(CROWD_MIN, 1 / (float) Math.sqrt(1 + n));
             }
+        }
+        return shown;
+    }
+
+    /**
+     * The ground layer, before the entities (RenderLevelStageEvent AFTER_CUTOUT_BLOCKS): the underlays in one batch, then
+     * the rims' light in one additive batch. Units drawn after it stand over their circle (round 9: rings crossing the
+     * units' bodies broke the ground); the pull still keeps it over the grass.
+     */
+    static void renderGround(MultiBufferSource.BufferSource buffers, Matrix4f mat, float clock, float partialTick) {
+        prepared = false;
+        long t0 = System.nanoTime();
+        if (prepare(clock, partialTick) > 0) {
             VertexConsumer sh = buffers.getBuffer(BarFxRenderTypes.RUNES_SHADE);
             for (int i = 0; i < POOL.count; i++)
                 if (SHOWN[i])
@@ -242,7 +267,44 @@ public final class RuneFxClient {
             VertexConsumer vc = buffers.getBuffer(BarFxRenderTypes.RUNES);
             for (int i = 0; i < POOL.count; i++)
                 if (SHOWN[i])
-                    circle(vc, mat, i, clock, RADIUS[i]);
+                    ground(vc, mat, i, clock, RADIUS[i]);
+            buffers.endBatch(BarFxRenderTypes.RUNES);
+        }
+        prepared = true;
+        frameClock = clock;
+        renderNanos += System.nanoTime() - t0;
+    }
+
+    /**
+     * The light above the ground, after the domes (AFTER_TRANSLUCENT_BLOCKS): seed, tip glyph, burst, waist band, sigil,
+     * pillar, motes. On the ground pass's frame and clock; when that pass did not run, the whole circle here.
+     */
+    static void render(MultiBufferSource.BufferSource buffers, Matrix4f mat, float clock, float partialTick) {
+        boolean whole = !prepared;
+        if (prepared)
+            clock = frameClock;
+        prepared = false;
+        long t0 = System.nanoTime();
+        if (whole)
+            prepare(clock, partialTick);
+        if (POOL.count == 0)
+            return;
+        if (shown > 0) {
+            if (whole) {
+                VertexConsumer sh = buffers.getBuffer(BarFxRenderTypes.RUNES_SHADE);
+                for (int i = 0; i < POOL.count; i++)
+                    if (SHOWN[i])
+                        underlay(sh, mat, i, clock, RADIUS[i]);
+                buffers.endBatch(BarFxRenderTypes.RUNES_SHADE);
+            }
+            VertexConsumer vc = buffers.getBuffer(BarFxRenderTypes.RUNES);
+            for (int i = 0; i < POOL.count; i++) {
+                if (!SHOWN[i])
+                    continue;
+                if (whole)
+                    ground(vc, mat, i, clock, RADIUS[i]);
+                air(vc, mat, i, clock, RADIUS[i]);
+            }
             buffers.endBatch(BarFxRenderTypes.RUNES);
         }
         renderNanos += System.nanoTime() - t0;
@@ -290,13 +352,12 @@ public final class RuneFxClient {
         stroke(vc, m, gx, gy + 0.01f, gz, rr, wc * DARK_K, DARK_SEG, reveal, DARK[f], DARK_A * s);
     }
 
-    private static void circle(VertexConsumer vc, Matrix4f m, int i, float clock, float R) {
+    private static void ground(VertexConsumer vc, Matrix4f m, int i, float clock, float R) {
         float t = clock - POOL.born[i];
         float s = strength(i, clock);
         if (s <= 0.01f)
             return;
         float sl = s * CROWD[i];   // the light, dimmed in a crowd
-        float sc = R / RuneFx.CAST_RADIUS;
         float ending = ending(i, clock, s);
         float grow = 1 + 0.12f * ending;
         float breath = BREATH + BREATH_DEPTH * (float) Math.sin(t * 2 * Math.PI * BREATH_HZ);
@@ -306,8 +367,6 @@ public final class RuneFxClient {
         int f = POOL.style[i];
         float u0 = f * CELL_U;
         float tau = 6.2831855f;
-        if (t < SEED_T)   // the seed: light gathers at the feet the moment the cast starts
-            billboard(vc, m, cx, cy + 0.15f, cz, SEED_HALF * Math.max(1, sc), u0 + 2 * GLYPH_U, V_FX + GLYPH_V, 1 - t / SEED_T);
         // the ground layer, pulled toward the RTS camera: the atlas ring (close only), the rim's halo and core
         float rr = R * grow, reveal = Math.min(1, t / DRAW_IN);
         float gx = cx + px, gy = cy + py, gz = cz + pz;
@@ -322,17 +381,36 @@ public final class RuneFxClient {
             Math.min(1, CORE_A * sl * breath * settle + 0.5f * flash * sl));
         if (near > 0.01f)   // the inner line: the second weight under the rim
             stroke(vc, m, gx, gy, gz, rr * INNER_R, wc * INNER_W, STROKE_SEG, reveal, CORE[f], INNER_A * sl * near);
-        if (t < DRAW_IN && near > 0.01f) {   // the glyph riding the sweep's tip: the circle is being written
-            double a = sweepStart + reveal * tau;
-            int g = POOL.id[i] & 15;
-            billboard(vc, m, cx + (float) Math.cos(a) * rr * 0.92f, cy + 0.25f, cz + (float) Math.sin(a) * rr * 0.92f,
-                TIP_HALF * Math.max(1, sc), u0 + (g & 3) * GLYPH_U, V_GLYPH + (g >> 2) * GLYPH_V, sl * near);
-        }
         if (rel >= 0 && rel < PULSE_T) {   // the release: the rim thrown out, the moment read at any zoom
             float q = rel / PULSE_T;
             float rp = rr * (PULSE_FROM + (PULSE_TO - PULSE_FROM) * ease(q));
             stroke(vc, m, gx, gy + 0.02f, gz, rp, wc * HALO_K, STROKE_SEG, 1, HALO[f], HALO_A * (1 - q) * sl);
             stroke(vc, m, gx, gy + 0.02f, gz, rp, wc, STROKE_SEG, 1, CORE[f], (1 - q) * sl);
+        }
+    }
+
+    private static void air(VertexConsumer vc, Matrix4f m, int i, float clock, float R) {
+        float t = clock - POOL.born[i];
+        float s = strength(i, clock);
+        if (s <= 0.01f)
+            return;
+        float sl = s * CROWD[i];   // the light, dimmed in a crowd
+        float sc = R / RuneFx.CAST_RADIUS;
+        float ending = ending(i, clock, s);
+        float grow = 1 + 0.12f * ending;
+        float rel = t - DRAW_IN;
+        float cx = POOL.x[i], cy = POOL.y[i] + 0.05f, cz = POOL.z[i];
+        int f = POOL.style[i];
+        float u0 = f * CELL_U;
+        float tau = 6.2831855f;
+        float rr = R * grow, reveal = Math.min(1, t / DRAW_IN);
+        if (t < SEED_T)   // the seed: light gathers at the feet the moment the cast starts
+            billboard(vc, m, cx, cy + 0.15f, cz, SEED_HALF * Math.max(1, sc), u0 + 2 * GLYPH_U, V_FX + GLYPH_V, 1 - t / SEED_T);
+        if (t < DRAW_IN && near > 0.01f) {   // the glyph riding the sweep's tip: the circle is being written
+            double a = sweepStart + reveal * tau;
+            int g = POOL.id[i] & 15;
+            billboard(vc, m, cx + (float) Math.cos(a) * rr * 0.92f, cy + 0.25f, cz + (float) Math.sin(a) * rr * 0.92f,
+                TIP_HALF * Math.max(1, sc), u0 + (g & 3) * GLYPH_U, V_GLYPH + (g >> 2) * GLYPH_V, sl * near);
         }
         if (rel >= 0 && rel < BURST_T)   // and a white burst at the feet
             billboard(vc, m, cx, cy + 0.15f, cz, BURST_HALF * Math.max(1, sc), u0 + 2 * GLYPH_U, V_FX + GLYPH_V,
@@ -389,7 +467,7 @@ public final class RuneFxClient {
 
     /**
      * Where mote k of a circle is at time t (offset from the centre) and its alpha, into mx, my, mz, ma (Brassworks'
-     * cogs are circle()'s own).
+     * cogs are air()'s own).
      */
     static void mote(int f, int k, float t, int id, float R) {
         float ph = (float) k / MOTES + hash01(id * 31 + k);
@@ -461,6 +539,7 @@ public final class RuneFxClient {
     private static void fan(VertexConsumer vc, Matrix4f m, float cx, float cy, float cz, float r, int seg, float reveal,
                             float start, int feather, float spin, float uc, float vc0, float hu, float hv, float cr, float cg,
                             float cb, float a) {
+        seg = segs(r, seg);
         float litF = reveal * (seg + feather);
         int lit = Math.max(1, Math.min(seg, (int) Math.ceil(litF)));
         double step = Math.PI * 2 / seg;
@@ -488,6 +567,7 @@ public final class RuneFxClient {
                                float reveal, int rgb, float a) {
         if (a <= 0.01f)
             return;
+        seg = segs(r + w, seg);
         float cr = ((rgb >> 16) & 255) / 255f, cg = ((rgb >> 8) & 255) / 255f, cb = (rgb & 255) / 255f;
         float r0 = Math.max(0, r - w), r1 = Math.max(0, r - w / 2), r2 = r + w / 2, r3 = r + w;
         float litF = reveal * (seg + FEATHER);
@@ -503,6 +583,14 @@ public final class RuneFxClient {
             strip(vc, m, cx, cy, cz, c0, s0, c1, s1, r1, aj, r2, aj, cr, cg, cb);
             strip(vc, m, cx, cy, cz, c0, s0, c1, s1, r2, aj, r3, 0, cr, cg, cb);
         }
+    }
+
+    /** The slices for a ring of radius {@code r} (blocks): {@code seg} at most, fewer when it is small on screen. */
+    static int segs(float r, int seg) {
+        if (bpp <= 0)
+            return seg;
+        int want = (int) Math.ceil(6.2831855f * r / (bpp * SEG_PX));
+        return Math.min(seg, Math.max(SEG_MIN, want));
     }
 
     /** One quad of a ring between radii ra (alpha aa) and rb (alpha ab), from angle (c0, s0) to (c1, s1). */
