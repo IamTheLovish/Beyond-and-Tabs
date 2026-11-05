@@ -195,7 +195,30 @@ class ShaderPack(unittest.TestCase):
             src = spc.expand(os.path.join(spc.SHADERS, name))
             self.assertIn("windOffset(playerPos + cameraPosition", src, name)
         props = read("block.properties")
-        self.assertIn("block.10002=oak_leaves", props)
+        self.assertIn("block.10004=oak_leaves", props)
+        self.assertIn("#define ID_LEAVES 10004.0", read("lib", "settings.glsl"))
+
+    def test_block_ids_are_unique_and_named(self):
+        # two features claiming one id would light leaves as water (or water as leaves) with nothing failing: #437's
+        # leaves and #438's water both took 10002 until Nov 5. Each block.N line once, each block under one id, and
+        # every id the programs name (#define ID_*) has its line and the other way round
+        props = read("block.properties").replace("\\\r\n", " ").replace("\\\n", " ")
+        ids = {}
+        owner = {}
+        for line in props.splitlines():
+            m = re.match(r"block\.(\d+)=(.*)", line)
+            if not m:
+                continue
+            self.assertNotIn(m.group(1), ids, "block.%s is declared twice" % m.group(1))
+            ids[m.group(1)] = m.group(2).split()
+            for block in ids[m.group(1)]:
+                self.assertNotIn(block, owner, "%s is under block.%s and block.%s" % (block, owner.get(block), m.group(1)))
+                owner[block] = m.group(1)
+        named = re.findall(r"#define (ID_\w+) (\d+)\.0", read("lib", "settings.glsl"))
+        values = [v for _, v in named]
+        self.assertEqual(len(values), len(set(values)), "two ID_ defines share an id: %s" % named)
+        self.assertEqual(set(values), set(ids), "ids without a define or without a block.N line: %s vs %s"
+                         % (sorted(values), sorted(ids)))
 
     def test_options_compile_both_ways(self):
         # every option a program reads is compiled at both ends of its range (a toggle on and off)

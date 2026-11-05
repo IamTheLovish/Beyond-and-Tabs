@@ -58,5 +58,5 @@ const float ambientOcclusionLevel = 1.0;
 
 // block ids from block.properties
 #define ID_FOLIAGE 10001.0             // plants, and the lower half of two-block ones
-#define ID_LEAVES 10002.0
+#define ID_LEAVES 10004.0              // 10002 is water's (#438)
 #define ID_FOLIAGE_UPPER 10003.0       // the upper half of a two-block plant
