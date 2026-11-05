@@ -1299,7 +1299,7 @@ public final class BarFxClient {
             if (ul > .2f) { ux /= ul; uy /= ul; len = Math.max(1, Math.min(p.stretch, 1 + sp / 8)); } else { ux = 0; uy = 0; }
         }
         if (ux == 0 && uy == 0) {
-            float an = p.spin + k * .8f;
+            float an = p.spin + k * .8f + (clock - p.born) * p.rate;   // rate: BREATH puffs' roll speed (rad/s)
             ux = (float) Math.cos(an); uy = (float) Math.sin(an);
         }
         // the long axis on the screen (+u of the frame), and the short one square to it

@@ -42,15 +42,17 @@ public final class BreathFx {
     private BreathFx() { }
 
     private static final Minecraft MC = Minecraft.getInstance();
-    /** Per tick: core tongues, body tongues, wisps, splash tongues, ring flames, sparks, embers; licks on at most LICKS_MAX. */
-    static final int CORES = 10, BODY = 8, WISPS = 2, SPLASH = 12, RING = 10, SPARKS = 6, EMBERS = 1, LICKS_MAX = 6;
+    /** Per tick: core tongues, body tongues, body puffs, soul-smoke, splash tongues, pool flames, embers; licks on at
+     *  most LICKS_MAX units. */
+    static final int CORES = 3, BODY = 4, PUFFS = 4, SMOKES = 2, SPLASH = 12, POOL = 2, EMBERS = 4, LICKS_MAX = 6;
     /** The jaws the renderer found are trusted this many client ticks (an undrawn dragon's are guessed instead). */
     static final long JAWS_FRESH = 3;
-    // soul-fire (Fable round 3: away from a flat "water" blue): each flame fades from its first colour to its second
-    static final int CORE = 0xF2FFFF, CORE_END = 0x8AF3FF, BODY_C = 0x5FD3FF, BODY_END = 0x2C6FE0, WISP = 0x1A2E6E,
-        WISP_END = 0x0A1030, SPLASH_C = 0x9FF0FF, SPLASH_END = 0x1B3FAA, GROUND_GLOW = 0x1FA8FF, RING_C = 0x4FD0FF,
-        SPARK = 0xBFF4FF, EMBER = 0x6FE8FF, EMBER_END = 0x2A6DFF, SCORCH = 0x0A1F5C, LICK = 0x8FE0FF, LICK_END = 0x2A6DFF,
-        LIT = 0x66B8FF, JAW_GLOW = 0xBFEFFF, JAW_LIGHT = 0x5FD3FF;
+    // soul-fire, cyan to cobalt only (Fable round 4: lilac merges with the wings); each flame fades from its first
+    // colour to its second over its life
+    static final int CORE = 0xF4FFFF, CORE_END = 0xBFEFFF, BODY_C = 0x3F8DFF, BODY_END = 0x1A3FD6, SMOKE = 0x2A2F52,
+        SMOKE_END = 0x1A1E36, MUZZLE = 0xFFFFFF, SPLASH_C = 0x9FE8FF, SPLASH_END = 0x1332C8, POOL_C = 0x6FD8FF,
+        POOL_END = 0x1E4BD8, HOT = 0x7FD6FF, GLOW = 0x1E4BFF, EMBER = 0xC8F0FF, SCORCH = 0x0A1A2E, LICK = 0x8FE0FF,
+        LICK_END = 0x2A6DFF, LIT = 0x66B8FF;
 
     private static final double[] V = new double[3];
     private static final List<BoneDragonUnit> TICKING = new ArrayList<>();
@@ -144,81 +146,88 @@ public final class BreathFx {
         // it swells in over the first ticks and gutters out over the last (the jaw opens before, shuts after)
         float swell = Math.min(1f, (t + 1) / 4f) * Math.min(1f, (FireBreath.TICKS - t) / 6f);
 
-        // the stream (Fable round 3: "a flat solid wedge, a jet of liquid"): textured flame TONGUES (the atlas of
-        // tools/breath_sprites.py) laid along their motion - a white-hot core that races ahead, a light-blue body that
-        // wobbles side to side as it goes, and dark wisps rising off its far half and the impact
+        // the stream (Fable rounds 3-4: "a flat solid wedge", then "reads as water / ice, no breakup"): textured flame
+        // tongues (the atlas of tools/breath_sprites.py) laid along their motion - a white-hot core racing ahead (added
+        // light), a cobalt body of tongues that wobble side to side and ragged puffs rolling as they go (ALPHA-BLENDED,
+        // BarFxClient P.blend, so blue stays blue over grass), soul-smoke drifting up off it - and a flash in the jaws
         float px = -sz, pz = sx, pl = (float) Math.sqrt(px * px + pz * pz);   // square to the stream, on the ground
         if (pl > 1.0e-3) { px /= pl; pz /= pl; }
         float wobble = 1.5f * (float) Math.sin(now() * 0.6);
+        float dv = Math.max(1f, dist);
         for (int i = 0; i < CORES; i++) {
             FireBreath.flame(jx, jy, jz, ax, ay, az, tan, BarFxClient.R.nextDouble() * .04, BarFxClient.R.nextDouble(), V);
-            float k = rnd(22f, 26f) / (float) Math.sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
+            float k = rnd(22f, 28f) / (float) Math.sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
             float lead = rnd(0, .05f);
             BarFxClient.P p = flame(jx + (float) V[0] * k * lead, jy + (float) V[1] * k * lead, jz + (float) V[2] * k * lead,
-                rnd(.35f, .45f), .18f * zs, CORE, CORE_END, (float) V[0] * k, (float) V[1] * k, (float) V[2] * k, 1.6f, ay,
-                swell * .85f, false);
+                rnd(.25f, .35f), .25f * zs, CORE, CORE_END, (float) V[0] * k, (float) V[1] * k, (float) V[2] * k, 2.4f, ay,
+                swell, false);
             p.tex = BarFxClient.R.nextInt(6);
             p.stretch = 3.4f;
         }
-        for (int i = 0; i < BODY; i++) {
+        for (int i = 0; i < BODY + PUFFS; i++) {
+            boolean puff = i >= BODY;
             FireBreath.flame(jx, jy, jz, ax, ay, az, tan, BarFxClient.R.nextDouble() * .7, BarFxClient.R.nextDouble(), V);
             // 16-20 blocks a second, or what it takes to reach the ground in its life (a dragon 12 up)
-            float k = Math.max(rnd(16f, 20f), dist / .55f) / (float) Math.sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
-            float lead = rnd(0, .05f), size = .3f * zs;
+            float k = Math.max(rnd(16f, 20f), dv / .5f) / (float) Math.sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
+            float lead = rnd(0, .05f), size = (puff ? .4f : .3f) * zs;
             BarFxClient.P p = flame(jx + (float) V[0] * k * lead, jy + (float) V[1] * k * lead, jz + (float) V[2] * k * lead,
-                rnd(.5f, .7f), size, BODY_C, BODY_END, (float) V[0] * k + px * wobble, (float) V[1] * k,
-                (float) V[2] * k + pz * wobble, 2.7f, ay, swell * .55f, true);
-            p.tex = BarFxClient.R.nextInt(6);
-            p.stretch = 2.5f;
+                rnd(.45f, .6f), size, BODY_C, BODY_END, (float) V[0] * k + px * wobble, (float) V[1] * k,
+                (float) V[2] * k + pz * wobble, Math.max(2.5f, Math.min(5f, 1.2f * zs / size)), ay, swell * .7f, true);
+            if (puff) {
+                p.tex = 6 + BarFxClient.R.nextInt(2);
+                p.spin = rnd(0, 6.28f);
+                p.rate = rnd(1f, 3f) * (BarFxClient.R.nextBoolean() ? 1 : -1);   // 60-180 degrees a second
+            } else {
+                p.tex = BarFxClient.R.nextInt(6);
+                p.stretch = 2.5f;
+            }
         }
-        for (int i = 0; i < WISPS; i++) {
-            float f = i == 0 ? rnd(.5f, 1f) : 1f;
-            BarFxClient.P p = flame(jx + sx * f + rnd(-.5f, .5f), jy + sy * f + .4f, jz + sz * f + rnd(-.5f, .5f), rnd(1.2f, 1.8f),
-                .75f * zs, WISP, WISP_END, rnd(-.3f, .3f), 1.5f, rnd(-.3f, .3f), 2f, Float.NaN, swell * .25f, true);
+        for (int i = 0; i < SMOKES; i++) {
+            FireBreath.flame(jx, jy, jz, ax, ay, az, tan, BarFxClient.R.nextDouble(), BarFxClient.R.nextDouble(), V);
+            float k = rnd(8f, 10f) / (float) Math.sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
+            float f = rnd(.3f, .7f);
+            BarFxClient.P p = flame(jx + sx * f, jy + sy * f + .3f, jz + sz * f, rnd(.9f, 1.4f), .75f * zs, SMOKE, SMOKE_END,
+                (float) V[0] * k * .4f, 1f, (float) V[2] * k * .4f, 2.3f, Float.NaN, swell * .35f, true);
             p.tex = 6 + BarFxClient.R.nextInt(2);
             p.spin = rnd(0, 6.28f);
+            p.rate = rnd(-1f, 1f);
         }
-        // the jaws carry the fire: a hot glow on the skull and a wider blue light round it
-        BarFxClient.flash(jx, jy, jz, .45f * zs * swell, .1f, JAW_GLOW);
-        flame(jx, jy, jz, .1f, 1f * zs, JAW_LIGHT, JAW_LIGHT, 0, 0, 0, 1f, Float.NaN, .25f * swell, false);
-        // the impact (round 3: "soap foam that buries the squad"): tongues racing out along the ground, each faint at
-        // the centre so a unit inside still shows; a pulsing glow on the ground; a ragged burning ring; sparks flung
-        // up and out; embers left lying on the burnt ground; a dark scorch
+        BarFxClient.flash(jx, jy, jz, .75f * zs * swell, .1f, MUZZLE);
+        // the impact (round 4: "a firework / glass shatter", "a speck at zoom 60"): tongues hugging the ground outward,
+        // a pool of flames licking up where it has burnt, a hot spot and a wide glow that read from far, a few embers
+        // flung in a random cone, a dark scorch; the units standing in it lit, with flames licking up them
         for (int i = 0; i < SPLASH; i++) {
             double a = BarFxClient.R.nextDouble() * Math.PI * 2;
-            float sp = rnd(5f, 9f), r0 = rnd(0, .3f) * far;
-            BarFxClient.P p = flame(ax + (float) Math.cos(a) * r0, ay + .2f, az + (float) Math.sin(a) * r0, rnd(.4f, .7f),
-                .25f * zs, SPLASH_C, SPLASH_END, (float) Math.cos(a) * sp, rnd(1f, 2f), (float) Math.sin(a) * sp, 2f,
-                Float.NaN, swell * .35f, true);
+            float sp = rnd(4f, 7f), r0 = rnd(0, .3f) * far;
+            BarFxClient.P p = flame(ax + (float) Math.cos(a) * r0, ay + .2f, az + (float) Math.sin(a) * r0, rnd(.35f, .6f),
+                .3f * zs, SPLASH_C, SPLASH_END, (float) Math.cos(a) * sp, .5f, (float) Math.sin(a) * sp, 2f, Float.NaN,
+                swell * .45f, true);
             p.tex = BarFxClient.R.nextInt(6);
             p.stretch = 3f;
         }
-        BarFxClient.P glow = BarFxClient.add(BarFxClient.DECAL, ax, ay + .03f, az, .1f, Math.max(2f, far), GROUND_GLOW);
-        glow.alpha = (.3f + rnd(-.1f, .1f)) * swell;
-        glow.spin = rnd(0, 6.28f);
-        for (int i = 0; i < RING; i++) {
-            double a = BarFxClient.R.nextDouble() * Math.PI * 2;
-            float rr = rnd(.8f, 1f) * Math.max(2.4f, far);
-            flame(ax + (float) Math.cos(a) * rr, ay + .15f, az + (float) Math.sin(a) * rr, .3f, rnd(.06f, .12f) * zs, RING_C,
-                RING_C, 0, rnd(.2f, .6f), 0, 1.5f, Float.NaN, swell * .6f, false);
+        for (int i = 0; i < POOL; i++) {
+            double r = 2.8 * Math.sqrt(BarFxClient.R.nextDouble()), a = BarFxClient.R.nextDouble() * Math.PI * 2;
+            BarFxClient.P p = flame(ax + (float) (Math.cos(a) * r), ay + rnd(0, .6f), az + (float) (Math.sin(a) * r),
+                rnd(.8f, 1.2f), rnd(.25f, .4f) * zs, POOL_C, POOL_END, 0, rnd(1f, 1.6f), 0, 1.4f, Float.NaN, swell * .7f, false);
+            p.tex = BarFxClient.R.nextInt(6);
+            p.stretch = 2f;
         }
-        for (int i = 0; i < SPARKS; i++) {
-            double a = BarFxClient.R.nextDouble() * Math.PI * 2;
-            float sp = landed ? rnd(6f, 12f) : rnd(4f, 8f);
-            BarFxClient.P p = BarFxClient.add(BarFxClient.SPARK, ax, ay + .3f, az, rnd(.5f, 1f), .03f, SPARK);
-            p.vx = (float) Math.cos(a) * sp; p.vz = (float) Math.sin(a) * sp; p.vy = landed ? rnd(3f, 6f) : rnd(1f, 3f);
+        if (t % 2 == 0) {
+            flame(ax, ay + .3f, az, .3f, 1.25f * zs, HOT, HOT, 0, 0, 0, 1f, Float.NaN, .5f * swell, false);
+            flame(ax, ay + .3f, az, .4f, 2f * zs, GLOW, GLOW, 0, 0, 0, 1f, Float.NaN, .25f * swell, false);
         }
         for (int i = 0; i < EMBERS; i++) {
-            double r = far * Math.sqrt(BarFxClient.R.nextDouble()), a = BarFxClient.R.nextDouble() * Math.PI * 2;
-            flame(ax + (float) (Math.cos(a) * r), ay + .08f, az + (float) (Math.sin(a) * r), rnd(2f, 4f), .075f * zs, EMBER,
-                EMBER_END, 0, .05f, 0, 1f, Float.NaN, rnd(.3f, 1f), false);
+            double a = BarFxClient.R.nextDouble() * Math.PI * 2;
+            float sp = rnd(3f, 6f), up = rnd(.5f, 1f);   // a random cone about 60 degrees off the ground
+            BarFxClient.P p = BarFxClient.add(BarFxClient.SPARK, ax + rnd(-.6f, .6f) * far, ay + .3f, az + rnd(-.6f, .6f) * far,
+                rnd(.6f, 1f), .05f, EMBER);
+            p.vx = (float) Math.cos(a) * sp * (1 - up * .5f); p.vz = (float) Math.sin(a) * sp * (1 - up * .5f); p.vy = sp * up;
         }
         if (t % 5 == 0) {
-            BarFxClient.P sc = BarFxClient.add(BarFxClient.DECAL, ax, ay + .02f, az, 2.5f, 1.5f * Math.max(1f, far * .6f), SCORCH);
-            sc.alpha = .25f;
+            BarFxClient.P sc = BarFxClient.add(BarFxClient.DECAL, ax, ay + .02f, az, 4f, 3f, SCORCH);
+            sc.alpha = .35f;
             sc.spin = rnd(0, 6.28f);
         }
-        // the units standing in it: lit by the fire, with flames licking up them
         if (t % 2 == 0) {
             int n = 0;
             for (LivingEntity le : MC.level.getEntitiesOfClass(LivingEntity.class,
@@ -228,11 +237,13 @@ public final class BreathFx {
                 float w = le.getBbWidth() * .5f, h = le.getBbHeight();
                 flame((float) le.getX(), (float) le.getY() + h * .5f, (float) le.getZ(), .15f, Math.max(w, h * .5f) * 1.2f,
                     LIT, LIT, 0, 0, 0, 1f, Float.NaN, .3f * swell, false);
-                BarFxClient.P p = flame((float) le.getX() + rnd(-w, w), (float) le.getY() + rnd(.1f, h * .8f),
-                    (float) le.getZ() + rnd(-w, w), rnd(.3f, .45f), rnd(.15f, .25f) * zs, LICK, LICK_END, 0, rnd(1.2f, 2f), 0,
-                    1.6f, Float.NaN, swell * .8f, false);
-                p.tex = BarFxClient.R.nextInt(6);
-                p.stretch = 2f;
+                for (int j = 0; j < 2; j++) {
+                    BarFxClient.P p = flame((float) le.getX() + rnd(-w, w), (float) le.getY() + h * rnd(.6f, 1f),
+                        (float) le.getZ() + rnd(-w, w), .5f, .2f * zs, LICK, LICK_END, 0, rnd(1.2f, 2f), 0, 1.6f, Float.NaN,
+                        swell * .8f, false);
+                    p.tex = BarFxClient.R.nextInt(6);
+                    p.stretch = 2f;
+                }
             }
         }
     }
