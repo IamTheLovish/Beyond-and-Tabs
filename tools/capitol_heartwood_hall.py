@@ -30,8 +30,8 @@ overgrown air temple; ref 106 organic arches):
     trunk's foot flaring over the top step); its hollow heart is the centre spawn's
     column (a verdant froglight glows in its roof), and the spawn walks out by doorways on the axes and out of any of
     the four arches; four BOUGHS break out through the roof, one on each side, each its own shape;
-  - each garden corner a mossy stone PIER with a lantern, a low moss mat round its foot, by a MOONWELL (a water
-    cauldron between bare calcite kerbs);
+  - each garden corner a mossy stone PIER with a lantern, a low moss mat round its foot, by a MOONWELL (a moss
+    bed between bare calcite kerbs);
   - the STAG-DRYAD FACE is carved in the trunk just over the roof on the two sides the RTS camera sees (a birch blaze,
     glowing eyes in the bark, dark brows), its ANTLERS branch out of the brow toward the crown as the tree's own boughs;
   - a BLOSSOM CROWN of uneven lobes (Nov 2026, after two blind massing rounds: the round tiered canopy read as "a
@@ -137,6 +137,9 @@ def garden(c):
                 c.set(dx, 1, dz, "pink_petals", facing="north", flower_amount=str(1 + h % 4))
         elif ring >= 6 and name == MC and h % 2:
             c.set(dx, 1, dz, MSSL, type="bottom", **DRY)            # a stepping stone proud of the moss
+        if name in ("rooted_dirt", "podzol") and c.get(dx, 1, dz)[0] == "air":
+            c.set(dx, 1, dz, "moss_carpet")     # a bare brown cell read as "a stray brown block ... a leftover"
+                                                # on the moss from the RTS camera (Fable critics rounds 9 and 10)
     # the foundation types must sit in layer 0 even if the hash shuffles them away
     c.set(0, 0, 6, "moss_block")
 
@@ -269,19 +272,19 @@ def boughs(c):
 
 # The boughs that break out through the roof (lovish, Nov 5: "with branches coming out of the roof"), as waypoints
 # (a, t, y) on a side o: from the trunk inside the hall, up through the roof's top step (ring 3, y9, between two
-# roof stairs), climbing steeply to over the eaves (ring 5), or up into the crown's rim. The tips stand
+# roof stairs), climbing a step out for a step up past the eaves (ring 6), or up into the crown's rim. The tips stand
 # off the stag-dryad's faces from the RTS camera; two arms alike at one height read as "a T-cross / scarecrow"
 # (Fable critic round 4) and a post with a square elbow as "a candelabra" (round 5), so each climbs its own diagonal.
 # Four, each its own shape (four alike read as a chapel's ribs). Fable critic round 1: limbs "poking out over the hall
 # walls" are what delivers "branches coming out of the roof" - the roof that now shows keeps the temple's stone share.
-ROOF_BOUGHS = (("south", ((2, -1, 6), (2, -1, 8), (3, -2, 9), (3, -2, 10), (4, -2, 12), (5, -3, 13), (5, -3, 14))),
-               ("west", ((2, 1, 6), (2, 1, 8), (3, 2, 9), (3, 2, 10), (4, 3, 12), (4, 3, 13), (5, 3, 15))),
-               ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 9), (3, -1, 10), (4, -1, 12), (5, -2, 13), (5, -2, 14))),
+ROOF_BOUGHS = (("south", ((2, -1, 6), (2, -1, 8), (3, -2, 8), (3, -2, 9), (4, -2, 10), (5, -3, 11), (6, -3, 12),
+                          (6, -3, 13))),
+               ("west", ((2, 1, 6), (2, 1, 8), (3, 2, 8), (3, 2, 9), (4, 2, 10), (4, 3, 11), (5, 3, 12), (6, 3, 13),
+                         (6, 4, 14))),
+               ("east", ((2, 1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (4, -1, 10), (5, -1, 11), (6, -2, 12),
+                         (6, -2, 14))),
                ("north", ((2, -1, 6), (2, 0, 7), (2, 0, 8), (3, 0, 8), (3, 0, 9), (3, 0, 11), (4, -1, 13), (4, -1, 16),
                           (4, -2, 18))))
-# Steep (about two up for a step out) and stopping over the eaves (ring 5): limbs climbing a step out for a step up to
-# ring 6 read from the RTS camera as "four flat, 1-thick horizontal dark-oak arms ... a dark belt as wide as the roof"
-# (Fable critic round 8, and "a flat jumble ... a crab" in round 7).
 
 
 def _limb(c, cells):
@@ -443,10 +446,11 @@ def roots(c):
 
 
 def moonwells(c):
-    """A moonwell under each root arch on the stylobate's corner: a still basin (a water cauldron - no flowing water)
-    between two bare calcite kerbs (the Court's silver)."""
+    """A moonwell on the stylobate's corner by each pier: a moss bed between two bare calcite kerbs (the Court's
+    silver). Its still water (a water cauldron) was the one blue on the hall - "a blue insert ... competes with team
+    colour", "tiny ... read as glitches at RTS zoom" (Fable critics rounds 7, 9 and 10) - so the bed is moss."""
     for (sx, sz) in CORNERS:
-        c.set(sx * 5, 1, sz * 5, "water_cauldron", level="3")
+        c.set(sx * 5, 1, sz * 5, "moss_block")
         c.set(sx * 6, 1, sz * 5, "calcite")
         c.set(sx * 5, 1, sz * 6, "calcite")
         # no candles on the kerbs: the kerbs sit on the corner's way out, and a unit leaving the Court stood on a candle
