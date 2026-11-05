@@ -714,6 +714,33 @@ public class BotPlayer {
             if (!done && tier2 && kit.t2Lab() != null && count(buildings, kit.t2Lab()) < 1
                     && t1Req != null && com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, t1Req))
                 done = placeTechBuilding(level, kit.t2Lab(), armyBuildings + 2, workers, 3);   // 3 builders: the lab is 504 builder-seconds
+            // DIAG (throwaway, never merge): the T2 lab's state every 30 s from the research until the lab stands
+            if (kit.t2Lab() != null && (tier2 || researchingT2) && gameTime % 600 < 20
+                    && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab())) {
+                BuildingPlacement lab = null;
+                for (BuildingPlacement bp : buildings)
+                    if (bp.getBuilding() == kit.t2Lab())
+                        lab = bp;
+                String labState = "not placed";
+                if (lab != null) {
+                    int near = 0;
+                    double nearest = Double.MAX_VALUE;
+                    for (var w : lab.getBuilders())
+                        if (w instanceof LivingEntity le) {
+                            double d = Math.sqrt(le.blockPosition().distSqr(lab.centrePos));
+                            nearest = Math.min(nearest, d);
+                            if (d < 10)
+                                near++;
+                        }
+                    labState = String.format(java.util.Locale.ROOT, "placed at %s, built %b, blocks %d/%d (%.0f%%), builders %d (%d within 10, nearest %.0f)",
+                        lab.centrePos.toShortString(), lab.isBuilt, lab.getBlocksPlaced(), lab.getBlocksTotal(), lab.getBlocksPlacedPercent() * 100,
+                        lab.getBuilders().size(), near, nearest == Double.MAX_VALUE ? -1 : nearest);
+                }
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Bot] {} T2LAB GameTest diag at {}: tier2 {}, researching {}, t1 lab {} finished {}, lab {}, metal fill {}, workers {}",
+                    name, String.format(java.util.Locale.ROOT, "%d:%02d", gameTime / 1200, gameTime / 20 % 60), tier2, researchingT2,
+                    t1Req == null ? "none" : t1Req.name, t1Req != null && com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, t1Req),
+                    labState, String.format(java.util.Locale.ROOT, "%.2f", metalFill), workers.size());
+            }
             // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction). Behind the tech buildings:
             // ahead of them, a floating easy bot whose Dungeon was cancelled once laid annexes every think and never
             // re-laid it (bots_reach_tier_2, flake-stress 40806850709 / 40806858215, Oct 29)
