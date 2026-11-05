@@ -358,13 +358,33 @@ public class FogSnapshotGameTests {
                 level.getChunkSource().addRegionTicket(hold, p, 0, p);
             }
         long[] startNs = {-1};
+        long t0 = System.nanoTime();
+        long tick0 = helper.getTick();
+        // DIAG (throwaway/diag-hang): "[ChunkWait]" passes ci_gametests.sh's console filter
+        java.util.function.Consumer<String> trace = what -> ReignOfNether.LOGGER.info("[ChunkWait] hang-test tick "
+            + (helper.getTick() - tick0) + " wall " + (System.nanoTime() - t0) / 1_000_000L + " ms: " + what);
+        trace.accept("start");
         helper.onEachTick(() -> {
+            if ((helper.getTick() - tick0) % 1000 == 0 || helper.getTick() - tick0 >= 19985) {
+                if (startNs[0] < 0) {
+                    int missing = 0, dark = 0;
+                    for (int cx = cx0 - 1; cx <= cx0 + 1; cx++)
+                        for (int cz = cz0 - 1; cz <= cz0 + 1; cz++) {
+                            LevelChunk c = level.getChunkSource().getChunkNow(cx, cz);
+                            if (c == null) missing++;
+                            else if (!c.isLightCorrect()) dark++;
+                        }
+                    trace.accept("not started: chunks not loaded " + missing + ", light not correct " + dark);
+                } else
+                    trace.accept(FogChunkSnapshot.debugState());
+            }
             if (startNs[0] < 0) {
                 for (int cx = cx0 - 1; cx <= cx0 + 1; cx++)
                     for (int cz = cz0 - 1; cz <= cz0 + 1; cz++) {
                         LevelChunk c = level.getChunkSource().getChunkNow(cx, cz);
                         if (c == null || !c.isLightCorrect()) return;
                     }
+                trace.accept("all 9 chunks light-correct: beginCapture");
                 FogChunkSnapshot.testBarrierHook = p -> p.equals(hung) ? new CompletableFuture<>() : null;
                 FogChunkSnapshot.beginCapture(level, cx0 - 1, cx0 + 1, cz0 - 1, cz0 + 1);
                 startNs[0] = System.nanoTime();
@@ -372,6 +392,7 @@ public class FogSnapshotGameTests {
             }
             if (FogChunkSnapshot.isCapturing()) return;
             long tookMs = (System.nanoTime() - startNs[0]) / 1_000_000L;
+            trace.accept("capture done in " + tookMs + " ms, forced " + FogChunkSnapshot.forcedCount());
             int forced = FogChunkSnapshot.forcedCount();
             FogChunkSnapshot.testBarrierHook = null;
             FogChunkSnapshot.awaitWrites();

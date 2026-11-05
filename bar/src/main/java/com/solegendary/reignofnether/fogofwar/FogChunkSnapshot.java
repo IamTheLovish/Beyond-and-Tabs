@@ -285,6 +285,26 @@ public class FogChunkSnapshot {
             logProgress(cache);
     }
 
+    /** DIAG (throwaway/diag-hang): the progress line now, for the hung-barrier test's trace. */
+    public static String debugState() {
+        if (!capturing || captureLevel == null) return "not capturing, forced " + forcedCount + ", captured " + capturedCount;
+        ServerChunkCache cache = captureLevel.getChunkSource();
+        int unloaded = 0, lightIncorrect = 0, barrier = 0;
+        StringBuilder waits = new StringBuilder();
+        long now = System.nanoTime();
+        for (var e : waiting.entrySet()) {
+            if (cache.getChunkNow(e.getKey().x, e.getKey().z) == null) unloaded++;
+            else if (e.getValue() == null) lightIncorrect++;
+            else if (!e.getValue().isDone()) barrier++;
+            Long since = waitSince.get(e.getKey());
+            if (since != null) waits.append(' ').append(e.getKey()).append(':').append((now - since) / 1_000_000L).append("ms");
+        }
+        return "capturing " + capturedCount + "/" + totalCount + " for " + (now - captureStartNs) / 1_000_000L + " ms, pending "
+            + pending.size() + ", order " + order.size() + ", waiting " + waiting.size() + " (unloaded " + unloaded
+            + ", light-incorrect " + lightIncorrect + ", barrier " + barrier + "), relight " + relight.size() + ", forced "
+            + forcedCount + ", waited" + waits;
+    }
+
     private static void logProgress(ServerChunkCache cache) {
         long now = System.nanoTime();
         if (now - lastProgressNs < PROGRESS_LOG_NS) return;
