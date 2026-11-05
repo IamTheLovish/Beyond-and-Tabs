@@ -15,7 +15,8 @@ Slices and how each is measured: `design/own_shader_pack.md` in the game's repos
 Plants sway from the foot up and leaves shimmer in the mod's own wind field (`environment/wind/WindField.java`, the
 one the tree limbs move in): two gust waves travel across the map along a slowly turning heading, so from the RTS
 camera the wind is seen rolling over the grass. Amplitudes are in blocks (a tuft's top ~0.12 at a full gust, a leaf
-~0.035). The shadow pass moves leaves by the same function, so their shadows stay attached; plants cast no shadow.
+~0.035). The shadow pass moves leaves by the same function, so their shadows stay attached. Plants cast a faint shadow
+(`PLANT_SHADOW`, 0.30 of the sun) that does not sway yet: at a full gust a tuft's top leaves it by ~0.12 block.
 Options: `WIND` (on), `WIND_STRENGTH` (1.0).
 
 ## Cloud shadows
