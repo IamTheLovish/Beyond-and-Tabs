@@ -91,8 +91,31 @@ public class BoneDragonBreathGameTests {
         d.setYBodyRot(yaw);
         d.setYHeadRot(yaw);
         d.setOwnerName(owner);
+        BoneDragonUnit.breathTrace = true;
         level.addFreshEntity(d);
         return d;
+    }
+
+    /**
+     * {@link DragonDiveGameTests#finish}, with - on a failure - each dragon's breath state and last breath events
+     * (BoneDragonUnit.breathDebug) and the ids of this test's units, so a flake says what the breath did.
+     */
+    private static boolean done(GameTestHelper helper, List<String> problems, Runnable clean, List<Mob> units) {
+        if (!problems.isEmpty()) {
+            List<String> said = new ArrayList<>(problems);
+            StringBuilder ids = new StringBuilder();
+            for (Mob m : units) {
+                if (m instanceof BoneDragonUnit d)
+                    said.add("dragon " + d.breathDebug());
+                else
+                    ids.append(ids.length() == 0 ? "" : ", ").append(m.getId())
+                        .append(m instanceof Unit u && u.getOwnerName() != null && u.getOwnerName().endsWith("_foe") ? " foe" : " friend")
+                        .append(String.format(Locale.ROOT, " %.0f hp", m.getHealth()));
+            }
+            said.add("this test's units: " + ids);
+            problems = said;
+        }
+        return DragonDiveGameTests.finish(helper, problems, clean);
     }
 
     /** A stone column at (x, z) from the floor up to (not including) floor + top: a perch for a foe over the ground. */
@@ -189,10 +212,10 @@ public class BoneDragonBreathGameTests {
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             }
             if (!problems.isEmpty())
-                return DragonDiveGameTests.finish(helper, problems, clean);
+                return done(helper, problems, clean, all);
             if (landedAt[0] < 0) {
                 if (tick > 20)
-                    return DragonDiveGameTests.finish(helper, List.of("the dragon never landed"), clean);
+                    return done(helper, List.of("the dragon never landed"), clean, all);
                 return false;
             }
             if ((tick - landedAt[0]) % 20 == 10 && dragon.getTarget() != target)
@@ -204,9 +227,9 @@ public class BoneDragonBreathGameTests {
             if (burns[0].done(tick) && burns[1].done(tick) || tick >= 245) {
                 for (Burns b : burns)
                     b.judge(problems);
-                return DragonDiveGameTests.finish(helper, problems, clean);
+                return done(helper, problems, clean, all);
             }
-            return !problems.isEmpty() && DragonDiveGameTests.finish(helper, problems, clean);
+            return !problems.isEmpty() && done(helper, problems, clean, all);
         });
     }
 
@@ -247,7 +270,7 @@ public class BoneDragonBreathGameTests {
         DragonDiveGameTests.everyTick(helper, 250, tick -> {
             List<String> problems = new ArrayList<>();
             if (tick == 2 && !dragon.startDive(dragon.position()))
-                return DragonDiveGameTests.finish(helper, List.of("the dive onto its own spot was refused"), clean);
+                return done(helper, List.of("the dive onto its own spot was refused"), clean, all);
             if (landedAt[0] < 0 && dragon.isLanded()) {
                 landedAt[0] = tick;
                 for (int i = 0; i < spared.length; i++)
@@ -256,7 +279,7 @@ public class BoneDragonBreathGameTests {
             }
             if (landedAt[0] < 0) {
                 if (tick > 20)
-                    return DragonDiveGameTests.finish(helper, List.of("the dragon never landed"), clean);
+                    return done(helper, List.of("the dragon never landed"), clean, all);
                 return false;
             }
             if ((tick - landedAt[0]) % 20 == 10 && dragon.getTarget() != target)
@@ -266,7 +289,7 @@ public class BoneDragonBreathGameTests {
             if (!problems.isEmpty() || burn.done(tick) || tick >= 245) {
                 if (problems.isEmpty())   // a spared foe burnt already fails it; its unread seconds are not "lost 0.0"
                     burn.judge(problems);
-                return DragonDiveGameTests.finish(helper, problems, clean);
+                return done(helper, problems, clean, all);
             }
             return false;
         });
@@ -315,9 +338,9 @@ public class BoneDragonBreathGameTests {
             if (burns[0].done(tick) && burns[1].done(tick) || tick >= 205) {
                 for (Burns b : burns)
                     b.judge(problems);
-                return DragonDiveGameTests.finish(helper, problems, clean);
+                return done(helper, problems, clean, all);
             }
-            return !problems.isEmpty() && DragonDiveGameTests.finish(helper, problems, clean);
+            return !problems.isEmpty() && done(helper, problems, clean, all);
         });
     }
 
@@ -371,7 +394,7 @@ public class BoneDragonBreathGameTests {
             if (!problems.isEmpty() || burn.done(tick) || tick >= 205) {
                 if (problems.isEmpty())   // a spared foe burnt already fails it; its unread seconds are not "lost 0.0"
                     burn.judge(problems);
-                return DragonDiveGameTests.finish(helper, problems, clean);
+                return done(helper, problems, clean, all);
             }
             return false;
         });
@@ -411,20 +434,20 @@ public class BoneDragonBreathGameTests {
                 dragon.setHoldPosition(true);
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(first);
                 if (!dragon.isBreathing() && !dragon.startBreath(first, first.position()))
-                    return DragonDiveGameTests.finish(helper, List.of("the breath at the first foe did not start"), clean);
+                    return done(helper, List.of("the breath at the first foe did not start"), clean, all);
             }
             if (tick == order) {
                 if (!dragon.isBreathing())
-                    return DragonDiveGameTests.finish(helper, List.of("the breath at the first foe ended before the order"), clean);
+                    return done(helper, List.of("the breath at the first foe ended before the order"), clean, all);
                 before[0] = second.getHealth();
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(second);
             }
             if (tick > order && second.getHealth() < before[0] - 0.01f)
-                return DragonDiveGameTests.finish(helper, List.of(), clean);
+                return done(helper, List.of(), clean, all);
             if (tick >= order + TURN_TICKS)
-                return DragonDiveGameTests.finish(helper, List.of(String.format(Locale.ROOT, "ordered onto a second foe"
+                return done(helper, List.of(String.format(Locale.ROOT, "ordered onto a second foe"
                     + " mid-breath, the dragon had not burnt it %d ticks later (breathing: %s): the fire stayed on the"
-                    + " first foe", TURN_TICKS, dragon.isBreathing())), clean);
+                    + " first foe", TURN_TICKS, dragon.isBreathing())), clean, all);
             return false;
         });
     }
@@ -463,6 +486,7 @@ public class BoneDragonBreathGameTests {
             helper.fail("could not create the dragon");
             return;
         }
+        List<Mob> all = List.of(dragon);
         AABB arena = new AABB(helper.absolutePos(BlockPos.ZERO)).inflate(24, 32, 24).move(8, 0, 8);
         int[] firstHit = { -1 }, drops = { 0 };
         float[] last = { mill.getHealth() };
@@ -483,14 +507,14 @@ public class BoneDragonBreathGameTests {
             }
             last[0] = hp;
             if (!problems.isEmpty())
-                return DragonDiveGameTests.finish(helper, problems, clean);
+                return done(helper, problems, clean, all);
             if (firstHit[0] >= 0 && tick >= firstHit[0] + 40 || tick >= 400) {
                 if (firstHit[0] < 0)
                     problems.add("the windmill was never burnt (" + mill.getHealth() + " health)");
                 else if (drops[0] < 3)
                     problems.add("the windmill lost health on " + drops[0] + " ticks in the 2 s from the first hit (want"
                         + " >= 3: a breath burns all along, not one blast)");
-                return DragonDiveGameTests.finish(helper, problems, clean);
+                return done(helper, problems, clean, all);
             }
             return false;
         });

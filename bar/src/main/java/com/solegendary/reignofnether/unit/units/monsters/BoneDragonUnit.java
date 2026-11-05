@@ -542,6 +542,7 @@ public class BoneDragonUnit extends GhastUnit {
                 || getOwnerName().isEmpty())
             return false;
         aimBreath(target, aim);
+        trace("start" + (breathLanded ? " landed" : " air"), target);
         breathTick = 0;
         breathSeq = breathSeq == Integer.MAX_VALUE ? 1 : breathSeq + 1;
         this.entityData.set(breathSeqAccessor, breathSeq);   // last: the client reads the rest before this
@@ -574,10 +575,37 @@ public class BoneDragonUnit extends GhastUnit {
         this.entityData.set(breathLandedAccessor, breathLanded);
     }
 
+    /**
+     * Game tests only (off in play): the last few breath events of each dragon - starts, swings, stops and why - so a
+     * failure message can say what the breath did (stress 42038136489: breaths that stopped early or never burnt).
+     */
+    public static boolean breathTrace = false;
+    private final java.util.ArrayDeque<String> trace = new java.util.ArrayDeque<>();
+
+    private void trace(String what, @Nullable net.minecraft.world.entity.Entity e) {
+        if (!breathTrace)
+            return;
+        if (trace.size() >= 8)
+            trace.removeFirst();
+        trace.addLast(String.format(java.util.Locale.ROOT, "t%d %s%s", tickCount, what, e == null ? "" : String.format(
+            java.util.Locale.ROOT, " %s#%d @%.1f", net.minecraft.world.entity.EntityType.getKey(e.getType()).getPath(), e.getId(), e.distanceTo(this))));
+    }
+
+    /** The dragon's breath state and its last events, for a game test's failure message. */
+    public String breathDebug() {
+        LivingEntity goal = getTargetGoal().getTarget(), mob = getTarget();
+        return String.format(java.util.Locale.ROOT, "[dragon#%d breathing %s tick %d, goal target %s, mob target %s,"
+                + " landed %s, flyer %s, hp %.0f, events: %s]", getId(), isBreathing(), breathTick,
+            goal == null ? "none" : net.minecraft.world.entity.EntityType.getKey(goal.getType()).getPath() + "#" + goal.getId(),
+            mob == null ? "none" : net.minecraft.world.entity.EntityType.getKey(mob.getType()).getPath() + "#" + mob.getId(), isLanded(), isFlyingUnit(),
+            getHealth(), String.join("; ", trace));
+    }
+
     /** Ends the breath (both sides learn it from the breath number going to 0). */
     public void stopBreath() {
         if (breathTick < 0)
             return;
+        trace("stop at tick " + breathTick, null);
         breathTick = -1;
         breathTarget = null;
         this.entityData.set(breathSeqAccessor, 0);
@@ -593,20 +621,25 @@ public class BoneDragonUnit extends GhastUnit {
     /** One server tick of the breath: follow the target, burn on the pulse ticks, stop at the end or when it is lost. */
     private void tickBreath(ServerLevel sl) {
         if (!isAlive() || this.hasEffect(MobEffectRegistrar.DISARM.get())) {
+            trace(isAlive() ? "disarmed" : "dead", null);
             stopBreath();
             return;
         }
         // an order (or RoN's own pick) onto another unit mid-breath: the fire swings to it now, not after burning out on
         // the old target (CI 42012754225). The breath's clock runs on, so a new order never buys an extra burn
         LivingEntity ordered = getTargetGoal().getTarget();
-        if (ordered != null && ordered != breathTarget && ordered.isAlive() && ordered.level() == sl)
+        if (ordered != null && ordered != breathTarget && ordered.isAlive() && ordered.level() == sl) {
+            trace("swing", ordered);
             aimBreath(ordered, aimOf(ordered));
+        }
         if (breathTarget != null && breathTarget.isAlive() && breathTarget.level() == sl)
             breathBase = aimOf(breathTarget);
         else
             breathTarget = null;   // dead or gone: the fire plays out where it last was
         Vec3 aim = breathAim(breathTick);
         if (aim.distanceTo(jaws(aim)) > (breathLanded ? FireBreath.GROUND_LENGTH : FireBreath.AIR_MAX) + BREATH_LOST) {
+            trace(String.format(java.util.Locale.ROOT, "lost: aim %.1f from the jaws", aim.distanceTo(jaws(aim))),
+                breathTarget);
             stopBreath();
             return;
         }
