@@ -315,12 +315,15 @@ def key_poses(n=10):
     # ground, the arms hanging limp (plumb), every weapon gone (shattered)
     # r6: a sideways slump with less fold (the r2-r5 -30 / -40 fold read as a red crate and sank the chest into the
     # waist) - the driver's death clip ends here too
-    p = {"body": A("body", [-24, 0, 18]), "chest": [-18, 0, 0], "head": [-21, 0, 0],
+    # r6b: r5's forward crumple again (the blind A/B preferred it to r6's slump), made contact-clean: the chest moved
+    # 1 px forward as it folds, head roll 12 / yaw 0, the right arm out 12 (r2-r5 failed here: chest in the waist,
+    # hood in the right sleeve)
+    p = {"body": A("body", [-30, 0, 0]), "chest": [-40, 0, 0], "head": [-36, 0, 12],
          "tatter_f": [80, 0, 0], "tatter_b": [-80, 0, 0], "tatter_l": [0, 0, 80], "tatter_r": [0, 0, -80],
          "right_forearm": A("right_forearm", [0, 0, 0]), "left_forearm": A("left_forearm", [0, 0, 0]),
-         "_move": {"hover": [0, -5.0, 0]}, "_hide": ["ring"]}
-    p["right_arm"] = [30, 0, 5]          # r6: limp along the body (plumb arms swung into the chest of the slump)
-    p["left_arm"] = [30, 0, 5]
+         "_move": {"hover": [0, -5.0, 0], "chest": [0, 0, -1]}, "_hide": ["ring"]}
+    p["right_arm"] = [20, 0, -12]
+    p["left_arm"] = [30, 0, -10]
     # landed: the lowest cloth / bone touches y = 0 (the sheet's "falls 5 px"; the forward fold sets the exact drop)
     p["_move"]["hover"][1] = 0.0
     p["_move"]["hover"][1] = round(-rig.low(p, skip=("hem_chain",)), 2)
