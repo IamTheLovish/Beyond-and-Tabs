@@ -14,6 +14,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import building_gates as G  # noqa: E402
+import camera_colour as C  # noqa: E402
 import lab_lotus_academy as L  # noqa: E402
 import schem_study as S  # noqa: E402
 
@@ -96,6 +97,74 @@ class LotusAcademyTest(unittest.TestCase):
         yard = sum(1 for h in hits.values() if h[0][1] == 0 and h[0][2] >= 4) / n
         self.assertGreaterEqual(jade, 0.40, (jade, yard))
         self.assertLess(yard, 0.15, (jade, yard))
+
+    # ---- the Fable critics' fixes (Nov 4, eyes 41792408905: L1 5 / 10, L3 5.5 / 10; critic-b.md, critic-c.md F1/F3) ----
+    def test_court_in_the_mids_on_camera(self):
+        """The court the RTS camera sees (layer 0, z >= 4) reads in the mids at every level: the median of what each
+        floor cell looks like from above (design/vehicle_labs/camera_colours.json, the eyes stills' own values) sits
+        in 0.28-0.40, under the lit jade roofs. Shipped: polished andesite at 0.45 - the lightest large area of the
+        building on the noon still (critic B: "the floor owns the lights")."""
+        table = C.load()
+        for i in range(3):
+            hits = G.shoot(self.lv[i], "rts", step=4)
+            vals = sorted(C.lookup(table, n, "up")[2] for (q, n, _f, _b) in hits.values()
+                          if q[1] == 0 and q[2] >= 4 and C.lookup(table, n, "up"))
+            self.assertTrue(vals, "L%d: no court seen" % (i + 1))
+            med = vals[len(vals) // 2]
+            self.assertTrue(0.28 <= med <= 0.40, "L%d court median %.2f" % (i + 1, med))
+
+    def test_every_eave_has_a_dark_hem(self):
+        """Every eave lip - the galleries' and the gate's (y 4), each hall roof's (R1, R2, R3) - is dark oak, not jade,
+        at every level (critic B: the round-4 hem, the one detail round that won, was on the first roof only, "a stripe
+        on one roof, not an outline of the building")."""
+        lips = (4, L.R1, L.R2, L.R3)
+        for i in range(3):
+            jade = sorted(q for q, n in self.solid[i].items() if q[1] in lips and n == JADE + "_stairs")
+            self.assertEqual(jade, [], "L%d jade eave stairs" % (i + 1))
+
+    def test_one_gold_boss_on_the_gate(self):
+        """The torii (z 8) carries at most one gold block at every level (critic B: gate_l2 / gate_l3 put three to six
+        gold blocks back on the gate the camera sees first; gold studs had been taken off the eaves on Nov 1)."""
+        for i in range(3):
+            gold = sorted(q for q, n in self.solid[i].items() if q[2] == L.SZ - 1 and n == "gold_block")
+            self.assertLessEqual(len(gold), 1, "L%d gate gold %s" % (i + 1, gold))
+
+    def test_crown_one_gold_seed_and_a_light(self):
+        """The crown keeps ONE gold cell (the seed head) and its boss is not gold (critic C F1: a gold apex is the
+        Sunforged's; the pagoda and the academy both put a gold cube on top), and a lantern stands at the top for dusk
+        (critic B: the shipped crown is "a faint pink smudge" at dusk)."""
+        for i in range(3):
+            s = self.solid[i]
+            top = max(q[1] for q in s)
+            gold = sorted(q for q, n in s.items() if n == "gold_block" and q[1] >= top - 5 and q[2] < L.SZ - 1)
+            self.assertLessEqual(len(gold), 1, "L%d crown gold %s" % (i + 1, gold))
+            light = [q for q, n in s.items() if n == "lantern" and q[1] >= top - 1]
+            self.assertTrue(light, "L%d: no lantern on the crown" % (i + 1))
+
+    def test_no_pink_crumbs_below_the_crown(self):
+        """Pink only in the crown: every cherry cell at every level sits within one row of the top heart (critic B: the
+        L1 crown's petal tips and the L2 crown's slab petals stay behind as pink crumbs on the tower - y 13 and y 16 at
+        L3; the chain only adds or replaces)."""
+        for i in range(3):
+            s = self.solid[i]
+            hy = max(q[1] for q, n in s.items() if n == "pearlescent_froglight")
+            low = sorted(q for q, n in s.items() if n.startswith("cherry") and abs(q[1] - hy) > 1)
+            self.assertEqual(low, [], "L%d pink crumbs" % (i + 1))
+
+    def test_l3_grows_a_lotus_not_a_fourth_roof(self):
+        """L3 is the academy's own top (critic C F3): three jade roofs, not the capitol's four-roof profile, and the
+        lotus opens wide - its pink spans at least 5 cells east-west (shipped: a fourth roof and a 3-wide lotus, "the
+        pagoda at two thirds scale")."""
+        s = self.solid[2]
+        blocks = self.lv[2].blocks
+        lips = sorted({y for (x, y, z), n in s.items() if y > 4 and n in (JADE + "_stairs", "dark_oak_stairs")
+                       and blocks[(x, y, z)][1].get("facing") == "north"
+                       and blocks[(x, y, z)][1].get("half") == "bottom"})
+        roofs = [y for y in lips if y - 1 not in lips]     # a lip and its second course one above are one roof
+        self.assertLessEqual(len(roofs), 3, lips)
+        hy = max(q[1] for q, n in s.items() if n == "pearlescent_froglight")
+        xs = [q[0] for q, n in s.items() if n.startswith("cherry") and q[1] == hy]
+        self.assertGreaterEqual(max(xs) - min(xs) + 1, 5, sorted(xs))
 
     def test_shipped_structures_are_the_generator_build(self):
         built = (L.l1(), L.l2(), L.l3())
