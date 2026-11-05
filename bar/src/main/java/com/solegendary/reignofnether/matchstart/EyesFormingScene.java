@@ -178,7 +178,9 @@ final class EyesFormingScene {
             dirZ = -home.getX() / len;
         }
         centre = new Vec3(Math.floor(home.getX() + dirX * OFFSET) + 0.5, home.getY(), Math.floor(home.getZ() + dirZ * OFFSET) + 0.5);
-        spireAt = centre.add(dirX * 22, 0, dirZ * 22);
+        // far enough that the RTS camera's slant does not put the spire in front of the portal (run 41996488439's
+        // spark still, at 22 blocks)
+        spireAt = centre.add(dirX * 40, 0, dirZ * 40);
         // a photo booth, not a match: the site is beyond our base's vision, and the server's fog filter withheld both
         // the frame's blocks and the forming itself (the fog rule working: run 41982195607, "no forming reached the
         // client in 15 s"), so fog of war goes off on both sides, as for scene 15
