@@ -57,8 +57,26 @@ public class FogSnapshotGameTests {
      * the hung barrier, then the build. The capture itself must end within 12 s of starting (the test's own check).
      */
     static final long HANG_TEST_LIMIT_NS = FogChunkSnapshot.MAX_CHUNK_WAIT_NS + 50_000_000_000L;
-    /** The GameTest timeout of the three real-time tests: far over their real-time limits, which fail them first. */
+    /**
+     * The GameTest timeout of the three real-time tests: far over their real-time limits, which fail them first, at any
+     * tick rate the test server has shown (up to ~6,700 ticks a second: 2,000,000 ticks are 300 s, over the longest
+     * limit, 180 s). The tests poll with {@link #everyTick}, not vanilla's onEachTick, so the bound costs nothing.
+     */
     static final int REAL_TIME_TEST_TIMEOUT_TICKS = 2_000_000;
+
+    /**
+     * Runs {@code task} once a tick from the next tick on, for as long as the test runs: a one-entry chain of
+     * runAfterDelay(1). Vanilla's GameTestHelper.onEachTick books one run-at entry per tick left until the timeout and
+     * GameTestInfo walks that whole map every tick: with the 2,000,000-tick timeout (two onEachTick in the unloaded
+     * test: 4,000,000 entries) the server ran ~20-25 ticks a second for these tests (#515's green), and the chunks'
+     * light took up to ~20 s of the 60 s limit (Overseer round 18 on #516).
+     */
+    static void everyTick(GameTestHelper helper, Runnable task) {
+        helper.runAfterDelay(1, () -> {
+            task.run();
+            everyTick(helper, task);
+        });
+    }
     /** Level compareFiles reads live chunks from, to say on a light mismatch which side the world now matches. */
     static ServerLevel diagLevel = null;
 
@@ -253,7 +271,7 @@ public class FogSnapshotGameTests {
         Map<ChunkPos, byte[]> reference = new LinkedHashMap<>();
         long[] t = {0, 0, 0}; // one-tick capture ns, capture start tick, settle start tick
         long startNs = System.nanoTime();
-        helper.onEachTick(() -> {
+        everyTick(helper, () -> {
             if (phase[0] < 5 && System.nanoTime() - startNs > LOADED_TEST_LIMIT_NS) {
                 problems.add("not done after " + LOADED_TEST_LIMIT_NS / 1_000_000_000L + " s, in phase " + phase[0]
                         + " (0: box loading or lighting, 1-2: light barriers, 4: capture running)");
@@ -371,7 +389,7 @@ public class FogSnapshotGameTests {
         long[] startNs = {-1};
         long testStartNs = System.nanoTime();
         boolean[] done = {false};
-        helper.onEachTick(() -> {
+        everyTick(helper, () -> {
             if (done[0]) return;
             if (System.nanoTime() - testStartNs > HANG_TEST_LIMIT_NS) {
                 done[0] = true;
@@ -445,7 +463,7 @@ public class FogSnapshotGameTests {
         // a non-ticking hold (level 33, as the capture's own ticket) so the reference reads the same loaded chunks
         TicketType<ChunkPos> hold = TicketType.FORCED;
         // start once the other test of the batch is done with the shared snapshot state (or has timed out)
-        helper.onEachTick(() -> {
+        everyTick(helper, () -> {
             if (startTick[0] >= 0 || !(loadedTestDone.get()
                     || System.nanoTime() - startNs > LOADED_TEST_LIMIT_NS + 5_000_000_000L)) return;
             for (int cx = minCx; cx <= maxCx; cx++)
@@ -462,7 +480,7 @@ public class FogSnapshotGameTests {
             startTick[0] = helper.getTick();
         });
         boolean[] done = {false};
-        helper.onEachTick(() -> {
+        everyTick(helper, () -> {
             if (!done[0] && System.nanoTime() - startNs > UNLOADED_TEST_LIMIT_NS) {
                 done[0] = true;
                 if (startTick[0] >= 0)
