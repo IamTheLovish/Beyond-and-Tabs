@@ -74,7 +74,7 @@ BASE_YAW = -18.0                              # yaw < 0 turns -z toward +x, the 
 # docked length ladder (px, pommel to tip): short to long with the slot, in a narrow band so the ring stays one shape;
 # each weapon's docked scale = its target / its length at flight scale 1.0 (DOCK_SCALE[k], at most 0.9)
 DOCK_LEN = {k: 10.0 + 0.5 * (k - 1) for k in range(1, 11)}     # r3: 10 -> 14.5 (r2 11 -> 17.3): the wider ring
-UNDERLAY = 0.6                                # px: the soul_dim rim round a phantom weapon's main parts (its outline)
+EDGE = 0.5                                    # px: r4 the glow edge strips on a phantom head (replaces the r2/r3 underlay)
 
 
 def slot_layout(n):
@@ -469,24 +469,44 @@ def length_of(prims):
 DOCK_SCALE = {k: round(min(0.9, DOCK_LEN[k] / length_of(prims_of(k))), 4) for k in range(1, 11)}
 
 
-def place(bone, origin, prims, scale, underlay=False):
-    """Primitives in the weapon frame -> cubes of `bone` (whose pivot is the pommel at `origin`), scaled. underlay:
-    each main part (at least 3 px long at scale 1.0) gets a soul_dim twin UNDERLAY px wider on every side and sunk half
-    its thickness - from above, a dark rim round the translucent teal (the outline that keeps a spoke legible on grass)."""
+def place(bone, origin, prims, scale, edges=False):
+    """Primitives in the weapon frame -> cubes of `bone` (whose pivot is the pommel at `origin`), scaled. edges (r4,
+    replacing r2/r3's soul_dim underlay, which made the phantoms read as solid tools with an outline): each soul_core
+    HEAD part (at least 3 px long at scale 1.0) gets two soul_glow strips EDGE px wide along its two long sides - a
+    bright cutting edge round a darker translucent core."""
     for (c, s, col, rot) in prims:
         centre = [origin[a] + c[a] * scale for a in range(3)]
         size = [v * scale for v in s]
         kw = dict(rotation=list(rot), pivot=centre) if any(abs(r) > 1e-9 for r in rot) else {}
-        if underlay and col == "soul_core" and max(s) >= 3.0:
-            uc = [centre[0], centre[1] - size[1] * 0.5, centre[2]]
-            ukw = dict(rotation=list(rot), pivot=uc) if kw else {}
-            bone.box_at(uc, [size[0] + 2 * UNDERLAY, size[1], size[2] + 2 * UNDERLAY], "soul_dim", **ukw)
         bone.box_at(centre, size, col, **kw)
+        if edges and col == "soul_core" and max(s[0], s[2]) >= 3.0:
+            along_z = size[2] >= size[0]
+            for sgn in (-1, 1):
+                if along_z:
+                    ec = [centre[0] + sgn * (size[0] / 2), centre[1], centre[2]]
+                    es = [EDGE, size[1] + 0.1, size[2] * 0.9]
+                else:
+                    ec = [centre[0], centre[1], centre[2] + sgn * (size[2] / 2)]
+                    es = [size[0] * 0.9, size[1] + 0.1, EDGE]
+                ekw = dict(rotation=list(rot), pivot=centre) if kw else {}
+                bone.box_at(ec, es, "soul_glow", **ekw)
+
+
+def far_lod(m, k, w, pivot):
+    """r4: the TACTICAL stand-in of weapon k (the critic: at 21 px/block the shafts went sub-pixel and the heads became
+    confetti): a child bone weapon_<k>_far with a 2 px shaft and a uniform 4 x 4 px glowing head at the docked length.
+    The model subclass draws it instead of the weapon when the camera is far (GeneratedBodies.wantsDetail false):
+    weapon_<k>.skipDraw = far (its own cubes), weapon_6_ball.visible = !far, weapon_<k>_far.visible = far. Hiding
+    weapon_<k> (the gameplay toggle) hides both, as the far bone is its child."""
+    f = m.bone("weapon_%d_far" % k, list(pivot), w.name)
+    L = DOCK_LEN[k]
+    f.box_at([pivot[0], pivot[1], pivot[2] - (L - 4.0) / 2], [2.0, 1.2, L - 4.0], "bone" if k == 1 else "soul_core")
+    f.box_at([pivot[0], pivot[1], pivot[2] - (L - 2.0)], [4.0, 2.0, 4.0], "soul_glow")
 
 
 def weapons(m, n):
-    # r3: shafts (hafts, grips, snath, pommels, the flail's chain) are soul_thread, the heads soul_core and only the
-    # heads keep the soul_dim underlay - at 21 px/block every weapon read as the same rod-with-blob
+    # r3: shafts (hafts, grips, snath, pommels, the flail's chain) are soul_thread, the heads soul_core; r4: the heads
+    # carry glow edges, and every weapon a far stand-in (far_lod)
     for (k, tier, yaw, pivot, pitch) in slot_layout(n):
         slot = m.bone("slot_%d" % k, list(pivot), "ring", rotation=[0, round(yaw, 3), 0])
         w = m.bone("weapon_%d" % k, list(pivot), slot.name, rotation=[pitch, 0, 0])
@@ -494,12 +514,13 @@ def weapons(m, n):
         if k == 6:
             # the flail's head on its own bone from the haft's end (a spring in flight); docked it lies on along the
             # haft, so the spoke stays one straight line (r2: a ball hanging plumb read as a floating cube)
-            place(w, pivot, flail(), sc, underlay=True)
+            place(w, pivot, flail(), sc, edges=True)
             hp = [pivot[0], pivot[1], pivot[2] - 10.0 * sc]
             hb = m.bone("weapon_6_ball", hp, w.name)
-            place(hb, hp, [q for q in flail_head() if q[2] != "soul_glow"], sc, underlay=True)
+            place(hb, hp, [q for q in flail_head() if q[2] != "soul_glow"], sc, edges=True)
         else:
-            place(w, pivot, prims_of(k), sc, underlay=k != 1)
+            place(w, pivot, prims_of(k), sc, edges=k != 1)
+        far_lod(m, k, w, pivot)
 
 
 def build(n=10):
@@ -518,7 +539,10 @@ def build(n=10):
     m.contact_ok = [("body", t) for t in ("tatter_f", "tatter_b", "tatter_l", "tatter_r")] + [
         ("chest", "mantle"), ("mantle", "cape"), ("mantle", "head"), ("mantle", "right_arm"), ("mantle", "left_arm"),
         ("head", "cape"), ("lantern", "lantern_core"),
-        ("right_arm", "right_forearm"), ("left_arm", "left_forearm"), ("right_hand", "weapon_1")]
+    ] + [("weapon_%d" % k, "weapon_%d_far" % k) for k in range(1, n + 1)] + [
+        ("weapon_6_ball", "weapon_6_far"),
+        ("right_arm", "right_forearm"), ("left_arm", "left_forearm"), ("right_hand", "weapon_1"),
+        ("right_hand", "weapon_1_far")]
     return m
 
 
@@ -529,7 +553,9 @@ def counts(m):
         while top and not top.startswith("weapon_") and m.bones[top].parent:
             top = m.bones[top].parent
         key = top if top.startswith("weapon_") else "body"
-        if key.startswith("weapon_6"):
+        if key.endswith("_far"):
+            key = "far"
+        elif key.startswith("weapon_6"):
             key = "weapon_6"
         per[key] = per.get(key, 0) + len(b.cubes)
     return per
