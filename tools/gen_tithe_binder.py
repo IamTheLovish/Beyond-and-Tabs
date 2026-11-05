@@ -53,8 +53,11 @@ PALETTE = {
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c",
     "soul_glow": "#62f3cb", "soul_core": "#34dba3", "soul_thread": "#2f8f7f", "soul_dim": "#1b6d53",
     "white_hot": "#e9fff8",
+    # r6: ONE glow family - the lantern core, the far heads and the hook's edge in a darker mint that stays mint under
+    # the additive glow pass (soul_glow + its glow summed to a cyan-white, apart from the mint weapons)
+    "lamp_glow": "#1f8a66",
 }
-EMISSIVE = ["soul_glow"]
+EMISSIVE = ["soul_glow", "lamp_glow"]
 UPGRADE = "tithe_of_iron"
 
 # r2: the whole body stands 5 px higher than the sheet's numbers (built at the sheet's coordinates, then lifted): a
@@ -269,7 +272,7 @@ def body(m):
             ln.cube([px, 21.25, pz], [0.7, 4, 0.7], "deepslate")      # posts
     # r3: the core on its own bone (lantern_core, hidden when the lantern cracks: death t8) over a dim core inside it
     ln.cube([-1.3, 21.5, -6.5], [2.6, 3.0, 2.6], "soul_dim")
-    m.bone("lantern_core", [0, 26, -5.2], "lantern").cube([-1.4, 21.4, -6.6], [2.8, 3.2, 2.8], "soul_glow")   # GLOW 1
+    m.bone("lantern_core", [0, 26, -5.2], "lantern").cube([-1.4, 21.4, -6.6], [2.8, 3.2, 2.8], "lamp_glow")   # GLOW 1
     ln.cube([-0.75, 26, -5.45], [1.5, 1, 0.5], "deepslate")           # finial ring
     ln.cube([-0.5, 19, -5.7], [1, 1.5, 1], "deepslate")               # spike
     # Tithe of Iron: a bone cage over the core, four ribs leaning in at the top
@@ -315,7 +318,7 @@ def grave_hook():
         blade.append(prim)
     out += blade
     # the inner (cutting) edge glows: r3 a 1.3 px strip astride the edge (r1/r2 0.4 px: at N = 1 no teal read)
-    out += [edge_of(b, -1, t=1.3) for b in blade]
+    out += [edge_of(b, -1, col="lamp_glow", t=1.3) for b in blade]
     return out
 
 
@@ -501,7 +504,7 @@ def far_lod(m, k, w, pivot):
     f = m.bone("weapon_%d_far" % k, list(pivot), w.name)
     L = DOCK_LEN[k]
     f.box_at([pivot[0], pivot[1], pivot[2] - (L - 4.0) / 2], [2.0, 1.2, L - 4.0], "bone" if k == 1 else "soul_core")
-    f.box_at([pivot[0], pivot[1], pivot[2] - (L - 2.0)], [4.0, 2.0, 4.0], "soul_glow")
+    f.box_at([pivot[0], pivot[1], pivot[2] - (L - 2.0)], [4.0, 2.0, 4.0], "lamp_glow")
 
 
 def weapons(m, n):

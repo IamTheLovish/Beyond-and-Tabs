@@ -20,10 +20,12 @@
   "soul_core": "#34dba3",
   "soul_thread": "#2f8f7f",
   "soul_dim": "#1b6d53",
-  "white_hot": "#e9fff8"
+  "white_hot": "#e9fff8",
+  "lamp_glow": "#1f8a66"
  },
  "emissive": [
-  "soul_glow"
+  "soul_glow",
+  "lamp_glow"
  ],
  "bones": [
   {
@@ -2091,7 +2093,7 @@
       3.2,
       2.8
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -2240,7 +2242,7 @@
       0.796,
       2.817
      ],
-     "color": "soul_glow",
+     "color": "lamp_glow",
      "rotation": [
       0,
       30,
@@ -2263,7 +2265,7 @@
       0.796,
       2.254
      ],
-     "color": "soul_glow",
+     "color": "lamp_glow",
      "rotation": [
       0,
       90,
@@ -2286,7 +2288,7 @@
       0.796,
       1.69
      ],
-     "color": "soul_glow",
+     "color": "lamp_glow",
      "rotation": [
       0,
       150,
@@ -2333,7 +2335,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -2593,7 +2595,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -2718,7 +2720,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -2869,7 +2871,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -3007,7 +3009,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -3211,7 +3213,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -3326,7 +3328,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -3510,7 +3512,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -3661,7 +3663,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   },
@@ -3789,7 +3791,7 @@
       2.0,
       4.0
      ],
-     "color": "soul_glow"
+     "color": "lamp_glow"
     }
    ]
   }
