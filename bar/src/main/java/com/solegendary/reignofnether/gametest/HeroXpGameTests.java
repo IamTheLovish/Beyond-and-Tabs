@@ -172,12 +172,16 @@ public class HeroXpGameTests {
                 if (orbs == 0) {
                     BlockPos at = deathAt[0] == null ? hero.blockPosition() : BlockPos.containing(deathAt[0]);
                     where = String.format(java.util.Locale.ROOT, " (orbs right after the kill %d, within 64 blocks now %d; "
-                        + "hero %s, victim died at %s, %.2f from the hero; entity ticking there %b, at the hero %b)", atKill[0],
+                        + "hero %s, victim died at %s, %.2f from the hero; entity ticking there %b, at the hero %b; "
+                        + "hero alive %b, health %.1f, removed %s)", atKill[0],
                         helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
                             hero.getBoundingBox().inflate(64)).size(),
                         hero.blockPosition().toShortString(), at.toShortString(),
                         deathAt[0] == null ? -1 : deathAt[0].distanceTo(hero.position()),
-                        helper.getLevel().isPositionEntityTicking(at), helper.getLevel().isPositionEntityTicking(hero.blockPosition()));
+                        helper.getLevel().isPositionEntityTicking(at), helper.getLevel().isPositionEntityTicking(hero.blockPosition()),
+                        // a hero dying between the kill and the count discards its orbs (HeroExperienceOrb.tick) and would
+                        // look like a chunk problem (review round 4 on #488)
+                        hero.isAlive(), hero.getHealth(), hero.getRemovalReason());
                 }
                 discard(mobs);
                 if (got != want)
