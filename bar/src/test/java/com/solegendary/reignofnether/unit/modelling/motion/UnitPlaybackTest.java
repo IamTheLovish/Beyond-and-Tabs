@@ -401,6 +401,25 @@ class UnitPlaybackTest {
         assertTrue(between == 0, between + " client ticks drew the unit sliding across an 8-block blink");
     }
 
+    /**
+     * A teleport stays a jump with the unit's velocity heard (units track deltas: the server sends the walk's velocity
+     * with its moves): heard velocity explains a fast move only up to {@link UnitPlayback#HEARD_SLACK} times itself, so
+     * an 8-block blink by a walking unit (0.25 a tick heard) is still drawn as a jump, never a slide across.
+     */
+    @Test
+    void a_teleport_with_the_walks_velocity_heard_is_still_drawn_as_a_jump() {
+        IntFunction<double[]> blink = k -> new double[] { SPEED * k + (k >= 150 ? 8.0 : 0.0), 0 };
+        // a walk's velocity wavers a little, so it is sent every interval (ServerEntity sends it only when it changed)
+        IntFunction<double[]> walking = k -> new double[] { SPEED + 0.001 * (k % 2), 0, 0 };
+        Drawn d = replay(steady(260), blink, Set.of(), walking, Set.of());
+        double from = SPEED * 149, to = SPEED * 150 + 8.0;
+        int between = 0;
+        for (double x : d.x())
+            if (x > from + 1.0 && x < to - 1.0)
+                between++;
+        assertTrue(between == 0, between + " client ticks drew the walking unit sliding across an 8-block blink");
+    }
+
     /** One client tick's horizontal move, the largest over the client ticks that show server ticks [from, to). */
     static double worstStep(Drawn d, int from, int to) {
         double worst = 0;

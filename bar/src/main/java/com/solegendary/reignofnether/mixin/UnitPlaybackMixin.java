@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.mixin;
 
 import com.solegendary.reignofnether.unit.modelling.motion.UnitPlayback;
+import com.solegendary.reignofnether.unit.playback.StampedUnit;
 import com.solegendary.reignofnether.unit.playback.UnitPlaybackClient;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -19,13 +20,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * files it in the unit's Track under the server tick the last clock stamp named - with what the packet carries, which
  * UnitPlaybackPacketMixin read from the packet itself - instead of starting vanilla's 3-client-tick lerp (which stalls
  * whenever a tick runs late: 4-12% of client ticks at 500-799 units, 16-29% at 14.5 TPS). The head-rotation packet
- * (lerpHeadTo) goes into the same Track, so head, body and pitch are drawn on one delay. aiStep, once a client tick, then
+ * (lerpHeadTo) goes into the same Track, so head, body and pitch are drawn on one delay, and so does the server's velocity
+ * (StampedUnit, from the velocity packet), which tells a throw from a blink. aiStep, once a client tick, then
  * places and turns the unit where the playback clock says, before vanilla's own lerps (never started) would have run.
  * Client-side copies of units only; anything else keeps vanilla. Each injection must apply (require = 1): a half-applied
  * mixin - packets filed, never drawn - would freeze every unit without a word.
  */
 @Mixin(LivingEntity.class)
-public abstract class UnitPlaybackMixin extends Entity {
+public abstract class UnitPlaybackMixin extends Entity implements StampedUnit {
 
     @Shadow protected int lerpSteps;
     @Shadow protected int lerpHeadSteps;
@@ -49,18 +51,18 @@ public abstract class UnitPlaybackMixin extends Entity {
             track = reignofnether$track = new UnitPlayback.Track(getType().updateInterval());
         if (!track.seeded())   // where its spawn packet (or vanilla, before the clock ran) left it
             track.seed(tick - getType().updateInterval(), getX(), getY(), getZ(), getYRot(), getYHeadRot(), getXRot());
-        if (kind < 0) {
-            // not a tracker packet (another system placing it): it names where to stand and how to face
-            track.packet(tick, UnitPlayback.Track.POS | UnitPlayback.Track.ROT, x, y, z, yRot, xRot);
-        } else if (UnitPlaybackClient.wasTeleport()) {
-            // a teleport packet: its own position (vanilla hands lerpTo the drawn one when it is within 1/32)
-            track.packet(tick, kind, UnitPlaybackClient.teleportX(), UnitPlaybackClient.teleportY(),
-                UnitPlaybackClient.teleportZ(), yRot, xRot);
-        } else {
-            track.packet(tick, kind, x, y, z, yRot, xRot);
-        }
+        // not a tracker packet (kind < 0: another system placing it): it names where to stand and how to face
+        track.packet(tick, kind < 0 ? UnitPlayback.Track.POS | UnitPlayback.Track.ROT : kind, x, y, z, yRot, xRot);
         lerpSteps = 0;
         ci.cancel();
+    }
+
+    /** The server's velocity for this unit (UnitPlaybackPacketMixin): it tells a throw from a blink (Track.motion). */
+    @Override
+    public void reignofnether$heardMotion(double vx, double vy, double vz) {
+        UnitPlayback.Track track = reignofnether$track;
+        if (track != null && level().isClientSide() && UnitPlaybackClient.drawsFromStamps((LivingEntity) (Object) this))
+            track.motion(UnitPlaybackClient.CLOCK.newest(), vx, vy, vz);
     }
 
     @Inject(method = "lerpHeadTo(FI)V", at = @At("HEAD"), cancellable = true, require = 1)
