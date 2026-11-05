@@ -83,15 +83,15 @@ public final class RuneFxClient {
      * The rim per faction (F_* id): its core (light enough to read on sunlit grass, never pure hue, never pure white:
      * overlapping rims summed to white in round 9), its halo (the faction's hue), and the dark line under both.
      */
-    static final int[] CORE = {0xE4ECFF, 0xFFF2C0, 0xD0FF60, 0xFFB080, 0xB0FFB0, 0xA8F8FF, 0xD0B8FF, 0xFFC870};
-    static final int[] HALO = {0xC8C8FF, 0xFFE070, 0x7CE000, 0xFF2A00, 0x28C850, 0x30D8FF, 0x9050FF, 0xD07818};
+    static final int[] CORE = {0xF4F8FF, 0xFFF2C0, 0xD0FF60, 0xFFB080, 0xB0FFB0, 0xA8F8FF, 0xD0B8FF, 0xFFC870};
+    static final int[] HALO = {0x8FB0FF, 0xFFE070, 0x7CE000, 0xFF2A00, 0x28C850, 0x30D8FF, 0x9050FF, 0xD07818};
     static final int[] DARK = {0x202040, 0x3A1E00, 0x1A2A00, 0x3A0800, 0x0B3D1E, 0x002A3A, 0x1E0A40, 0x3A2400};
     /**
      * The rim core's half width: at least CORE_W blocks and CORE_PX screen pixels (RTS camera). The halo is HALO_K times
      * as wide, the dark line DARK_K times.
      */
     static final float CORE_W = 0.05f, CORE_PX = 1.5f, HALO_K = 2.7f, DARK_K = 2.2f;
-    static final float CORE_A = 0.95f, HALO_A = 0.35f, DARK_A = 0.55f;
+    static final float CORE_A = 0.95f, HALO_A = 0.42f, DARK_A = 0.55f;
     /** The rim's core settles by SETTLE over the hold, from SETTLE_FROM s to SETTLE_TO s. */
     static final float SETTLE = 0.3f, SETTLE_FROM = 0.5f, SETTLE_TO = 1.3f;
     /** The hold's beat: from BEAT_FROM s, every BEAT_EVERY s the core brightens by BEAT, fading over BEAT_T s. */
@@ -110,7 +110,7 @@ public final class RuneFxClient {
      */
     static final float LIFT_MAX = 3.0f;
     /** RTS zoom: the details fade out from LOD_FROM to LOD_TO. */
-    static final float LOD_FROM = 24, LOD_TO = 36;
+    static final float LOD_FROM = 28, LOD_TO = 40;
     /** Past zoom 30 the circle grows with the zoom, up to this. */
     static final float SCALE_MAX = 1.2f;
     static final float RING_A = 1.0f, SIGIL_A = 0.95f, FLASH_T = 0.1f;
@@ -118,8 +118,11 @@ public final class RuneFxClient {
     static final float BURST_HALF = 0.6f, BURST_T = 0.1f, BURST_A = 0.8f;
     /** The glyph riding the sweep's tip: half size in blocks. */
     static final float TIP_HALF = 0.16f;
-    /** Others within this many blocks dim a circle's light to 1 / sqrt(1 + n), not below CROWD_MIN. */
-    static final float CROWD_R = 3, CROWD_MIN = 0.6f;
+    /**
+     * Others within this many blocks dim a circle's light to 1 / sqrt(1 + n), not below CROWD_MIN (round 11: at .6 a
+     * dense army's rings read as thin faint arcs; at .75 in round 9 they summed toward white).
+     */
+    static final float CROWD_R = 3, CROWD_MIN = 0.78f;
     /** How many circles may flash at full strength in one frame; past it every flash is dimmed to share that much. */
     static final float FLASH_CAP = 3;
     /** The rim thrown out at the release: from this share of the circle's radius to PULSE_TO over PULSE_T s. */
@@ -128,7 +131,7 @@ public final class RuneFxClient {
     static final float TIER_H = 0.8f, TIER_R = 0.62f, TIER_AT = 0.3f, TIER_A = 0.7f, TIER_SPIN = -0.2f;
     static final float TIER_RISE = 0.12f;
     static final float PILLAR_FROM = 2.0f, PILLAR_H = 2.5f, PILLAR_HW = 0.125f, PILLAR_A = 0.5f, PILLAR_T = 0.12f;
-    static final int MOTES = 8;
+    static final int MOTES = 12;
     /** Motes run this much faster than the cast's clock (short lives). */
     static final float MOTE_SPEED = 2;
     static final float MOTE_A = 1.0f, MOTE_HALF = 0.26f, RISE = 1.5f;
