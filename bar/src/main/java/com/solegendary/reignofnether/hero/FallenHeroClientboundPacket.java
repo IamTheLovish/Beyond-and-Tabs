@@ -111,4 +111,10 @@ public class FallenHeroClientboundPacket {
         ctx.get().setPacketHandled(true);
         return success.get();
     }
+
+    /** STUB (the red for HeroFallenAlertGameTests): the roster only, as main's handler did - the alert is never told. */
+    public void deliver(java.util.function.Consumer<HeroUnitSave> roster, HeroFallenNews.Listener alert) {
+        roster.accept(new HeroUnitSave(uuid, name, ownerName, experience, skillPoints, 0,
+            ability1Rank, ability2Rank, ability3Rank, ability4Rank, items));
+    }
 }
