@@ -130,10 +130,14 @@ class LotusAcademyTest(unittest.TestCase):
     def test_every_eave_has_a_dark_hem(self):
         """Every eave lip - the galleries' and the gate's (y 4), each hall roof's (R1, R2, R3) - is dark oak, not jade,
         at every level (critic B: the round-4 hem, the one detail round that won, was on the first roof only, "a stripe
-        on one roof, not an outline of the building")."""
+        on one roof, not an outline of the building"). Definition re-set Nov 5 (its own commit, before the build): the
+        galleries' pitch steps (x 1 / 7, y 5 = R1, lovish's pick D) sit one up and one in from their dark hem at y 4 -
+        not eaves; every other jade stair at a lip height still fails, so the shipped hem gap still fails."""
         lips = (4, L.R1, L.R2, L.R3)
+        steps = {(x, L.R1, z) for x in (1, L.SX - 2) for z in range(L.GALLERY[0], L.GALLERY[1] + 1)}
         for i in range(3):
-            jade = sorted(q for q, n in self.solid[i].items() if q[1] in lips and n == JADE + "_stairs")
+            jade = sorted(q for q, n in self.solid[i].items() if q[1] in lips and n == JADE + "_stairs"
+                          and q not in steps)
             self.assertEqual(jade, [], "L%d jade eave stairs" % (i + 1))
 
     def test_one_gold_boss_on_the_gate(self):
@@ -193,19 +197,20 @@ class LotusAcademyTest(unittest.TestCase):
 
     def test_dark_ridges_show_on_camera(self):
         """The ridges are seen at L1: the RTS camera's rays land on the top face of dark oak on the galleries' outer
-        walls (y 5) and on the second hall roof's crest (two above its lip)."""
+        walls (y 5). (The hall roofs' crests carry the second storey and the lotus at every level, so their ridges are
+        checked in the structure above, not on camera.)"""
         hits = G.shoot(self.lv[0], "rts", step=4)
         up = [q for (q, n, f, _b) in hits.values() if n.startswith("dark_oak") and f == "up"]
         self.assertTrue([q for q in up if q[1] == 5 and q[0] in (0, L.SX - 1) and q[2] >= 4], "no gallery ridge seen")
-        self.assertTrue([q for q in up if q[1] == L.R2 + 2 and q[2] <= 3], "no hall ridge seen")
 
     def test_seated_on_a_kerb_and_a_south_way(self):
         """The footprint never grows (BuildingLevels), so the apron is the plot's own edge: at every level layer 0's
-        outer ring is a dressed stone-brick kerb, and the gate's three-wide way out (x 3..5, z 7..8) is the pale
-        polished andesite path running in from the south edge. Shipped: the court's plain stone ran to the edge."""
+        outer ring is a dressed stone-brick kerb, broken only by the pale polished andesite path's mouth on the axis
+        under the gate (x 4, z 8): the path runs in from the south edge. Shipped: the court's plain stone ran to the
+        edge."""
         for i in range(3):
             s = self.solid[i]
-            way = {(x, z) for x in (3, 4, 5) for z in (7, 8)}
+            way = {(L.C, L.SZ - 1)}
             ring = [(x, z) for x in range(L.SX) for z in range(L.SZ)
                     if (x in (0, L.SX - 1) or z in (0, L.SZ - 1)) and (x, z) not in way]
             bad = sorted((x, z, s.get((x, 0, z))) for (x, z) in ring if s.get((x, 0, z)) != "stone_bricks")
