@@ -192,6 +192,23 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
         }
     }
 
+    /**
+     * Where a flyer flies to shoot a building's block: short of its range from the block, toward where it is, on the
+     * ground there (FlyingMoveToTargetGoal holds its altitude over the ground under a target). Sent at the block itself,
+     * the ground under it is the building, so a flyer ended over the roof, mostly out of range (the Seraph Archer's test,
+     * flake-stress 42103967138: 2 of 8 never hit, the rest 1-2 hits in 10 s where 6 fit).
+     */
+    private BlockPos flyerStandoff(BlockPos bp) {
+        float range = ((AttackerUnit) this.mob).getAttackRange();
+        BlockPos p = com.solegendary.reignofnether.util.MyMath.getXZRangeLimitedBlockPos(bp, this.mob.getOnPos(), Math.max(1f, range - 3f));
+        BlockPos g = new BlockPos(p.getX(), buildingTarget != null ? buildingTarget.originPos.getY() : bp.getY(), p.getZ());
+        for (int i = 0; i < 16 && this.mob.level().getBlockState(g).isAir(); i++)
+            g = g.below();
+        for (int i = 0; i < 16 && !this.mob.level().getBlockState(g.above()).isAir(); i++)
+            g = g.above();
+        return g;
+    }
+
     // moveGoal controllers
     private boolean isDoneMoving() {
         FlyingMoveToTargetGoal fmg = getFlyingMoveGoal();
@@ -212,7 +229,7 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
     private void moveTo(BlockPos bp) {
         FlyingMoveToTargetGoal fmg = getFlyingMoveGoal();
         if (fmg != null)
-            fmg.setMoveTarget(bp);
+            fmg.setMoveTarget(flyerStandoff(bp));
         else if (!Engage.keepPath(this.mob, bp, 1.0f))   // every tick while out of range: keep a path that still ends there
             this.mob.getNavigation().moveTo(bp.getX(), bp.getY(), bp.getZ(), 1.0f);
     }
