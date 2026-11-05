@@ -6241,8 +6241,9 @@ LAWN_R64 = dict(
     blade_elong=1.4,                 # the blade stipple streaks along the lay, x longer than wide; r67 3.0 -> 1.4
                                      # (round tufts keep the lit side >= 0.02 with the wider drift - test_lawn_r67)
     crease=1.3,                      # valley sharpening (0 = the raw noise, symmetric, no lit side at the camera)
-    relief=0.096,                    # luma swing of the forms (the lit flank vs the body); r64 0.16 -> r66 D1 x0.6
-                                     # (lovish Nov 5: "softer", grain contrast -40%)
+    relief=0.13,                     # luma swing of the forms (the lit flank vs the body); r64 0.16 -> r66 D1 x0.6
+                                     # (lovish Nov 5: "softer", grain contrast -40%) -> r68 0.13 with the lifted floor:
+                                     # keeps the lit side >= 0.02; the range still FALLS (p5-p95 0.222 -> 0.192, D1 0.195)
     slope_k=8.0,                     # H units per block that count as a fully lit flank
     selfshade=0.75,                  # how far a flank facing away from the sun goes into shade (x its slope); r66 0.55
                                      # -> 0.75 keeps the east light (test_lawn_r62/r64 lit side >= 0.02) with less relief
@@ -6250,8 +6251,10 @@ LAWN_R64 = dict(
     shadow_len=0.10,                 # blocks: the longest shadow sampled (short: a line of shade, not a pool)
     shadow=0.7,                      # how far full shade goes toward LAWN64_UNDER (1 = all the way; that is the floor);
                                      # r66 D1 1.0 -> 0.7: shallower creases, the softer grain
-    under=0.91,                      # x LAWN64_UNDER: the crease floor's value (r65 D: a shade deeper - with the patches
-                                     # halved the p5-p95 range needed it back; near-black stays ~0.3% under our gain)
+    under=1.2,                       # x LAWN64_UNDER: the crease floor's value (r65 D: a shade deeper - with the patches
+                                     # halved the p5-p95 range needed it back; near-black stays ~0.3% under our gain);
+                                     # r68 0.91 -> 1.2: the r67 critic's "salt-and-pepper ... near-black pits" (dark
+                                     # tail (mean - p1) / mean 0.394 -> 0.325, test_lawn_r68)
     patch=0.0,                       # the 2-6 block tonal patches: luma x (1 +- patch/2 at one std); r64 0.24 -> r65 D
                                      # 0.12 (lovish: "The grass looks blotchy") -> r66 D1 0: one size, evenly spread, they
                                      # read as camouflage ("too symettrical or patterned"); the drifts now live in
