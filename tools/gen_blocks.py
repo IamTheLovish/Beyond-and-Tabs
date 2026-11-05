@@ -6430,12 +6430,10 @@ _LAWN_CACHE = {}
 
 def lawn_sheet(res, blocks=4, seed=None, knobs=None, variant=1):
     """The lawn's turf sheet: (H, alb) of `variant` (1..LAWN_VARIANTS) over `blocks` x `blocks`. The pack writes
-    LAWN_SHEET_BLOCKS = 8 (write_lawn_sheet; test_lawn_r64 measures those). `blocks` defaults to 4 for
-    test_lawn_r62/r63, written for the 4-block sheet: they mip the sheet to a fixed 128 px (= 32 texels per block of a
-    4-block sheet - the RTS camera), so on the 8-block sheet they would measure a 16-texel camera nobody plays at;
-    the same recipe at 4 blocks has the same statistics, and test_lawn_r64 re-states their bands on the 8 x 8 sheet
-    at 32 texels per block. (Their mechanical fix is box_mip(alb, 32 * LAWN_SHEET_BLOCKS) - not this lane's to make.)
-    The default sheets are cached in the process."""
+    LAWN_SHEET_BLOCKS = 8 (write_lawn_sheet; the game's GiantLawnCells.SIZE matches it, test_lawn_sheet_java).
+    test_lawn_r62/r63/r64 all measure that 8 x 8 sheet at 32 texels per block (r62/r63 since 7af1259d); `blocks`
+    still defaults to 4, round 62's sheet, for any caller that asks for that cut. The default sheets are cached in
+    the process."""
     if knobs:
         return lawn_turf(res, blocks, variant, knobs, seed)
     key = (res, blocks, seed, variant)

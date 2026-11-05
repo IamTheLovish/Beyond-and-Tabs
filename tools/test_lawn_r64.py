@@ -21,10 +21,8 @@ These checks sit beside test_lawn_r61/r62/r63's, which all stay (the r62/r63 ban
   >= 100 is out of reach under the biome tint's ceiling (albedo white = L 0.58) with near-black under 1%
 - the painted light comes from the EAST: LAWN_SUN = (1, 0), and round the darkest 10% the luma 2 px WEST minus 2 px
   EAST >= 0.02 (test_lawn_r62's method, the direction fixed here)
-- test_lawn_r62/r63's bands re-stated on the pack's 8 x 8 sheet at 32 texels per block (those files mip to a
-  fixed 128 px - 32 texels per block of the 4-block sheet they were written for - so lawn_sheet keeps a 4-block
-  default cut of the same recipe for them; their mechanical fix, box_mip(alb, 32 * LAWN_SHEET_BLOCKS), is not this
-  lane's to make)
+- test_lawn_r62/r63's bands re-stated on the pack's 8 x 8 sheet at 32 texels per block (since 7af1259d those files
+  measure the same 8 x 8 sheet themselves: lawn_sheet(256, blocks=LAWN_SHEET_BLOCKS), box_mip(alb, 32 * blocks))
 - the flower layer: grass_flower_layer_1..8, 128 x 128 RGBA, 1-6% opaque, 6-12 heads of 0.05-0.11 block, value
   0.75+ everywhere (untinted: real daisy white, buttercup yellow, clover pink), clear of the sprite's edges; and the
   build writes them (SHEET_JOBS) with the sheet variants' sprite names grass_block_top[_k<k>]_g<cell>
@@ -187,14 +185,14 @@ class LawnSheetRound64Test(unittest.TestCase):
         self.assertGreaterEqual(float(west[dark].mean() - east[dark].mean()), 0.02)
 
     def test_rounds_62_63_bands_on_the_8x8_sheet(self):
-        """test_lawn_r62/r63 mip the sheet to a fixed 128 px (32 texels per block of the 4-block sheet they were
-        written for), so they keep measuring lawn_sheet's default 4-block cut of the same recipe; the pack's 8 x 8
-        sheet is held to the SAME bands here at 32 texels per block (3 x 3 sheets, as they tile): near-black
+        """test_lawn_r62/r63's bands on the pack's 8 x 8 sheet (since 7af1259d those files measure it too); held to the
+        SAME bands here at 32 texels per block (3 x 3 sheets, as they tile): near-black
         < 0.5% under our gain, speckle 0.40-0.50, 2+ block share 0.08-0.30 (floor 0.15 -> 0.08 with test_lawn_r62's
         on lovish's "D, and lower both floors", Nov 4 ~17:05 ET), fine grain (under 0.2 block over
         0.25-0.6 block), saturation >= 0.58 and L >= 0.34 under our gain, worn soil 0.3-8% (floor 1% -> 0.3% with
         test_lawn_r63's on lovish's "D, and lower both floors") in pieces of 32-4096 px,
-        the brightest 0.5% in 8+ specks of 2+ px (4+ of 5+ px, none over 30), and the sheet wraps."""
+        the brightest 0.5% in 32+ specks of 2+ px (16+ of 5+ px, none over 30: r63's 8 / 4 per 4 x 4 blocks, scaled
+        by area), and the sheet wraps."""
         f3 = np.tile(sheet_mip(), (3, 3, 1))
         g3 = np.tile(sheet_mip(gain=True), (3, 3, 1))
         L, Lg = sim.luma(f3), sim.luma(g3)

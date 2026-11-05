@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Round 63 lawn: the 4 x 4-block sheet as a CLOVER CARPET (lovish Nov 4 04:23-04:50 ET: concept C "clover + grass
+"""Round 63 lawn: the lawn sheet as a CLOVER CARPET (4 x 4 blocks in round 63, 8 x 8 since round 64; measured on the
+8 x 8 sheet the pack ships since 7af1259d) (lovish Nov 4 04:23-04:50 ET: concept C "clover + grass
 patches"; on round 62's sheet "61b looks better the last one is terrible" - its 0.26-0.52-block clumps read as tree
 canopy from the RTS camera; "more blending and contrast between the ground", "needs more shadow and contrasts").
 
@@ -167,7 +168,7 @@ class LawnSheetRound63Test(unittest.TestCase):
         self.assertLessEqual(max(sizes), 30)
 
     def test_sheet_wraps_seamlessly(self):
-        """the sheet repeats every 4 blocks: its last column / row must join its first like any inner neighbours do."""
+        """the sheet repeats every 8 blocks: its last column / row must join its first like any inner neighbours do."""
         _H, alb = sheet()
         L = alb @ gen_blocks.LUMA
         cols = np.abs(np.diff(L, axis=1)).mean(0)
