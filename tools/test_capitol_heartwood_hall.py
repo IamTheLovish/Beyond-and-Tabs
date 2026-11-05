@@ -27,6 +27,11 @@ def _ring(q):
     return max(abs(q[0] - C), abs(q[2] - C))
 
 
+def _bark(n):
+    """The tree's wood (logs and wood blocks of any bark), not the stag-dryad's birch."""
+    return n.endswith(("_log", "_wood")) and "birch" not in n
+
+
 class HeartwoodHallTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -142,7 +147,7 @@ class HeartwoodHallTest(unittest.TestCase):
         roof = {q for q, n in solid.items() if _ring(q) <= 3 and q[1] >= 7 and any(k in n for k in STONE)}
         self.assertTrue(roof, "the hall has no roof")
         line = self._roofline()
-        bark = {q for q, n in solid.items() if n in ("oak_log", "oak_wood")}
+        bark = {q for q, n in solid.items() if _bark(n)}
         legs = {(q[0], q[2]) for q in bark if q[1] == 2}
         sides = set()
         for q in bark:
@@ -166,15 +171,15 @@ class HeartwoodHallTest(unittest.TestCase):
         self.assertGreaterEqual(len(sides), 3, sides)
 
     def test_roots_are_bark_lines_not_cube_stacks(self):
-        """The roots that arch from the hall's corner piers into the garden read as lines from the RTS camera: every
-        bark cell outside the walls (ring >= 5) up to the parapet (y <= 8) is an oak log lying along its arc (axis x or
-        z), so the camera sees bark on top, never a pale log end. Shipped: full oak_wood cubes standing on end - "four
-        diagonal stacks of full oak_wood cubes ... a zipper of pale-topped cubes - the crate stacks" (Fable critic A,
-        Nov 4, 4/10: the most distracting element on the still)."""
-        cells = [(q, n, pr) for q, (n, pr) in self.b.blocks.items()
-                 if n in ("oak_log", "oak_wood") and _ring(q) >= 5 and q[1] <= 8]
-        self.assertTrue(cells, "no roots outside the walls")
-        bad = [(q, n, pr.get("axis")) for q, n, pr in cells if n != "oak_log" or pr.get("axis") not in ("x", "z")]
+        """No crate stacks at the hall's corners: any bark outside the walls (ring >= 5) up to the parapet (y <= 8) is
+        a log lying along its line (axis x or z), so the camera sees bark on top, never a pale log end. Shipped: full
+        oak_wood cubes standing on end - "four diagonal stacks of full oak_wood cubes ... a zipper of pale-topped cubes
+        - the crate stacks" (Fable critic A, Nov 4, 4/10: the most distracting element on the still). Logs on their
+        side still read as "crate stacks at every corner" (Fable critic, round 1, Nov 5), so the roots now lie low as
+        mangrove-root mats and no bark stands there at all."""
+        cells = [(q, n, pr) for q, (n, pr) in self.b.blocks.items() if _bark(n) and _ring(q) >= 5 and q[1] <= 8]
+        bad = [(q, n, pr.get("axis")) for q, n, pr in cells
+               if not n.endswith("_log") or pr.get("axis") not in ("x", "z")]
         self.assertEqual(bad, [], "%d of %d root cells are cubes or stand on end" % (len(bad), len(cells)))
 
     def test_data_and_assets_copies_match(self):
