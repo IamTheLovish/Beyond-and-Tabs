@@ -49,6 +49,24 @@ class GroundSheetRulesTest {
     }
 
     @Test
+    void lawnCellsOnTheEightByEightSheetThePackShips() {
+        // carried over from #496's GiantLawnCellsTest (round 64's 8x8 sheet; environment/lawn is replaced by this class):
+        // round 62's 4x4 layout read the 8-wide sheet's first two rows as four - not on the 8x8 sheet
+        assertEquals(5, GroundSheetRules.cell(4, 0, 8), "the 5th column is cell 5, not the next row's start");
+        assertEquals(13, GroundSheetRules.cell(4, 1, 8));
+        assertEquals(2, GroundSheetRules.cell(1, 0, 8), "x is the sheet column");
+        // 1_000_001 = 125_000 sheets + 1, and -3 is row 5 of the sheet above (floorMod(-3, 8) = 5)
+        assertEquals(GroundSheetRules.cell(1, 5, 8), GroundSheetRules.cell(1_000_001, -3, 8));
+        for (int x = -17; x < 17; x++)
+            for (int z = -17; z < 17; z++) {
+                if (Math.floorMod(x, 8) != 0)
+                    assertEquals(GroundSheetRules.cell(x - 1, z, 8) + 1, GroundSheetRules.cell(x, z, 8), "x neighbours inside a row");
+                if (Math.floorMod(z, 8) != 0)
+                    assertEquals(GroundSheetRules.cell(x, z - 1, 8) + 8, GroundSheetRules.cell(x, z, 8), "z neighbours a row apart");
+            }
+    }
+
+    @Test
     void negativeCoordinatesContinueTheSheetWithoutAMirror() {
         // -1 is the column left of 0, i.e. the sheet's last column: no flip at the world origin
         assertEquals(4, GroundSheetRules.cell(-1, 0, 4));

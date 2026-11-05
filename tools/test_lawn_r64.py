@@ -21,10 +21,8 @@ These checks sit beside test_lawn_r61/r62/r63's, which all stay (the r62/r63 ban
   the new look" (Nov 5, after D1 "softer") a band 0.17-0.23
 - the painted light comes from the EAST: LAWN_SUN = (1, 0), and round the darkest 10% the luma 2 px WEST minus 2 px
   EAST >= 0.02 (test_lawn_r62's method, the direction fixed here)
-- test_lawn_r62/r63's bands re-stated on the pack's 8 x 8 sheet at 32 texels per block (those files mip to a
-  fixed 128 px - 32 texels per block of the 4-block sheet they were written for - so lawn_sheet keeps a 4-block
-  default cut of the same recipe for them; their mechanical fix, box_mip(alb, 32 * LAWN_SHEET_BLOCKS), is not this
-  lane's to make)
+- test_lawn_r62/r63's bands re-stated on the pack's 8 x 8 sheet at 32 texels per block (since 7af1259d those files
+  measure the same 8 x 8 sheet themselves: lawn_sheet(256, blocks=LAWN_SHEET_BLOCKS), box_mip(alb, 32 * blocks))
 - the flower layer: grass_flower_layer_1..8, 128 x 128 RGBA, 1-6% opaque, 6-12 heads of 0.05-0.11 block, value
   0.75+ everywhere (untinted: real daisy white, buttercup yellow, clover pink), clear of the sprite's edges; and the
   build writes them (SHEET_JOBS) with the sheet variants' sprite names grass_block_top[_k<k>]_g<cell>
@@ -213,7 +211,8 @@ class LawnSheetRound64Test(unittest.TestCase):
         on lovish's "D, and lower both floors", Nov 4 ~17:05 ET), fine grain (under 0.2 block over
         0.25-0.6 block), saturation >= 0.58 and L >= 0.34 under our gain, worn soil at most 8% (the floor went with
         lovish's "Re-set to the new look", Nov 5: no soil specks in the sheet) in pieces of 32-4096 px,
-        the brightest 0.5% in 8+ specks of 2+ px (4+ of 5+ px, none over 30), and the sheet wraps."""
+        the brightest 0.5% in 32+ specks of 2+ px (16+ of 5+ px, none over 30: r63's 8 / 4 per 4 x 4 blocks, scaled
+        by area), and the sheet wraps."""
         f3 = np.tile(sheet_mip(), (3, 3, 1))
         g3 = np.tile(sheet_mip(gain=True), (3, 3, 1))
         L, Lg = sim.luma(f3), sim.luma(g3)

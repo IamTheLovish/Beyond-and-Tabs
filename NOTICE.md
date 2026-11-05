@@ -59,16 +59,18 @@ instance of the variable font). Details: `design/lobby-backdrop.md`.
 ## Block textures: photo scans (CC0)
 
 Most of the realistic block pack (`resourcepacks/BeyondAndTabs-Realistic`, built by `tools/gen_blocks.py`) is
-original and procedurally generated. Since Oct 22 2026 (lovish's decision), **stone, dirt, the grass block** (top,
-side and side overlay) **and basalt**, with their variants, are built from photo-scanned materials by **ambientCG**
-(https://ambientcg.com), released under **CC0 1.0 Universal** (public domain dedication; ambientcg.com/license):
+original and procedurally generated. Since Oct 22 2026 (lovish's decision), **stone, the dirt family** (dirt, dirt
+path, coarse dirt) **and the grass block's side**, with their variants, are built from photo-scanned materials by
+**ambientCG** (https://ambientcg.com), released under **CC0 1.0 Universal** (public domain dedication;
+ambientcg.com/license). The grass block's top is procedural (since round 34; the lawn sheet since round 62), and so
+is basalt (since round 31, columnar):
 
 | ambientCG asset | becomes |
 |---|---|
 | Rock058 | stone |
-| Ground106 | dirt, and the soil of the grass block's side |
-| Grass004 | the grass block's top, and the blade tones of its side's turf |
-| Rock035 | basalt (side and end) |
+| Ground106 | dirt, dirt path (top and side), coarse dirt, and the soil of the grass block's side (round 60's `soil_scan`) |
+| Grass004 | the blade tones of the grass block's side turf (the overlay) |
+| Rock035 | nothing now (basalt until round 31); its copies stay in `tools/scans/` |
 
 CC0 asks for no attribution; we credit the source anyway. `tools/scan_prep.py` makes 512 px copies of the colour,
 normal and displacement maps (downloaded Oct 22 2026, 1K JPG sets) in `tools/scans/`; `tools/gen_blocks.py` fits

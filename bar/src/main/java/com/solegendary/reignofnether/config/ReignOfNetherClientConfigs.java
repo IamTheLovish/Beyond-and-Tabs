@@ -255,7 +255,7 @@ public class ReignOfNetherClientConfigs {
         GROUND_SCARS = BUILDER.define("ground_scars", true);
         BUILDER.comment("Path edges: a ragged grass fringe spills over paths, dirt, sand and gravel where they meet grass, so the border is not a straight tile line from the RTS camera. Built with the terrain (no per-frame cost); false = the plain square edges");
         PATH_EDGES = BUILDER.define("path_edges", true);
-        BUILDER.comment("Lawn sheet: the grass top is one texture over 4x4 blocks (a pack with the grass_block_top_g1..16 sprites; 2x2 / 8x8 with 4 / 64 of them), so its soft patches run across blocks and a field shows no per-block repeat. Built with the terrain (no per-frame cost); false = every block its own grass top. Takes effect when the terrain is rebuilt (F3+A)");
+        BUILDER.comment("Lawn sheet: the grass top is one texture over 8x8 blocks (a pack with the grass_block_top_g1..64 sprites; 2x2 / 4x4 with 4 / 16 of them), so its soft patches run across blocks and a field shows no per-block repeat. Built with the terrain (no per-frame cost); false = every block its own grass top. Takes effect when the terrain is rebuilt (F3+A)");
         LAWN_SHEET = BUILDER.define("lawn_sheet", true);
         BUILDER.comment("Ground sheets: the tops of dirt, coarse dirt, the dirt path, gravel, mud and podzol are each one texture over 2x2, 4x4 or 8x8 blocks (a pack with the <top>_g1..N*N sprites; the pack decides the size), so no block grid shows. Built with the terrain (no per-frame cost); false = every block its own top. Takes effect when the terrain is rebuilt (F3+A)");
         GROUND_SHEETS = BUILDER.define("ground_sheets", true);
