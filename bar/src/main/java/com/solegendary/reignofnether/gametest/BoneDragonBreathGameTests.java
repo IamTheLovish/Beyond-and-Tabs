@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.entities.GhastUnitFireball;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit;
@@ -185,7 +186,7 @@ public class BoneDragonBreathGameTests {
                 problems.add("the dive onto its own spot was refused");
             if (landedAt[0] < 0 && dragon.isLanded()) {
                 landedAt[0] = tick;
-                ((AttackerUnit) dragon).setUnitAttackTarget(target);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             }
             if (!problems.isEmpty())
                 return DragonDiveGameTests.finish(helper, problems, clean);
@@ -195,7 +196,7 @@ public class BoneDragonBreathGameTests {
                 return false;
             }
             if ((tick - landedAt[0]) % 20 == 10 && dragon.getTarget() != target)
-                ((AttackerUnit) dragon).setUnitAttackTarget(target);   // a neighbouring test's unit must not pull it away
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);   // a neighbouring test's unit must not pull it away
             for (Burns b : burns)
                 b.tick(tick, landedAt[0] + 1);
             if (burns[0].first >= 0 && !dragon.isLanded())
@@ -234,6 +235,9 @@ public class BoneDragonBreathGameTests {
             helper.fail("could not create the landed cone test units");
             return;
         }
+        // ordered fire only (Hold fire still obeys an order): RoN turns an idle or unordered unit on the NEAREST
+        // enemy, and the spared foes here are nearer the dragon than its target
+        EngagementStance.set(dragon, EngagementStance.HOLD_FIRE);
         Mob[] spared = { tower, flank, back, friend };
         String[] why = { "a foe on a tower 6 up beside the landed dragon's line of fire", "a foe at the dragon's flank",
             "a foe behind the dragon", "a friend in the cone" };
@@ -248,7 +252,7 @@ public class BoneDragonBreathGameTests {
                 landedAt[0] = tick;
                 for (int i = 0; i < spared.length; i++)
                     before[i] = spared[i].getHealth();
-                ((AttackerUnit) dragon).setUnitAttackTarget(target);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             }
             if (landedAt[0] < 0) {
                 if (tick > 20)
@@ -256,7 +260,7 @@ public class BoneDragonBreathGameTests {
                 return false;
             }
             if ((tick - landedAt[0]) % 20 == 10 && dragon.getTarget() != target)
-                ((AttackerUnit) dragon).setUnitAttackTarget(target);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             burn.tick(tick, landedAt[0] + 1);
             spared(problems, spared, before, why);
             if (!problems.isEmpty() || burn.done(tick) || tick >= 245) {
@@ -296,12 +300,12 @@ public class BoneDragonBreathGameTests {
             List<String> problems = new ArrayList<>();
             if (tick == 2) {
                 dragon.setHoldPosition(true);
-                ((AttackerUnit) dragon).setUnitAttackTarget(target);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             }
             if (tick < 2)
                 return false;
             if (tick % 20 == 12 && dragon.getTarget() != target)
-                ((AttackerUnit) dragon).setUnitAttackTarget(target);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             for (Burns b : burns)
                 b.tick(tick, 3);
             if (burns[0].first == tick && (!dragon.isFlyingUnit() || dragon.getY() - floorY < AIR_UP - 2))
@@ -341,6 +345,9 @@ public class BoneDragonBreathGameTests {
             helper.fail("could not create the airborne cone test units");
             return;
         }
+        // ordered fire only (Hold fire still obeys an order): RoN turns an idle or unordered unit on the NEAREST
+        // enemy, and the spared foes here are nearer the dragon than its target
+        EngagementStance.set(dragon, EngagementStance.HOLD_FIRE);
         Mob[] spared = { tower, off, back, friend };
         String[] why = { "a foe on a tower level with the flying dragon", "a foe 7 blocks off the line of fire",
             "a foe behind the dragon", "a friend under the cone" };
@@ -352,18 +359,70 @@ public class BoneDragonBreathGameTests {
                 for (int i = 0; i < spared.length; i++)
                     before[i] = spared[i].getHealth();
                 dragon.setHoldPosition(true);
-                ((AttackerUnit) dragon).setUnitAttackTarget(target);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             }
             if (tick < 2)
                 return false;
             if (tick % 20 == 12 && dragon.getTarget() != target)
-                ((AttackerUnit) dragon).setUnitAttackTarget(target);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             burn.tick(tick, 3);
             spared(problems, spared, before, why);
             if (!problems.isEmpty() || burn.done(tick) || tick >= 205) {
                 burn.judge(problems);
                 return DragonDiveGameTests.finish(helper, problems, clean);
             }
+            return false;
+        });
+    }
+
+    // ---- orders ------------------------------------------------------------------------------------------------------
+
+    /** Ticks from a new order to the first burn on the new target: the breath's next burn, one second at most. */
+    static final int TURN_TICKS = 20;
+
+    /**
+     * Breathing on one foe, the dragon is ordered onto another 8 blocks to the side: the running breath swings to it and
+     * burns it within {@link #TURN_TICKS} ticks of the order - the player's order is obeyed now, not after the old
+     * breath's 2.5 s have burnt out on the old target.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void bone_dragon_breath_turns_to_a_new_order_at_once(GameTestHelper helper) {
+        String owner = owner(helper, "turn"), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        BoneDragonUnit dragon = dragon(helper, owner, 2.5, AIR_UP, 7.5, -90f);
+        Mob first = foe(helper, foeOwner, 7.5, 0, 3.5), second = foe(helper, foeOwner, 7.5, 0, 11.5);
+        List<Mob> all = new ArrayList<>();
+        for (Mob m : new Mob[] { dragon, first, second })
+            if (m != null)
+                all.add(m);
+        Runnable clean = TestCleanup.atEnd(helper, () -> all.forEach(Mob::discard));
+        if (all.size() != 3) {
+            clean.run();
+            helper.fail("could not create the order test units");
+            return;
+        }
+        EngagementStance.set(dragon, EngagementStance.HOLD_FIRE);   // only what it is ordered onto
+        final int order = 8;   // between the breath's first burn (its tick 0) and its second (tick 10)
+        float[] before = new float[1];
+        DragonDiveGameTests.everyTick(helper, 110, tick -> {
+            if (tick == 2) {
+                dragon.setHoldPosition(true);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(first);
+                if (!dragon.isBreathing() && !dragon.startBreath(first, first.position()))
+                    return DragonDiveGameTests.finish(helper, List.of("the breath at the first foe did not start"), clean);
+            }
+            if (tick == order) {
+                if (!dragon.isBreathing())
+                    return DragonDiveGameTests.finish(helper, List.of("the breath at the first foe ended before the order"), clean);
+                before[0] = second.getHealth();
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(second);
+            }
+            if (tick > order && second.getHealth() < before[0] - 0.01f)
+                return DragonDiveGameTests.finish(helper, List.of(), clean);
+            if (tick >= order + TURN_TICKS)
+                return DragonDiveGameTests.finish(helper, List.of(String.format(Locale.ROOT, "ordered onto a second foe"
+                    + " mid-breath, the dragon had not burnt it %d ticks later (breathing: %s): the fire stayed on the"
+                    + " first foe", TURN_TICKS, dragon.isBreathing())), clean);
             return false;
         });
     }
