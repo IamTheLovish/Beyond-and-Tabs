@@ -131,7 +131,7 @@ public class DefeatCleanupServerEvents {
             return;
         try {
             // bookkeeping, not combat: a defeated side's machine does not burst into the winner's army (DeathBurst;
-            // Command Center Eris.14, Nov 5, lovish to confirm)
+            // lovish, Nov 5: "Quiet on cleanup + delete")
             com.solegendary.reignofnether.unit.DeathBurst.quietly(le::kill);
             if (le.isAlive())   // something refused the kill (invulnerable summon): take it out of the world
                 le.discard();

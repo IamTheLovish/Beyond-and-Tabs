@@ -540,7 +540,7 @@ public class UnitActionItem {
                 }
                 case DELETE -> {
                     // a deleted machine does not burst: else deleting it beside the enemy is a free bomb (DeathBurst;
-                    // Command Center Eris.14, Nov 5, lovish to confirm)
+                    // lovish, Nov 5: "Quiet on cleanup + delete")
                     com.solegendary.reignofnether.unit.DeathBurst.quietly(((LivingEntity) unit)::kill);
                 }
                 case DISCARD -> {

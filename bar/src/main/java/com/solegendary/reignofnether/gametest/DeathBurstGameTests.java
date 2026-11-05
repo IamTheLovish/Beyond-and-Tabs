@@ -254,9 +254,9 @@ public class DeathBurstGameTests {
 
     /**
      * A defeated side's units are cleared with a kill over the next ticks (DefeatCleanupServerEvents), and that is
-     * bookkeeping, not combat: none of its machines bursts into the winner's army (Command Center Eris.14, Nov 5,
-     * provisional until lovish confirms). A defeated owner's Steam Juggernaut handed to the cleanup beside an enemy 1.7
-     * from its middle: it is dead 10 ticks later, the enemy took nothing.
+     * bookkeeping, not combat: none of its machines bursts into the winner's army (lovish, Nov 5: "Quiet on cleanup +
+     * delete"). A defeated owner's Steam Juggernaut handed to the cleanup beside an enemy 1.7 from its middle: it is
+     * dead 10 ticks later, the enemy took nothing.
      */
     @GameTest(template = ARENA, batch = "death_burst_defeat", timeoutTicks = 60)
     public static void a_defeated_sides_machine_cleared_by_the_cleanup_does_not_burst(GameTestHelper helper) {
@@ -282,7 +282,7 @@ public class DeathBurstGameTests {
 
     /**
      * The Delete order kills the unit, and a deleted machine does not burst: else deleting your own machine beside the
-     * enemy is a free bomb (Command Center Eris.14, Nov 5, provisional until lovish confirms). The owner deletes a Steam
+     * enemy is a free bomb (lovish, Nov 5: "Quiet on cleanup + delete"). The owner deletes a Steam
      * Juggernaut (the order the client sends) with an enemy 1.7 from its middle: it is dead, the enemy took nothing.
      */
     @GameTest(template = ARENA, batch = "death_burst_delete", timeoutTicks = 60)

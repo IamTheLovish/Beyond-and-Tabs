@@ -92,7 +92,7 @@ public final class DeathBurst {
 
     /**
      * Runs {@code clear} with bursts off. A match reset (review round 1 on #517), a defeated side's cleanup and the
-     * player's Delete order (Command Center Eris.14, Nov 5, lovish to confirm) take units off the field with
+     * player's Delete order (lovish, Nov 5: "Quiet on cleanup + delete") take units off the field with
      * entity.kill(), and a machine killed that way must not burst into its neighbours. Nests (a depth count, as
      * UnitDamage's explicit scope); server thread only.
      */
