@@ -229,15 +229,16 @@ def curved_roof(r, x1, x2, z1, z2, y, chimes, flush_north=True):
 
 
 def pitch(r, x, y, z, x1, x2, z1, z2, flush_north):
-    """One cell inside a roof's lip: d = its distance in from the nearest seen edge; jade under it, then a jade stair
-    one up per cell (facing in, the low edge out) until two up, where the ridge is dark oak."""
+    """One cell inside a roof's lip: d = its distance in from the nearest seen edge; one cell in, a full jade step one
+    up (blind Fable round r2: stair steps read as "flat 2-wide teal slab planes" - a full block's riser casts the
+    shadow line); two in, the dark oak ridge two up, on jade."""
     sides = [(z2 - z, "north"), (x - x1, "east"), (x2 - x, "west")] + ([] if flush_north else [(z - z1, "south")])
     d, f = min(sides, key=lambda t: t[0])
     h = min(d, 2)
     for k in range(h):
         r.set(x, y + k, z, JADE)
     if h < 2:
-        r.st(x, y + h, z, f)
+        r.set(x, y + h, z, JADE)
     else:
         r.set(x, y + 2, z, OAK)
 
@@ -330,19 +331,20 @@ def galleries(r):
             r.rod(out, 2, z)
         for z in range(GALLERY[0], GALLERY[1] + 1):
             r.set(out, 3, z, OAK)
-        # a lean-to (lovish's pick D, Nov 5): the dark hem at the court (low edge out), a jade step, a dark oak ridge
-        # on the outer wall the camera sees; the ridge's ends lift as jade slab tips
+        # a lean-to (lovish's pick D, Nov 5): the dark hem at the court (low edge out), a full jade step, a dark oak
+        # ridge one up on the outer wall the camera sees (round r2: full risers); the ridge's ends lift as jade slab tips
         up = "west" if out == 0 else "east"
         for z in range(GALLERY[0], GALLERY[1] + 1):
             mid, lip = (1, 2) if out == 0 else (SX - 2, SX - 3)
             r.set(out, 4, z, JADE)
             r.set(mid, 4, z, JADE)
             r.st(lip, 4, z, up, name=OAK_ST)               # the dark hem (Fable critic B)
-            r.st(mid, 5, z, up)
+            r.set(mid, 5, z, JADE)
+            r.set(out, 5, z, JADE)
             if z in (GALLERY[0], GALLERY[1]):
-                r.slab(out, 5, z)                          # the eave's lifted ends
+                r.slab(out, 6, z)                          # the eave's lifted ends
             else:
-                r.set(out, 5, z, OAK)
+                r.set(out, 6, z, OAK)
 
 
 def hall_l1(r):
@@ -456,8 +458,6 @@ def hall_l2(r, chimes):
         for y in range(R1 + 3, R2):
             r.red(x, y, 2)
     curved_roof(r, 1, 7, 0, 3, R2, chimes)
-    for x in (3, 5):
-        r.st(x, R2 - 1, 3, "north", "top", OAK_ST)       # rafter ends
     # its pitch climbs to a dark oak ridge (curved_roof); the lotus stands on it
     # lanterns on the first roof's band at the ends, like lamps set out on a balcony
     for x in (1, 7):
@@ -506,11 +506,11 @@ def storey3(r, chimes):
                     r.set(x, y, z, OAK)
     curved_roof(r, 2, 6, 0, 3, R3, chimes)
     # the L1 lotus's petal tips stay outside the storey (the chain only adds or replaces): they read as pink crumbs on
-    # the tower (Fable critic B, Nov 4) - each becomes a dark oak rafter end under the third roof's lip
+    # the tower (Fable critic B, Nov 4) - each becomes a jade top slab under the third roof's lip (round r2: as dark
+    # oak rafter ends they joined the stacked south hems into "a dark brown wedge from crown to court")
     for (x, y, z), (n, p) in list(r.b.items()):
         if n.startswith("cherry") and y == R2 + 3:
-            f = {(-1, 0): "east", (1, 0): "west", (0, 1): "north"}[(max(-1, min(1, x - C)), max(-1, min(1, z - 1)))]
-            r.st(x, y, z, f, "top", OAK_ST)
+            r.slab(x, y, z, typ="top")
     for (x, z) in ((2, 3), (6, 3)):        # lightning rods on the third roof's front tips (the storm caught everywhere)
         r.rod(x, R3 + 2, z)
     lotus_crown(r, R3 + 1)                 # the lotus climbs onto the new top (L3's fourth storey grows through it)
