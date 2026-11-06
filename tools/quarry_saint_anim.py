@@ -43,9 +43,15 @@ KEYS_FILE = os.path.join(ROOT, "design", "fixtures", "quarry_saint_keys.json")
 
 # ------------------------------------------------------------------ constants (the Java port copies these) ---------
 VMAX = 1.6                     # px/tick at speed 1 (0.1 blocks/tick: the sheet's ~0.22 movement speed)
-STEP = 12.0                    # px per step (r3: the legs reach +-6 px from the hip with the knee <= 35)
+STEP = 16.0                    # px per step (r4: 12 -> 16; the plinth lands 8 px ahead of the hip, thigh ~+30)
 LIFT = 1.4                     # px: the swing plinth's lift (heavy: barely clears)
 STANCE_KNEE = 14.0             # deg: the stance knee's bend at mid-stance (sets the hip height)
+ACCEPT_KNEE = 30.0             # r4: the stance knee at weight acceptance (peak at 15% of the stance, p ~0.07): the
+#                                heavy drop (with the 8 px reach, the pelvis ~2.9 px under the rest height; < KNEE_CAP)
+SAG_TORSO = 2.5                # r4: deg of forward torso per px of a key table's "sag" (a pelvis drop was clamped to
+#                                ~0.3 px by the knee window: the slam's hold read dead)
+BOB_KICK = 3.4                 # r4: the maul's bob kicked by this x strength deg/tick on a ground hit (~2.5 deg peak
+#                                on a footfall; r3b 1.0)
 KNEE_CAP = 35.0                # deg: no standing knee bends past this
 SWING_KNEE_CAP = 50.0          # deg: the swinging leg (to lift the plinth at all)
 K_MASS, C_MASS = 0.25, 0.55    # sheet 3.0: the torso follows the pelvis 2 ticks late, 0.4 px overshoot
@@ -57,7 +63,7 @@ K_LOOK, C_LOOK = 0.06, 0.40    # the slow glance
 SHARD_G = 0.18                 # px/tick^2
 DRIVE = 6.0                    # deg per px/tick^2 of root acceleration
 GRIND_SPEED = 2.0              # deg/tick (40 deg/s): faster than this a joint grinds
-GRIND_AMP = 0.6                # deg, a square wave every 2 ticks
+GRIND_AMP = 1.0                # deg, a square wave every 2 ticks (r4: 0.6 did not read at 42 px/block)
 GRIND_BONES = ("torso", "shoulder_r", "shoulder_l", "thigh_r", "thigh_l", "head")
 BREATH_TICKS = 80
 CLIP_TICKS = {"idle": 160, "walk": 100, "sweep": 50, "slam": 50, "gatefall": 64, "glance": 8, "stagger": 24,
@@ -68,7 +74,7 @@ SWEEP = [(0, "ready", "S"), (3, "ready", "S"), (13, "sweep_windup", "S"), (15, "
          (16, "sweep_contact", "L"), (19, "sweep_contact", "H"), (30, "sweep_follow", "S"),
          (36, "sweep_recover", "S"), (46, "ready", "S"), (50, "ready", "H")]
 SLAM = [(0, "ready", "S"), (4, "slam_step", "S"), (16, "slam_windup", "S"), (19, "slam_windup", "H"),
-        (20, "slam_mid", "L"), (21, "slam_contact", "L"), (25, "slam_contact", "H"), (34, "slam_contact", "S", 1.5),
+        (20, "slam_mid", "L"), (21, "slam_contact", "L"), (25, "slam_contact", "H"), (34, "slam_contact", "S", 2.0),
         (38, "slam_wrench", "S"), (40, "slam_pop", "L"), (46, "slam_step", "S"), (49, "ready", "S"),
         (50, "ready", "H")]
 GATEFALL = [(0, "ready", "S"), (8, "gatefall_brace", "S"), (30, "gatefall_windup", "S"), (33, "gatefall_windup", "H"),
@@ -394,14 +400,25 @@ def step(state, inp):
             ik = False
             planted = []
         if clip == "stagger":
-            planted = ["l"] if 1 <= t <= 8 else ["r", "l"]
+            # r4: the hit-side plinth steps 6 px back with a 2 px lift and lands GRAV at t8, then steps home t16-24
+            a0 = ANKLE["r"]
+            if t <= 8:
+                u = t / 8.0
+                ank["r"] = [a0[0], a0[1] + 2.0 * math.sin(math.pi * u), a0[2] + 6.0 * ease("G", u)]
+            elif t < 16:
+                ank["r"] = [a0[0], a0[1], a0[2] + 6.0]
+            else:
+                u = (t - 16) / 8.0
+                ank["r"] = [a0[0], a0[1] + 1.5 * math.sin(math.pi * u), a0[2] + 6.0 * (1.0 - smooth(u))]
+            planted = ["l"] if (1 <= t <= 7 or 17 <= t <= 23) else ["r", "l"]
         g = GLOW.get(clip)
         if g:
             glow, glow_disc = table1(g, t)
         for (tt, sth) in GROUND_HITS.get(clip, []):
             if t == tt:
                 ground_hit(st, sth, fx)
-        move = [move[0], move[1] - sag, move[2]]
+        if sag:
+            add(rot, "torso", [-SAG_TORSO * sag, 0.0, 0.0])          # r4: the sag as a forward lean (see SAG_TORSO)
     elif clip == "walk":
         rot, move, ank, pel_rot, planted = walk(st, inp, t, fx)
         glow = 0.45
@@ -558,7 +575,7 @@ def ground_hit(st, strength, fx, where="body"):
     """The weight rule: every contact with the ground hops the shards (1-tick stagger) and kicks the maul's bob."""
     for i in range(3):
         st["shard_kick"].append((i, i, 0.5 + 0.4 * min(1.0, strength)))
-    st["springs"]["maul_bob"][1] += -2.5 * strength * 0.4
+    st["springs"]["maul_bob"][1] += -BOB_KICK * strength
     fx.append(["ground_hit", round(strength, 3), where])
 
 
@@ -653,15 +670,29 @@ def walk(st, inp, t, fx):
     st["phase"] = (st["phase"] + advance / (2.0 * STEP)) % 1.0
     p = st["phase"]
     rot = {}
-    ka, kc = KEYS["rest"], KEYS["carry"]
+    # r4: rest -> carry_lift (the maul straight up in front of the right shoulder; smoothstep, t0-5) -> carry (onto the
+    # shoulder, linear, t5-8; the stone-on-stone click at t8) -> held. r3b slerped straight from the ground to the
+    # shoulder and the arm read as jumping ~90 deg between two frames
+    cr = st["carry"]
+    if "carry_lift" in KEYS:
+        if cr <= 0.5:
+            ka, kc, uc = KEYS["rest"], KEYS["carry_lift"], smooth(cr / 0.5)
+        else:
+            ka, kc, uc = KEYS["carry_lift"], KEYS["carry"], min(1.0, (cr - 0.5) / 0.3)
+        if abs(cr - 0.8) < 1e-6:
+            st["springs"]["maul_bob"][1] += -BOB_KICK * 0.3
+            fx.append(["click", 0.3, "shoulder_r"])
+    else:
+        ka, kc, uc = KEYS["rest"], KEYS["carry"], c
     for n in set(ka) | set(kc):
         if n.startswith("_") or n in ("pelvis", "thigh_r", "thigh_l", "shin_r", "shin_l", "foot_r", "foot_l"):
             continue
         ra, rc = ka.get(n, [0.0, 0.0, 0.0]), kc.get(n, [0.0, 0.0, 0.0])
-        rot[n] = interp_rot(n, ra, rc, c)
+        rot[n] = interp_rot(n, ra, rc, uc)
     ank = {}
     planted = []
     stance_z = 0.0
+    stance_u = 0.5
     moving = st["dist"] > 0.0 and (advance > 0.0 or st["moving"] > 0)
     for k, ph in (("r", p), ("l", (p + 0.5) % 1.0)):
         base = list(ANKLE[k])
@@ -674,6 +705,7 @@ def walk(st, inp, t, fx):
             ank[k] = [base[0], base[1], base[2] + z]
             planted.append(k)
             stance_z = z
+            stance_u = ph / 0.5
         else:                                                # swing: back -> forward on an arc
             u = (ph - 0.5) / 0.5
             z = STEP / 2.0 - STEP * smooth(u)
@@ -696,8 +728,12 @@ def walk(st, inp, t, fx):
         if advance > 0.0 and ph1 < ph0:
             ground_hit(st, 0.5, fx, "foot_" + k)
             fx.append(["footfall", 0.5, "foot_" + k])
-    # the hip height from the stance leg (bent STANCE_KNEE at mid-stance): an inverted pendulum
-    le = math.sqrt(THIGH_LEN ** 2 + SHIN_LEN ** 2 + 2 * THIGH_LEN * SHIN_LEN * math.cos(math.radians(STANCE_KNEE)))
+    # the hip height from the stance leg: an inverted pendulum, the knee giving at weight acceptance (r4: ACCEPT_KNEE
+    # peaking at 20% of the stance, the sheet's p 0.10 - the pelvis drops ~3 px there; STANCE_KNEE at mid-stance)
+    knee = STANCE_KNEE
+    if moving and stance_u < 0.3:
+        knee += (ACCEPT_KNEE - STANCE_KNEE) * math.sin(math.pi * stance_u / 0.3)
+    le = math.sqrt(THIGH_LEN ** 2 + SHIN_LEN ** 2 + 2 * THIGH_LEN * SHIN_LEN * math.cos(math.radians(knee)))
     rest_d = math.dist(HIP["r"], ANKLE["r"])
     h = math.sqrt(max(1.0, le * le - stance_z * stance_z)) if moving else rest_d
     drop = (h - rest_d) if moving else 0.0
@@ -825,7 +861,8 @@ def bake_clip(clip):
     out = {}
     for t in range(CLIP_TICKS[clip]):
         rot, move, ank, sag, (ka, kb, u) = blend_keys(table, t)
-        move = [move[0], move[1] - sag, move[2]]
+        if sag:
+            add(rot, "torso", [-SAG_TORSO * sag, 0.0, 0.0])    # as the driver applies it (step)
         if u in (0.0, 1.0) or ka == kb:
             continue                                          # at a key: its own solved arms
         # r3b: every tick (run 42170685878 baked every 2nd and averaged the odd one per bone: in the slam's 2-tick wrench

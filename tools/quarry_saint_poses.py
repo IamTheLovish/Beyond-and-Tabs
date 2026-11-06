@@ -51,10 +51,15 @@ KEYS = {
     "carry": dict(grip=(-16.0, 38.0, -11.0), yaw=180.0, pitch=35.0, dir_tol=(10, 5), carry=True,
                   left={"shoulder_l": [0, 0, 0]}),
     "rest_lift": dict(rest_lift=6.0),
+    # r4: the walk's shoulder transition passes the maul straight up in front of the right shoulder (rest -> here
+    # smoothstep, here -> carry linear onto the shoulder), not a slerp straight from the ground to the shoulder
+    "carry_lift": dict(grip=(-18.0, 32.0, -14.0), yaw=0.0, pitch=85.0, dir_tol=(20, 15),
+                       left={"shoulder_l": [0, 0, 0]}),
     "sweep_mid": dict(grip=(0.0, 22.0, -16.0), yaw=-75.0, pitch=12.0, move=(1.0, -3.0, 0.0), pelvis=(0, 6, 0),
                       torso=(2, -16, 0), head=(0, 10, 0), feet={}, left="haft"),
-    "sweep_recover": dict(grip=(-8.0, 20.0, -12.0), yaw=-10.0, pitch=15.0, move=(0.0, -2.0, 0.0), torso=(-4, 8, 0),
-                          feet={}, left="haft"),
+    # r4: back from the follow-through on the LEFT (the torso still turned -8) toward READY, the head sagging
+    "sweep_recover": dict(grip=(-8.0, 20.0, -12.0), yaw=-10.0, pitch=15.0, move=(0.0, -2.0, 0.0), torso=(-4, -8, 0),
+                          feet={}, left="haft", elbow_out=6.0),
     "slam_step": dict(grip=(-10.0, 22.0, -12.0), yaw=-25.0, pitch=40.0, move=(0.0, -2.5, 0.0), torso=(-4, 0, 0),
                       feet={"l": (0, 0, -3, 0)}, left="haft"),
     "slam_mid": dict(grip=(-4.0, 44.0, -12.0), yaw=0.0, pitch=85.0, move=(0.0, -4.0, 0.0), torso=(0, 0, 0),
@@ -75,20 +80,24 @@ KEYS = {
                            "r": (-16, -18)}, toe={"r": -15}, planted="l", left={"shoulder_l": [-12, 0, 0]}),
     "walk_pass_L": dict(CARRY, move=(2.0, None, 0.0), pelvis=(0, 0, -2), torso=(0, 0, 0), legs={"l": (0, -2),
                         "r": (4, -34)}, planted="l", left={"shoulder_l": [0, 0, 0]}),
-    # 3.4 the sweep (vs units), MIRRORED from the sheet: the right fist is the knob hand (GRIP_R by the pommel, the
-    # left 11 px up toward the head), so the swing that keeps the arms uncrossed winds up on the LEFT and sweeps left
-    # to right (a left-hander's swing); the sheet's right-to-left sweep crosses the forearms through the chest
-    "sweep_windup": dict(grip=(4.0, 22.0, -12.0), yaw=-100.0, pitch=20.0, move=(1.5, -3.0, 0.0), pelvis=(0, 0, 0),
-                         torso=(4, -35, 0), head=(0, 25, 0), feet={}, left="haft", head_out_left=14.0,
-                         dir_tol=(10, 10)),
-    "sweep_contact": dict(grip=(-2.0, 24.0, -15.0), yaw=-50.0, pitch=4.0, move=(0.5, -3.0, 0.0), pelvis=(0, 12, 0),
-                          torso=(0, -2, 0), head=(0, -10, 0), feet={}, left="haft"),
-    # r3b: the follow-through's fists out in front (z -24, r3 -16), the head front-right (yaw 40, r3 50), twist 20 (r3 28)
-    "sweep_follow": dict(grip=(-6.0, 24.0, -24.0), yaw=40.0, pitch=0.0, move=(-1.0, -3.0, 0.0), pelvis=(0, 12, 0),
-                         torso=(-4, 20, 0), head=(0, -8, 0), feet={"r": (0, 0, 0, 10)}, left="haft", elbow_out=6.0),
+    # 3.4 the sweep (vs units), r4: the sheet's direction again - a LEVEL arc from behind the right hip to the front
+    # left (the r3b critic: the left-wind-up sweep read as a chop). The maul head held at y 18-28 px in all three keys
+    # (head_y), the torso yawed +35 -> 0 -> -40, the elbows out; the fists in front of the hips (the r1 attempt crossed
+    # the forearms through a wider, hunched chest)
+    "sweep_windup": dict(grip=(-14.0, 22.0, -10.0), yaw=120.0, pitch=8.0, move=(-1.5, -3.0, 0.0), pelvis=(0, 10, 0),
+                         torso=(4, 35, 0), head=(0, -25, 0), feet={}, left="haft", head_y=(18.0, 28.0),
+                         dir_tol=(15, 10), elbow_out=6.0),
+    "sweep_contact": dict(grip=(-6.0, 22.0, -18.0), yaw=50.0, pitch=4.0, move=(-0.5, -3.0, 0.0), pelvis=(0, 0, 0),
+                          torso=(0, 2, 0), head=(0, 0, 0), feet={}, left="haft", head_y=(18.0, 28.0),
+                          dir_tol=(15, 10), elbow_out=6.0),
+    "sweep_follow": dict(grip=(2.0, 22.0, -20.0), yaw=-55.0, pitch=0.0, move=(1.0, -3.0, 0.0), pelvis=(0, -12, 0),
+                         torso=(-6, -40, 0), head=(0, 15, 0), feet={"l": (0, 0, 0, 10)}, left="haft",
+                         head_y=(16.0, 30.0), dir_tol=(15, 10), elbow_out=6.0),
     # 3.5 the slam (vs buildings)
-    "slam_windup": dict(grip=(-10.0, 46.0, 0.0), yaw=145.0, pitch=50.0, move=(0.0, -3.5, 0.0), torso=(18, 0, 0),
-                        head_x_max=-6.0, halo_clear=24.0, dir_tol=(20, 15),
+    # r4: the fists forward of the face (z <= -8; r3b held them behind the head, the forearms over the skull at
+    # t12-16), the elbows out, the maul head still right of and clear of the halo from the RTS camera
+    "slam_windup": dict(grip=(-10.0, 46.0, -12.0), yaw=150.0, pitch=45.0, move=(0.0, -3.5, 0.0), torso=(18, 0, 0),
+                        head_x_max=-6.0, halo_clear=24.0, dir_tol=(20, 15), grip_z_max=-8.0, elbow_out=8.0,
                         head=(-15, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft"),
     # r3b: the slam / Gatefall contacts and the wrench bend 8-10 deg less (the arms reached down across the chest)
     # with the fists further out in front and the elbows out
@@ -97,8 +106,10 @@ KEYS = {
     "slam_wrench": dict(grip=(-6.0, 24.0, -28.0), yaw=0.0, pitch=-30.0, buried=-3.0, move=(0.0, -5.0, -1.0),
                         torso=(-10, 0, 0), head=(4, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft", elbow_out=8.0),
     # 3.8 Gatefall
-    "gatefall_windup": dict(grip=(-4.0, 54.0, 0.0), yaw=180.0, pitch=85.0, move=(0.0, -4.0, 0.0), torso=(24, 0, 0),
-                            head_x_max=-6.0,
+    # r4: the maul back-LEFT and lower (yaw 205, pitch 72; r3b 180 / 85 stacked it over the head and halo), the head
+    # clear of the halo from the RTS camera (halo_clear), the fists forward of the face, the elbows out
+    "gatefall_windup": dict(grip=(-4.0, 48.0, -12.0), yaw=205.0, pitch=72.0, move=(0.0, -4.0, 0.0), torso=(24, 0, 0),
+                            halo_clear=24.0, grip_z_max=-8.0, elbow_out=8.0, dir_tol=(20, 15),
                             head=(-20, 0, 0), feet={"r": (-3, 0, 0, 0), "l": (3, 0, 0, 0)}, left="haft"),
     "gatefall_contact": dict(grip=(-6.0, 20.0, -30.0), yaw=0.0, pitch=-40.0, buried=-4.0, move=(0.0, -6.0, -1.0),
                              torso=(-28, 0, 0), head=(10, 0, 0), feet={"r": (-3, 0, 0, 0), "l": (3, 0, 0, 0)},
@@ -106,7 +117,8 @@ KEYS = {
     # 3.6 hit reactions (from the rest stance): a projectile glances (1.5 deg away, a hit from the front-left), the
     # stagger's peak (t4: the hit-side right plinth lifted 2 px and 4 px back, the torso rocked 8 deg back)
     "glance": dict(torso=(1.5, 0, -1.0), keep_rest_maul=True, feet={}),
-    "stagger": dict(torso=(8, 0, 3), head=(4, 0, 0), move=(0.0, -1.0, 1.0), feet={"r": (0, 2, 4, 0)}, lift={"r"},
+    # r4: a bigger rock and step (the r3b critic: invisible at tactical): torso 14 back, plinth 2 up and 6 back
+    "stagger": dict(torso=(14, 0, 5), head=(6, 0, 0), move=(0.0, -1.0, 1.5), feet={"r": (0, 2, 6, 0)}, lift={"r"},
                     keep_rest_maul=True),
     # 3.7 death: t20 kneeling on the right knee (the maul still in the hand, its head on the ground: the release is
     # the clip's), t34 toppled forward onto the ground (the maul lying flat beside it, still in the fist)
@@ -115,6 +127,27 @@ KEYS = {
     "death_topple": dict(grip=(-20.0, 8.0, -34.0), yaw=20.0, pitch=0.0, buried=0.0, kneel=True, pelvis=(-25, 0, 4),
                          torso=(-46, 0, 6), head=(30, 0, 8), lie=True, left={"shoulder_l": [80, 0, 20], "forearm_l": [10, 0, 0]}),
 }
+# r4: the key solve is per key. The key file stores each key's spec (spec_json) and SOLVER_VERSION; CI re-solves only
+# the keys whose spec changed, or all of them when the version or the body / FK files change
+# (tools/render/quarry_saint/pipeline.py plan). Bump SOLVER_VERSION whenever a change here alters the answer for an
+# UNCHANGED spec (fit_grip / solve_key / measure behaviour); new optional spec fields need no bump.
+SOLVER_VERSION = 1
+
+
+def spec_json(spec):
+    """A key spec as canonical JSON (tuples -> lists, sets -> sorted lists, keys sorted): what the key file stores."""
+    def norm(v):
+        if isinstance(v, dict):
+            return {str(k): norm(x) for k, x in v.items()}
+        if isinstance(v, (set, frozenset)):
+            return sorted(norm(x) for x in v)
+        if isinstance(v, (list, tuple)):
+            return [norm(x) for x in v]
+        if isinstance(v, float) and v == int(v):
+            return float(v)
+        return v
+    return json.dumps(norm(spec), sort_keys=True, separators=(",", ":"))
+
 # the sheet's pelvis drops (2-6 px) on legs of 8 + 6.5 px cost ~15-25 degrees of knee per px (a 3 px drop: an 83
 # degree squat in the first solve); the planted keys take half the drop
 DROP_SCALE = 0.5
@@ -152,7 +185,7 @@ def body_box_arrays(m, T, extra=()):
 
 
 def fit_grip(m, G0, yaw0, pitch0, T, two_hands=True, ground=None, dir_tol=(20, 15), head_out_left=None,
-             carry=False, k=1, head_x_max=None, halo_clear=None):
+             carry=False, k=1, head_x_max=None, halo_clear=None, grip_z_max=None, head_y=None):
     """The reachable grip and haft direction nearest the key's: both shoulders within reach of their fists (11 to 23
     px from the shoulder pivot), the fists, the haft and the head out of the body (torso, pelvis, head, thighs), the
     head's centre not under the ground. Returns (G, yaw, pitch, shift px)."""
@@ -171,6 +204,9 @@ def fit_grip(m, G0, yaw0, pitch0, T, two_hands=True, ground=None, dir_tol=(20, 1
         return np.all((P[..., None, :] > lo - mg) & (P[..., None, :] < hi + mg), axis=-1).any(-1)
 
     base = 0.012 * ((G - np.array(G0)) ** 2).sum(-1)
+    if grip_z_max is not None:
+        # r4: the fists forward of the face (overhead wind-ups: forearms over the skull and the halo, r3b)
+        base = base + 1.0 * np.maximum(0, G[:, 2] - grip_z_max) ** 2
     rr = np.linalg.norm(G - SR, axis=-1)
     base = base + 3.0 * (np.maximum(0, rr - 23.0) ** 2 + np.maximum(0, 11 - rr) ** 2)
     base = base + 8.0 * inside(G, 4.0)
@@ -206,6 +242,8 @@ def fit_grip(m, G0, yaw0, pitch0, T, two_hands=True, ground=None, dir_tol=(20, 1
                 hz = np.array(m.fk("halo", m.bones["halo"].pivot)) + np.array(T)
                 sh = (hc - hz) @ Rv.T
                 c = c + 2.0 * np.maximum(0, halo_clear - np.hypot(sh[:, 0], sh[:, 1])) ** 2
+            if head_y is not None:                        # r4: the maul head's height band (a level sweep)
+                c = c + 0.8 * (np.maximum(0, head_y[0] - hc[:, 1]) ** 2 + np.maximum(0, hc[:, 1] - head_y[1]) ** 2)
             if head_x_max is not None:                    # r3: the maul head this far right of the head (x <=)
                 c = c + 0.8 * np.maximum(0, hc[:, 0] - head_x_max) ** 2
                 # and away from the halo from above: its centre >= 9 px off the head's vertical line
@@ -370,7 +408,8 @@ def solve_key(bind, name, spec, log, dsl=None):
         cands = fit_grip(m, spec["grip"], spec["yaw"], spec["pitch"], T, two_hands=two, ground=ground,
                          dir_tol=spec.get("dir_tol", (20, 15)), head_out_left=spec.get("head_out_left"),
                          carry=spec.get("carry", False), k=5, head_x_max=spec.get("head_x_max"),
-                         halo_clear=spec.get("halo_clear"))
+                         halo_clear=spec.get("halo_clear"), grip_z_max=spec.get("grip_z_max"),
+                         head_y=spec.get("head_y"))
         best = None
         base = copy.deepcopy(m)
         dsl_clear = clear_dsl(dsl) if dsl is not None else None
