@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.unit.HeroUnitSave;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.Mob;
@@ -153,16 +154,40 @@ public class HeroXpGameTests {
             }
             int want = (((Unit) victim).getCost().population + 1) * 50;
             hero.setNoAi(true);
-            helper.runAfterDelay(3, victim::kill);
+            int[] atKill = { -1 };
+            net.minecraft.world.phys.Vec3[] deathAt = { null };
+            helper.runAfterDelay(3, () -> {
+                deathAt[0] = victim.position();
+                victim.kill();
+                atKill[0] = helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
+                    hero.getBoundingBox().inflate(8)).size();
+            });
             helper.runAfterDelay(5, () -> {
                 int orbs = helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
                     hero.getBoundingBox().inflate(8)).size();
                 int got = ((HeroUnit) hero).getExperience();
+                // flake-stress 41842460060 (1 of 4 shard-1 runners on #488's head) failed with no orbs and the XP right;
+                // the scenario run 20 times alone kept all 10 orbs every time (diag 41956551913), so a failure says where
+                String where = "";
+                if (orbs == 0) {
+                    BlockPos at = deathAt[0] == null ? hero.blockPosition() : BlockPos.containing(deathAt[0]);
+                    where = String.format(java.util.Locale.ROOT, " (orbs right after the kill %d, within 64 blocks now %d; "
+                        + "hero %s, victim died at %s, %.2f from the hero; entity ticking there %b, at the hero %b; "
+                        + "hero alive %b, health %.1f, removed %s)", atKill[0],
+                        helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
+                            hero.getBoundingBox().inflate(64)).size(),
+                        hero.blockPosition().toShortString(), at.toShortString(),
+                        deathAt[0] == null ? -1 : deathAt[0].distanceTo(hero.position()),
+                        helper.getLevel().isPositionEntityTicking(at), helper.getLevel().isPositionEntityTicking(hero.blockPosition()),
+                        // a hero dying between the kill and the count discards its orbs (HeroExperienceOrb.tick) and would
+                        // look like a chunk problem (review round 4 on #488)
+                        hero.isAlive(), hero.getHealth(), hero.getRemovalReason());
+                }
                 discard(mobs);
                 if (got != want)
                     helper.fail("a neutral kill paid " + got + " XP, not " + want);
                 else if (orbs == 0)
-                    helper.fail("the neutral kill sent no XP orbs to show it");
+                    helper.fail("the neutral kill sent no XP orbs to show it" + where);
                 else
                     helper.succeed();
             });

@@ -72,7 +72,12 @@ public class BombardShell extends ThrowableItemProjectile {
     }
 
     public BombardShell(Level level, LivingEntity shooter, float damage) {
-        super(EntityRegistrar.BOMBARD_SHELL.get(), shooter, level);
+        this(EntityRegistrar.BOMBARD_SHELL.get(), level, shooter, damage);
+    }
+
+    /** For the shells that are this one with a different look and flight (unit/units/storm/RocketShell): their own entity type, the same rules. */
+    protected BombardShell(EntityType<? extends BombardShell> type, Level level, LivingEntity shooter, float damage) {
+        super(type, shooter, level);
         this.damage = damage;
         if (shooter instanceof Unit u && u.getOwnerName() != null)
             this.ownerName = u.getOwnerName();
@@ -106,15 +111,23 @@ public class BombardShell extends ThrowableItemProjectile {
         return (int) Math.max(20, Math.min(44, 20 + flat));
     }
 
-    /** {@link #flightTicks} for other factions' artillery that lobs these shells (the Stormcallers' Rocket Battery). */
+    /** {@link #flightTicks} for other artillery that lobs these shells (the Mortar Crawler, the Iron Leviathan Engine). */
     public static int flightTicksFor(double flat) {
+        return flightTicks(flat);
+    }
+
+    /**
+     * Flight time for a shot of this flat length, when the shell has no fixed one. The shell that is this one with its own
+     * flight (unit/units/storm/RocketShell) overrides it, together with {@link #getGravity}; the rest of the solve is shared.
+     */
+    protected int flightTicksAt(double flat) {
         return flightTicks(flat);
     }
 
     /** Sets the velocity that brings the shell from where it is now to (x, y, z) under vanilla throwable physics. */
     public void aimAt(double x, double y, double z) {
         double dx = x - getX(), dy = y - getY(), dz = z - getZ();
-        int t = fixedFlightTicks > 0 ? fixedFlightTicks : flightTicks(Math.sqrt(dx * dx + dz * dz));
+        int t = fixedFlightTicks > 0 ? fixedFlightTicks : flightTicksAt(Math.sqrt(dx * dx + dz * dz));
         double drag = 0.99, g = getGravity();
         // sum of drag^k for k < t: how far a unit velocity carries in t ticks
         double s = (1 - Math.pow(drag, t)) / (1 - drag);
@@ -206,11 +219,16 @@ public class BombardShell extends ThrowableItemProjectile {
             b.destroyRandomBlocks(halfOffDefences
                 ? damage * buildingMult * (SiegeLobberUnit.hitsAtTheFullRate(b) ? 1f : SiegeTuning.OTHER_BUILDING_SHARE)
                 : com.solegendary.reignofnether.building.BuildingDamage.unit(damage * buildingMult), shooter);
+        burstEffects(sl, x, y, z, splash);
+        discard();
+        return hit.size();
+    }
+
+    /** What the burst looks and sounds like (no damage here); the shell that is this one with its own look overrides it. */
+    protected void burstEffects(ServerLevel sl, double x, double y, double z, float splash) {
         sl.sendParticles(ParticleTypes.EXPLOSION, x, y + 0.3, z, 1, 0, 0, 0, 0);
         sl.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, 6, splash * 0.4, 0.2, splash * 0.4, 0.02);
         sl.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 1.6f, 1.2f);
-        discard();
-        return hit.size();
     }
 
     @Override

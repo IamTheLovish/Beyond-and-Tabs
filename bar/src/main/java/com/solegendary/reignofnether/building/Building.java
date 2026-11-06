@@ -210,6 +210,14 @@ public abstract class Building {
 
     }
 
+    /**
+     * A portal-type building (a portal, a game ender): finishing it plays the forming moment (barfx/PortalForming)
+     * instead of switching on at once. Off for every other building.
+     */
+    public boolean formsWhenBuilt() {
+        return false;
+    }
+
     /** A built building has just fallen to damage (not a cancel, a decommission or a clean-up), blocks still standing. Hook for death blasts. */
     public void onFellToDamage(ServerLevel serverLevel, BuildingPlacement placement) { }
 
