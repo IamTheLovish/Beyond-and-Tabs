@@ -145,12 +145,12 @@ TARGETS = {
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
     # the _s blue CODE: 65-255 = subsurface scattering (light through the leaf under a shader pack)
     # round 18: leaves' tilt 18 -> 12 (every leaf edge drew a dark rim under shaders)
-    "oak_leaves":       dict(luma=0.55, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "oak_leaves":       dict(luma=0.48, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
     "birch_leaves":     dict(luma=0.58, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
     "spruce_leaves":    dict(luma=0.48, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
-    "acacia_leaves":    dict(luma=0.55, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "jungle_leaves":    dict(luma=0.52, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
-    "dark_oak_leaves":  dict(luma=0.50, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
+    "acacia_leaves":    dict(luma=0.48, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "jungle_leaves":    dict(luma=0.46, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
+    "dark_oak_leaves":  dict(luma=0.44, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
     "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.26, tilt=24.0, smooth=76, pore=10),   # r31: pink-grey, rust blooms
@@ -181,7 +181,7 @@ TARGETS = {
     # flat dark slab (reviewer, eyes run 39548166615); the reference's numbers were for a lit flat view
     "spruce_log":       dict(luma=0.27, std=0.090, sat=0.42, tilt=22.0, smooth=40, pore=36),   # r70: crisp bark (m_bark_r70), no lmean stretch
     "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
-    "birch_log":        dict(luma=0.72, std=0.150, sat=0.06, tilt=12.0, smooth=50, pore=30),   # r54: 2-3 dark bands (~0.25) on the 0.80 paper carry the spread; tilt 26 -> 12 (the paper's relief lit as speckle at 30 px)
+    "birch_log":        dict(luma=0.80, std=0.150, sat=0.06, tilt=12.0, smooth=50, pore=30),   # r54: 2-3 dark bands (~0.25) on the 0.80 paper carry the spread; tilt 26 -> 12 (the paper's relief lit as speckle at 30 px)
     "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
     "acacia_log":       dict(luma=0.38, std=0.100, sat=0.10, tilt=22.0, smooth=40, pore=36),   # r70: crisp bark (m_bark_r70), no lmean stretch
     "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
@@ -1218,9 +1218,9 @@ def m_spruce_planks(F, n):
 # LEAF_GAP_DROP, and an uncovered texel whose neighbourhood (a blur LEAF_GAP_BLUR of a block wide) is less than
 # LEAF_GAP_COVER leaf stays a hole
 LEAF_GAP_RIM = 0.60
-LEAF_GAP_DROP = 0.70
+LEAF_GAP_DROP = 0.50          # r71: 0.70 -> 0.50 (critic r1: holes into the crown read as black flecks)
 LEAF_GAP_BLUR = 1.0 / 96
-LEAF_GAP_COVER = 0.50
+LEAF_GAP_COVER = 0.35         # r71: only the larger gaps stay open
 
 
 def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0, gaps=True):
@@ -1262,7 +1262,7 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0, gaps=True):
             ddy = (cy - sprigs[:, 1] + 0.5) % 1.0 - 0.5
             dist = np.sqrt(ddx * ddx + ddy * ddy)
             j = int(np.argmin(dist))
-            if gaps and dist[j] / cell > LEAF_GAP_RIM and rng.random() < LEAF_GAP_DROP:
+            if gaps and dist[j] / cell > LEAF_GAP_RIM and rng.random() < LEAF_GAP_DROP * (0.5 if needles else 1.0):
                 continue                                              # a sprig's outer rim, thinned: the gaps
             sh = sprigs[j, 2]
             th = math.atan2(ddy[j], ddx[j])                           # leaves fan out from the twig
@@ -1720,11 +1720,23 @@ PROC_VARIANT_BLOCKS["mud"] = ("cube_column", {"end": "mud", "side": "mud_side"})
 TARGETS["mangrove_log"] = dict(luma=0.28, std=0.095, sat=0.40, tilt=22.0, smooth=40, pore=36)
 TARGETS["mangrove_log_top"] = dict(luma=0.36, std=0.070, sat=0.50, tilt=12.0, smooth=40, pore=30)
 LEAVES["mangrove_leaves"] = (320, 0.11, 0.055, False)
-TARGETS["mangrove_leaves"] = dict(luma=0.52, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170)
+TARGETS["mangrove_leaves"] = dict(luma=0.46, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170)
 LEAF_VARIANTS["mangrove_leaves_v2"] = "mangrove_leaves"
 LEAVES["mangrove_leaves_v2"] = LEAVES["mangrove_leaves"]
 TARGETS["mangrove_leaves_v2"] = dict(TARGETS["mangrove_leaves"])
 SEED_ORDER = SEED_ORDER + ("mangrove_log", "mangrove_log_top", "mangrove_leaves", "mangrove_leaves_v2")
+# r71 (Fable critic, trees r1: "bark repeats - the same wavy ridge at the same x in every tile"): every bark gets
+# PROC_VARIANTS textures (the base's maps on their own seed inside proc_variant's blob, the base tile in the border
+# band), and the pack's log and wood blockstates pick one per block for every axis (write_models: LOG_VARIANT_WOODS).
+# Appended last (SEED_ORDER rule)
+LOG_VARIANT_WOODS = ("oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry")
+for _w in LOG_VARIANT_WOODS:
+    for _k in range(2, PROC_VARIANTS + 1):
+        PROC_VARIANT_OF["%s_log_v%d" % (_w, _k)] = _w + "_log"
+        TARGETS["%s_log_v%d" % (_w, _k)] = dict(TARGETS[_w + "_log"])
+        SEED_ORDER = SEED_ORDER + ("%s_log_v%d" % (_w, _k),)
+    # a bark's variant cross-fades into the base over ~1/10 block (a hard blob edge cut the ridges off along a curve)
+    PROC_FEATHER[_w + "_log"] = 24.0
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2260,14 +2272,17 @@ def m_birch_log(F, n):
     # across the trunk, a texel or two tall), broken at random lengths (an isotropic noise, so the breaks never line
     # up the trunk) - not a solid black stripe; every mark is a warm grey-brown laid over the paper (a mix, not a
     # multiply to black); the papery peel shows as faint horizontal curls in the paper itself
-    thin = 1 - smoothstep(0.0, 0.12, np.abs(F.noise(4, 14, 0.6, sx=12.0, sy=1.0)))   # thin lines across the trunk
-    seg = smoothstep(-0.3, 0.4, F.noise(5, 16, 0.4))                   # broken into dashes
-    band = smoothstep(0.1, 0.5, band) * (0.08 + 0.92 * thin * seg)
+    # r71 (Fable critic, trees r1: "birch reads as grey marble" - the soft grey dashes and wash): a near-white paper,
+    # the dashes CRISP and dark (hard-edged, 2-6 texels tall at 256), no wash under the band, the patches small
+    thin = 1 - smoothstep(0.0, 0.05, np.abs(F.noise(4, 14, 0.6, sx=12.0, sy=1.0)))   # thin lines across the trunk
+    seg = smoothstep(0.0, 0.15, F.noise(5, 16, 0.4))                   # broken into dashes, crisp ends
+    band = smoothstep(0.1, 0.5, band) * thin * seg
     curl = F.noise(6, 18, 0.5, sx=6.0, sy=1.0)                        # thin horizontal peel lines in the paper
-    H = 0.6 + 0.06 * paper - 0.06 * band - 0.05 * lent - 0.05 * patch + 0.015 * curl   # marks: colour, barely relief
-    paper_rgb = tint((0.86, 0.85, 0.80), 0.94 + 0.03 * paper + 0.025 * curl)
-    mark = np.clip(0.62 * band + 0.40 * lent + 0.35 * patch, 0, 0.80)[..., None]
-    mark_rgb = np.asarray((0.38, 0.33, 0.28))[None, None, :] * (0.9 + 0.2 * norm01(F.noise(4, 12, 0.5)))[..., None]
+    H = 0.6 + 0.04 * paper - 0.06 * band - 0.05 * lent - 0.05 * patch + 0.015 * curl   # marks: colour, barely relief
+    paper_rgb = tint((0.91, 0.89, 0.85), 0.97 + 0.02 * paper + 0.015 * curl)   # ~#e8e4d8
+    patch = smoothstep(0.3, 0.6, patch)                               # the patches small and solid
+    mark = np.clip(0.85 * band + 0.55 * lent + 0.75 * patch, 0, 0.92)[..., None]
+    mark_rgb = np.asarray((0.17, 0.15, 0.13))[None, None, :] * (0.9 + 0.2 * norm01(F.noise(4, 12, 0.5)))[..., None]
     return H, np.clip(paper_rgb * (1 - mark) + mark_rgb * mark, 0, 1)
 
 
@@ -4452,13 +4467,13 @@ def m_bark_r56(F, n, base=(0.42, 0.33, 0.21), style="oak"):
 # style: (ridges per block, furrow width (of a ridge), cracks per block, crack half-width (block), fibre, crest,
 # plate tone, lenticels)
 BARK70 = {
-    "oak": (5, 0.32, 3, 0.012, 0.10, 0.16, 0.10, 0.0),        # deep grey-brown furrows, blocky ridges
+    "oak": (5, 0.32, 2, 0.012, 0.10, 0.16, 0.10, 0.0),        # deep grey-brown furrows, blocky ridges
     "spruce": (7, 0.20, 6, 0.010, 0.07, 0.10, 0.16, 0.0),     # thin red-brown scales: many short plates
-    "jungle": (4, 0.18, 2, 0.008, 0.08, 0.10, 0.08, 0.0),     # smooth, long plates, shallow seams
-    "acacia": (6, 0.26, 2, 0.008, 0.13, 0.12, 0.08, 0.0),     # grey, fibrous ridges
-    "dark_oak": (4, 0.38, 2, 0.014, 0.08, 0.12, 0.08, 0.0),   # near-black, wide deep furrows
+    "jungle": (4, 0.18, 1, 0.008, 0.08, 0.10, 0.08, 0.0),     # smooth, long plates, shallow seams
+    "acacia": (6, 0.26, 1, 0.008, 0.13, 0.12, 0.08, 0.0),     # grey, fibrous ridges
+    "dark_oak": (4, 0.38, 1, 0.014, 0.08, 0.12, 0.08, 0.0),   # near-black, wide deep furrows
     "cherry": (8, 0.10, 1, 0.006, 0.07, 0.08, 0.06, 0.35),    # smooth, fine seams, horizontal lenticels
-    "mangrove": (6, 0.22, 3, 0.010, 0.08, 0.12, 0.10, 0.0),   # dark red-brown narrow ridges
+    "mangrove": (6, 0.22, 2, 0.010, 0.08, 0.12, 0.10, 0.0),   # dark red-brown narrow ridges
 }
 
 
@@ -4467,7 +4482,10 @@ def m_bark_r70(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     rng = F.rng
     # the furrows: between `cols` ridges, swaying up the trunk (periodic: cols whole ridges a tile, the sway wraps)
     sway = 0.14 * F.noise(1, 3, 0.8, sx=1.0, sy=2.0)
-    cu = F.u * cols + sway
+    # r71 (critic, trees r1: "equal ridge widths... reads as bamboo"): the ridges unevenly spaced across the trunk -
+    # a slow offset along u only (long up the trunk), small enough that the ridges never fold back
+    spacing = 0.10 * F.noise(1, 2, 0.8, sx=1.0, sy=60.0)
+    cu = F.u * cols + sway + spacing                                       # in ridge units: d(cu)/du >= cols - ~3 > 0
     c = np.floor(cu).astype(int) % cols
     fu = cu - np.floor(cu)
     width = fw * (0.7 + 0.6 * rng.random(cols))[c]                         # each furrow its own width
@@ -6581,6 +6599,24 @@ def write_models():
     # basalt: vanilla's axis turns of the column, the same turn for every variant (the shared band stays shared)
     turn = {"axis=x": {"x": 90, "y": 90}, "axis=y": {}, "axis=z": {"x": 90}}
     blockstate("basalt", {k: [dict({"model": "minecraft:block/" + m}, **r) for m in basalt] for k, r in turn.items()})
+    # r71: the barks' variants on logs and wood blocks, every axis (vanilla's turns: a log on its side draws the
+    # horizontal column model turned; a wood block is bark on all six faces)
+    for w in LOG_VARIANT_WOODS:
+        logs, horiz, woods = [w + "_log"], [w + "_log_horizontal"], [w + "_wood"]
+        for k in range(2, PROC_VARIANTS + 1):
+            side = "%s_log_v%d" % (w, k)
+            model(side, "minecraft:block/cube_column", {"end": w + "_log_top", "side": side})
+            model("%s_log_horizontal_v%d" % (w, k), "minecraft:block/cube_column_horizontal",
+                  {"end": w + "_log_top", "side": side})
+            model("%s_wood_v%d" % (w, k), "minecraft:block/cube_column", {"end": side, "side": side})
+            logs.append(side)
+            horiz.append("%s_log_horizontal_v%d" % (w, k))
+            woods.append("%s_wood_v%d" % (w, k))
+        blockstate(w + "_log", {"axis=x": [dict({"model": "minecraft:block/" + m}, x=90, y=90) for m in horiz],
+                                "axis=y": pick(logs),
+                                "axis=z": [dict({"model": "minecraft:block/" + m}, x=90) for m in horiz]})
+        blockstate(w + "_wood", {k: [dict({"model": "minecraft:block/" + m}, **r) for m in woods]
+                                 for k, r in turn.items()})
     # round 33: the procedural variants - a model per variant on its textures, the blockstate a weighted pick (equal
     # weights: the tiling-breaker; the base is the texture the block's stairs / slabs / walls draw, through vanilla's
     # own models, which this pack does not touch). Full cubes only: no turn, no uvlock.
@@ -6994,6 +7030,7 @@ RECIPES = recipes()
 # stepped. Each costs ~4x the memory of a 128x texture (x3 maps) - 13 textures, ~13 MB of atlas with mipmaps.
 # Not stone and the building blocks: their grain read worse, not better, at 256x (a maze of worms) and they are many.
 HIRES = set(GRASS_TOPS) | set(LEAVES) | {"oak_log"} | {w + "_log" for w in WOODS} | {"birch_log"}
+HIRES |= {v for v, b in PROC_VARIANT_OF.items() if b in HIRES}   # r71: a bark's variants at its own resolution
 # round 28: the photo scans at 256 too (from 512 px sources) - at 128 the scans' grain fell under a texel and the mips
 # averaged it to mush; the grass side and its overlay match the top's resolution
 HIRES |= {"stone", "dirt", "grass_block_side", "grass_block_side_overlay", "basalt_side", "basalt_top"} \
