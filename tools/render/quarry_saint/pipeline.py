@@ -21,6 +21,17 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+# what the solved keys depend on: their git blob ids (the same as `git ls-files -s` of the committed files)
+KEY_INPUTS = ("tools/gen_quarry_saint.py", "tools/quarry_saint_poses.py", "tools/gen_models.py", "tools/contact_check.py")
+
+
+def inputs_id(root):
+    import hashlib
+    ids = []
+    for p in KEY_INPUTS:
+        data = open(os.path.join(root, p), "rb").read().replace(b"\r\n", b"\n")
+        ids.append(hashlib.sha1(b"blob %d\x00" % len(data) + data).hexdigest())
+    return ",".join(ids)
 
 
 def main():
@@ -64,6 +75,15 @@ def main():
             poses, report = P.solve_all(only)
             json.dump({"poses": poses, "report": report}, open(os.path.join(out, "keys_%s.json" % a.tag), "w"))
             msg = "keys %s: %d solved (%s)" % (a.tag, len(poses), ",".join(poses))
+        elif step == "need-keys":
+            # the key solve (35 min of runner time) only when its inputs changed since the committed key file
+            kf = os.path.join(root, "design", "fixtures", "quarry_saint_keys.json")
+            have = json.load(open(kf)).get("_inputs") if os.path.exists(kf) else None
+            need = have != inputs_id(root)
+            if os.environ.get("GITHUB_OUTPUT"):
+                with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                    f.write("solve=%s\n" % ("true" if need else "false"))
+            msg = "need-keys: %s (committed %s, now %s)" % (need, have, inputs_id(root))
         elif step == "keyfile":
             import quarry_saint_poses as P
             import quarry_saint_anim as A
@@ -72,15 +92,27 @@ def main():
                 d = json.load(open(f))
                 poses.update(d["poses"])
                 report.update(d["report"])
-            missing = [k for k in P.KEYS if k not in poses]
-            if missing:
-                raise SystemExit("keyfile: missing keys %s" % missing)
-            poses = {k: poses[k] for k in P.KEYS}
-            report = {k: report[k] for k in P.KEYS}
-            json.dump(poses, open(os.path.join(out, "poses.json"), "w"), indent=1)
-            json.dump(report, open(os.path.join(out, "key_report.json"), "w"), indent=1)
-            A.build_keys(os.path.join(out, "poses.json"))
-            msg = "keyfile: %d keys -> design/fixtures/quarry_saint_keys.json" % len(poses)
+            cache = os.path.join(HERE, "cache", "key_report.json")
+            if not poses:
+                # no solved parts (the inputs are unchanged): the committed key file and its cached report stand
+                if os.path.exists(cache):
+                    json.dump(json.load(open(cache)), open(os.path.join(out, "key_report.json"), "w"), indent=1)
+                msg = "keyfile: no parts - the committed key file is used (inputs unchanged)"
+            else:
+                missing = [k for k in P.KEYS if k not in poses]
+                if missing:
+                    raise SystemExit("keyfile: missing keys %s" % missing)
+                poses = {k: poses[k] for k in P.KEYS}
+                report = {k: report[k] for k in P.KEYS}
+                json.dump(poses, open(os.path.join(out, "poses.json"), "w"), indent=1)
+                json.dump(report, open(os.path.join(out, "key_report.json"), "w"), indent=1)
+                os.makedirs(os.path.dirname(cache), exist_ok=True)
+                json.dump(report, open(cache, "w"), indent=1)
+                A.build_keys(os.path.join(out, "poses.json"))
+                keys = json.load(open(A.KEYS_FILE))
+                keys = dict([("_inputs", inputs_id(root))] + list(keys.items()))
+                json.dump(keys, open(A.KEYS_FILE, "w"), indent=1)
+                msg = "keyfile: %d keys -> design/fixtures/quarry_saint_keys.json" % len(poses)
         elif step == "bake":
             import importlib
             import quarry_saint_anim as A
