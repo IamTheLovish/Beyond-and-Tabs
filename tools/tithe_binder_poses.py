@@ -15,7 +15,7 @@ the hood; the raised arms below use the outward sign. Trailing cloth and chains 
 sheet writes +35 / +30).
 
 The chains are springs in the game; here each takes the angle its spring would settle to: hanging plumb (lantern
-chain, shackle chains, the flail's head) unless that puts it into the body, then the nearest free swing (`_free`); the
+chain, shackle chains) unless that puts it into the body, then the nearest free swing (`_free`); the
 hem chains rest on the skirt's flare, never through it. The wheel's yaw in a still is its free spin phase: the arms
 reach the wheel's planes in several poses, so each pose names the phase it is drawn at (`ring` y).
 
@@ -153,9 +153,9 @@ class Rig:
         degrees a chain swings off plumb (the back hem chain trailing in the move)."""
         trail = trail or {}
         hidden = set(pose.get("_hide", ()))
-        for b in ("lantern_chain", "right_shackle_chain", "left_shackle_chain", "weapon_6_ball"):
-            if b in self.m.bones and b not in pose and b not in hidden and not (
-                    b == "weapon_6_ball" and ("weapon_6" in hidden or "ring" in hidden)):
+        # (r2: the flail's head lies along its haft while docked, so it is no longer hung plumb here)
+        for b in ("lantern_chain", "right_shackle_chain", "left_shackle_chain"):
+            if b in self.m.bones and b not in pose and b not in hidden:
                 self.free(pose, b, base=trail.get(b, (0, 0)))
         for k in (1, 2, 3):
             a, bb = "hem_chain_%d" % k, "hem_chain_%d_b" % k
@@ -184,7 +184,7 @@ def _hook_in_hand(rig, pose, side="right"):
         pose["_move"] = {k: v for k, v in pose["_move"].items() if k != "slot_1"}
     rig.set(pose)
     hb = m.bones[side + "_hand"]
-    grip = m.fk(hb.name, [hb.pivot[0], 12.0, 0.0])              # through the fingers' middle
+    grip = m.fk(hb.name, [hb.pivot[0], hb.pivot[1] - 3.0, 0.0])              # through the fingers' middle
     F = m.frame(hb.name)
     xl = tuple(F[i][0] for i in range(3))
     yl = tuple(F[i][1] for i in range(3))
@@ -251,13 +251,16 @@ def key_poses(n=10):
                                      "right_shackle_chain": (-20, 0), "left_shackle_chain": (-20, 0)})
 
     # volley wind-up extreme (5.3, t11-13 hold): the right arm UP and BEHIND the head, the left hand aimed at the
-    # target (ahead), the wheel dipped 15 toward it, every weapon's tip cocked up 25, hover +3, mantle +1
-    windup = {"body": A("body", [10, 0, 0]), "head": [-20, 0, 0],
+    # target (ahead), every weapon's tip cocked up 25, mantle +1. r2 (the review: wind-up, strike and bind looked
+    # alike from 52 deg - only thin arms moved): the MASS winds up - the body twists 30 to its right and leans back,
+    # the whole Binder draws back 3 px and up 3, the ring is pulled back 4 px and cocked (its front edge up 12; the
+    # sheet's dip toward the target moves to the strike)
+    windup = {"body": A("body", [10, 30, 0]), "head": [-20, -10, 0],
               "right_arm": A("right_arm", [200, 0, 30]), "right_forearm": A("right_forearm", [60, 0, 0]),
               "right_hand": [20, 0, 0],
               "left_arm": A("left_arm", [84, 10, 12]), "left_forearm": A("left_forearm", [5, 0, 0]),
-              "ring": [-15, 0, 0], "cape": [-6, 0, 0],
-              "_move": {"hover": [0, 3.0, 0], "mantle": [0, 1.0, 0]}}
+              "ring": [12, 0, 0], "cape": [-6, 0, 0],
+              "_move": {"hover": [0, 3.0, 3.0], "ring": [0, 1.0, 4.0], "mantle": [0, 1.0, 0]}}
     for tb in TATTERS:
         windup[tb] = [-8, 0, 0]
     for k in ks:
@@ -265,13 +268,14 @@ def key_poses(n=10):
     windup = rig.phase("volley_windup", windup, ks, layout)
     P["volley_windup"] = rig.settle(dict(windup), trail={"lantern_chain": (12, 0)})
 
-    # volley strike (t15): the whip forward, the body pitched -15, the hover lunge; the wheel's tilt is still held;
-    # the first weapon of the volley (the spoke nearest the target bearing) has left its slot
-    p = {"body": A("body", [-15, 0, 0]), "head": [0, 0, 0],
+    # volley strike (t15): the whip forward, the body pitched -15 and untwisted through to -20, the lunge (4 px
+    # forward, 1 down); the ring snaps toward the target (5 px forward, its front edge dipped 18); the first weapon of
+    # the volley (the spoke nearest the target bearing) has left its slot
+    p = {"body": A("body", [-15, -20, 0]), "head": [0, 15, 0],
          "right_arm": A("right_arm", [60, 0, -12]), "right_forearm": A("right_forearm", [10, 0, 0]),
          "left_arm": windup["left_arm"], "left_forearm": windup["left_forearm"],
-         "ring": [-15, windup["ring"][1], 0], "cape": [-12, 0, 0],
-         "_move": {"hover": [0, -1.0, -2.0]}}
+         "ring": [-18, windup["ring"][1], 0], "cape": [-12, 0, 0],
+         "_move": {"hover": [0, -1.0, -4.0], "ring": [0, -2.0, -5.0]}}
     for tb in ("tatter_f", "tatter_l", "tatter_r"):
         p[tb] = [-15, 0, 0]
     p["tatter_b"] = [-4, 0, 0]
@@ -279,11 +283,14 @@ def key_poses(n=10):
         p["weapon_%d" % k] = [10, 0, 0]
     P["volley_strike"] = rig.settle(rig.phase("volley_strike", p, ks, layout, hide_first=True))
 
-    # bind receive (5.4, t10): head tilted back and turned to the corpse, the left arm opened back and out
-    p = {"head": [16, 12, 0], "chest": [4, 0, 0], "left_arm": A("left_arm", [-40, 0, 36]),
+    # bind receive (5.4, t10), the corpse at the front-right: r2 - the whole body turns 25 to the corpse and leans
+    # back 8 (receiving), the head tilted back and turned further, the left arm opened back and out; the ring tilts
+    # down toward the corpse (its right side dips 10) and leans 2 px toward it; hover +2
+    p = {"body": [8, 25, 0], "head": [16, 12, 0], "chest": [4, 0, 0], "left_arm": A("left_arm", [-40, 0, 36]),
          "left_forearm": A("left_forearm", [20, 0, 0]), "left_hand": [-10, 0, 0], "cape": [-8, 0, 0],
-         "_move": {"mantle": [0, 1.0, 0]}}
-    P["bind_receive"] = rig.settle(rig.phase("bind_receive", p, ks, layout))
+         "ring": [0, 0, 10],
+         "_move": {"hover": [0, 2.0, 0], "ring": [-2.0, 0, -2.0], "mantle": [0, 1.0, 0]}}
+    P["bind_receive"] = rig.settle(rig.phase("bind_receive", p, ks, layout), trail={"lantern_chain": (12, 0)})
 
     # hit react (5.5, t1, a hit from the front): body back 12, head 15, hover down 2, the wheel kicked away from
     # the hit (its front up 10), every docked weapon rattling (roll 15, alternating), the cloth lagging (inertia)
@@ -306,12 +313,17 @@ def key_poses(n=10):
 
     # death t30 (the crumple): fallen 5 px onto the ground, folded forward into the robe, the tatters spread on the
     # ground, the arms hanging limp (plumb), every weapon gone (shattered)
-    p = {"body": A("body", [-30, 0, 0]), "chest": [-40, 0, 0], "head": A("head", [-30, 0, 0]),
+    # r6: a sideways slump with less fold (the r2-r5 -30 / -40 fold read as a red crate and sank the chest into the
+    # waist) - the driver's death clip ends here too
+    # r6b: r5's forward crumple again (the blind A/B preferred it to r6's slump), made contact-clean: the chest moved
+    # 1 px forward as it folds, head roll 12 / yaw 0, the right arm out 12 (r2-r5 failed here: chest in the waist,
+    # hood in the right sleeve)
+    p = {"body": A("body", [-30, 0, 0]), "chest": [-40, 0, 0], "head": [-36, 0, 12],
          "tatter_f": [80, 0, 0], "tatter_b": [-80, 0, 0], "tatter_l": [0, 0, 80], "tatter_r": [0, 0, -80],
          "right_forearm": A("right_forearm", [0, 0, 0]), "left_forearm": A("left_forearm", [0, 0, 0]),
-         "_move": {"hover": [0, -5.0, 0]}, "_hide": ["ring"]}
-    for side in ("right", "left"):
-        p[side + "_arm"] = rig.world(p, side + "_arm", rot_mat(0, 0, 0))
+         "_move": {"hover": [0, -5.0, 0], "chest": [0, 0, -1]}, "_hide": ["ring"]}
+    p["right_arm"] = [20, 0, -12]
+    p["left_arm"] = [30, 0, -10]
     # landed: the lowest cloth / bone touches y = 0 (the sheet's "falls 5 px"; the forward fold sets the exact drop)
     p["_move"]["hover"][1] = 0.0
     p["_move"]["hover"][1] = round(-rig.low(p, skip=("hem_chain",)), 2)
