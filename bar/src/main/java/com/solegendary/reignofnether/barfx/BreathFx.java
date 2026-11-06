@@ -126,8 +126,8 @@ public final class BreathFx {
             bz = target.getZ();
         }
         double s = FireBreath.sweep(t);
-        float ax = (float) FireBreath.along(bx, off.x(), s), ay = (float) FireBreath.along(by, off.y(), s);
-        float az = (float) FireBreath.along(bz, off.z(), s);
+        float ax = (float) FireBreath.aim(landed, bx, off.x(), s), ay = (float) FireBreath.aim(landed, by, off.y(), s);
+        float az = (float) FireBreath.aim(landed, bz, off.z(), s);
         // the jaws: the posed model's, if it was drawn just now; else where the server puts them
         float jx, jy, jz;
         if (now() - d.clientJawsAt <= JAWS_FRESH) {

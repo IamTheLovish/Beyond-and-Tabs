@@ -10,6 +10,7 @@
 // pass (ShaderPacks.skipOverlays).
 // Leaves move in the wind exactly as lit.vsh moves them (lib/wind.glsl, the same world position in), so a shimmering
 // canopy's shadow shimmers with it instead of standing still under it.
+// A plant's shadow fades out as the sun sinks (PLANT_SHADOW_SUN_LOW / _HIGH): long low-sun streaks striped the lawn.
 
 #include "/lib/settings.glsl"
 #include "/lib/shadowfit.glsl"
@@ -25,8 +26,12 @@ varying float casterOpacity;
 
 void main() {
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
+    // the light looks down its view's -z: +z back into player space points at the sun (or moon); its y is the sine of
+    // the light's height above the horizon
+    float sunUp = normalize(mat3(shadowModelViewInverse) * vec3(0.0, 0.0, 1.0)).y;
+    float plantShadow = PLANT_SHADOW * smoothstep(PLANT_SHADOW_SUN_LOW, PLANT_SHADOW_SUN_HIGH, sunUp);
     bool plant = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 || abs(mc_Entity.x - ID_FOLIAGE_UPPER) < 0.5;
-    casterOpacity = plant ? PLANT_SHADOW : 1.0;
+    casterOpacity = plant ? plantShadow : 1.0;
     gl_Position = ftransform();
 #if WIND == 1
     if (abs(mc_Entity.x - ID_LEAVES) < 0.5) {

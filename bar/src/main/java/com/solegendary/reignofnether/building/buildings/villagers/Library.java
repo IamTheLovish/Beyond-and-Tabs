@@ -91,6 +91,7 @@ public class Library extends ProductionBuilding implements RangeIndicatorAddon {
         this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/enchanting_table_top.png");
 
         this.buildTimeModifier = 1.1f;
+        this.buildTimeBlocks = 99;   // RoN's 99-block library's build time; the Scriptorium's art (tools/lab_library.py) is 236 blocks
 
         this.canSetRallyPoint = false;
 
