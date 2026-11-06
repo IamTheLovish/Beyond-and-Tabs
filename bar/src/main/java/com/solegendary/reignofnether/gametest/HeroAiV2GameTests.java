@@ -76,6 +76,32 @@ public class HeroAiV2GameTests {
             QueueMode.REPLACE);
     }
 
+    /**
+     * A player's order as {@link #order(GameTestHelper, String, Mob, UnitAction, BlockPos)} gives it, with a setup
+     * problem booked in {@code setup} when the order cannot reach the unit (see {@link #unreachable}).
+     */
+    static void order(GameTestHelper helper, List<String> setup, String owner, Mob unit, UnitAction action, BlockPos at) {
+        String why = unreachable(helper, unit, action);
+        if (why != null)
+            setup.add(why);
+        order(helper, owner, unit, action, at);
+    }
+
+    /**
+     * Why an order given now would not reach {@code unit}, or null when it would. CommandQueues.issue finds each unit
+     * with level.getEntity and passes over one the level does not hold yet, without a word: a unit added at the test's
+     * start stays out of that lookup until its chunk's entity section is loaded (ArenaReady, GameTestChunks
+     * .whenEntitiesReady), and a test that ordered it at a fixed tick from the spawn went on to judge a hero with no
+     * order (flake-stress 42145152071: "did not follow its move order (95.5 -> 95.5)", "did not go back to its move
+     * order"). The problem says where the unit was and whether its chunk was entity-ticking.
+     */
+    static String unreachable(GameTestHelper helper, Mob unit, UnitAction action) {
+        if (helper.getLevel().getEntity(unit.getId()) == unit)
+            return null;
+        return "setup: the " + action + " order at test tick " + helper.getTick()
+            + " went to a unit the level does not hold yet, so it was dropped (" + ArenaReady.describe(helper.getLevel(), List.of(unit)) + ")";
+    }
+
     /** The test's units, nulls allowed (a failed spawn): HeroAiGameTests.finish discards the rest. */
     static List<Mob> mobs(Mob... ms) {
         return new ArrayList<>(Arrays.asList(ms));
@@ -120,7 +146,8 @@ public class HeroAiV2GameTests {
         double[] closest = { Double.MAX_VALUE };
         boolean[] cast = { false };
         int[] arrived = { -1 };
-        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        List<String> setup = new ArrayList<>();
+        helper.runAfterDelay(2, () -> order(helper, setup, me, hero, UnitAction.MOVE, dest));
         for (int t = 3; t <= 260; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
@@ -134,7 +161,7 @@ public class HeroAiV2GameTests {
                 }
                 if (tick < 260)
                     return;
-                List<String> problems = new ArrayList<>();
+                List<String> problems = new ArrayList<>(setup);
                 if (worst[0] > 2.5)
                     problems.add(String.format("the hero left its lane by %.1f blocks during a move order (the enemy was 6 off it)", worst[0]));
                 if (arrived[0] < 0)
@@ -165,10 +192,11 @@ public class HeroAiV2GameTests {
         double[] spot = new double[2];
         double[] worst = { 0 };
         boolean[] cast = { false };
+        List<String> setup = new ArrayList<>();
         helper.runAfterDelay(2, () -> {
             spot[0] = hero.getX();
             spot[1] = hero.getZ();
-            order(helper, me, hero, UnitAction.HOLD, BlockPos.ZERO);
+            order(helper, setup, me, hero, UnitAction.HOLD, BlockPos.ZERO);
         });
         for (int t = 3; t <= 150; t++) {
             final int tick = t;
@@ -177,7 +205,7 @@ public class HeroAiV2GameTests {
                 cast[0] |= !judgement.isOffCooldown(p);
                 if (tick < 150)
                     return;
-                List<String> problems = new ArrayList<>();
+                List<String> problems = new ArrayList<>(setup);
                 if (worst[0] > 1.0)
                     problems.add(String.format("the hero left its hold spot by %.1f blocks", worst[0]));
                 if (!cast[0])
@@ -185,6 +213,14 @@ public class HeroAiV2GameTests {
                 HeroAiGameTests.finish(helper, problems, mobs(hero, foe), null);
             });
         }
+    }
+
+    /** {@link #attack(GameTestHelper, String, Mob, Mob)}, with a setup problem booked as {@link #order} books one. */
+    static void attack(GameTestHelper helper, List<String> setup, String owner, Mob unit, Mob target) {
+        String why = unreachable(helper, unit, UnitAction.ATTACK);
+        if (why != null)
+            setup.add(why);
+        attack(helper, owner, unit, target);
     }
 
     /** A player's attack order on {@code target}, as the server takes one from the player's client. */
@@ -222,7 +258,8 @@ public class HeroAiV2GameTests {
         // where the two stood as the charge set off: on landing it shoves the target blocks away, so the landing is
         // judged against the spots it aimed at, not against where the target was thrown
         double[] spots = new double[4];
-        helper.runAfterDelay(2, () -> attack(helper, me, hero, target));
+        List<String> setup = new ArrayList<>();
+        helper.runAfterDelay(2, () -> attack(helper, setup, me, hero, target));
         for (int t = 3; t <= 160; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
@@ -237,7 +274,7 @@ public class HeroAiV2GameTests {
                 }
                 if (tick < 160)
                     return;
-                List<String> problems = new ArrayList<>();
+                List<String> problems = new ArrayList<>(setup);
                 if (chargedAt[0] < 0)
                     problems.add(String.format("under an attack order the hero never used Shield Charge on its target (still %.1f blocks off)",
                         hero.distanceTo(target)));
@@ -271,7 +308,8 @@ public class HeroAiV2GameTests {
         double[] worst = { 0 };
         double[] closest = { Double.MAX_VALUE };
         int[] arrived = { -1 }, reachedFoe = { -1 };
-        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        List<String> setup = new ArrayList<>();
+        helper.runAfterDelay(2, () -> order(helper, setup, me, hero, UnitAction.MOVE, dest));
         for (int t = 3; t <= 320; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
@@ -285,7 +323,7 @@ public class HeroAiV2GameTests {
                 }
                 if (tick < 320)
                     return;
-                List<String> problems = new ArrayList<>();
+                List<String> problems = new ArrayList<>(setup);
                 if (worst[0] > 2.5)
                     problems.add(String.format("the hero left its lane by %.1f blocks during the move order", worst[0]));
                 if (arrived[0] < 0)
@@ -377,7 +415,7 @@ public class HeroAiV2GameTests {
         List<String> problems = new ArrayList<>();
         helper.runAfterDelay(2, () -> {
             hero.setHealth(hero.getMaxHealth() * 0.5f);
-            order(helper, me, hero, UnitAction.MOVE, dest);
+            order(helper, problems, me, hero, UnitAction.MOVE, dest);
         });
         helper.runAfterDelay(30, () -> {
             z30[0] = hero.getZ();
@@ -395,7 +433,7 @@ public class HeroAiV2GameTests {
                 problems.add("at a quarter health the hero stopped short of the enemies but never ran from them");
             later[0] = hero.getZ();
             // the player takes it back: the same order again, at the same low health
-            order(helper, me, hero, UnitAction.MOVE, dest);
+            order(helper, problems, me, hero, UnitAction.MOVE, dest);
         });
         // obeyed = it got there; once there the order is done and the hero may turn on the enemies beside the spot
         double[] closest = { Double.MAX_VALUE };
@@ -706,7 +744,7 @@ public class HeroAiV2GameTests {
         double front = helper.absolutePos(new BlockPos(0, 2, 11)).getZ();
         double[] deepest = { Double.NEGATIVE_INFINITY };
         List<String> problems = new ArrayList<>();
-        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        helper.runAfterDelay(2, () -> order(helper, problems, me, hero, UnitAction.MOVE, dest));
         helper.runAfterDelay(25, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
         for (int t = 26; t <= 130; t++)
             helper.runAfterDelay(t, () -> deepest[0] = Math.max(deepest[0], hero.getZ()));
