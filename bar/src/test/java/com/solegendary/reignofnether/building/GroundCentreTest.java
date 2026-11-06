@@ -32,6 +32,23 @@ class GroundCentreTest {
     }
 
     @Test
+    void anAnimalSpawnsAtLeastFifteenFromTheFloorNotFromTheBoxCentre() {
+        // a ground spot 12 blocks out from the centre column: inside the 15-block minimum, so no spawn. Measured from
+        // the box centre (13 up) it was 17.7 away and passed - animals spawned against the hall's kerb
+        BlockPos spot = new BlockPos(19, 64, 7);
+        assertFalse(BuildingPlacement.inAnimalSpawnRing(spot, BuildingPlacement.groundCentre(MIN, CENTRE), 15, 30));
+        assertTrue(BuildingPlacement.inAnimalSpawnRing(spot, CENTRE, 15, 30), "the box centre lets it through: the bug");
+    }
+
+    @Test
+    void anAnimalMaySpawnOutToTheFullRangeOnTheFloor() {
+        // 29 blocks out on the ground is inside a 30-block range; from the box centre it was 31.8 and refused
+        BlockPos spot = new BlockPos(36, 64, 7);
+        assertTrue(BuildingPlacement.inAnimalSpawnRing(spot, BuildingPlacement.groundCentre(MIN, CENTRE), 15, 30));
+        assertFalse(BuildingPlacement.inAnimalSpawnRing(spot, CENTRE, 15, 30), "the box centre refuses it: the bug");
+    }
+
+    @Test
     void aLowBuildingKeepsItsReach() {
         // a 3-high hut: its box centre is one block up, so the ground centre changes its reach by under a block
         BlockPos min = new BlockPos(0, 64, 0);
