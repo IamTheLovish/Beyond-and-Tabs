@@ -471,8 +471,12 @@ jobs:
           grep resourcePacks run/options.txt
       - name: Start the recorder (waits for the tour's Xvfb display, then films it)
         run: |
-          which ffmpeg || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
-          which xdotool || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xdotool
+          # the video is a bonus, the stills are the run: on Nov 6, 3 of 4 runs of one branch got an apt mirror at ~25 kB/s,
+          # spent 42 min on ffmpeg's 61 MB and hit the job's 45-min limit before the game started (42185251420 attempts
+          # 1-2, 42209052624) while other runs that hour fetched it at 11.5 MB/s. So each install gets 5 min; without
+          # ffmpeg the recorder records nothing and the clip step (continue-on-error) says "0 video clips"
+          which ffmpeg || timeout 300 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg || echo "::warning::[Eyes] ffmpeg did not install within 5 min (slow apt mirror): no video clips this run"
+          which xdotool || timeout 300 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xdotool || echo "::warning::[Eyes] xdotool did not install within 5 min"
           setsid nohup bash tools/eyes_record.sh "$PWD/eyes-rec" > /dev/null 2>&1 &
           echo "recorder pid $!"
           # memory and load every 30 s (published as mem.log): three tours lost their runner on Oct 15 ("lost
