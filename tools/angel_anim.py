@@ -450,6 +450,29 @@ def rest_hand(kind, side):
     return tuple(S[i] + hq[i] for i in range(3)), mv(Ra, a)
 
 
+def rot_lerp(Ra, Rb, w):
+    """The rotation w of the way from Ra to Rb (about the one axis of Ra^T Rb)."""
+    D = mmul(mT(Ra), Rb)
+    ang = math.degrees(math.acos(clamp((D[0][0] + D[1][1] + D[2][2] - 1.0) / 2.0, -1.0, 1.0)))
+    ax = (D[2][1] - D[1][2], D[0][2] - D[2][0], D[1][0] - D[0][1])
+    if ang < 1e-6 or dot(ax, ax) < 1e-12:
+        return Ra if w < 0.5 else Rb
+    return mmul(Ra, axis_mat(ax, ang * w))
+
+
+_STOW = []
+
+
+def arrow_stow():
+    """m3: the arrow's rotation in the draw hand's fore (the archer) as it appears at attack t3, breath and flight
+    lean left out: where it rests while hidden."""
+    if not _STOW:
+        A = attack_tracks("archer", 3, 0)
+        R_a, phi = ik_arm("archer", "r", A["ik_r"], A["pole_r"])
+        _STOW.append(mmul(mT(mmul(R_a, rmat((phi, 0.0, 0.0)))), align((0.0, 0.0, -1.0), A["aim"])))
+    return _STOW[0]
+
+
 def ik_arm(kind, side, target, pole):
     """Two-bone IK: the upper arm's rotation (body frame) and the fore's hinge angle (deg, about its x) that put the
     hand point on target with the elbow toward pole. Out of reach: the arm points at the target, fully stretched."""
@@ -936,7 +959,14 @@ def step(st, inp):
             scale[n] = [1.0, math.sqrt(dot(want, want)) / L0, 1.0]
         grip = x_fore_l(Gl)
         adir = aim if (A is not None and A.get("bow", 0.0) > 0.0) else tuple(grip[i] - hand[i] for i in range(3))
-        out["arrow"] = delta_on_rest(rest["arrow"], mmul(mT(mmul(R_ra, R_rf)), align((0.0, 0.0, -1.0), adir)))
+        L_arrow = mmul(mT(mmul(R_ra, R_rf)), align((0.0, 0.0, -1.0), adir))
+        # m3: hidden, the arrow is never posed by a jump (the no-jump test covers hidden bones): it rests in the hand
+        # in the pose it appears in (t3), and after the release it eases there from the shot over 8 ticks
+        vis = 1.0 if (A is not None and A.get("arrow")) else (
+            1.0 - smooth((at - 15.0) / 8.0) if (A is not None and at > 15) else 0.0)
+        if vis < 1.0:
+            L_arrow = rot_lerp(arrow_stow(), L_arrow, vis)
+        out["arrow"] = delta_on_rest(rest["arrow"], L_arrow)
         if not (A is not None and A.get("arrow")):
             out["_hide"] = ["arrow"]
     if k == "sword":
