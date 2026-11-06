@@ -362,6 +362,67 @@ class AngelRigTest {
         assertTrue(bad.isEmpty(), String.join("; ", bad));
     }
 
+    // ------------------------------------------------------------------ the passes fade with the body
+
+    /** The pose the driver's run() reaches at tick {@code at} of {@code clip}. */
+    private static AngelRig.Pose poseAt(int kind, String clip, int at) {
+        AngelRig.Pose[] got = {null};
+        run(kind, clip, at + 1, (t, pose) -> {
+            if (t == at) {
+                got[0] = new AngelRig.Pose();
+                got[0].set(pose);
+            }
+        });
+        return got[0];
+    }
+
+    private static double fx(int kind, String clip, int t, String key) {
+        return kinds.getAsJsonObject(KINDS[kind]).getAsJsonObject(clip).getAsJsonObject("poses")
+            .getAsJsonObject(Integer.toString(t)).getAsJsonObject("_fx").get(key).getAsDouble();
+    }
+
+    /**
+     * Every pass of the body - the paint, the team mask, the glow - fades with it: at the arrival's t4 and the death's
+     * t12 (the fixture's alpha and halo alpha) the body, the lantern and the halo draw at the driver's alpha / halo
+     * alpha in both passes and the passes go translucent; the Mender's heal (attack t10, glow 1.6) brightens only the
+     * glow pass's lantern (once at full, once more at 0.6); a hovering angel draws everything at 1, opaque.
+     */
+    @Test
+    void every_pass_fades_with_the_body_and_the_halo_with_its_own_alpha() {
+        double[] f = new double[4];
+        for (int kind = 0; kind < 3; kind++)
+            for (Object[] at : new Object[][]{{"arrive", 4}, {"death", 12}}) {
+                String clip = (String) at[0];
+                int t = (Integer) at[1];
+                AngelRig.Pose p = poseAt(kind, clip, t);
+                double alpha = fx(kind, clip, t, "alpha"), halo = fx(kind, clip, t, "halo_alpha");
+                String where = KINDS[kind] + " " + clip + " t" + t;
+                assertTrue(alpha < 0.999, where + ": the fixture fades the body here (alpha " + alpha + ")");
+                for (boolean glow : new boolean[]{false, true}) {
+                    AngelRig.passFactors(p, glow, f);
+                    String pass = where + (glow ? " glow pass" : " paint / team pass");
+                    assertEquals(alpha, f[AngelRig.F_BODY], EPS, pass + ": the body at the driver's alpha");
+                    assertEquals(halo, f[AngelRig.F_HALO], EPS, pass + ": the halo at the driver's halo alpha");
+                    assertEquals(alpha, f[AngelRig.F_LANTERN], EPS, pass + ": the lantern fades with the body");
+                    assertEquals(0.0, f[AngelRig.F_LANTERN_EXTRA], EPS, pass + ": no extra lantern light");
+                }
+                assertTrue(AngelRig.translucent(p), where + ": the passes draw translucent while it fades");
+            }
+        AngelRig.Pose heal = poseAt(0, "attack", 10);
+        assertEquals(1.6, fx(0, "attack", 10, "glow"), EPS, "the fixture's heal glow");
+        AngelRig.passFactors(heal, true, f);
+        assertEquals(1.0, f[AngelRig.F_LANTERN], EPS, "the heal: the lantern's glow at full");
+        assertEquals(0.6, f[AngelRig.F_LANTERN_EXTRA], EPS, "the heal: and 0.6 more on top (x1.6)");
+        assertEquals(1.0, f[AngelRig.F_BODY], EPS, "the heal: the body's own glow unchanged");
+        AngelRig.passFactors(heal, false, f);
+        assertEquals(0.0, f[AngelRig.F_LANTERN_EXTRA], EPS, "the heal brightens the glow pass only");
+        AngelRig.Pose hover = poseAt(2, "hover", 10);
+        AngelRig.passFactors(hover, true, f);
+        for (int i = 0; i < 3; i++)
+            assertEquals(1.0, f[i], EPS, "hovering: group " + i + " draws in full");
+        assertTrue(!AngelRig.translucent(hover), "hovering: the passes stay opaque");
+    }
+
     // ------------------------------------------------------------------ DSL -> ModelPart signs
 
     /** A part that records what apply() writes, with ModelPart's fields (radians; model px, y down). */

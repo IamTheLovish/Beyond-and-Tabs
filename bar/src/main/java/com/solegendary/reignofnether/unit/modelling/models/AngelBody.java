@@ -13,6 +13,9 @@ public interface AngelBody {
     /** The pose for the coming draw (the drive's blend), or null for the rest pose. */
     void frame(AngelRig.Pose pose);
 
+    /** The next draws are the additive glow pass (the rig's fade goes on as colour, the heal's glow with it). */
+    void glowPass(boolean on);
+
     /** The generated body's detail switch (GeneratedBodies.wantsDetail). */
     void setDetail(boolean on);
 }

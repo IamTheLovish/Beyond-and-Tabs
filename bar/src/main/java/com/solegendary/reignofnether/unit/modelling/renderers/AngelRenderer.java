@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.unit.modelling.animations.AngelRig;
 import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
 import com.solegendary.reignofnether.unit.modelling.models.AngelBody;
 import com.solegendary.reignofnether.unit.modelling.models.MenderAngelUnitModel;
+import com.solegendary.reignofnether.unit.modelling.models.SplitPasses;
 import com.solegendary.reignofnether.unit.modelling.models.SeraphArcherUnitModel;
 import com.solegendary.reignofnether.unit.modelling.models.SwordSeraphUnitModel;
 import com.solegendary.reignofnether.unit.modelling.models.gen.MenderAngelModel;
@@ -18,10 +19,14 @@ import com.solegendary.reignofnether.unit.units.villagers.MenderAngelUnit;
 import com.solegendary.reignofnether.unit.units.villagers.SeraphArcherUnit;
 import com.solegendary.reignofnether.unit.units.villagers.SwordSeraphUnit;
 import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -40,7 +45,8 @@ import javax.annotation.Nullable;
  * a tinted vanilla vex.
  * <p>
  * The rig plays its own death (no sideways flip), its arrival (the drive starts it on a young angel), the white light
- * of both (the white overlay) and their fade (translucent while the rig's alpha is under 1).
+ * of both (the white overlay) and their fade: every pass - the paint, the team cloth, the glow - translucent / dimmed
+ * with the rig's alpha, the halo with its halo alpha (AngelDraw).
  */
 @OnlyIn(Dist.CLIENT)
 public class AngelRenderer<T extends AngelUnit, M extends EntityModel<T> & AngelBody> extends MobRenderer<T, M> {
@@ -56,8 +62,21 @@ public class AngelRenderer<T extends AngelUnit, M extends EntityModel<T> & Angel
         this.scale = scale;
         this.kind = kind;
         this.timing = timing;
-        this.addLayer(new TeamColourLayer<>(this));
-        this.addLayer(GeneratedBodies.glow(this, name));
+        // the team cloth and the light fade with the body (AngelDraw): a translucent mask while it fades, and the
+        // generated body's glow type drawn by a pass that tells the model it is the additive one
+        this.addLayer(new TeamColourLayer<T, M>(this) {
+            @Override
+            protected RenderType maskType(T entity, ResourceLocation team) {
+                return fading(entity) ? RenderType.entityTranslucent(team) : super.maskType(entity, team);
+            }
+        });
+        this.addLayer(new GlowLayer<>(this, GeneratedBodies.glow(this, name).renderType()));
+    }
+
+    /** The rig fades this angel's body or halo now (arriving, dying). */
+    static boolean fading(AngelUnit entity) {
+        AngelDrive d = entity.clientDrive;
+        return d != null && d.ready() && AngelRig.translucent(d.blended());
     }
 
     /** The Mender Angel: the release is the heal, every {@link MenderAngelUnit#HEAL_INTERVAL_TICKS} while it mends. */
@@ -119,10 +138,43 @@ public class AngelRenderer<T extends AngelUnit, M extends EntityModel<T> & Angel
     @Nullable
     @Override
     public RenderType getRenderType(T entity, boolean bodyVisible, boolean translucent, boolean glowing) {
-        AngelDrive d = entity.clientDrive;
-        if (bodyVisible && d != null && d.ready() && d.blended().alpha < 0.999)
+        if (bodyVisible && fading(entity))
             return RenderType.entityTranslucent(texture);
         return super.getRenderType(entity, bodyVisible, translucent, glowing);
+    }
+
+    /**
+     * GeneratedBodies.glow's pass (the same mipmapped additive type and SplitPasses pruning) with the model told it is
+     * the glow pass, so the light fades with the body and the Mender's lantern brightens on the heal.
+     */
+    static final class GlowLayer<T extends AngelUnit, M extends EntityModel<T> & AngelBody> extends RenderLayer<T, M> {
+        private final RenderType type;
+
+        GlowLayer(RenderLayerParent<T, M> parent, RenderType type) {
+            super(parent);
+            this.type = type;
+        }
+
+        @Override
+        public void render(PoseStack pose, MultiBufferSource buffers, int light, T entity, float limbSwing,
+                           float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw,
+                           float headPitch) {
+            if (UnitLod.skipOverlay(entity))
+                return;
+            M model = this.getParentModel();
+            SplitPasses split = model instanceof SplitPasses sp ? sp : null;
+            if (split != null)
+                split.beginPass(split.glowParts());
+            model.glowPass(true);
+            try {
+                model.renderToBuffer(pose, buffers.getBuffer(type), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                    1f, 1f, 1f, 1f);
+            } finally {
+                model.glowPass(false);
+                if (split != null)
+                    split.endPass(split.glowParts());
+            }
+        }
     }
 
     // ------------------------------------------------------------------ the drive

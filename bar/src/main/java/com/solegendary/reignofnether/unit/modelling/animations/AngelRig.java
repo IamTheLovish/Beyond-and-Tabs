@@ -1331,6 +1331,29 @@ public final class AngelRig {
         return xFore(add(Gl, mv(L_bow, sub(q, Gl))), El, Sl, R_lf, R_la);
     }
 
+    // ------------------------------------------------------------------ the passes' fade (pure, tested) ------------
+    /** Indices into {@link #passFactors}' output: the body, the halo, the lantern, the lantern's extra light. */
+    public static final int F_BODY = 0, F_HALO = 1, F_LANTERN = 2, F_LANTERN_EXTRA = 3;
+
+    /**
+     * How strongly each group of parts draws in one pass of the body (the paint, the team mask, the glow): the body at
+     * the pose's alpha, the halo at its own halo alpha, the lantern with the body - and in the glow pass also at the
+     * kind's glow (the Mender's lantern brightens x1.6 on the heal): a factor over 1 draws the lantern once at full and
+     * once more additively with the rest ({@code F_LANTERN_EXTRA}).
+     */
+    public static void passFactors(Pose pose, boolean glowPass, double[] out) {
+        double a = pose.alpha, g = glowPass ? pose.glow : 1.0;
+        out[F_BODY] = a;
+        out[F_HALO] = pose.haloAlpha;
+        out[F_LANTERN] = a * Math.min(1.0, g);
+        out[F_LANTERN_EXTRA] = a * Math.max(0.0, g - 1.0);
+    }
+
+    /** The pose fades some part (arriving, dying): its passes draw translucent. */
+    public static boolean translucent(Pose pose) {
+        return pose.alpha < 0.999 || pose.haloAlpha < 0.999;
+    }
+
     // ------------------------------------------------------------------ onto the model ----------------------------
 
     /**

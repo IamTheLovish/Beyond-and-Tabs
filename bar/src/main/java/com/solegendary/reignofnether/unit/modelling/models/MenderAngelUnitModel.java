@@ -17,13 +17,16 @@ import javax.annotation.Nullable;
  * the Mender Angel in motion over its generated body (MenderAngelModel, design/models/sunforged_angel_b4_*.json by
  * tools/dsl_to_game.py; generator tools/gen_angels.py): every bone posed by {@link AngelRig} (the port of
  * tools/angel_anim.py), stepped per game tick by AngelDrive and blended per frame by AngelRenderer - the halo rides
- * the head through the rig's own halo channel. OwnMotion: the living army's motion pass leaves it alone. The body's
- * alpha (the arrival's fade-in, the death's fade-out) scales every pass's vertex alpha.
+ * the head through the rig's own halo channel. OwnMotion: the living army's motion pass leaves it alone. Every pass
+ * (the paint, the team mask, the glow) fades with the rig (AngelDraw): the body at its alpha, the halo at its halo
+ * alpha, the Mender's lantern brightened by the heal in the glow pass.
  */
 @OnlyIn(Dist.CLIENT)
 public class MenderAngelUnitModel extends MenderAngelModel<MenderAngelUnit> implements OwnMotion, AngelBody {
     private final AngelRig.Bones rig = AngelParts.bones(this::bone);
+    private final AngelDraw draw = new AngelDraw(root(), bone("halo"), bone("lantern"));
     @Nullable private AngelRig.Pose pose;
+    private boolean glowPass;
 
     public MenderAngelUnitModel(ModelPart root) {
         super(root);
@@ -32,6 +35,11 @@ public class MenderAngelUnitModel extends MenderAngelModel<MenderAngelUnit> impl
     @Override
     public void frame(@Nullable AngelRig.Pose pose) {
         this.pose = pose;
+    }
+
+    @Override
+    public void glowPass(boolean on) {
+        this.glowPass = on;
     }
 
     @Override
@@ -45,6 +53,7 @@ public class MenderAngelUnitModel extends MenderAngelModel<MenderAngelUnit> impl
     @Override
     public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer, int light, int overlay, float r, float g,
                                float b, float a) {
-        super.renderToBuffer(poseStack, buffer, light, overlay, r, g, b, pose == null ? a : a * (float) pose.alpha);
+        draw.render(pose, glowPass, r, g, b, a,
+            (r2, g2, b2, a2) -> super.renderToBuffer(poseStack, buffer, light, overlay, r2, g2, b2, a2));
     }
 }
