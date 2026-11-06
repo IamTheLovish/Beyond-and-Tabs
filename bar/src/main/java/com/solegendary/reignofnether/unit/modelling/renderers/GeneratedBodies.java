@@ -10,6 +10,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.EyesLayer;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import com.solegendary.reignofnether.player.PlayerColors;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -96,6 +101,45 @@ public final class GeneratedBodies {
             }
         };
     }
+
+    /**
+     * The light lines of a body drawn in its OWNER's colour (the Light Grid, design/ai_faction.md: "light as the only
+     * ornament", one team light colour): its {@code _team_glow} texture (tools/dsl_to_game.py writes it for a colour
+     * both emissive and on --team), full-bright and additive like {@link #glow}, multiplied by the owner's display
+     * colour - the same colour as the unit's outline and selection circle, so from the RTS camera the brightest thing
+     * on the body says whose it is. An unowned unit glows {@link #UNOWNED_LIGHT}. Draws only the glow parts.
+     */
+    public static <T extends LivingEntity, M extends EntityModel<T>> RenderLayer<T, M> teamGlow(
+            RenderLayerParent<T, M> parent, String name) {
+        RenderType type = MipRenderTypes.glow(mipmapped(name + "_team_glow"));
+        return new RenderLayer<>(parent) {
+            @Override
+            public void render(PoseStack pose, MultiBufferSource buffers, int light, T entity, float limbSwing,
+                               float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw,
+                               float headPitch) {
+                if (entity.isInvisible() || UnitLod.skipOverlay(entity))
+                    return;
+                int rgb = UNOWNED_LIGHT;
+                if (entity instanceof Unit unit && unit.getOwnerName() != null && !unit.getOwnerName().isBlank())
+                    rgb = PlayerColors.getPlayerDisplayColorHex(unit.getOwnerName());
+                float r = ((rgb >> 16) & 0xFF) / 255f, g = ((rgb >> 8) & 0xFF) / 255f, b = (rgb & 0xFF) / 255f;
+                M model = this.getParentModel();
+                SplitPasses split = model instanceof SplitPasses sp ? sp : null;
+                if (split != null)
+                    split.beginPass(split.glowParts());
+                try {
+                    model.renderToBuffer(pose, buffers.getBuffer(type), LightTexture.FULL_BRIGHT,
+                        OverlayTexture.NO_OVERLAY, r, g, b, 1f);
+                } finally {
+                    if (split != null)
+                        split.endPass(split.glowParts());
+                }
+            }
+        };
+    }
+
+    /** The light of a body with no owner (a neutral or a preview): a cool white. */
+    public static final int UNOWNED_LIGHT = 0xCFEFFF;
 
     public static boolean wantsDetail(Entity entity) {
         if (OrthoviewClientEvents.isEnabled())

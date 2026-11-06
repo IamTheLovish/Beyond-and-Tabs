@@ -33,6 +33,8 @@ BODIES = [
      "--plain-spec"),
     ("design/models/sunforged_dawn_paladin_v2.json", "DawnPaladinModel", "dawn_paladin_body_unit",
      "tabard,tabard_dark", "--plain-spec"),
+    # Nov 6: the Light Grid's Builder Drone (tools/gen_builder_drone.py); line_glow is a TEAM LIGHT (emissive + team)
+    ("design/models/lumen_builder_drone.json", "BuilderDroneModel", "builder_drone_unit", "team_paint,line_glow"),
 ]
 TEX = "bar/src/main/resources/assets/reignofnether/textures/entities/"
 JAVA = "bar/src/main/java/com/solegendary/reignofnether/unit/modelling/models/gen/"
@@ -65,7 +67,9 @@ def main(argv):
             raise SystemExit("export failed: " + texture)
         print(r.stdout.strip().splitlines()[0])
         if check:
-            for s in SUFFIXES:
+            # a team light's texture exists only on bodies that have one (tools/dsl_to_game.py team_glow)
+            for s in SUFFIXES + (("_team_glow",) if os.path.exists(os.path.join(ROOT, TEX + texture + "_team_glow.png"))
+                                 else ()):
                 if not same_pixels(TEX + texture + s + ".png"):
                     changed.append(texture + s + ".png")
             if subprocess.run(["git", "diff", "--quiet", "--", JAVA + cls + ".java"], cwd=ROOT).returncode != 0:

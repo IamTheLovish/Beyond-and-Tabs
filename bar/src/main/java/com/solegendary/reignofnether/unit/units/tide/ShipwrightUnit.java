@@ -55,7 +55,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Tidewrought constructor - the <b>Shipwright</b> (design/tidewrought_plan.md, slice 1). A corsair carpenter in a
+ * The Light Grid's T1 worker, the <b>Builder Drone</b> (design/ai_faction.md, PR 379: "hover constructor; draws grid
+ * patches"), converted in place from the Tidewrought Shipwright (lovish, Oct 29: "convert in place"; class, entity id
+ * and lang key keep the old name until the cleanup slice). Its body is the generated drone (BuilderDroneRenderer, the
+ * shared Hover rig, the team light lines); it carries the Light Grid's own tool, <b>Draw Grid</b> (RaiseTidepool, the
+ * Tide Priest's cast at the same price and cooldown), and sounds like a machine of light, not a man.
+ * <p>
+ * Was: the Tidewrought constructor - the <b>Shipwright</b> (design/tidewrought_plan.md, slice 1). A corsair carpenter in a
  * teal smock and brass-buckled apron on the illager body (VillagerUnitModel, its own skin from
  * tools/gen_tide_skins.py), with the shared worker plumbing: builds, repairs, reclaims (and drains tidepools - any
  * worker's reclaim order does). The first one a player starts with is tagged as the commander - the <b>Admiral</b> -
@@ -66,6 +72,13 @@ import java.util.List;
  */
 public class ShipwrightUnit extends Vindicator implements Unit, WorkerUnit, AttackerUnit, ArmSwingingUnit {
     public static final Abilities ABILITIES = new Abilities();
+    static {
+        // T, not Q: a worker's card also carries the faction's build menu, whose first tab takes Q W E R A S D
+        // (BuildGroup.SLOT_KEYS); the commander's runtime abilities then take the next free keys round it
+        // (CommanderServerEvents.addOnFreeKey)
+        ABILITIES.add(new com.solegendary.reignofnether.ability.abilities.RaiseTidepool(),
+            com.solegendary.reignofnether.keybinds.Keybindings.abilitySlot5);
+    }
     //region
     @Override
     public void updateAbilityButtons() {
@@ -241,17 +254,18 @@ public class ShipwrightUnit extends Vindicator implements Unit, WorkerUnit, Atta
                 .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
     }
 
+    // a machine of light: no voice at idle; glassy hits; it goes out like a switched-off beacon (the derez)
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.VILLAGER_AMBIENT;
+        return null;
     }
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.VILLAGER_DEATH;
+        return SoundEvents.BEACON_DEACTIVATE;
     }
     @Override
     protected SoundEvent getHurtSound(DamageSource p_34103_) {
-        return SoundEvents.VILLAGER_HURT;
+        return SoundEvents.AMETHYST_BLOCK_HIT;
     }
     @Override
     public boolean isLeftHanded() { return false; }

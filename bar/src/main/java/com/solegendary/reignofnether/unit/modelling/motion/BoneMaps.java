@@ -126,6 +126,8 @@ public final class BoneMaps {
                 return NONE;
             BoneMap m = new BoneMap(body == null ? 0f : body.y, true, true, !keyframes)
                 .set(Motion.BODY, body).set(Motion.HEAD, head);
+            if (!keyframes && model instanceof HoverBody hover)   // a drone: it drops and crashes (DeathFall#poseHover)
+                return m.fallsHovering(hover.hoverPx(), hover.hullHalfPx());
             ModelPart[] fall = keyframes ? null : humanRig(hm, head);
             if (fall == null)
                 return m;
