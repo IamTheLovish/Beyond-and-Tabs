@@ -25,5 +25,9 @@ You need: a Minecraft Java Edition account and the file BeyondAndTabs-test.mrpac
 6. Paste the address lovish sends you (it looks like something.e4mc.link) and click
    "Join Server".
 
+Graphics: the game starts with our own shader pack ON (realistic light and shadows, water).
+- Press K in game to turn it off or on (off = the plain Minecraft look, fastest).
+- Press O for its settings: Profile LOW for a weaker PC, MEDIUM (the default) or HIGH.
+
 If it says your mods do not match, ask lovish for the newest .mrpack - his game and
 yours must use the same version.
