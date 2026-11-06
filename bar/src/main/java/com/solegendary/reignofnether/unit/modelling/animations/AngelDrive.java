@@ -1,7 +1,7 @@
 package com.solegendary.reignofnether.unit.modelling.animations;
 
 /**
- * STUB until the green commit (no cues, no arrival). An angel's rig in play: one per unit on the client (AngelUnit.clientDrive, made on the first draw, gone with the
+ * An angel's rig in play: one per unit on the client (AngelUnit.clientDrive, made on the first draw, gone with the
  * entity). The renderer fills {@link #signals} from the unit and calls {@link #catchUp} with the entity's tickCount;
  * this steps {@link AngelRig} once per game tick (never per frame), keeps the last two poses, and {@link #blend} lerps
  * them by partialTick. Pure maths, like the rig: no Minecraft class here, so AngelDriveTest drives it without a game.
@@ -23,6 +23,7 @@ public final class AngelDrive {
 
     /** More ticks behind than this (off screen, a lag spike) and the drive starts over instead of catching up. */
     public static final int MAX_CATCH_UP = 40;
+    private static final long NONE = Long.MIN_VALUE;
 
     /** When a kind's contact comes, in ticks (the units' own numbers, handed in by the renderer). */
     public static final class Timing {
@@ -66,8 +67,9 @@ public final class AngelDrive {
     private final AngelRig.Inputs in = new AngelRig.Inputs();
     private AngelRig.Pose prev = new AngelRig.Pose(), cur = new AngelRig.Pose();
     private final AngelRig.Pose out = new AngelRig.Pose();
-    private boolean ready;
-    private int lastTick;
+    private boolean ready, swingingBefore;
+    private int lastTick, seenWindup, seenContact;
+    private long clock, contactAt = NONE, selfCueAt = NONE;
 
     public AngelDrive(AngelRig.Kind kind, long seed, Timing timing) {
         this.kind = kind;
@@ -90,6 +92,11 @@ public final class AngelDrive {
         return cur;
     }
 
+    /** The pose {@link #blend} wrote last (what is being drawn). */
+    public AngelRig.Pose blended() {
+        return out;
+    }
+
     /** The ticks until the predicted contact the last step fed the rig (-1 none due). */
     public int attackIn() {
         return in.attackIn;
@@ -106,13 +113,66 @@ public final class AngelDrive {
      * plays its arrival from its first tick.
      */
     public void catchUp(int tickCount) {
-        // STUB (tests first): no arrival, no cues, no prediction; the real drive lands with the green commit
-        if (st == null)
-            st = new AngelRig.State(kind, seed, false);
-        AngelRig.step(st, in, cur);
+        if (ready) {
+            int behind = tickCount - lastTick;
+            if (behind == 0)
+                return;
+            if (behind > 0 && behind <= MAX_CATCH_UP) {
+                for (int i = 0; i < behind; i++)
+                    tick();
+                lastTick = tickCount;
+                return;
+            }
+        }
+        boolean arrive = tickCount >= 0 && tickCount < AngelRig.ARRIVE_LEN;
+        st = new AngelRig.State(kind, seed, arrive);
+        seenWindup = signals.windupSeq;
+        seenContact = signals.contactSeq;
+        swingingBefore = signals.swinging;
+        contactAt = selfCueAt = NONE;
+        in.attackSeq = 0;
+        tick();
         prev.set(cur);
+        for (int i = 0; arrive && i < tickCount; i++)
+            tick();
         ready = true;
         lastTick = tickCount;
+    }
+
+    private void tick() {
+        AngelRig.Pose p = prev;
+        prev = cur;
+        cur = p;
+        clock++;
+        Signals s = signals;
+        if (s.contactSeq != seenContact) {
+            seenContact = s.contactSeq;
+            in.attackSeq++;
+            contactAt = s.engaged && timing.repeat > 0 ? clock + timing.repeat : NONE;
+        }
+        if (s.windupSeq != seenWindup) {
+            seenWindup = s.windupSeq;
+            if (timing.windupLead > 0)
+                contactAt = clock + timing.windupLead;
+        }
+        if (timing.swingLead > 0) {
+            if (s.swinging && !swingingBefore)
+                contactAt = selfCueAt = clock + timing.swingLead;
+            swingingBefore = s.swinging;
+            if (selfCueAt == clock) {                // the held blow lands: the contact cue, made here
+                in.attackSeq++;
+                selfCueAt = NONE;
+                contactAt = s.engaged && timing.repeat > 0 ? clock + timing.repeat : NONE;
+            }
+        }
+        if (contactAt != NONE && contactAt < clock)
+            contactAt = NONE;
+        in.attackIn = contactAt == NONE ? -1 : (int) Math.min(Integer.MAX_VALUE, contactAt - clock);
+        in.speed = s.speed;
+        in.yawRate = s.yawRate;
+        in.hurtTime = s.hurtTime;
+        in.dying = s.dying;
+        AngelRig.step(st, in, cur);
     }
 
     /** The pose for a frame {@code partial} of a tick after the newest step: the last two steps lerped (short way). */

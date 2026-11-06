@@ -55,7 +55,8 @@ public class SeraphArcherUnit extends AngelUnit implements AttackerUnit, RangedA
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.30f;
 
-    static final int ATTACK_WINDUP_TICKS = 4;
+    /** UnitRangedAttackGoal's wind-up: the release comes this many ticks less one after the wind-up cue. */
+    public static final int ATTACK_WINDUP_TICKS = 4;
 
     private UnitRangedAttackGoal<? extends LivingEntity> attackGoal;
     private BlockPos attackMoveTarget = null;
@@ -141,11 +142,18 @@ public class SeraphArcherUnit extends AngelUnit implements AttackerUnit, RangedA
             return false;
         // the seraph as both projectile and owner: the mixin takes getUnitAttackDamage and applies ranged armour
         boolean hurt = target.hurt(damageSources().mobProjectile(this, this), getUnitAttackDamage());
+        cueContact(target);                                   // the release: the client rig's contact
         Vec3 from = new Vec3(getX(), getY() + getBbHeight() * 0.6, getZ());
         Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
         BarFx.shot(sl, from, to, BarFx.K_ARROW, this);
         sl.playSound(null, blockPosition(), SoundEvents.ARROW_SHOOT, SoundSource.NEUTRAL, 0.8f, 1.5f);
         return hurt;
+    }
+
+    /** The draw starts (UnitRangedAttackGoal's first wind-up tick): the client rig's wind-up cue. */
+    @Override
+    public void onRangedWindup(LivingEntity target) {
+        cueWindup(target);
     }
 
     @Override

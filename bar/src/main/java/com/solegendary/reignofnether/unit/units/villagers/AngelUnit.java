@@ -10,6 +10,7 @@ import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.controls.FlyingUnitMoveControl;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.animations.AngelDrive;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -44,7 +45,7 @@ import java.util.UUID;
 
 /**
  * The Angel Caller's summons (CallAngel; lovish, Oct 29 2026): the Mender Angel, the Seraph Archer and the Sword
- * Seraph share this body - the vex's model drawn bright and tinted per kind by AngelRenderer until real angel art comes -
+ * Seraph share this class - each on its own generated body, animated by the client rig (AngelRenderer, AngelRig) -
  * and its rules:
  * <ul>
  *   <li>it flies on the bee's flight plumbing (FlyingMoveToTargetGoal, FlyingUnitMoveControl, no gravity: it hovers
@@ -149,6 +150,10 @@ public abstract class AngelUnit extends PathfinderMob implements Unit {
         this.entityData.define(contactCueDataAccessor, 0);
         this.entityData.define(cueTargetDataAccessor, -1);
     }
+
+    /** Client only: this unit's animation driver, made by AngelRenderer on the first draw (null on the server). */
+    @Nullable
+    public AngelDrive clientDrive;
 
     /** The wind-up cue counter (synced): steps when the archer's draw starts. */
     public int getWindupCue() { return this.entityData.get(windupCueDataAccessor); }

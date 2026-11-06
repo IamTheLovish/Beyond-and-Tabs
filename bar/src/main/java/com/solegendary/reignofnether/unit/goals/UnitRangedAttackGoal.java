@@ -149,6 +149,9 @@ public class UnitRangedAttackGoal<T extends net.minecraft.world.entity.Mob> exte
                 if (attackWindupTicksLeft == attackWindupTicksMax &&
                     mob instanceof KeyframeAnimated && !mob.level().isClientSide())
                     UnitAnimationClientboundPacket.sendBasicPacket(UnitAnimationAction.ATTACK_UNIT, mob);
+                if (attackWindupTicksLeft == attackWindupTicksMax && mob instanceof RangedAttackerUnit ranged
+                    && !mob.level().isClientSide())
+                    ranged.onRangedWindup(target);
 
                 attackWindupTicksLeft -= 1;
 
