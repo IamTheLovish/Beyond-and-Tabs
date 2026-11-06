@@ -82,8 +82,11 @@ public class ShipwrightUnit extends Vindicator implements Unit, WorkerUnit, Atta
     //region
     @Override
     public void updateAbilityButtons() {
-        abilities = Abilities.cloneKeepingExtras(ABILITIES, abilities);   // keeps a commander's runtime abilities
+        abilities = Abilities.cloneKeepingExtras(baseAbilities(), abilities);   // keeps a commander's runtime abilities
     }
+    /** The worker's own abilities: the Builder Drone's Draw Grid. A subclass worker (the Harbourmaster) gives its own
+     *  set - lovish's exception to "builders have no abilities" is the Light Grid drone only (Nov 6). */
+    protected Abilities baseAbilities() { return ABILITIES; }
     Object2ObjectArrayMap<Ability, Float> cooldowns = Unit.createCooldownMap();
     Object2ObjectArrayMap<Ability, Integer> charges = new Object2ObjectArrayMap<>();
     @Override public Object2ObjectArrayMap<Ability, Float> getAbilityCooldowns() { return cooldowns; }
@@ -197,7 +200,7 @@ public class ShipwrightUnit extends Vindicator implements Unit, WorkerUnit, Atta
     final static public float movementSpeed = 0.25f;
     public int maxResources = 100;
 
-    private Abilities abilities = ABILITIES.clone();
+    private Abilities abilities = baseAbilities().clone();
     private final List<ItemStack> items = new ArrayList<>();
 
     private boolean isSwingingArmOnce = false;
