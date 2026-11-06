@@ -138,6 +138,9 @@ ARM = {
 STRING_TIP = {"string_top": (9.7, 31.392, 1.115), "string_bot": (-1.928, -0.557, 1.115)}
 BOW_LONG, BOW_FACE = (0.342, 0.94, 0.0), (0.0, 0.0, -1.0)
 AIM = (0.0, -0.342, -0.94)               # the archer's shot: -20 deg below the facing
+SWORD_CUT = [(7, 0.0), (8, 0.15), (9, 0.40), (10, 0.63), (11, 0.81), (12, 0.93)]   # the cut: (tick, share of
+#   the arc); the guard is reached 2 ticks before the first (held), contact stays t10. m3: spread over 5 ticks (was
+#   8-12, 0.25 / 0.53 / 0.79 / 0.95): the blade turned 49 deg/tick in the world with the torso twist; now <= 43
 SWORD_BLADE = (-0.16, 0.766, 0.643)     # the blade (pommel -> tip) in the sword bone's rest space (b2: 40 back)
 # the Mender's column robe: robe panels hang from y 16.8 (pivot offsets from the skirt centre C), the hem 7.15 lower
 SKIRT = {"robe_front": (0.0, 0.0, -2.15), "robe_back": (0.0, 0.0, 1.85), "robe_left": (2.8, 0.0, -0.15),
@@ -550,14 +553,14 @@ def attack_tracks(kind, t, variant):
                 if s_ <= fr[n_ + 1] or n_ == len(fr) - 2:
                     u = clamp((s_ - fr[n_]) / (fr[n_ + 1] - fr[n_]), 0.0, 1.0)
                     return tuple(lerp(seq[n_][i], seq[n_ + 1][i], u) for i in range(3))
-        S_ = [(8, 0.0), (9, 0.25), (10, 0.53), (11, 0.79), (12, 0.95)]
+        S_ = SWORD_CUT
         over = unit(tuple(dirs[3][i] + 0.22 * (dirs[3][i] - dirs[2][i]) for i in range(3)))
         D0 = mv(rmat(SWORD_CARRY), SWORD_BLADE)
-        o["ik_r"] = vkeys(t, [(0, R0), (6, pts[0]), (8, pts[0])] + [(tk, along(pts, sv)) for tk, sv in S_[1:]] +
+        o["ik_r"] = vkeys(t, [(0, R0), (S_[0][0] - 2, pts[0])] + [(tk, along(pts, sv)) for tk, sv in S_] +
                           [(13, pts[3]), (16, pts[3]), (20, (-3.0, 20.5, -8.0)), (25, R0)])
-        o["blade"] = unit(vkeys(t, [(0, D0), (6, dirs[0]), (8, dirs[0])] +
-                                [(tk, unit(along(dirs, sv))) for tk, sv in S_[1:4]] +
-                                [(12, unit(along(dirs, 0.95))), (13, over), (14, dirs[3]), (16, dirs[3]), (20, (0.0, 0.3, -0.95)),
+        o["blade"] = unit(vkeys(t, [(0, D0), (S_[0][0] - 2, dirs[0])] +
+                                [(tk, unit(along(dirs, sv))) for tk, sv in S_] +
+                                [(13, over), (14, dirs[3]), (16, dirs[3]), (20, (0.0, 0.3, -0.95)),
                                  (25, D0)]))
         o["pole_r"] = vkeys(t, [(0, eR), (6, (-1.0, -0.5, 0.4)), (20, (-1.0, -0.5, 0.4)), (25, eR)])
         hd = unit(dirs[0])
