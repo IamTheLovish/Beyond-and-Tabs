@@ -50,9 +50,14 @@ HOVER_T = {"mender": 30.0, "archer": 26.0, "sword": 34.0}    # sheet 3.2: hover 
 FLY_T = {"mender": 22.0, "archer": 20.0, "sword": 24.0}      # sheet 3.3: fly beat
 BOB = {"mender": 1.2, "archer": 1.5, "sword": 2.0}           # px, hover bob (half the travel)
 FLY_PITCH = {"mender": -35.0, "archer": -35.0, "sword": -42.0}
-EVENT = {"mender": 10, "archer": 14, "sword": 10}           # the attack clip's contact tick
+EVENT = {"mender": 10, "archer": 16, "sword": 10}           # the attack clip's contact tick (archer: m2 hold to 16)
+STROKE = {"mender": (10, 5), "archer": (16, 5), "sword": (9, 4)}   # the attack's own downstroke (start tick, ticks)
 ATTACK_LEN = {"mender": 24, "archer": 33, "sword": 25}
-HIT_LEN, ARRIVE_LEN, DEATH_LEN = 8, 30, 20
+HIT_LEN, ARRIVE_LEN, DEATH_LEN = 10, 30, 20
+SUPINATE = -15.0          # m2: the upstroke (and the death's fold) turns the outer wing about its span (the fore's
+#                           rx) so the flights never show the RTS / quarter camera a pure down face (Minecraft lights a
+#                           down face 0.4: brown). b4's chord already rises 20 to the trailing edge; a sweep of the lit
+#                           share of the wing faces over hover / death / arrive picked -15 (trailing edge down)
 # sheet 3.1: arm elevation at the top / bottom. The sheet's +50 top is cut per kind by the b2 halo: a higher top
 # lifts the inner wing (the elbow, 6 px out) through the ring's side (archer / sword: OD 10.5 at y +5.8 over the
 # head pivot) or the Mender's low disc (9 px, its rim beside the crown)
@@ -74,10 +79,11 @@ BREATH_BEATS = 4                                             # the breath: one p
 GLANCE_MIN, GLANCE_MAX = 3, 5                                # beats between head glances (seeded)
 GLANCE_YAW = 18.0
 # springs (k, c): cloth, hem (one more link), feather tips, halo, legs, lantern pendulum, hit kick
-K_CLOTH, C_CLOTH = 0.16, 0.42
-K_HEM, C_HEM = 0.16, 0.42
-K_TIPS, C_TIPS = 0.35, 0.45
-K_HALO, C_HALO = 0.30, 0.55
+K_CLOTH, C_CLOTH = 0.15, 0.30          # m2: lags ~2 ticks with an overshoot
+K_HEM, C_HEM = 0.15, 0.30
+K_TIPS, C_TIPS = 0.25, 0.32            # m2: the tips trail the hand 1-2 ticks and settle
+K_HALO, C_HALO = 0.45, 0.50            # m2: 1-2 ticks behind the head, a small settle
+K_LANT, C_LANT = 0.10, 0.10            # m2: the lantern's own swing on the chain (a second pendulum link)
 K_LEG, C_LEG = 0.14, 0.40
 K_PEND, C_PEND = (2.0 * math.pi / 24.0) ** 2, 0.06            # sheet: lantern period 24 ticks
 # rest rotations (tools/gen_angels.py b2 == b4) of the bones posed in a parent frame, and the offsets that move
@@ -86,6 +92,7 @@ REST = {
                "right_fore": (36.0, 0.0, 0.0), "chain": (-74.94, -38.49, -21.767), "halo": (35.0, 0.0, 0.0)},
     "archer": {"left_arm": (18.0, -8.0, 14.0), "left_fore": (56.0, 0.0, 0.0), "right_arm": (4.0, 6.0, 0.0),
                "right_fore": (54.0, 0.0, 0.0), "bow": (-73.84, -11.264, -11.557), "halo": (25.0, 0.0, 0.0),
+               "string_top": (0.0, 0.0, -20.0), "string_bot": (0.0, 0.0, 160.0), "arrow": (-58.141, -3.175, 5.094),
                "tabard_front": (6.0, 0.0, 0.0), "tabard_back": (-6.0, 0.0, 0.0), "left_thigh": (-14.0, 0.0, 0.0),
                "right_thigh": (-14.0, 0.0, 0.0), "left_shin": (-12.0, 0.0, 0.0), "right_shin": (-12.0, 0.0, 0.0)},
     "sword": {"left_arm": (10.0, 8.0, 14.0), "left_fore": (70.0, 0.0, 0.0), "right_arm": (-8.0, 2.0, -18.0),
@@ -94,11 +101,9 @@ REST = {
               "tabard_front": (6.0, 0.0, 0.0), "tabard_back": (-6.0, 0.0, 0.0), "left_thigh": (-14.0, 0.0, 0.0),
               "right_thigh": (-14.0, 0.0, 0.0), "left_shin": (-12.0, 0.0, 0.0), "right_shin": (-12.0, 0.0, 0.0)},
 }
-HALO_PITCH = 0.3        # the halo takes this share of the head's pitch and roll (all of its yaw): a full share drops
-#                         the b2 ring onto the wing roots when the flying head counter-pitches 20-25 deg
-HALO_FLAME_DY = {"mender": 11.0, "archer": 6.0, "sword": 6.0}   # px the halo floats up while the wings stand in the
-#                         flame (death, arrival) to clear the V (the Mender's low 9 px disc has to rise over the hands)
-HALO_LIFT = 2.4         # px the halo floats up in full flight (the counter-pitched head's crown clears it)
+HALO_PITCH = 1.0        # m2: the halo rides the head in full (its motion parented to the head, 1-2 ticks late)
+HEAD_COUNTER = 0.35     # the flying head counter-pitches this share of the body's pitch (m1 0.7: with the halo on
+#                         the head, 0.7 tipped the ring onto the wing roots)
 SWORD_CARRY = (-30.0, 0.0, 10.0)   # body-frame tilt of the resting blade about the grip: upright before the shoulder,
 #                                    clear of the right wing's stroke (b2 rests it 40 deg back, inside the stroke)
 HALO_OFF = {"mender": (0.0, 3.576, 4.914), "archer": (0.0, 5.8, 4.514), "sword": (0.0, 5.8, 4.514)}  # halo - head
@@ -112,6 +117,11 @@ ARM = {
     "sword": {"l": ((4.5, 26.524, 0.0), (4.5, 20.924, 0.0), (4.975, 14.11, -0.152)),
               "r": ((-4.5, 26.524, 0.0), (-4.5, 20.924, 0.0), (-4.232, 16.052, -1.255))},
 }
+# b4 archer (tools/gen_angels.py bow_string_b4): the string halves' pivots (the bow tips, model px) and the bow's
+# rest long axis / belly direction in the body frame (its world rotation at rest is the identity)
+STRING_TIP = {"string_top": (9.7, 31.392, 1.115), "string_bot": (-1.928, -0.557, 1.115)}
+BOW_LONG, BOW_FACE = (0.342, 0.94, 0.0), (0.0, 0.0, -1.0)
+AIM = (0.0, -0.342, -0.94)               # the archer's shot: -20 deg below the facing
 SWORD_BLADE = (-0.16, 0.766, 0.643)     # the blade (pommel -> tip) in the sword bone's rest space (b2: 40 back)
 # the Mender's column robe: robe panels hang from y 16.8 (pivot offsets from the skirt centre C), the hem 7.15 lower
 SKIRT = {"robe_front": (0.0, 0.0, -2.15), "robe_back": (0.0, 0.0, 1.85), "robe_left": (2.8, 0.0, -0.15),
@@ -276,13 +286,17 @@ def wing_cycle(k, p, B, amp, sweep_amp, droop=0.0, fold_extra=0.0, amp_up=None, 
         return mid + (au if v > 0.0 else amp) * v
     ea, ef, eh = e(p), e(p - LAG_FORE / B), e(p - LAG_HAND / B)
     sweep = sweep_amp * (1.0 - 11.0 * math.cos(2.0 * math.pi * warp(p)))
-    return {"arm": (ea + droop, sweep), "fore": (ef - ea, fold_k * FOLD_FORE[k] * fold0(p - 1.5 / B)),
+    return {"arm": (ea + droop, sweep), "sup": SUPINATE * fold0(p - 1.0 / B),
+            "fore": (ef - ea, fold_k * FOLD_FORE[k] * fold0(p - 1.5 / B)),
             "hand": (eh - ef, fold_k * FOLD_HAND[k] * fold0(p) + fold_extra),
             "tips_fold": fold_k * FOLD_TIPS * fold0(p - 2.0 / B)}
 
 
 # the death / arrival "flame": wings swept back and raised so the hands close over (behind) the halo
-FLAME = {"arm": (55.0, -25.0), "fore": (15.0, -10.0), "hand": (15.0, -10.0), "tips_fold": 0.0}
+FLAME = {"arm": (30.0, -10.0), "fore": (15.0, 10.0), "hand": (15.0, 5.0), "tips_fold": 5.0}
+# m2: the death's wings fold UP and back (raised 30, swept back 10, the elbow and wrist folded behind) with the halo
+# kept on the head; m1's tall V (55 up, hands curling in) only cleared the halo with a 6-11 px lift off the head,
+# and a higher fold (38 up, 30 back) crossed the two wings' tips behind the back (2.5-3 px in a contact sweep)
 # (a contact sweep over raised poses: higher, or the hands closing to meet, runs the inner wings through the b2 halo
 #  or through each other - the flame is a tall V whose hands curl in, the tips 8-12 px apart over the halo)
 
@@ -440,106 +454,147 @@ def attack_tracks(kind, t, variant):
         o["wing_w"] = keys(t, [(0, 0.0), (6, 1.0), (16, 1.0), (24, 0.0)])
         o["cup"] = keys(t, [(0, 0.0), (6, 8.0), (9, 8.0), (11, 0.0)])
     elif kind == "archer":
-        # 0-5 nock (the right hand to the quiver and back), 5-11 draw (bow arm out at the target, string hand to the
-        # chin), 11-13 anchor HOLD, 14 release (the string hand flies back, the bow arm recoils), 15-20 follow, 20-33
+        # m2: 0-4 the draw hand comes up to the string (the arrow appears on it at t3), 4-12 the draw (the bow arm
+        # pushes out to the aim, -20 deg below the facing; the string hand pulls to the cheek; the body turns side-on
+        # 35), 12-16 HOLD, 16 release in ONE tick (the string snaps, the hand flies back), 16-18 the limbs recoil,
+        # 18-26 return (the hand passes the quiver at 23: the next arrow), 26-33 settle
         L0, _ = rest_hand(kind, "l")
         R0, _ = rest_hand(kind, "r")
-        o["body_dz"] = keys(t, [(0, 0.0), (14, 0.0), (20, 1.0), (33, 0.0)])
-        o["body_ry"] = keys(t, [(0, 0.0), (5, 0.0), (11, 18.0), (14, 18.0), (20, 14.0), (33, 0.0)])   # side-on
-        o["head_ry"] = keys(t, [(0, 0.0), (5, 0.0), (11, -18.0), (14, -18.0), (20, -14.0), (33, 0.0)])
-        o["ik_l"] = vkeys(t, [(0, L0), (6, (5.6, 24.0, -7.8)), (11, (7.4, 26.0, -10.0)), (13, (7.4, 26.0, -10.0)),
-                              (14, (7.5, 26.0, -10.6)), (16, (7.4, 25.8, -10.3)), (20, (7.4, 25.6, -10.0)),
-                              (33, L0)])
-        o["ik_r"] = vkeys(t, [(0, R0), (1.2, (-6.4, 19.5, -1.5)), (2.5, (-5.6, 19.8, 2.6)), (4, (-6.2, 22.5, -2.0)),
-                              (5, (-2.0, 23.8, -6.8)), (6, (3.4, 24.6, -7.8)), (11, (-1.2, 26.4, -3.9)),
-                              (13, (-1.2, 26.4, -3.9)), (14, (-3.0, 27.0, -3.0)), (16, (-3.4, 26.6, -3.0)),
-                              (20, (-4.4, 24.0, -3.4)), (33, R0)])
         _, eL = rest_hand(kind, "l")
         _, eR = rest_hand(kind, "r")
-        o["pole_l"] = vkeys(t, [(0, eL), (5, (1.0, -0.4, 0.3)), (20, (1.0, -0.4, 0.3)), (33, eL)])
-        o["pole_r"] = vkeys(t, [(0, eR), (2, (-1.0, -0.4, 0.3)), (4, (-1.0, -0.6, 0.2)), (6, (-0.5, -1.0, 0.1)),
-                                (11, (-1.0, 0.1, 0.6)), (20, (-1.0, 0.0, 0.4)), (33, eR)])
-        o["bow"] = keys(t, [(0, 0.0), (11, 1.0), (20, 1.0), (33, 0.0)])     # 0 rest .. 1 the bow upright, aimed
-        o["amp_up"] = keys(t, [(0, 1.0), (5, 1.0), (11, 0.4), (22, 0.4), (30, 1.0)])   # aim: half-open, held
-        o["wing_w"] = keys(t, [(0, 0.0), (8, 1.0), (13, 1.0), (14, 0.0)])
+        tw = keys(t, [(0, 0.0), (4, 10.0), (12, 35.0), (16, 35.0), (18, 32.0), (26, 8.0), (33, 0.0)])
+        o["body_ry"], o["head_ry"] = tw, -tw
+        o["body_dz"] = keys(t, [(0, 0.0), (16, 0.0), (18, 0.8), (26, 0.2), (33, 0.0)])
+        d35 = mv(rmat((0.0, -35.0, 0.0)), AIM)
+        cheek = (-1.6, 26.6, -3.4)
+        g12 = tuple(cheek[i] + 8.4 * d35[i] for i in range(3))
+        o["ik_l"] = vkeys(t, [(0, L0), (4, (5.6, 23.5, -7.6)), (12, g12), (16, g12),
+                              (17, tuple(g12[i] + 0.3 * d35[i] for i in range(3))), (18, g12),
+                              (26, (5.8, 22.4, -8.2)), (33, L0)])
+        o["ik_r"] = vkeys(t, [(0, R0), (4, (4.4, 24.0, -5.8)), (12, cheek), (16, cheek), (17, (-3.0, 28.0, -4.4)),
+                              (18, (-3.2, 28.0, -4.6)), (21, (-5.0, 25.0, -3.0)), (24, (-5.6, 22.6, 1.2)), (33, R0)])
+        o["pole_l"] = vkeys(t, [(0, eL), (4, (1.0, -0.5, 0.2)), (26, (1.0, -0.5, 0.2)), (33, eL)])
+        o["pole_r"] = vkeys(t, [(0, eR), (4, (-0.6, -1.0, 0.3)), (12, (-1.0, 0.15, 0.6)), (18, (-1.0, 0.1, 0.5)),
+                                (24, (-1.0, -0.3, 0.2)), (33, eR)])
+        o["aim"] = mv(rmat((0.0, -tw, 0.0)), AIM)                       # the shot in the body frame
+        o["bow"] = keys(t, [(0, 0.0), (4, 0.25), (12, 1.0), (18, 1.0), (26, 0.15), (33, 0.0)])
+        o["recoil"] = keys(t, [(0, 0.0), (16, 0.0), (17, 1.0), (18, 0.0)])
+        o["string"] = keys(t, [(0, 0.0), (3.9, 0.0), (4.6, 1.0), (16, 1.0), (17, -0.12), (18, 0.05), (19, 0.0)])
+        o["arrow"] = 3 <= t <= 15
+        o["amp_up"] = keys(t, [(0, 1.0), (4, 1.0), (12, 0.4), (20, 0.4), (30, 1.0)])   # aim: half-open, held
+        o["wing_w"] = keys(t, [(0, 0.0), (8, 1.0), (16, 1.0)])
         o["cup"] = 0.0
     else:
-        # 0-6 wind-up (the blade raised high over the right shoulder, the shield forward, the body coils), 6-8 HOLD,
-        # 8-11 the diagonal cut right-high to left-low in front, 10 impact, 11-16 follow-through past the left hip
-        # (the shield swung clear), 16-25 recover in front. Variant 1 (every 3rd cut): the rising backhand, the path
-        # run the other way.
+        # m2: 0-6 wind-up (the blade raised high over the right shoulder, the shield forward, the body coils), 6-8
+        # HOLD, 8-12 the diagonal cut right-high to left-low broken over 4 ticks (~28 / 58 / 86 / 100% of the arc;
+        # the torso's twist 1 tick ahead), 10 impact, 12-13 the blade overshoots ~10 deg, 12-16 hold past the left
+        # hip (the shield swung clear), 16-25 recover in front. Variant 1 (every 3rd cut): the rising backhand.
         R0, _ = rest_hand(kind, "r")
-        high, high_d = (-8.0, 30.0, -2.5), (-0.3, 0.93, 0.1)
-        mid, mid_d = (-3.0, 24.5, -8.8), (-0.05, 0.45, -0.9)
-        hit, hit_d = (-0.8, 21.8, -8.2), (0.4, -0.1, -0.9)
-        low, low_d = (0.5, 20.5, -6.5), (0.5, -0.8, -0.35)
-        if variant == 1:
-            high, high_d, low, low_d = low, low_d, high, high_d
-            mid, mid_d = (-1.5, 23.0, -9.0), (0.1, 0.4, -0.9)
-        D0 = mv(rmat(SWORD_CARRY), SWORD_BLADE)
-        o["ik_r"] = vkeys(t, [(0, R0), (6, high), (8, high), (9, mid), (10, hit), (11, low), (14, low),
-                              (16, low), (20, (-3.0, 20.5, -8.0)), (25, R0)])
-        o["blade"] = unit(vkeys(t, [(0, D0), (6, high_d), (8, high_d), (9, mid_d), (10, hit_d), (11, low_d),
-                                    (14, low_d), (16, low_d), (20, (0.0, 0.3, -0.95)), (25, D0)]))
         _, eR = rest_hand(kind, "r")
+        pts = [(-8.0, 30.0, -2.5), (-3.0, 24.5, -8.8), (-0.8, 21.8, -8.2), (0.5, 20.5, -6.5)]
+        dirs = [(-0.3, 0.93, 0.1), (-0.05, 0.45, -0.9), (0.4, -0.1, -0.9), (0.5, -0.8, -0.35)]
+        if variant == 1:
+            pts, dirs = pts[::-1], dirs[::-1]
+            pts[1], dirs[1] = (-1.5, 23.0, -9.0), (0.1, 0.4, -0.9)
+        cum = [0.0]
+        for a, b in zip(pts, pts[1:]):
+            cum.append(cum[-1] + math.sqrt(sum((b[i] - a[i]) ** 2 for i in range(3))))
+        fr = [c / cum[-1] for c in cum]
+
+        def along(seq, s_):
+            for n_ in range(len(fr) - 1):
+                if s_ <= fr[n_ + 1] or n_ == len(fr) - 2:
+                    u = clamp((s_ - fr[n_]) / (fr[n_ + 1] - fr[n_]), 0.0, 1.0)
+                    return tuple(lerp(seq[n_][i], seq[n_ + 1][i], u) for i in range(3))
+        S_ = [(8, 0.0), (9, 0.25), (10, 0.53), (11, 0.79), (12, 0.95)]
+        over = unit(tuple(dirs[3][i] + 0.22 * (dirs[3][i] - dirs[2][i]) for i in range(3)))
+        D0 = mv(rmat(SWORD_CARRY), SWORD_BLADE)
+        o["ik_r"] = vkeys(t, [(0, R0), (6, pts[0]), (8, pts[0])] + [(tk, along(pts, sv)) for tk, sv in S_[1:]] +
+                          [(13, pts[3]), (16, pts[3]), (20, (-3.0, 20.5, -8.0)), (25, R0)])
+        o["blade"] = unit(vkeys(t, [(0, D0), (6, dirs[0]), (8, dirs[0])] +
+                                [(tk, unit(along(dirs, sv))) for tk, sv in S_[1:4]] +
+                                [(12, unit(along(dirs, 0.95))), (13, over), (14, dirs[3]), (16, dirs[3]), (20, (0.0, 0.3, -0.95)),
+                                 (25, D0)]))
         o["pole_r"] = vkeys(t, [(0, eR), (6, (-1.0, -0.5, 0.4)), (20, (-1.0, -0.5, 0.4)), (25, eR)])
+        hd = unit(dirs[0])
+        o["plane"] = (hd, unit(cross(hd, unit(dirs[1]))))
         sgn = 1.0 if variant == 0 else -1.0
-        o["body_rx"] = keys(t, [(0, 0.0), (6, 10.0), (8, 10.0), (10, -10.0), (12, -12.0), (16, -6.0), (25, 0.0)])
-        o["body_ry"] = sgn * keys(t, [(0, 0.0), (6, 15.0), (8, 15.0), (10, -22.0), (12, -25.0), (16, -16.0),
-                                      (25, 0.0)])
-        o["body_dz"] = keys(t, [(0, 0.0), (8, 0.0), (11, -3.0), (16, -2.0), (25, 0.0)])
-        o["body_dy"] = keys(t, [(0, 0.0), (6, 0.6), (8, 0.6), (11, -2.0), (16, -1.2), (25, 0.0)])
+        o["body_rx"] = keys(t, [(0, 0.0), (6, 10.0), (8, 10.0), (10, -6.0), (12, -12.0), (16, -6.0), (25, 0.0)])
+        o["body_ry"] = sgn * keys(t, [(0, 0.0), (6, 15.0), (8, 15.0), (9, 2.0), (10, -16.0), (11, -25.0),
+                                      (14, -25.0), (16, -16.0), (25, 0.0)])
+        o["body_dz"] = keys(t, [(0, 0.0), (8, 0.0), (10, -1.5), (12, -3.0), (16, -2.0), (25, 0.0)])
+        o["body_dy"] = keys(t, [(0, 0.0), (6, 0.6), (8, 0.6), (10, -0.8), (12, -2.0), (16, -1.2), (25, 0.0)])
         o["head_ry"] = -0.6 * o["body_ry"]
-        o["la"] = (keys(t, [(0, 0.0), (6, 26.0), (8, 26.0), (10, 6.0), (16, 6.0), (25, 0.0)]),
+        o["la"] = (keys(t, [(0, 0.0), (6, 26.0), (8, 26.0), (11, 6.0), (16, 6.0), (25, 0.0)]),
                    keys(t, [(0, 0.0), (6, -10.0), (8, -10.0), (25, 0.0)]),
-                   keys(t, [(0, 0.0), (6, 4.0), (8, 4.0), (10, 34.0), (16, 30.0), (25, 0.0)]))
-        o["wing_w"] = keys(t, [(0, 0.0), (6, 1.0), (14, 1.0), (25, 0.0)])
+                   keys(t, [(0, 0.0), (6, 4.0), (8, 4.0), (11, 34.0), (16, 30.0), (25, 0.0)]))
+        o["wing_w"] = keys(t, [(0, 0.0), (6, 1.0), (9, 1.0)])
         o["cup"] = keys(t, [(0, 0.0), (6, 8.0), (8, 8.0), (10, 0.0)])
     return o
 
 
 def arrive_tracks(k, t):
+    """m2: a real descent from 24 px up, braking (fast at first, slowing into the hover point by 20) on wings flared
+    as air brakes, the body leaning back and the legs reaching for the ground; the light fades off 2-12 (the
+    texture back by 12); 18-24 one great downstroke bobs it up 1.5 px, 24-30 it settles on the hover."""
     o = {}
-    o["dy"] = 24.0 * (1.0 - smooth(t / 18.0)) + keys(t, [(0, 0.0), (18, 0.0), (22, 2.0), (30, 0.0)])
-    o["scale"] = 0.7 + 0.3 * smooth(t / 14.0)
-    o["white"] = 1.0 - smooth((t - 12.0) / 6.0)
-    o["halo_dy"] = HALO_FLAME_DY[k] * (1.0 - smooth((t - 22.0) / 8.0))     # over the flame; settles last (24-30)
-    o["alpha"] = smooth(t / 8.0)
-    o["head_rx"] = keys(t, [(0, -10.0), (24, -10.0), (30, 0.0)])
+    u = clamp(t / 20.0, 0.0, 1.0)
+    o["dy"] = 24.0 * (1.0 - u) * (1.0 - u) + keys(t, [(0, 0.0), (19, 0.0), (23, 1.5), (30, 0.0)])
+    o["scale"] = 0.85 + 0.15 * smooth(t / 10.0)
+    o["white"] = 1.0 - smooth((t - 2.0) / 10.0)
+    o["alpha"] = smooth(t / 6.0)
+    o["body_rx"] = keys(t, [(0, 0.0), (8, 6.0), (16, 14.0), (22, 4.0), (30, 0.0)])
+    o["head_rx"] = keys(t, [(0, -6.0), (20, -10.0), (30, 0.0)])
+    o["legs"] = keys(t, [(0, 0.0), (8, 0.3), (16, 1.0), (22, 1.0), (30, 0.0)])
     return o
 
 
-def arrive_wing(k, t):
-    """The arrival's wings: the flame (closed up over the halo) to 16, lift 5 and HOLD 2, one great downstroke
-    (x1.4) 18-24, the upstroke 24-30 ending on the hover's top hold (phase 0)."""
+AIRBRAKE = {"arm": (22.0, 12.0), "fore": (0.0, -10.0), "hand": (6.0, -16.0)}
+
+
+def arrive_wing(k, t, B=30.0):
+    """m2: the arrival's wings flared forward as air brakes (spread, swept 22 forward, the hands cupped) with a small
+    flutter to 16, lift 5 and HOLD 2, one great downstroke (x1.4) 18-24, the upstroke 24-30 ending on the hover's top
+    hold (phase 0)."""
     if t <= 18:
         lift = keys(t, [(0, 0.0), (16, 0.0), (17, 5.0), (18, 5.0)])
-        return {"arm": (FLAME["arm"][0] + lift, FLAME["arm"][1]), "fore": FLAME["fore"], "hand": FLAME["hand"],
-                "tips_fold": 0.0}
+        fl = 3.0 * math.sin(2.0 * math.pi * t / 8.0) * (1.0 - smooth((t - 12.0) / 4.0))
+        return {"arm": (AIRBRAKE["arm"][0] + lift + fl, AIRBRAKE["arm"][1]), "fore": AIRBRAKE["fore"],
+                "hand": (AIRBRAKE["hand"][0] - fl, AIRBRAKE["hand"][1]), "tips_fold": 0.0, "sup": 0.0}
     if t <= 24:
         u = (t - 18) / 6.0
+        top = AIRBRAKE["arm"][0] + 5.0
         bottom = 0.5 * (UP[k] + DN) + 1.4 * (DN - 0.5 * (UP[k] + DN))
-        e = lambda v: (FLAME["arm"][0] + 5.0) + (bottom - FLAME["arm"][0] - 5.0) * v * v * (2.2 - 1.2 * v)  # noqa
-        ea, ef, eh = e(u), e(max(0.0, u - 0.25)), e(max(0.0, u - 0.4))
+        e = lambda v: top + (bottom - top) * v * v * (2.2 - 1.2 * v)  # noqa: E731
+        ea, ef, eh = e(u), e(max(0.0, u - 1.0 / 6.0)), e(max(0.0, u - 2.0 / 6.0))
         op = smooth(u / 0.5)
-        return {"arm": (ea, FLAME["arm"][1] * (1.0 - op)), "fore": (ef - ea, FLAME["fore"][1] * (1.0 - op)),
-                "hand": (eh - ef, FLAME["hand"][1] * (1.0 - op)), "tips_fold": 0.0}
-    q = BOTTOM1 + (1.0 - BOTTOM1) * (t - 24) / 6.0                   # the cycle's upstroke, 6 ticks
-    return wing_cycle(k, q, 15.0, 1.0, 0.0, fold_k=0.5)
+        return {"arm": (ea, AIRBRAKE["arm"][1] * (1.0 - op)), "fore": (ef - ea, AIRBRAKE["fore"][1] * (1.0 - op)),
+                "hand": (eh - ef + AIRBRAKE["hand"][0] * (1.0 - op), AIRBRAKE["hand"][1] * (1.0 - op)),
+                "tips_fold": 0.0, "sup": 0.0}
+    # 24-30: from the bottom of the great stroke into the hover's own pose, phase-matched (the state hands over at
+    # phase 0 on tick 30), blended over the 6 ticks
+    wa = arrive_wing(k, 24, B)
+    wb = wing_cycle(k, (t - 29.0) / B, B, 1.0, 1.0)
+    u = smooth((t - 24) / 6.0)
+    out = {n: tuple(lerp(wa[n][i], wb[n][i], u) for i in range(2)) for n in ("arm", "fore", "hand")}
+    out["tips_fold"] = lerp(wa["tips_fold"], wb["tips_fold"], u)
+    out["sup"] = lerp(wa.get("sup", 0.0), wb["sup"], u)
+    return out
 
 
 def death_tracks(k, t):
+    """m2: back to the light - the head droops 0-3 then lifts, the arms open, the wings fold UP and back over 6 ticks
+    (FLAME), the body lifts 8 px (2-16) as it turns to light (4-14) and fades (8-20); the halo stays on the head and
+    fades last (14-20)."""
     o = {}
-    o["dy"] = 8.0 * smooth((t - 4.0) / 12.0)
-    o["stretch"] = 1.0 + 0.1 * smooth((t - 4.0) / 12.0)
-    o["white"] = smooth((t - 4.0) / 12.0)
+    o["dy"] = 8.0 * smooth((t - 2.0) / 14.0)
+    o["stretch"] = 1.0 + 0.06 * smooth((t - 4.0) / 12.0)
+    o["white"] = smooth((t - 4.0) / 10.0)
     o["alpha"] = 1.0 - smooth((t - 8.0) / 12.0)
-    o["halo_scale"] = 1.0 + 0.6 * smooth((t - 10.0) / 10.0)
-    o["halo_dy"] = HALO_FLAME_DY[k] * smooth(t / 4.0) + 6.0 * smooth((t - 10.0) / 10.0)   # it rises out with the light
-    o["halo_alpha"] = 1.0 - smooth((t - 12.0) / 8.0)
-    o["head_rx"] = keys(t, [(0, 0.0), (4, 15.0)])
-    o["arms_open"] = keys(t, [(0, 0.0), (4, 1.0)])
-    o["wing_w"] = keys(t, [(0, 0.0), (4, 1.0)])
+    o["halo_alpha"] = 1.0 - smooth((t - 14.0) / 6.0)
+    o["head_rx"] = keys(t, [(0, 0.0), (3, -12.0), (8, -4.0), (14, 8.0), (20, 10.0)])
+    o["arms_open"] = keys(t, [(0, 0.0), (5, 1.0)])
+    o["wing_w"] = keys(t, [(0, 0.0), (6, 1.0)])
     return o
 
 
@@ -598,12 +653,15 @@ def step(st, inp):
     # -- clip clocks ------------------------------------------------------------------------------------------------
     at = st.attack_t
     A = attack_tracks(k, at, st.variant) if at >= 0 else None
-    if A is not None and at == EVENT[k]:
-        # the event: the scripted stroke (top hold to here) hands over to the cycle at the downstroke's start
-        st.phase, st.glide = DOWN0, 0
+    s0, sl = STROKE[k]
+    if A is not None and at == s0 + sl:
+        # the attack's own downstroke (s0 .. s0 + sl) hands the wings back to the cycle at the bottom
+        st.phase, st.glide = BOTTOM1, 0
         p = st.phase
     hit = st.hit_t
-    hk = keys(hit, [(0, 0.0), (2, 1.0), (5, 0.35), (8, 0.0)]) if hit >= 0 else 0.0
+    # m2 hit react: back 20 by t2, held, recovering t4-t10 through a 5 deg overshoot at t6
+    HK = [(0, 0.0), (2, 1.0), (4, 0.9), (6, -0.25), (10, 0.0)]
+    hk = keys(hit, HK) if hit >= 0 else 0.0
     Ar = arrive_tracks(k, st.arrive_t) if st.arrive_t >= 0 else None
     D = death_tracks(k, st.death_t) if st.death_t >= 0 else None
     # -- body -------------------------------------------------------------------------------------------------------
@@ -620,7 +678,7 @@ def step(st, inp):
     pitch = spring(st.sp["pitch"], pitch, 0.3, 0.75)
     body = [pitch, 0.0, roll]
     dmove = [0.0, bob, 0.0]
-    head = [-0.7 * (pitch + 6.0) - 0.6 * breath, clamp(inp.yaw_rate * 3.0, -20.0, 20.0), -0.6 * roll]
+    head = [-HEAD_COUNTER * (pitch + 6.0) - 0.6 * breath, clamp(inp.yaw_rate * 3.0, -20.0, 20.0), -0.35 * roll]
     if st.glance_t >= 0:
         g = st.glance_t
         head[1] += st.glance_yaw * keys(g, [(0, 0.0), (10, 1.0), (30, 1.0), (42, 0.0)])
@@ -634,13 +692,14 @@ def step(st, inp):
         head[0] += A.get("head_rx", 0.0)
         head[1] += A.get("head_ry", 0.0)
     if hk:
-        body[0] += 10.0 * hk
-        head[0] += 6.0 * keys(hit - 1, [(0, 0.0), (2, 1.0), (5, 0.35), (8, 0.0)])
+        body[0] += 20.0 * hk
+        head[0] += 15.0 * keys(hit - 1, HK)
     fx = {"white": 0.0, "alpha": 1.0, "halo_alpha": 1.0, "glow": 1.0}
     scale = {}
     if Ar is not None:
         dmove[1] += Ar["dy"]
         head[0] += Ar["head_rx"]
+        body[0] += Ar["body_rx"]
         fx["white"], fx["alpha"] = Ar["white"], Ar["alpha"]
         scale["body"] = [Ar["scale"]] * 3
     if D is not None:
@@ -648,7 +707,6 @@ def step(st, inp):
         head[0] += D["head_rx"]
         fx["white"], fx["alpha"], fx["halo_alpha"] = D["white"], D["alpha"], D["halo_alpha"]
         scale["body"] = [1.0, D["stretch"], 1.0]
-        scale["halo"] = [D["halo_scale"]] * 3
     if A is not None and "glow" in A:
         fx["glow"] = A["glow"]
     # -- wings ------------------------------------------------------------------------------------------------------
@@ -663,6 +721,7 @@ def step(st, inp):
         w = wing_cycle(k, p, B, a_side, sweep_amp, droop=-12.0 * inner, fold_extra=15.0 * inner,
                        amp_up=(a_side * A["amp_up"]) if (A is not None and "amp_up" in A) else None)
         w = {n: (list(v) if isinstance(v, tuple) else v) for n, v in w.items()}
+        sup = w["sup"] * (1.0 - gw)
         if gw > 0.001:
             # the glide: arms held at +8 dihedral, the hand -6, the tips rippling 3 deg on a 30-tick wave
             gp = {"arm": (8.0, 0.0), "fore": (0.0, 0.0),
@@ -671,34 +730,52 @@ def step(st, inp):
                 w[n] = [lerp(w[n][i], gp[n][i], gw) for i in range(2)]
             w["tips_fold"] *= 1.0 - gw
         w["arm"][1] += 20.0 * brake
-        if A is not None and A.get("wing_w", 0.0) > 0.0:
-            # anticipation: the wings rise to the top hold (cupped forward) and hold until the event
-            tw = A["wing_w"] if at < EVENT[k] else 0.0
+        if A is not None and at < s0 + sl:
             top = wing_cycle(k, 0.04, B, a_side, sweep_amp,
                              amp_up=(a_side * A["amp_up"]) if "amp_up" in A else None)
-            for n in ("arm", "fore", "hand"):
-                for i in range(2):
-                    w[n][i] = lerp(w[n][i], top[n][i], tw)
-            w["tips_fold"] = lerp(w["tips_fold"], 0.0, tw)
+            if at < s0:
+                # anticipation: the wings rise to the top hold (cupped forward) and hold until the stroke
+                tw = A.get("wing_w", 0.0)
+                for n in ("arm", "fore", "hand"):
+                    for i in range(2):
+                        w[n][i] = lerp(w[n][i], top[n][i], tw)
+                w["tips_fold"] = lerp(w["tips_fold"], 0.0, tw)
+                sup *= 1.0 - tw
+            else:
+                # the attack's own downstroke from the top hold: eases off the top, strikes into the bottom (its
+                # fastest tick ~60% in: the sword's at t11); the fore / hand 1 and 2 ticks behind the arm
+                bot = wing_cycle(k, BOTTOM1 - 0.001, B, a_side, sweep_amp)["arm"][0]
+                ut = (at - s0 + 1.0) / sl
+
+                def es(u):
+                    u = clamp(u, 0.0, 1.0)
+                    return top["arm"][0] + (bot - top["arm"][0]) * u * u * (2.2 - 1.2 * u)
+                ea, ef, eh = es(ut), es(ut - 1.0 / sl), es(ut - 2.0 / sl)
+                w["arm"] = [ea, top["arm"][1] * (1.0 - ut)]
+                w["fore"] = [ef - ea, 0.0]
+                w["hand"] = [eh - ef, 0.0]
+                w["tips_fold"], sup = 0.0, 0.0
             w["arm"][1] += A.get("cup", 0.0)
         if hk:
-            w["arm"][0] += 15.0 * hk
+            w["arm"][0] += 30.0 * hk
             w["tips_fold"] += 10.0 * hk
         if Ar is not None:
-            aw = arrive_wing(k, st.arrive_t)
+            aw = arrive_wing(k, st.arrive_t, B)
             for n in ("arm", "fore", "hand"):
                 w[n] = list(aw[n])
             w["tips_fold"] = aw["tips_fold"]
+            sup = aw.get("sup", 0.0)
         if D is not None:
             for n in ("arm", "fore", "hand"):
                 w[n] = [lerp(w[n][i], FLAME[n][i], D["wing_w"]) for i in range(2)]
-            w["tips_fold"] = lerp(w["tips_fold"], 0.0, D["wing_w"])
+            w["tips_fold"] = lerp(w["tips_fold"], FLAME["tips_fold"], D["wing_w"])
+            sup = lerp(sup, SUPINATE, D["wing_w"])
         # the tips: a spring on the hand's absolute elevation (they trail up on the downstroke, flick at the bottom)
         hand_abs = w["arm"][0] + w["fore"][0] + w["hand"][0]
         ts = st.s("tips_" + lr, hand_abs)
-        tips_rel = clamp(spring(ts, hand_abs, K_TIPS, C_TIPS) - hand_abs, -15.0, 15.0)
+        tips_rel = clamp(spring(ts, hand_abs, K_TIPS, C_TIPS) - hand_abs, -20.0, 20.0)
         out["wing_%s_arm" % lr] = [0.0, side * w["arm"][1], side * w["arm"][0]]
-        out["wing_%s_fore" % lr] = [0.0, -side * w["fore"][1], side * w["fore"][0]]
+        out["wing_%s_fore" % lr] = [sup, -side * w["fore"][1], side * w["fore"][0]]   # the supination: outer wing
         out["wing_%s_hand" % lr] = [0.0, -side * w["hand"][1], side * w["hand"][0]]
         out["wing_%s_tips" % lr] = [0.0, -side * w["tips_fold"], side * tips_rel]
     # -- arms and props ---------------------------------------------------------------------------------------------
@@ -713,7 +790,12 @@ def step(st, inp):
         la_d = (la_d[0] + 20.0 * o, la_d[1], la_d[2] + 30.0 * o)
         ra_d = (ra_d[0] + 20.0 * o, ra_d[1], ra_d[2] - 30.0 * o)
     if hk:
-        la_d = (la_d[0] - 8.0 * hk, la_d[1], la_d[2] + 6.0 * hk)
+        if k == "sword":
+            la_d = (la_d[0] + 30.0 * hk, la_d[1], la_d[2])           # the shield arm comes up (block reflex)
+        elif k == "mender":
+            la_d = (la_d[0], la_d[1], la_d[2] - 20.0 * hk)           # the lantern arm drops
+        else:
+            la_d = (la_d[0] - 8.0 * hk, la_d[1], la_d[2] + 6.0 * hk)
         ra_d = (ra_d[0] - 8.0 * hk, ra_d[1], ra_d[2] - 6.0 * hk)
     la_d = (la_d[0] + breath_arm, la_d[1], la_d[2] + 0.5 * fw * 10.0)
     ra_d = (ra_d[0] + breath_arm, ra_d[1], ra_d[2] - 0.5 * fw * 10.0)
@@ -737,31 +819,89 @@ def step(st, inp):
         pv = st.prev.get("pitch_v", 0.0)
         pitch_v = body[0] - st.prev.get("pitch", body[0])
         st.prev["pitch"], st.prev["pitch_v"] = body[0], pitch_v
-        drive = -0.35 * (pitch_v - pv) - 0.5 * (bob - st.prev.get("bob", bob)) + (A or {}).get("kick", 0.0)
-        st.prev["bob"] = bob
+        # driven by the body's acceleration: the pitch's, the bob's (the beat), the hit's jolt and the heal's thrust
+        bvv = bob - st.prev.get("bob", bob)
+        drive = -0.35 * (pitch_v - pv) - 0.9 * (bvv - st.prev.get("bob_v", bvv)) + (A or {}).get("kick", 0.0)
+        drive += 6.0 if hit == 0 else 0.0
+        st.prev["bob"], st.prev["bob_v"] = bob, bvv
         sw = st.s("pend_x")
+        ax0 = sw[1]
         spring(sw, -18.0 * fw, K_PEND, C_PEND, drive)
         sw[0] = clamp(sw[0], -40.0, 40.0)
         sz = st.s("pend_z")
-        spring(sz, -0.6 * roll, K_PEND, C_PEND, 0.0)
+        az0 = sz[1]
+        spring(sz, 0.6 * roll, K_PEND, C_PEND, 3.0 if hit == 0 else 0.0)      # swings OUT of the turn
         R_sw = rmat((sw[0], 0.0, sz[0]))
         R_par = mmul(R_body, mmul(R_la, R_lf))
         out["chain"] = delta_on_rest(rest["chain"], mmul(mT(R_par), mmul(R_sw, R_chain_w0)))
+        # the lantern on the chain's end: a second link, kicked by the chain's angular acceleration
+        lx, lz = st.s("lant_x"), st.s("lant_z")
+        spring(lx, 0.0, K_LANT, C_LANT, -0.9 * (sw[1] - ax0))
+        spring(lz, 0.0, K_LANT, C_LANT, -0.9 * (sz[1] - az0))
+        out["lantern"] = [clamp(lx[0], -30.0, 30.0), 0.0, clamp(lz[0], -30.0, 30.0)]
     if k == "archer":
+        # m2: drawn, the bow is aimed - its long axis upright across the shot, its belly toward the target (AIM: -20
+        # below the facing, the body side-on) - and the limbs recoil 2 ticks after the release; at rest it is the
+        # generator's lean. The string's halves (b4) run from the tips to the draw hand while drawn, snap back in one
+        # tick; the arrow (b4) rides the draw hand from the nock to the release, pointed at the bow's grip.
         bw = A.get("bow", 0.0) if A is not None else 0.0
-        # drawn, the bow is held upright in the body frame (the rest lean of 21 deg out taken off, turned to face the
-        # target while the body stands side-on); at rest it rides the hand
+        aim = A["aim"] if A is not None else AIM
         W0 = mmul(mmul(rmat(rest["left_arm"]), rmat(rest["left_fore"])), rmat(rest["bow"]))
+        up = (0.0, 1.0, 0.0)
+        du = dot(up, aim)
+        up_t = unit((up[0] - du * aim[0], up[1] - du * aim[1], up[2] - du * aim[2]))
+        R_t = mmul(frame(up_t, aim), mT(frame(BOW_LONG, BOW_FACE)))
+        ang = math.degrees(math.acos(clamp((R_t[0][0] + R_t[1][1] + R_t[2][2] - 1.0) / 2.0, -1.0, 1.0)))
+        ax = (R_t[2][1] - R_t[1][2], R_t[0][2] - R_t[2][0], R_t[1][0] - R_t[0][1])
+        R_b = axis_mat(ax, bw * ang) if ang > 1e-6 and dot(ax, ax) > 1e-12 else rmat((0.0, 0.0, 0.0))
+        rk = A.get("recoil", 0.0) if A is not None else 0.0
+        R_b = mmul(axis_mat(cross(up_t, aim), -6.0 * rk), R_b)
         R_par = mmul(R_la, R_lf)
-        lock = smooth(clamp(bw * 1.5, 0.0, 1.0))
-        e_lock = delta_on_rest(rest["bow"], mmul(mT(R_par), mmul(rmat((0.0, -18.0 * bw, 21.0 * bw)), W0)))
-        out["bow"] = [wrap(e_lock[i] * lock) for i in range(3)]
+        L_bow = mmul(mT(R_par), mmul(R_b, W0))
+        out["bow"] = delta_on_rest(rest["bow"], L_bow)
+        Sl, El, Gl = ARM[k]["l"]
+        Sr, Er, Gr = ARM[k]["r"]
+
+        def x_fore_l(q):
+            r = tuple(El[i] + mv(R_lf, tuple(q[n] - El[n] for n in range(3)))[i] for i in range(3))
+            return tuple(Sl[i] + mv(R_la, tuple(r[n] - Sl[n] for n in range(3)))[i] for i in range(3))
+
+        def x_bow(q):
+            return x_fore_l(tuple(Gl[i] + mv(L_bow, tuple(q[n] - Gl[n] for n in range(3)))[i] for i in range(3)))
+        hr = tuple(Er[i] + mv(R_rf, tuple(Gr[n] - Er[n] for n in range(3)))[i] for i in range(3))
+        hand = tuple(Sr[i] + mv(R_ra, tuple(hr[n] - Sr[n] for n in range(3)))[i] for i in range(3))
+        tips = {n: x_bow(q) for n, q in STRING_TIP.items()}
+        mid = tuple(0.5 * (tips["string_top"][i] + tips["string_bot"][i]) for i in range(3))
+        sw_ = A.get("string", 0.0) if A is not None else 0.0
+        tgt = tuple(mid[i] + sw_ * (hand[i] - mid[i]) for i in range(3))
+        R_pb = mmul(R_par, L_bow)
+        for n, tip in tips.items():
+            W_cur = mmul(R_pb, rmat(rest[n]))
+            cur = mv(W_cur, (0.0, -1.0, 0.0))
+            want = tuple(tgt[i] - tip[i] for i in range(3))
+            out[n] = delta_on_rest(rest[n], mmul(mT(R_pb), mmul(align(cur, want), W_cur)))
+            L0 = math.sqrt(sum((mid[i] - tip[i]) ** 2 for i in range(3)))
+            scale[n] = [1.0, math.sqrt(dot(want, want)) / L0, 1.0]
+        grip = x_fore_l(Gl)
+        adir = aim if (A is not None and A.get("bow", 0.0) > 0.0) else tuple(grip[i] - hand[i] for i in range(3))
+        out["arrow"] = delta_on_rest(rest["arrow"], mmul(mT(mmul(R_ra, R_rf)), align((0.0, 0.0, -1.0), adir)))
+        if not (A is not None and A.get("arrow")):
+            out["_hide"] = ["arrow"]
     if k == "sword":
         # the blade aimed in the body frame (rest: carried upright before the shoulder, SWORD_CARRY)
         W0 = mmul(mmul(rmat(rest["right_arm"]), rmat(rest["right_fore"])), rmat(rest["sword"]))
         W_carry = mmul(rmat(SWORD_CARRY), W0)
         D0 = mv(rmat(SWORD_CARRY), SWORD_BLADE)
-        W = mmul(align(D0, A["blade"]), W_carry) if A is not None else W_carry
+        if A is not None:
+            # the cut turns the blade about ONE axis (the plane through the high guard and the cut's middle), a
+            # small correction on top keeps it on its keyed direction: never the ambiguous half-turn of align()
+            hd, n_ = A["plane"]
+            bl = A["blade"]
+            th = math.degrees(math.atan2(dot(cross(hd, bl), n_), dot(hd, bl)))
+            R_cut = axis_mat(n_, th)
+            W = mmul(align(mv(R_cut, hd), bl), mmul(R_cut, mmul(align(D0, hd), W_carry)))
+        else:
+            W = W_carry
         out["sword"] = delta_on_rest(rest["sword"], mmul(mT(mmul(R_ra, R_rf)), W))
     # -- cloth, legs, halo: spring-dampers that lag the body (secondary motion) ------------------------------------
     vy = bob - st.prev.get("bob_c", bob)
@@ -771,7 +911,7 @@ def step(st, inp):
     cs_z = st.s("cloth_z", body[2])
     spring(cs_x, body[0], K_CLOTH, C_CLOTH)
     spring(cs_z, body[2], K_CLOTH, C_CLOTH)
-    sx = clamp(cs_x[0] - body[0], -30.0, 30.0) - 25.0 * fw - 4.0 * hk
+    sx = 1.5 * clamp(cs_x[0] - body[0], -30.0, 30.0) - 25.0 * fw
     sz_ = clamp(cs_z[0] - body[2], -25.0, 25.0) * 0.7
     fl = st.s("flare")
     flare = spring(fl, clamp(-vy * 9.0, -6.0, 6.0) + 6.0 * hk, K_CLOTH, C_CLOTH)
@@ -794,9 +934,10 @@ def step(st, inp):
             out[n] = [hx[0] + 1.6 * f[0] * max(0.0, flare), 0.0, hz[0] + 1.6 * f[1] * max(0.0, flare)]
             d = mv(R_sk, off)
             mv_[n] = [d[i] - off[i] for i in range(3)]
-        for n, fwd, back in (("stole_front", 1.1, 0.0), ("stole_back", 0.55, 1.1)):
+        for n, fwd, back in (("stole_front", 1.1, 0.0), ("stole_back", 0.0, 1.1)):
             a = sx * (fwd if sx > 0 else back)
-            out[n] = [a + (flare if n == "stole_front" else -flare) * 0.6, 0.0, 0.5 * sz_]
+            fl_ = flare if n == "stole_front" else -flare
+            out[n] = [a + (max(0.0, fl_) if n == "stole_front" else min(0.0, fl_)) * 0.6, 0.0, 0.5 * sz_]
         dmove_extra = mv_
     else:
         dmove_extra = {}
@@ -809,8 +950,10 @@ def step(st, inp):
             spring(ls, body[0], K_LEG, C_LEG)
             lag = clamp(ls[0] - body[0], -25.0, 25.0)
             kick = 0.8 * flare
-            out[lr + "_thigh"] = [lag - 25.0 * fw - 3.0 * hk + kick * side * 0.3, 0.0, side * 2.0 * fw]
-            out[lr + "_shin"] = [0.5 * lag - 10.0 * fw - 4.0 * hk, 0.0, 0.0]
+            reach = Ar["legs"] if Ar is not None else 0.0                 # the arrival's legs reach for the ground
+            out[lr + "_thigh"] = [lag - 25.0 * fw - 6.0 * hk + kick * side * 0.3 + 22.0 * reach, 0.0,
+                                  side * 2.0 * fw]
+            out[lr + "_shin"] = [0.5 * lag - 10.0 * fw - 6.0 * hk + 8.0 * reach, 0.0, 0.0]
     # the halo rides the head 2 ticks late (it hangs from the body bone): rotation and the pivot it is carried to
     hs = [st.s("halo_" + a, head[i]) for i, a in enumerate("xyz")]
     for i in range(3):
@@ -820,10 +963,8 @@ def step(st, inp):
     Hm = rmat(halo_r)
     off = HALO_OFF[k]
     d = mv(Hm, off)
-    flame_dy = (Ar or D or {}).get("halo_dy", 0.0)
     breath_late = 0.3 * math.sin(2.0 * math.pi * ((st.beats + p) / BREATH_BEATS - 0.1))     # the halo rises late
-    halo_mv = [d[0] - off[0], d[1] - off[1] + HALO_LIFT * fw + flame_dy + breath_late,
-               d[2] - off[2]]
+    halo_mv = [d[0] - off[0], d[1] - off[1] + breath_late, d[2] - off[2]]
     out["body"] = body
     out["head"] = head
     out["halo"] = halo_r
@@ -868,8 +1009,9 @@ def clip_len(kind, clip):
             "death": DEATH_LEN}[clip]
 
 
-def run(kind, clip, seed=1):
-    """[(tick, pose)] for every tick of the clip (tick 0 = its first), after the warm-up the clip needs."""
+def run(kind, clip, seed=1, after=0):
+    """[(tick, pose)] for every tick of the clip (tick 0 = its first), after the warm-up the clip needs; after: that
+    many ticks more with the inputs back at the clip's steady state (the hand-back, not in the fixture)."""
     st = State(kind, seed, arrive=(clip == "arrive"))
     inp = Inputs()
     frames = []
@@ -882,7 +1024,7 @@ def run(kind, clip, seed=1):
                 step(st, inp)
     n = clip_len(kind, clip)
     E = EVENT[kind]
-    for t in range(n):
+    for t in range(n + after):
         if clip == "fly":
             inp.speed = CRUISE
         elif clip == "bank":
@@ -978,45 +1120,66 @@ def geo(Ra, Rb):
     return math.degrees(math.acos(clamp((R[0][0] + R[1][1] + R[2][2] - 1.0) / 2.0, -1.0, 1.0)))
 
 
+LOCKED = ("bow", "arrow", "string_top", "string_bot", "chain", "lantern", "sword", "halo")   # aimed in the world
+
+
 def stats(model_key="b2", seed=1):
+    """Per clip: the max joint step per tick (local rotation, the rig's joints; the world-aimed props - bow, arrow,
+    string, lantern chain, blade, halo - by their step in the body frame), the wing tip's elevation range and travel,
+    the bob, and the hand-back: how far any bone tip jumps on the tick after the clip (inputs back to the clip's
+    steady state) against the clip's own last tick."""
     here = os.path.dirname(os.path.abspath(__file__))
     rows = []
     for kind in KINDS:
         bones = load_model(os.path.join(here, "..", "design", "models",
                                         "sunforged_angel_%s_%s.json" % (model_key, kind)))
         tipL = far_point(bones["wing_l_tips"], bones["wing_l_arm"]["pivot"])
+        tips = {n: far_point(b, b["pivot"]) for n, b in bones.items()}
         sh = bones["wing_l_arm"]["pivot"]
         for clip in CLIPS:
-            fr = run(kind, clip, seed)
+            fr = run(kind, clip, seed, after=1)
             worst, wb, wt = 0.0, "", 0
-            prevR = None
-            elevs, tys, bobs = [], [], []
+            prevR, prevH, prevP = None, set(), None
+            elevs, tys, bobs, moves = [], [], [], []
             for t, pz in fr:
-                Rs = {n: rmat([bones[n].get("rotation", [0, 0, 0])[a] + pz.get(n, [0, 0, 0])[a] for a in range(3)])
-                      for n in bones}
-                if prevR is not None:
-                    for n in bones:
-                        g = geo(prevR[n], Rs[n])
-                        if g > worst:
-                            worst, wb, wt = g, n, t
-                prevR = Rs
                 f = fk(bones, pz)
+                hid = set(pz.get("_hide", []))
+                Rs = {}
+                for n in bones:
+                    if n in LOCKED:
+                        Rs[n] = f(n)[0]
+                    else:
+                        Rs[n] = rmat([bones[n].get("rotation", [0, 0, 0])[a] + pz.get(n, [0, 0, 0])[a]
+                                      for a in range(3)])
+                P = {n: [mv(f(n)[0], tips[n])[i] + f(n)[1][i] for i in range(3)] for n in bones if n not in hid}
+                if prevR is not None:
+                    if t < len(fr) - 1:
+                        for n in bones:
+                            if n in hid or n in prevH:
+                                continue
+                            g = geo(prevR[n], Rs[n])
+                            if g > worst:
+                                worst, wb, wt = g, n, t
+                    moves.append(max(math.sqrt(sum((P[n][i] - prevP[n][i]) ** 2 for i in range(3)))
+                                     for n in P if n in prevP))
+                prevR, prevH, prevP = Rs, hid, P
+                if t >= len(fr) - 1:
+                    continue
                 R, tr = f("wing_l_tips")
                 tp = [mv(R, tipL)[i] + tr[i] for i in range(3)]
                 Rb, tb = f("body")
-                # the tip's elevation about the shoulder in the BODY frame (bank / pitch removed), and its world height
                 sh_w = [mv(Rb, sh)[i] + tb[i] for i in range(3)]
                 rel = mv(mT(Rb), [tp[i] - sh_w[i] for i in range(3)])
                 elevs.append(math.degrees(math.atan2(rel[1], math.hypot(rel[0], rel[2]))))
                 tys.append(tp[1])
                 bobs.append(pz["_move"]["body"][1])
             rows.append((kind, clip, worst, wb, wt, min(elevs), max(elevs), max(tys) - min(tys),
-                         (max(bobs) - min(bobs)) / 2.0))
-    print("%-7s %-7s %9s %-16s %13s %8s %8s" % ("kind", "clip", "max step", "(bone @ tick)", "tip elev deg",
-                                               "tip dy", "bob amp"))
-    for kind, clip, w, wb, wt, e0, e1, dy, ba in rows:
-        print("%-7s %-7s %7.1f d  %-16s %5.0f..%-5.0f %7.1fpx %6.2fpx" % (kind, clip, w, "%s@%d" % (wb, wt), e0, e1,
-                                                                        dy, ba))
+                         (max(bobs) - min(bobs)) / 2.0, moves[-2], moves[-1]))
+    print("%-7s %-7s %9s %-17s %13s %8s %8s %16s" % ("kind", "clip", "max step", "(bone @ tick)", "tip elev deg",
+                                                    "tip dy", "bob amp", "last/hand-back"))
+    for kind, clip, w, wb, wt, e0, e1, dy, ba, ml, mh in rows:
+        print("%-7s %-7s %7.1f d  %-17s %5.0f..%-5.0f %7.1fpx %6.2fpx %6.1f / %4.1f px" % (
+            kind, clip, w, "%s@%d" % (wb, wt), e0, e1, dy, ba, ml, mh))
     return rows
 
 

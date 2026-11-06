@@ -33,8 +33,8 @@ def main():
             row = {}
             for vn in ("rts", "topdown"):
                 V = gp.VIEWS[vn]
-                fs = strips.faces(m, root, {})
-                fh = strips.faces(m, root, {"_hide": ["halo"]})
+                fs = strips.faces(m, root, {"_hide": ["arrow"]})
+                fh = strips.faces(m, root, {"_hide": ["halo", "arrow"]})
                 bx = strips.bbox(fs, V)
                 im, _, mask, team = gp.render(fs, imgs, d2g.DENSITY, V, a.size, OWNER, bx, with_mask=True)
                 _, _, mask_h, _ = gp.render(fh, imgs, d2g.DENSITY, V, a.size, OWNER, bx, with_mask=True)

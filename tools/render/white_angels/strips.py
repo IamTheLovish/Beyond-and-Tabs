@@ -90,6 +90,7 @@ def task(args):
         json.dump({"t%02d" % t: A.rnd(p) for t, p in picks}, f, separators=(",", ":"))
     allf = [(t, p, faces(m, root, p)) for t, p in picks]
     rows = []
+    values = {}
     for vn in views:
         V = gp.VIEWS[vn]
         bx = None
@@ -99,6 +100,17 @@ def task(args):
         cells = []
         for t, p, fs in allf:
             im, _, mask, _ = gp.render(fs, imgs, d2g.DENSITY, V, size, (0.23, 0.44, 0.82), bx, with_mask=True)
+            # the wings' value: the pixels the wings change (a second render with both wings hidden), mean Rec.709
+            # luminance 0-255 at the frame's own size (a far read keeps the mean)
+            nw = dict(p)
+            nw["_hide"] = list(p.get("_hide", [])) + ["wing_l_arm", "wing_r_arm"]
+            im2, _ = gp.render(faces(m, root, nw), imgs, d2g.DENSITY, V, size, (0.23, 0.44, 0.82), bx)
+            a1 = np.asarray(im, dtype=np.float32)
+            a2 = np.asarray(im2, dtype=np.float32)
+            wing = mask & (np.abs(a1 - a2).max(axis=2) > 2.0)
+            lum = a1[..., 0] * 0.2126 + a1[..., 1] * 0.7152 + a1[..., 2] * 0.0722
+            val = float(lum[wing].mean()) if wing.any() else float("nan")
+            values.setdefault(vn, []).append((t, round(val, 1), int(wing.sum())))
             cells.append((t, fx_frame(im, mask, p.get("_fx", {}))))
         rows.append((vn, cells))
     # contact sheet: a title line, then one row per view
@@ -128,7 +140,12 @@ def task(args):
         gd.text((6, size + 5), "%s %s t%d" % (kind, clip, cells[c][0]), fill=(30, 30, 30))
         gif.append(g)
     gif[0].save(base + ".gif", save_all=True, append_images=gif[1:], duration=int(50 * step), loop=0)
-    return "%s %s %s: %d frames (every %d), %d views" % (key, kind, clip, n, step, len(rows))
+    with open(base + "_wing_value.json", "w") as f:
+        json.dump(values, f)
+    mins = " ".join("%s min %.0f@t%d" % (vn, *min(((v, t) for t, v, _ in vals if v == v), default=(float("nan"), -1)))
+                    for vn, vals in values.items())
+    return "%s %s %s: %d frames (every %d), %d views; wing value (0-255) %s" % (key, kind, clip, n, step, len(rows),
+                                                                               mins)
 
 
 def main():

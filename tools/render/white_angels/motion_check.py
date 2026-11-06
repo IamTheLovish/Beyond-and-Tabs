@@ -52,6 +52,7 @@ def main():
     a = ap.parse_args()
     out = {}
     worst_all = (0.0, "")
+    worst_vis = (0.0, "")        # without the two humerus blocks meeting inside the back (the spine, hidden)
     for kind in A.KINDS:
         m = render_concept.load_model(os.path.join(ROOT, "design", "models", "sunforged_angel_%s_%s.json" % (a.key, kind)))
         rest = {}
@@ -69,7 +70,7 @@ def main():
                 if t % a.every and t != len(fr) - 1:
                     continue
                 extra = {k: v for k, v in pz.items() if not k.startswith("_")}
-                for h in C.check(m, extra, (), pz.get("_move", {}), threshold=a.report):
+                for h in C.check(m, extra, pz.get("_hide", ()), pz.get("_move", {}), threshold=a.report):
                     pr = frozenset((h[1], h[4]))
                     d = h[0] - rest.get(pr, 0.0)
                     if d <= a.report:
@@ -106,8 +107,12 @@ def main():
                 print("%17s %s %.2f@%d" % ("", k2, d, t))
             if cw and cw[0][1][0] > worst_all[0]:
                 worst_all = (cw[0][1][0], "%s %s %s @%d" % (kind, clip, cw[0][0], cw[0][1][1]))
+            vis = [kv for kv in cw if kv[0] != "wing_l_arm<->wing_r_arm"]
+            if vis and vis[0][1][0] > worst_vis[0]:
+                worst_vis = (vis[0][1][0], "%s %s %s @%d" % (kind, clip, vis[0][0], vis[0][1][1]))
             out["%s/%s" % (kind, clip)] = {"cross": cw, "inwing": iw[:3], "moved": sorted(moved), "lags": lags}
     print("worst new penetration (part through part) on %s: %.2f px  %s" % (a.key, worst_all[0], worst_all[1]))
+    print("worst without the spine (wing_l_arm<->wing_r_arm) on %s: %.2f px  %s" % (a.key, worst_vis[0], worst_vis[1]))
     if a.json:
         json.dump(out, open(a.json, "w"), indent=1)
 
