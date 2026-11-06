@@ -533,25 +533,10 @@ def step(state, inp):
 
 
 def baked_arms(clip, t):
-    """The arms baked offline for this tick of a two-hand clip; the bake holds every 2nd tick between two keys, an odd
-    tick takes the mean of its neighbours (each baked, or at a key: the key's own solved arms)."""
-    bk = KEYS.get("_bake", {}).get(clip, {})
-    if str(t) in bk:
-        return bk[str(t)]
-    if t % 2 == 0 or not bk:
-        return None
-
-    def at(tt):
-        if str(tt) in bk:
-            return bk[str(tt)]
-        rot, _m, _a, _s, (ka, kb, u) = blend_keys(TABLES[clip], tt)
-        if u in (0.0, 1.0) or ka == kb:
-            return {n: rot.get(n, [0.0, 0.0, 0.0]) for n in next(iter(bk.values()))}
-        return None
-    a_, b_ = at(t - 1), at(t + 1)
-    if a_ is None or b_ is None:
-        return None
-    return {n: interp_rot(n, a_[n], b_[n], 0.5) for n in a_}
+    """The arms baked offline for this tick of a two-hand clip (every tick between two different keys; at a key or a
+    hold the key's own solved arms stand, so None). r3b: no odd-tick averaging any more - it also averaged a held key
+    tick with the next key (the slam's t19, the Gatefall's t33: the left fist 19 px off the haft in run 42176335754)."""
+    return KEYS.get("_bake", {}).get(clip, {}).get(str(t))
 
 
 def add(rot, n, d):
