@@ -27,8 +27,13 @@ public final class LeafLight {
     /** Vanilla's AO shade of a block with a full collision box (and, before this, of a leaf block). */
     public static final float SOLID_SHADE = 0.2F;
 
-    /** A leaf block's AO shade as a neighbour: see the class comment and crown-lighting notes for how it was chosen. */
-    public static final float LEAF_SHADE = SOLID_SHADE;
+    /**
+     * A leaf block's AO shade as a neighbour. The eyes leaf sweep (wood sampler, RTS camera, tools/crown_measure.py):
+     * vanilla 0.2 -> 1.0 lifted the green crowns from 0.53 to only 0.58 of the lawn without a shader pack and ~flat with
+     * ours, so AO is the smaller term; 0.6 gives a leaf face between leaves 0.6 of its light (vanilla 0.2) while a
+     * crown's steps still show (LeafLightTest).
+     */
+    public static final float LEAF_SHADE = 0.6F;
 
     /**
      * Without a shader pack: how far a leaf face's directional shade moves from vanilla's solid-cube table (up 1.0,
@@ -36,7 +41,7 @@ public final class LeafLight {
      * A face of leaves is leaves turned every way, never a flat wall: 0 = vanilla, 1 = every face lit like the top.
      * Our shader pack ignores vanilla's face shade (oldLighting=false) and lights leaves itself (lit.fsh LEAF_SOFT).
      */
-    public static final float FACE_LIFT = 0.0F;
+    public static final float FACE_LIFT = 0.5F;   // east / west 0.8, north / south 0.9, down 0.75 (eyes 42206522370)
 
     private static volatile float eyesShade = Float.NaN;
     private static volatile float eyesFaceLift = Float.NaN;

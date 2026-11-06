@@ -63,7 +63,7 @@ const float ambientOcclusionLevel = 1.0;
 // turned every way, so its normal leans LEAF_SOFT of the way toward up, and a crown is mostly air between its leaves,
 // so a leaf face in the crown's own shadow still gets LEAF_THROUGH of the sun. Only leaves receive it (lit.fsh): a
 // tree's shadow on the lawn keeps its mass. Off: leaves lit like any block (the A/B, tools/crown_measure.py)
-#define LEAF_LIGHT 0 // [0 1]
+#define LEAF_LIGHT 1 // [0 1]
 const float LEAF_SOFT = 0.5;
 const float LEAF_THROUGH = 0.35;
 
