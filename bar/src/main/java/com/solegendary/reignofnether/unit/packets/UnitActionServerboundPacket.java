@@ -163,6 +163,15 @@ public class UnitActionServerboundPacket {
     public static boolean accept(ServerPlayer player, String ownerName, UnitAction action, int unitId, int[] unitIds,
                                  BlockPos preselectedBlockPos, BlockPos selectedBuildingPos, QueueMode queueMode,
                                  java.util.function.BiPredicate<ServerPlayer, net.minecraft.world.entity.Entity> seenBySender) {
+        return accept(player, ownerName, action, unitId, unitIds, preselectedBlockPos, selectedBuildingPos, queueMode,
+            seenBySender, (p, b) -> true);
+    }
+
+    /** STUB (tests first): the building rule is not applied yet. */
+    public static boolean accept(ServerPlayer player, String ownerName, UnitAction action, int unitId, int[] unitIds,
+                                 BlockPos preselectedBlockPos, BlockPos selectedBuildingPos, QueueMode queueMode,
+                                 java.util.function.BiPredicate<ServerPlayer, net.minecraft.world.entity.Entity> seenBySender,
+                                 java.util.function.BiPredicate<ServerPlayer, com.solegendary.reignofnether.building.BuildingPlacement> buildingKnown) {
         if (player == null || !PacketAuth.mayActFor(player, ownerName)) {
             ReignOfNether.LOGGER.warn("UnitActionServerboundPacket: Tried to process packet from " +
                 (player == null ? "null" : player.getName().getString()) + " for " + ownerName);
