@@ -15,6 +15,7 @@ import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockEventPacket;
 import net.minecraft.network.protocol.game.ClientboundExplodePacket;
 import net.minecraft.network.protocol.game.ClientboundLevelEventPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
@@ -37,11 +38,22 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * World effects under the fog, end to end (backlog 5a, #510; Command Center Eris.15, Nov 6): the level's own calls -
- * {@code levelEvent} (2001, a block breaking), {@code playSeededSound}, {@code destroyBlockProgress} (the crack overlay)
- * and {@code explode} - are made at a spot, and a packet recorder on each player's connection keeps what reaches it. A
- * player whose fog hides the spot must get none of the four; a player the fog does not apply to gets all four (the
- * control, so a quiet recorder can't pass for a gate).
+ * World effects under the fog, end to end (backlog 5a, #510; Command Center Eris.15 and Eris.16, Nov 6): the server
+ * makes an effect at a spot the way the game does, and a packet recorder on each player's connection keeps what reaches
+ * it. A player whose fog hides the spot must get none of it; a player the fog does not apply to gets all of it (the
+ * control, so a quiet recorder can't pass for a gate). One test per leak family - one way the server sends an effect
+ * that names a position:
+ * <ul>
+ *   <li><b>the positional broadcast</b> ({@code PlayerList.broadcast}, gated once at its entry by PlayerListFogMixin):
+ *       a level event (2001, a block breaking), a sound (playSeededSound), and a block event (a chest lid, a bell, a
+ *       note block - sent the way ServerLevel.runBlockEvents sends it at the end of the tick);</li>
+ *   <li><b>per-player sends</b> past that broadcast (ServerLevelEffectFogMixin): a block's crack overlay
+ *       (destroyBlockProgress) and an explosion (explode);</li>
+ *   <li><b>global level events</b> ({@code ServerLevel.globalLevelEvent}: a wither spawning 1023, a dragon dying 1028,
+ *       an end portal opening 1038), sent to every player online, wherever they are, with the event's real position.</li>
+ * </ul>
+ * The fourth item on the Oct 28 list (#35, "Fog leaks"), order targets, is inbound and was closed in #511
+ * (UnitActionFogGameTests), except ATTACK_BUILDING (no server-side record of the buildings a player has seen).
  * <p>
  * The players join the server the way a real one does, through {@code PlayerList.placeNewPlayer} on a Connection with an
  * in-memory channel (netty's EmbeddedChannel: nothing is encoded or leaves the process), so they are in the lists every
@@ -50,13 +62,9 @@ import java.util.UUID;
  * are then swapped for the recorder; they are never ticked (the channel is not in the server's connection list) and
  * leave through {@code PlayerList.remove} before anything is put back.
  * <p>
- * On main (no PlayerListFogMixin / ServerLevelEffectFogMixin) the fogged player gets the level event, the crack and the
- * explosion (main gates sounds only). Block events (a chest lid, a bell) go through the same PlayerList.broadcast entry
- * as the level event and the sound, but are only sent at the end of the level's tick, so this one-callback test does not
- * fire one.
- * <p>
- * The test server runs with fog off, so it all happens inside ONE callback, in one server tick, in a batch of its own,
- * and is put back before it returns: the border fitted for a match, fog on, then off again and the border restored.
+ * The test server runs with fog off, so each test does everything inside ONE callback, in one server tick, in a batch
+ * of its own, and puts it back before it returns: the border fitted for a match, fog on, then off again and the border
+ * restored.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -94,20 +102,28 @@ public class FogEffectEndToEndGameTests {
         return new Joined(player, channel, new Recorder(server, connection, player));
     }
 
-    /** "levelEvent sound crack explode": which of the four effects reached {@code r}, by packet type. */
+    /** The effects a recorder got, by name, in a fixed order ("levelEvent sound blockEvent crack explode globalEvent"). */
     static String got(Recorder r) {
-        boolean ev = false, snd = false, crack = false, boom = false;
+        boolean ev = false, snd = false, blk = false, crack = false, boom = false, global = false;
         for (Packet<?> p : r.sent) {
-            ev |= p instanceof ClientboundLevelEventPacket;
+            if (p instanceof ClientboundLevelEventPacket e) {
+                if (e.isGlobalEvent())
+                    global = true;
+                else
+                    ev = true;
+            }
             snd |= p instanceof ClientboundSoundPacket;
+            blk |= p instanceof ClientboundBlockEventPacket;
             crack |= p instanceof ClientboundBlockDestructionPacket;
             boom |= p instanceof ClientboundExplodePacket;
         }
         List<String> out = new ArrayList<>();
         if (ev) out.add("levelEvent");
         if (snd) out.add("sound");
+        if (blk) out.add("blockEvent");
         if (crack) out.add("crack");
         if (boom) out.add("explode");
+        if (global) out.add("globalEvent");
         return String.join(" ", out);
     }
 
@@ -121,8 +137,18 @@ public class FogEffectEndToEndGameTests {
         return sb.toString();
     }
 
-    @GameTest(template = SkirmishGameTests.ARENA, batch = "fog_effects_end_to_end", timeoutTicks = 20)
-    public static void a_fogged_player_is_sent_none_of_a_spots_world_effects(GameTestHelper helper) {
+    /** The effects of one family, made at {@code at} as the game makes them. */
+    @FunctionalInterface
+    interface Effects {
+        void make(ServerLevel level, BlockPos at, double x, double y, double z);
+    }
+
+    /**
+     * Joins a fogged RTS player and a control player 6 blocks from {@code at} (inside every effect's range), turns fog
+     * on, makes the effects, and checks: the control got exactly {@code all}, the fogged player nothing. Everything is
+     * put back before it returns.
+     */
+    static void scene(GameTestHelper helper, String tag, String all, Effects effects) {
         ServerLevel level = helper.getLevel();
         PlayerList list = level.getServer().getPlayerList();
         List<String> problems = new ArrayList<>();
@@ -131,7 +157,7 @@ public class FogEffectEndToEndGameTests {
         boolean wasOn = FogOfWarServerEvents.isEnabled();
         BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
         double x = at.getX() + 0.5, y = at.getY() + 0.5, z = at.getZ() + 0.5;
-        String base = "gametest_fogfx2_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        String base = "gametest_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         String rtsName = base + "_rts";
         List<Joined> joined = new ArrayList<>();
         String step = "setup";
@@ -150,7 +176,7 @@ public class FogEffectEndToEndGameTests {
                     if (j.player().serverLevel() != level)
                         problems.add(j.player().getGameProfile().getName() + " joined another level ("
                             + j.player().serverLevel().dimension().location() + ")");
-                    j.player().moveTo(x + 6, at.getY(), z, 0, 0);   // 6 blocks away: inside every effect's range
+                    j.player().moveTo(x + 6, at.getY(), z, 0, 0);
                 }
                 if (!list.getPlayers().contains(rts.player()) || !level.players().contains(rts.player()))
                     problems.add("the joined player is not in the player list / the level's players (nothing tested)");
@@ -169,13 +195,10 @@ public class FogEffectEndToEndGameTests {
                     step = "make the effects";
                     rts.recorder().sent.clear();
                     watcher.recorder().sent.clear();
-                    level.levelEvent(null, 2001, at, Block.getId(Blocks.STONE.defaultBlockState()));
-                    level.playSeededSound(null, x, y, z, SoundEvents.NOTE_BLOCK_BELL, SoundSource.BLOCKS, 1f, 1f, 0L);
-                    level.destroyBlockProgress(-77_002, at, 5);
-                    level.explode(null, x, y, z, 0.5f, Level.ExplosionInteraction.NONE);
+                    effects.make(level, at, x, y, z);
                     String control = got(watcher.recorder()), leaked = got(rts.recorder());
-                    if (!control.equals("levelEvent sound crack explode"))
-                        problems.add("a player the fog does not apply to got only [" + control + "], expected all four");
+                    if (!control.equals(all))
+                        problems.add("a player the fog does not apply to got [" + control + "], expected [" + all + "]");
                     if (!leaked.isEmpty())
                         problems.add("under fog, with no vision of the spot, the player was still sent [" + leaked + "]");
                 }
@@ -206,14 +229,44 @@ public class FogEffectEndToEndGameTests {
             border.setCenter(cx, cz);
             border.setSize(size);
         }
-        for (Joined j : joined)
-            if (list.getPlayers().contains(j.player()))
-                problems.add(j.player().getGameProfile().getName() + " is still in the player list");
+        for (ServerPlayer sp : list.getPlayers())
+            if (sp.getGameProfile().getName().startsWith(base))
+                problems.add(sp.getGameProfile().getName() + " is still in the player list");
         if (FogOfWarServerEvents.isEnabled() != wasOn)
             problems.add("fog flag was not restored");
         if (problems.isEmpty())
             helper.succeed();
         else
             helper.fail(String.join("; ", problems));
+    }
+
+    /**
+     * The positional broadcast: a level event, a sound and a block event. The block event is sent as
+     * ServerLevel.runBlockEvents sends it (PlayerList.broadcast, 64 blocks, this dimension) - runBlockEvents itself
+     * only runs at the end of the level's tick, after this one-callback test has put the fog back.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, batch = "fog_effects_broadcast", timeoutTicks = 20)
+    public static void a_fogged_player_is_sent_none_of_a_spots_broadcast_effects(GameTestHelper helper) {
+        scene(helper, "fogfx_bc", "levelEvent sound blockEvent", (level, at, x, y, z) -> {
+            level.levelEvent(null, 2001, at, Block.getId(Blocks.STONE.defaultBlockState()));
+            level.playSeededSound(null, x, y, z, SoundEvents.NOTE_BLOCK_BELL, SoundSource.BLOCKS, 1f, 1f, 0L);
+            level.getServer().getPlayerList().broadcast(null, x, y, z, 64, level.dimension(),
+                new ClientboundBlockEventPacket(at, Blocks.NOTE_BLOCK, 0, 0));
+        });
+    }
+
+    /** The per-player sends: a block's crack overlay and an explosion (no blocks broken: ExplosionInteraction.NONE). */
+    @GameTest(template = SkirmishGameTests.ARENA, batch = "fog_effects_per_player", timeoutTicks = 20)
+    public static void a_fogged_player_is_sent_neither_a_spots_crack_nor_its_explosion(GameTestHelper helper) {
+        scene(helper, "fogfx_pp", "crack explode", (level, at, x, y, z) -> {
+            level.destroyBlockProgress(-77_002, at, 5);
+            level.explode(null, x, y, z, 0.5f, Level.ExplosionInteraction.NONE);
+        });
+    }
+
+    /** A global level event (1023, a wither spawning): every player online is sent its real position. */
+    @GameTest(template = SkirmishGameTests.ARENA, batch = "fog_effects_global", timeoutTicks = 20)
+    public static void a_fogged_player_is_not_sent_a_global_event_at_a_hidden_spot(GameTestHelper helper) {
+        scene(helper, "fogfx_gl", "globalEvent", (level, at, x, y, z) -> level.globalLevelEvent(1023, at, 0));
     }
 }
