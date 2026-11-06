@@ -48,8 +48,9 @@ import java.util.function.Supplier;
  * packets, teleports), then the drawn walk per jittery clock: speed cv / % of client ticks the unit stands still for
  * vanilla's lerp ("now") and the game's stamped playback ("buf", with its lag behind the newest tick heard), and the
  * position packets vanilla's lerp tracked every tick would cost ("e1 pos"). A ground lane adds where the drawn body's
- * feet stand against its blocks ("gnd", step 3 A), and a "[MotionGnd]" line the client ticks around its worst sink and
- * float. The crowd adds what idle units do after arriving. The asserts guard the measurement itself (the unit moved)
+ * feet stand against its blocks ("gnd", step 3 A); a stepped lane that breaks its ground bounds names, in its failure,
+ * the client ticks around its worst sink and float (CI keeps only the first 300 characters of 15 "[Motion]" lines, and
+ * every failure line whole). The crowd adds what idle units do after arriving. The asserts guard the measurement itself (the unit moved)
  * and, on the stepped lanes, the ground under the drawn body ({@link Gnd}); the other bounds come with their fixes.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
@@ -184,7 +185,7 @@ public class MotionFluidityGameTests {
                         + " blocks in " + p.ticks() + " ticks");
                 String bad = i == 1 && p.gnd != null ? p.gnd.broken(man) : null;
                 if (bad != null)
-                    worse.add(bad);
+                    worse.add(bad + (p.gndStory == null ? "" : "; worst frames" + p.gndStory));
             }
             if (!problems.isEmpty())
                 helper.fail(kind + ": the measurement has no walk to judge: " + String.join("; ", problems));
@@ -617,9 +618,6 @@ public class MotionFluidityGameTests {
             }
             long e1 = sent1.stream().filter(p -> p.hasPos() && p.tick() >= from && p.tick() < to).count();
             ReignOfNether.LOGGER.warn(serverPart + groundPart + client + " | e1 pos " + e1);
-            // its own prefix: not folded into the [Motion] notice (the job's log keeps it whole)
-            if (gndStory != null)
-                ReignOfNether.LOGGER.warn("[MotionGnd] " + what + ":" + gndStory);
         }
 
         /**
