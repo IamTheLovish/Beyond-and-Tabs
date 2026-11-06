@@ -94,22 +94,16 @@ class AssemblyWorksTest(unittest.TestCase):
         self.assertGreaterEqual(top - rest, 2, "chimney %d, next %d" % (top, rest))
 
     def test_the_silhouette_steps(self):
-        """L1 is accreted volumes, not a box: the column tops of the plot fall into at least 4 height bands (lean-to,
-        hall, office, chimney) each at least 2 columns wide. Main's Works: deck 5-6 + two stacks."""
+        """L1 is accreted volumes, not a box: at least 4 heights each hold the top of at least 3 columns (lean-tos, hall,
+        office, chimney crown), and no one height holds the top of more than a third of the plot. Main's Works: y 5 holds
+        108 of 121 tops, y 6 holds 11, y 8 two."""
         t = tops(self.solid[0])
-        bands = {}
+        count = {}
         for y in t.values():
             if y >= 3:
-                bands[y] = bands.get(y, 0) + 1
-        groups, last = [], None
-        for y in sorted(bands):
-            if last is not None and y - last <= 1:
-                groups[-1] += bands[y]
-            else:
-                groups.append(bands[y])
-            last = y
-        # a band = a run of neighbouring heights; the chimney counts with its crown
-        self.assertGreaterEqual(len(groups), 4, "height bands %s" % sorted(bands.items()))
+                count[y] = count.get(y, 0) + 1
+        self.assertGreaterEqual(sum(1 for c in count.values() if c >= 3), 4, "tops by height %s" % sorted(count.items()))
+        self.assertLessEqual(max(count.values()), len(t) // 3, "tops by height %s" % sorted(count.items()))
 
     def test_a_forge_glows_on_the_camera_side(self):
         """At dusk the Works has a lit point at ground level the camera sees: at L1 a lit blast furnace faces south or
@@ -142,13 +136,14 @@ class AssemblyWorksTest(unittest.TestCase):
     def test_game_rules(self):
         """What AssemblyWorks.java and the placement read: 11 x 11 at every level; polished_blackstone and
         deepslate_bricks (startingBlockTypes) in L1's layer 0; a full foundation; each level keeps every cell of the one
-        before (changeStructure only adds or replaces); the spawn column (the middle cell, centrePos fixed at L1's box)
-        open from y 1 to one above L1's centre height at every level, and a 3-wide way out south from it to the plot's
+        before (changeStructure only adds or replaces); the spawn column (the middle cell, centrePos)
+        open from y 1 to one above each level's own centre height, and a 3-wide way out south from it to the plot's
         edge (the Steam Juggernaut, spawnRadiusOffset 2); no gravity blocks, fluids, doors or leaves; data and assets
         copies identical."""
-        h1 = max(q[1] for q in self.solid[0]) + 1     # the generator's box ends at its top block (check_levels)
-        ytop = (h1 - 1) // 2 + 1
         for i, s in enumerate(self.solid):
+            # centrePos is the box's middle; a saved game reloaded at L2 / L3 measures it off that level's taller box
+            # (the Barracks round 4 lesson), so each level's own centre height counts
+            ytop = max(q[1] for q in s) // 2 + 1
             xs, zs = [q[0] for q in s], [q[2] for q in s]
             self.assertEqual((min(xs), max(xs), min(zs), max(zs)), (0, 10, 0, 10), FILES[i])
             self.assertTrue(all((x, 0, z) in s for x in range(11) for z in range(11)), FILES[i] + ": foundation hole")
