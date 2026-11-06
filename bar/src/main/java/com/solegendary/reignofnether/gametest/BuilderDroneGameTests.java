@@ -132,7 +132,8 @@ public class BuilderDroneGameTests {
                 return;
             }
             List<String> problems = new ArrayList<>();
-            if (!(drone instanceof WorkerUnit w) || w.getBuildRepairGoal() == null || w.getGatherResourceGoal() == null)
+            WorkerUnit w = drone;   // the drone keeps the shared worker plumbing (it compiles only as a WorkerUnit)
+            if (w.getBuildRepairGoal() == null || w.getGatherResourceGoal() == null)
                 problems.add("the Builder Drone is not a worker that builds and gathers");
             compare(problems, "health", drone.getMaxHealth(), peer.getMaxHealth());
             compare(problems, "armour", drone.getAttributeValue(Attributes.ARMOR), peer.getAttributeValue(Attributes.ARMOR));
