@@ -119,7 +119,7 @@ public class HeroAiV2GameTests {
      * from the units' own first tick. A setup that never ticks ends through HeroAiGameTests.finish (units discarded).
      */
     static void start(GameTestHelper helper, ArenaReady.Timeline line, List<Mob> units) {
-        line.start(helper, units, 1, READY_WAIT, why -> HeroAiGameTests.finish(helper, List.of(why), units, null));
+        line.start(helper, units, 0, READY_WAIT, why -> HeroAiGameTests.finish(helper, List.of(why), units, null));
     }
 
     /** The test's units, nulls allowed (a failed spawn): HeroAiGameTests.finish discards the rest. */
