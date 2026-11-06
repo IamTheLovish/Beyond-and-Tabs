@@ -118,7 +118,7 @@ public class AngelRenderer<T extends AngelUnit, M extends EntityModel<T> & Angel
     /** Translucent while the rig fades the body (arriving, dying), the generated body's own type otherwise. */
     @Nullable
     @Override
-    protected RenderType getRenderType(T entity, boolean bodyVisible, boolean translucent, boolean glowing) {
+    public RenderType getRenderType(T entity, boolean bodyVisible, boolean translucent, boolean glowing) {
         AngelDrive d = entity.clientDrive;
         if (bodyVisible && d != null && d.ready() && d.blended().alpha < 0.999)
             return RenderType.entityTranslucent(texture);
