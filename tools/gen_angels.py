@@ -9,7 +9,8 @@ kind's light). Flat colours; the values follow the sheet (cream plate and feathe
     python3 tools/gen_angels.py --massing b --kind archer    # design/models/sunforged_angel_b_archer.json
     python3 tools/gen_angels.py --massing b2 --kind sword   # round 2: B raised to a body (sunforged_angel_b2_sword.json)
     python3 tools/gen_angels.py --massing b3 --kind sword   # round 3: B2's part-level pass
-    python3 tools/gen_angels.py --all                        # all fifteen (a, b, c, b2 unchanged + b3)
+    python3 tools/gen_angels.py --massing b4 --kind sword   # round 4: B3's wings with B2's halo (one change vs B3)
+    python3 tools/gen_angels.py --all                        # all eighteen (a, b, c, b2, b3 unchanged + b4)
     python3 tools/render_concept.py --check design/models/sunforged_angel_*.json
 
 Space is the DSL's (design/models/README.md): px, y up, the unit faces -Z, +x is its left. Hover pose: the model is
@@ -49,7 +50,8 @@ KIND_PALETTE = {
 EMISSIVE = ["sun", "glow"]
 NAMES = {"mender": "Mender Angel", "archer": "Seraph Archer", "sword": "Sword Seraph"}
 ROLES = {"mender": "healer (summon)", "archer": "ranged (summon)", "sword": "melee engager (summon)"}
-MASSING = {"a": "Choir Seraph", "b": "Ordo Seraph", "c": "Herald", "b2": "Ordo Seraph r2", "b3": "Ordo Seraph r3"}
+MASSING = {"a": "Choir Seraph", "b": "Ordo Seraph", "c": "Herald", "b2": "Ordo Seraph r2", "b3": "Ordo Seraph r3",
+           "b4": "Ordo Seraph r4"}
 KIND_SCALE = {"mender": 0.92, "archer": 1.00, "sword": 1.15}      # the game's render scale (not baked in here)
 RTS_EYE = (0.0, 0.79, -0.62)                                      # toward the RTS camera (52 deg down, in front)
 
@@ -824,13 +826,17 @@ def build_b2(kind, rnd=2):
     pal.update(KIND_PALETTE[kind])
     pal["feather_warm"] = "#eadab4"            # 6: the flights' warm cream (the underside), a step under "feather"
     key = "b%d" % rnd
-    if rnd == 3:
+    if rnd >= 3:
         pal["feather_warm"] = "#fbf4e4"        # round 3, 1: near-white flights
+    if rnd == 3:
         pal["sun"] = "#ffe188"                 # round 3, 3: the halo's gold ~20% less saturated (#ffd96a)
         pal["halo_gold"] = "#d4af5a"           # the Mender's disc face (gold #d4a63c, ~20% less saturated)
+    # round 4 (B4): B3 with ONE change - B2's halo back (geometry and colours: the ring's tube 2.1 px in sun #ffd96a,
+    # the Mender's gold disc); the blind critic read B2's ring at far and lost B3's (a 1 px smudge on the grass)
     m = Model("%s - %s (massing %s)" % (NAMES[kind], MASSING[key], key.upper()), "sunforged",
-              ROLES[kind] + (", round 2 body" if rnd == 2 else ", round 3 part pass"), pal, EMISSIVE)
-    body = body_b2(m, kind, flat_hem=(rnd == 3))
+              ROLES[kind] + {2: ", round 2 body", 3: ", round 3 part pass", 4: ", round 4: B3 wings, B2 halo"}[rnd],
+              pal, EMISSIVE)
+    body = body_b2(m, kind, flat_hem=(rnd >= 3))
     (wings_b2 if rnd == 2 else wings_b3)(m, kind)
     chin, H = body["chin"], body["H"]
     head_b2(m, chin, H)
@@ -1043,7 +1049,7 @@ def extent(m, names=None):
 
 
 def build(massing, kind):
-    if massing in ("b2", "b3"):
+    if massing in ("b2", "b3", "b4"):
         return build_b2(kind, rnd=int(massing[1]))
     pal = dict(PALETTE)
     pal.update(KIND_PALETTE[kind])
@@ -1138,13 +1144,14 @@ def write(massing, kind):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--massing", choices=("a", "b", "c", "b2", "b3"),
-                    help="a / b / c: round 1's greyboxes (kept as the A/B record); b2: round 2's B; b3: round 3's")
+    ap.add_argument("--massing", choices=("a", "b", "c", "b2", "b3", "b4"),
+                    help="a / b / c: round 1's greyboxes (kept as the A/B record); b2: round 2's B; b3: round 3's; "
+                         "b4: B3's wings with B2's halo")
     ap.add_argument("--kind", choices=("mender", "archer", "sword"))
     ap.add_argument("--all", action="store_true")
     a = ap.parse_args()
     if a.all:
-        for ms in ("a", "b", "c", "b2", "b3"):
+        for ms in ("a", "b", "c", "b2", "b3", "b4"):
             for k in ("mender", "archer", "sword"):
                 write(ms, k)
     elif a.massing and a.kind:
