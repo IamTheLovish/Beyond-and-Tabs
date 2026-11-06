@@ -180,6 +180,13 @@ def measure(A, runs):
                 M, tv = fr[n]
                 return M @ np.array(p, float) + tv
             root = np.array(pose["root"], float)
+            if name == "walk":                            # r4: the stride and the weight (the r3b critic's items)
+                py = pose["bones"]["pelvis"]["off"][1]
+                rec["pelvis_y_min"] = min(rec.get("pelvis_y_min", 0.0), py)
+                for k in ("r", "l"):
+                    tx = pose["bones"].get("thigh_" + k, {"rot": [0, 0, 0]})["rot"][0]
+                    rec["thigh_x_min"] = min(rec.get("thigh_x_min", 0.0), tx)
+                    rec["thigh_x_max"] = max(rec.get("thigh_x_max", 0.0), tx)
             if name in TWO_HAND:
                 G, H = W("maul", gr), W("maul", (gr[0], gr[1], gr[2] - 10.0))
                 d = (H - G) / np.linalg.norm(H - G)
@@ -261,7 +268,8 @@ def summary(nums, timings):
     along_min = min(v["along_min"] for v in two.values())
     haft_max = max(v["haft_l_max"] for v in two.values())
     hs = nums["halo_slam_hold"]
-    lines = ["## Quarry Saint r3b - measured", "",
+    hg = nums.get("halo_gatefall_hold", (0.0, 0, 0))
+    lines = ["## Quarry Saint - measured", "",
              "| fix | goal | measured |", "|---|---|---|",
              "| walk: planted-foot slip, world frame | <= %.2f px/tick | max %.4f px/tick, %.3f px over %d ticks |" % (
                  SLIP_GOAL, walk["slip_max"], walk["slip_total"], nums["walk_ticks"]),
@@ -269,6 +277,8 @@ def summary(nums, timings):
              "| ... with 0.5 px clearance (forearms, fists grown 0.5) | 0 px | max %.2f px (%s %s) |" % worst_clear,
              "| halo visible at the slam hold (rts, maul drawn vs hidden) | >= %d%% | %.0f%% (%d / %d px) |" % (
                  HALO_GOAL * 100, hs[0] * 100, hs[1], hs[2]),
+             "| halo visible at the Gatefall hold (t31, rts) | >= %d%% | %.0f%% (%d / %d px) |" % (
+                 HALO_GOAL * 100, hg[0] * 100, hg[1], hg[2]),
              "| top-view gold (rest, topdown) | <= %.0f%% | %.2f%% (upgraded %.2f%%) |" % (
                  GOLD_GOAL, nums["gold_top_pct"]["base"], nums["gold_top_pct"]["upgrade"]),
              "| fists: left fist place along the haft (two-hand clips) | >= 11 px | min %.2f px; off the haft max "
@@ -310,6 +320,7 @@ def main():
         slam = dict(runs["slam"])
         nums["halo_slam_hold"] = halo_share(qs, to_preview(slam[17]))
         nums["halo_slam_windup_key"] = halo_share(qs, A.KEYS["slam_windup"])
+        nums["halo_gatefall_hold"] = halo_share(qs, to_preview(dict(runs["gatefall"])[31]))   # r4
         nums["halo_rest"] = halo_share(qs, A.KEYS["rest"])
         nums["gold_top_pct"] = {"base": gold_share(qs), "upgrade": gold_share(qs, True)}
         nums["keys"] = key_report(out)

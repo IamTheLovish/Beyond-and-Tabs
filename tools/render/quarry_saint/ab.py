@@ -75,21 +75,26 @@ def main():
     for lab, (_name, cells, tag) in labels.items():
         r = []
         for key, cap in (("view_rts_42", "rts close 42 px/block, rest"), ("view_quarter_42", "quarter 42, rest"),
-                         ("slam_rts_42_%s" % a.slam, "slam hold, rts 42")):
+                         ("slam_rts_42_%s" % a.slam, "slam hold, rts 42"),
+                         ("sweep_rts_42_t012", "sweep wind-up t12, rts 42"),
+                         ("gatefall_rts_42_t030", "Gatefall wind-up t30, rts 42")):
             im = load(cells, tag, key)
             if im is not None:
                 r.append((im, "%s - %s" % (lab, cap)))
         body.append(r)
         r = []
-        for key, cap in (("view_rts_21", "rts tactical 21, rest"), ("slam_rts_21_%s" % a.slam, "slam hold, rts 21")):
+        for key, cap in (("view_rts_21", "rts tactical 21, rest"), ("slam_rts_21_%s" % a.slam, "slam hold, rts 21"),
+                         ("sweep_rts_21_t012", "sweep wind-up, rts 21"), ("gatefall_rts_21_t030", "Gatefall wind-up, 21")):
             im = load(cells, tag, key)
             if im is not None:
                 r.append((im, "%s - %s" % (lab, cap)))
         tac.append(r)
     compose(body, "Quarry Saint - A/B: X vs Y (Blender Workbench, the repo's bone math)",
-            "each side rendered from its own commit; rest and the slam hold", os.path.join(a.out, "ab_body_rts.png"))
+            "each side rendered from its own commit; rest, the slam hold, the sweep and Gatefall wind-ups",
+            os.path.join(a.out, "ab_body_rts.png"))
     compose(tac, "Quarry Saint - A/B tactical: X vs Y at 21 px per block",
-            "each side rendered from its own commit; rest and the slam hold", os.path.join(a.out, "ab_tactical.png"))
+            "each side rendered from its own commit; rest, the slam hold, the sweep and Gatefall wind-ups",
+            os.path.join(a.out, "ab_tactical.png"))
 
 
 if __name__ == "__main__":
