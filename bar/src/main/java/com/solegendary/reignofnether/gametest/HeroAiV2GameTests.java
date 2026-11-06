@@ -88,18 +88,23 @@ public class HeroAiV2GameTests {
     }
 
     /**
-     * Why an order given now would not reach {@code unit}, or null when it would. CommandQueues.issue finds each unit
-     * with level.getEntity and passes over one the level does not hold yet, without a word: a unit added at the test's
-     * start stays out of that lookup until its chunk's entity section is loaded (ArenaReady, GameTestChunks
-     * .whenEntitiesReady), and a test that ordered it at a fixed tick from the spawn went on to judge a hero with no
-     * order (flake-stress 42145152071: "did not follow its move order (95.5 -> 95.5)", "did not go back to its move
-     * order"). The problem says where the unit was and whether its chunk was entity-ticking.
+     * Why an order given now would not be carried out as the test counts on, or null when it would: the unit is not in
+     * level.getEntity (CommandQueues.issue passes over such a unit without a word), or its chunk is not entity-ticking
+     * yet, so the unit has not run a tick and the test's clock runs ahead of it. A unit added at the test's start can
+     * be either until its arena's entities load (ArenaReady, GameTestChunks.whenEntitiesReady). Diagnosis 42191145776
+     * (shard 8, 4 runners): the retreat test failed "did not follow its move order (95.5 -> 95.5)" on the two runners
+     * where its hero was in the level but "tickCount 0, entity-ticking false" at the tick-2 order, and passed on the two
+     * where it read "tickCount 2, entity-ticking true". The problem says where the unit was and how far it had got.
      */
     static String unreachable(GameTestHelper helper, Mob unit, UnitAction action) {
-        if (helper.getLevel().getEntity(unit.getId()) == unit)
+        var level = helper.getLevel();
+        boolean inLevel = level.getEntity(unit.getId()) == unit;
+        boolean ticking = level.isPositionEntityTicking(unit.blockPosition());
+        if (inLevel && ticking)
             return null;
-        return "setup: the " + action + " order at test tick " + helper.getTick()
-            + " went to a unit the level does not hold yet, so it was dropped (" + ArenaReady.describe(helper.getLevel(), List.of(unit)) + ")";
+        return "setup: the " + action + " order at test tick " + helper.getTick() + " went to a unit "
+            + (inLevel ? "whose chunk is not entity-ticking yet, so it has not started to act" : "the level does not hold yet, so it was dropped")
+            + " (" + ArenaReady.describe(level, List.of(unit)) + ")";
     }
 
     /**
