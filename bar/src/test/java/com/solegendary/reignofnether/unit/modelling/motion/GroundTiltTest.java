@@ -80,7 +80,7 @@ class GroundTiltTest {
         for (; x < 34; x += speed) {
             y += Mth.clamp(serverY(profile, x, width) - y, -RISE, RISE);
             GroundTilt.target(g, x, y, z, EAST, width, true, target);
-            GroundTilt.step(s, 0, target, fresh);
+            GroundTilt.step(s, 0, target, y, fresh);
             fresh = false;
             float p = GroundTilt.pitchAt(s, 0, 1f), r = GroundTilt.rollAt(s, 0, 1f), d = GroundTilt.dropAt(s, 0, 1f);
             GroundTilt.feet(g, x, y, z, EAST, width, p, r, d, feet);

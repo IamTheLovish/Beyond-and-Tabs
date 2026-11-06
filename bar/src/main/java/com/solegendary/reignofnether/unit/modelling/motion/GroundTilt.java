@@ -9,6 +9,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import static com.solegendary.reignofnether.unit.modelling.motion.AnimState.GROUND;
 import static com.solegendary.reignofnether.unit.modelling.motion.AnimState.GROUND_PREV;
+import static com.solegendary.reignofnether.unit.modelling.motion.AnimState.GROUND_Y;
 
 /**
  * The ground under the body (motion fluidity step 3, A; lovish, Nov 5: "units interactive with blocks the air and the
@@ -48,10 +49,16 @@ public final class GroundTilt {
     public static final float MAX_DROP = 0.75f;
     /**
      * How far the drawn tilt (degrees) and drop (blocks) move in one client tick toward the ground's: a beast tips onto
-     * a step's slope in 2-3 ticks (it should be on its feet before it has walked far over the edge), and the drop moves
-     * less than the playback's drawn rise (0.34 a tick), so the body's height is never drawn moving faster than today.
+     * a step's slope in 2-3 ticks (it should be on its feet before it has walked far over the edge).
      */
     public static final float TILT_STEP = 12f, DROP_STEP = 0.3f;
+    /**
+     * The most the drawn body's height (the unit's drawn height plus the drop) moves in one client tick, blocks: a
+     * little under the playback's own drawn rise (0.34, "r0.34" in the [Motion] notice). Without it the drop pulled the
+     * body down onto the lower ground while the unit's drawn height was still falling after it, and a Bison came down
+     * a step 0.52 in one tick (CI #551's first green).
+     */
+    public static final float BODY_STEP = 0.33f;
 
     /** The most a body this wide tilts, degrees. */
     public static float maxDeg(float width) {
@@ -173,10 +180,14 @@ public final class GroundTilt {
     }
 
     /**
-     * One client tick of the drawn tilt and drop toward {@code target} ({@link #target}'s out): each moves at most
-     * {@link #TILT_STEP} / {@link #DROP_STEP}; a fresh slot starts where the ground puts it.
+     * One client tick of the drawn tilt and drop toward {@code target} ({@link #target}'s out), the unit drawn at height
+     * {@code y}: each moves at most {@link #TILT_STEP} / {@link #DROP_STEP}, and the drop no further than keeps the
+     * body's height (y plus the drop) within {@link #BODY_STEP} of last tick's; a fresh slot starts where the ground puts
+     * it.
      */
-    public static void step(float[] s, int b, float[] target, boolean fresh) {
+    public static void step(float[] s, int b, float[] target, double y, boolean fresh) {
+        float last = s[b + GROUND_Y];
+        float dy = fresh || !Float.isFinite(last) || !Double.isFinite(y) ? 0f : (float) (y - last);
         for (int k = 0; k < 3; k++) {
             float t = Float.isFinite(target[k]) ? target[k] : 0f;
             float cur = s[b + GROUND + k];
@@ -184,9 +195,17 @@ public final class GroundTilt {
                 cur = 0f;
             float lim = k == 2 ? DROP_STEP : TILT_STEP;
             float next = fresh ? t : cur + Mth.clamp(t - cur, -lim, lim);
+            if (k == 2 && !fresh) {
+                float body = dy + (next - cur);
+                if (Math.abs(body) > BODY_STEP)
+                    next = cur + Math.copySign(BODY_STEP, body) - dy;
+                next = Mth.clamp(next, -MAX_DROP, 0f);
+            }
             s[b + GROUND_PREV + k] = fresh ? next : cur;
             s[b + GROUND + k] = next;
         }
+        if (Double.isFinite(y))
+            s[b + GROUND_Y] = (float) y;
     }
 
     /** The drawn pitch (degrees, + = nose up) between the last two ticks. */

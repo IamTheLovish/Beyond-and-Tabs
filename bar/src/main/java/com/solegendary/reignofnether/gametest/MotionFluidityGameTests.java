@@ -357,7 +357,7 @@ public class MotionFluidityGameTests {
                     long t0 = System.nanoTime();
                     for (int i = 0; i < n; i++) {
                         GroundTilt.target(g, xs[i], ys[i], zs[i], yaws[i], ws[i], true, target);
-                        GroundTilt.step(slab, i * AnimState.STRIDE, target, round == -5);
+                        GroundTilt.step(slab, i * AnimState.STRIDE, target, ys[i], round == -5);
                     }
                     if (round >= 0)
                         rounds[round] = (System.nanoTime() - t0) / 1e6;
@@ -604,7 +604,7 @@ public class MotionFluidityGameTests {
                 int at = Math.max(0, Math.min(d.serverTickAt[c], track.size() - 1));
                 boolean grounded = track.get(at)[4] == 1;
                 GroundTilt.target(g, d.x[c], d.y[c], d.z[c], d.yaw[c], width, grounded, target);
-                GroundTilt.step(s, 0, target, fresh);
+                GroundTilt.step(s, 0, target, d.y[c], fresh);
                 fresh = false;
                 if (d.serverTickAt[c] < from || d.serverTickAt[c] >= to)
                     continue;

@@ -159,7 +159,7 @@ public final class AnimStates {
         } else
             GroundTilt.target(ground, le.getX(), le.getY(), le.getZ(), s[b + AnimState.SP_TURN], le.getBbWidth(),
                 le.onGround(), TILT);
-        GroundTilt.step(s, b, TILT, fresh);
+        GroundTilt.step(s, b, TILT, le.getY(), fresh);
         if (fresh) {
             // its own tempo and a phase of its own: neighbours never breathe in step (Desync, Life.offset)
             s[b + AnimState.TEMPO] = Desync.tempo(id);
