@@ -32,7 +32,7 @@ const float WIND_FLUTTER_HZ = 1.6;
 // as a sheen on the plants it bends (GUST_SHEEN) - a wave you can see from above, not a pixel's jitter.
 // The top of a grass tuft at a full gust moves ~0.08 block (~2.5 px at the default zoom); a leaf block ~0.02
 const float PLANT_SWAY = 0.08;
-const float PLANT_FLUTTER = 0.05;      // the flutter's share of a plant's sway (was 0.15)
+const float PLANT_FLUTTER = 0.04;      // the flutter's share of a plant's sway (0.15 in round 1)
 const float LEAF_SWAY = 0.018;
 const float LEAF_PHASE = 0.2;          // the leaves' flutter phase changes 5x slower across space than a plant's: a
                                        // canopy moves as one, not block by block

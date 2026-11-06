@@ -328,6 +328,9 @@ public class T3RoleGameTests {
     /**
      * Bone Dragon: a breath hits every enemy inside its cone (and withers them), never a friend in it, an enemy behind
      * the dragon or one off the cone's angle; the damage is its attack damage, x1.3 at night.
+     * Nov 5 (the blue fire breath, BoneDragonBreathGameTests): the dragon breathes from its fighting height (10 over the
+     * ground, where FlyingMoveToTargetGoal holds it, not 4) and each burn is aimed at a point - its target - instead of
+     * along a flat direction from the body; where the foes stand and every assertion are unchanged.
      */
     @GameTest(template = ARENA, timeoutTicks = 60)
     public static void bone_dragon_breath_withers_the_cone(GameTestHelper helper) {
@@ -349,9 +352,9 @@ public class T3RoleGameTests {
                 helper.fail("could not create the breath test units");
                 return;
             }
-            dragon.setPos(dragon.getX(), dragon.getY() + 4, dragon.getZ());   // in the air over the line
+            dragon.setPos(dragon.getX(), dragon.getY() + 10, dragon.getZ());   // in the air over the line, at its fighting height
             float a0 = inA.getHealth(), b0 = inB.getHealth(), f0 = friend.getHealth(), be0 = behind.getHealth(), o0 = offAngle.getHealth();
-            int hit = dragon.breathe(level, new Vec3(1, 0, 0));
+            int hit = dragon.breathPulse(level, inA.position());
             if (hit != 2)
                 problems.add("the breath should hit the two enemies in its cone, hit " + hit);
             if (inA.getHealth() >= a0 || inB.getHealth() >= b0)
