@@ -63,6 +63,20 @@ public class MotionFluidityGameTests {
     static final int WALK_TICKS = 420;
     /** Ticks the crowd is watched standing, after it arrived. */
     static final int IDLE_TICKS = 100;
+    /**
+     * A snap: the yaw the packets carry (yRot) turning over this many degrees in one server tick (vanilla MoveControl
+     * turns up to 90 a tick toward its wanted point); NEAR_ACROSS: a wanted point closer across than this is almost
+     * straight above or below the unit, so the heading toward it is noise.
+     */
+    static final double SNAP_DEG = 45, NEAR_ACROSS = 0.3;
+
+    /** The median of {@code v} (NaN when empty). */
+    static double median(List<Double> v) {
+        if (v.isEmpty())
+            return Double.NaN;
+        double[] s = v.stream().mapToDouble(Double::doubleValue).sorted().toArray();
+        return s[s.length / 2];
+    }
 
     static final ClientView.Clock[] CLOCKS = {
         ClientView.Clock.steady(),
@@ -311,7 +325,8 @@ public class MotionFluidityGameTests {
         final ServerEntity everyTick;
         final VecDeltaCodec codec1 = new VecDeltaCodec();
         final List<ClientView.Sent> sent1 = new ArrayList<>();
-        final List<double[]> track = new ArrayList<>();   // x, y, z, body yaw, on ground (1/0), per tick
+        // per tick: x, y, z, body yaw, on ground (1/0), yRot, the wanted point's distance across (-1: none) and rise
+        final List<double[]> track = new ArrayList<>();
         final double x0, y0, z0;
         final float yaw0;
         int tick = 0, teleports = 0, rotOnly = 0, idleFrom = -1;
@@ -363,7 +378,16 @@ public class MotionFluidityGameTests {
             // that make it send off its cadence, and an every-tick tracker needs neither
             tracker.sendChanges();
             everyTick.sendChanges();
-            track.add(new double[] { mob.getX(), mob.getY(), mob.getZ(), mob.yBodyRot, mob.onGround() ? 1 : 0 });
+            // with the yaw the packets carry (yRot) and how far across and up the move control's wanted point is: a snap
+            // turn toward a point almost straight above (a step's foot) is a turn toward noise
+            // (MoveControl.tick sets MOVE_TO back to WAIT before it moves, so hasWanted() is false by now: the last
+            // wanted point is read while the unit still has a path)
+            net.minecraft.world.entity.ai.control.MoveControl mc = mob.getMoveControl();
+            boolean pathing = !mob.getNavigation().isDone();
+            double wantedAcross = pathing ? Math.hypot(mc.getWantedX() - mob.getX(), mc.getWantedZ() - mob.getZ()) : -1;
+            double wantedUp = pathing ? mc.getWantedY() - mob.getY() : 0;
+            track.add(new double[] { mob.getX(), mob.getY(), mob.getZ(), mob.yBodyRot, mob.onGround() ? 1 : 0,
+                mob.getYRot(), wantedAcross, wantedUp });
             tick++;
         }
 
@@ -409,6 +433,7 @@ public class MotionFluidityGameTests {
             List<Double> speed = new ArrayList<>();
             double maxYaw = 0, maxDy = 0, lastStep = 0;
             int reversals = 0, air = 0;
+            List<Double> snapAcross = new ArrayList<>(), snapUp = new ArrayList<>();
             for (int k = Math.max(1, from); k < to; k++) {
                 double[] a = track.get(k - 1), b = track.get(k);
                 speed.add(Math.hypot(b[0] - a[0], b[2] - a[2]));
@@ -422,7 +447,19 @@ public class MotionFluidityGameTests {
                 maxDy = Math.max(maxDy, b[1] - a[1]);
                 if (b[4] == 0)
                     air++;
+                if (Math.abs(Mth.wrapDegrees(b[5] - a[5])) > SNAP_DEG && b[6] >= 0) {
+                    snapAcross.add(b[6]);
+                    snapUp.add(b[7]);
+                }
             }
+            // the yRot snaps (the yaw the packets carry, over SNAP_DEG in one tick): how many, how many toward a wanted
+            // point under NEAR_ACROSS blocks across (straight above or below the unit), the median distance across and up
+            int snaps = snapAcross.size(), near = 0;
+            for (double v : snapAcross)
+                if (v < NEAR_ACROSS)
+                    near++;
+            String snapPart = String.format(Locale.ROOT, " snap %d/%d a%.2f u%.2f;", snaps, near, median(snapAcross),
+                median(snapUp));
             double[] s = speed.stream().mapToDouble(Double::doubleValue).toArray();
             double mean = Arrays.stream(s).average().orElse(0), var = 0;
             for (double v : s)
@@ -452,9 +489,9 @@ public class MotionFluidityGameTests {
             // one line a walk (CI folds every "[Motion]" line into ONE notice: a shard keeps only its first 10, ~4 KB each):
             // the server's walk, then the drawn walk per jittery clock
             String serverPart = String.format(Locale.ROOT, "[Motion] %s: %dt %.3fb/t cv %.2f stops %d; yaw max %.0f rev %d;"
-                    + " rise %.2f air %d; pos %d gaps %d/%d/%d/%d rot %d tp %d", what, s.length, mean,
+                    + " rise %.2f air %d;%s pos %d gaps %d/%d/%d/%d rot %d tp %d", what, s.length, mean,
                 mean > 0 ? Math.sqrt(var / Math.max(1, s.length)) / mean : 0, stops, maxYaw, reversals, maxDy, air,
-                posPackets, gaps[0], gaps[1], gaps[2], gaps[3], rotPackets, teleports);
+                snapPart, posPackets, gaps[0], gaps[1], gaps[2], gaps[3], rotPackets, teleports);
             // the drawn walk per clock: vanilla's lerp (today), vanilla's lerp tracked every tick, and the game's stamped
             // playback (UnitPlayback, "buf");
             // each as speed cv / % ticks frozen / torso pitch deg / lag behind the newest known server tick
@@ -475,9 +512,11 @@ public class MotionFluidityGameTests {
                     from, to, mean, sx, sz);
                 ClientView.Smooth buffered = ClientView.smoothness(ClientView.replayStamped(sent, n, c, seed, interval,
                     x0, y0, z0, yaw0), from, to, mean, sx, sz);
-                client.append(String.format(Locale.ROOT, " | %s %.2f/%.1f e1 %.2f/%.1f buf %.2f/%.1f/%.1ft", c.name(),
-                    today.cv(), today.frozenPct(), every.cv(), every.frozenPct(), buffered.cv(), buffered.frozenPct(),
-                    buffered.lagTicks()));
+                // (y: the largest drawn yaw change in one client tick, degrees; r: the largest drawn rise in one)
+                client.append(String.format(Locale.ROOT, " | %s %.2f/%.1f y%.0f r%.2f e1 %.2f/%.1f buf %.2f/%.1f/%.1ft"
+                    + " y%.0f r%.2f", c.name(), today.cv(), today.frozenPct(), today.maxYawStep(), today.maxDy(), every.cv(),
+                    every.frozenPct(), buffered.cv(), buffered.frozenPct(), buffered.lagTicks(), buffered.maxYawStep(),
+                    buffered.maxDy()));
             }
             long e1 = sent1.stream().filter(p -> p.hasPos() && p.tick() >= from && p.tick() < to).count();
             ReignOfNether.LOGGER.warn(serverPart + client + " | e1 pos " + e1);

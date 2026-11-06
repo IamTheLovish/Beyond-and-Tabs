@@ -154,7 +154,8 @@ final class ClientView {
     }
 
     /** The drawn walk's smoothness between two server ticks of the walk (the server's own judged window). */
-    record Smooth(double cv, double frozenPct, double jumpRatio, double pitchDeg, double maxDy, double lagTicks, int ticks) {
+    record Smooth(double cv, double frozenPct, double jumpRatio, double pitchDeg, double maxDy, double lagTicks, int ticks,
+                  double maxYawStep) {
         String brief() {
             return String.format(Locale.ROOT, "%.2f/%.1f/%.1f/%.1f", cv, frozenPct, pitchDeg, lagTicks);
         }
@@ -168,7 +169,7 @@ final class ClientView {
      */
     static Smooth smoothness(Drawn d, int from, int to, double serverMeanSpeed, double[] serverX, double[] serverZ) {
         List<Double> speeds = new ArrayList<>();
-        double maxDy = 0, lagSum = 0;
+        double maxDy = 0, lagSum = 0, maxYawStep = 0;
         int lagN = 0;
         // the walk's direction, start to end of the window: the lag is how far behind the newest known server position
         // the drawn unit is, along it, in ticks of the walk's mean speed
@@ -190,6 +191,7 @@ final class ClientView {
                 lagN++;
             }
             maxDy = Math.max(maxDy, d.y[c] - d.y[c - 1]);
+            maxYawStep = Math.max(maxYawStep, Math.abs(Mth.wrapDegrees(d.yaw[c] - d.yaw[c - 1])));
             Kinematics.step(slab, 0, (float) dx, (float) (d.y[c] - d.y[c - 1]), (float) dz, 0f, 20f, 20f, false, fresh);
             if (!fresh) {
                 pitchSum += Math.abs(Mth.clamp(slab[AnimState.ACCEL] * Kinematics.PITCH_PER_ACCEL,
@@ -200,7 +202,7 @@ final class ClientView {
         }
         double lag = lagN > 0 ? lagSum / lagN : Double.NaN;
         if (speeds.size() < 4)
-            return new Smooth(Double.NaN, Double.NaN, Double.NaN, Double.NaN, maxDy, lag, speeds.size());
+            return new Smooth(Double.NaN, Double.NaN, Double.NaN, Double.NaN, maxDy, lag, speeds.size(), maxYawStep);
         double[] s = speeds.stream().mapToDouble(Double::doubleValue).toArray();
         double mean = Arrays.stream(s).average().orElse(0), var = 0, max = 0;
         int frozen = 0;
@@ -212,6 +214,6 @@ final class ClientView {
         }
         double cv = mean > 1e-6 ? Math.sqrt(var / s.length) / mean : Double.NaN;
         return new Smooth(cv, 100.0 * frozen / s.length, serverMeanSpeed > 1e-6 ? max / serverMeanSpeed : Double.NaN,
-            pitchN > 0 ? pitchSum / pitchN : 0, maxDy, lag, s.length);
+            pitchN > 0 ? pitchSum / pitchN : 0, maxDy, lag, s.length, maxYawStep);
     }
 }

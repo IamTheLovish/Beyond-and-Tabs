@@ -38,6 +38,11 @@ class UnitPlaybackTest {
     /** Walk steps a client tick may move the unit while it catches up after a server hitch (a jog, not a leap). */
     static final double MAX_CATCH_UP = 2.0;
     static final int INTERVAL = 3;
+    /**
+     * The most the drawn body may turn in one client tick (degrees): 400 degrees a second, a brisk turn - a 90-degree
+     * corner over 5 client ticks (250 ms) - where the buffer drew a server snap as 57-62 in one (CI #545).
+     */
+    static final double MAX_DRAWN_TURN = 20.0;
     static final double SPEED = 0.25;   // blocks a tick: an infantry walk
 
     // ------------------------------------------------------------------------------------------------ the clocks
@@ -625,6 +630,81 @@ class UnitPlaybackTest {
         assertTrue(headOff <= 1.0, String.format(Locale.ROOT, "the head is drawn %.0f degrees off the body", headOff));
         assertTrue(pitchOff <= 0.02, String.format(Locale.ROOT, "the pitch is drawn %.0f%% of the turn off the body",
             100 * pitchOff));
+    }
+
+    /**
+     * PR 2 of motion fluidity: on the stepped lane the server turns a unit 90 degrees in one tick at a path corner
+     * (vanilla MoveControl turns up to 90 a tick toward its next node: 4 such snaps a walk for infantry and the War
+     * Mammoth, CI #545), and the buffer drew that as 57-62 degrees in one client tick - a flick, the unit "bugging
+     * around". Drawn as a turn: no client tick turns the body more than {@link #MAX_DRAWN_TURN} degrees, through a
+     * 90-degree corner and a 170-degree reversal, on a steady clock, every 700-unit clock and at 14.5 TPS; and a second
+     * after the corner the unit is drawn within 1 degree of the server's facing (a turn, not a lag).
+     */
+    @Test
+    void a_path_corner_snap_is_drawn_as_a_turn_not_a_flick() {
+        final int corner = 120;
+        StringBuilder bad = new StringBuilder();
+        for (double turn : new double[] { 90, 170 }) {
+            double after = -90 + turn, c = Math.cos(Math.toRadians(turn)), s = Math.sin(Math.toRadians(turn));
+            // east until the corner, then on along the new heading (a yaw of -90 + turn)
+            IntFunction<double[]> truth = k -> k < corner ? new double[] { SPEED * k, 0, 0, -90, 0 }
+                : new double[] { SPEED * corner + SPEED * (k - corner) * c, SPEED * (k - corner) * s, 0, after, 0 };
+            List<double[]> clocks = new ArrayList<>();
+            clocks.add(steady(260));
+            clocks.add(at14(260));
+            for (long seed : SEEDS)
+                clocks.add(at700(260, seed));
+            double worstStep = 0, worstEnd = 0;
+            for (double[] at : clocks) {
+                Drawn d = replay(at, truth, Set.of());
+                for (int i = 1; i < d.yaw().length; i++) {
+                    worstStep = Math.max(worstStep, Math.abs(Mth.wrapDegrees(d.yaw()[i] - d.yaw()[i - 1])));
+                    if (d.newest()[i] >= corner + 20)
+                        worstEnd = Math.max(worstEnd, Math.abs(Mth.wrapDegrees(d.yaw()[i] - after)));
+                }
+            }
+            if (worstStep > MAX_DRAWN_TURN || worstEnd > 1.0)
+                bad.append(String.format(Locale.ROOT, " a %.0f-degree turn: %.0f degrees in one client tick (bound %.0f),"
+                    + " %.1f off the server a second after;", turn, worstStep, MAX_DRAWN_TURN, worstEnd));
+        }
+        assertTrue(bad.length() == 0, "a corner snap is drawn as a flick:" + bad);
+    }
+
+    /**
+     * r1 B1 of #545 (Eris.14): the turn cap must not slow a jump's facing. A standing unit is teleported 30 blocks and
+     * turned 150 degrees in the same packet (Phenomena's moveTo(..., 0, 0), a command's moveTo with a yaw, an ability
+     * teleport), its head packet on the same tick: the position snaps, and so must the facing. With the cap alone the
+     * body was drawn 132 degrees off on the first tick at the new place and spun there for 9 client ticks. On the first
+     * client tick drawn at the new place, the body and the head face the server's way within 1 degree, on a steady
+     * clock and every 700-unit clock.
+     */
+    @Test
+    void a_teleport_that_turns_the_unit_faces_its_new_way_at_once() {
+        final int at = 150;
+        final double after = -90 + 150;
+        IntFunction<double[]> truth = k -> k < at ? new double[] { 0, 0, 0, -90, 0 } : new double[] { 30, 0, 0, after, 0 };
+        List<double[]> clocks = new ArrayList<>();
+        clocks.add(steady(260));
+        for (long seed : SEEDS)
+            clocks.add(at700(260, seed));
+        double server = qa(after), worstBody = 0, worstHead = 0;
+        int never = 0;
+        for (double[] clock : clocks) {
+            Drawn d = replay(clock, truth, Set.of());
+            int first = -1;
+            for (int c = 0; c < d.x().length && first < 0; c++)
+                if (Math.abs(d.x()[c] - 30) < 1)
+                    first = c;
+            if (first < 0) {
+                never++;
+                continue;
+            }
+            worstBody = Math.max(worstBody, Math.abs(Mth.wrapDegrees(d.yaw()[first] - server)));
+            worstHead = Math.max(worstHead, Math.abs(Mth.wrapDegrees(d.headYaw()[first] - server)));
+        }
+        assertTrue(never == 0 && worstBody <= 1.0 && worstHead <= 1.0, String.format(Locale.ROOT, "a 30-block teleport"
+            + " that turns the unit 150 degrees is drawn at its new place facing %.0f degrees off the server (head %.0f);"
+            + " %d clocks never drew it there", worstBody, worstHead, never));
     }
 
     /** A turn across south (179 to -179 degrees) is drawn the short way: 2 degrees, never a spin through north. */
