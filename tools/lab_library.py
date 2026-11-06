@@ -29,7 +29,7 @@ GAME RULES (asserted in check_levels):
   - nothing pops off (gen_structures._SunRig support rules); no water, lava, gravity blocks, redstone, doors, leaves,
     copper.
 
-Usage: python3 tools/lab_library.py [OUT_DIR ...]   (default: both shipped copies, data/ and assets/)
+Usage: python3 tools/lab_library.py [--layout ne|front] [OUT_DIR ...]   (default: "ne", both shipped copies)
 """
 import os
 import sys
@@ -48,6 +48,17 @@ TX0, TX1, TZ0, TZ1 = 4, 6, 0, 2   # the tower
 TW = 9                         # the tower's wall top (the gold band)
 TC = (5, 1)                    # the tower's centre column
 PORCH = (2, 4)                 # the porch pillars' x, at z 5
+LAYOUT = "ne"
+# the tower's place: "ne" behind the hall on the north-east (the Barracks' keep), or "front" over the entrance on the
+# south (a west-work: the camera sees its two faces whole, the hall's roof behind it). One variable for a blind round.
+LAYOUTS = {"ne": (4, 6, 0, 2), "front": (2, 4, 4, 6)}
+
+
+def use_layout(name):
+    global TX0, TX1, TZ0, TZ1, TC, LAYOUT
+    TX0, TX1, TZ0, TZ1 = LAYOUTS[name]
+    TC = ((TX0 + TX1) // 2, (TZ0 + TZ1) // 2)
+    LAYOUT = name
 
 
 class Rig(LB.Rig):
@@ -131,7 +142,7 @@ def tower_body(r, top):
                     r.pillar(x, y, z)
                 else:
                     r.set(x, y, z, "quartz_bricks")
-    for (fx, fz) in ((TX0, 1), (5, TZ1)):
+    for (fx, fz) in ((TX0, TC[1]), (TC[0], TZ1)):
         for y in (7, 8):
             r.b.pop((fx, y, fz), None)
             r.set(TC[0], y, TC[1], DARK)
@@ -171,13 +182,28 @@ def porch(r):
         r.lantern(x, 2, 6)
 
 
+def front_door(r):
+    """The "front" layout's entrance: the porch is the tower's base - a door through its south face, its hollow and
+    the hall's wall, under a chiseled lintel; lantern posts on the plinth's front corners."""
+    for y in (1, 2):
+        for z in (TZ1, TC[1], HZ1):
+            r.b.pop((TC[0], y, z), None)
+    r.set(TC[0], 3, TZ1, "chiseled_quartz_block")
+    for x in (0, 6):
+        r.set(x, 1, 6, "stone_brick_wall")
+        r.lantern(x, 2, 6)
+
+
 def draw_l1(r):
     plinth(r)
     hall(r)
     hall_roof(r)
     tower_body(r, TW - 1)
     crown(r, TW, True)
-    porch(r)
+    if LAYOUT == "front":
+        front_door(r)
+    else:
+        porch(r)
 
 
 GRAND_BAND = TW + 3            # the grand's second gold band, over the lantern room
@@ -252,7 +278,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHIPPED = [os.path.join(ROOT, "bar", "src", "main", "resources", k, "reignofnether", "structures") for k in ("data", "assets")]
 
 if __name__ == "__main__":
-    outs = sys.argv[1:] or SHIPPED
+    args = sys.argv[1:]
+    if args[:1] == ["--layout"]:
+        use_layout(args[1])
+        args = args[2:]
+    outs = args or SHIPPED
     built = (l1(), grand())
     for out in outs:
         os.makedirs(out, exist_ok=True)
