@@ -74,13 +74,13 @@ public class RocketRackModel {
                     .texOffs(28, 0).addBox(-1.0F, -len, -1.0F, 2.0F, len + 1.0F, 2.0F)
                     .texOffs(38, 0).addBox(-1.5F, -len + 3.0F, -1.5F, 3.0F, 2.0F, 3.0F),
                 PartPose.offsetAndRotation(x, 0.0F, 0.0F, 0.0F, 0.0F, fan));
-            // the orb sits on the rod's tip: a core and three thin spikes crossing it
+            // the orb sits on the rod's tip: a small bright core and three long thin spikes crossing it (a star, not a cube)
             float tx = x + len * (float) Math.sin(fan), ty = -len * (float) Math.cos(fan);
             glow.addOrReplaceChild("orb" + i, CubeListBuilder.create()
-                    .texOffs(0, 14).addBox(-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F)
-                    .texOffs(40, 8).addBox(-4.0F, -0.5F, -0.5F, 8.0F, 1.0F, 1.0F)
-                    .texOffs(40, 8).addBox(-0.5F, -4.0F, -0.5F, 1.0F, 8.0F, 1.0F)
-                    .texOffs(40, 8).addBox(-0.5F, -0.5F, -4.0F, 1.0F, 1.0F, 8.0F),
+                    .texOffs(0, 14).addBox(-1.5F, -1.5F, -1.5F, 3.0F, 3.0F, 3.0F)
+                    .texOffs(40, 8).addBox(-5.0F, -0.5F, -0.5F, 10.0F, 1.0F, 1.0F)
+                    .texOffs(40, 8).addBox(-0.5F, -5.0F, -0.5F, 1.0F, 10.0F, 1.0F)
+                    .texOffs(40, 8).addBox(-0.5F, -0.5F, -5.0F, 1.0F, 1.0F, 10.0F),
                 PartPose.offsetAndRotation(tx, ty - 1.0F, 0.0F, 0.0F, 0.0F, fan));
         }
         return LayerDefinition.create(mesh, 64, 32);

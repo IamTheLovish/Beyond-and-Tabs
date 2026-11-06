@@ -130,11 +130,11 @@ def rack(rng):
     for name, (x0, y0, x1, y1) in box_faces(38, 0, 3, 2, 3).items():
         k = {"top": 1.2, "bottom": 0.7}.get(name, 1.0)
         noisy(img, x0, y0, x1, y1, shade(COPPER_L, k), rng, 0.05)
-    # lit parts, drawn full bright: the orb on each rod tip (4x4x4 at (0, 14)) and the spikes crossing it (8x1x1 at (40, 8))
-    glow_box(img, 0, 14, 4, 4, 4, rng)
+    # lit parts, drawn full bright: the orb on each rod tip (3x3x3 at (0, 14)) and the spikes crossing it (10x1x1 at (40, 8))
+    glow_box(img, 0, 14, 3, 3, 3, rng)
     # (the whole 18x10 corner is lit, so the spike samples light in whichever way round it is laid)
-    fill(img, 40, 8, 58, 18, BOLT_GLOW)
-    for x in range(41, 57):
+    fill(img, 40, 8, 64, 20, BOLT_GLOW)
+    for x in range(41, 62):
         img.putpixel((x, 12), BOLT_WHITE + (255,))
     return img
 
