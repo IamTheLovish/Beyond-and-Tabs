@@ -248,6 +248,24 @@ class HeartwoodHallTest(unittest.TestCase):
         import capitol_heartwood_hall as hh
         self.assertEqual(hh.vines_knocked_off(self.b.blocks), [])
 
+    def test_the_tree_is_one_piece(self):
+        """Every bark cell, and the stag's birch face and antlers, joins the trunk face to face: round 12 had two loose
+        bough cells, and round 13's diagonal antler arms met only at their edges, "stripped-birch stubs ... detached/
+        floating" (Fable critic round 13)."""
+        import capitol_heartwood_hall as hh
+        wood = {q for q, n in self.names.items() if n in (hh.LOG, hh.WOOD, hh.BIRCH, hh.BIRCH_W)}
+        start = (C, hh.BASE + 1, C)
+        self.assertIn(start, wood)
+        seen, todo = {start}, [start]
+        while todo:
+            p = todo.pop()
+            for d in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)):
+                q = (p[0] + d[0], p[1] + d[1], p[2] + d[2])
+                if q in wood and q not in seen:
+                    seen.add(q)
+                    todo.append(q)
+        self.assertEqual(sorted(wood - seen), [])
+
     def test_data_and_assets_copies_match(self):
         with open(NBT, "rb") as f, open(NBT_ASSETS, "rb") as g:
             self.assertEqual(f.read(), g.read())

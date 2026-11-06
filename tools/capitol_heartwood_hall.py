@@ -274,8 +274,14 @@ def face(c, o):
 # blocks a step, pressed to the bark - read from the RTS camera as "a beige lump of stripped birch pressed against the
 # trunk ... a bolted-on crate, not a face" (Fable critic round 12).
 # The arm starts beside the forehead, not over the eyes: a root one out over each eye hid it from the camera.
+# Each step of the arm shares a face with the last, as the boughs' do: round 13's arm stood one cell a step on the
+# diagonal, met only at its edges, and read as "stripped-birch stubs under the crown edge ... detached/floating"
+# (Fable critic round 13). It steps out beside the forehead (a 2, t 3) before it climbs one block out from the face, so
+# no step stands in the RTS camera's rays to the eyes (they climb toward the larger t from t 1).
 ANTLERS = tuple(q for s in (-1, 1) for q in
-                ((2, 2 * s, 3), (3, 3 * s, 4), (3, 4 * s, 5), (3, 5 * s, 6), (3, 6 * s, 7),   # the arm
+                ((2, 2 * s, 3), (2, 3 * s, 3), (3, 3 * s, 3),                                # the root, out of the brow
+                 (3, 3 * s, 4), (3, 4 * s, 4), (3, 4 * s, 5), (3, 5 * s, 5), (3, 5 * s, 6),  # the arm, step by step
+                 (3, 6 * s, 6), (3, 6 * s, 7),
                  (3, 4 * s, 6),                                                              # the middle tine
                  (3, 6 * s, 8)))                                                             # the tip tine
 
@@ -729,9 +735,10 @@ def check(s, box=(2 * R + 1, H, 2 * R + 1)):
             for f in faces:
                 d = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}[f]
                 assert (x + d[0], y, z + d[1]) in names, "a vine at %s hangs on nothing (%s)" % ((x, y, z), f)
-    # the tree's dark bark is one piece: every bark cell joins the trunk face to face (a lone bough cell read as "two
-    # single dark blocks [that] hang detached under the crown edges", Fable critic round 12)
-    bark = {p for p, nm in names.items() if nm in (LOG, WOOD)}
+    # the tree is one piece: every bark cell, and the stag's birch face and antlers, joins the trunk face to face (a
+    # lone bough cell read as "two single dark blocks [that] hang detached under the crown edges", Fable critic round
+    # 12; round 13's diagonal antler arms met only at their edges, "stripped-birch stubs ... detached/floating")
+    bark = {p for p, nm in names.items() if nm in (LOG, WOOD, BIRCH, BIRCH_W)}
     seen, todo = {(cx, BASE + 1, cz)}, [(cx, BASE + 1, cz)]
     while todo:
         p = todo.pop()
