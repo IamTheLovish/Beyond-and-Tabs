@@ -62,10 +62,35 @@ public final class GameTestChunks {
      */
     public static final long WAIT_MS = 60_000L;
 
-    /** STUB (tests first): the gate's readiness check, not written yet - it calls every chunk ready. */
+    /**
+     * The first of {@code chunks} that is not ready for entities, or null when every one is. Ready = its entity
+     * section is loaded ({@code areEntitiesLoaded}) AND it is entity-ticking ({@code isPositionEntityTicking}). A
+     * chunk at FULL is not enough for either: entity sections load on their own (IO), and entity ticking also needs
+     * every chunk within 2 FULL. Until both hold, an entity added there stays out of level.getEntity /
+     * getEntitiesOfClass and never ticks (#517's "in level false", hero_xp's "entity ticking there false"; vanilla's
+     * own MC-261024). {@code y} only picks the probe position; ticking is per chunk.
+     */
     @javax.annotation.Nullable
     public static long[] firstNotEntityReady(ServerLevel level, List<long[]> chunks, int y) {
+        for (long[] c : chunks)
+            if (!entityReady(level, (int) c[0], (int) c[1], y))
+                return c;
         return null;
+    }
+
+    /** One chunk of {@link #firstNotEntityReady}: entities loaded and entity-ticking. */
+    public static boolean entityReady(ServerLevel level, int cx, int cz, int y) {
+        return level.areEntitiesLoaded(ChunkPos.asLong(cx, cz))
+            && level.isPositionEntityTicking(new BlockPos((cx << 4) + 8, y, (cz << 4) + 8));
+    }
+
+    /** The chunks a box covers, each once (x-major). */
+    public static List<long[]> chunksOf(net.minecraft.world.level.levelgen.structure.BoundingBox box) {
+        List<long[]> out = new ArrayList<>();
+        for (int cx = box.minX() >> 4; cx <= box.maxX() >> 4; cx++)
+            for (int cz = box.minZ() >> 4; cz <= box.maxZ() >> 4; cz++)
+                out.add(new long[] { cx, cz });
+        return out;
     }
 
     /** Absolute ceiling on one wait, well under the 40-minute CI watchdog so a verdict still gets written. */
