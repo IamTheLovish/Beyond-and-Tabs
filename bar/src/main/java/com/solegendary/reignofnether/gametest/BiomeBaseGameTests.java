@@ -668,7 +668,7 @@ public class BiomeBaseGameTests {
             { Buildings.FOUNDRY_HALL, 428, new int[] { 14, 21, 14 } },     // the Grand Foundry (Oct 19)
             { Buildings.WRECK_HARBOUR, 243, new int[] { 14, 21, 14 } },    // the Admiral's Beacon (Oct 19)
             { Buildings.JADE_PAGODA, 494, new int[] { 14, 21, 14 } },      // the Pagoda of a Thousand Storms (Oct 19)
-            { Buildings.HEARTWOOD_HALL, 498, new int[] { 14, 35, 14 } } }; // the World-Tree Court (Oct 19), tall tree (Nov 5), lifted crown (his references, Nov 5)
+            { Buildings.HEARTWOOD_HALL, 498, new int[] { 14, 27, 14 } } }; // the World-Tree Court (Oct 19), tall tree (Nov 5), lifted crown (his references, Nov 5), framed in the RTS view (Nov 6)
         for (Object[] row : capitols) {
             Building b = (Building) row[0];
             int ronBlocks = (Integer) row[1];

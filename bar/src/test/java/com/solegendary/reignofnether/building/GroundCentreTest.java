@@ -9,13 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The animal rules measure "near the building" from its floor, not its box centre (#522 review N1): the box centre of
- * a 15 x 36 x 15 Heartwood Hall stands 17 over the ground, so a 10-block sphere round it reached no ground.
+ * a 15 x 28 x 15 Heartwood Hall stands 13 over the ground, so a 10-block sphere round it reached no ground.
  */
 class GroundCentreTest {
 
-    // the hall at y64: minCorner (0, 64, 0), maxCorner (14, 99, 14), its box centre as BuildingPlacement computes it
+    // the hall at y64: minCorner (0, 64, 0), maxCorner (14, 91, 14), its box centre as BuildingPlacement computes it
     private static final BlockPos MIN = new BlockPos(0, 64, 0);
-    private static final BlockPos CENTRE = new BlockPos(7, (64 + 99) / 2, 7);
+    private static final BlockPos CENTRE = new BlockPos(7, (64 + 91) / 2, 7);
 
     @Test
     void theGroundCentreIsTheCentreColumnAtTheFloor() {
