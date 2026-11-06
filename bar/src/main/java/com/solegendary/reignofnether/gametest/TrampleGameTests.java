@@ -362,6 +362,35 @@ public class TrampleGameTests {
 
     // ------------------------------------------------------------------ 3. the cost, against the budget set first
 
+    /** Walks stamped before the cost window: enough for the JIT to compile the stamp path (C2 near 10-15k calls). */
+    static final int WARM_UP_WALKS = 30_000;
+
+    /**
+     * Runs the stamp path {@link #WARM_UP_WALKS} times (and the sampler's pass over the units 2,000 times) before the
+     * measured window, along the pad's south edge row
+     * (dz +16, which the march never reaches: its cells saturate within a few dozen walks, so the march's own cell and
+     * byte counts are untouched), and returns the mean microseconds of the first 200 walks - the cold cost, printed
+     * beside the steady one, never asserted. In a match the sampler has stamped every unit's walk many thousands of
+     * times before a big march; flake-stress run 42196677820 measured 7-32 us a walk on a fresh server running only
+     * these tests (interpreted code) against 1.6-2.2 us in CI's shard 1, where every other test's units had already
+     * warmed it.
+     */
+    static double warmUp(Pad pad) {
+        double z = pad.cz + 16 + 0.5, y = PAD_Y + 1;
+        long coldNanos = 0;
+        for (int i = 0; i < WARM_UP_WALKS; i++) {
+            double x0 = pad.cx - 14 + (i % 25), x1 = x0 + 3;
+            long t0 = i < 200 ? System.nanoTime() : 0;
+            GroundMemoryServer.trampleSegment(pad.level, x0 + 0.5, z, x1 + 0.5, z, y, i % 7 == 0 ? 1.95 : 0.6);
+            if (i < 200)
+                coldNanos += System.nanoTime() - t0;
+        }
+        // ...and the sampler's own walk over the units (standing still now: no stamps, positions only)
+        for (int i = 0; i < 2_000; i++)
+            GroundMemoryServer.trampleNow(pad.level);
+        return coldNanos / 1e3 / 200;
+    }
+
     /** design/battlefield_effects.md: <= 3 us per walking unit per sample pass on the CI GameTest server. */
     static final double BUDGET_US_PER_WALK = 3.0;
     /** ...and a 100-unit march costs <= 6 KB/s per client in deltas (the scars brawl budget). */
@@ -371,7 +400,8 @@ public class TrampleGameTests {
      * Fifty-two units of three kinds (40 militia, 8 brutes, 4 ravagers) march across a pad and back through real MOVE
      * orders; the live sampler's own totals (GroundMemoryServer.trampleTotals) over the march give its cost per walking
      * unit and the cells it changed, priced at the delta wire's bytes per cell (5, GroundMemoryClientboundPacket) and
-     * scaled to 100 units. Both against the design's budgets, set before this was first run.
+     * scaled to 100 units. Both against the design's budgets, set before this was first run. The stamp path is warmed
+     * up first ({@link #warmUp}): the budget is the steady cost of a match, not of the first calls after a server start.
      */
     @GameTest(template = ARENA, batch = "trample_cost", timeoutTicks = 420)
     public static void trample_cost_stays_inside_the_budget(GameTestHelper helper) {
@@ -392,11 +422,13 @@ public class TrampleGameTests {
         final long[] start = new long[4];
         final boolean[] done = { false };
         final int window = 360;
+        final double[] coldUs = { Double.NaN };
         helper.onEachTick(() -> {
             if (done[0])
                 return;
             t[0]++;
             if (t[0] == 5) {
+                coldUs[0] = warmUp(pad);
                 long[] s = GroundMemoryServer.trampleTotals(pad.level);
                 System.arraycopy(s, 0, start, 0, 4);
                 pad.move(units, pad.at(12, 0));
@@ -414,8 +446,8 @@ public class TrampleGameTests {
             double bytesPerS = cells * 5 / seconds;
             double bytesPerS100 = unitsWalking == 0 ? Double.NaN : bytesPerS * 100 / unitsWalking;
             ReignOfNether.LOGGER.info(String.format(Locale.ROOT,
-                "[Stress] [Trample] cost: %d passes, %d walks (%.1f units walking a pass), %.2f us per walk (budget %.1f), %d cells changed = %.0f B/s, %.0f B/s per 100 walkers (budget %.0f)",
-                passes, walks, unitsWalking, usPerWalk, BUDGET_US_PER_WALK, cells, bytesPerS, bytesPerS100, BUDGET_BYTES_PER_S_100));
+                "[Stress] [Trample] cost: %d passes, %d walks (%.1f units walking a pass), %.2f us per walk (budget %.1f; cold, before the warm-up: %.2f us), %d cells changed = %.0f B/s, %.0f B/s per 100 walkers (budget %.0f)",
+                passes, walks, unitsWalking, usPerWalk, BUDGET_US_PER_WALK, coldUs[0], cells, bytesPerS, bytesPerS100, BUDGET_BYTES_PER_S_100));
             if (walks < units.size() * 3L)
                 pad.problems.add("the sampler counted only " + walks + " walks in " + passes + " passes for " + units.size() + " marching units");
             else {
