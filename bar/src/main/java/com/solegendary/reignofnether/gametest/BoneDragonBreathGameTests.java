@@ -550,15 +550,27 @@ public class BoneDragonBreathGameTests {
             return;
         }
         EngagementStance.set(dragon, EngagementStance.HOLD_FIRE);   // only what it is ordered onto
-        final int order = 8;   // between the breath's first burn (its tick 0) and its second (tick 10)
+        // the breath starts once the dragon is ticking (ArenaReady.TICKS of its own): green 42212877775 had one run
+        // start it on a dragon still at tickCount 0 - its chunk not entity-ticking yet - so the breath sat at its tick 0
+        // and burnt neither foe ("t0 start", "breathing true tick 0"). The clock below is the breath's, not the test's
+        final int[] start = { -1 };
+        final int orderAfter = 6;   // between the breath's first burn (its tick 0) and its second (tick 10)
         float[] before = new float[1];
         DragonDiveGameTests.everyTick(helper, 110, tick -> {
-            if (tick == 2) {
+            if (start[0] < 0) {
+                if (dragon.tickCount < ArenaReady.TICKS) {
+                    if (tick >= 60)
+                        return done(helper, List.of("the dragon was not ticking after 60 test ticks: "
+                            + ArenaReady.describe(helper.getLevel(), all)), clean, all);
+                    return false;
+                }
+                start[0] = tick;
                 dragon.setHoldPosition(true);
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(first);
                 if (!dragon.isBreathing() && !dragon.startBreath(first, first.position()))
                     return done(helper, List.of("the breath at the first foe did not start"), clean, all);
             }
+            int order = start[0] + orderAfter;
             if (tick == order) {
                 if (!dragon.isBreathing())
                     return done(helper, List.of("the breath at the first foe ended before the order"), clean, all);
