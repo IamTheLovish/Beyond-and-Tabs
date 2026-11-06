@@ -52,6 +52,9 @@ import java.util.Set;
  *       (one crown mass, not scattered leaves).</li>
  *   <li>R3 a natural tree: every leaf is natural (not persistent, distance under 7, so nothing decays), TreeClearing
  *       finds one tree holding every log grown, and felling it leaves nothing standing but ground plants.</li>
+ *   <li>R5 the economy stays where it was (lovish, Nov 6: "A: same per tree"): a felled tree pays what one of
+ *       today's vanilla oaks pays - 4 to 6 logs at 5 energy, {@link #MIN_TREE_ENERGY} to {@link #MAX_TREE_ENERGY} -
+ *       however many logs it has.</li>
  * </ul>
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
@@ -66,12 +69,14 @@ public class TreeShapeGameTests {
     static final int MAX_BARE = 10;
     static final double MAX_FOOTPRINT_FILL = 0.80;
     static final double MIN_FOOTPRINT_FILL = 0.30;
+    /** R5: a vanilla oak (4-6 logs at 5 energy a log) paid 20-30 before the tree shapes lane. */
+    static final float MIN_TREE_ENERGY = 20f, MAX_TREE_ENERGY = 30f;
     /** Half the pad: a tree's logs stay within 7 of its trunk (TreeClearing.MAX_TREE_REACH); our crowns reach 7, vanilla's
      *  fancy oak about 7. Kept under the GameTest spacing so two tests' pads never meet. */
     static final int HALF = 9;
     static final int HEIGHT = 30;
     /** Above the arena and every other test's scratch pad (they use y 170-190); each test its own height. */
-    static final int BIOME_PAD_Y = 226, MAP_PAD_Y = 262;
+    static final int BIOME_PAD_Y = 226, MAP_PAD_Y = 262, ENERGY_PAD_Y = 226;
 
     /** R4: the skirmish world's biome places no vanilla tree, and places at least one tree. */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 100)
@@ -131,6 +136,93 @@ public class TreeShapeGameTests {
         measureAll(helper, features, MAP_PAD_Y);
     }
 
+    /**
+     * R5 on hand-built trees (no template needed): a 5-log tree and a 44-log tree (a 2 x 2 trunk 8 high and four
+     * 3-log limbs) each pay one tree's energy when felled, and the building ghost (Scan.energy) shows the same.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 100)
+    public static void felled_trees_pay_one_tree_of_energy_whatever_their_size(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos centre = helper.absolutePos(new BlockPos(8, 1, 8)).atY(ENERGY_PAD_Y);
+        String owner = "gametest_treeenergy_" + centre.asLong();
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        ResourcesServerEvents.resourcesList.add(pool);
+        List<String> faults = new ArrayList<>();
+        try {
+            for (boolean big : new boolean[] { false, true }) {
+                pad(level, centre);
+                int logs = big ? bigTree(level, centre) : smallTree(level, centre);
+                TreeClearing.Scan scan = TreeClearing.scan(level, centre.getX() - HALF, centre.getZ() - HALF,
+                    centre.getX() + HALF, centre.getZ() + HALF, centre.getY() - 1, centre.getY() + 2);
+                String id = (big ? "the big tree" : "the small tree") + " (" + logs + " logs)";
+                if (scan.trees.size() != 1 || scan.logs != logs) {
+                    faults.add(id + ": TreeClearing sees " + scan.trees.size() + " trees, " + scan.logs + " logs (setup)");
+                    continue;
+                }
+                if (scan.energy() < MIN_TREE_ENERGY || scan.energy() > MAX_TREE_ENERGY)
+                    faults.add(id + ": the building ghost shows " + fmt(scan.energy()) + " energy, not " + MIN_TREE_ENERGY + "-" + MAX_TREE_ENERGY);
+                var job = TreeClearing.fellTree(level, owner, scan.trees.get(0).base);
+                if (job == null) {
+                    faults.add(id + ": TreeClearing will not fell it (setup)");
+                    continue;
+                }
+                job.finish();
+                if (job.logsFelled != logs)
+                    faults.add(id + ": felled " + job.logsFelled + " logs (setup)");
+                if (job.energyCredited < MIN_TREE_ENERGY || job.energyCredited > MAX_TREE_ENERGY)
+                    faults.add(id + ": felling paid " + fmt(job.energyCredited) + " energy, not " + MIN_TREE_ENERGY + "-" + MAX_TREE_ENERGY);
+            }
+        } finally {
+            ResourcesServerEvents.resourcesList.remove(pool);
+            pad(level, centre);
+        }
+        if (faults.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join(" | ", faults));
+    }
+
+    static final BlockState NATURAL_LEAF = Blocks.OAK_LEAVES.defaultBlockState()
+        .setValue(LeavesBlock.DISTANCE, 1).setValue(LeavesBlock.PERSISTENT, false);
+
+    /** Logs at ps, and a natural leaf (distance 1) on every free side of the top ones; returns the logs set. */
+    static int logsWithLeaves(ServerLevel level, List<BlockPos> ps, int leafFromY) {
+        int flags = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+        Set<BlockPos> set = new HashSet<>(ps);
+        for (BlockPos p : ps)
+            level.setBlock(p, Blocks.OAK_LOG.defaultBlockState(), flags);
+        for (BlockPos p : ps)
+            if (p.getY() >= leafFromY)
+                for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                    BlockPos q = p.relative(d);
+                    if (d != net.minecraft.core.Direction.DOWN && !set.contains(q) && level.getBlockState(q).isAir())
+                        level.setBlock(q, NATURAL_LEAF, flags);
+                }
+        return set.size();
+    }
+
+    /** A vanilla-oak-sized tree: 5 logs, leaves round the top two. */
+    static int smallTree(ServerLevel level, BlockPos c) {
+        List<BlockPos> ps = new ArrayList<>();
+        for (int y = 0; y < 5; y++)
+            ps.add(c.above(y));
+        return logsWithLeaves(level, ps, c.getY() + 3);
+    }
+
+    /** One of our big oaks' size: a 2 x 2 trunk 8 high (32 logs) and four 3-log limbs at the top (12): 44 logs. */
+    static int bigTree(ServerLevel level, BlockPos c) {
+        List<BlockPos> ps = new ArrayList<>();
+        for (int y = 0; y < 8; y++)
+            for (int dx = 0; dx <= 1; dx++)
+                for (int dz = 0; dz <= 1; dz++)
+                    ps.add(c.offset(dx, y, dz));
+        int[][] dirs = { { -1, 0 }, { 2, 0 }, { 0, -1 }, { 0, 2 } };
+        for (int[] d : dirs)
+            for (int i = 0; i < 3; i++)
+                ps.add(c.offset(d[0] + Integer.signum(d[0]) * i, 7, d[1] + Integer.signum(d[1]) * i));
+        return logsWithLeaves(level, ps, c.getY() + 6);
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /** The battlefield biome's tree features by id ("tree" in the id), or null without the biome. */
@@ -188,7 +280,7 @@ public class TreeShapeGameTests {
                         faults.add(id + ": R3 " + m.unnaturalLeaves + " leaves persistent or at distance 7 (decay / never felled)");
                     String fell = fell(level, centre, owner, m);
                     if (fell != null)
-                        faults.add(id + ": R3 " + fell);
+                        faults.add(id + (fell.startsWith("R5") ? ": " : ": R3 ") + fell);
                 }
                 double mean = grown == 0 ? 0 : bareSum / (double) grown;
                 if (grown > 0 && mean < MIN_MEAN_BARE)
@@ -282,6 +374,9 @@ public class TreeShapeGameTests {
         if (job == null)
             return "TreeClearing will not fell it";
         job.finish();
+        if (job.energyCredited < MIN_TREE_ENERGY || job.energyCredited > MAX_TREE_ENERGY)
+            return "R5 felling paid " + fmt(job.energyCredited) + " energy, not " + MIN_TREE_ENERGY + "-" + MAX_TREE_ENERGY
+                + " (one of today's vanilla oaks)";
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int dx = -HALF; dx <= HALF; dx++)
             for (int dz = -HALF; dz <= HALF; dz++)
