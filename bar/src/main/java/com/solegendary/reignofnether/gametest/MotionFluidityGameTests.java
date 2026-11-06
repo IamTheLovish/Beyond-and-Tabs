@@ -389,9 +389,14 @@ public class MotionFluidityGameTests {
      * The ground under one drawn walk ("gnd", step 3 A), today (upright) and tilted: the mean |gap| per foot pad, the
      * worst float over the frames that show the unit on the ground (the hop up a step floats by design), the worst sink
      * over all of them. The bounds were set before the run that judges them (Eris.16's round 1 review of #551, Nov 6): a
-     * beast stands at most half today's mean gap off the ground, floats at most three quarters of today's worst and never
-     * sinks deeper than today's worst; a man stays upright by design (3 degrees of tilt at most) and is never drawn
-     * worse than today, with 0.02 blocks of slack on his sink.
+     * beast stands at most half today's mean gap off the ground and never sinks deeper than today's worst; a man stays
+     * upright by design (3 degrees of tilt at most) and is never drawn worse than today, with 0.02 blocks of slack on his
+     * sink.
+     * <p>
+     * A beast's worst float is not bounded in step 3 A. lovish, Nov 6 (via Eris.17's buttons): "Accept for 3A, fix in 3B
+     * (Recommended)". It is a one-frame event, one corner pad first passing over a 1-block edge while the other three
+     * stand level (CI build 42166157505), and a rigid body cannot put one corner down without lifting the others. Step 3
+     * B (per-foot contact) brings the bound back: at most three quarters of today's worst.
      */
     record Gnd(double meanToday, double mean, double floatToday, double floatMax, double sinkToday, double sinkMax) {
         /** What breaks the bounds, or null. */
@@ -399,7 +404,7 @@ public class MotionFluidityGameTests {
             List<String> out = new ArrayList<>();
             if (mean > (man ? meanToday : 0.5 * meanToday) + 1e-9)
                 out.add("the feet stand off the ground");
-            if (floatMax > (man ? floatToday : 0.75 * floatToday) + 1e-9)
+            if (man && floatMax > floatToday + 1e-9)
                 out.add("a foot floats over a step");
             if (sinkMax > sinkToday + (man ? 0.02 : 0.0) + 1e-9)
                 out.add("a foot sinks deeper into a step than today");
