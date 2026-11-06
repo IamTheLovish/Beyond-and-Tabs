@@ -71,9 +71,25 @@ BEAT_EASE = 0.12                                             # beatTicks += (tar
 # already points 25 / 45 / 51 deg back): a hand folded past straight back crosses the spine behind the shoulders
 FOLD_HAND = {"mender": 40.0, "archer": 40.0, "sword": 40.0}
 FOLD_FORE = {"mender": 20.0, "archer": 20.0, "sword": 20.0}
-FOLD_TIPS = 15.0
+FOLD_TIPS = 4.0          # m3: was 15 - the tips folded 15 past the hand opened a 20-25 deg gap at the wrist (blind5's
+#                          "comb"); 4 keeps neighbouring flights 10-15 apart (the b4 fan itself is 11-14)
 LAG_FORE, LAG_HAND, LAG_BOB, LAG_PITCH = 2.0, 3.0, 3.0, 3.0  # ticks
 GLIDE_TICKS, GLIDE_AFTER = 20, 2                             # fly: a 20-tick glide after every 2 beats
+GLIDE_BOB, GLIDE_DIH = 1.2, 4.0          # m3: the glide breathes (px half-travel, deg dihedral) once per glide: no
+#                                          pixel-identical hold (blind5: bank ends, fly t44-t60)
+STROKE_LAG = {"mender": (1.0, 2.0), "archer": (0.5, 1.0), "sword": (1.0, 2.0)}   # attack downstroke: fore / hand lag
+#                                          (ticks); m3: the archer's wings follow the release through at once
+PITCH_CAP = 45.0         # m3: no flight turns more than this about its own long axis (body frame; blind5: the upstroke
+#                          pitched the primaries ~90 into a vertical comb that flickered solid / striped at RTS)
+# b4 flight cubes (tools/gen_angels.py, left side; the right mirrors to (rx, -ry, -rz)): their rotations in the bone
+FEATHERS = {
+    "mender": {"hand": ((-20.7, 14.5, 3.6),),
+               "tips": ((-69.1, 68.5, -58.7), (-37.8, 56.1, -23.8), (-27.4, 42.0, -10.1), (-22.9, 28.6, -2.5))},
+    "archer": {"hand": ((-20.3, 9.4, 6.5), (-20.5, 11.8, 5.6)),
+               "tips": ((-37.8, 56.1, -22.8), (-27.4, 42.0, -9.2), (-22.1, 24.7, 0.4))},
+    "sword": {"hand": ((-20.1, 6.0, 9.8), (-20.1, 4.4, 10.4)),
+              "tips": ((-33.1, 51.2, -14.9), (-25.5, 37.5, -4.2), (-22.1, 24.6, 2.4), (-20.6, 13.1, 7.1))},
+}
 ROLL_PER_YAW, ROLL_CAP, ROLL_A = 6.0, 35.0, 0.45             # bank: deg roll per deg/tick, cap, 2-pole filter
 BREATH_BEATS = 4                                             # the breath: one per 4 wing beats
 GLANCE_MIN, GLANCE_MAX = 3, 5                                # beats between head glances (seeded)
@@ -292,8 +308,36 @@ def wing_cycle(k, p, B, amp, sweep_amp, droop=0.0, fold_extra=0.0, amp_up=None, 
             "tips_fold": fold_k * FOLD_TIPS * fold0(p - 2.0 / B)}
 
 
-# the death / arrival "flame": wings swept back and raised so the hands close over (behind) the halo
-FLAME = {"arm": (30.0, -10.0), "fore": (15.0, 10.0), "hand": (15.0, 5.0), "tips_fold": 5.0}
+def feather_pitch(R):
+    """How far a flight (its cube's rotation R in the body frame) is turned about its own long axis (local z) off
+    lying flat, signed (right-handed about that axis, -180..180): 0 = its top face up (the b4 flights rest at 0-19),
+    +-90 = edge-on (a comb tooth). A flight standing on end (its axis within 10 deg of vertical) reads 0."""
+    n, l_ = mv(R, (0.0, 1.0, 0.0)), mv(R, (0.0, 0.0, 1.0))
+    if abs(l_[1]) > 0.985:
+        return 0.0
+    n0 = unit((-l_[1] * l_[0], 1.0 - l_[1] * l_[1], -l_[1] * l_[2]))
+    return math.degrees(math.atan2(dot(cross(n0, n), l_), dot(n0, n)))
+
+
+def cap_pitch(P, L, cubes):
+    """m3: the bone's own rotation L (under the parent's P, body frame) twisted back about its flights' mean long axis
+    so no flight pitches past PITCH_CAP either way; the very matrix L when none does."""
+    Rc = [rmat(c) for c in cubes]
+    ax = unit(tuple(sum(mv(R, (0.0, 0.0, 1.0))[i] for R in Rc) for i in range(3)))
+    for _ in range(3):
+        PL = mmul(P, L)
+        s = max((feather_pitch(mmul(PL, R)) for R in Rc), key=abs)
+        if abs(s) <= PITCH_CAP + 0.25:
+            break
+        L = mmul(L, axis_mat(ax, -(s - math.copysign(PITCH_CAP, s))))
+    return L
+
+
+# m3: the death / arrival cocoon (blind5 R: the wings closed up 60-70 deg over the shoulders inside the light): raised
+# 60 and 5 forward, the elbow 10 and wrist 5 up: the tips stand 57-69 deg over the shoulder (the m2 flame, 30 up,
+# read as a slump). A contact sweep picked it: higher, or swept back, crosses the two hands / tips behind the back or
+# runs the elbows through the halo by > 2.7 px; this one adds <= 2.6 px (the spine blocks, as the hover does)
+COCOON = {"arm": (60.0, 5.0), "fore": (10.0, 0.0), "hand": (5.0, 0.0), "tips_fold": 0.0}
 # m2: the death's wings fold UP and back (raised 30, swept back 10, the elbow and wrist folded behind) with the halo
 # kept on the head; m1's tall V (55 up, hands curling in) only cleared the halo with a 6-11 px lift off the head,
 # and a higher fold (38 up, 30 back) crossed the two wings' tips behind the back (2.5-3 px in a contact sweep)
@@ -534,67 +578,55 @@ def attack_tracks(kind, t, variant):
 
 
 def arrive_tracks(k, t):
-    """m2: a real descent from 24 px up, braking (fast at first, slowing into the hover point by 20) on wings flared
-    as air brakes, the body leaning back and the legs reaching for the ground; the light fades off 2-12 (the
-    texture back by 12); 18-24 one great downstroke bobs it up 1.5 px, 24-30 it settles on the hover."""
+    """m3 (blind5: R's staging on S's descent): the unit comes down 14 px from the light, braking into the hover point
+    by 20 (the body leaning back, the legs reaching), a flat light silhouette with the wings in the COCOON to 14; the
+    light gives way to the shaded body over 10 ticks (10-20, no pop); the unfurl's push (16-24) bobs it up 1.5 px,
+    the settle (24-29) lets it down onto the hover. The halo stays on the head; its opacity is the body's."""
     o = {}
     u = clamp(t / 20.0, 0.0, 1.0)
-    o["dy"] = 24.0 * (1.0 - u) * (1.0 - u) + keys(t, [(0, 0.0), (19, 0.0), (23, 1.5), (30, 0.0)])
-    o["scale"] = 0.85 + 0.15 * smooth(t / 10.0)
-    o["white"] = 1.0 - smooth((t - 2.0) / 10.0)
+    o["dy"] = ARRIVE_DROP * (1.0 - u) * (1.0 - u) + keys(t, [(0, 0.0), (17, 0.0), (23, 1.5), (29, 0.0)])
+    o["scale"] = 0.85 + 0.15 * smooth(t / 12.0)
+    o["white"] = 1.0 - smooth((t - 10.0) / 10.0)
     o["alpha"] = smooth(t / 6.0)
-    o["body_rx"] = keys(t, [(0, 0.0), (8, 6.0), (16, 14.0), (22, 4.0), (30, 0.0)])
+    o["halo_alpha"] = o["alpha"]
+    o["body_rx"] = keys(t, [(0, 0.0), (8, 6.0), (16, 10.0), (22, 4.0), (30, 0.0)])
     o["head_rx"] = keys(t, [(0, -6.0), (20, -10.0), (30, 0.0)])
     o["legs"] = keys(t, [(0, 0.0), (8, 0.3), (16, 1.0), (22, 1.0), (30, 0.0)])
     return o
 
 
-AIRBRAKE = {"arm": (22.0, 12.0), "fore": (0.0, -10.0), "hand": (6.0, -16.0)}
+ARRIVE_DROP, DEATH_LIFT = 14.0, 14.0     # m3: px down into the hover / up out of it (blind4: 12-15)
+UNFURL_LEVEL = 5.0                       # m3: the arm's elevation the unfurl opens to (the wings spread out level)
 
 
 def arrive_wing(k, t, B=30.0):
-    """m2: the arrival's wings flared forward as air brakes (spread, swept 22 forward, the hands cupped) with a small
-    flutter to 16, lift 5 and HOLD 2, one great downstroke (x1.4) 18-24, the upstroke 24-30 ending on the hover's top
-    hold (phase 0)."""
-    if t <= 18:
-        lift = keys(t, [(0, 0.0), (16, 0.0), (17, 5.0), (18, 5.0)])
-        fl = 3.0 * math.sin(2.0 * math.pi * t / 8.0) * (1.0 - smooth((t - 12.0) / 4.0))
-        return {"arm": (AIRBRAKE["arm"][0] + lift + fl, AIRBRAKE["arm"][1]), "fore": AIRBRAKE["fore"],
-                "hand": (AIRBRAKE["hand"][0] - fl, AIRBRAKE["hand"][1]), "tips_fold": 0.0, "sup": 0.0}
-    if t <= 24:
-        u = (t - 18) / 6.0
-        top = AIRBRAKE["arm"][0] + 5.0
-        bottom = 0.5 * (UP[k] + DN) + 1.4 * (DN - 0.5 * (UP[k] + DN))
-        e = lambda v: top + (bottom - top) * v * v * (2.2 - 1.2 * v)  # noqa: E731
-        ea, ef, eh = e(u), e(max(0.0, u - 1.0 / 6.0)), e(max(0.0, u - 2.0 / 6.0))
-        op = smooth(u / 0.5)
-        return {"arm": (ea, AIRBRAKE["arm"][1] * (1.0 - op)), "fore": (ef - ea, AIRBRAKE["fore"][1] * (1.0 - op)),
-                "hand": (eh - ef + AIRBRAKE["hand"][0] * (1.0 - op), AIRBRAKE["hand"][1] * (1.0 - op)),
-                "tips_fold": 0.0, "sup": 0.0}
-    # 24-30: from the bottom of the great stroke into the hover's own pose, phase-matched (the state hands over at
-    # phase 0 on tick 30), blended over the 6 ticks
-    wa = arrive_wing(k, 24, B)
-    wb = wing_cycle(k, (t - 29.0) / B, B, 1.0, 1.0)
-    u = smooth((t - 24) / 6.0)
-    out = {n: tuple(lerp(wa[n][i], wb[n][i], u) for i in range(2)) for n in ("arm", "fore", "hand")}
-    out["tips_fold"] = lerp(wa["tips_fold"], wb["tips_fold"], u)
-    out["sup"] = lerp(wa.get("sup", 0.0), wb["sup"], u)
+    """m3: the cocoon to 14 (the flights stirring 2 deg in the light), the unfurl 14-23 (the arm 60 -> 5, ~6 deg/tick,
+    9 at its fastest, the elbow and wrist opening), running on through 10 deg of overshoot to 25, then the settle up
+    into the hover's top hold, phase-matched (the state is at phase 0 on 29)."""
+    top = wing_cycle(k, 0.0, B, 1.0, 1.0)
+    w = smooth((t - 14.0) / 9.0)
+    out = {n: [lerp(COCOON[n][i], top[n][i], w) for i in range(2)] for n in ("arm", "fore", "hand")}
+    out["arm"][0] = keys(t, [(14, COCOON["arm"][0]), (23, UNFURL_LEVEL), (25, UNFURL_LEVEL - 10.0),
+                             (29, top["arm"][0])])
+    out["arm"][0] += 2.0 * math.sin(2.0 * math.pi * t / 10.0) * (1.0 - smooth((t - 8.0) / 6.0))
+    out["tips_fold"] = lerp(COCOON["tips_fold"], top["tips_fold"], w)
+    out["sup"] = top["sup"] * w
     return out
 
 
 def death_tracks(k, t):
-    """m2: back to the light - the head droops 0-3 then lifts, the arms open, the wings fold UP and back over 6 ticks
-    (FLAME), the body lifts 8 px (2-16) as it turns to light (4-14) and fades (8-20); the halo stays on the head and
-    fades last (14-20)."""
+    """m3: the arrival's mirror - the head droops 0-3 then lifts, the arms open, the wings fold UP into the COCOON
+    2-8, the body lifts 14 px (2-18) as it turns to light (6-14: 8 ticks) and fades (9-20); the halo stays on the
+    head and fades with the body."""
     o = {}
-    o["dy"] = 8.0 * smooth((t - 2.0) / 14.0)
+    o["dy"] = DEATH_LIFT * smooth((t - 2.0) / 16.0)
     o["stretch"] = 1.0 + 0.06 * smooth((t - 4.0) / 12.0)
-    o["white"] = smooth((t - 4.0) / 10.0)
-    o["alpha"] = 1.0 - smooth((t - 8.0) / 12.0)
-    o["halo_alpha"] = 1.0 - smooth((t - 14.0) / 6.0)
+    o["white"] = smooth((t - 6.0) / 8.0)
+    o["alpha"] = 1.0 - smooth((t - 9.0) / 11.0)
+    o["halo_alpha"] = o["alpha"]
     o["head_rx"] = keys(t, [(0, 0.0), (3, -12.0), (8, -4.0), (14, 8.0), (20, 10.0)])
     o["arms_open"] = keys(t, [(0, 0.0), (5, 1.0)])
-    o["wing_w"] = keys(t, [(0, 0.0), (6, 1.0)])
+    o["wing_w"] = keys(t, [(0, 0.0), (2, 0.0), (8, 1.0)])
     return o
 
 
@@ -632,7 +664,11 @@ def step(st, inp):
     target_beat = lerp(HOVER_T[k], FLY_T[k], fw) * st.tempo
     st.beat += (target_beat - st.beat) * BEAT_EASE
     B = st.beat
-    if st.glide > 0:
+    if st.arrive_t >= 0:
+        # m3: the arrival keys its own wings; the phase runs on to land on 0 (the top hold) at its last tick, so the
+        # bob and pitch it fades in are the cycle's own and nothing snaps at the hand-over
+        st.phase = ((st.arrive_t - (ARRIVE_LEN - 1)) / B) % 1.0
+    elif st.glide > 0:
         st.glide -= 1
     else:
         st.phase += 1.0 / B
@@ -668,6 +704,8 @@ def step(st, inp):
     breath = math.sin(2.0 * math.pi * (st.beats + p) / BREATH_BEATS)
     bob_amp = BOB[k] * lerp(1.0, 0.6, fw)
     bob = bob_amp * bob0(p - LAG_BOB / B) * (1.0 - gw)
+    gth = 2.0 * math.pi * (GLIDE_TICKS - st.glide) / GLIDE_TICKS            # m3: the glide's own breath (one wave)
+    bob -= GLIDE_BOB * math.cos(gth) * gw              # rises while the dihedral comes down (the push), sinks after
     if st.arrive_t >= 0:
         bob *= smooth((st.arrive_t - 24) / 6.0)                     # the arrival carries its own bob to 24
     brake = clamp(-acc / 0.08, 0.0, 1.0)
@@ -700,7 +738,7 @@ def step(st, inp):
         dmove[1] += Ar["dy"]
         head[0] += Ar["head_rx"]
         body[0] += Ar["body_rx"]
-        fx["white"], fx["alpha"] = Ar["white"], Ar["alpha"]
+        fx["white"], fx["alpha"], fx["halo_alpha"] = Ar["white"], Ar["alpha"], Ar["halo_alpha"]
         scale["body"] = [Ar["scale"]] * 3
     if D is not None:
         dmove[1] += D["dy"]
@@ -724,7 +762,7 @@ def step(st, inp):
         sup = w["sup"] * (1.0 - gw)
         if gw > 0.001:
             # the glide: arms held at +8 dihedral, the hand -6, the tips rippling 3 deg on a 30-tick wave
-            gp = {"arm": (8.0, 0.0), "fore": (0.0, 0.0),
+            gp = {"arm": (8.0 + GLIDE_DIH * math.sin(gth), 0.0), "fore": (0.0, 0.0),
                   "hand": (-6.0 + 3.0 * math.sin(2.0 * math.pi * st.glide / 30.0), 0.0)}
             for n in ("arm", "fore", "hand"):
                 w[n] = [lerp(w[n][i], gp[n][i], gw) for i in range(2)]
@@ -750,7 +788,8 @@ def step(st, inp):
                 def es(u):
                     u = clamp(u, 0.0, 1.0)
                     return top["arm"][0] + (bot - top["arm"][0]) * u * u * (2.2 - 1.2 * u)
-                ea, ef, eh = es(ut), es(ut - 1.0 / sl), es(ut - 2.0 / sl)
+                lf, lh = STROKE_LAG[k]
+                ea, ef, eh = es(ut), es(ut - lf / sl), es(ut - lh / sl)
                 w["arm"] = [ea, top["arm"][1] * (1.0 - ut)]
                 w["fore"] = [ef - ea, 0.0]
                 w["hand"] = [eh - ef, 0.0]
@@ -767,8 +806,8 @@ def step(st, inp):
             sup = aw.get("sup", 0.0)
         if D is not None:
             for n in ("arm", "fore", "hand"):
-                w[n] = [lerp(w[n][i], FLAME[n][i], D["wing_w"]) for i in range(2)]
-            w["tips_fold"] = lerp(w["tips_fold"], FLAME["tips_fold"], D["wing_w"])
+                w[n] = [lerp(w[n][i], COCOON[n][i], D["wing_w"]) for i in range(2)]
+            w["tips_fold"] = lerp(w["tips_fold"], COCOON["tips_fold"], D["wing_w"])
             sup = lerp(sup, SUPINATE, D["wing_w"])
         # the tips: a spring on the hand's absolute elevation (they trail up on the downstroke, flick at the bottom)
         hand_abs = w["arm"][0] + w["fore"][0] + w["hand"][0]
@@ -778,6 +817,16 @@ def step(st, inp):
         out["wing_%s_fore" % lr] = [sup, -side * w["fore"][1], side * w["fore"][0]]   # the supination: outer wing
         out["wing_%s_hand" % lr] = [0.0, -side * w["hand"][1], side * w["hand"][0]]
         out["wing_%s_tips" % lr] = [0.0, -side * w["tips_fold"], side * tips_rel]
+        # m3: the pitch cap - the hand, then the tips, twisted back about their flights so none stands edge-on
+        P = mmul(rmat(out["wing_%s_arm" % lr]), rmat(out["wing_%s_fore" % lr]))
+        for bn in ("hand", "tips"):
+            nm = "wing_%s_%s" % (lr, bn)
+            L = rmat(out[nm])
+            cubes = [(c[0], side * c[1], side * c[2]) for c in FEATHERS[k][bn]]
+            L2 = cap_pitch(P, L, cubes)
+            if L2 is not L:
+                out[nm] = list(euler(L2))
+            P = mmul(P, L2)
     # -- arms and props ---------------------------------------------------------------------------------------------
     rest = REST[k]
     la_d = (0.0, 0.0, 0.0)
