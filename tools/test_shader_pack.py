@@ -204,16 +204,27 @@ class ShaderPack(unittest.TestCase):
         # >= 12 blocks). The GLSL's own lines are pinned and its constants read
         wind = read("lib", "wind.glsl")
         code = spc.code_of(wind)
-        self.assertIn("return 0.3 + 0.7 * ((1.0 - WIND_RIPPLE) * swell + WIND_RIPPLE * ripple);", code)
+        # the gust is one field over the world: a position's distance along the wind, two travelling sines over it,
+        # nothing per plant (Eris.14, #437 r3: a hash in d, a scaled wavelength or wp.xz * 9.0 in windGustAt passed)
+        self.assertIn("float windGust(vec2 xz, float t, vec2 dir) { float d = dot(xz, dir); "
+                      "float swell = sin(WIND_TWO_PI * (d - t * WIND_V1) / WIND_L1); "
+                      "float ripple = sin(WIND_TWO_PI * (d - t * WIND_V2) / WIND_L2 + 1.7); "
+                      "return 0.3 + 0.7 * ((1.0 - WIND_RIPPLE) * swell + WIND_RIPPLE * ripple); }", code)
+        self.assertIn("float windGustAt(vec3 wp) { float heading = windHeading(frameTimeCounter); "
+                      "return windGust(wp.xz, frameTimeCounter, vec2(cos(heading), sin(heading))); }", code)
+        self.assertIn("float g = windGust(wp.xz, t, dir);", code)
         self.assertIn("float h = PLANT_SWAY * plant * (g + PLANT_FLUTTER * flutter);", code)
         self.assertIn("off.xz += dir * h + side * (PLANT_SWAY * plant * 0.08 * across);", code)
+        self.assertIn("off.y -= 0.15 * abs(h);", code)
         self.assertIn("float leafFlutter = sin(WIND_TWO_PI * WIND_FLUTTER_HZ * t + phase * LEAF_PHASE);", code)
         self.assertIn("float phase = dot(wp, vec3(1.9, 1.3, 2.3));", code)
         c = {n: spc.float_const(wind, n) for n in ("PLANT_SWAY", "PLANT_FLUTTER", "LEAF_SWAY", "LEAF_PHASE",
                                                    "WIND_RIPPLE", "WIND_L1", "WIND_V1", "WIND_L2", "GUST_SHEEN")}
-        # a one-block tuft's tip at a full gust (g = 1) with the flutter at its peak, the sideways part included
-        tip = c["PLANT_SWAY"] * math.hypot(1.0 + c["PLANT_FLUTTER"], 0.08)
-        self.assertLessEqual(tip, 0.085, "a tuft's tip moves %.3f block" % tip)
+        # a one-block tuft's whole tip offset at a full gust (g = 1) with the flutter at its peak: along the wind,
+        # sideways (0.08) and the stem's dip (0.15 of the lean)
+        lean = c["PLANT_SWAY"] * (1.0 + c["PLANT_FLUTTER"])
+        tip = math.sqrt(lean ** 2 + (c["PLANT_SWAY"] * 0.08) ** 2 + (0.15 * lean) ** 2)
+        self.assertLessEqual(tip, 0.085, "a tuft's tip moves %.4f block" % tip)
         # a leaf at a full gust: along, across and up (1, 0.5, 0.4) of its shimmer
         self.assertLessEqual(c["LEAF_SWAY"] * math.sqrt(1.0 + 0.25 + 0.16), 0.022)
         # the gust is mostly the slow swell: >= 4 s a wave, >= 12 blocks long; the fast ripple (1.7 s) a small share
@@ -223,13 +234,15 @@ class ShaderPack(unittest.TestCase):
         self.assertLessEqual(c["PLANT_FLUTTER"], 0.06)
         # neighbouring leaf blocks flutter nearly in step: the phase moves <= 0.7 rad a block (|(1.9, 1.3, 2.3)| x scale)
         self.assertLessEqual(c["LEAF_PHASE"] * math.sqrt(1.9 ** 2 + 1.3 ** 2 + 2.3 ** 2), 0.7)
-        # the gust's sheen: plants only, calm (0.3) = none, at most 5% of a plant's colour (gust -0.4 .. 1)
+        # the gust's sheen: plants only, calm (0.3) = none, as strong as the sway (WIND_STRENGTH), at most 5% of a
+        # plant's colour at the default strength (gust -0.4 .. 1)
         fsh = spc.code_of(read("program", "lit.fsh"))
         vsh = spc.code_of(read("program", "lit.vsh"))
-        self.assertIn("albedo *= 1.0 + GUST_SHEEN * (gust - 0.3) * foliage;", fsh)
+        self.assertIn("albedo *= 1.0 + GUST_SHEEN * WIND_STRENGTH * (gust - 0.3) * foliage;", fsh)
         self.assertIn("if (share.x > 0.0) gust = windGustAt(playerPos + cameraPosition);", vsh)
         self.assertIn("gl_Position = ftransform(); viewPos = (gl_ModelViewMatrix * gl_Vertex).xyz; gust = 0.3;", vsh)
-        self.assertLessEqual(c["GUST_SHEEN"] * 0.7, 0.05)
+        strength = float(re.search(r"(?m)^#define WIND_STRENGTH (\S+) //", read("lib", "settings.glsl")).group(1))
+        self.assertLessEqual(c["GUST_SHEEN"] * strength * 0.7, 0.05)
         self.assertGreater(c["GUST_SHEEN"], 0.0)
 
     def test_block_ids_are_unique_and_named(self):

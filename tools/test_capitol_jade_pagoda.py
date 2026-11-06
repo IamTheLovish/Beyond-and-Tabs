@@ -127,6 +127,14 @@ class JadePagodaTest(unittest.TestCase):
         floating = sorted(q for q in self.solid if q[1] >= 6 and not any(f in self.solid for f in faces(q)))
         self.assertEqual(floating, [])
 
+    def test_no_pink_and_no_black_heads_at_the_corners(self):
+        """The plinth carries no cherry pink and no black dragon heads (blind Fable round r3, Nov 5, eyes 42015769000:
+        the shipped pagoda with only these removed scored 6 / 10 over the shipped 5 - "black unit-sized blobs on the
+        corner tips pull the eye to the base and read as units next to the soldiers; pink crumbs read as Verdant's
+        palette"; lovish, Nov 4: the garden trees "Azalea instead"). Red on the shipped pagoda."""
+        bad = sorted({n for n in self.solid.values() if "cherry" in n or "pink" in n or n == "dragon_head"})
+        self.assertEqual(bad, [])
+
     def test_shipped_structure_is_the_generator_build(self):
         with tempfile.TemporaryDirectory() as d:
             out = os.path.join(d, "jp.nbt")

@@ -147,6 +147,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(CameraFadeClientEvents.class);
         vanillaEventBus.register(ItemClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.barfx.BreathFx.class);   // a dragon's fire breath, drawn every client tick
         vanillaEventBus.register(com.solegendary.reignofnether.hero.HeroMarkerClientEvents.class);   // the hero ring and crest
         // the world look: haze + grade + vignette after the world, before the hand and HUD (postfx/WorldLookPass)
         vanillaEventBus.register(com.solegendary.reignofnether.postfx.WorldLookClientEvents.class);
