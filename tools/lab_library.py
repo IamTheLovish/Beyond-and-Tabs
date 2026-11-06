@@ -206,29 +206,35 @@ def draw_l1(r):
         porch(r)
 
 
-GRAND_BAND = TW + 3            # the grand's second gold band, over the lantern room
+GRAND_BAND = TW + 4            # the grand's second gold band, over the three-high lantern room
+PINNACLES = ((0, 0), (0, HZ1), (SX - 1, HZ1))   # the hall's free corners
 
 
 def draw_grand(r):
-    """L1 + the lantern room: the L1 crown's eaves, centre and finial become the room's floor and glowstone core,
-    glazed faces at y 10..11 between quartz pillars, then a second gold band, eaves and finial."""
+    """L1 + the lantern room: the L1 crown's eaves, centre and finial become a glazed room three high (y 10..12) round
+    a glowstone core between quartz pillars, then a second gold band, eaves and finial (top y 17, L1's 13); and the
+    hall's three free corners rise into quartz pinnacles with a lantern on each, through the roof's eaves (round 2,
+    blind r1: the first grand was "one extra gold band, invisible at RTS")."""
     draw_l1(r)
     for x in range(TX0, TX1 + 1):
         for z in range(TZ0, TZ1 + 1):
-            for y in (TW + 1, TW + 2):
+            for y in range(TW + 1, GRAND_BAND):
                 if (x, z) == TC:
                     r.set(x, y, z, "glowstone")
                 elif x in (TX0, TX1) and z in (TZ0, TZ1):
                     r.pillar(x, y, z)
                 else:
                     r.set(x, y, z, "glass")
-    r.set(TC[0], TW + 3, TC[1], "glowstone")
+    r.set(TC[0], GRAND_BAND, TC[1], "glowstone")
     crown(r, GRAND_BAND, True)
+    for x, z in PINNACLES:
+        r.pillar(x, HW + 1, z)
+        r.lantern(x, HW + 2, z)
     return r
 
 
 L1_SY = TW + 5                 # the lantern on the finial (y 13)
-GRAND_SY = GRAND_BAND + 5      # the grand's lantern (y 16)
+GRAND_SY = GRAND_BAND + 5      # the grand's lantern (y 17)
 
 
 def build(draw, sy, tier):
