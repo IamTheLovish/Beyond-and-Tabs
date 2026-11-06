@@ -145,12 +145,12 @@ TARGETS = {
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
     # the _s blue CODE: 65-255 = subsurface scattering (light through the leaf under a shader pack)
     # round 18: leaves' tilt 18 -> 12 (every leaf edge drew a dark rim under shaders)
-    "oak_leaves":       dict(luma=0.62, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "birch_leaves":     dict(luma=0.66, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "spruce_leaves":    dict(luma=0.55, std=0.120, sat=0.04, ao=0.35, tilt=9.0, smooth=50, pore=150),
-    "acacia_leaves":    dict(luma=0.62, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "jungle_leaves":    dict(luma=0.58, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=70, pore=170),
-    "dark_oak_leaves":  dict(luma=0.55, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170),
+    "oak_leaves":       dict(luma=0.57, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "birch_leaves":     dict(luma=0.62, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "spruce_leaves":    dict(luma=0.52, std=0.120, sat=0.04, ao=0.35, tilt=9.0, smooth=50, pore=150),
+    "acacia_leaves":    dict(luma=0.57, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "jungle_leaves":    dict(luma=0.54, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=70, pore=170),
+    "dark_oak_leaves":  dict(luma=0.51, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
     "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.26, tilt=24.0, smooth=76, pore=10),   # r31: pink-grey, rust blooms
@@ -181,7 +181,7 @@ TARGETS = {
     # flat dark slab (reviewer, eyes run 39548166615); the reference's numbers were for a lit flat view
     "spruce_log":       dict(luma=0.27, std=0.090, sat=0.42, tilt=22.0, smooth=40, pore=36),   # r70: crisp bark (m_bark_r70), no lmean stretch
     "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
-    "birch_log":        dict(luma=0.80, std=0.110, sat=0.06, tilt=12.0, smooth=50, pore=30),   # r54: 2-3 dark bands (~0.25) on the 0.80 paper carry the spread; tilt 26 -> 12 (the paper's relief lit as speckle at 30 px)   # r73: 0.150 -> 0.110 (critic r3: the fit stretched the paper into grey waves)
+    "birch_log":        dict(luma=0.80, std=0.095, sat=0.06, tilt=12.0, smooth=50, pore=30),   # r54: 2-3 dark bands (~0.25) on the 0.80 paper carry the spread; tilt 26 -> 12 (the paper's relief lit as speckle at 30 px)   # r73: 0.150 -> 0.110 (critic r3: the fit stretched the paper into grey waves); r74: 0.095
     "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
     "acacia_log":       dict(luma=0.38, std=0.100, sat=0.10, tilt=22.0, smooth=40, pore=36),   # r70: crisp bark (m_bark_r70), no lmean stretch
     "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
@@ -1220,13 +1220,16 @@ def m_spruce_planks(F, n):
 LEAF_GAP_RIM = 0.60
 LEAF_GAP_DROP = 0.50          # r71: 0.70 -> 0.50 (critic r1: holes into the crown read as black flecks)
 LEAF_GAP_BLUR = 1.0 / 96
-LEAF_GAP_COVER = 0.28         # r71: only the larger gaps stay open; r73: 0.35 -> 0.28, smaller holes (critic r3: one
-                              # dark "eye" cavity repeating per oak tile, birch 20% open)
+LEAF_GAP_COVER = 0.22         # r71: only the larger gaps stay open; r73: 0.35 -> 0.28, smaller holes (critic r3: one
+                              # dark "eye" cavity repeating per oak tile, birch 20% open); r74: 0.22 (critic r4: the
+                              # oak eye still the largest hole)
 # r72: the darkest leaf texel at least this share of the leaves' median shade (no near-black flecks), and the
 # tinted leaves' albedo a touch warm, so the biome's blue-green tint lands nearer the olive lawn (critic, trees r2:
 # "crowns a saturated blue-green, lawn olive; they fight")
 LEAF_FLOOR = 0.70            # r73: 0.62 -> 0.70 (critic r3: crowns still read as dark blobs)
-LEAF_WARM = (1.06, 1.00, 0.88)
+LEAF_WARM = (1.03, 1.00, 0.94)
+# r74 (Fable critic, trees r4, blind: r73's brighter leaves read "lime" in 5 of 6 leaf previews, under the plains
+# tint): the luma halfway back (oak 0.62 -> 0.57) and the warm cast halved (less yellow under the tint)
 
 
 def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0, gaps=True):
@@ -1731,7 +1734,7 @@ PROC_VARIANT_BLOCKS["mud"] = ("cube_column", {"end": "mud", "side": "mud_side"})
 TARGETS["mangrove_log"] = dict(luma=0.28, std=0.095, sat=0.40, tilt=22.0, smooth=40, pore=36)
 TARGETS["mangrove_log_top"] = dict(luma=0.36, std=0.070, sat=0.50, tilt=12.0, smooth=40, pore=30)
 LEAVES["mangrove_leaves"] = (320, 0.11, 0.055, False)
-TARGETS["mangrove_leaves"] = dict(luma=0.58, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170)
+TARGETS["mangrove_leaves"] = dict(luma=0.54, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170)
 LEAF_VARIANTS["mangrove_leaves_v2"] = "mangrove_leaves"
 LEAVES["mangrove_leaves_v2"] = LEAVES["mangrove_leaves"]
 TARGETS["mangrove_leaves_v2"] = dict(TARGETS["mangrove_leaves"])
@@ -2291,9 +2294,10 @@ def m_birch_log(F, n):
     curl = F.noise(6, 18, 0.5, sx=6.0, sy=1.0)                        # thin horizontal peel lines in the paper
     H = 0.6 + 0.04 * paper - 0.06 * band - 0.05 * lent - 0.05 * patch + 0.015 * curl   # marks: colour, barely relief
     # r73 (critic r3: "soft horizontal grey wave bands, a grey-marble look"): the paper's own waves at half strength
-    paper_rgb = tint((0.91, 0.89, 0.85), 0.97 + 0.01 * paper + 0.008 * curl)   # ~#e8e4d8
-    patch = smoothstep(0.55, 0.8, patch)                              # r72: the patches smaller (~1/8 block), solid
-    mark = np.clip(0.85 * band + 0.55 * lent + 0.75 * patch, 0, 0.92)[..., None]
+    paper_rgb = tint((0.91, 0.89, 0.85), 0.97 + 0.005 * paper + 0.004 * curl)   # ~#e8e4d8; r74: halved again
+    patch = smoothstep(0.7, 0.9, patch)                               # r72: the patches smaller (~1/8 block), solid
+    # r74 (critic r4: "two solid black masses per tile read as paint splats"): smaller still and only part-dark
+    mark = np.clip(0.85 * band + 0.55 * lent + 0.55 * patch, 0, 0.92)[..., None]
     mark_rgb = np.asarray((0.17, 0.15, 0.13))[None, None, :] * (0.9 + 0.2 * norm01(F.noise(4, 12, 0.5)))[..., None]
     return H, np.clip(paper_rgb * (1 - mark) + mark_rgb * mark, 0, 1)
 
@@ -4516,9 +4520,14 @@ def m_bark_r70(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     # the cracks across each ridge, at the ridge's own heights (rows a tile, an offset a ridge, a wobble along u)
     off = rng.random(cols)[c]
     lo, hi = BARK_CRACK_TILT
-    tilt = (lo + (hi - lo) * rng.random(cols)) * np.where(rng.random(cols) < 0.5, -1.0, 1.0)
+    k = cols * (rows + 1)
+    tilt = (lo + (hi - lo) * rng.random(k)) * np.where(rng.random(k) < 0.5, -1.0, 1.0)
+    # r74 (critic r4: spruce's parallel slanted cracks stacked into diagonal bands): the slant per PLATE (its ridge and
+    # its row), not per ridge; cherry's marks stay level (its lenticels are horizontal; critic r4 picked r72's cherry)
+    row0 = np.floor(F.v * rows + off).astype(int) % rows
+    tilt = tilt[c * (rows + 1) + row0] * (0.0 if lent_a > 0 else 1.0)
     # in crack units (1 = a tile / rows) per ridge width (fu 0..1 = a tile / cols): rows / cols is 45 degrees
-    slant = tilt[c] * (rows / cols) * (fu - 0.5)
+    slant = tilt * (rows / cols) * (fu - 0.5)
     jag = 0.05 * F.noise(10, 40, 0.5)                                      # r73: a jagged line, not a ruled one
     cv = F.v * rows + off + slant + jag + 0.06 * F.noise(2, 6, 0.6, sx=4.0, sy=1.0)
     fv = cv - np.floor(cv)
