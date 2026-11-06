@@ -948,7 +948,20 @@ public class AngelCallerGameTests {
     public static void angel_caller_sword_seraph_flies_dives_into_melee_and_fades_after_30s(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "sword"), foeOwner = owner(helper, "swordfoe");
-        Mob caster = caller(helper, owner, 3, 3, CallAngel.Kind.SWORD.essence);
+        // RED ONLY, never ships (#566): the caster is set up exactly as caller() does, but the Sword call is given before
+        // it is in the level's entity lookup - the state the flaky shard-8 runs hit when the arena's entity section was
+        // not loaded at the tick-2 click - and only then is it added. Deterministic on every run.
+        Mob caster = EntityRegistrar.ANGEL_CALLER_UNIT.get().create(level);
+        if (caster != null) {
+            BlockPos at = helper.absolutePos(new BlockPos(3, 2, 3));
+            caster.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            ((Unit) caster).setOwnerName(owner);
+            caster.setNoAi(true);
+            AutocastState.setAll((Unit) caster, false);
+            Essence.add(caster, CallAngel.Kind.SWORD.essence);
+            click(level, caster, CallAngel.Kind.SWORD);
+            level.addFreshEntity(caster);
+        }
         List<Mob> units = new ArrayList<>();
         if (caster == null) {
             helper.fail("could not spawn the caster");
@@ -963,13 +976,10 @@ public class AngelCallerGameTests {
         double[] nearestHit = { Double.MAX_VALUE };
         int[] groundedEarly = { 0 }, seenEarly = { 0 }, hits = { 0 };
         boolean[] aliveLate = { false }, goneAfter = { false };
-        // RED ONLY, never ships (#566): the Sword call goes in before the caster's first entity tick, the state the
-        // flaky shard-8 runs hit at their tick-2 click, now on every run
-        {
-            click(level, caster, CallAngel.Kind.SWORD);
+        helper.runAfterDelay(cast, () -> {
             List<AngelUnit> as = angels(caster, CallAngel.Kind.SWORD);
             angel[0] = as.isEmpty() ? null : as.get(0);
-        }
+        });
         helper.runAfterDelay(foeAt, () -> {
             foe[0] = still(helper, EntityRegistrar.IRON_GOLEM_UNIT.get(), foeOwner, 3, 10);
             if (foe[0] != null) {
