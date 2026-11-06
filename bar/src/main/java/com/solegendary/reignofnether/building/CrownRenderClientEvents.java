@@ -116,6 +116,8 @@ public class CrownRenderClientEvents {
         float frozenAt = Float.NaN;  // the clock (ticks) it was last seen at, while fogged
         float swellAt = -1e9f;
         long capturedAt = Long.MIN_VALUE, releaseUntil;
+        // the refresh that last found its placement on the client's building list (gone from it: destroyed)
+        long listedAt = Long.MIN_VALUE;
         CrownMesh mesh;
         RenderType[] types = new RenderType[0];
         float[] out = new float[0];
@@ -185,7 +187,8 @@ public class CrownRenderClientEvents {
 
     private static void refresh(long now) {
         CANDIDATES.clear();
-        if (on()) {
+        boolean listing = on();
+        if (listing) {
             Vec3 cam = MC.gameRenderer.getMainCamera().getPosition();
             List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
             for (int i = 0; i < buildings.size(); i++) {
@@ -194,11 +197,14 @@ public class CrownRenderClientEvents {
                     continue;
                 boolean verdant = FactionTraits.of(p.getBuilding().getFaction()) == FactionTraits.VERDANT
                     || (p.currentStructureName != null && p.currentStructureName.contains("_verdant"));
+                Tree t = TREES.get(p);
+                if (t != null)
+                    t.listedAt = now;           // still placed (a level-up to a structure we do not animate is not "gone")
                 if (!CrownMotion.animates(p.currentStructureName, verdant))
                     continue;
-                Tree t = TREES.get(p);
                 if (t == null) {
                     t = new Tree();
+                    t.listedAt = now;
                     TREES.put(p, t);
                 }
                 if (t.blockCount != p.getBlocks().size() || !Objects.equals(t.structure, p.currentStructureName))
@@ -227,7 +233,7 @@ public class CrownRenderClientEvents {
         boolean changed = false;
         for (int i = RELEASING.size() - 1; i >= 0; i--) {
             Tree t = RELEASING.get(i);
-            if (now >= t.releaseUntil || now < t.releaseUntil - REFRESH_TICKS) {
+            if (now >= t.releaseUntil || now < t.releaseUntil - CrownMotion.HAND_BACK_TICKS) {
                 RELEASING.remove(i);
                 if (!t.taken)
                     t.mesh = null;
@@ -237,10 +243,16 @@ public class CrownRenderClientEvents {
             Tree t = TAKEN.get(i);
             int at = CANDIDATES.indexOf(t);
             if (at < 0 || at >= take) {
-                // handed back to the mesh: drawn until its re-mesh has surely landed, so the crown never blinks out
+                // handed back to the mesh: drawn until its re-mesh has surely landed, so the crown never blinks out -
+                // unless its building is gone (destroyed): then nothing is handed back, and it stops at once
                 t.taken = false;
-                t.releaseUntil = now + REFRESH_TICKS;
-                RELEASING.add(t);
+                int hold = CrownMotion.handBackTicks(!listing || t.listedAt == now);
+                if (hold > 0) {
+                    t.releaseUntil = now + hold;
+                    RELEASING.add(t);
+                } else {
+                    t.mesh = null;
+                }
                 dirty(t);
                 changed = true;
             }

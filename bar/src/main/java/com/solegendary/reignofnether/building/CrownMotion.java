@@ -323,6 +323,6 @@ public final class CrownMotion {
      * out of range, over the budget, or the view changed); otherwise the building is gone (destroyed, cancelled).
      */
     public static int handBackTicks(boolean placed) {
-        return HAND_BACK_TICKS;
+        return placed ? HAND_BACK_TICKS : 0;
     }
 }
