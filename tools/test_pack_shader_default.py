@@ -102,6 +102,26 @@ class Profiles(unittest.TestCase):
         for opt in ("AO", "SOFT_SHADOWS", "BLOOM", "SSR", "CAUSTICS"):     # the per-pixel extras off on LOW
             self.assertEqual(low[opt], "0", opt)
             self.assertEqual(high[opt], "1", opt)
+        # #437's wind and cloud shadows (vertex and per-pixel work) off on LOW, on otherwise; its RTS texture sharpening
+        # off on LOW (0 = the hardware's mip choice)
+        for opt in ("WIND", "CLOUD_SHADOWS"):
+            self.assertEqual(low[opt], "0", opt)
+            self.assertEqual(med[opt], "1", opt)
+        self.assertEqual(float(low["TEXTURE_SHARPNESS"]), 0.0)
+
+    def test_every_on_off_screen_option_is_in_every_profile(self):
+        # Eris.15 (#554 review r1): a profile that leaves an option out keeps whatever the player had, so switching to
+        # LOW after #437 merged would have kept wind and cloud shadows on and never set the sharpening. Every on/off
+        # option on the screen (its values [0 1]) and every slider is set by every profile
+        props = properties(read(os.path.join(SHADERS, "shaders.properties")))
+        opts = options()
+        on_screen = [o for o in props["screen"].split() if o in opts]
+        toggles = [o for o in on_screen if opts[o][1] == ["0", "1"]]
+        sliders = [o for o in props["sliders"].split() if o in opts and o != "sunPathRotation"]   # the look's own tilt
+        self.assertTrue(toggles and sliders)
+        for name, entries in profiles().items():
+            for opt in toggles + sliders:
+                self.assertIn(opt, entries, "profile %s does not set %s" % (name, opt))
 
     def test_the_screen_shows_the_profile_and_says_how_to_turn_it_off(self):
         props = properties(read(os.path.join(SHADERS, "shaders.properties")))
