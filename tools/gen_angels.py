@@ -8,7 +8,8 @@ kind's light). Flat colours; the values follow the sheet (cream plate and feathe
 
     python3 tools/gen_angels.py --massing b --kind archer    # design/models/sunforged_angel_b_archer.json
     python3 tools/gen_angels.py --massing b2 --kind sword   # round 2: B raised to a body (sunforged_angel_b2_sword.json)
-    python3 tools/gen_angels.py --all                        # all twelve (round 1's a, b, c unchanged + b2)
+    python3 tools/gen_angels.py --massing b3 --kind sword   # round 3: B2's part-level pass
+    python3 tools/gen_angels.py --all                        # all fifteen (a, b, c, b2 unchanged + b3)
     python3 tools/render_concept.py --check design/models/sunforged_angel_*.json
 
 Space is the DSL's (design/models/README.md): px, y up, the unit faces -Z, +x is its left. Hover pose: the model is
@@ -48,7 +49,7 @@ KIND_PALETTE = {
 EMISSIVE = ["sun", "glow"]
 NAMES = {"mender": "Mender Angel", "archer": "Seraph Archer", "sword": "Sword Seraph"}
 ROLES = {"mender": "healer (summon)", "archer": "ranged (summon)", "sword": "melee engager (summon)"}
-MASSING = {"a": "Choir Seraph", "b": "Ordo Seraph", "c": "Herald", "b2": "Ordo Seraph r2"}
+MASSING = {"a": "Choir Seraph", "b": "Ordo Seraph", "c": "Herald", "b2": "Ordo Seraph r2", "b3": "Ordo Seraph r3"}
 KIND_SCALE = {"mender": 0.92, "archer": 1.00, "sword": 1.15}      # the game's render scale (not baked in here)
 RTS_EYE = (0.0, 0.79, -0.62)                                      # toward the RTS camera (52 deg down, in front)
 
@@ -666,7 +667,7 @@ def wings_b2(m, kind):
     return dict(R=R, wrist=Wr, tip=T, u_tip=u_tip)
 
 
-def body_b2(m, kind):
+def body_b2(m, kind, flat_hem=False):
     """B's cuirass; the Mender in A's legless column robe (a flared skirt then a taper to a point, no feet) with a
     team panel down its front and back; the Archer and the Sword in a wider split tabard over trailing legs."""
     b = m.bone("body", [0, 21.0, 0])
@@ -681,7 +682,11 @@ def body_b2(m, kind):
             dome(p, s * 4.9, 0.0, 22.8, 3.2, 4.0, 4.6, "plate", layers=1, top=0.75, k=2)
     if kind == "mender":
         skirt_panels(m, "robe", 16.8, 9.6, 3.2, 2.3, 5.0, "robe", n=8)
-        taper_panels(m, "hem", 9.65, 0.0, 5.0, 3.6, 1.2, "robe", n=8)
+        if flat_hem:     # round 3, 4: the column ends in a flat gold hem 0.3 body-widths across, not a point
+            taper_panels(m, "hem", 9.65, 1.0, 5.0, 3.6, 1.45, "robe", n=8)
+            rounded(b, 0, -0.15, 0.0, 1.1, 2.9, 2.1, "gold", k=1)
+        else:
+            taper_panels(m, "hem", 9.65, 0.0, 5.0, 3.6, 1.2, "robe", n=8)
         front = [[(0, 25.5, -3.2), (0, 20.7, -3.1), (0, 16.8, -2.6), (0, 9.6, -3.9), (0, 3.6, -2.2)]]
         back = [[(0, 25.5, 3.2), (0, 20.7, 3.1), (0, 16.8, 2.3), (0, 9.6, 3.6), (0, 3.6, 1.9)]]
         stole(m, front, back, w=3.0)
@@ -814,18 +819,28 @@ def halo_disc_b2(m, centre, diameter, tilt):
     return hb
 
 
-def build_b2(kind):
+def build_b2(kind, rnd=2):
     pal = dict(PALETTE)
     pal.update(KIND_PALETTE[kind])
     pal["feather_warm"] = "#eadab4"            # 6: the flights' warm cream (the underside), a step under "feather"
-    m = Model("%s - %s (massing B2)" % (NAMES[kind], MASSING["b2"]), "sunforged", ROLES[kind] + ", round 2 body",
-              pal, EMISSIVE)
-    body = body_b2(m, kind)
-    wings_b2(m, kind)
+    key = "b%d" % rnd
+    if rnd == 3:
+        pal["feather_warm"] = "#fbf4e4"        # round 3, 1: near-white flights
+        pal["sun"] = "#ffe188"                 # round 3, 3: the halo's gold ~20% less saturated (#ffd96a)
+        pal["halo_gold"] = "#d4af5a"           # the Mender's disc face (gold #d4a63c, ~20% less saturated)
+    m = Model("%s - %s (massing %s)" % (NAMES[kind], MASSING[key], key.upper()), "sunforged",
+              ROLES[kind] + (", round 2 body" if rnd == 2 else ", round 3 part pass"), pal, EMISSIVE)
+    body = body_b2(m, kind, flat_hem=(rnd == 3))
+    (wings_b2 if rnd == 2 else wings_b3)(m, kind)
     chin, H = body["chin"], body["H"]
     head_b2(m, chin, H)
     back = 0.1 + 0.86 * H / 2 + 0.35
-    if kind == "mender":
+    if rnd == 3:
+        # 3: 0.9 x the head's width (the hair cap, 0.76 H + 0.3), tilted 28 back, floating just over the crown
+        D = 0.9 * (0.76 * H + 0.3)
+        crown = chin + 0.98 * H
+        halo_b3(m, (0.0, crown + 0.35 + D / 2 * math.cos(math.radians(28.0)), 0.5), D, 28.0, disc=(kind == "mender"))
+    elif kind == "mender":
         halo_disc_b2(m, (0.0, chin + 0.62 * H, back + 2.4), 9.0, 35.0)
     else:
         # 4: the tube 2.1 px, the ring widened to 10.5 and raised 1 px so its hole stays open over the crown (the
@@ -878,6 +893,134 @@ def build_b2(kind):
     return m, errs, lo
 
 
+# ------------------------------------------------------------------ round 3: option B3 (B2's part-level pass) ------
+# The blind critic picked B2 over B (6.8 vs 5.2). Round 3 changes ONE thing per element:
+#  1 underside  - game_preview / Minecraft light a face 0.4 + 0.6 (n.L0 + n.L1): a face turned DOWN gets 0.4 whatever
+#                 its paint (white reads 40%), so the palette alone cannot lift it. The flights go near-white
+#                 (feather_warm #fbf4e4) AND the plane is reclined so the chord RISES 10 deg to the trailing edge
+#                 (B2: falls 20): the front and quarter cameras then see the lit top faces, never a down face
+#  2 wing bone  - the leading edge 60% of the unit's arm (1.15 px, B2 1.6-0.9), ONE continuous team stripe root to
+#                 tip at ~25% chord, a cream covert row between it and the flights, six secondaries wrist to root
+#                 (pointed: five notches in the trailing edge), primaries ~40% of the half-span; humerus tabard_dark
+#  3 halo       - outer diameter 0.9 x the head's width (3.55 px), tube 1/8 of it (0.44 px), tilted 28 back, floating
+#                 over the crown; its gold ~20% less saturated (sun #ffe188; the Mender's disc halo_gold #d4af5a)
+#  4 hem        - the Mender's column robe ends in a flat gold hem 0.3 body-widths (2.9 px) across, not a point
+B3_WING = {
+    # B2's spans / chords / sweeps / dihedrals and finger tips; the rest per round 3
+    "mender": dict(B2_WING["mender"], n_sec=6, n_cov=3, root_f=0.18, n_ip=1),
+    "archer": dict(B2_WING["archer"], n_sec=6, n_cov=4, root_f=0.24, n_ip=2),
+    "sword": dict(B2_WING["sword"], n_sec=6, n_cov=4, root_f=0.24, n_ip=2),
+}
+RHO_B3 = 100.0                       # 1: the chord rises 10 deg toward the trailing edge (B2: 70, falling 20)
+BONE_T = 0.6 * 1.9                   # 2: the leading edge 60% of the arm's 1.9 px
+STRIPE = 0.25                        # 2: the team stripe's share of the chord
+
+
+def wings_b3(m, kind):
+    P = B3_WING[kind]
+    d_h = _unit(HUM_DIR)
+    R = _add(HUM_BASE, _mul(d_h, HUM_LEN))
+    M = rot_mat(-RHO_B3, 0, P["delta"])
+    cd = math.cos(math.radians(P["delta"]))
+    u_tip = (P["S"] - R[0]) / cd
+    u_w = (0.55 * P["S"] - R[0]) / cd
+    Wr = (u_w, u_w * math.tan(math.radians(WRIST_FWD)))
+    E = (0.5 * Wr[0], 0.5 * Wr[1] + 0.25)
+    T = (u_tip, Wr[1] - (u_tip - u_w) * math.tan(math.radians(P["sweep"])))
+    c = P["c"]
+    hand_len = math.dist(Wr, T)
+    a_h = ((T[0] - Wr[0]) / hand_len, (T[1] - Wr[1]) / hand_len)
+    b_h = (a_h[1], -a_h[0])
+    LE = [(0.0, 0.0), E, Wr]
+
+    def le(t):
+        return polyline(LE, t)
+
+    def chord(t):
+        return c * (1.0 + 0.1 * t)
+
+    def P2(p, q, k):
+        return (p[0] + q[0] * k, p[1] + q[1] * k)
+    fw, gap, rec = P["fw"], P["gap"], P["recede"]
+    nfing = len(rec)
+    rf = P["root_f"]
+    tips_f, roots_f = [], []
+    for k in range(nfing):                                    # primaries rooted near the wrist: ~40% of the half-span
+        tips_f.append(P2(P2(T, b_h, fw / 2 + k * (fw + gap)), a_h, -rec[k]))
+        roots_f.append(P2(P2(Wr, a_h, hand_len * max(0.04, rf - 0.06 * k)), b_h, fw / 2 + 0.35 * k))
+    te_w = (Wr[0], Wr[1] - chord(2.0))
+    span_px = math.dist(LE[0], E) + math.dist(E, Wr)
+    for side in (1, -1):
+        lr = "l" if side > 0 else "r"
+
+        def Wp(uv, w=0.0):
+            p = apply(M, (uv[0], uv[1], w))
+            return mirror((R[0] + p[0], R[1] + p[1], R[2] + p[2]), side)
+        n0 = mirror(apply(M, (0.0, 0.0, 1.0)), side)
+        nf = n0 if _dot(n0, RTS_EYE) > 0 else _mul(n0, -1.0)
+        names = ["wing_%s_arm" % lr, "wing_%s_fore" % lr, "wing_%s_hand" % lr, "wing_%s_tips" % lr]
+        pivots = [mirror(HUM_BASE, side), Wp(E), Wp(Wr), Wp(P2(Wr, a_h, 0.3 * hand_len))]
+        bones = [m.bone(n, list(pv), parent="body" if i == 0 else names[i - 1]) for i, (n, pv) in
+                 enumerate(zip(names, pivots))]
+        arm_b, fore_b, hand_b, tips_b = bones
+        hc = _add(HUM_BASE, _mul(d_h, HUM_LEN / 2 + 0.25))
+        across = _unit(_cross(d_h, (0.0, 1.0, 0.0)))
+        slab(arm_b, mirror(hc, side), mirror(d_h, side), mirror(across, side), (HUM_W, HUM_T, HUM_LEN + 0.5),
+             "tabard_dark")
+        # 2: six secondaries wrist to root, pointed - five notches in the trailing edge
+        ns = P["n_sec"]
+        for k in range(ns):
+            t = -0.25 + 2.2 * k / (ns - 1)
+            b = P2(le(t), (0.0, -1.0), 0.15 * c)
+            dd = _unit((0.1 * t, -1.0, 0.0))
+            tip = P2(le(t), dd, chord(t))
+            w = 1.3 * (2.2 / (ns - 1)) * span_px / 2 + 0.3
+            feather(arm_b if t < 1.0 else fore_b, Wp(b), Wp(tip), w, 0.5, "feather_warm", nf,
+                    offset=-0.05 * (k % 2), pointed=True)
+        nip = P["n_ip"]
+        for i in range(nip):
+            b = P2(P2(Wr, a_h, hand_len * (0.05 + 0.1 * i)), b_h, 0.25 * c)
+            tip = P2(lerp(te_w, tips_f[-1], (i + 1) / (nip + 1.0)), b_h, 0.7)
+            feather(hand_b, Wp(b), Wp(tip), fw + 0.7, 0.5, "feather_warm", nf, offset=-0.12 + 0.04 * i, pointed=True)
+        for k in range(nfing):
+            feather(tips_b, Wp(roots_f[k]), Wp(tips_f[k]), fw, 0.55, "feather_warm", nf, offset=-0.04 - 0.05 * k,
+                    pointed=True)
+        # 2: the cream covert row between the stripe and the flights (square ends, alternate lengths)
+        nc = P["n_cov"]
+        for k in range(nc):
+            t = -0.1 + 2.0 * k / (nc - 1)
+            b = P2(le(t), (0.0, -1.0), 0.18 * chord(t))
+            tip = P2(le(t), (0.0, -1.0), (0.52 if k % 2 else 0.46) * chord(t))
+            w = 1.2 * (2.0 / (nc - 1)) * span_px / 2 + 0.4
+            feather(arm_b if t < 1.0 else fore_b, Wp(b), Wp(tip), w, 0.6, "feather", nf, offset=0.3)
+        hb = P2(P2(Wr, a_h, 0.2 * hand_len), b_h, 0.2 * c)          # the primary coverts over the hand's root
+        feather(hand_b, Wp(hb), Wp(P2(hb, b_h, 0.3 * c)), 0.4 * hand_len, 0.6, "feather", nf, offset=0.3)
+        # 2: ONE team stripe along the whole leading edge, root to the outer primary's tip, ~25% chord, 1.15 thick;
+        # each piece runs 0.5 px into the next so the joints stay closed
+        hm = P2(Wr, a_h, 0.55 * hand_len)
+        for bone, p0, p1, wb in ((arm_b, LE[0], E, STRIPE * chord(0.5)), (fore_b, E, Wr, STRIPE * chord(1.5)),
+                                 (hand_b, Wr, hm, STRIPE * 0.9 * c), (tips_b, hm, T, 0.6 * fw + 0.3)):
+            s_ = _unit((p1[0] - p0[0], p1[1] - p0[1], 0.0))
+            bk = (s_[1], -s_[0])
+            q0 = P2(P2(p0, s_, -0.5), bk, wb / 2)
+            q1 = P2(P2(p1, s_, 0.5 if bone is not tips_b else 0.0), bk, wb / 2)
+            feather(bone, Wp(q0), Wp(q1), wb, BONE_T, "tabard", nf, offset=0.45)
+    return dict(R=R, wrist=Wr, tip=T, u_tip=u_tip)
+
+
+def halo_b3(m, centre, diameter, tilt, disc=False):
+    """3: the small halo floating over the crown - a ring (tube 1/8 of the diameter) or, for the Mender, a flat
+    halo_gold disc in a glowing rim."""
+    hb = m.bone("halo", list(centre), parent="body", rotation=[tilt, 0, 0])
+    tube = diameter / 8.0
+    if disc:
+        cx, cy, cz = centre
+        for w, h in ((diameter - 0.5, diameter - 1.3), (diameter - 1.3, diameter - 0.5)):
+            hb.box_at((cx, cy, cz + 0.1), (w, h, 0.4), "halo_gold")
+    ring(hb, centre, diameter / 2 - tube / 2, 6, tube, max(0.45, tube), "sun")
+    return hb
+
+
 # ------------------------------------------------------------------ assembly ------------------------------------
 def settle(m):
     """Moves the whole model so its lowest posed point is at y = 0 (the hover pose's reference)."""
@@ -898,8 +1041,8 @@ def extent(m, names=None):
 
 
 def build(massing, kind):
-    if massing == "b2":
-        return build_b2(kind)
+    if massing in ("b2", "b3"):
+        return build_b2(kind, rnd=int(massing[1]))
     pal = dict(PALETTE)
     pal.update(KIND_PALETTE[kind])
     m = Model("%s - %s (massing %s)" % (NAMES[kind], MASSING[massing], massing.upper()), "sunforged",
@@ -993,13 +1136,13 @@ def write(massing, kind):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--massing", choices=("a", "b", "c", "b2"),
-                    help="a / b / c: round 1's greyboxes (kept as the A/B record); b2: round 2's B")
+    ap.add_argument("--massing", choices=("a", "b", "c", "b2", "b3"),
+                    help="a / b / c: round 1's greyboxes (kept as the A/B record); b2: round 2's B; b3: round 3's")
     ap.add_argument("--kind", choices=("mender", "archer", "sword"))
     ap.add_argument("--all", action="store_true")
     a = ap.parse_args()
     if a.all:
-        for ms in ("a", "b", "c", "b2"):
+        for ms in ("a", "b", "c", "b2", "b3"):
             for k in ("mender", "archer", "sword"):
                 write(ms, k)
     elif a.massing and a.kind:

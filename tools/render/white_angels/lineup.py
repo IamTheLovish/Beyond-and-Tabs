@@ -101,11 +101,14 @@ def main():
         blow(far).save(os.path.join(a.out, "far_lineup_%s.png" % L))
         blow(sil).save(os.path.join(a.out, "silhouette_lineup_%s.png" % L))
         print("lineup %s: %d models" % (L, len(cuts)))
-    # a round against the option it grew from (b on top, b2 under): far_lineup_b_vs_b2.png, silhouette_lineup_b_vs_b2.png
+    # a round against the round before it in the same run (b2 over b3, else b over b2): far_lineup_b2_vs_b3.png ...
     for L in letters:
         m2 = re.match(r"([a-z])([0-9]+)$", L)
-        if m2 and m2.group(1) in rows:
-            P = m2.group(1)
+        if not m2:
+            continue
+        prev = [m2.group(1) + str(n) for n in range(int(m2.group(2)) - 1, 1, -1)] + [m2.group(1)]
+        P = next((q for q in prev if q in rows), None)
+        if P:
             blow(stack([rows[P][0], rows[L][0]], GRASS)).save(os.path.join(a.out, "far_lineup_%s_vs_%s.png" % (P, L)))
             blow(stack([rows[P][1], rows[L][1]], (236, 236, 236))).save(
                 os.path.join(a.out, "silhouette_lineup_%s_vs_%s.png" % (P, L)))
