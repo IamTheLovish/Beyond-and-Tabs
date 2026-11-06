@@ -1,0 +1,200 @@
+[09:42:24] [Server thread/INFO]: [Tick] p50 11.8 ms, p95 26.2 ms, max 51.1 ms over the last 100 ticks; 82 units, 17 buildings, 1 players
+[09:42:24] [Server thread/INFO]: [Paths] last 10 s: 27 unit vanilla createPath, 27 short searches, 8 full-range fallbacks (pillager_unit 5, skeleton_unit 2, spider_unit 1), 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 12/28 hits
+[09:42:25] [Render thread/INFO]: [Eyes] 13_dome: Bastion Aegis cast by 678 at -182, 72, 34
+[09:42:26] [Render thread/INFO]: [Eyes] 13_dome: domes on the client 1
+[09:42:26] [Render thread/INFO]: [Eyes] clip-mark 13_dome 1793958146644
+[09:42:26] [IO-Worker-2/INFO]: [Eyes] 13_dome: Saved screenshot as bat_eyes_13_dome.png
+[09:42:27] [Render thread/INFO]: [Eyes] 13_dome_hit: domes on the client 1, projectiles 4
+[09:42:27] [Render thread/INFO]: [Eyes] clip-mark 13_dome_hit 1793958147419
+[09:42:27] [Render thread/INFO]: [Eyes] 14_first_person: RTS eye at y 95 (ground 72)
+[09:42:27] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[09:42:27] [Render thread/INFO]: [Eyes] step 14 screen none level true
+[09:42:27] [IO-Worker-2/INFO]: [Eyes] 13_dome_hit: Saved screenshot as bat_eyes_13_dome_hit.png
+[09:42:28] [Render thread/INFO]: [Sfx] 201 ticks, played/asked: units 15/25 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[09:42:32] [Render thread/INFO]: [Frame] p50 92.0 ms (11 fps), p95 227.2 ms, max 327.9 ms over 240 frames; first-person view, zoom 30, 52 units known
+[09:42:32] [Render thread/INFO]: [Anim] 17 units/frame (max 35): animation p50 0.2 ms, p95 0.5 ms; unit render p50 17.0 ms, p95 36.7 ms; per unit 23.4 us anim, 1059.3 us render (anim 2%); first-person view, zoom 30, detail off, over 92 frames
+[09:42:32] [Render thread/INFO]: [FrameParts] 92 frames, mean 109.2 ms/frame; ours 22.4 ms (20%): unitBodies 17.48 (max 69.8, 16/f) | worldFx 2.51 (max 11.1, 11/f) | entityShadows 0.80 (max 14.0, 15/f) | hud 0.45 (max 1.4, 0.5/f) | minimap 0.26 (max 0.7, 19/f) | unitOverlays 0.24 (max 2.7, 11/f) | bars 0.18 (max 5.1, 22/f) | markersWreck 0.16 (max 1.5, 1.0/f) | buildingDecor 0.07 (max 2.9, 4.0/f) | markersGrid 0.05 (max 5.0, 1.0/f) | markersMetal 0.04 (max 0.1, 2.0/f) | unitRings 0.04 (max 0.1, 5.6/f) | markersMapWorld 0.03 (max 0.1, 0.5/f) (+13 smaller); elsewhere 86.9 ms; 281 section re-mesh requests/s
+[09:42:32] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.1 ms/tick: unitTick 0.09 (max 3.1, 50/t)
+[09:42:32] [Render thread/INFO]: [FogRemesh] 10 s: 17 fog updates, sections marked 280/s (skipped 294/s under the surface band, flushed 0/s), rebuilt 59/s (+267/s all air) on vanilla, band 0.18 ms/s, surface mode, 0 stale columns
+[09:42:32] [Render thread/INFO]: [Eyes] 14_first_person: eye at [-220, 74, -7] y 75 looking at the capitol -210, 79, 3
+[09:42:32] [Render thread/INFO]: [Eyes] clip-mark 14_first_person 1793958152394
+[09:42:32] [Render thread/INFO]: [Eyes] 16 scars: pad at -254, 70, 47 (capitol -210, 79, 3), fog of war on the client: true
+[09:42:32] [IO-Worker-4/INFO]: [Eyes] 14_first_person: Saved screenshot as bat_eyes_14_first_person.png
+[09:42:34] [Server thread/INFO]: [Tick] p50 13.1 ms, p95 32.6 ms, max 45.2 ms over the last 100 ticks; 82 units, 18 buildings, 1 players
+[09:42:34] [Server thread/INFO]: [Paths] last 10 s: 81 unit vanilla createPath, 77 short searches, 4 full-range fallbacks (skeleton_unit 2, spider_unit 2), 1 failed full searches not repeated, 4 failed searches not repeated; chase cell memo 124/639 hits
+[09:42:34] [Server thread/INFO]: [Sys] 200 ticks, mean 13.7 ms/tick; ours 3.0 ms (22%): pathfinder 1.20 (max 37.6, 2.0/t) | attacker 0.51 (max 23.7, 80/t) | unit 0.40 (max 6.3, 82/t) | reactions 0.13 (max 8.3, 83/t) | unitGrid 0.12 (max 10.1, 1.0/t) | fogOfWar 0.10 (max 3.5, 1.0/t) | buildings 0.07 (max 3.1, 1.0/t) | separation 0.07 (max 6.1, 82/t) | pushScan 0.07 (max 2.7, 81/t) | targetGrid 0.05 (max 0.1, 1.0/t) | bots 0.05 (max 3.4, 0.1/t) | attacker/entityScan 0.05 (max 3.1, 14/t) | unstick 0.04 (max 3.0, 82/t) | attacker/idleAggro 0.03 (max 3.7, 6.9/t) (+10 smaller); vanilla 10.6 ms (77%): chunks 3.94 (max 21.7, 3.0/t) | aiGoals 2.34 (max 26.6, 103/t) | unitTick 1.65 (max 9.6, 82/t) | travel 1.22 (max 13.5, 103/t) | baseTick 0.68 (max 6.5, 132/t) | otherEntities 0.58 (max 10.7, 80/t) | levelRest 0.14 (max 3.2, 3.0/t); elsewhere 0.1 ms; gc 84 ms
+[09:42:34] [Server thread/INFO]: [Goals] 200 ticks, 1.29 ms/tick in 31 goal classes: MeleeAttackBuildingGoal 0.40 ms (tick 0.40; 13 calls/t, 30.2 us/call) | MeleeAttackUnitGoal 0.35 ms (tick 0.32, canUse 0.02; 17 calls/t, 21.2 us/call) | BuildRepairGoal 0.18 ms (start 0.18; 10 calls/t, 17.9 us/call) | UnitCrossbowAttackGoal 0.10 ms (tick 0.10; 7 calls/t, 15.3 us/call) | UnitBowAttackGoal 0.07 ms (tick 0.07; 9 calls/t, 7.9 us/call) | MoveToTargetBlockGoal 0.07 ms (canContinue 0.07; 26 calls/t, 2.6 us/call) | SelectedTargetGoal 0.03 ms (canContinue 0.02; 35 calls/t, 0.8 us/call) | TemptGoal 0.02 ms (canUse 0.02; 4 calls/t, 5.2 us/call) | FloatGoal 0.02 ms (canUse 0.02; 32 calls/t, 0.5 us/call) (+22 smaller)
+[09:42:35] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[09:42:39] [Render thread/INFO]: [Sfx] 202 ticks, played/asked: units 21/22 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[09:42:41] [Render thread/INFO]: [Eyes] clip-mark 16_scars_before_rts 1793958161709
+[09:42:42] [IO-Worker-9/INFO]: [Eyes] 16_scars_before_rts: Saved screenshot as bat_eyes_16_scars_before_rts.png
+[09:42:42] [Render thread/INFO]: [Frame] p50 110.7 ms (9 fps), p95 227.2 ms, max 327.9 ms over 240 frames; RTS view, zoom 30, 48 units known
+[09:42:42] [Render thread/INFO]: [Anim] 9 units/frame (max 10): animation p50 0.1 ms, p95 0.2 ms; unit render p50 11.1 ms, p95 16.2 ms; per unit 25.9 us anim, 1317.6 us render (anim 2%); RTS view, zoom 30, detail on, over 33 frames
+[09:42:42] [Render thread/INFO]: [FrameParts] 77 frames, mean 129.6 ms/frame; ours 7.4 ms (6%): unitBodies 4.73 (max 25.3, 3.5/f) | worldFx 2.16 (max 11.8, 11/f) | markersMapWorld 0.17 (max 3.2, 0.6/f) | unitOverlays 0.12 (max 3.2, 11/f) | bars 0.09 (max 3.1, 22/f) (+19 smaller); elsewhere 122.3 ms; 293 section re-mesh requests/s
+[09:42:42] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.1 ms/tick: unitTick 0.06 (max 0.1, 50/t)
+[09:42:42] [Render thread/INFO]: [FogRemesh] 10 s: 18 fog updates, sections marked 294/s (skipped 449/s under the surface band, flushed 0/s), rebuilt 36/s (+123/s all air) on vanilla, band 0.24 ms/s, surface mode, 0 stale columns
+[09:42:44] [Server thread/INFO]: [Tick] p50 11.1 ms, p95 21.0 ms, max 51.3 ms over the last 100 ticks; 78 units, 18 buildings, 1 players
+[09:42:44] [Server thread/INFO]: [Paths] last 10 s: 80 unit vanilla createPath, 71 short searches, 4 full-range fallbacks (skeleton_unit 3, spider_unit 1), 0 failed full searches not repeated, 9 failed searches not repeated; chase cell memo 106/663 hits
+[09:42:44] [Server thread/INFO]: [Sys] 200 ticks, mean 12.5 ms/tick; ours 2.2 ms (18%): attacker 0.65 (max 20.0, 78/t) | unit 0.32 (max 7.2, 80/t) | pathfinder 0.30 (max 42.2, 2.0/t) | reactions 0.13 (max 5.2, 80/t) | buildings 0.11 (max 3.6, 1.0/t) | pushScan 0.11 (max 7.0, 79/t) | fogOfWar 0.09 (max 3.1, 1.0/t) | targetGrid 0.07 (max 3.1, 0.9/t) | unstick 0.06 (max 3.0, 80/t) | stuckNudge 0.05 (max 2.8, 80/t) | attacker/entityScan 0.04 (max 2.1, 14/t) | separation 0.04 (max 3.0, 80/t) | autoCaster 0.04 (max 2.3, 1.0/t) | unitGrid 0.03 (max 1.3, 1.0/t) (+10 smaller); vanilla 10.0 ms (80%): chunks 3.28 (max 12.9, 3.0/t) | aiGoals 2.31 (max 43.6, 100/t) | unitTick 1.66 (max 7.9, 80/t) | travel 1.22 (max 8.8, 101/t) | baseTick 0.74 (max 10.9, 130/t) | otherEntities 0.60 (max 9.3, 84/t) | levelRest 0.16 (max 5.2, 3.0/t); elsewhere 0.3 ms; gc 58 ms
+[09:42:44] [Server thread/INFO]: [Goals] 200 ticks, 1.32 ms/tick in 31 goal classes: MeleeAttackBuildingGoal 0.47 ms (tick 0.47; 12 calls/t, 38.4 us/call) | MeleeAttackUnitGoal 0.37 ms (tick 0.35, canUse 0.02; 17 calls/t, 21.4 us/call) | UnitBowAttackGoal 0.18 ms (tick 0.18; 11 calls/t, 17.0 us/call) | BuildRepairGoal 0.17 ms (start 0.17; 14 calls/t, 12.6 us/call) | MoveToTargetBlockGoal 0.04 ms (canContinue 0.04; 27 calls/t, 1.5 us/call) | SelectedTargetGoal 0.02 ms (canContinue 0.02; 36 calls/t, 0.6 us/call) | WaterAvoidingRandomStrollGoal 0.02 ms (canContinue 0.02; 4 calls/t, 3.7 us/call) (+24 smaller)
+[09:42:49] [Render thread/INFO]: [Sfx] 200 ticks, played/asked: units 0/0 buildings 5/6 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[09:42:49] [Render thread/INFO]: [Eyes] 16 scars: 0 chunks marked on the server; client: 0 chunk copies (0 marked), 15 regions (0 drawn, 0 quads), rebuilds 0, last build 0.00 ms, draw 0.00 ms
+[09:42:49] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts 1793958169822
+[09:42:49] [Render thread/INFO]: [Eyes] 16 probe client dirt path: (-260,53) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[09:42:49] [Render thread/INFO]: [Eyes] 16 probe client snow 1: (-248,54) MOTION_BLOCKING 69 NO_LEAVES 47 top 70 = block.minecraft.snow, surface 70.125, one below block.minecraft.grass_block
+[09:42:49] [Render thread/INFO]: [Eyes] 16 probe client snow 2: (-247,54) MOTION_BLOCKING 69 NO_LEAVES 47 top 70 = block.minecraft.snow, surface 70.250, one below block.minecraft.grass_block
+[09:42:49] [Render thread/INFO]: [Eyes] 16 probe client snow 4: (-245,54) MOTION_BLOCKING 69 NO_LEAVES 47 top 70 = block.minecraft.snow, surface 70.500, one below block.minecraft.grass_block
+[09:42:49] [Render thread/INFO]: [Eyes] 16 probe client top slab: (-247,50) MOTION_BLOCKING 70 NO_LEAVES 47 top 70 = block.minecraft.stone_slab, surface 71.000, one below block.minecraft.grass_block
+[09:42:49] [Render thread/INFO]: [Eyes] 16 probe client bottom slab: (-246,50) MOTION_BLOCKING 70 NO_LEAVES 47 top 70 = block.minecraft.stone_slab, surface 70.500, one below block.minecraft.grass_block
+[09:42:49] [Render thread/INFO]: [Eyes] 16 probe client stairs: (-247,45) MOTION_BLOCKING 71 NO_LEAVES 47 top 71 = block.minecraft.grass_block, surface 72.000, one below block.minecraft.dirt
+[09:42:49] [Render thread/INFO]: [Eyes] 16 probe client flat grass: (-254,47) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[09:42:49] [Render thread/INFO]: [Eyes] 16 probe client game ender centre: (-258,58) MOTION_BLOCKING 69 NO_LEAVES 47 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[09:42:49] [Server thread/INFO]: [Eyes] 16 probe server dirt path: (-260,53) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.dirt_path, surface 69.938, one below block.minecraft.dirt, scorch 0 crater 0
+[09:42:49] [Server thread/INFO]: [Eyes] 16 probe server snow 1: (-248,54) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.125, one below block.minecraft.grass_block, scorch 0 crater 0
+[09:42:49] [Server thread/INFO]: [Eyes] 16 probe server snow 2: (-247,54) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.250, one below block.minecraft.grass_block, scorch 0 crater 0
+[09:42:49] [Server thread/INFO]: [Eyes] 16 probe server snow 4: (-245,54) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.500, one below block.minecraft.grass_block, scorch 0 crater 0
+[09:42:49] [Server thread/INFO]: [Eyes] 16 probe server top slab: (-247,50) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 71.000, one below block.minecraft.grass_block, scorch 0 crater 0
+[09:42:49] [Server thread/INFO]: [Eyes] 16 probe server bottom slab: (-246,50) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 70.500, one below block.minecraft.grass_block, scorch 0 crater 0
+[09:42:49] [Server thread/INFO]: [Eyes] 16 probe server stairs: (-247,45) MOTION_BLOCKING 71 NO_LEAVES 71 top 71 = block.minecraft.grass_block, surface 72.000, one below block.minecraft.dirt, scorch 0 crater 0
+[09:42:49] [Server thread/INFO]: [Eyes] 16 probe server flat grass: (-254,47) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt, scorch 0 crater 0
+[09:42:49] [Server thread/INFO]: [Eyes] 16 probe server game ender centre: (-258,58) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt, scorch 0 crater 0
+[09:42:50] [IO-Worker-8/INFO]: [Eyes] 16_scars_rts: Saved screenshot as bat_eyes_16_scars_rts.png
+[09:42:52] [Render thread/INFO]: [Frame] p50 120.6 ms (8 fps), p95 170.8 ms, max 228.4 ms over 240 frames; RTS view, zoom 15, 44 units known
+[09:42:52] [Render thread/INFO]: [FrameParts] 77 frames, mean 129.2 ms/frame; ours 1.2 ms (1%): worldFx 0.78 (max 6.2, 11/f) | markersWreck 0.13 (max 3.0, 1.0/f) | markersMapWorld 0.13 (max 3.1, 1.0/f) | buildingDecor 0.04 (max 3.0, 4.0/f) | unitOverlays 0.03 (max 0.0, 11/f) (+18 smaller); elsewhere 128.1 ms; 79 section re-mesh requests/s
+[09:42:52] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.1 ms/tick: unitTick 0.06 (max 1.0, 46/t)
+[09:42:52] [Render thread/INFO]: [FogRemesh] 10 s: 15 fog updates, sections marked 79/s (skipped 352/s under the surface band, flushed 0/s), rebuilt 6/s (+12/s all air) on vanilla, band 0.17 ms/s, surface mode, 0 stale columns
+[09:42:53] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_close 1793958173911
+[09:42:54] [IO-Worker-4/INFO]: [Eyes] 16_scars_rts_close: Saved screenshot as bat_eyes_16_scars_rts_close.png
+[09:42:54] [Server thread/INFO]: [Tick] p50 9.9 ms, p95 23.3 ms, max 41.2 ms over the last 100 ticks; 74 units, 19 buildings, 1 players
+[09:42:54] [Server thread/INFO]: [Paths] last 10 s: 63 unit vanilla createPath, 56 short searches, 7 full-range fallbacks (skeleton_unit 7), 1 failed full searches not repeated, 7 failed searches not repeated; chase cell memo 49/283 hits
+[09:42:54] [Server thread/INFO]: [Sys] 200 ticks, mean 10.6 ms/tick; ours 2.4 ms (23%): attacker 1.34 (max 34.3, 74/t) | unit 0.23 (max 6.2, 76/t) | fogOfWar 0.15 (max 8.1, 1.0/t) | pathfinder 0.11 (max 1.3, 2.0/t) | buildings 0.09 (max 3.2, 1.0/t) | unitGrid 0.07 (max 5.1, 1.0/t) | pushScan 0.06 (max 3.0, 75/t) | stuckNudge 0.06 (max 4.1, 76/t) | targetGrid 0.06 (max 3.1, 0.9/t) | attacker/entityScan 0.03 (max 2.3, 14/t) | reactions 0.03 (max 0.1, 77/t) | unstick 0.02 (max 0.2, 76/t) | bots 0.02 (max 1.0, 0.1/t) (+11 smaller); vanilla 8.0 ms (76%): aiGoals 2.25 (max 17.0, 97/t) | chunks 2.13 (max 9.3, 3.0/t) | unitTick 1.52 (max 8.8, 76/t) | travel 0.92 (max 10.7, 97/t) | baseTick 0.64 (max 10.5, 125/t) | otherEntities 0.50 (max 6.8, 89/t) | levelRest 0.07 (max 0.1, 3.0/t); elsewhere 0.2 ms; gc 8 ms
+[09:42:54] [Server thread/INFO]: [Goals] 200 ticks, 1.21 ms/tick in 31 goal classes: MeleeAttackBuildingGoal 0.67 ms (tick 0.66; 14 calls/t, 46.6 us/call) | BuildRepairGoal 0.25 ms (tick 0.01, start 0.23; 14 calls/t, 17.4 us/call) | MoveToTargetBlockGoal 0.09 ms (canContinue 0.09; 24 calls/t, 3.8 us/call) | UnitBowAttackGoal 0.07 ms (tick 0.07; 10 calls/t, 7.4 us/call) | SelectedTargetGoal 0.03 ms (canContinue 0.03; 31 calls/t, 1.1 us/call) | RandomLookAroundUnitGoal 0.02 ms (canUse 0.02; 8 calls/t, 3.2 us/call) | PanicGoal 0.02 ms (canUse 0.02; 4 calls/t, 5.4 us/call) | MeleeAttackUnitGoal 0.02 ms (tick 0.02; 13 calls/t, 1.6 us/call) (+23 smaller)
+[09:42:55] [Server thread/INFO]: [Match] defeat: Offline (lost all their buildings)
+[09:42:55] [Server thread/INFO]: [Match] PLAYING -> ENDED (won by [Bot1 (medium)])
+[09:42:55] [Server thread/INFO]: [Defeat] Offline leaves 0 building(s) and 31 unit(s) to clean up
+[09:42:55] [Server thread/INFO]: Named entity VillagerUnit['Commander'/18, l='ServerLevel[Beyond and Tabs - Skirmish 1]', x=-216.61, y=70.00, z=-5.38] died: Commander was killed
+[09:42:55] [Render thread/INFO]: [System] [CHAT] 
+[09:42:55] [Render thread/INFO]: [System] [CHAT] Offline has lost all their buildings and is defeated!
+[09:42:55] [Render thread/INFO]: [System] [CHAT] 
+[09:42:55] [Render thread/INFO]: [System] [CHAT] 
+[09:42:55] [Render thread/INFO]: [System] [CHAT] There are 1 RTS player(s) remaining
+[09:42:55] [Render thread/INFO]: [System] [CHAT] 
+[09:42:55] [Render thread/INFO]: [System] [CHAT] 
+[09:42:55] [Render thread/INFO]: [System] [CHAT] Bot1 (medium) is victorious!
+[09:42:55] [Render thread/INFO]: [System] [CHAT] 
+[09:42:55] [Server thread/INFO]: +6 creepScore for: Bot1 (medium)
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=229, y=69, z=3})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=230, y=69, z=-16})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=210, y=70, z=-3})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=243, y=68, z=-7})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=243, y=68, z=-3})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=217, y=69, z=-8})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=210, y=69, z=6})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=236, y=69, z=-2})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=257, y=69, z=-11})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=245, y=69, z=8})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=230, y=69, z=19})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=262, y=69, z=6})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=203, y=68, z=5})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=265, y=71, z=-12})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=245, y=69, z=12})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=271, y=69, z=-6})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=245, y=69, z=16})
+[09:42:55] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_REPLACEMENT for  (itemName: , pos: BlockPos{x=257, y=68, z=17})
+[09:42:57] [Render thread/INFO]: [Eyes] step 21 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[09:42:57] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_crater 1793958177924
+[09:42:58] [IO-Worker-10/INFO]: [Eyes] 16_scars_rts_crater: Saved screenshot as bat_eyes_16_scars_rts_crater.png
+[09:43:02] [Render thread/INFO]: [Frame] p50 124.5 ms (8 fps), p95 193.9 ms, max 243.6 ms over 240 frames; RTS view, zoom 85, 8 units known
+[09:43:02] [Render thread/INFO]: [FrameParts] 93 frames, mean 108.2 ms/frame; ours 3.0 ms (3%): worldFx 1.36 (max 11.5, 11/f) | markersWreck 0.97 (max 14.7, 1.0/f) | markersMetal 0.23 (max 9.3, 2.0/f) | buildingBoxes 0.12 (max 4.9, 1.0/f) | markersMapWorld 0.11 (max 3.1, 1.0/f) | markersMap 0.07 (max 6.0, 1.0/f) | buildingDecor 0.04 (max 2.7, 4.0/f) | strategicIcons 0.03 (max 0.6, 0.6/f) | unitOverlays 0.03 (max 0.1, 11/f) | markersRange 0.02 (max 0.3, 1.0/f) | unitRings 0.02 (max 1.2, 11/f) (+13 smaller); elsewhere 105.2 ms; 11 section re-mesh requests/s
+[09:43:02] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.1, 22/t)
+[09:43:02] [Render thread/INFO]: [FogRemesh] 10 s: 2 fog updates, sections marked 11/s (skipped 48/s under the surface band, flushed 0/s), rebuilt 23/s (+129/s all air) on vanilla, band 0.02 ms/s, surface mode, 0 stale columns
+[09:43:02] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 17.5 ms): per-system timing off
+[09:43:02] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_far 1793958182960
+[09:43:02] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[09:43:03] [IO-Worker-4/INFO]: [Eyes] 16_scars_rts_far: Saved screenshot as bat_eyes_16_scars_rts_far.png
+[09:43:03] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[09:43:04] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|12|4556|738|0
+[09:43:04] [Server thread/INFO]: RTSPlayerSaveData.load
+[09:43:04] [Server thread/INFO]: [Tick] p50 7.2 ms, p95 13.5 ms, max 224.6 ms over the last 100 ticks; 41 units, 19 buildings, 1 players
+[09:43:04] [Server thread/INFO]: [Paths] last 10 s: 5 unit vanilla createPath, 5 short searches, 0 full-range fallbacks, 1 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[09:43:04] [Server thread/INFO]: [Sys] 160 ticks, mean 10.7 ms/tick; ours 2.9 ms (27%): pathfinder 1.37 (max 78.9, 2.0/t) | attacker 0.37 (max 9.8, 46/t) | unit 0.23 (max 6.1, 47/t) | buildings 0.22 (max 5.0, 1.0/t) | unitGrid 0.16 (max 10.1, 1.1/t) | pushScan 0.12 (max 16.1, 46/t) | bots 0.07 (max 3.9, 0.1/t) | economy 0.06 (max 6.2, 1.0/t) | fogOfWar 0.05 (max 2.7, 1.0/t) | targetGrid 0.05 (max 3.1, 0.8/t) | unitSync 0.04 (max 3.3, 0.1/t) | attacker/retarget 0.04 (max 5.0, 3.8/t) | attacker/attackMove 0.04 (max 4.0, 7.2/t) (+11 smaller); vanilla 7.2 ms (67%): chunks 2.32 (max 14.8, 3.0/t) | aiGoals 1.52 (max 14.4, 64/t) | travel 1.36 (max 19.6, 68/t) | unitTick 0.85 (max 8.9, 47/t) | baseTick 0.51 (max 10.2, 92/t) | otherEntities 0.47 (max 11.4, 151/t) | levelRest 0.16 (max 5.1, 3.0/t); elsewhere 0.6 ms; gc 37 ms
+[09:43:04] [Server thread/INFO]: [Goals] 160 ticks, 0.22 ms/tick in 29 goal classes: BuildRepairGoal 0.11 ms (tick 0.01, start 0.10; 13 calls/t, 8.1 us/call) | MoveToTargetBlockGoal 0.03 ms (canContinue 0.03; 27 calls/t, 1.3 us/call) | RandomLookAroundGoal 0.03 ms (tick 0.03; 6 calls/t, 4.7 us/call) | FloatGoal 0.02 ms (canUse 0.02; 25 calls/t, 0.7 us/call) (+25 smaller)
+[09:43:06] [Render thread/INFO]: [Sfx] 353 ticks, played/asked: units 1/12 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[09:43:07] [Render thread/INFO]: [Eyes] clip-mark 16_scars_fp_crater 1793958187995
+[09:43:08] [IO-Worker-8/INFO]: [Eyes] 16_scars_fp_crater: Saved screenshot as bat_eyes_16_scars_fp_crater.png
+[09:43:10] [Render thread/INFO]: [Clock] tick 6010: 60 frames over 7677 ms; old clock (game time) advanced -0.54 with 26 steps back, new clock advanced 153.46 with 0 steps back
+[09:43:10] [Render thread/INFO]: [Clock] frames (ms,old,new): 0,501.000,6011.000 62,500.160,6012.160 204,500.060,6015.060 321,500.420,6017.420 435,500.700,6019.700 552,501.000,6022.000 677,500.440,6024.440 833,500.580,6027.580 976,500.420,6030.420 1120,500.300,6033.300 1266,500.160,6036.160 1424,500.400,6039.400 1566,500.220,6042.220 1684,500.640,6044.640 1814,500.140,6047.140 1959,500.040,6050.040 2102,500.980,6052.980 2252,500.940,6055.940 2386,500.640,6058.640 2525,500.400,6061.400 2637,500.700,6063.700 2745,500.860,6065.860 2851,500.960,6067.960 2961,500.120,6070.120 3069,500.340,6072.340 3175,500.460,6074.460 3281,500.580,6076.580 3387,500.700,6078.700 3492,500.800,6080.800 3598,500.900,6082.900 3708,500.040,6085.040 3818,500.300,6087.300 3934,500.540,6089.540 4135,500.580,6093.580 4242,500.800,6095.800 4346,500.880,6097.880 4452,501.000,6100.000 4565,500.200,6102.200 4671,500.380,6104.380 4777,500.480,6106.480 4882,500.600,6108.600 4988,500.720,6110.720 5098,500.860,6112.860 5276,500.360,6116.360 5446,500.780,6119.780 5580,500.500,6122.500 5712,500.140,6125.140 5843,500.820,6127.820 5979,500.520,6130.520 6117,500.220,6133.220 6274,500.400,6136.400 6517,500.120,6141.120 6691,500.660,6144.660 6877,500.420,6148.420 7011,500.060,6151.060 7140,500.760,6153.760 7271,500.360,6156.360 7401,500.980,6158.980 7538,500.680,6161.680 7677,500.460,6164.460
+[09:43:12] [Render thread/INFO]: [Frame] p50 121.3 ms (8 fps), p95 177.0 ms, max 243.6 ms over 240 frames; RTS view, zoom 30, 8 units known
+[09:43:12] [Render thread/INFO]: [FrameParts] 83 frames, mean 120.8 ms/frame; ours 0.9 ms (1%): markersWreck 0.24 (max 3.0, 1.0/f) | worldFx 0.13 (max 0.9, 11/f) | markersRange 0.12 (max 6.3, 1.0/f) | markersMapWorld 0.10 (max 3.1, 1.0/f) | markersMetal 0.09 (max 3.1, 2.0/f) | hud 0.05 (max 1.1, 0.1/f) | minimap 0.04 (max 0.6, 3.2/f) | bars 0.03 (max 2.0, 22/f) | unitOverlays 0.03 (max 0.0, 11/f) (+17 smaller); elsewhere 120.0 ms; 0 section re-mesh requests/s
+[09:43:12] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[09:43:13] [Render thread/INFO]: [Eyes] clip-mark 16_scars_fp_steps 1793958193081
+[09:43:13] [Render thread/INFO]: [Eyes] 16 scars: done, client: 0 chunk copies (0 marked), 15 regions (0 drawn, 0 quads), rebuilds 0, last build 0.00 ms, draw 0.00 ms
+[09:43:13] [Render thread/INFO]: [Eyes] 17_fog: fog of war on, 12 marchers summoned at [-185, 71, 2]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-185, 71, -1)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-185, 71, 1)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-185, 71, 3)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-185, 71, 5)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 71, -1)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 71, 1)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:pillager_unit for Offline at (-187, 71, 3)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:pillager_unit for Offline at (-187, 71, 5)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:pillager_unit for Offline at (-189, 71, -1)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:pillager_unit for Offline at (-189, 71, 1)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:vindicator_unit for Offline at (-189, 71, 3)]
+[09:43:13] [Server thread/INFO]: [Offline: Summoned reignofnether:vindicator_unit for Offline at (-189, 71, 5)]
+[09:43:13] [Render thread/INFO]: [System] [CHAT] 
+[09:43:13] [Render thread/INFO]: [System] [CHAT] Enabled fog of war for all players
+[09:43:13] [Render thread/INFO]: [System] [CHAT] 
+[09:43:13] [IO-Worker-9/INFO]: [Eyes] 16_scars_fp_steps: Saved screenshot as bat_eyes_16_scars_fp_steps.png
+[09:43:14] [Server thread/INFO]: [Tick] p50 6.4 ms, p95 9.9 ms, max 17.3 ms over the last 100 ticks; 36 units, 20 buildings, 1 players
+[09:43:14] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[09:43:22] [Render thread/INFO]: [Frame] p50 55.3 ms (18 fps), p95 148.2 ms, max 236.1 ms over 240 frames; RTS view, zoom 45, 12 units known
+[09:43:22] [Render thread/INFO]: [Anim] 12 units/frame (max 12): animation p50 0.1 ms, p95 0.1 ms; unit render p50 7.7 ms, p95 12.1 ms; per unit 8.3 us anim, 700.7 us render (anim 1%); RTS view, zoom 45, detail off, over 162 frames
+[09:43:22] [Render thread/INFO]: [FrameParts] 171 frames, mean 58.3 ms/frame; ours 9.6 ms (17%): unitBodies 8.01 (max 13.9, 11/f) | markersWreck 0.62 (max 11.2, 1.0/f) | entityShadows 0.61 (max 6.4, 17/f) | unitOverlays 0.12 (max 0.8, 11/f) | markersMetal 0.12 (max 0.3, 2.0/f) | markersMapWorld 0.06 (max 0.2, 1.0/f) | markersRange 0.03 (max 0.3, 1.0/f) | buildingBoxes 0.02 (max 0.0, 1.0/f) (+16 smaller); elsewhere 48.7 ms; 0 section re-mesh requests/s
+[09:43:22] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.1, 12/t)
+[09:43:22] [Render thread/INFO]: [Sfx] 320 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[09:43:24] [Server thread/INFO]: [Tick] p50 6.2 ms, p95 9.2 ms, max 13.4 ms over the last 100 ticks; 37 units, 21 buildings, 1 players
+[09:43:24] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[09:43:27] [Render thread/INFO]: [Eyes] step 22 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[09:43:32] [Render thread/INFO]: [Frame] p50 53.4 ms (19 fps), p95 62.5 ms, max 90.9 ms over 240 frames; RTS view, zoom 45, 12 units known
+[09:43:32] [Render thread/INFO]: [Anim] 12 units/frame (max 12): animation p50 0.1 ms, p95 0.1 ms; unit render p50 7.7 ms, p95 12.9 ms; per unit 9.2 us anim, 716.3 us render (anim 1%); RTS view, zoom 45, detail off, over 184 frames
+[09:43:32] [Render thread/INFO]: [FrameParts] 184 frames, mean 54.3 ms/frame; ours 10.3 ms (19%): unitBodies 8.60 (max 18.7, 12/f) | entityShadows 0.70 (max 6.4, 18/f) | markersWreck 0.56 (max 1.4, 1.0/f) | markersMetal 0.12 (max 1.8, 2.0/f) | unitOverlays 0.08 (max 0.1, 11/f) | unitRings 0.07 (max 0.2, 11/f) | markersMapWorld 0.06 (max 0.1, 1.0/f) | markersRange 0.02 (max 0.3, 1.0/f) (+16 smaller); elsewhere 44.1 ms; 0 section re-mesh requests/s
+[09:43:32] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.5, 12/t)
+[09:43:34] [Server thread/INFO]: [Tick] p50 5.5 ms, p95 9.2 ms, max 18.9 ms over the last 100 ticks; 37 units, 21 buildings, 1 players
+[09:43:34] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[09:43:41] [Render thread/INFO]: [Sfx] 380 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[09:43:42] [Render thread/INFO]: [Frame] p50 53.0 ms (19 fps), p95 64.0 ms, max 90.9 ms over 240 frames; RTS view, zoom 45, 18 units known
+[09:43:42] [Render thread/INFO]: [Anim] 12 units/frame (max 12): animation p50 0.1 ms, p95 0.1 ms; unit render p50 7.7 ms, p95 12.8 ms; per unit 9.4 us anim, 722.8 us render (anim 1%); RTS view, zoom 45, detail off, over 186 frames
+[09:43:42] [Render thread/INFO]: [FrameParts] 186 frames, mean 53.8 ms/frame; ours 10.3 ms (19%): unitBodies 8.69 (max 16.1, 12/f) | entityShadows 0.58 (max 3.5, 18/f) | markersWreck 0.56 (max 3.0, 1.0/f) | markersMetal 0.11 (max 0.2, 2.0/f) | unitOverlays 0.11 (max 3.0, 11/f) | unitRings 0.08 (max 0.1, 11/f) | markersMapWorld 0.06 (max 0.1, 1.0/f) | markersRange 0.02 (max 0.3, 1.0/f) | buildingBoxes 0.02 (max 0.1, 1.0/f) (+15 smaller); elsewhere 43.5 ms; 0 section re-mesh requests/s
+[09:43:42] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.1, 17/t)
+[09:43:44] [Server thread/INFO]: [Tick] p50 5.0 ms, p95 8.8 ms, max 13.9 ms over the last 100 ticks; 39 units, 22 buildings, 1 players
+[09:43:44] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[09:43:52] [Render thread/INFO]: [Frame] p50 52.1 ms (19 fps), p95 60.9 ms, max 91.3 ms over 240 frames; RTS view, zoom 45, 19 units known
+[09:43:52] [Render thread/INFO]: [Anim] 12 units/frame (max 12): animation p50 0.1 ms, p95 0.1 ms; unit render p50 7.7 ms, p95 11.8 ms; per unit 9.7 us anim, 709.3 us render (anim 1%); RTS view, zoom 45, detail off, over 189 frames
+[09:43:52] [Render thread/INFO]: [FrameParts] 189 frames, mean 53.0 ms/frame; ours 10.0 ms (19%): unitBodies 8.50 (max 17.3, 12/f) | markersWreck 0.55 (max 2.2, 1.0/f) | entityShadows 0.54 (max 3.5, 18/f) | markersMetal 0.12 (max 0.7, 2.0/f) | unitRings 0.08 (max 0.2, 11/f) | unitOverlays 0.07 (max 0.7, 11/f) | markersMapWorld 0.06 (max 0.7, 1.0/f) | markersRange 0.02 (max 0.3, 1.0/f) (+16 smaller); elsewhere 43.0 ms; 0 section re-mesh requests/s
+[09:43:52] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.04 (max 0.1, 19/t)
+[09:43:53] [Render thread/WARN]: [Eyes] 17_fog: gave up - fog on the client false, 12 marchers (border 720 -> 720, fog on the server: true, 18 other units cleared off the route)
+[09:43:54] [Server thread/INFO]: [Tick] p50 4.9 ms, p95 8.9 ms, max 10.0 ms over the last 100 ticks; 39 units, 22 buildings, 1 players
+[09:43:54] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks, 0 failed full searches not repeated, 0 failed searches not repeated; chase cell memo 0/0 hits
+[09:43:54] [Render thread/INFO]: [Sfx] 260 ticks, played/asked: units 0/0 buildings 0/0 abilities 0/0 announcer 0/0 ui 0/0 | game time values 0
+[09:43:55] [Render thread/INFO]: [Eyes] unit textures with mips: 24 of 33 registered (up to 3 levels)
+[09:43:55] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[09:43:55] [Render thread/INFO]: [Eyes] tour complete
+[09:43:55] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[09:43:55] [Render thread/INFO]: Stopping!
+[09:43:55] [Server thread/INFO]: Offline lost connection: Disconnected
+[09:43:55] [Server thread/INFO]: Offline left the game
+[09:43:55] [Server thread/INFO]: Player logged out: Offline, id: 2
+[09:43:55] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[09:43:55] [Server thread/INFO]: RTSPlayerSaveData.load
+[09:43:55] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|4713|1022|0
+[09:43:55] [Server thread/INFO]: Stopping server
+[09:43:55] [Server thread/INFO]: Saving players
+[09:43:55] [Server thread/INFO]: Saving worlds
+[09:43:55] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[09:43:55] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[09:43:55] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[09:43:55] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[09:43:55] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[09:43:55] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[09:43:55] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
