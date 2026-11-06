@@ -186,9 +186,12 @@ def measure(A, runs):
                 w = W("hand_l", gl) - G
                 along = float(w @ d)
                 dist = float(np.linalg.norm(w - along * d))
-                rec["haft_l_max"] = max(rec["haft_l_max"], dist)
-                rec["along_min"] = along if rec["along_min"] is None else min(rec["along_min"], along)
+                if dist > rec["haft_l_max"]:
+                    rec["haft_l_max"], rec["haft_l_at"] = dist, t
+                if rec["along_min"] is None or along < rec["along_min"]:
+                    rec["along_min"], rec["along_min_at"] = along, t
                 rec["along_max"] = along if rec["along_max"] is None else max(rec["along_max"], along)
+                rec.setdefault("haft_ticks", []).append([t, round(dist, 2), round(along, 2)])
             for k in ("r", "l"):
                 a = W("foot_" + k, bones["foot_" + k]["pivot"]) + root
                 if k in pose["planted"] and k in prev:
