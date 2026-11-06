@@ -93,11 +93,19 @@ public class TitheBinderGameTests {
             helper.fail(String.join("; ", problems));
     }
 
-    /** A unit that stands where it is put (no AI), added to {@code made} for the cleanup. */
+    /**
+     * A unit that stands where it is put (no AI), added to {@code made} for the cleanup. spawnUnit puts its feet at
+     * test height 2, which is inside the arena's grass top; a unit with AI falls or steps out of that, but a no-AI one
+     * never ticks its own movement and would stay buried, so every forced move (a hook drag) would hit the next grass
+     * block as a wall. It is lifted to stand on the floor, as units stand in a real match.
+     */
     private static Mob still(GameTestHelper helper, EntityType<? extends Mob> type, String owner, int x, int z, List<Entity> made) {
         Mob m = HeroGameTests.spawnUnit(helper, type, owner, x, z);
         if (m != null) {
             m.setNoAi(true);
+            ServerLevel level = helper.getLevel();
+            for (int up = 0; up < 3 && !level.noCollision(m); up++)
+                m.moveTo(m.getX(), Math.floor(m.getY()) + 1, m.getZ(), m.getYRot(), m.getXRot());
             made.add(m);
         }
         return m;
