@@ -74,11 +74,14 @@ public final class RuneFxClient {
      * widths) takes chords within SAG_SOFT_PX, its fading edges hide the corners; a stroke thinner than THIN_PX on
      * screen is one strip of the same light, not three (its two fading strips would be under a pixel); and a circle
      * off the screen is not drawn ({@link BarFxClient#onScreen}, with a margin of the release pulse's reach and the
-     * sigil's height, so a circle half on the screen is drawn whole and none pops at the edge). Always on: the shipped
+     * sigil's height, so a circle half on the screen is drawn whole and none pops at the edge). Two more, still at the
+     * close zoom's cost: a fan's whole slices go two to a quad (the same triangles: each slice was a quad with its centre
+     * twice), and a soft stroke is a tent of two strips (from nothing at TENT_K widths in to its peak on the line and out
+     * again) carrying the three strips' light, TENT_A times their alpha at the peak. Always on: the shipped
      * path. Only an eyes run (-Dbat.eyes=true) can turn them off, on half its slices, to time the old path on the same
      * runner ({@link #eyesOldPath}); nothing else reaches the switch.
      */
-    static final float SAG_SOFT_PX = 1.0f, SOFT_K = 1.5f, THIN_PX = 1.75f;
+    static final float SAG_SOFT_PX = 1.0f, SOFT_K = 1.5f, THIN_PX = 1.75f, TENT_K = 1.25f, TENT_A = 1.2f;
     private static final boolean EYES = Boolean.getBoolean("bat.eyes");
     private static boolean lean = true;
 
@@ -625,6 +628,23 @@ public final class RuneFxClient {
         double c0 = Math.cos(start), s0 = Math.sin(start);   // turned by one slice each step: no trig per slice
         for (int j = 0; j < lit; j++) {
             double c1 = c0 * cs - s0 * sn, s1 = s0 * cs + c0 * sn;
+            if (lean && j + 1 < lit && (feather <= 0 || litF - (j + 1) >= feather)) {
+                // two whole slices in one quad: (c, p0, p1) and (p1, p2, c), the triangles they were, half the vertices
+                double c2 = c1 * cs - s1 * sn, s2 = s1 * cs + c1 * sn;
+                if (a > 0.004f) {
+                    float k0 = (float) (c0 * cp + s0 * sp), l0 = (float) (s0 * cp - c0 * sp);
+                    float k1 = (float) (c1 * cp + s1 * sp), l1 = (float) (s1 * cp - c1 * sp);
+                    float k2 = (float) (c2 * cp + s2 * sp), l2 = (float) (s2 * cp - c2 * sp);
+                    tv(vc, m, cx, cy, cz, cr, cg, cb, a, uc, vc0);
+                    tv(vc, m, cx + r * (float) c0, cy, cz + r * (float) s0, cr, cg, cb, a, uc + hu * k0, vc0 + hv * l0);
+                    tv(vc, m, cx + r * (float) c1, cy, cz + r * (float) s1, cr, cg, cb, a, uc + hu * k1, vc0 + hv * l1);
+                    tv(vc, m, cx + r * (float) c2, cy, cz + r * (float) s2, cr, cg, cb, a, uc + hu * k2, vc0 + hv * l2);
+                }
+                c0 = c2;
+                s0 = s2;
+                j++;
+                continue;
+            }
             float aj = feather > 0 ? a * Math.max(0, Math.min(1, (litF - j) / feather)) : a;
             if (aj > 0.004f) {   // (t - spin) by the angle-difference identities
                 float k0 = (float) (c0 * cp + s0 * sp), l0 = (float) (s0 * cp - c0 * sp);
@@ -649,12 +669,16 @@ public final class RuneFxClient {
         if (a <= 0.01f)
             return;
         boolean soft = lean && w > wc * SOFT_K, thin = lean && bpp > 0 && w < THIN_PX * bpp;
-        seg = segs(r + w, seg, soft ? SAG_SOFT_PX : SAG_PX);
+        seg = segs(r + (soft ? TENT_K : 1) * w, seg, soft ? SAG_SOFT_PX : SAG_PX);
         float cr = ((rgb >> 16) & 255) / 255f, cg = ((rgb >> 8) & 255) / 255f, cb = (rgb & 255) / 255f;
         float r0 = Math.max(0, r - w), r1 = Math.max(0, r - w / 2), r2 = r + w / 2, r3 = r + w;
         if (thin) {   // one strip carrying the three's light: full over 1.5 w
             r1 = Math.max(0, r - 0.75f * w);
             r2 = r + 0.75f * w;
+        }
+        if (soft) {   // a tent of two strips carrying the three's light: nothing at TENT_K w either side, the peak on r
+            r0 = Math.max(0, r - TENT_K * w);
+            r3 = r + TENT_K * w;
         }
         float litF = reveal * (seg + FEATHER);
         int lit = Math.max(1, Math.min(seg, (int) Math.ceil(litF)));
@@ -666,6 +690,14 @@ public final class RuneFxClient {
             float aj = a * Math.max(0, Math.min(1, (litF - j) / FEATHER));
             if (aj > 0.004f) {
                 float a0 = (float) c0, b0 = (float) s0, a1 = (float) c1, b1 = (float) s1;
+                if (soft) {
+                    float ap = Math.min(1, aj * TENT_A);
+                    strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r0, 0, r, ap, cr, cg, cb);
+                    strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r, ap, r3, 0, cr, cg, cb);
+                    c0 = c1;
+                    s0 = s1;
+                    continue;
+                }
                 if (!thin)
                     strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r0, 0, r1, aj, cr, cg, cb);
                 strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r1, aj, r2, aj, cr, cg, cb);
