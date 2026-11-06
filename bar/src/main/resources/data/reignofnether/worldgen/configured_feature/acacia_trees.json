@@ -1,0 +1,11 @@
+{
+  "type": "reignofnether:template_tree",
+  "config": {
+    "templates": [
+      "acacia_1",
+      "acacia_2",
+      "acacia_3",
+      "acacia_4"
+    ]
+  }
+}

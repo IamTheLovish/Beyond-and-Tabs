@@ -1,0 +1,15 @@
+{
+  "type": "reignofnether:template_tree",
+  "config": {
+    "templates": [
+      "spruce_1",
+      "spruce_2",
+      "spruce_3",
+      "spruce_4",
+      "pine_1",
+      "pine_2",
+      "pine_3",
+      "pine_4"
+    ]
+  }
+}

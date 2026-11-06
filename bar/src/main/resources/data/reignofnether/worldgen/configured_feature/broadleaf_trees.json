@@ -1,0 +1,19 @@
+{
+  "type": "reignofnether:template_tree",
+  "config": {
+    "templates": [
+      "oak_1",
+      "oak_2",
+      "oak_3",
+      "oak_4",
+      "oak_1",
+      "oak_2",
+      "oak_3",
+      "oak_4",
+      "birch_1",
+      "birch_2",
+      "birch_3",
+      "birch_4"
+    ]
+  }
+}
