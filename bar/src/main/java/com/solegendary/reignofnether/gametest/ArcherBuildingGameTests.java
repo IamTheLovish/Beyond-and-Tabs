@@ -76,11 +76,27 @@ public class ArcherBuildingGameTests {
     }
 
     /**
+     * A high flyer: the Sky Corsair (range 13 in 3D, cruising 10 blocks up) ordered onto the raid tower must hurt it.
+     * Its bombs are not an archer's chip (they splash at their own building rate), so only the hit is checked, not the
+     * archer cap. Review r1 of the flyer stand-off (#538): a stand-off measured flat, ignoring the flight height, parks it
+     * where the tower's lowest blocks are out of its 3D reach.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 2400)
+    public static void a_sky_corsair_bombs_an_enemy_tower(GameTestHelper helper) {
+        hurts(helper, 22, EntityRegistrar.SKY_CORSAIR_UNIT.get(), "Sky Corsair", m -> { }, false);
+    }
+
+    /**
      * One shooter of {@code type} 15 blocks from an enemy raid tower on its own far pad, ordered to attack it: the tower
      * must lose health within {@link #FIRST_HIT_TICKS}, and over the next {@link #WINDOW_TICKS} no more than the archer
      * rate allows.
      */
     static void chips(GameTestHelper helper, int slot, EntityType<? extends Mob> type, String name, Consumer<Mob> arm) {
+        hurts(helper, slot, type, name, arm, true);
+    }
+
+    /** {@link #chips}, with the archer-rate cap only when {@code archerRate} (a bomber's splash has its own rate). */
+    static void hurts(GameTestHelper helper, int slot, EntityType<? extends Mob> type, String name, Consumer<Mob> arm, boolean archerRate) {
         ServerLevel level = helper.getLevel();
         RaidGameTests.Pads pads = new RaidGameTests.Pads(level, slot, 1);
         // registered here, once, idling until the pad is ready: registering from inside whenEntitiesReady's callback
@@ -171,7 +187,10 @@ public class ArcherBuildingGameTests {
                 }
                 over[0] = true;
                 float perHit = au.getUnitAttackDamage() * bp.getMeleeDamageMult() * au.getBuildingDamageMultiplier() * ARCHER_MULT * HEALTH_PER_DAMAGE;
-                if (verdict == null) {
+                if (verdict == null && !archerRate)
+                    ReignOfNether.LOGGER.info("[ArcherBuilding] GameTest {}: first hit after {} ticks, {} health in the next {} s (no archer cap); {}",
+                        name, firstHit[0] - start, firstHit[1] - health, WINDOW_TICKS / 20, state);
+                if (verdict == null && archerRate) {
                     int lost = firstHit[1] - health;
                     int shots = WINDOW_TICKS / Math.max(1, (int) au.getAttackCooldown()) + 1;
                     float cap = shots * perHit * 1.5f + (float) (2 * bp.getHealthPerBlock());
