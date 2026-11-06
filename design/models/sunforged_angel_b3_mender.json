@@ -3818,5 +3818,8 @@
    "body",
    "wing_r_arm"
   ]
+ ],
+ "flat_light": [
+  "wing_"
  ]
 }

@@ -832,6 +832,10 @@ def build_b2(kind, rnd=2):
               ROLES[kind] + (", round 2 body" if rnd == 2 else ", round 3 part pass"), pal, EMISSIVE)
     body = body_b2(m, kind, flat_hem=(rnd == 3))
     (wings_b2 if rnd == 2 else wings_b3)(m, kind)
+    if rnd == 3:
+        # round 3, 1: the feather coat painted without its own baked occlusion (a coat of tiles: the stacked 0.5 px
+        # layers darkened each other to ~35% in the front view of the first r3 render)
+        m.flat_light = ["wing_"]
     chin, H = body["chin"], body["H"]
     head_b2(m, chin, H)
     back = 0.1 + 0.86 * H / 2 + 0.35
