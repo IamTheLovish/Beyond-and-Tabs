@@ -2479,6 +2479,22 @@ public class BotPlayer {
     public java.util.function.Predicate<String> enemyFilter = null;
 
     /**
+     * The ground this bot plays on (X/Z; Y ignored), or null for the whole dimension. Metal patches are one list per
+     * dimension (MetalPatches), so on a server running many bases side by side - every game-test shard since #561 put
+     * dozens of tests on one server - a bot whose own nearby patch failed went for the next-nearest patch in the world:
+     * a neighbouring test's base 160 blocks on, then the next, out to 3.5 km (bots_reach_tier_2, run 42165929068 shard
+     * 2: "hard (HARD villagers) never finished its T2 lab", its extractor sites cancelled for no progress at 35, 67, 185,
+     * 339 ... 3,478 blocks from its builders). A test sets it to its own region; a match can set it to its map.
+     */
+    public net.minecraft.world.level.levelgen.structure.BoundingBox playArea = null;
+
+    /** True when (x, z) of {@code p} lies in {@link #playArea} (always, when there is none). */
+    public boolean inPlayArea(BlockPos p) {
+        return playArea == null || (p.getX() >= playArea.minX() && p.getX() <= playArea.maxX()
+            && p.getZ() >= playArea.minZ() && p.getZ() <= playArea.maxZ());
+    }
+
+    /**
      * The D-gun at the nearest enemy within 12 blocks, aimed through it - but only with an energy reserve left
      * over (300+), so a bot never stalls its own economy to shoot. Hard bots save less, easy bots never shoot.
      */
