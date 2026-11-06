@@ -475,13 +475,17 @@ jobs:
           fi
           grep resourcePacks run/options.txt
       # the recorder's packages: apt took 32-37 min from the runner's mirror on Nov 6 and three tours were cut at the
-      # job limit - the .debs come back from the actions cache, apt gets a time budget and one retry from
-      # archive.ubuntu.com (tools/eyes_apt.sh), and the cache is saved at once, before the tour can be cut
+      # job limit - the .debs come back from the actions cache (the newest earlier save), apt gets a time budget and
+      # one retry from archive.ubuntu.com (tools/eyes_apt.sh); the cache is saved at once, before the tour can be cut,
+      # under a per-run key and only when the install succeeded with new .debs, so a cut install never freezes a half cache
       - name: The recorder's .debs from an earlier run
-        id: debs
         uses: actions/cache/restore@v4
-        with: { path: ~/.cache/eyes-debs, key: eyes-debs-ubuntu-24.04-ffmpeg-xdotool-v1 }
+        with:
+          path: ~/.cache/eyes-debs
+          key: eyes-debs-ubuntu-24.04-ffmpeg-xdotool-v1-${{ github.run_id }}
+          restore-keys: eyes-debs-ubuntu-24.04-ffmpeg-xdotool-v1-
       - name: Start the recorder (waits for the tour's Xvfb display, then films it)
+        id: recorder
         run: |
           bash tools/eyes_apt.sh ~/.cache/eyes-debs ffmpeg xdotool
           setsid nohup bash tools/eyes_record.sh "$PWD/eyes-rec" > /dev/null 2>&1 &
@@ -490,10 +494,10 @@ jobs:
           # communication") with no log left - this shows whether memory or CPU ran out
           setsid nohup bash -c 'while sleep 30; do echo "$(date -u +%H:%M:%S) $(free -m | awk "/Mem:/{print \"used \" \$3 \" MB, available \" \$7}") load $(cut -d" " -f1-3 /proc/loadavg)"; done' > "$PWD/mem.log" 2>&1 &
       - name: Keep the recorder's .debs for the next run
-        if: always() && steps.debs.outputs.cache-hit != 'true'
+        if: always() && steps.recorder.outputs.ok == '1' && steps.recorder.outputs.added != '0'
         continue-on-error: true
         uses: actions/cache/save@v4
-        with: { path: ~/.cache/eyes-debs, key: eyes-debs-ubuntu-24.04-ffmpeg-xdotool-v1 }
+        with: { path: ~/.cache/eyes-debs, key: 'eyes-debs-ubuntu-24.04-ffmpeg-xdotool-v1-${{ github.run_id }}' }
       - name: Play the scripted tour in the real client
         id: tour
         continue-on-error: true
