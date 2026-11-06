@@ -40,6 +40,15 @@ to evoke the general feel of a late-90s RTS lobby, but no audio from Total Annih
 was sampled, traced, resynthesised or used as a reference recording; the script reads no input files. They are part
 of this project and distributed under its licence.
 
+## In-game sound effects
+
+The battle, building, ability and match sounds in `bar/src/main/resources/assets/reignofnether/sounds/sfx/` are
+**original, procedurally generated** audio from `tools/gen_sfx.py` (numpy + scipy, ffmpeg/libvorbis for the encode;
+every sound is seeded, so re-running reproduces it). The script reads no input files. Among them, `portal_forming`
+(Nov 2026: a portal or game ender forming - a rising charge, then a settle) follows only the general idea of a portal
+that forms instead of switching on; no file, function, texture or sound of any third-party pack, game or library was
+used for it or for the effect it accompanies. They are part of this project and distributed under its licence.
+
 ## Title and loading screen art
 
 The rose window, arch, filigree, candlelight and background in `bar/src/main/resources/assets/reignofnether/textures/gui/splash/`
@@ -97,9 +106,12 @@ fills them with its own paper colours, creases and seal marks. No Alex's Mobs pi
 
 ## Our shader pack (`shaderpacks/BeyondAndTabs`)
 
-Our shader pack for Oculus (not shipped to testers yet; it is meant to replace the old third-party one) is our own: every file is original work, written clean-room from the
+Our shader pack for Oculus (shipped ON by default in the tester packs since Nov 5, 2026; it replaced the old third-party one) is our own: every file is original work, written clean-room from the
 public documentation of the OptiFine / Iris shader-pack format, general graphics knowledge and this repository's own
 code (its grade and edge smoothing are ported from our `bat_postfx.fsh`). It is not derived from any other shader pack,
 and no other pack's source, settings or shader files were read to write it (design/own_shader_pack.md). It is released
 under this repository's licence, GNU GPL v2 or later (a copy is in the pack folder, so the built zip carries it).
-Oculus (LGPL v3), which loads it, is installed from its official Modrinth file, unmodified.
+Oculus (by Asek3, a Forge port of Iris; GNU LGPL v3; source: https://github.com/Asek3/Oculus), which loads it, is
+not bundled with or modified by us: the tester packs list its official Modrinth file (version 1.20.1-1.8.0) and the
+launcher downloads it from cdn.modrinth.com, checked against Modrinth's sha512. The packs also write Oculus' config
+once (shaders on, our pack selected); press K in game to turn shaders off, O for the shader settings.

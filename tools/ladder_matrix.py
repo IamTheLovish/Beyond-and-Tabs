@@ -37,12 +37,50 @@ TARGET = 40            # nightly matches in all, spread over the tier pairs: two
 MATRIX_LIMIT = 256     # GitHub's cap on jobs from one matrix
 
 
-def tiers():
-    src = open(BOT_PLAYER, encoding="utf-8").read()
-    m = re.search(r"enum\s+Difficulty\s*\{([^}]*)\}", src)
+# Difficulty values that are not ladder tiers. PASSIVE is a bot that plays nothing (lobby filler): a match against it
+# measures nothing, and its place at the end of the lobby cycle would rank it the strongest tier.
+NOT_TIERS = {"passive"}
+
+
+def enum_constants(src, name):
+    """The constant names of `enum <name>` in Java source, in declaration order: comments, constructor arguments,
+    constant bodies and everything after the constants' `;` (fields, methods) are left out."""
+    src = re.sub(r"/\*.*?\*/", " ", src, flags=re.S)
+    src = re.sub(r"//[^\n]*", " ", src)
+    m = re.search(r"\benum\s+" + re.escape(name) + r"\b[^{]*\{", src)
     if not m:
+        return None
+    names, token, depth = [], "", 0
+    for ch in src[m.end():]:
+        if ch in "({[":
+            depth += 1
+        elif ch in ")}]":
+            if depth == 0:   # the enum's own closing brace: no `;` after the constants
+                break
+            depth -= 1
+        elif depth == 0 and ch in ",;":
+            names.append(token)
+            token = ""
+            if ch == ";":
+                break
+            continue
+        if depth == 0 and ch not in ")}]":
+            token += ch
+    names.append(token)
+    out = []
+    for t in names:
+        ident = re.match(r"\s*(?:@\w+\s*)*([A-Za-z_]\w*)", t)
+        if ident:
+            out.append(ident.group(1))
+    return out
+
+
+def tiers():
+    """The ladder's tiers, weakest first: `enum Difficulty` in BotPlayer.java in declaration order, minus NOT_TIERS."""
+    found = enum_constants(open(BOT_PLAYER, encoding="utf-8").read(), "Difficulty")
+    if found is None:
         sys.exit("ladder_matrix: no `enum Difficulty` in BotPlayer.java")
-    found = [t.strip().lower() for t in m.group(1).split(",") if t.strip()]
+    found = [t.lower() for t in found if t.lower() not in NOT_TIERS]
     if not found:
         sys.exit("ladder_matrix: empty Difficulty enum")
     return found

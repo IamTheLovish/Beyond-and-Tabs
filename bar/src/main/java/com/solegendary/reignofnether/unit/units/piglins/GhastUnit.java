@@ -275,14 +275,24 @@ public class GhastUnit extends Ghast implements Unit, AttackerUnit, RangedAttack
         return this.targetGoal.getTarget();
     }
 
+    /**
+     * Out of bounds ("Can't attack while out of bounds"): nothing to stand on anywhere under the unit, down to the
+     * bottom of the world - the void round a map. The rule used to read the column from the sky down and call the unit
+     * out of bounds when the block two under the top one was air, so over a bridge, a ledge or a thin floor over a cave
+     * it was disarmed for as long as it stayed there (the Bone Dragon, which inherits it: stress 42070433882 found it
+     * disarmed over the game-test arena's thin ground, "cooldown 66666456", its breath never starting).
+     */
+    public static boolean overTheVoid(net.minecraft.world.level.Level level, BlockPos from) {
+        BlockPos.MutableBlockPos p = from.mutable();
+        for (; p.getY() >= level.getMinBuildHeight(); p.move(0, -1, 0))
+            if (!level.getBlockState(p).getFluidState().isEmpty() || MiscUtil.isSolidBlocking(level, p))
+                return false;
+        return true;
+    }
+
     public void tick() {
-        if (tickCount % 10 == 0) {
-            BlockPos bp = MiscUtil.getHighestNonAirBlock(level(), blockPosition(), false, true);
-            BlockState lowestBs = level().getBlockState(bp.below());
-            if (lowestBs.isAir()) {
-                addEffect(new MobEffectInstance(MobEffectRegistrar.DISARM.get(), 15, 1, true, false));
-            }
-        }
+        if (tickCount % 10 == 0 && overTheVoid(level(), blockPosition()))
+            addEffect(new MobEffectInstance(MobEffectRegistrar.DISARM.get(), 15, 1, true, false));
 
         this.setCanPickUpLoot(false);
         super.tick();

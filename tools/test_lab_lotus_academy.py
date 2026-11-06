@@ -26,6 +26,16 @@ JADE = "waxed_oxidized_cut_copper"
 QUIET = ("stone", "stone_bricks", "polished_andesite", "stone_brick_stairs", "stone_brick_slab", "smooth_stone")
 LOUD = ("cherry", "gold", "jade", "oxidized", "moss", "target", "petals", "froglight", "amethyst")
 
+# The floor blocks' values from ABOVE on today's stills (tools/camera_colour.measure, the median 'up' value of the
+# pixels each block's rays hit): eyes 41792408905 (Nov 4, main: the Fable critics' run) and 41973122578 (Nov 5, this
+# lane's Lotus before / after). design/vehicle_labs/camera_colours.json was measured Oct 30 on the block pack of then
+# and no longer matches the stills (smooth stone 0.33 there, 0.63 on screen; tuff 0.34 there, 0.19 on the Ashborn
+# capitol's terrace): the first court fix, smooth stone, passed on the old table and read LIGHTER than the shipped
+# court on the after still (court crop luma 0.56 -> 0.60). The court test reads this measured model instead.
+COURT_UP = {"polished_andesite": 0.59, "polished_andesite_stairs": 0.55, "smooth_stone": 0.63, "stone": 0.40,
+            "stone_bricks": 0.44, "stone_brick_stairs": 0.41, "chiseled_stone_bricks": 0.42, "dark_oak_planks": 0.31,
+            "tuff": 0.19, "pearlescent_froglight": 0.96}
+
 
 class LotusAcademyTest(unittest.TestCase):
     @classmethod
@@ -88,14 +98,125 @@ class LotusAcademyTest(unittest.TestCase):
         self.assertEqual(bad, [])
 
     def test_l1_owns_more_of_the_camera_than_the_yard(self):
-        """From the RTS camera's real rays, jade roofs are the largest material (>= 40 % of the building's hits) and
-        the court floor (y 0, z >= 4) is under 15 %: shipped 35 % / 21 % (the yard competes)."""
+        """From the RTS camera's real rays, the roofs - jade and their dark oak eave stairs - are the largest material
+        (>= 40 % of the building's hits) and the court floor (y 0, z >= 4) is under 15 %: shipped 35 % / 21 % (the yard
+        competes). Definition re-set Nov 4 (its own commit): the dark oak hem the Fable critics asked for on every eave
+        is the roofs' edge, so its stairs count as roof; the band is unchanged and the shipped L1 still fails it."""
         hits = G.shoot(self.lv[0], "rts", step=4)
         n = max(1, len(hits))
-        jade = sum(1 for h in hits.values() if h[1].startswith(JADE)) / n
+        jade = sum(1 for h in hits.values() if h[1].startswith(JADE) or h[1] == "dark_oak_stairs") / n
         yard = sum(1 for h in hits.values() if h[0][1] == 0 and h[0][2] >= 4) / n
         self.assertGreaterEqual(jade, 0.40, (jade, yard))
         self.assertLess(yard, 0.15, (jade, yard))
+
+    # ---- the Fable critics' fixes (Nov 4, eyes 41792408905: L1 5 / 10, L3 5.5 / 10; critic-b.md, critic-c.md F1/F3) ----
+    def test_court_in_the_mids_on_camera(self):
+        """The court the RTS camera sees (layer 0, z >= 4) reads in the mids at every level: the median of what each
+        floor cell looks like from above (COURT_UP, measured on today's stills) sits in the Art method's mids,
+        0.28-0.50, under the lit jade roofs (0.61). Shipped: polished andesite at 0.59 - the lightest large area of the
+        building on the noon still (critic B: "the floor owns the lights"). A floor block the model lacks fails. And at most 35 % of the court's pixels are in the lights (>= 0.50: the pale path and the
+        start-type steps only) - a median alone passed the shipped Lotus court on its stone-brick border."""
+        for i in range(3):
+            hits = G.shoot(self.lv[i], "rts", step=4)
+            floor = [n for (q, n, _f, _b) in hits.values() if q[1] == 0 and q[2] >= 4]
+            self.assertEqual(sorted({n for n in floor if n not in COURT_UP}), [], "L%d: unmeasured floor" % (i + 1))
+            vals = sorted(COURT_UP[n] for n in floor)
+            self.assertTrue(vals, "L%d: no court seen" % (i + 1))
+            med = vals[len(vals) // 2]
+            self.assertTrue(0.28 <= med < 0.50, "L%d court median %.2f" % (i + 1, med))
+            light = sum(1 for v in vals if v >= 0.50) / len(vals)
+            self.assertLessEqual(light, 0.35, "L%d court in the lights %.2f" % (i + 1, light))
+
+    def test_every_eave_has_a_dark_hem(self):
+        """Every eave lip - the galleries' and the gate's (y 4), each hall roof's (R1, R2, R3) - is dark oak, not jade,
+        at every level (critic B: the round-4 hem, the one detail round that won, was on the first roof only, "a stripe
+        on one roof, not an outline of the building"). Definition re-set Nov 5 (its own commit, before the build): the
+        galleries' pitch steps (x 1 / 7, y 5 = R1, lovish's pick D) sit one up and one in from their dark hem at y 4 -
+        not eaves; every other jade stair at a lip height still fails, so the shipped hem gap still fails."""
+        lips = (4, L.R1, L.R2, L.R3)
+        steps = {(x, L.R1, z) for x in (1, L.SX - 2) for z in range(L.GALLERY[0], L.GALLERY[1] + 1)}
+        for i in range(3):
+            jade = sorted(q for q, n in self.solid[i].items() if q[1] in lips and n == JADE + "_stairs"
+                          and q not in steps)
+            self.assertEqual(jade, [], "L%d jade eave stairs" % (i + 1))
+
+    def test_one_gold_boss_on_the_gate(self):
+        """The torii (z 8) carries at most one gold block at every level (critic B: gate_l2 / gate_l3 put three to six
+        gold blocks back on the gate the camera sees first; gold studs had been taken off the eaves on Nov 1)."""
+        for i in range(3):
+            gold = sorted(q for q, n in self.solid[i].items() if q[2] == L.SZ - 1 and n == "gold_block")
+            self.assertLessEqual(len(gold), 1, "L%d gate gold %s" % (i + 1, gold))
+
+    def test_crown_one_gold_seed_and_a_light(self):
+        """The crown keeps ONE gold cell (the seed head) and its boss is not gold (critic C F1: a gold apex is the
+        Sunforged's; the pagoda and the academy both put a gold cube on top), and a lantern stands at the top for dusk
+        (critic B: the shipped crown is "a faint pink smudge" at dusk)."""
+        for i in range(3):
+            s = self.solid[i]
+            top = max(q[1] for q in s)
+            gold = sorted(q for q, n in s.items() if n == "gold_block" and q[1] >= top - 5 and q[2] < L.SZ - 1)
+            self.assertLessEqual(len(gold), 1, "L%d crown gold %s" % (i + 1, gold))
+            light = [q for q, n in s.items() if n == "lantern" and q[1] >= top - 1]
+            self.assertTrue(light, "L%d: no lantern on the crown" % (i + 1))
+
+    def test_no_pink_crumbs_below_the_crown(self):
+        """Pink only in the crown: every cherry cell at every level sits within one row of the top heart (critic B: the
+        L1 crown's petal tips and the L2 crown's slab petals stay behind as pink crumbs on the tower - y 13 and y 16 at
+        L3; the chain only adds or replaces)."""
+        for i in range(3):
+            s = self.solid[i]
+            hy = max(q[1] for q, n in s.items() if n == "pearlescent_froglight")
+            low = sorted(q for q, n in s.items() if n.startswith("cherry") and abs(q[1] - hy) > 1)
+            self.assertEqual(low, [], "L%d pink crumbs" % (i + 1))
+
+    # ---- lovish's pick D (Nov 5, via Eris.14: "pitched jade + stone apron"; Fable critic r1: "flat, light teal
+    # slabs" where the quality bar's roofs are "the darkest, steepest shapes", and "the plinth sits on grass like a
+    # crate") ----
+    ROOFS = ((0, L.R1, 0, 8), (0, L.R2, 1, 7), (1, L.R3, 2, 6))   # (first level, lip y, x1, x2), each z 0..3
+
+    def test_roofs_climb_two_steps_to_a_dark_ridge(self):
+        """Each roof climbs from its lip in jade stair steps to a dark oak ridge. The side galleries (a lean-to, z 5..6):
+        hem at the court, a jade stair one up, a dark oak ridge on the outer wall the camera sees. Each hall roof
+        (hipped, the north side flush): the cells two in from the west, south and east edges are dark oak two up, or
+        the storey or crown that rises off them - never jade. Shipped: flat jade bands, a jade ridge."""
+        for i in range(3):
+            s, b = self.solid[i], self.lv[i].blocks
+            for lip, step, ridge, f in ((2, 1, 0, "west"), (6, 7, 8, "east")):
+                for z in (5, 6):
+                    self.assertEqual(s.get((step, 5, z)), JADE + "_stairs", "L%d gallery step %s" % (i + 1, (step, z)))
+                    self.assertEqual(b[(step, 5, z)][1].get("facing"), f, "L%d gallery step facing" % (i + 1))
+                    self.assertTrue(s.get((ridge, 5, z), "").startswith("dark_oak"),
+                                    "L%d gallery ridge %s: %s" % (i + 1, (ridge, z), s.get((ridge, 5, z))))
+        for lv, y, x1, x2 in self.ROOFS:
+            for i in range(lv, 3):
+                s = self.solid[i]
+                crest = [(x, z) for x in range(x1, x2 + 1) for z in range(0, 4) if min(x - x1, x2 - x, 3 - z) >= 2]
+                bad = sorted((x, z, s.get((x, y + 2, z))) for (x, z) in crest
+                             if s.get((x, y + 2, z), "air").startswith(JADE) or (x, y + 2, z) not in s)
+                self.assertEqual(bad, [], "L%d roof %d crest" % (i + 1, y))
+
+    def test_dark_ridges_show_on_camera(self):
+        """The ridges are seen at L1: the RTS camera's rays land on the top face of dark oak on the galleries' outer
+        walls (y 5). (The hall roofs' crests carry the second storey and the lotus at every level, so their ridges are
+        checked in the structure above, not on camera.)"""
+        hits = G.shoot(self.lv[0], "rts", step=4)
+        up = [q for (q, n, f, _b) in hits.values() if n.startswith("dark_oak") and f == "up"]
+        self.assertTrue([q for q in up if q[1] == 5 and q[0] in (0, L.SX - 1) and q[2] >= 4], "no gallery ridge seen")
+
+    def test_seated_on_a_kerb_and_a_south_way(self):
+        """The footprint never grows (BuildingLevels), so the apron is the plot's own edge: at every level layer 0's
+        outer ring is a dressed stone-brick kerb, broken only by the pale polished andesite path's mouth on the axis
+        under the gate (x 4, z 8): the path runs in from the south edge. Shipped: the court's plain stone ran to the
+        edge."""
+        for i in range(3):
+            s = self.solid[i]
+            way = {(L.C, L.SZ - 1)}
+            ring = [(x, z) for x in range(L.SX) for z in range(L.SZ)
+                    if (x in (0, L.SX - 1) or z in (0, L.SZ - 1)) and (x, z) not in way]
+            bad = sorted((x, z, s.get((x, 0, z))) for (x, z) in ring if s.get((x, 0, z)) != "stone_bricks")
+            self.assertEqual(bad, [], "L%d kerb" % (i + 1))
+            off = sorted((x, z, s.get((x, 0, z))) for (x, z) in way if s.get((x, 0, z)) != "polished_andesite")
+            self.assertEqual(off, [], "L%d south way" % (i + 1))
 
     def test_shipped_structures_are_the_generator_build(self):
         built = (L.l1(), L.l2(), L.l3())

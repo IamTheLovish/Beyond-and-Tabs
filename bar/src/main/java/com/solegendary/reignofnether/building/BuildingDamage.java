@@ -11,7 +11,8 @@ package com.solegendary.reignofnether.building;
  *       ({@code BuildingPlacement.getMagicDamageMult}) multiply a unit's damage by it, so they all follow.</li>
  *   <li>{@link #unit(float)} - the unit-caused hits that do not go through that multiplier: a Creeper's, Pillager's and
  *       Ghast's explosion ({@code BuildingServerEvents.onExplosion}) and a Bombard Crew's shell
- *       ({@code BombardShell}, on top of its own {@code BUILDING_DAMAGE_MULT}).</li>
+ *       ({@code BombardShell}, on top of its own {@code BUILDING_DAMAGE_MULT}; the Rocket Battery's {@code RocketShell}
+ *       bursts through the same code, so it follows).</li>
  * </ul>
  * Not scaled: hits that already carry their own building number (a Ravager's roar, a Gorehorn Rhino's breach, a
  * Shellback Turtle's battery, a Royal Guard's mace slam, a sapper's charge, a siege lobber's shell), the game-enders
