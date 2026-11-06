@@ -25,7 +25,11 @@ import java.util.List;
  * hero_xp_pays_double_for_a_neutral_kill, "entity ticking there false"). It got far worse with #488's wider arena gaps
  * (GameTestLayout.GAP), which spread a batch over many more fresh chunks.
  * <p>
- * In the default batch (a full-size one: no batch name of its own), so it starts as most tests do.
+ * In a batch of its own, as hero_xp_pays_double_for_a_neutral_kill and the death-burst tests are: a full-size batch
+ * spends long enough spawning its structures that the ring two chunks round each arena (which a chunk needs FULL to be
+ * entity-ticking, and which the 5x5 forced grid does not wait for) has loaded by the first tick, so it never showed
+ * the race (flake-stress 42141743756: 0 of 3 in the default batch, while hero_xp in its own batch read "entity ticking
+ * there false" on 1 of 3). A small batch starts right after its spawn, on chunks #488's wider gaps leave fresh.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -37,7 +41,7 @@ public class ArenaEntitiesGameTests {
      * At the test's first tick: every chunk of the arena has its entities loaded and is entity-ticking, and a unit
      * spawned then is in the level's lookup (level.getEntity) and in a box scan (getEntitiesOfClass) at once.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40)
+    @GameTest(template = ARENA, batch = "arena_entities_are_ready_when_a_test_starts", timeoutTicks = 40)
     public static void arena_entities_are_ready_when_a_test_starts(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
