@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.MountingUnit;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -55,7 +56,7 @@ import java.util.Optional;
 
 // despite being a RangedAttackerUnit we don't implement performRangedAttack as we override the Pillager crossbow attack instead
 // we just implement this for fog reveal methods
-public class PillagerUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit {
+public class PillagerUnit extends Pillager implements Unit, MountingUnit, AttackerUnit, RangedAttackerUnit {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new MountRavager(), Keybindings.abilitySlot1);
@@ -104,6 +105,7 @@ public class PillagerUnit extends Pillager implements Unit, AttackerUnit, Ranged
     public Goal getAttackGoal() { return attackGoal; }
     public ReturnResourcesGoal getReturnResourcesGoal() { return returnResourcesGoal; }
     public int getMaxResources() { return maxResources; }
+    @Override
     public MountGoal getMountGoal() { return mountGoal; }
 
     private EnemySearchBehaviour attackSearchBehaviour = EnemySearchBehaviour.NONE;

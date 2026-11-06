@@ -12,6 +12,7 @@ import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.controls.FlyingUnitMoveControl;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.MountingUnit;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.ZombieUnit;
@@ -47,7 +48,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BeeUnit extends Bee implements Unit, AttackerUnit {
+public class BeeUnit extends Bee implements Unit, MountingUnit, AttackerUnit {
     public static final Abilities ABILITIES = new Abilities();
     private Abilities abilities = ABILITIES.clone();
     private final List<ItemStack> items = new ArrayList<>();
@@ -90,6 +91,7 @@ public class BeeUnit extends Bee implements Unit, AttackerUnit {
     public Goal getAttackGoal() {return attackGoal;}
     public ReturnResourcesGoal getReturnResourcesGoal() {return null;}
     public int getMaxResources() {return 0;}
+    @Override
     public MountGoal getMountGoal() {return null;}
 
     private EnemySearchBehaviour attackSearchBehaviour = EnemySearchBehaviour.NONE;

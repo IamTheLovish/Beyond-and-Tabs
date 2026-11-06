@@ -16,6 +16,7 @@ import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.MountingUnit;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -57,7 +58,7 @@ import java.util.Set;
 
 import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
-public class BlazeUnit extends Blaze implements Unit, AttackerUnit, RangedAttackerUnit, RangeIndicator {
+public class BlazeUnit extends Blaze implements Unit, MountingUnit, AttackerUnit, RangedAttackerUnit, RangeIndicator {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new FirewallShot(), Keybindings.abilitySlot1);
@@ -101,6 +102,7 @@ public class BlazeUnit extends Blaze implements Unit, AttackerUnit, RangedAttack
     public SelectedTargetGoal<? extends LivingEntity> getTargetGoal() {return targetGoal;}
     public ReturnResourcesGoal getReturnResourcesGoal() {return returnResourcesGoal;}
     public int getMaxResources() {return maxResources;}
+    @Override
     public MountGoal getMountGoal() {return mountGoal;}
 
     private MoveToTargetBlockGoal moveGoal;

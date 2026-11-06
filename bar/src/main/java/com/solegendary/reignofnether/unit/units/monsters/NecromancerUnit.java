@@ -66,7 +66,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class NecromancerUnit extends Skeleton implements Unit, AttackerUnit, RangedAttackerUnit, HeroUnit, KeyframeAnimated, RangeIndicator {
+public class NecromancerUnit extends Skeleton implements Unit, MountingUnit, AttackerUnit, RangedAttackerUnit, HeroUnit, KeyframeAnimated, RangeIndicator {
     public final Abilities ABILITIES = new Abilities(
         List.of(
             new Pair<>(new RaiseDead(), Keybindings.abilitySlot1),
@@ -127,6 +127,7 @@ public class NecromancerUnit extends Skeleton implements Unit, AttackerUnit, Ran
     public Goal getAttackGoal() {return attackGoal;}
     public ReturnResourcesGoal getReturnResourcesGoal() {return returnResourcesGoal;}
     public int getMaxResources() {return maxResources;}
+    @Override
     public MountGoal getMountGoal() {return mountGoal;}
 
     private EnemySearchBehaviour attackSearchBehaviour = EnemySearchBehaviour.NONE;
