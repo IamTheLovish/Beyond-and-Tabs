@@ -1289,6 +1289,20 @@ public class PlayerServerEvents {
         })));
     }
 
+    /**
+     * A match reset's clearing of the field: kills each of {@code units} that {@code which} picks (a kill, so the
+     * death handlers tidy up after it), with explosive deaths off - a reset is no battle, and every machine on the map
+     * would burst into its neighbours (DeathBurst.quietly; review round 1 on #517).
+     */
+    public static void killForReset(Iterable<? extends LivingEntity> units,
+                                    java.util.function.Predicate<LivingEntity> which) {
+        com.solegendary.reignofnether.unit.DeathBurst.quietly(() -> {
+            for (LivingEntity entity : units)
+                if (which.test(entity))
+                    entity.kill();
+        });
+    }
+
     public static int resetRTS(boolean hardReset) {
         return resetRTS(hardReset, false);
     }
@@ -1326,9 +1340,8 @@ public class PlayerServerEvents {
         if (retireOverTicks && !isSandboxOrScenario)
             com.solegendary.reignofnether.maps.ArenaRetirement.retireAll(serverLevel);
 
-        for (LivingEntity entity : UnitServerEvents.getAllUnits())
-            if (hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario))
-                entity.kill();
+        killForReset(UnitServerEvents.getAllUnits(),
+            entity -> hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario));
 
         if (!isSandboxOrScenario)
             UnitServerEvents.getAllUnits().removeIf(u -> (hardReset || (u instanceof Unit unit && !Unit.hasAnchor(unit))));

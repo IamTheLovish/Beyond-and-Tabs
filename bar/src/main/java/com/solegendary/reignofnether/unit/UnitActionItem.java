@@ -539,7 +539,9 @@ public class UnitActionItem {
                     }
                 }
                 case DELETE -> {
-                    ((LivingEntity) unit).kill();
+                    // a deleted machine does not burst: else deleting it beside the enemy is a free bomb (DeathBurst;
+                    // lovish, Nov 5: "Quiet on cleanup + delete")
+                    com.solegendary.reignofnether.unit.DeathBurst.quietly(((LivingEntity) unit)::kill);
                 }
                 case DISCARD -> {
                     if (unit instanceof ConvertableUnit cUnit) {
