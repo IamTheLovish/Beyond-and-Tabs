@@ -27,8 +27,12 @@ public class RocketRackModel {
     public static final ModelLayerLocation LAYER_LOCATION =
         new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "rocket_rack_layer"), "main");
 
-    /** How far (radians) a full recoil kicks the rack back, and how far (px) it shoves it straight back. */
-    public static final float RECOIL_TILT = 0.30F, RECOIL_SHOVE = 1.6F;
+    /**
+     * How far (radians) a full recoil kicks the rack back, and how far (px) it shoves it straight back. The shove is what
+     * shows from the RTS camera (a tilt about the X axis is foreshortened top-down): 1.6 px read as "no recoil" to the
+     * blind critic in three storm rounds.
+     */
+    public static final float RECOIL_TILT = 0.45F, RECOIL_SHOVE = 3.5F;
 
     /** The copper frame with its rods, and the lit part holding the orbs: both hinged at the same place. */
     public final ModelPart rack, glow;
