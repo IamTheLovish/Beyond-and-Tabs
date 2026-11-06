@@ -16,10 +16,12 @@ Entries that name a vanilla chunk ("defaultBatch:3") cannot be resolved from the
 
     python3 tools/check_shards.py
 """
-import glob
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import shard_plan  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GT = os.path.join(ROOT, "bar/src/main/java/com/solegendary/reignofnether/gametest/")
@@ -27,17 +29,9 @@ WORKFLOW = os.path.join(ROOT, ".github/workflows/build.yml")
 
 
 def tests():
-    out = []
-    for f in sorted(glob.glob(GT + "*.java")):
-        src = open(f, encoding="utf-8").read()
-        consts = dict(re.findall(r'static final String (\w+)\s*=\s*"([^"]*)"', src))
-        for m in re.finditer(r'@GameTest\(([^)]*)\)\s*(?:@\w+(?:\([^)]*\))?\s*)*public static void (\w+)', src):
-            b = re.search(r'batch\s*=\s*(?:"([^"]*)"|(\w+))', m.group(1))
-            batch = "defaultbatch"
-            if b:
-                batch = b.group(1) if b.group(1) is not None else consts.get(b.group(2), b.group(2))
-            out.append((m.group(2).lower(), batch.lower()))
-    return out
+    """(lower-cased method name, lower-cased batch) of every @GameTest - read by tools/shard_plan.py, which resolves
+    batch constants and concatenations (batch = BATCH + "_guard_next") and annotations with parentheses inside."""
+    return [(t.name, t.batch) for t in shard_plan.source_tests(GT)]
 
 
 def lists():
