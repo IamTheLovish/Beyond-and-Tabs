@@ -27,6 +27,7 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.TitheBinderUnit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -400,6 +401,65 @@ public class TitheBinderGameTests {
             finish(helper, problems);
             return true;
         });
+    }
+
+    // ------------------------------------------------------------------------------------------------ the summon tag
+
+    /**
+     * A summon's optional {@code BoundWeapons} tag (TitheBinderUnit.KEY_BOUND_WEAPONS, the eyes showcase) starts the
+     * Binder at that count, clamped to 1-10, and wins over a saved count in the same tag; the count it gives saves and
+     * loads back unchanged without the tag (the gameplay count is the ledger's own). Made and loaded the way /summon
+     * does (EntityType.create, then load), never added to the level.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
+    public static void tithe_binder_bound_weapons_tag_sets_the_count_clamped_to_one_to_ten(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> problems = new ArrayList<>();
+        int[][] cases = { { -3, 1 }, { 0, 1 }, { 1, 1 }, { 6, 6 }, { 10, 10 }, { 11, 10 }, { 99, 10 } };
+        List<Entity> made = new ArrayList<>();
+        try {
+            for (int[] c : cases) {
+                TitheBinderUnit b = EntityRegistrar.TITHE_BINDER_UNIT.get().create(level);
+                if (b == null) {
+                    problems.add("EntityType.create made no Binder");
+                    break;
+                }
+                made.add(b);
+                CompoundTag tag = b.saveWithoutId(new CompoundTag());
+                tag.putInt(TitheBinderUnit.KEY_BOUND_WEAPONS, c[0]);
+                b.load(tag);
+                if (b.getWeapons() != c[1])
+                    problems.add("BoundWeapons " + c[0] + " gave " + b.getWeapons() + " weapons, expected " + c[1]);
+                CompoundTag saved = b.saveWithoutId(new CompoundTag());
+                if (saved.contains(TitheBinderUnit.KEY_BOUND_WEAPONS))
+                    problems.add("the save writes BoundWeapons (a summon-only tag)");
+                TitheBinderUnit copy = EntityRegistrar.TITHE_BINDER_UNIT.get().create(level);
+                if (copy == null) {
+                    problems.add("EntityType.create made no second Binder");
+                    break;
+                }
+                made.add(copy);
+                copy.load(saved);
+                if (copy.getWeapons() != c[1])
+                    problems.add("BoundWeapons " + c[0] + ": saved and loaded back as " + copy.getWeapons()
+                        + " weapons, expected " + c[1]);
+            }
+            // a byte tag (/summon ... {BoundWeapons:7b}) is a number too
+            TitheBinderUnit b = EntityRegistrar.TITHE_BINDER_UNIT.get().create(level);
+            if (b != null) {
+                made.add(b);
+                CompoundTag tag = b.saveWithoutId(new CompoundTag());
+                tag.putByte(TitheBinderUnit.KEY_BOUND_WEAPONS, (byte) 7);
+                b.load(tag);
+                if (b.getWeapons() != 7)
+                    problems.add("BoundWeapons 7b gave " + b.getWeapons() + " weapons, expected 7");
+            }
+        } catch (RuntimeException ex) {
+            problems.add("threw " + ex);
+        } finally {
+            cleanUp(made, List.of());
+        }
+        finish(helper, problems);
     }
 
     // ------------------------------------------------------------------------------------------------ restless weapons

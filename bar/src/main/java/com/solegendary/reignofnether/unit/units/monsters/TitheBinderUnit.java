@@ -31,6 +31,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -275,6 +276,12 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
     /** Save keys: the count and the half bind (pending hits and a hook in flight are not saved). */
     static final String KEY_WEAPONS = "bt_tithe_weapons";
     static final String KEY_HALF = "bt_tithe_half";
+    /**
+     * Optional, read only: a summon's starting count ({@code /summon ... {BoundWeapons:6}}, the eyes showcase), clamped
+     * to 1-10 by the ledger like any restore. It wins over the saved count when both are given (a /data merge). Never
+     * written: the count saves under {@link #KEY_WEAPONS}, and the ledger stays the one gameplay count.
+     */
+    public static final String KEY_BOUND_WEAPONS = "BoundWeapons";
 
     public int maxResources = 100;
 
@@ -736,7 +743,10 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
     public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
         this.readUnitSaveData(pCompound);
-        if (pCompound.contains(KEY_WEAPONS)) {
+        if (pCompound.contains(KEY_BOUND_WEAPONS, Tag.TAG_ANY_NUMERIC)) {
+            ledger.restore(pCompound.getInt(KEY_BOUND_WEAPONS), false, now());
+            syncLedger();
+        } else if (pCompound.contains(KEY_WEAPONS)) {
             ledger.restore(pCompound.getInt(KEY_WEAPONS), pCompound.getBoolean(KEY_HALF), now());
             syncLedger();
         }
