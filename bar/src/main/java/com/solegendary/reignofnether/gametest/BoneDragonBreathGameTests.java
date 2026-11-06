@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.entities.GhastUnitFireball;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.EngagementStance;
+import com.solegendary.reignofnether.unit.FireBreath;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit;
@@ -445,6 +446,77 @@ public class BoneDragonBreathGameTests {
             if (!problems.isEmpty() || burn.done(tick) || tick >= 205) {
                 if (problems.isEmpty())   // a spared foe burnt already fails it; its unread seconds are not "lost 0.0"
                     burn.judge(problems);
+                return done(helper, problems, clean, all);
+            }
+            return false;
+        });
+    }
+
+    /** How much health a foe must lose on a burn tick to count as burnt by it (a burn is 10, the wither's tick 1). */
+    static final float BURN_MIN = 3f;
+
+    /**
+     * Airborne over a squad (the eyes stills' layout: the target, one beside it on the far side and one behind it), the
+     * strafe burns the far side of the squad on EVERY burn of the breath, from the first. The fire used to land
+     * {@link FireBreath#AIR_SWEEP} short of its target when the breath began and sweep to as far past (eyes 42083382498
+     * and 42172015718: the splash 3-4 blocks short of the squad), so the first two of its five burns fell between the
+     * dragon and the squad and only its target caught them.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 220)
+    public static void bone_dragon_air_breath_burns_the_far_side_of_the_squad_from_the_first_burn(GameTestHelper helper) {
+        String owner = owner(helper, "air_squad"), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        BoneDragonUnit dragon = dragon(helper, owner, 2.5, AIR_UP, 7.5, -90f);
+        Mob target = foe(helper, foeOwner, 7.5, 0, 7.5);
+        Mob beside = foe(helper, foeOwner, 8.9, 0, 8.6), behind = foe(helper, foeOwner, 10.3, 0, 7.5);
+        List<Mob> all = new ArrayList<>();
+        for (Mob m : new Mob[] { dragon, target, beside, behind })
+            if (m != null)
+                all.add(m);
+        Runnable clean = TestCleanup.atEnd(helper, () -> all.forEach(Mob::discard));
+        if (all.size() != 4) {
+            clean.run();
+            helper.fail("could not create the airborne squad test units");
+            return;
+        }
+        EngagementStance.set(dragon, EngagementStance.HOLD_FIRE);   // ordered fire only: the target, not the nearest
+        Mob[] far = { beside, behind };
+        String[] name = { "the foe beside the target on the far side (1.4 past, 1.1 off)", "the foe 2.8 behind the target" };
+        float[] last = new float[far.length];
+        float[] targetLast = { Float.NaN };
+        int[] first = { -1 };
+        int burns = FireBreath.TICKS / FireBreath.PULSE_TICKS;
+        List<String> missed = new ArrayList<>();
+        DragonDiveGameTests.everyTick(helper, 210, tick -> {
+            List<String> problems = new ArrayList<>();
+            if (tick == 2) {
+                dragon.setHoldPosition(true);
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
+            }
+            if (tick < 2)
+                return false;
+            if (tick % 20 == 12 && dragon.getTarget() != target)
+                ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
+            float hp = target.getHealth();
+            // the breath's first burn: the tick its target first loses a burn's worth
+            if (first[0] < 0 && tick >= 3 && !Float.isNaN(targetLast[0]) && hp < targetLast[0] - BURN_MIN)
+                first[0] = tick;
+            targetLast[0] = hp;
+            int since = first[0] < 0 ? -1 : tick - first[0];
+            if (since >= 0 && since % FireBreath.PULSE_TICKS == 0 && since / FireBreath.PULSE_TICKS < burns) {
+                int n = since / FireBreath.PULSE_TICKS + 1;
+                for (int i = 0; i < far.length; i++)
+                    if (far[i].getHealth() > last[i] - BURN_MIN)
+                        missed.add(String.format(Locale.ROOT, "%s was not burnt by burn %d of %d (lost %.1f)", name[i], n,
+                            burns, last[i] - far[i].getHealth()));
+            }
+            for (int i = 0; i < far.length; i++)
+                last[i] = far[i].getHealth();
+            if (since >= FireBreath.PULSE_TICKS * (burns - 1) || tick >= 205) {
+                if (first[0] < 0)
+                    problems.add("the target was never burnt");
+                if (!missed.isEmpty())
+                    problems.add("the fire landed short of the squad: " + String.join("; ", missed));
                 return done(helper, problems, clean, all);
             }
             return false;
