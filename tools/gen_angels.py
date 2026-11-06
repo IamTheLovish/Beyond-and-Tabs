@@ -1113,7 +1113,7 @@ def build(massing, kind):
     body = {"a": body_a, "b": body_b, "c": body_c}[massing](m, kind)
     {"a": wings_a, "b": wings_b, "c": wings_c}[massing](m, kind)
     chin, H = body["chin"], body["H"]
-    hd = head(m, chin, H, circlet=(massing == "b"))
+    head(m, chin, H, circlet=(massing == "b"))
     back = 0.1 + 0.86 * H / 2 + 0.35
     if massing == "a":
         halo_ring(m, (0.0, 37.5, back + 1.6), 8.0, 0.9, 1.2, 0.0)
@@ -1177,7 +1177,6 @@ def report(m, path):
     nc = sum(len(b.cubes) for b in m.bones.values())
     lo, hi = extent(m)
     body_hi = extent(m, lambda n: not (n.startswith("wing") or n in ("halo", "bow", "sword", "shield")))[1][1]
-    span = 2 * max(abs(lo[0]), abs(hi[0]))
     wl, wh = extent(m, lambda n: n.startswith("wing"))
     wspan = wh[0] - wl[0]
     print("%s: %d bones, %d cubes; bbox x %.1f..%.1f y %.1f..%.1f z %.1f..%.1f px; crown %.1f px; wing span %.1f "

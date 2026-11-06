@@ -1004,7 +1004,6 @@ def step(st, inp):
         hx, hz = st.s("hem_x", sx), st.s("hem_z", sz_)
         spring(hx, sx, K_HEM, C_HEM)
         spring(hz, sz_, K_HEM, C_HEM)
-        R_hem = rmat((hx[0], 0.0, hz[0]))
         mv_ = {}
         for n, off in SKIRT.items():
             f = FLARE[n.split("_")[1]]
