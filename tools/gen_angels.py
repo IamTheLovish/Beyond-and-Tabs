@@ -29,7 +29,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gen_models import (Model, OUT, ring, rays, rounded, dome, ngon_prism, octagon_pole, rot_mat, apply,  # noqa: E402
                         _add, _mul, _dot, _cross, _unit)
 from gen_angel_statue import slab  # noqa: E402  (gen_models.slab, nudged off gimbal lock)
-from human_kit import skirt_panels, attach  # noqa: E402
+from human_kit import skirt_panels, attach, owner_of  # noqa: E402
+from gen_medic import cone_plates, put_plate  # noqa: E402
 
 PALETTE = {
     "feather": "#efe8da", "feather_mid": "#d9cfbc", "feather_dark": "#b9ad96", "robe": "#e6dfd0",
@@ -179,12 +180,12 @@ def wings_a(m, kind):
     tip_v = {"mender": 24.5, "archer": 26.5, "sword": 26.0}[kind]
     out = {"mender": 6.6, "archer": 6.4, "sword": 7.4}[kind]
     J = [(0.0, 0.0), (2.7, 7.4), (5.3, 15.8), (6.3, 19.6)]
-    ch = {"mender": (7.5, 7.0), "archer": (6.0, 5.5), "sword": (7.0, 6.5)}[kind]
+    ch = {"mender": (2.6, 7.4), "archer": (2.4, 6.0), "sword": (2.6, 7.0)}[kind]
     tips = arc_tips((0.6, tip_v - 3.5), (J[3][0] + out - 4.0, tip_v), 5 if kind != "sword" else 6,
                     {"mender": 1.6, "archer": 0.6, "sword": 1.0}[kind], (0.0, 1.0))
-    sec, prim, cov = std_wing(J, lambda t: ch[0] + (ch[1] - ch[0]) * t, (-0.8, -0.55), tips, 5,
+    sec, prim, cov = std_wing(J, lambda t: ch[0] + (ch[1] - ch[0]) * min(1.0, 1.6 * t), (-0.85, -0.2), tips, 5,
                               wid_prim=2.2)
-    spec = dict(root=(2.4, 25.5, 2.8), rho=-18.0, delta=0.0, joints=J, sec=sec, prim=prim, cov=cov, bar_w=2.2,
+    spec = dict(root=(2.4, 25.5, 3.1), rho=-18.0, delta=0.0, joints=J, sec=sec, prim=prim, cov=cov, bar_w=2.2,
                 colours=dict(bar="tabard_dark", sec="feather_mid", prim="feather", cov="feather"))
     for s in (1, -1):
         wing(m, s, spec)
@@ -206,7 +207,7 @@ def wings_b(m, kind):
     Ti = (u_w + 1.0, -1.2 - c_hand - 1.2)
     n = {"mender": 6, "archer": 6, "sword": 7}[kind]
     tips = arc_tips(Ti, T, n, {"mender": 3.2, "archer": 0.8, "sword": 2.0}[kind], (0.55, -0.85))
-    sec, prim, cov = std_wing(J, lambda t: c_root + (c_hand - c_root) * t, (0.0, -1.0), tips, 5,
+    sec, prim, cov = std_wing(J, lambda t: c_root + (c_hand - c_root) * t, (0.0, -1.0), tips, 5, cov_frac=0.66,
                               wid_prim=2.6 if kind != "archer" else 2.2)
     team = "tabard"
     spec = dict(root=root, rho=70.0, delta=delta, joints=J, sec=sec, prim=prim, cov=cov,
@@ -218,7 +219,7 @@ def wings_b(m, kind):
 def wings_c(m, kind):
     """C: four wings - a large upper pair raised in a V (rounded, primaries fanned ~60 degrees, the plane reclined 25)
     and a small lower pair angled down and back (two bones, team colour)."""
-    root = (2.0, 20.0, 2.5)
+    root = (2.0, 20.0, 3.2)
     J = [(0.0, 0.0), (3.4, 4.6), (7.8, 10.8), (10.2, 12.6)]
     L = {"mender": 8.6, "archer": 8.8, "sword": 9.0}[kind]
     a0, a1 = {"mender": (40.0, -38.0), "archer": (26.0, -30.0), "sword": (34.0, -34.0)}[kind]
@@ -229,12 +230,13 @@ def wings_c(m, kind):
         a = math.radians(a1 + (a0 - a1) * f)
         Lk = L * (0.78 + 0.22 * f) if kind != "archer" else L * (0.7 + 0.42 * f * f)
         tips.append((J[3][0] - 1.6 * (1 - f) + math.cos(a) * Lk, J[3][1] - 1.2 * (1 - f) + math.sin(a) * Lk))
-    sec, prim, cov = std_wing(J, lambda t: 7.0 - 1.2 * t, (0.18, -1.0), tips, 5, wid_prim=2.4)
-    spec = dict(root=root, rho=-25.0, delta=0.0, joints=J, sec=sec, prim=prim, cov=cov,
+    sec, prim, cov = std_wing(J, lambda t: 3.4 + 3.6 * min(1.0, 1.6 * t), (0.18, -1.0), tips, 5, wid_prim=2.4)
+    spec = dict(root=root, rho=-12.0, delta=0.0, joints=J, sec=sec, prim=prim, cov=cov,
                 colours=dict(bar="feather", sec="feather_mid", prim="feather", cov="feather"))
     for s in (1, -1):
         wing(m, s, spec)
-    # the lower pair: down 25 and back 20 to tips near (12, 5, 12); the plane tipped 40 forward
+    # the lower pair: down and out to tips near (12, 4, 5); the plane tipped only 10 forward - the sheet's 40 (tips
+    # back at z 12) lay along the RTS camera's line of sight and the team-coloured pair went edge-on
     K = (4.6, -3.6)
     low_sec = []
     for k, (bf, tip) in enumerate(((0.25, (0.6, -6.2)), (0.6, (3.4, -8.0)), (0.95, (6.4, -9.6)))):
@@ -243,7 +245,7 @@ def wings_c(m, kind):
     low_prim = [(K, (7.8, -11.4), 2.4, 1), (K, (9.4, -10.6), 2.4, 1), (K, (10.6, -9.0), 2.3, 1),
                 (K, (10.8, -7.0), 2.2, 1)]
     low_cov = [((0.4, -0.3), (2.2, -3.4), 2.8, 0), (lerp((0.0, 0.0), K, 0.75), (5.4, -6.2), 2.6, 1)]
-    spec_low = dict(root=(2.0, 15.0, 2.5), rho=40.0, delta=0.0, joints=[(0.0, 0.0), K], sec=low_sec,
+    spec_low = dict(root=(2.0, 15.0, 3.3), rho=10.0, delta=0.0, joints=[(0.0, 0.0), K], sec=low_sec,
                     prim=low_prim, cov=low_cov, bar_w=1.5, sec_pt=True,
                     colours=dict(bar="tabard_dark", sec="tabard", prim="tabard", cov="tabard_dark"))
     for s in (1, -1):
@@ -425,6 +427,21 @@ def leg(m, side, hip, thigh_len, shin_len, w, rot_thigh, rot_shin, c_thigh, c_sh
     sh.box_at((hx, ay - 2.6, -0.75), (w * 0.5, 1.2, w * 0.55), c_toe, rotation=[-14, 0, 0], pivot=[hx, ay, -0.2])
 
 
+def taper_panels(m, prefix, top, hem, A, B, A_hem, colour, n=10, t=0.32, cz=-0.15, parent="body"):
+    """A cone that NARROWS downward (A's candle hem) shared over four panel bones like human_kit.skirt_panels, but
+    with the plates exact at the WIDE top: skirt_panels sizes them at the hem, which for a taper left grass showing
+    between the plates (round 1's first render: a bird cage under the robe)."""
+    s_hem = A_hem / A
+    zf, zb = cz - B, cz + B
+    hinge = top - 0.2
+    pivots = {"_front": [0, hinge, zf + 0.3], "_back": [0, hinge, zb - 0.3], "_left": [A - 0.4, hinge, cz],
+              "_right": [-(A - 0.4), hinge, cz]}
+    bones = {prefix + k: m.bone(prefix + k, pv, parent=parent) for k, pv in pivots.items()}
+    for p in cone_plates(0, cz, A, B, hem, s_hem, top, 1.0, n, t, exact_at=top):
+        put_plate(bones[owner_of(prefix, p["th"])], p, colour)
+    return bones
+
+
 def body_a(m, kind):
     """A: the tall robed seraph - V torso, a gold cincture, a robe flaring to 10.5 px at y 11 and tapering to a 2.5 px
     point at y 0 (a candle body, no feet); the stole in team colour front and back."""
@@ -435,7 +452,7 @@ def body_a(m, kind):
     rounded(b, 0, 0, 19.9, 20.9, 6.3, 4.7, "gold", k=2)                     # cincture
     b.box_at((0, 20.4, -2.5), (1.4, 1.4, 0.5), "sun_gold", rotation=[0, 0, 45], pivot=[0, 20.4, -2.5])
     skirt_panels(m, "robe", 20.3, 11.0, 2.95, 2.05, 5.25, "robe", n=10)
-    skirt_panels(m, "hem", 11.05, 0.0, 5.25, 3.65, 1.25, "robe", hem_colour="robe_shade", hem_h=1.2, n=10)
+    taper_panels(m, "hem", 11.05, 0.0, 5.25, 3.65, 1.25, "robe", n=10)
     # the stole: two strips over the shoulders, down the chest, across the cincture, down the robe to the hem
     def fr(y, x, s):
         if y >= 23:
@@ -548,7 +565,7 @@ def build(massing, kind):
     elif massing == "b":
         halo_ring(m, (0.0, chin + H - 0.6, back + 2.0), 7.0, 0.9, 1.1, 25.0)
     else:
-        halo_disc(m, (0.0, 25.0, 6.6), 12.0, 40.0)
+        halo_disc(m, (0.0, 25.0, 8.0), 12.0, 40.0)
     sx, sy, sz = body["shoulder"]
     la = arm(m, 1, (sx, sy, sz), body["up"], body["fore"], body["arm_w"], body["sleeve"], body["fore_c"], body["cuff"])
     ra = arm(m, -1, (-sx, sy, sz), body["up"], body["fore"], body["arm_w"], body["sleeve"], body["fore_c"],
@@ -570,8 +587,8 @@ def build(massing, kind):
         lb.box_at(core, (2.2, 2.2, 2.2), "glow", rotation=[45, 45, 0], pivot=list(core))
     elif kind == "archer":
         length = {"a": 38.0, "b": 34.0, "c": 24.0}[massing]
-        lean = {"a": 30.0, "b": 20.0, "c": 18.0}[massing]
-        grip = {"a": (6.6, 21.0, -6.8), "b": (6.4, 19.0, -7.2), "c": (5.0, 15.6, -5.6)}[massing]
+        lean = {"a": 22.0, "b": 20.0, "c": 18.0}[massing]
+        grip = {"a": (7.4, 21.0, -6.4), "b": (6.4, 19.0, -7.2), "c": (5.0, 15.6, -5.6)}[massing]
         errs.append(solve(m, la, grip))
         bow(m, m.fk(la[1], la[2]), length, lean, la[1])
         errs.append(solve(m, ra, (-sx - 0.4, wy - 1.0, fz - 1.2)))
