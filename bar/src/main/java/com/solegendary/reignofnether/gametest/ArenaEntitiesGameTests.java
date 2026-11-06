@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
@@ -14,6 +15,7 @@ import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -86,5 +88,71 @@ public class ArenaEntitiesGameTests {
                     + ", getEntitiesOfClass " + scanned + " (at " + m.blockPosition().toShortString() + ")");
         }
         return problems;
+    }
+
+    /** A ticket that loads a chunk to FULL (level 33) and no further: FULL, never entity-ticking (no ticket at 31 or less). */
+    static final TicketType<ChunkPos> FULL_ONLY = TicketType.create("gametest_full_only", Comparator.comparingLong(ChunkPos::toLong));
+
+    /**
+     * The gate's readiness check against the failure itself, deterministically (Command Center Eris.17, option b): a
+     * fresh far chunk held at FULL by a level-33 ticket alone - what the framework's structure wait counts as loaded -
+     * is not entity-ticking, so a unit added there never ticks (hero_xp's "entity ticking there false": its orbs never
+     * flew). {@link GameTestChunks#firstNotEntityReady} must call that chunk not ready. Then a FORCED ticket (what
+     * StructureUtilsMixin adds, level 31) and its ring loaded: the check must flip to ready, and the same unit ticks.
+     * Whether a real test would start in the first state is load-dependent (a small batch in a full shard); this pins
+     * that the gate's check sees exactly that state.
+     */
+    @GameTest(template = ARENA, batch = "arena_entities_probe", timeoutTicks = 400)
+    public static void a_chunk_that_is_full_but_not_entity_ticking_is_not_ready_for_entities(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+        int cx = (origin.getX() >> 4) - 256, cz = (origin.getZ() >> 4) - 256;   // ~4000 blocks off: never loaded before
+        ChunkPos pos = new ChunkPos(cx, cz);
+        List<long[]> one = List.of(new long[] { cx, cz });
+        List<String> problems = new ArrayList<>();
+        level.getChunkSource().addRegionTicket(FULL_ONLY, pos, 0, pos);
+        Runnable cleanup = () -> {
+            level.getChunkSource().removeRegionTicket(FULL_ONLY, pos, 0, pos);
+            GameTestChunks.releaseAll(level, one);
+        };
+        GameTestChunks.Wait full = GameTestChunks.await(level, one, GameTestChunks.WAIT_MS, "probe chunk");
+        if (!full.complete()) {
+            cleanup.run();
+            helper.fail("the probe chunk never loaded to FULL (" + full.summary() + ")");
+            return;
+        }
+        int y = level.getChunk(cx, cz).getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, 8, 8) + 1;
+        Mob m = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (m == null) {
+            cleanup.run();
+            helper.fail("could not create the unit");
+            return;
+        }
+        m.moveTo((cx << 4) + 8.5, y, (cz << 4) + 8.5, 0, 0);
+        level.addFreshEntity(m);
+        helper.runAfterDelay(10, () -> {
+            boolean ticking = level.isPositionEntityTicking(m.blockPosition());
+            if (ticking)
+                problems.add("setup: the FULL-only chunk is entity-ticking (nothing tested)");
+            else if (GameTestChunks.firstNotEntityReady(level, one, y) == null)
+                problems.add("a chunk at FULL but not entity-ticking read ready for entities (the unit there ticked "
+                    + m.tickCount + " times in 10 ticks)");
+            int before = m.tickCount;
+            GameTestChunks.hold(level, cx, cz);   // what the structure load adds: level 31, the ring 2 chunks out
+            try {
+                GameTestChunks.awaitRingOrFail(level, one, "probe");
+            } catch (RuntimeException e) {
+                problems.add("the ring round the probe chunk never loaded: " + e.getMessage());
+            }
+            helper.runAfterDelay(40, () -> {
+                if (GameTestChunks.firstNotEntityReady(level, one, y) != null)
+                    problems.add("with a FORCED ticket and its ring loaded, the chunk still read not ready");
+                if (m.tickCount <= before)
+                    problems.add("the unit never ticked once the chunk was entity-ready (tickCount " + m.tickCount + ")");
+                m.discard();
+                cleanup.run();
+                TerrainGameTests.finish(helper, problems);
+            });
+        });
     }
 }
