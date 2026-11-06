@@ -843,8 +843,8 @@ def bake_clip(clip):
         move = [move[0], move[1] - sag, move[2]]
         if u in (0.0, 1.0) or ka == kb:
             continue                                          # at a key: its own solved arms
-        if t % 2:
-            continue                                          # every 2nd tick (the driver averages the odd one)
+        # r3b: every tick (run 42170685878 baked every 2nd and averaged the odd one per bone: in the slam's 2-tick wrench
+        # the per-bone average of two far-apart poses left the left fist 19 px off the haft)
         m = copy.deepcopy(bind)
         for n in ("pelvis", "torso", "head"):
             r = rot.get(n, [0.0, 0.0, 0.0])
