@@ -151,11 +151,16 @@ public class DeathBurstGameTests {
         helper.runAfterDelay(5, () -> {
             gone.discard();
             plain.kill();
+            boolean rackGarrisoned = com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon.getGarrison(
+                (Unit) rack) != null;
+            double rackGap = rack.distanceTo(byRack);
             rack.kill();
+            boolean rackDead = !rack.isAlive();
             float g = taken(byGone), p = taken(byPlain), r = taken(byRack);
             discard(made);
             String got = String.format(Locale.ROOT, "beside the despawned machine %.2f, beside the dead Vindicator %.2f, "
-                + "beside the dead Rocket Battery %.2f", g, p, r);
+                + "beside the dead Rocket Battery %.2f (rack dead %b, garrisoned %b, %.2f from its target)", g, p, r,
+                rackDead, rackGarrisoned, rackGap);
             if (g != 0)
                 helper.fail("a machine taken off the field without dying burst: " + got);
             else if (p != 0)
@@ -292,12 +297,19 @@ public class DeathBurstGameTests {
         Mob boiler = unit(helper, EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get(), me, 8.5, 8.5, made);
         Mob near = target(helper, them, 10.5, 8.5, made);   // 19.08 if it burst
         helper.runAfterDelay(5, () -> {
+            // why an order would not reach the unit (red 42131219782: the Delete left it alive)
+            String before = String.format(Locale.ROOT, "owner '%s' (order from '%s'), may command %b, in level %b, effects %s,"
+                    + " health %.1f",
+                ((Unit) boiler).getOwnerName(), me, com.solegendary.reignofnether.unit.UnitActionItem.mayCommand(
+                    helper.getLevel(), me, (Unit) boiler, false),
+                helper.getLevel().getEntity(boiler.getId()) == boiler, boiler.getActiveEffectsMap().keySet(), boiler.getHealth());
             new com.solegendary.reignofnether.unit.UnitActionItem(me, com.solegendary.reignofnether.unit.UnitAction.DELETE,
                 -1, new int[] { boiler.getId() }).action(helper.getLevel());
             boolean dead = !boiler.isAlive();
             float n = taken(near);
             discard(made);
-            String got = String.format(Locale.ROOT, "the Juggernaut dead %b, the enemy beside it took %.2f", dead, n);
+            String got = String.format(Locale.ROOT, "the Juggernaut dead %b (health %.1f), the enemy beside it took %.2f; before: %s",
+                dead, boiler.getHealth(), n, before);
             if (!dead)
                 helper.fail("the Delete order left the Juggernaut alive (nothing tested): " + got);
             else if (n != 0)
