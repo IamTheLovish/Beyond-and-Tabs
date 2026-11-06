@@ -84,6 +84,14 @@ public final class GameTestChunks {
             && level.isPositionEntityTicking(new BlockPos((cx << 4) + 8, y, (cz << 4) + 8));
     }
 
+    /** One chunk's state for a log line: "cx,cz entities loaded B, entity-ticking B, FULL B". */
+    public static String describeEntityReady(ServerLevel level, long[] c, int y) {
+        int cx = (int) c[0], cz = (int) c[1];
+        return cx + "," + cz + " entities loaded " + level.areEntitiesLoaded(ChunkPos.asLong(cx, cz))
+            + ", entity-ticking " + level.isPositionEntityTicking(new BlockPos((cx << 4) + 8, y, (cz << 4) + 8))
+            + ", FULL " + (level.getChunkSource().getChunkNow(cx, cz) != null);
+    }
+
     /** The chunks a box covers, each once (x-major). */
     public static List<long[]> chunksOf(net.minecraft.world.level.levelgen.structure.BoundingBox box) {
         List<long[]> out = new ArrayList<>();

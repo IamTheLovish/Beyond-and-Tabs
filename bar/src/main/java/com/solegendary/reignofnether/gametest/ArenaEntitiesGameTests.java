@@ -111,10 +111,11 @@ public class ArenaEntitiesGameTests {
         List<long[]> one = List.of(new long[] { cx, cz });
         List<String> problems = new ArrayList<>();
         level.getChunkSource().addRegionTicket(FULL_ONLY, pos, 0, pos);
-        Runnable cleanup = () -> {
+        // run once whenever the test ends (a timeout too), so the far chunk's tickets never outlive it
+        Runnable cleanup = TestCleanup.atEnd(helper, () -> {
             level.getChunkSource().removeRegionTicket(FULL_ONLY, pos, 0, pos);
             GameTestChunks.releaseAll(level, one);
-        };
+        });
         GameTestChunks.Wait full = GameTestChunks.await(level, one, GameTestChunks.WAIT_MS, "probe chunk");
         if (!full.complete()) {
             cleanup.run();
@@ -123,6 +124,8 @@ public class ArenaEntitiesGameTests {
         }
         int y = level.getChunk(cx, cz).getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, 8, 8) + 1;
         Mob m = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (m != null)
+            TestCleanup.entities(helper, List.of(m));
         if (m == null) {
             cleanup.run();
             helper.fail("could not create the unit");

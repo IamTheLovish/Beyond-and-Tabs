@@ -16,6 +16,8 @@ public final class StartGateProgress {
 
     /** Ticks without a new ready chunk before the wait counts as stalled (also needs the wall time, see above). */
     public static final int STALL_TICKS = 200;
+    /** The wall time those ticks take at 20 per second: a stall needs both. */
+    public static final long STALL_NANOS = STALL_TICKS * 50_000_000L;
     /** Wall time of the whole wait, at most: under the CI watchdog and the suite's own per-test budget. */
     public static final long CAP_NANOS = 120_000_000_000L;
 
@@ -43,7 +45,7 @@ public final class StartGateProgress {
         ticks++;
         if (nanos - startNanos >= CAP_NANOS)
             return Verdict.CAPPED;
-        if (ticks - bestAt >= STALL_TICKS && nanos - bestAtNanos >= STALL_TICKS * 50_000_000L)
+        if (ticks - bestAt >= STALL_TICKS && nanos - bestAtNanos >= STALL_NANOS)
             return Verdict.STALLED;
         return Verdict.HOLD;
     }

@@ -5,7 +5,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestInfo;
 import net.minecraft.gametest.framework.StructureUtils;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.StructureBlockEntity;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
@@ -30,8 +29,11 @@ import java.util.List;
  */
 public final class TestStartGate {
 
-    /** Waits this long or longer are logged (shorter ones are the normal case and would flood the filtered log). */
-    static final int LOG_FROM_TICKS = 20;
+    /**
+     * Waits of this many wall milliseconds or more are logged. Not a tick count: the server ticks unthrottled, so 20
+     * ticks are 3-20 ms and almost every wait that needs one IO round-trip would log a line (~1300 tests).
+     */
+    static final long LOG_FROM_MS = 1000;
 
     private TestStartGate() { }
 
@@ -39,21 +41,29 @@ public final class TestStartGate {
     public static final class Gate {
         final StartGateProgress progress = new StartGateProgress();
         List<long[]> chunks;
-        public boolean open;
+        boolean open;
+
+        /** Has the gate let the test start (for good)? */
+        public boolean isOpen() {
+            return open;
+        }
     }
 
     /** True: hold the test's first tick back this tick. Opens the gate (for good) otherwise. */
     public static boolean hold(GameTestInfo info, ServerLevel level, Gate gate) {
+        BlockPos sbPos = info.getStructureBlockPos();
         if (gate.chunks == null) {
-            BlockPos sbPos = info.getStructureBlockPos();
             if (sbPos == null || !(level.getBlockEntity(sbPos) instanceof StructureBlockEntity sbe)) {
-                gate.open = true;   // nothing to wait for that we can name: start as vanilla does
+                // never expected: every test spawns its structure before its first tick. Start as vanilla does
+                ReignOfNether.LOGGER.warn("[ChunkWait] gametest-start-gate {}: no structure block at {}, starting without the gate",
+                    info.getTestName(), sbPos);
+                gate.open = true;
                 return false;
             }
             BoundingBox box = StructureUtils.getStructureBoundingBox(sbe);
             gate.chunks = GameTestChunks.chunksOf(box);
         }
-        int y = info.getStructureBlockPos().getY();
+        int y = sbPos.getY();
         int ready = 0;
         long[] first = null;
         for (long[] c : gate.chunks)
@@ -66,19 +76,16 @@ public final class TestStartGate {
         if (v == StartGateProgress.Verdict.HOLD)
             return true;
         gate.open = true;
-        int held = gate.progress.ticksHeld();
+        long ms = gate.progress.millisSince(now);
         if (v == StartGateProgress.Verdict.READY) {
-            if (held >= LOG_FROM_TICKS)
+            if (ms >= LOG_FROM_MS)
                 ReignOfNether.LOGGER.info("[ChunkWait] gametest-start-gate {}: {} structure chunks entity-ready after {} ticks ({} ms)",
-                    info.getTestName(), gate.chunks.size(), held, gate.progress.millisSince(now));
+                    info.getTestName(), gate.chunks.size(), gate.progress.ticksHeld(), ms);
         } else {
             ReignOfNether.LOGGER.warn("[ChunkWait] gametest-start-gate {}: starting anyway ({}) with {} of {} structure chunks"
-                    + " not ready for entities after {} ticks ({} ms); first {},{}: entities loaded {}, entity-ticking {},"
-                    + " FULL {}", info.getTestName(), v == StartGateProgress.Verdict.STALLED ? "no progress" : "wall-time cap",
-                gate.chunks.size() - ready, gate.chunks.size(), held, gate.progress.millisSince(now), first[0], first[1],
-                level.areEntitiesLoaded(ChunkPos.asLong((int) first[0], (int) first[1])),
-                level.isPositionEntityTicking(new BlockPos(((int) first[0] << 4) + 8, y, ((int) first[1] << 4) + 8)),
-                level.getChunkSource().getChunkNow((int) first[0], (int) first[1]) != null);
+                    + " not ready for entities after {} ticks ({} ms); first {}", info.getTestName(),
+                v == StartGateProgress.Verdict.STALLED ? "no progress" : "wall-time cap", gate.chunks.size() - ready,
+                gate.chunks.size(), gate.progress.ticksHeld(), ms, GameTestChunks.describeEntityReady(level, first, y));
         }
         return false;
     }

@@ -31,7 +31,7 @@ public abstract class GameTestInfoMixin {
 
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     private void reignofnether$holdStartUntilEntitiesReady(CallbackInfo ci) {
-        if (reignofnether$startGate != null && reignofnether$startGate.open)
+        if (reignofnether$startGate != null && reignofnether$startGate.isOpen())
             return;
         GameTestInfo self = (GameTestInfo) (Object) this;
         ServerLevel level = self.getLevel();
