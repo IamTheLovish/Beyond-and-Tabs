@@ -4,7 +4,8 @@ The pack is loaded by Oculus in the game, which we never run on lovish's PC; thi
 in seconds instead of in a ten-minute eyes run. Each program is expanded the way the loader expands it (``#include
 "/lib/x.glsl"`` from the pack's ``shaders/`` folder, nested), then compiled by Khronos's reference compiler, glslang,
 as the loader's legacy GLSL 1.20 profile. Programs that read a loader macro (MC_RENDER_STAGE_STARS) compile both with
-and without it.
+and without it, and every option a program reads (lib/settings.glsl) is compiled at the other ends of its range too, so
+an option turned off on the pack's screen never hides a compile error.
 
     python3 tools/shader_pack_check.py [--glslang PATH]
 
@@ -267,19 +268,87 @@ def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 
 
+# an option the player sets on the pack's screen: `#define NAME default // [a b c]` (lib/settings.glsl)
+OPTION = re.compile(r"^#define\s+(\w+)\s+(\S+)\s*//\s*\[([^\]]*)\]", re.M)
+
+
+def option_variants(source):
+    """[(label, source)] for each option the program reads past its own #define, set to the other ends of its range
+    (a toggle both on and off, a slider at its lowest and highest), the way the loader rewrites the #define line."""
+    out = []
+    for m in OPTION.finditer(source):
+        name, default, values = m.group(1), m.group(2), m.group(3).split()
+        if len(re.findall(r"\b%s\b" % name, source)) < 2:
+            continue                    # declared but not read by this program
+        for v in sorted({values[0], values[-1]} - {default}):
+            out.append(("%s=%s" % (name, v), source[:m.start(2)] + v + source[m.end(2):]))
+    return out
+
+
+# a program-scope declaration the loader binds or a stage passes on, as GLSL allows it: optional interpolation /
+# invariance qualifiers, the storage qualifier, an optional precision, the type, then one or more names - each maybe
+# an array, maybe with an initialiser (`uniform vec3 a, b;`, `flat varying highp float k[2];`, `uniform float s = 1.0;`)
+DECLARATION = re.compile(
+    r"^[ \t]*(?:(?:invariant|flat|smooth|noperspective|centroid)\s+)*(uniform|varying|attribute)\s+"
+    r"(?:(?:lowp|mediump|highp)\s+)?\w+\s+([^;{}()]*?(?:\([^;{}]*\)[^;{}()]*?)*);", re.M)
+
+
+def declared_names(declarators):
+    """The names in a declaration's list: `a, b[2], c = vec3(1.0, 0.0, 0.0)` -> [a, b, c]. Commas inside an
+    initialiser's brackets do not split it."""
+    names, depth, part = [], 0, ""
+    for ch in declarators + ",":
+        if ch in "([":
+            depth += 1
+        elif ch in ")]":
+            depth -= 1
+        if ch == "," and depth == 0:
+            m = re.match(r"\s*(\w+)", part)
+            if m:
+                names.append(m.group(1))
+            part = ""
+        else:
+            part += ch
+    return names
+
+
+def duplicate_declarations(source):
+    """Names a program declares twice (GLSL 120 rejects a second `uniform vec3 cameraPosition;`), after its #if /
+    #ifdef are applied (preprocess) and with its comments gone: [(name, count)]."""
+    counts = {}
+    for _, declarators in DECLARATION.findall(code_lines(preprocess(source))):
+        for name in declared_names(declarators):
+            counts[name] = counts.get(name, 0) + 1
+    return sorted((n, c) for n, c in counts.items() if c > 1)
+
+
+def code_lines(source):
+    """The source without its comments, its lines kept (so a statement still starts a line)."""
+    source = re.sub(r"/\*.*?\*/", lambda m: "\n" * m.group(0).count("\n"), source, flags=re.S)
+    return re.sub(r"//[^\n]*", "", source)
+
+
+def variants_of(base):
+    """[(label, source)]: the program as the pack ships it, each OPTION_VARIANTS combination it reads, and every other
+    option it reads at the ends of its range (option_variants) - each option-screen state the loader can build."""
+    sources = [("", base)]
+    for opts in OPTION_VARIANTS:
+        if all(reads_option(base, o) for o in opts):
+            sources.append((", ".join("%s=%s" % kv for kv in opts.items()), with_options(base, opts)))
+    labels = {label for label, _ in sources}
+    sources += [(label, src) for label, src in option_variants(base) if label not in labels]
+    return sources
+
+
 def check(glslang, options=None):
     """All problems found, as printable lines. options: option values every program is compiled at (default: the
-    pack's own), on top of which OPTION_VARIANTS are tried."""
+    pack's own), on top of which every option-screen variant is tried (variants_of)."""
     problems = header_problems()
     for name in programs():
         base = expand(os.path.join(SHADERS, name))
         base = with_options(base, {k: v for k, v in (options or {}).items() if reads_option(base, k) or
                                    re.search(r"#define\s+%s\b" % re.escape(k), base)})
-        sources = [("", base)]
-        for opts in OPTION_VARIANTS:
-            if all(reads_option(base, o) for o in opts):
-                sources.append((", ".join("%s=%s" % kv for kv in opts.items()), with_options(base, opts)))
-        for opt_label, source in sources:
+        for opt_label, source in variants_of(base):
             variants = [({}, source)]
             used = {m: v for m, v in LOADER_MACROS.items() if m in source}
             if used:

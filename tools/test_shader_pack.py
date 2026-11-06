@@ -111,13 +111,59 @@ class ShaderPack(unittest.TestCase):
         self.assertTrue(0.80 <= under <= 0.92, "ground under a tuft at %.3f of the open lawn" % under)
         # the shadow pass draws the plants with that opacity, and the lookup lets the rest of the sun through (the code
         # itself, comments stripped: a comment quoting a line does not run)
-        self.assertIn("casterOpacity = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? PLANT_SHADOW : 1.0;", code("shadow.vsh"))
+        # both halves of a two-block plant (ID_FOLIAGE_UPPER, #437) cast the faint shadow, never a full one, and
+        # it fades as the sun sinks
+        vsh = code("shadow.vsh")
+        self.assertIn("float sunUp = normalize(mat3(shadowModelViewInverse) * vec3(0.0, 0.0, 1.0)).y;", vsh)
+        self.assertIn("float plantShadow = PLANT_SHADOW * smoothstep(PLANT_SHADOW_SUN_LOW, PLANT_SHADOW_SUN_HIGH, sunUp);",
+                      vsh)
+        self.assertIn("bool plant = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 || abs(mc_Entity.x - ID_FOLIAGE_UPPER) < 0.5;",
+                      vsh)
+        self.assertIn("casterOpacity = plant ? plantShadow : 1.0;", vsh)
         self.assertIn("gl_FragData[0] = vec4(casterOpacity, casterOpacity, casterOpacity, 1.0);", code("shadow.fsh"))
         lookup = code("lib", "shadow.glsl")
-        self.assertIn("return 1.0 - texture2D(shadowcolor0, uv).r;", lookup)
-        self.assertIn("? 1.0 : casterThrough(uv);", lookup)
-        self.assertIn("through += casterThrough(", lookup)
+        self.assertIn("float o = texture2D(shadowcolor0, uv).r; "
+                      "return plantReceiver > 0.5 && o < SOLID_CASTER ? 1.0 : 1.0 - o;", lookup)
+        self.assertIn("? 1.0 : casterThrough(uv, plantReceiver);", lookup)
+        self.assertIn("through += casterThrough(s.xy + o, plantReceiver);", lookup)
         self.assertIn("return through / blockers;", lookup)
+        # solid casters write 1 (shadow.fsh), and a plant's opacity never reaches the solid mark
+        self.assertLess(k, spc.float_const(lookup, "SOLID_CASTER"))
+        self.assertLessEqual(spc.float_const(lookup, "SOLID_CASTER"), 1.0)
+
+    def test_plant_shadows_fade_with_a_low_sun_and_skip_plants(self):
+        # Fable critic (wind round 1, Nov 5): at golden hour each tuft dragged a 1.5-2 block streak that striped the
+        # lawn darker than the units on it, and at noon tufts read ~0.5 of the lawn (eyes 42063595099) where the
+        # lit-side model gives 0.81-1.05 - each tuft took its own planes' faint shadow. The plants' shadow is
+        # lovish's PLANT_SHADOW from 40 degrees of sun up (noon ~60: his band above is unchanged), none from 20 down,
+        # and a plant takes no plant's shadow (only a solid caster's)
+        settings = read("lib", "settings.glsl")
+        low, high = spc.float_const(settings, "PLANT_SHADOW_SUN_LOW"), spc.float_const(settings, "PLANT_SHADOW_SUN_HIGH")
+
+        def fade(deg):                   # shadow.vsh's smoothstep on the sine of the sun's height
+            return spc._smoothstep(low, high, math.sin(math.radians(deg)))
+
+        self.assertEqual(fade(60.0), 1.0)                 # noon: all of PLANT_SHADOW
+        self.assertAlmostEqual(fade(40.0), 1.0, delta=1e-3)   # a 1-block tuft's shadow <= 1.2 blocks long
+        self.assertAlmostEqual(fade(20.0), 0.0, delta=1e-3)   # golden hour: no streak (it would be 2.7 blocks)
+        self.assertTrue(all(fade(a) <= fade(a + 1.0) for a in range(0, 90)))   # never darker as the sun sinks
+        # a faded-out plant writes no depth (Eris.16, #544 r1): the map keeps the nearest caster, so a tuft written at
+        # opacity 0 in front of a solid caster (a slope, a bank, a low wall) would read fully lit where main reads 0.7.
+        # shadow.fsh discards a caster under CASTER_NONE - which a plant's opacity is at 20 degrees and below, and
+        # never at 40 and up (and a solid caster, 1, never is)
+        sfsh = spc.code_of(read("shadow.fsh"))
+        self.assertIn("if (texture2D(texture, texcoord).a < 0.1 || casterOpacity < CASTER_NONE) discard;", sfsh)
+        self.assertLess(sfsh.index("casterOpacity < CASTER_NONE"), sfsh.index("gl_FragData[0] ="))
+        none = spc.float_const(sfsh, "CASTER_NONE")
+        plant = spc.float_const(settings, "PLANT_SHADOW", 0.0)
+        self.assertLess(plant * fade(20.0), none)
+        self.assertLess(plant * fade(10.0), none)
+        self.assertGreater(plant * fade(40.0), none)
+        self.assertTrue(0.0 < none <= 1.0 / 255)          # under one 8-bit step: nothing visible is dropped
+        # lit.fsh hands the lookup whether the pixel is a plant; the water's bed never is
+        fsh = spc.code_of(read("program", "lit.fsh"))
+        self.assertIn("shadow = sunShadow(playerPos, worldNormal, fit, foliage);", fsh)
+        self.assertIn("float bedShadow = sunShadow(bedPlayer, vec3(0.0, 1.0, 0.0), fit, 0.0);", fsh)
 
     def test_plants_have_a_lit_and_a_shaded_side(self):
         # the same answer: a plant's planes take a normal PLANT_SIDE of the way from up toward the face the camera sees
@@ -183,6 +229,90 @@ class ShaderPack(unittest.TestCase):
             self.assertIn("const float EXPOSURE = %s;" % exposure, final, materials)
             self.assertNotIn("BOUNCE", terrain, materials)
             self.assertEqual("uniform sampler2D normals;" in terrain, materials == 1)
+
+    def test_wind_moves_the_shadow_with_the_leaves(self):
+        # lib/wind.glsl: the terrain pass and the shadow pass call the same function on the same world position, so
+        # a leaf's shadow never detaches from the leaf (Oct 30)
+        for name in ("gbuffers_terrain.vsh", "shadow.vsh"):
+            src = spc.expand(os.path.join(spc.SHADERS, name))
+            self.assertIn("windOffset(playerPos + cameraPosition", src, name)
+        props = read("block.properties")
+        self.assertIn("block.10004=oak_leaves", props)
+        self.assertIn("#define ID_LEAVES 10004.0", read("lib", "settings.glsl"))
+
+    def test_wind_rolls_in_waves_not_jitter(self):
+        # Fable critic, wind round 1 (Nov 5): at ~30 px a block the sway read as every tuft jittering on its own, not as
+        # gusts rolling across the field (its bounds: a tuft's tip <= ~0.08 block, a leaf <= 0.02, waves >= 4 s and
+        # >= 12 blocks). The GLSL's own lines are pinned and its constants read
+        wind = read("lib", "wind.glsl")
+        code = spc.code_of(wind)
+        # the gust is one field over the world: a position's distance along the wind, two travelling sines over it,
+        # nothing per plant (Eris.14, #437 r3: a hash in d, a scaled wavelength or wp.xz * 9.0 in windGustAt passed)
+        self.assertIn("float windGust(vec2 xz, float t, vec2 dir) { float d = dot(xz, dir); "
+                      "float swell = sin(WIND_TWO_PI * (d - t * WIND_V1) / WIND_L1); "
+                      "float ripple = sin(WIND_TWO_PI * (d - t * WIND_V2) / WIND_L2 + 1.7); "
+                      "return 0.3 + 0.7 * ((1.0 - WIND_RIPPLE) * swell + WIND_RIPPLE * ripple); }", code)
+        self.assertIn("float windGustAt(vec3 wp) { float heading = windHeading(frameTimeCounter); "
+                      "return windGust(wp.xz, frameTimeCounter, vec2(cos(heading), sin(heading))); }", code)
+        self.assertIn("float g = windGust(wp.xz, t, dir);", code)
+        self.assertIn("float h = PLANT_SWAY * plant * (g + PLANT_FLUTTER * flutter);", code)
+        self.assertIn("off.xz += dir * h + side * (PLANT_SWAY * plant * 0.08 * across);", code)
+        self.assertIn("off.y -= 0.15 * abs(h);", code)
+        self.assertIn("float leafFlutter = sin(WIND_TWO_PI * WIND_FLUTTER_HZ * t + phase * LEAF_PHASE);", code)
+        self.assertIn("float phase = dot(wp, vec3(1.9, 1.3, 2.3));", code)
+        c = {n: spc.float_const(wind, n) for n in ("PLANT_SWAY", "PLANT_FLUTTER", "LEAF_SWAY", "LEAF_PHASE",
+                                                   "WIND_RIPPLE", "WIND_L1", "WIND_V1", "WIND_L2", "GUST_SHEEN")}
+        # a one-block tuft's whole tip offset at a full gust (g = 1) with the flutter at its peak: along the wind,
+        # sideways (0.08) and the stem's dip (0.15 of the lean)
+        lean = c["PLANT_SWAY"] * (1.0 + c["PLANT_FLUTTER"])
+        tip = math.sqrt(lean ** 2 + (c["PLANT_SWAY"] * 0.08) ** 2 + (0.15 * lean) ** 2)
+        self.assertLessEqual(tip, 0.085, "a tuft's tip moves %.4f block" % tip)
+        # a leaf at a full gust: along, across and up (1, 0.5, 0.4) of its shimmer
+        self.assertLessEqual(c["LEAF_SWAY"] * math.sqrt(1.0 + 0.25 + 0.16), 0.022)
+        # the gust is mostly the slow swell: >= 4 s a wave, >= 12 blocks long; the fast ripple (1.7 s) a small share
+        self.assertGreaterEqual(c["WIND_L1"] / c["WIND_V1"], 4.0)
+        self.assertGreaterEqual(min(c["WIND_L1"], c["WIND_L2"]), 12.0)
+        self.assertLessEqual(c["WIND_RIPPLE"], 0.25)
+        self.assertLessEqual(c["PLANT_FLUTTER"], 0.06)
+        # neighbouring leaf blocks flutter nearly in step: the phase moves <= 0.7 rad a block (|(1.9, 1.3, 2.3)| x scale)
+        self.assertLessEqual(c["LEAF_PHASE"] * math.sqrt(1.9 ** 2 + 1.3 ** 2 + 2.3 ** 2), 0.7)
+        # the gust's sheen: plants only, calm (0.3) = none, as strong as the sway (WIND_STRENGTH), at most 5% of a
+        # plant's colour at the default strength (gust -0.4 .. 1)
+        fsh = spc.code_of(read("program", "lit.fsh"))
+        vsh = spc.code_of(read("program", "lit.vsh"))
+        self.assertIn("albedo *= 1.0 + GUST_SHEEN * WIND_STRENGTH * (gust - 0.3) * foliage;", fsh)
+        self.assertIn("if (share.x > 0.0) gust = windGustAt(playerPos + cameraPosition);", vsh)
+        self.assertIn("gl_Position = ftransform(); viewPos = (gl_ModelViewMatrix * gl_Vertex).xyz; gust = 0.3;", vsh)
+        strength = float(re.search(r"(?m)^#define WIND_STRENGTH (\S+) //", read("lib", "settings.glsl")).group(1))
+        self.assertLessEqual(c["GUST_SHEEN"] * strength * 0.7, 0.05)
+        self.assertGreater(c["GUST_SHEEN"], 0.0)
+
+    def test_block_ids_are_unique_and_named(self):
+        # two features claiming one id would light leaves as water (or water as leaves) with nothing failing: #437's
+        # leaves and #438's water both took 10002 until Nov 5. Each block.N line once, each block under one id, and
+        # every id the programs name (#define ID_*) has its line and the other way round
+        props = read("block.properties").replace("\\\r\n", " ").replace("\\\n", " ")
+        ids = {}
+        owner = {}
+        for line in props.splitlines():
+            m = re.match(r"block\.(\d+)=(.*)", line)
+            if not m:
+                continue
+            self.assertNotIn(m.group(1), ids, "block.%s is declared twice" % m.group(1))
+            ids[m.group(1)] = m.group(2).split()
+            for block in ids[m.group(1)]:
+                self.assertNotIn(block, owner, "%s is under block.%s and block.%s" % (block, owner.get(block), m.group(1)))
+                owner[block] = m.group(1)
+        named = re.findall(r"#define (ID_\w+) (\d+)\.0", read("lib", "settings.glsl"))
+        values = [v for _, v in named]
+        self.assertEqual(len(values), len(set(values)), "two ID_ defines share an id: %s" % named)
+        self.assertEqual(set(values), set(ids), "ids without a define or without a block.N line: %s vs %s"
+                         % (sorted(values), sorted(ids)))
+
+    def test_options_compile_both_ways(self):
+        # every option a program reads is compiled at both ends of its range (a toggle on and off)
+        src = spc.expand(os.path.join(spc.SHADERS, "gbuffers_terrain.vsh"))
+        self.assertIn("WIND=0", [label for label, _ in spc.option_variants(src)])
 
     def test_water_has_its_own_surface_with_a_fallback(self):
         """Changed in slice 4 (claude/shader-water): this guard used to pin water to slice 1's plain surface ("water
@@ -278,13 +408,33 @@ class ShaderPack(unittest.TestCase):
         self.assertGreater(base, 0.5)
         self.assertLessEqual(top / ((1.0 - base) * 255.0), 0.07)    # one step <= 0.07 blocks
 
+    def test_rts_view_reads_terrain_textures_sharper(self):
+        # lovish, Oct 30: "better resolution for rts view". Under the orthographic RTS camera a 128 px block texture is
+        # read from the atlas's mip 2 and reads soft; terrain reads TEXTURE_SHARPNESS mip levels finer (a negative
+        # bias), first person and everything but terrain keep the hardware's choice, and the relief and material maps
+        # read at the same bias as the albedo (a sharp albedo over blurred relief looks painted on). Eris.14 (#437 r2):
+        # without this, `lodBias = 0.0` or a flipped sign passed every test
+        code = spc.code_of(read("program", "lit.fsh"))
+        self.assertIn("#ifdef LIT_TERRAIN float lodBias = orthoView() ? -TEXTURE_SHARPNESS : 0.0; #else "
+                      "float lodBias = 0.0; #endif", code)
+        self.assertIn("readMaterial(texture2D(normals, texcoord, lodBias), texture2D(specular, texcoord, lodBias),", code)
+        m = re.search(r"(?m)^#define TEXTURE_SHARPNESS (\S+) // \[([^\]]*)\]", read("lib", "settings.glsl"))
+        self.assertIsNotNone(m)
+        default, values = float(m.group(1)), [float(v) for v in m.group(2).split()]
+        self.assertTrue(0.0 < default <= 1.0, default)          # on by default, never past one whole mip level
+        self.assertEqual((min(values), max(values)), (0.0, 1.0))  # the screen can turn it off
+
     def test_water_body_has_no_seams_and_leans_to_the_palette(self):
         # Fable critic, rounds 1 and 2: a grid of seams across the pond (the water texture's per-block pattern) and a
         # grey body with a black far bank. The water reads its texture's average and the ripples draw the detail; the
         # body is lifted toward the palette's #3A6A8C, blue most (a measured step, lib/water.glsl)
         lit = read("program", "lit.fsh")
         water = read("lib", "water.glsl")
-        self.assertIn("vec4 tex = texture2D(texture, texcoord, waterBody > 0.5 ? WATER_TEXTURE_BIAS : 0.0);", lit)
+        # one texture read with one bias: the water body's WATER_TEXTURE_BIAS replaces the RTS sharpening (#437)
+        code = spc.code_of(lit)
+        self.assertIn("#ifdef WATER_SURFACE if (waterBody > 0.5) lodBias = WATER_TEXTURE_BIAS; #endif "
+                      "vec4 tex = texture2D(texture, texcoord, lodBias);", code)
+        self.assertEqual(code.count("texture2D(texture, texcoord"), 1)
         self.assertGreaterEqual(spc.float_const(water, "WATER_TEXTURE_BIAS"), 4.0)   # mip 4+: 128 px down to 8 or less
         self.assertIn("c *= WATER_BODY_GAIN * mix(SHALLOW_TINT,", lit)
         gain = spc.vec3_const(water, "WATER_BODY_GAIN")
@@ -328,6 +478,35 @@ class ShaderPack(unittest.TestCase):
         settings = read("lib", "settings.glsl")
         self.assertRegex(settings, r"(?m)^#define SSR 1 // \[0 1\]")
         self.assertRegex(settings, r"(?m)^#define CAUSTICS 1 // \[0 1\]")
+
+    def test_no_program_declares_a_name_twice(self):
+        # GLSL 120 rejects a second `uniform vec3 cameraPosition;`: #438's water declared cameraPosition and
+        # frameTimeCounter in lit.fsh and #437's wind.glsl declared them again, so with the default options
+        # gbuffers_water.fsh would not compile (Eris.14, #437 round 1). lib/world.glsl declares them once. Every program
+        # at every option-screen variant, after its #if / #ifdef (glslang runs only where it is installed)
+        for name in spc.programs():
+            for label, src in spc.variants_of(spc.expand(os.path.join(spc.SHADERS, name))):
+                self.assertEqual(spc.duplicate_declarations(src), [], "%s [%s]" % (name, label or "defaults"))
+        # only lib/world.glsl declares the two world uniforms
+        for dirpath, _, files in os.walk(spc.SHADERS):
+            for n in files:
+                if n.endswith((".vsh", ".fsh", ".glsl")) and n != "world.glsl":
+                    with open(os.path.join(dirpath, n), encoding="utf-8") as f:
+                        src = spc.code_lines(f.read())
+                    names = [x for _, d in spc.DECLARATION.findall(src) for x in spc.declared_names(d)]
+                    self.assertNotIn("cameraPosition", names, n)
+                    self.assertNotIn("frameTimeCounter", names, n)
+        # the check reads every way GLSL can write a declaration (Eris.14, #437 r2): a list of names, an initialiser,
+        # an array, precision and interpolation qualifiers; comments and function parameters are not declarations
+        for src, want in (("uniform vec3 a, b;\nuniform float b;", [("b", 2)]),
+                          ("flat varying highp float k[2];\nvarying float k;", [("k", 2)]),
+                          ("uniform float s = 1.0;\nuniform float s;", [("s", 2)]),
+                          ("uniform vec3 c = vec3(1.0, 0.0, 0.0), d;\nuniform vec3 d;", [("d", 2)]),
+                          ("invariant varying vec4 p;\ncentroid varying vec4 p;", [("p", 2)]),
+                          ("uniform mediump sampler2D t; // uniform sampler2D t;", []),
+                          ("/* uniform float x;\n */\nuniform float x;", []),
+                          ("void f(in float a) { float x = 1.0; }\nuniform float a;", [])):
+            self.assertEqual(spc.duplicate_declarations("#version 120\n" + src), want, src)
 
     def test_noon_light_leaves_open_ground_its_colour(self):
         # lib/light.glsl aims open ground at noon to come out at its albedo. Itachi 1 measured the lawn under the pack

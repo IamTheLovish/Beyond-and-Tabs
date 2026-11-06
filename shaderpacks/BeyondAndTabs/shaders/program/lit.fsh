@@ -13,6 +13,14 @@
 #include "/lib/shadow.glsl"
 #include "/lib/light.glsl"
 #include "/lib/pbrswitch.glsl"
+// cameraPosition and frameTimeCounter, declared once for the water, the wind and the clouds
+#include "/lib/world.glsl"
+#if WIND == 1 || CLOUD_SHADOWS == 1
+#include "/lib/wind.glsl"
+#endif
+#if CLOUD_SHADOWS == 1
+#include "/lib/clouds.glsl"
+#endif
 #ifdef LIT_PBR
 #include "/lib/pbr.glsl"
 #endif
@@ -35,8 +43,6 @@ uniform sampler2D depthtex1;           // the depth of the opaque world only: th
 uniform float viewWidth;
 uniform float viewHeight;
 uniform mat4 gbufferModelView;
-uniform vec3 cameraPosition;
-uniform float frameTimeCounter;
 #endif
 #ifdef LIT_ENTITY
 uniform vec4 entityColor;              // the hurt / creeper flash
@@ -49,6 +55,7 @@ varying vec3 viewPos;
 varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
+varying float gust;                    // lit.vsh: the wind's gust on a plant (0.3 = calm)
 varying float asDrawn;
 varying float waterBody;
 #ifdef LIT_PBR
@@ -71,14 +78,29 @@ const float PLANT_SIDE = 0.35;
 /* DRAWBUFFERS:01 */
 #endif
 void main() {
+    // sharper texture detail under the RTS camera ("better resolution", lovish Oct 30): it is orthographic at ~30-36
+    // screen pixels a block, so a 128 px block texture is drawn from the atlas's mip 2 (~4 texels to a pixel) and
+    // reads soft. A negative bias moves the read toward mip 1 - the atlas blends between levels, so a half step is
+    // half way - for albedo, relief and material alike (a sharper albedo over blurred relief would look painted on).
+    // First person and everything but terrain keep the hardware's choice. The README has the shimmer trade-off
+#ifdef LIT_TERRAIN
+    float lodBias = orthoView() ? -TEXTURE_SHARPNESS : 0.0;
+#else
+    float lodBias = 0.0;
+#endif
 #ifdef WATER_SURFACE
     // water takes its texture's average colour (WATER_TEXTURE_BIAS, lib/water.glsl) and the world-space ripples draw
     // the detail: the texture's own per-block pattern tiled a grid of seams across a pond (Fable critic, rounds 1, 2)
-    vec4 tex = texture2D(texture, texcoord, waterBody > 0.5 ? WATER_TEXTURE_BIAS : 0.0);
-#else
-    vec4 tex = texture2D(texture, texcoord);
+    if (waterBody > 0.5)
+        lodBias = WATER_TEXTURE_BIAS;
 #endif
+    vec4 tex = texture2D(texture, texcoord, lodBias);   // one read, one bias
     vec3 albedo = tex.rgb * glcolor.rgb;
+#if WIND == 1
+    // a gust's sheen on the plants it bends (lib/wind.glsl GUST_SHEEN, as strong as the sway: WIND_STRENGTH): from
+    // above, the waves roll across the field
+    albedo *= 1.0 + GUST_SHEEN * WIND_STRENGTH * (gust - 0.3) * foliage;
+#endif
 #if defined LIT_TERRAIN || defined LIT_WATER
     float ao = glcolor.a;              // separateAo: the vertex AO, not an alpha
     float alpha = tex.a;
@@ -116,8 +138,8 @@ void main() {
     vec2 levels = lightLevels(lmcoord);
 #ifdef LIT_PBR
     // the plants keep their up normal: their maps would tilt it back toward the planes' sideways look
-    Material mat = readMaterial(texture2D(normals, texcoord), texture2D(specular, texcoord), lin, geomN, vT, vB,
-                                !plane);
+    Material mat = readMaterial(texture2D(normals, texcoord, lodBias), texture2D(specular, texcoord, lodBias), lin,
+                                geomN, vT, vB, !plane);
     vec3 n = mat.normal;
     float texAo = mat.ao;
 #else
@@ -143,7 +165,11 @@ void main() {
     if (facing > 0.0) {
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
         vec3 worldNormal = mat3(gbufferModelViewInverse) * geomN;
-        shadow = sunShadow(playerPos, worldNormal, fit);
+        shadow = sunShadow(playerPos, worldNormal, fit, foliage);   // a plant takes no plant's shadow
+#if CLOUD_SHADOWS == 1
+        // a passing cloud takes some of the sun (and its glints, which read the same term), never the sky's fill
+        shadow *= cloudShade(playerPos + cameraPosition, normalize(mat3(gbufferModelViewInverse) * l));
+#endif
     }
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
@@ -235,7 +261,7 @@ void main() {
         if (bed && lw.y > 0.05 && below > 0.02) {
             vec2 atSurface = bedPlayer.xz + cameraPosition.xz + lw.xz * (below / lw.y);
             // the bed's own sun shadow (a bank's shadow puts the caustics out on the bed under it too)
-            float bedShadow = sunShadow(bedPlayer, vec3(0.0, 1.0, 0.0), fit);
+            float bedShadow = sunShadow(bedPlayer, vec3(0.0, 1.0, 0.0), fit, 0.0);
             float bedSun = dot(sunArriving(bedShadow, levels, sunColour), LUMA) * sunFacing(normalize(upPosition), l);
             float bedLight = bedSun + dot(skyColour, LUMA) + 1e-3;
             // a share of the bed's light, seen through what is left of the water's opacity; none right at the shore

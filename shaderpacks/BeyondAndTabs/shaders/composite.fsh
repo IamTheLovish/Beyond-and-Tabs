@@ -17,6 +17,8 @@
 #include "/lib/settings.glsl"
 #include "/lib/color.glsl"
 #include "/lib/ao.glsl"
+// cameraPosition and frameTimeCounter (declared once, there)
+#include "/lib/world.glsl"
 
 /*
 const int colortex0Format = RGBA16F;
@@ -45,8 +47,6 @@ uniform float viewHeight;
 uniform int isEyeInWater;
 uniform mat4 gbufferModelView;
 uniform mat4 gbufferModelViewInverse;
-uniform vec3 cameraPosition;
-uniform float frameTimeCounter;
 
 varying vec2 texcoord;
 

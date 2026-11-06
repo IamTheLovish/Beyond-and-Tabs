@@ -1,3 +1,11 @@
+profile=Profile
+profile.comment=Press K to turn the shader pack off or on (off is the plain game look), O to open this screen. Pick LOW on a weaker PC.
+profile.LOW=Low
+profile.LOW.comment=Fastest: smaller, nearer shadows; no ambient occlusion, bloom, caustics, water reflections, material maps, wind, cloud shadows or texture sharpening.
+profile.MEDIUM=Medium
+profile.MEDIUM.comment=The default: every effect on, shadows at 2048 out to 160 blocks.
+profile.HIGH=High
+profile.HIGH.comment=Sharpest: shadows at 4096 out to 224 blocks. Needs a strong GPU.
 option.shadowMapResolution=Shadow quality
 option.shadowMapResolution.comment=Texels of the sun's shadow map. The RTS view fits the map to what is on screen, so it is sharpest zoomed in.
 option.shadowDistance=Shadow distance
@@ -46,3 +54,15 @@ option.SSR=Water reflections
 option.SSR.comment=Mirrors banks, trees and buildings in water seen at a low angle (first person). From the RTS camera water is mostly clear, and this costs almost nothing.
 value.SSR.0=Sky only
 value.SSR.1=On
+option.WIND=Wind
+option.WIND.comment=Grass, flowers and crops sway from the foot up and leaves shimmer, with gusts rolling across the field along the wind the tree limbs move in.
+value.WIND.0=Off
+value.WIND.1=On
+option.WIND_STRENGTH=Wind strength
+option.WIND_STRENGTH.comment=How far plants and leaves move (1 = a grass tuft's top about a twelfth of a block at a full gust).
+option.CLOUD_SHADOWS=Cloud shadows
+option.CLOUD_SHADOWS.comment=Soft cloud shadows drift over the field with the wind. They dim the sun by at most 30%, so units stay easy to read.
+value.CLOUD_SHADOWS.0=Off
+value.CLOUD_SHADOWS.1=On
+option.TEXTURE_SHARPNESS=Texture sharpness (RTS)
+option.TEXTURE_SHARPNESS.comment=Finer block texture detail in the RTS view. Higher is sharper but shimmers more as the camera pans (0 = default filtering).
