@@ -221,6 +221,7 @@ def keep_body(r):
 
 ROOF = "dark_oak_stairs"                 # the roofs: the kit's dark trim (BiomePalette keeps DARK_OAK), pitched
 FINIAL = (7, 1)                          # the keep's finial column (the 4 x 4 keep has no centre cell)
+SPIRE = KW + 4                           # the spire's peak (round 3: "three flat steps barely above the wings")
 
 
 def crown(r):
@@ -228,7 +229,9 @@ def crown(r):
     pin", lovish's bar: "slim towers with crown bands and dark steep roofs"): the wall's top course (y 8) a GOLD CROWN
     BAND all the way round, over it a steep dark oak roof - eaves at y 9 climbing in from all four faces, the middle
     2 x 2 a block higher and a peak of stairs at y 11 - and a gold finial with the keep's lantern on the peak (the
-    keep's light at dusk). Round 3's crenellated white tier, pillar drum and 2 x 2 gold base are gone."""
+    keep's light at dusk). Round 3's crenellated white tier, pillar drum and 2 x 2 gold base are gone. Round 3 of the
+    Nov 6 loop (blind r2: "three flat steps barely above the wings, no spire"): the middle 2 x 2 rises three cells
+    over the eaves into a spire, its peak at y 12."""
     for x in range(KX0, KX1 + 1):
         for z in range(KZ0, KZ1 + 1):
             if x in (KX0, KX1) or z in (KZ0, KZ1):
@@ -236,12 +239,12 @@ def crown(r):
                 r.st(x, KW + 1, z, "east" if x == KX0 else "west" if x == KX1 else "south" if z == KZ0 else "north",
                      name=ROOF)                              # the eaves, climbing in
             else:
-                r.set(x, KW + 1, z, DARK)
-                r.set(x, KW + 2, z, DARK)
-                r.st(x, KW + 3, z, "east" if x == KX0 + 1 else "west", name=ROOF)   # the peak, a north-south ridge
+                for y in range(KW + 1, SPIRE):               # the spire: the middle 2 x 2 rises three over the eaves
+                    r.set(x, y, z, DARK)
+                r.st(x, SPIRE, z, "east" if x == KX0 + 1 else "west", name=ROOF)   # its peak, a north-south ridge
     fx, fz = FINIAL
-    r.set(fx, KW + 4, fz, "gold_block")                      # the finial
-    r.lantern(fx, KW + 5, fz)
+    r.set(fx, SPIRE + 1, fz, "gold_block")                   # the finial
+    r.lantern(fx, SPIRE + 2, fz)
 
 
 def keep_l1(r):
@@ -348,7 +351,7 @@ def draw_l2(r):
     ring(r, 8, 9, 5, 6, 7, name=ROOF)       # the pavilion's dome in the roofs' dark oak
     r.set(9, 8, 6, "smooth_quartz")         # was gold: a stud off the keep (Fable critic B); gold stays the keep's
     r.lantern(9, 9, 6)
-    angel(r, FINIAL[0], KW + 5, FINIAL[1])   # on the gold finial, in the lantern's cell
+    angel(r, FINIAL[0], SPIRE + 2, FINIAL[1])   # on the gold finial, in the lantern's cell
 
 
 # ======================================================================================================== L3
@@ -357,24 +360,25 @@ TX0, TZ1 = 4, 5                          # the L3 crown tier: x 4..9, z 0..5 (th
 
 def crown_tier(r):
     """The keep's L3 crown tier (lovish, Nov 4: "Barracks L3: wider keep", 6 x 6 over the court, footprint unchanged):
-    corbels at y 9 under the overhang (smooth quartz stairs turned down, facing out on the tier's west and south edges),
-    a smooth quartz deck at y 10 over all 36 cells, and a battlement ring at y 11 on its edge (merlons: a slab on every
-    other cell) round the keep's gold crown and the angel - the keep is the big shape at L3, the wings small."""
+    corbels at y 9 under the overhang (smooth quartz stairs turned down, facing out on the tier's west and south edges)
+    and, round 3 of the Nov 6 loop, a dark oak hip skirt at y 10 over all 36 cells - eaves climbing in on its edge,
+    planks inside - that the keep's spire, the finial and the angel rise out of (blind r2: the white deck and
+    battlement ring "removes the dark roofs entirely - an all-white crenellated box", L1 -> L3 3 / 10)."""
     y = KW + 1
     for x in range(TX0, KX1 + 1):
         for z in range(KZ0, TZ1 + 1):
-            if not (KX0 <= x <= KX1 and z <= KZ1):          # the overhang (the keep's own top stays under the deck)
+            if not (KX0 <= x <= KX1 and z <= KZ1):          # the overhang (the keep's own top stays under the skirt)
                 if x == TX0:
                     r.st(x, y, z, "west", "top", name="smooth_quartz_stairs")
                 elif z == TZ1:
                     r.st(x, y, z, "south", "top", name="smooth_quartz_stairs")
                 else:
                     r.set(x, y, z, "smooth_quartz")
-            r.set(x, y + 1, z, "smooth_quartz")
             if x in (TX0, KX1) or z in (KZ0, TZ1):
-                r.set(x, y + 2, z, "smooth_quartz")
-                if (x + z) % 2 == 1:
-                    r.slab(x, y + 3, z)
+                r.st(x, y + 1, z, "east" if x == TX0 else "west" if x == KX1 else "south" if z == KZ0 else "north",
+                     name=ROOF)
+            else:
+                r.set(x, y + 1, z, DARK)
 
 
 def draw_l3(r):
@@ -391,24 +395,19 @@ def draw_l3(r):
                 r.pillar(x, y, 1)
             else:
                 r.set(x, y, 1, DARK)                # a slit between the pillars
-        r.set(x, 10, 0, "smooth_quartz")
-        if x % 2 == 0:
-            r.set(x, 10, 1, "smooth_quartz")        # a merlon
-            r.slab(x, 11, 1)
-        else:
-            r.slab(x, 10, 1)
+        lean_to(r, (x, 0), (x, 1), 10, "north")     # round 3: the hall keeps the wings' dark roof (was white merlons)
     for x in (TX0, TX0 + 1):                        # the wing's last bay runs into the tier's corbels
         r.set(x, 8, 0, "quartz_bricks")
         r.set(x, 8, 1, DARK if x % 2 else "quartz_bricks")
     crown_tier(r)
-    angel(r, FINIAL[0], KW + 5, FINIAL[1], gold=True)
-    r.set(FINIAL[0], KW + 8, FINIAL[1], "gold_block")
-    r.set(FINIAL[0], KW + 9, FINIAL[1], "end_rod", facing="up")
+    angel(r, FINIAL[0], SPIRE + 2, FINIAL[1], gold=True)
+    r.set(FINIAL[0], SPIRE + 5, FINIAL[1], "gold_block")
+    r.set(FINIAL[0], SPIRE + 6, FINIAL[1], "end_rod", facing="up")
 
 
-L1_SY = KW + 6                # the lantern on the roof's finial is the top (y 13)
-L2_SY = KW + 9                # the angel's lantern (y 16)
-L3_SY = KW + 10               # the needle (y 17)
+L1_SY = SPIRE + 3             # the lantern on the spire's finial is the top (y 14)
+L2_SY = SPIRE + 6             # the angel's lantern (y 17)
+L3_SY = SPIRE + 7             # the needle (y 18)
 
 
 def build(draw, sy, tier):

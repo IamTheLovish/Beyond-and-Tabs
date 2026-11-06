@@ -279,7 +279,7 @@ class BarracksTest(unittest.TestCase):
         wing = sorted(c for c in [(x, z) for x in range(0, 4) for z in (0, 1)]
                       if not any(d in s.get((c[0], t[c], c[1]), "") for d in G.DARK))
         self.assertFalse(wing, "L3 north wing tops not dark at %s" % wing)
-        s1, t1 = self.solid[0], tops(self.solid[0])
+        t1 = tops(self.solid[0])
         roof = {c: t1[c] for c in [(x, z) for x in range(L.KX0, L.KX1 + 1) for z in range(L.KZ0, L.KZ1 + 1)]
                 if c != L.FINIAL}
         self.assertGreaterEqual(max(roof.values()) - min(roof.values()), 3, "L1 keep roof eaves -> peak %s" % roof)
