@@ -126,7 +126,7 @@ TARGETS = {
     "gravel":           dict(luma=0.505, std=0.160, sat=0.07, tilt=15.0, smooth=24, pore=30, soften=0.8, shoulder=0.62),   # r52: distinct stones; r53: 0.46 -> 0.43; r54: 0.49 - the TOP of the greys ladder; r57: 0.51 -> 0.50, tilt 18 -> 15, shoulder 0.62 (the whitest stones): mean <= 0.62 on screen
     # r35 (critic: the planks too dark and too close in value - oak ~0.55, jungle ~0.48, dark oak ~0.35): oak lifted
     "oak_planks":       dict(luma=0.55, std=0.055, sat=0.40, tilt=8.5, smooth=45, pore=24, soften=0.4, lf=0.3),
-    "oak_log":          dict(luma=0.33, std=0.240, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=2.0, lmean=0.39, shoulder=0.56),   # r58: std 0.19 -> 0.24 at the LINEAR mean of r57 (fit_albedo lmean)   # r55: std 0.060 -> 0.085 (plates against fissures)
+    "oak_log":          dict(luma=0.36, std=0.110, sat=0.34, tilt=22.0, smooth=40, pore=36),   # r70: crisp bark (m_bark_r70), no lmean stretch
     "oak_log_top":      dict(luma=0.44, std=0.073, sat=0.48, tilt=12.0, smooth=40, pore=30),
     # round 3 (Oct 15): what the RTS view shows most after grass and water (the eyes ground census); new keys go at
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
@@ -145,12 +145,12 @@ TARGETS = {
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
     # the _s blue CODE: 65-255 = subsurface scattering (light through the leaf under a shader pack)
     # round 18: leaves' tilt 18 -> 12 (every leaf edge drew a dark rim under shaders)
-    "oak_leaves":       dict(luma=0.55, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "birch_leaves":     dict(luma=0.58, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "spruce_leaves":    dict(luma=0.48, std=0.085, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
-    "acacia_leaves":    dict(luma=0.55, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "jungle_leaves":    dict(luma=0.52, std=0.095, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
-    "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
+    "oak_leaves":       dict(luma=0.55, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "birch_leaves":     dict(luma=0.58, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "spruce_leaves":    dict(luma=0.48, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
+    "acacia_leaves":    dict(luma=0.55, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "jungle_leaves":    dict(luma=0.52, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
+    "dark_oak_leaves":  dict(luma=0.50, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
     "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.26, tilt=24.0, smooth=76, pore=10),   # r31: pink-grey, rust blooms
@@ -179,15 +179,15 @@ TARGETS = {
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
     # flat dark slab (reviewer, eyes run 39548166615); the reference's numbers were for a lit flat view
-    "spruce_log":       dict(luma=0.23, std=0.110, lmean=0.27, shoulder=0.27, sat=0.42, tilt=26.2, smooth=40, pore=36),   # r53: the flakes apart; r54: lifted 0.19 -> 0.22, std 0.085 (near-black at 30 px)   # r59: shoulder 0.30 -> 0.27 (the spruce / dark oak wood p95 0.457 -> <= 0.42 in game)
+    "spruce_log":       dict(luma=0.27, std=0.090, sat=0.42, tilt=22.0, smooth=40, pore=36),   # r70: crisp bark (m_bark_r70), no lmean stretch
     "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
-    "birch_log":        dict(luma=0.72, std=0.210, sat=0.06, tilt=12.0, smooth=50, pore=30),   # r54: 2-3 dark bands (~0.25) on the 0.80 paper carry the spread; tilt 26 -> 12 (the paper's relief lit as speckle at 30 px)
+    "birch_log":        dict(luma=0.72, std=0.150, sat=0.06, tilt=12.0, smooth=50, pore=30),   # r54: 2-3 dark bands (~0.25) on the 0.80 paper carry the spread; tilt 26 -> 12 (the paper's relief lit as speckle at 30 px)
     "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
-    "acacia_log":       dict(luma=0.35, std=0.240, lmean=0.34, shoulder=0.40, sat=0.10, tilt=26.1, smooth=40, pore=36),   # r54: std 0.063 -> 0.080   # r59: std 0.24, lmean 0.39 -> 0.34, shoulder 0.40 (meso up, the lit face p95 0.61 -> <= ~0.54)
+    "acacia_log":       dict(luma=0.38, std=0.100, sat=0.10, tilt=22.0, smooth=40, pore=36),   # r70: crisp bark (m_bark_r70), no lmean stretch
     "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
-    "jungle_log":       dict(luma=0.29, std=0.300, lmean=0.43, shoulder=0.62, sat=0.35, tilt=31.2, smooth=40, pore=36),   # r54: std 0.070 -> 0.085   # r59: std 0.20 -> 0.30 (meso 0.029 -> ~0.04 in game; the hue kept)
+    "jungle_log":       dict(luma=0.36, std=0.100, sat=0.35, tilt=20.0, smooth=40, pore=36),   # r70: crisp bark (m_bark_r70), no lmean stretch
     "jungle_log_top":   dict(luma=0.43, std=0.100, sat=0.55, tilt=12.0, smooth=40, pore=30),
-    "dark_oak_log":     dict(luma=0.16, std=0.260, lmean=0.19, shoulder=0.20, sat=0.34, tilt=20.0, smooth=40, pore=36),   # r53: the blocks apart; r54: darker, coarser than oak   # r59: own bark (BARK56), std 0.26, shoulder 0.36 -> 0.20, tilt 31 -> 20 (dim plates, p95 <= ~0.43)
+    "dark_oak_log":     dict(luma=0.20, std=0.075, sat=0.34, tilt=22.0, smooth=40, pore=36),   # r70: crisp bark (m_bark_r70), no lmean stretch
     "dark_oak_log_top": dict(luma=0.21, std=0.039, sat=0.61, tilt=12.0, smooth=40, pore=30),
     # round 11: the other factions' buildings (structure census) - single-block numbers from pack-study 38760372803
     # (reference) beside 38760380796 (vanilla); std a little under the reference where rts_view says busy
@@ -214,8 +214,8 @@ TARGETS = {
     "cobbled_deepslate":          dict(luma=0.31, std=0.085, sat=0.12, tilt=20.0, smooth=26, pore=14),   # r42; r45: 0.31
     "cut_copper":                 dict(luma=0.50, std=0.058, sat=0.55, tilt=12.0, smooth=104, pore=0),
     "oxidized_cut_copper":        dict(luma=0.55, std=0.065, sat=0.45, tilt=12.0, smooth=12, pore=20),
-    "azalea_leaves":              dict(luma=0.43, std=0.080, sat=0.65, tilt=16.5, smooth=70, pore=180),
-    "flowering_azalea_leaves":    dict(luma=0.42, std=0.085, sat=0.62, tilt=16.5, smooth=60, pore=180),
+    "azalea_leaves":              dict(luma=0.43, std=0.110, sat=0.65, tilt=16.5, smooth=70, pore=180),
+    "flowering_azalea_leaves":    dict(luma=0.42, std=0.115, sat=0.62, tilt=16.5, smooth=60, pore=180),
     "netherrack":                 dict(luma=0.31, std=0.060, sat=0.64, tilt=30.0, smooth=50, pore=30),   # r44: lifted; r45: red again (it read brown, hue 39, at 5000)
     "nether_bricks":              dict(luma=0.23, std=0.050, sat=0.45, tilt=18.0, smooth=50, pore=12),   # r44: red-brown mortar; r45: 0.23, sat 0.45
     "prismarine_bricks":          dict(luma=0.58, std=0.075, sat=0.33, tilt=12.0, smooth=44, pore=10),
@@ -1214,11 +1214,24 @@ def m_spruce_planks(F, n):
     return m_planks(F, n, base=(0.48, 0.35, 0.21), wave=0.006)
 
 
-def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
+# round 70, the gaps between leaf clusters: a sprig's leaves past LEAF_GAP_RIM of its reach are dropped at
+# LEAF_GAP_DROP, and an uncovered texel whose neighbourhood (a blur LEAF_GAP_BLUR of a block wide) is less than
+# LEAF_GAP_COVER leaf stays a hole
+LEAF_GAP_RIM = 0.60
+LEAF_GAP_DROP = 0.70
+LEAF_GAP_BLUR = 1.0 / 96
+LEAF_GAP_COVER = 0.50
+
+
+def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0, gaps=True):
     """A leaf canopy tile: `count` leaves (length / width in tile units) dropped at random depths and angles; the top
     leaf wins each texel. Returns H, greyscale albedo (the foliage colour tints it in game) and the alpha mask (the
     holes 'fancy' leaves show). Under the holes the colour is a dark leaf shade: 'fast' graphics ignore the alpha and
-    draw it (vanilla does the same)."""
+    draw it (vanilla does the same).
+    Round 70 (lovish, Nov 5, playing with NO shader pack: "the tree looked terrible" - oak and cherry leaves "flat",
+    distant trees "dark green slabs"; every leaf texture had 0% holes since round 19): gaps=True thins the outer rim
+    of each sprig, so the canopy is clusters with real holes between them (the sky shows through, the clusters read
+    as clusters at any distance), and lights them in three soft tones - lit crowns, mid leaves, shaded rims."""
     rng = F.rng
     depth = np.full((n, n), -1.0)
     tone = np.zeros((n, n))
@@ -1236,7 +1249,8 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     cell = 1.0 / math.sqrt(len(sprigs))                               # a sprig's reach, about
     g = int(math.ceil(math.sqrt(count)))
     slots = rng.permutation(g * g)[:count]   # count < g*g: the empty slots fall at random, not in one row
-    deep = int(count * 0.25)       # a dim under-layer deep in the crown: the gaps show leaves behind, not sky
+    # a dim under-layer deep in the crown (round 70 with gaps: a thin one, so the gaps between clusters stay open)
+    deep = int(count * (0.06 if gaps else 0.25))
     for i in range(count + deep):
         if i < count:
             # leaves stratified over the tile (one per grid cell, jittered) so the gaps stay small and even - the
@@ -1248,6 +1262,8 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
             ddy = (cy - sprigs[:, 1] + 0.5) % 1.0 - 0.5
             dist = np.sqrt(ddx * ddx + ddy * ddy)
             j = int(np.argmin(dist))
+            if gaps and dist[j] / cell > LEAF_GAP_RIM and rng.random() < LEAF_GAP_DROP:
+                continue                                              # a sprig's outer rim, thinned: the gaps
             sh = sprigs[j, 2]
             th = math.atan2(ddy[j], ddx[j])                           # leaves fan out from the twig
             spread = 1.2 if needles else 0.7
@@ -1280,6 +1296,11 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     # round 19: no gaps at all - the few big ones left were the same pits on every block (birch "moth-eaten"); the
     # canopy's depth now comes from the deeper, darker fill leaves, not from holes onto the dark inside of the crown
     keep_gap = np.zeros_like(leaf)
+    if gaps:
+        # round 70: a gap at cluster scale stays open (alpha 0: the sky or the crown behind shows); pin-sized gaps
+        # inside a cluster are still filled, so a cluster has no flecks
+        cover = F.blur(leaf.astype(np.float64), n * LEAF_GAP_BLUR)
+        keep_gap = (~leaf) & (cover < LEAF_GAP_COVER)
     filled = (~leaf) & ~keep_gap
     alpha = (~keep_gap).astype(np.float64)
     rib = np.exp(-(across / 0.12) ** 2)                  # the midrib, a faint raised line
@@ -1293,6 +1314,12 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     # block at 256x, so each leaf kept its own light and the canopy read as fine noise); a leaf's own tone and its
     # curve are small touches
     soft = F.blur(np.where(leaf, lit, 0.55), n / 40)
+    if gaps:
+        # round 70: three soft tones instead of one smooth ramp - shaded rims, mid leaves, lit crowns (a canopy read
+        # close up and at a distance with no shader to model it), and a cluster darker toward a hole (its underside)
+        band = 0.5 * smoothstep(0.50, 0.62, soft) + 0.5 * smoothstep(0.68, 0.80, soft)
+        rim = F.blur(keep_gap.astype(np.float64), n / 128)
+        soft = 0.40 + 0.45 * band - 0.25 * rim
     shade = np.where(leaf, 0.36 + 0.62 * soft + 0.04 * (tone - 0.5) + 0.04 * dome + 0.02 * rib
                      - 0.03 * (along + 0.5), 0.36 + 0.62 * soft - 0.06)
     shade = np.where(alpha > 0, shade, 0.35)
@@ -1323,9 +1350,9 @@ TARGETS["grass_block_top_v2"] = dict(TARGETS["grass_block_top"])
 GRASS_TOPS = ("grass_block_top", "grass_block_top_v2")
 # Oct 21: cherry for the map trees (lovish's cherry references) - without these the cherries drew vanilla's flat
 # textures beside the pack. Appended last (SEED_ORDER rule).
-TARGETS["cherry_log"] = dict(luma=0.24, std=0.060, sat=0.42, tilt=12.0, smooth=50, pore=30)   # r53: smooth banded bark - tilt 22 -> 12 (the solver had blown its shallow furrows up to oak depth)
+TARGETS["cherry_log"] = dict(luma=0.32, std=0.090, sat=0.42, tilt=16.0, smooth=50, pore=30)   # r53: smooth banded bark - tilt 22 -> 12 (the solver had blown its shallow furrows up to oak depth)
 TARGETS["cherry_log_top"] = dict(luma=0.42, std=0.040, sat=0.45, tilt=10.0, smooth=45, pore=30)
-TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.100, sat=0.30, ao=0.35, tilt=9.0, smooth=60, pore=180)
+TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.130, sat=0.30, ao=0.35, tilt=9.0, smooth=60, pore=180)
 # round 23: the copper weathering stages in between (the capitol's roofs use all four); smooth is the base the
 # recipe's own per-texel smoothness replaces
 TARGETS["exposed_cut_copper"] = dict(luma=0.44, std=0.065, sat=0.42, tilt=12.0, smooth=90, pore=6)
@@ -1686,6 +1713,18 @@ for _k in range(2, PROC_VARIANTS + 1):
     TARGETS["mud_side_v%d" % _k] = dict(TARGETS["mud_side"])
     SEED_ORDER = SEED_ORDER + ("mud_side_v%d" % _k,)
 PROC_VARIANT_BLOCKS["mud"] = ("cube_column", {"end": "mud", "side": "mud_side"})
+# r70 (lovish, Nov 5, no shader pack: "the tree looked terrible" - the mangroves among them): mangrove's log, end
+# grain and leaves had no recipe, so they drew vanilla's 16x beside the pack. Appended last (SEED_ORDER rule): the
+# bark is the ridge recipe (BARK56 "mangrove": dark red-brown, narrow plates), the end grain m_log_top, the leaves
+# the canopy generator with gaps (narrow, pointed leaves), tinted in game like vanilla's, with a second variant
+TARGETS["mangrove_log"] = dict(luma=0.28, std=0.095, sat=0.40, tilt=22.0, smooth=40, pore=36)
+TARGETS["mangrove_log_top"] = dict(luma=0.36, std=0.070, sat=0.50, tilt=12.0, smooth=40, pore=30)
+LEAVES["mangrove_leaves"] = (320, 0.11, 0.055, False)
+TARGETS["mangrove_leaves"] = dict(luma=0.52, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170)
+LEAF_VARIANTS["mangrove_leaves_v2"] = "mangrove_leaves"
+LEAVES["mangrove_leaves_v2"] = LEAVES["mangrove_leaves"]
+TARGETS["mangrove_leaves_v2"] = dict(TARGETS["mangrove_leaves"])
+SEED_ORDER = SEED_ORDER + ("mangrove_log", "mangrove_log_top", "mangrove_leaves", "mangrove_leaves_v2")
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2216,9 +2255,20 @@ def m_birch_log(F, n):
     lent = (1 - smoothstep(0.0, 0.07, dash)) * smoothstep(0.6, 0.9, F.noise(5, 16, 0.4)) * (1 - band)
     dia = F.noise(3, 8, 0.6, sx=2.5, sy=1.0)
     patch = smoothstep(1.2, 1.7, dia - 0.4 * np.abs(F.noise(8, 24, 0.5, sx=1.0, sy=4.0))) * (1 - band)   # a few
-    H = 0.6 + 0.06 * paper - 0.06 * band - 0.05 * lent - 0.05 * patch   # the marks are in the colour, barely in the relief
-    shade = 0.94 + 0.03 * paper - 0.72 * band - 0.30 * lent - 0.70 * patch
-    return H, tint((0.86, 0.85, 0.80), shade)
+    # r70 (lovish, Nov 5, no shader pack, first person: birch "harsh black-and-white blotches"): the bands stay where
+    # they are (the trunk still reads at the RTS camera) but each is a cluster of THIN horizontal lenticel dashes (long
+    # across the trunk, a texel or two tall), broken at random lengths (an isotropic noise, so the breaks never line
+    # up the trunk) - not a solid black stripe; every mark is a warm grey-brown laid over the paper (a mix, not a
+    # multiply to black); the papery peel shows as faint horizontal curls in the paper itself
+    thin = 1 - smoothstep(0.0, 0.12, np.abs(F.noise(4, 14, 0.6, sx=12.0, sy=1.0)))   # thin lines across the trunk
+    seg = smoothstep(-0.3, 0.4, F.noise(5, 16, 0.4))                   # broken into dashes
+    band = smoothstep(0.1, 0.5, band) * (0.08 + 0.92 * thin * seg)
+    curl = F.noise(6, 18, 0.5, sx=6.0, sy=1.0)                        # thin horizontal peel lines in the paper
+    H = 0.6 + 0.06 * paper - 0.06 * band - 0.05 * lent - 0.05 * patch + 0.015 * curl   # marks: colour, barely relief
+    paper_rgb = tint((0.86, 0.85, 0.80), 0.94 + 0.03 * paper + 0.025 * curl)
+    mark = np.clip(0.62 * band + 0.40 * lent + 0.35 * patch, 0, 0.80)[..., None]
+    mark_rgb = np.asarray((0.38, 0.33, 0.28))[None, None, :] * (0.9 + 0.2 * norm01(F.noise(4, 12, 0.5)))[..., None]
+    return H, np.clip(paper_rgb * (1 - mark) + mark_rgb * mark, 0, 1)
 
 
 # each wood: (bark colour, end-grain colour) - fit_albedo sets luma / spread / saturation from the targets
@@ -2228,6 +2278,7 @@ WOODS = {
     "jungle": ((0.42, 0.40, 0.27), (0.72, 0.56, 0.36)),     # r57: greener-tan (its own against oak); r58: greener still (95, 90, 62)
     "dark_oak": ((0.25, 0.21, 0.15), (0.45, 0.30, 0.18)),   # r58: a neutral near-black (60, 52, 40), not red-brown
     "cherry": ((0.30, 0.16, 0.16), (0.82, 0.58, 0.52)),     # dark red-brown bark, pale pink heartwood
+    "mangrove": ((0.36, 0.20, 0.15), (0.66, 0.34, 0.26)),   # r70: dark red-brown bark, red heartwood (new)
 }
 
 
@@ -4239,7 +4290,14 @@ BARK56 = {
     "acacia": ("ridge", 3, 2, 0.50, 0.070, 0.10, 1.5, 0.00, 0.50, 0.0),    # grey fibrous ridges: long plates
     "jungle": ("ridge", 3, 3, 1.10, 0.070, 0.18, 1.5, 0.60, 0.20, 0.0),    # smoother, mottled, greener
     "dark_oak": ("ridge", 3, 2, 0.60, 0.120, 0.05, 1.6, 0.00, 0.05, 0.0),  # near-black long ridges, wide deep furrows
+    # r70 (lovish, Nov 5, no shader pack: cherry "smeared, swirly red-brown, melted photo" - r51's banded recipe whose
+    # wandering bands read as swirls up close): cherry on the ridge plates too - narrow, smooth, shallow fissures -
+    # with its horizontal lenticels drawn over them (m_bark_r56); mangrove (new) narrow dark red-brown plates
+    "cherry": ("ridge", 5, 4, 0.40, 0.045, 0.12, 1.2, 0.10, 0.12, 0.0),   # smooth narrow plates, fine fissures
+    "mangrove": ("ridge", 4, 3, 0.70, 0.070, 0.18, 1.4, 0.15, 0.10, 0.0), # dark red-brown, narrow ridges
 }
+# r70: long fibres up the trunk on every plate (lovish: "crisp, readable bark with vertical grain"), in the colour
+BARK_GRAIN = 0.07
 
 
 def _bark_plates(F, n, mode, cols, rows):
@@ -4363,8 +4421,14 @@ def m_bark_r56(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     # on a wood block's top. The meso now comes from the plates themselves (each plate its own tone, two-sided so
     # some plates read dark and some pale) and a sweep at 2-5 cycles, round, a third as strong
     sweep = 0.10 * F.noise(2, 5, 0.7)
+    grain = F.noise(14, 60, 0.3, sx=1.0, sy=10.0)                          # r70: long fibres up the trunk
     shade = (1 + lvl_amp * tone * plate + edge * sun * (1 - floor) + (mot + sweep) * plate + 0.02 * fib
-             - 0.55 * fissure - 0.25 * floor)
+             + BARK_GRAIN * grain * plate - 0.55 * fissure - 0.25 * floor)
+    if style == "cherry":
+        # r70: cherry's horizontal lenticels - short dark dashes across the smooth plates, a few a block
+        dash = np.abs(F.warp(F.noise(4, 12, 0.5, sx=10.0, sy=1.0), 0.0, 0.01 * F.noise(3, 8)))
+        lent = (1 - smoothstep(0.0, 0.06, dash)) * smoothstep(0.5, 0.9, F.noise(6, 18, 0.4))
+        shade = shade - 0.35 * lent * plate
     if crest > 0:
         # dark oak: a pale weathered crest along the middle of each plate (pale on black, what tells it from oak)
         # r58: per PLATE (half the plates crested), not a noise long up the trunk - that made one pale column per
@@ -4378,7 +4442,67 @@ def m_bark_r56(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     return H, alb
 
 
+# r70 (lovish, Nov 5, playing with NO shader pack, first person: "the tree looked terrible" / "the texture for it" -
+# cherry and mangrove "smeared, swirly, melted photo", oak's plates black-and-tan blotches up close): the r56 plates
+# were soft gradients whose spread fit_albedo measures at the RTS camera's mip, so at full size their contrast was
+# blown up to black and tan. A crisp bark instead: wavy furrows up the trunk between ridges (the ridge's crest lit,
+# the furrow dark), each ridge cracked across at its own heights into plates of their own tone, and long fine fibres
+# along every plate (the vertical grain). Its structure lives at the scale the fit measures (ridges 1/4-1/8 block),
+# so the fit no longer stretches it, and the fibres carry the close-up.
+# style: (ridges per block, furrow width (of a ridge), cracks per block, crack half-width (block), fibre, crest,
+# plate tone, lenticels)
+BARK70 = {
+    "oak": (5, 0.32, 3, 0.012, 0.10, 0.16, 0.10, 0.0),        # deep grey-brown furrows, blocky ridges
+    "spruce": (7, 0.20, 6, 0.010, 0.07, 0.10, 0.16, 0.0),     # thin red-brown scales: many short plates
+    "jungle": (4, 0.18, 2, 0.008, 0.08, 0.10, 0.08, 0.0),     # smooth, long plates, shallow seams
+    "acacia": (6, 0.26, 2, 0.008, 0.13, 0.12, 0.08, 0.0),     # grey, fibrous ridges
+    "dark_oak": (4, 0.38, 2, 0.014, 0.08, 0.12, 0.08, 0.0),   # near-black, wide deep furrows
+    "cherry": (8, 0.10, 1, 0.006, 0.07, 0.08, 0.06, 0.35),    # smooth, fine seams, horizontal lenticels
+    "mangrove": (6, 0.22, 3, 0.010, 0.08, 0.12, 0.10, 0.0),   # dark red-brown narrow ridges
+}
+
+
+def m_bark_r70(F, n, base=(0.42, 0.33, 0.21), style="oak"):
+    cols, fw, rows, cw, fib_a, crest_a, tone_a, lent_a = BARK70[style]
+    rng = F.rng
+    # the furrows: between `cols` ridges, swaying up the trunk (periodic: cols whole ridges a tile, the sway wraps)
+    sway = 0.14 * F.noise(1, 3, 0.8, sx=1.0, sy=2.0)
+    cu = F.u * cols + sway
+    c = np.floor(cu).astype(int) % cols
+    fu = cu - np.floor(cu)
+    width = fw * (0.7 + 0.6 * rng.random(cols))[c]                         # each furrow its own width
+    dist = np.minimum(fu, 1 - fu)                                          # 0 in the furrow, 0.5 on the crest
+    furrow = 1 - smoothstep(0.0, 0.5 * width, dist)
+    crest = smoothstep(0.5 * width, 0.5, dist)
+    # the cracks across each ridge, at the ridge's own heights (rows a tile, an offset a ridge, a wobble along u)
+    off = rng.random(cols)[c]
+    cv = F.v * rows + off + 0.06 * F.noise(2, 6, 0.6, sx=4.0, sy=1.0)
+    fv = cv - np.floor(cv)
+    crack = (1 - smoothstep(0.0, cw * rows, np.minimum(fv, 1 - fv))) * (1 - furrow)
+    # a crack runs only part of the way across its ridge (a plate is not a brick): gated by a noise along u
+    crack = crack * smoothstep(-0.2, 0.5, F.noise(6, 20, 0.4, sx=1.0, sy=3.0))
+    plate_id = c * (rows + 1) + np.floor(cv).astype(int) % rows
+    tone = (2 * rng.random(cols * (rows + 1)) - 1)[plate_id]
+    # the grain: long fibres up the plates (fine) and their bundles (coarser)
+    fibre = F.noise(24, 96, 0.2, sx=1.0, sy=14.0)
+    bundle = F.noise(8, 32, 0.4, sx=1.0, sy=8.0)
+    H = 0.55 + 0.20 * crest - 0.45 * furrow - 0.25 * crack + 0.04 * fibre + 0.04 * bundle
+    shade = (1 + crest_a * crest + tone_a * tone * (1 - furrow) + fib_a * fibre + 0.6 * fib_a * bundle
+             - 0.50 * furrow - 0.22 * crack)
+    if lent_a > 0:
+        # horizontal lenticels (cherry): short dark dashes across the plates, a few a block, never aligned up the trunk
+        lines = np.abs(F.noise(4, 12, 0.6, sx=12.0, sy=1.0))
+        seg = smoothstep(0.1, 0.6, F.noise(6, 18, 0.4))
+        lent = (1 - smoothstep(0.0, 0.08, lines)) * seg * (1 - furrow)
+        shade = shade - lent_a * lent
+    rgb = np.asarray(base, dtype=np.float64)
+    col = tint(rgb, shade) * (1 - 0.12 * furrow[..., None] * np.array([0.0, 0.3, 0.6]))   # furrows a touch cooler
+    return H, np.clip(col, 0, 1)
+
+
 def m_log(F, n, base=(0.42, 0.33, 0.21), style="oak"):
+    if style in BARK70:
+        return m_bark_r70(F, n, base, style)
     if style in BARK56:
         return m_bark_r56(F, n, base, style)
     return m_bark_r51(F, n, base, style)
