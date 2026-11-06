@@ -45,6 +45,9 @@ public class SunlanceTrebuchetUnit extends SiegeLobberUnit {
     @Nullable
     public ResourceCost getCost() { return ResourceCosts.SUNLANCE_TREBUCHET; }
 
+    // NEVER MERGE: the red-proof stub - the Trebuchet never fires (SunlanceTrebuchetGameTests must fail on this)
+    @Override public boolean fireShell(double x, double y, double z) { return false; }
+
     @Override public float getMinRange() { return SunlanceTrebuchetTuning.MIN_RANGE; }
     @Override public int getSetUpTicks() { return SunlanceTrebuchetTuning.SET_UP_TICKS; }
     @Override protected float shellSplash() { return SunlanceTrebuchetTuning.SPLASH_RADIUS; }
