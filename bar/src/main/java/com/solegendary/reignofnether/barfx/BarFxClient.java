@@ -87,6 +87,8 @@ public final class BarFxClient {
     static float leftX = 1, leftY, leftZ, upX, upY = 1, upZ;
     static boolean ortho = false;
     static float zoom = 30;
+    /** The window's width over its height (the RTS view is zoom blocks tall, zoom x aspect wide). */
+    static float aspect = 16 / 9f;
 
     // camera shake
     static float shakeAmt = 0;
@@ -233,6 +235,19 @@ public final class BarFxClient {
             return (float) Math.sqrt(px * px + py * py + pz * pz);
         }
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    /**
+     * Whether (x, y, z) lies within {@code margin} blocks of the screen: in the RTS view, of the orthographic frame's
+     * rectangle (zoom tall, zoom x aspect wide, measured along the camera's own left and up axes); in first person,
+     * {@link #near}. Tighter than near() in the RTS view, which keeps a round area well past the frame's edges.
+     */
+    static boolean onScreen(float x, float y, float z, float margin) {
+        if (!ortho)
+            return near(x, y, z, margin);
+        float dx = x - camX, dy = y - camY, dz = z - camZ;
+        float side = Math.abs(dx * leftX + dy * leftY + dz * leftZ), high = Math.abs(dx * upX + dy * upY + dz * upZ);
+        return high < zoom / 2 + margin && side < zoom / 2 * aspect + margin;
     }
 
     static boolean near(float x, float y, float z, float margin) {
@@ -1082,6 +1097,8 @@ public final class BarFxClient {
         upX = up.x(); upY = up.y(); upZ = up.z();
         ortho = OrthoviewClientEvents.isEnabled();
         zoom = OrthoviewClientEvents.getZoom();
+        var win = Minecraft.getInstance().getWindow();
+        aspect = win.getScreenWidth() / (float) Math.max(1, win.getScreenHeight());   // as OrthoviewClientEvents frames it
     }
 
     /**

@@ -65,6 +65,9 @@ import java.util.List;
  * showed arcs where a game at full frame rate holds whole circles).
  * Adds the still 18_overlays_runes_close (zoom 15 over the centre squad) and a "[Eyes] 18_overlays runes" line per slice
  * and per zoom: the circles' draw time per frame (RuneFxClient's own counter) and how many were held.
+ * With runes the measurement runs the order twice, RuneFxClient.lean (its cost cuts) on for half of each zoom's slices
+ * and off for the other half, ABBA then BAAB in time: "runes A/B" gives both paths' ms and vertices per frame from the
+ * same runner (Eris.15: runner speed drifts about 1 ms between runs). The budget line reads the lean slices, as played.
  * <p>
  * Wall-clock timeline, like scenes 16 and 17 (a shader-lane client runs a few ticks a second).
  */
@@ -99,7 +102,7 @@ final class EyesOverlaysScene {
             BarFx.F_STORM, BarFx.F_BRASS };
     private static final List<LivingEntity> runeCasters = new ArrayList<>();
     private static float[] runeNext = new float[0];   // each caster's next cast, on the effect clock
-    private static long runeNs0 = 0;
+    private static long runeNs0 = 0, runeVerts0 = 0;
     // per slice with runes: zoom asked, rune ms/frame, circles held at the end
     private static final List<double[]> runeRows = new ArrayList<>();
     private static final int ZOOM_RUNES_CLOSE = 15;
@@ -309,6 +312,7 @@ final class EyesOverlaysScene {
         results.clear();
         runeRows.clear();
         runeNext = new float[0];
+        RuneFxClient.lean = true;
         next(1);
     }
 
@@ -455,7 +459,8 @@ final class EyesOverlaysScene {
         slice = i;
         measuring = false;
         sliceNanos = System.nanoTime();
-        EyesDirector.setZoom(ORDER[i]);
+        EyesDirector.setZoom(zoomAt(i));
+        RuneFxClient.lean = RUNES == 0 || leanAt(i);
         OrthoviewClientEvents.centreCameraOnPosInstant(centre);
     }
 
@@ -471,6 +476,7 @@ final class EyesOverlaysScene {
             for (int k = 0; k < SECTIONS.length; k++)
                 sliceNs0[k] = FrameParts.frameSectionLifetimeNs(SECTIONS[k]);
             runeNs0 = RuneFxClient.renderNanos();
+            runeVerts0 = RuneFxClient.vertices();
             frames.clear();
             frameCursor = mc.getFrameTimer().getLogEnd();
             return true;
@@ -479,7 +485,7 @@ final class EyesOverlaysScene {
         if (s < SLICE_S)
             return true;
         endSlice();
-        if (slice + 1 < ORDER.length) {
+        if (slice + 1 < slices()) {
             startSlice(mc, slice + 1);
             return true;
         }
@@ -502,7 +508,7 @@ final class EyesOverlaysScene {
         long n = Math.max(1, FrameParts.framesLifetime() - sliceFrames0);
         double[] ms = frames.stream().mapToDouble(Double::doubleValue).sorted().toArray();
         double[] row = new double[7 + SECTIONS.length];
-        row[0] = ORDER[slice];
+        row[0] = zoomAt(slice);
         row[1] = OrthoviewClientEvents.getZoom();
         row[2] = StrategicViewClientEvents.isStrategicView() ? 1 : 0;
         row[3] = n;
@@ -517,12 +523,15 @@ final class EyesOverlaysScene {
         results.add(row);
         if (RUNES > 0) {
             double runeMs = (RuneFxClient.renderNanos() - runeNs0) / 1e6 / n;
-            runeRows.add(new double[] { ORDER[slice], runeMs, RuneFxClient.live() });
-            ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes slice {}/{}: zoom {}, {} casters, {} circles held: {} ms/frame",
-                    slice + 1, ORDER.length, ORDER[slice], runeCasters.size(), RuneFxClient.live(), String.format("%.3f", runeMs));
+            double verts = (RuneFxClient.vertices() - runeVerts0) / (double) n;
+            boolean lean = RuneFxClient.lean;
+            runeRows.add(new double[] { zoomAt(slice), runeMs, RuneFxClient.live(), lean ? 1 : 0, verts });
+            ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes slice {}/{}: zoom {}, {}, {} casters, {} circles held: {} ms/frame, "
+                    + "{} vertices/frame", slice + 1, slices(), zoomAt(slice), lean ? "lean" : "old path", runeCasters.size(),
+                    RuneFxClient.live(), String.format("%.3f", runeMs), Math.round(verts));
         }
         ReignOfNether.LOGGER.info("[Eyes] 18_overlays slice {}/{}: zoom {} (reached {}, {}), {} frames: p50 {} ms, p95 {} ms, "
-                        + "max {} ms | ms/frame: {}", slice + 1, ORDER.length, ORDER[slice], Math.round(row[1]),
+                        + "max {} ms | ms/frame: {}", slice + 1, slices(), zoomAt(slice), Math.round(row[1]),
                 row[2] > 0 ? "strategic" : "normal", n, f1(row[4]), f1(row[5]), f1(row[6]), parts);
     }
 
@@ -553,14 +562,41 @@ final class EyesOverlaysScene {
         runeSummary();
     }
 
+    /** Slices in the measurement: the order once, or twice with runes (the A/B). */
+    private static int slices() {
+        return RUNES > 0 ? ORDER.length * 2 : ORDER.length;
+    }
+
+    private static int zoomAt(int i) {
+        return ORDER[i % ORDER.length];
+    }
+
+    /**
+     * Whether slice i draws with RuneFxClient's cost cuts: within each zoom, its 2nd and 3rd slices of the first pass and
+     * its 1st and 4th of the second (ABBA, BAAB), so both paths see the same spread of the run's time.
+     */
+    private static boolean leanAt(int i) {
+        int j = i % ORDER.length, k = 0;
+        for (int q = 0; q < j; q++)
+            if (ORDER[q] == ORDER[j])
+                k++;
+        return (k == 1 || k == 2) == (i < ORDER.length);
+    }
+
     private static void runeSummary() {
+        RuneFxClient.lean = true;
         for (int zoom : ZOOMS) {
-            List<double[]> rows = new ArrayList<>();
+            List<double[]> rows = new ArrayList<>(), old = new ArrayList<>();
             for (double[] r : runeRows)
                 if ((int) r[0] == zoom)
-                    rows.add(r);
+                    (r[3] > 0 ? rows : old).add(r);
             if (rows.isEmpty())
                 continue;
+            if (!old.isEmpty())
+                ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes A/B zoom {} (medians of {} + {} slices, same runner): lean {} "
+                        + "ms/frame, {} vertices/frame | old path {} ms/frame, {} vertices/frame", zoom, rows.size(), old.size(),
+                        String.format("%.3f", median(rows, 1)), Math.round(median(rows, 4)),
+                        String.format("%.3f", median(old, 1)), Math.round(median(old, 4)));
             double ms = median(rows, 1);
             ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes zoom {} (medians of {} slices): {} casters, {} circles held, "
                     + "{} ms/frame (peak held {})", zoom, rows.size(), runeCasters.size(), Math.round(median(rows, 2)),

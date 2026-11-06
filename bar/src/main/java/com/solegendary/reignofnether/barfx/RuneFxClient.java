@@ -69,6 +69,15 @@ public final class RuneFxClient {
      */
     static final float SAG_PX = 0.4f;
     static final int SEG_MIN = 12;
+    /**
+     * The cost cuts (the zoom-30 budget, Eris.15): a wide soft stroke (the halo, the dark line: wider than SOFT_K core
+     * widths) takes chords within SAG_SOFT_PX, its fading edges hide the corners; a stroke thinner than THIN_PX on
+     * screen is one strip of the same light, not three (its two fading strips would be under a pixel); and a circle
+     * off the screen is not drawn ({@link BarFxClient#onScreen}). Always on in play; the eyes scene turns them off on
+     * half its slices to time the old path on the same runner.
+     */
+    static final float SAG_SOFT_PX = 1.0f, SOFT_K = 1.5f, THIN_PX = 1.75f;
+    public static boolean lean = true;
     /** Slices over which the sweep's leading edge fades in. */
     static final int FEATHER = 3;
     /** The outer rim sits at this share of a ring cell's width. */
@@ -174,7 +183,7 @@ public final class RuneFxClient {
     // this frame's: detail (1 close .. 0 far), the rim core's half width, blocks per screen pixel
     private static float near = 1, wc = CORE_W, bpp;
     private static float mx, my, mz, ma;   // mote()'s answer
-    private static long renderNanos = 0, renderFrames = 0;
+    private static long renderNanos = 0, renderFrames = 0, vertices = 0;
     private static int peak = 0;
 
     static void ingest(BarFx.Event e, float clock) {
@@ -217,6 +226,8 @@ public final class RuneFxClient {
     /** Lifetime totals for the eyes scene's cost line: nanoseconds spent drawing, frames drawn, most circles held. */
     public static long renderNanos() { return renderNanos; }
     public static long renderFrames() { return renderFrames; }
+    /** Lifetime vertices written (a runner's speed does not change it). */
+    public static long vertices() { return vertices; }
     public static int peak() { return peak; }
 
     /** The circles the ground pass drew this frame, and its clock: the air pass draws on the same state. */
@@ -250,7 +261,9 @@ public final class RuneFxClient {
                 }
             }
             float R = RADIUS[i] = POOL.radius[i] * scale;
-            if (!BarFxClient.near(POOL.x[i], POOL.y[i], POOL.z[i], R + 3) || !lit(POOL.x[i], POOL.y[i], POOL.z[i]))
+            boolean seen = lean ? BarFxClient.onScreen(POOL.x[i], POOL.y[i], POOL.z[i], R * PULSE_TO + 3)
+                : BarFxClient.near(POOL.x[i], POOL.y[i], POOL.z[i], R + 3);
+            if (!seen || !lit(POOL.x[i], POOL.y[i], POOL.z[i]))
                 continue;
             SHOWN[i] = true;
             shown++;
@@ -622,9 +635,14 @@ public final class RuneFxClient {
                                float reveal, int rgb, float a) {
         if (a <= 0.01f)
             return;
-        seg = segs(r + w, seg);
+        boolean soft = lean && w > wc * SOFT_K, thin = lean && bpp > 0 && w < THIN_PX * bpp;
+        seg = segs(r + w, seg, soft ? SAG_SOFT_PX : SAG_PX);
         float cr = ((rgb >> 16) & 255) / 255f, cg = ((rgb >> 8) & 255) / 255f, cb = (rgb & 255) / 255f;
         float r0 = Math.max(0, r - w), r1 = Math.max(0, r - w / 2), r2 = r + w / 2, r3 = r + w;
+        if (thin) {   // one strip carrying the three's light: full over 1.5 w
+            r1 = Math.max(0, r - 0.75f * w);
+            r2 = r + 0.75f * w;
+        }
         float litF = reveal * (seg + FEATHER);
         int lit = Math.max(1, Math.min(seg, (int) Math.ceil(litF)));
         double step = Math.PI * 2 / seg;
@@ -635,9 +653,11 @@ public final class RuneFxClient {
             float aj = a * Math.max(0, Math.min(1, (litF - j) / FEATHER));
             if (aj > 0.004f) {
                 float a0 = (float) c0, b0 = (float) s0, a1 = (float) c1, b1 = (float) s1;
-                strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r0, 0, r1, aj, cr, cg, cb);
+                if (!thin)
+                    strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r0, 0, r1, aj, cr, cg, cb);
                 strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r1, aj, r2, aj, cr, cg, cb);
-                strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r2, aj, r3, 0, cr, cg, cb);
+                if (!thin)
+                    strip(vc, m, cx, cy, cz, a0, b0, a1, b1, r2, aj, r3, 0, cr, cg, cb);
             }
             c0 = c1;
             s0 = s1;
@@ -650,9 +670,14 @@ public final class RuneFxClient {
      * {@link #SAG_PX}.
      */
     static int segs(float r, int seg) {
+        return segs(r, seg, SAG_PX);
+    }
+
+    /** {@link #segs(float, int)} with {@code sagPx} pixels of sag allowed. */
+    static int segs(float r, int seg, float sagPx) {
         if (bpp <= 0 || r <= 0)
             return seg;
-        float sag = SAG_PX * bpp / r;   // the sag allowed, as a share of the radius
+        float sag = sagPx * bpp / r;   // the sag allowed, as a share of the radius
         if (sag >= 1)
             return Math.min(seg, SEG_MIN);
         int want = (int) Math.ceil(Math.PI / Math.acos(1 - sag));
@@ -713,6 +738,7 @@ public final class RuneFxClient {
     private static void tv(VertexConsumer vc, Matrix4f m, float x, float y, float z, float r, float g, float b, float a,
                            float u, float v) {
         float lx = x - BarFxClient.camX, ly = y - BarFxClient.camY, lz = z - BarFxClient.camZ;
+        vertices++;
         vc.vertex(m.m00() * lx + m.m10() * ly + m.m20() * lz + m.m30(),
                 m.m01() * lx + m.m11() * ly + m.m21() * lz + m.m31(),
                 m.m02() * lx + m.m12() * ly + m.m22() * lz + m.m32())
