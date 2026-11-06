@@ -85,6 +85,11 @@ public final class GroundMemoryServer {
         // arrays reused, so a pass allocates nothing for a unit it has seen before)
         Int2ObjectOpenHashMap<double[]> trampleLast = new Int2ObjectOpenHashMap<>(), trampleNext = new Int2ObjectOpenHashMap<>();
         long tramplePasses = 0, trampleWalks = 0, trampleNanos = 0, trampleCells = 0;
+        // the sampler's chunk + field lookups, by chunk key: every walk of every unit asked the chunk map and Forge's
+        // capability dispatcher (flake-stress 42217883424: 2.2-3.3 us a walk against the 3.0 budget). Dropped on
+        // the chunk's unload, so a held chunk is always the loaded one
+        final Long2ObjectOpenHashMap<LevelChunk> trampleChunks = new Long2ObjectOpenHashMap<>();
+        final Long2ObjectOpenHashMap<GroundMemory> trampleFields = new Long2ObjectOpenHashMap<>();
     }
 
     // a ConcurrentHashMap: chunk load events may arrive off the server thread and only queue a key
@@ -289,10 +294,19 @@ public final class GroundMemoryServer {
         int changedCells = 0;
         for (int chunkX = minCx; chunkX <= maxCx; chunkX++)
             for (int chunkZ = minCz; chunkZ <= maxCz; chunkZ++) {
-                LevelChunk chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
-                GroundMemory mem = GroundMemoryCapability.of(chunk);
-                if (mem == null)
-                    continue;
+                long key = ChunkPos.asLong(chunkX, chunkZ);
+                LevelChunk chunk = st.trampleChunks.get(key);
+                GroundMemory mem;
+                if (chunk != null)
+                    mem = st.trampleFields.get(key);
+                else {
+                    chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                    mem = GroundMemoryCapability.of(chunk);
+                    if (mem == null)
+                        continue;   // not loaded (or no field): asked again next walk
+                    st.trampleChunks.put(key, chunk);
+                    st.trampleFields.put(key, mem);
+                }
                 columns.chunk = chunk;
                 mem.decayTo(now, params);
                 long[] changed = mem.addTrample(chunkX, chunkZ, ax, az, bx, bz, radius, columns);
@@ -616,6 +630,8 @@ public final class GroundMemoryServer {
             long key = evt.getChunk().getPos().toLong();
             st.marked.remove(key);
             st.dirty.remove(key);
+            st.trampleChunks.remove(key);
+            st.trampleFields.remove(key);
         }
     }
 
