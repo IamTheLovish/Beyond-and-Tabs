@@ -6,7 +6,7 @@
                            renderer (the eyes render type), so the colours here are the colours on screen
   rocket_rack.png   64x32  RocketRackModel: the lightning-rod rack - a copper back frame, four copper rods with a verdigris
                            bloom and a collar near the tip, and (in their own corner, drawn lit) the charged orbs that sit
-                           on the rod tips and the spikes crossing them
+                           on the rod tips (electric blue, no white-hot middle)
 
 The Stormcallers keep red lacquer, gold and jade on their units and buildings; the artillery reads as lightning on top of
 that (lovish, Nov 5: "a frame of copper lightning rods ... charged bolts with a jagged electric-blue trail"). The UV
@@ -23,7 +23,10 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "bar", "src", "main", "resources", "assets", "reignofnether", "textures", "entities")
 
-COPPER_D, COPPER, COPPER_L = (104, 52, 30), (176, 108, 52), (226, 156, 96)
+# copper is a saturated orange-red metal: the old (176, 108, 52) tan read as wooden poles to the blind critic
+COPPER_D, COPPER, COPPER_L = (86, 34, 16), (184, 82, 34), (236, 138, 70)
+COPPER_GLINT = (255, 196, 140)
+ORB_CORE, ORB_RIM, ORB_EDGE = (120, 205, 255), (70, 140, 255), (36, 64, 196)
 VERDI_D, VERDI = (44, 110, 96), (70, 160, 138)
 SOOT_D = (34, 32, 34)
 BOLT_WHITE, BOLT_GLOW, BOLT_DEEP = (255, 255, 255), (170, 224, 255), (88, 150, 255)
@@ -130,12 +133,13 @@ def rack(rng):
     for name, (x0, y0, x1, y1) in box_faces(38, 0, 3, 2, 3).items():
         k = {"top": 1.2, "bottom": 0.7}.get(name, 1.0)
         noisy(img, x0, y0, x1, y1, shade(COPPER_L, k), rng, 0.05)
-    # lit parts, drawn full bright: the orb on each rod tip (3x3x3 at (0, 14)) and the spikes crossing it (10x1x1 at (40, 8))
-    glow_box(img, 0, 14, 3, 3, 3, rng)
-    # (the whole 18x10 corner is lit, so the spike samples light in whichever way round it is laid)
-    fill(img, 40, 8, 64, 20, BOLT_GLOW)
-    for x in range(41, 62):
-        img.putpixel((x, 12), BOLT_WHITE + (255,))
+    # a bright metal glint down the middle of each rod's lit faces, so the rods read as polished copper, not wood
+    for name, (x0, y0, x1, y1) in box_faces(28, 0, 2, 20, 2).items():
+        if name in ("front", "right"):
+            for y in range(y0 + 2, y1 - 5):
+                img.putpixel((x0 + (1 if name == "right" else 0), y), COPPER_GLINT + (255,))
+    # lit part, drawn full bright: the orb on each rod tip (4x4x4 at (0, 14)), electric blue with no white-hot middle
+    glow_box(img, 0, 14, 4, 4, 4, rng, core=ORB_CORE, rim=ORB_RIM, edge=ORB_EDGE)
     return img
 
 

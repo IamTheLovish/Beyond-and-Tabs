@@ -298,18 +298,25 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         this.entityData.set(engagedDataAccessor, engaged);
     }
 
-    /** Client: while the rack charges for the next volley the loaded rods crackle with electric sparks, more the nearer it is. */
+    /**
+     * The charge's motes: small electric-blue specks, not vanilla's white electric sparks (a cloud of white sparkles over
+     * the rack read as a fireworks stand to the blind critic, round 1 of the storm loop).
+     */
+    static final net.minecraft.core.particles.DustParticleOptions CHARGE_MOTE =
+        new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.42f, 0.72f, 1.0f), 0.7f);
+
+    /** Client: while the rack charges for the next volley the loaded rods crackle with blue motes, more the nearer it is. */
     private void crackle() {
         float charge = RocketCharge.charge(getReloadTicks(), isEngaged());
         if (charge <= 0.05f || getLaunchTicks() > 0)
             return;
         float tilt = RocketRackGeometry.REST_TILT + RocketRackGeometry.LIFT_TILT * charge;
         for (int rod = 0; rod < RocketRackGeometry.RODS; rod++) {
-            if (getRandom().nextFloat() > 0.25f + 0.6f * charge)
+            if (getRandom().nextFloat() > 0.1f + 0.35f * charge)
                 continue;
             double[] tip = RocketRackGeometry.tipWorld(getX(), getY(), getZ(), yBodyRot, rod, tilt);
-            level().addParticle(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, tip[0], tip[1], tip[2],
-                (getRandom().nextDouble() - 0.5) * 0.25, 0.05 + getRandom().nextDouble() * 0.15, (getRandom().nextDouble() - 0.5) * 0.25);
+            level().addParticle(CHARGE_MOTE, tip[0], tip[1], tip[2],
+                (getRandom().nextDouble() - 0.5) * 0.1, 0.03 + getRandom().nextDouble() * 0.06, (getRandom().nextDouble() - 0.5) * 0.1);
         }
     }
 
@@ -436,15 +443,15 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
             tx += Math.cos(a) * r;
             tz += Math.sin(a) * r;
         }
-        // the rocket is the projectile: BarFx follows it (it classes a RocketShell K_ROCKET) with the muzzle flash on
-        // launch, a smoke trail in flight and a flash on impact, so nothing is drawn beside it
+        // the bolt is the projectile: BarFx follows it (it classes a RocketShell K_BOLT) with the muzzle arc on launch,
+        // a jagged electric trail in flight and a thunderclap on impact, so nothing else is drawn beside it
         // each bolt leaves the tip of its own rod, the rod the model draws it on (RocketRackGeometry), not the crew's hat
         double[] tip = RocketRackGeometry.tipWorld(getX(), getY(), getZ(), yBodyRot, nextRod++ % RocketRackGeometry.RODS, RocketRackGeometry.FIRE_TILT);
         RocketShell shell = new RocketShell(sl, this, getUnitAttackDamage());
         shell.setPos(tip[0], tip[1], tip[2]);
         shell.aimAt(tx, y, tz);
         sl.addFreshEntity(shell);
-        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, tip[0], tip[1], tip[2], 6, 0.12, 0.12, 0.12, 0.25);
+        sl.sendParticles(CHARGE_MOTE, tip[0], tip[1], tip[2], 4, 0.1, 0.1, 0.1, 0.05);
         if (!first)
             sl.playSound(null, blockPosition(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.NEUTRAL, 0.5F, 1.7F + getRandom().nextFloat() * 0.4F);
     }
