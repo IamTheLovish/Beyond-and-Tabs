@@ -1,11 +1,24 @@
-{"pre": [["python", "tools/gen_angels.py", "--all"]],
+{"pre": [["python", "tools/gen_angels.py", "--massing", "b2", "--kind", "mender"],
+         ["python", "tools/gen_angels.py", "--massing", "b2", "--kind", "archer"],
+         ["python", "tools/gen_angels.py", "--massing", "b2", "--kind", "sword"],
+         ["python", "tools/gen_angels.py", "--massing", "b4", "--kind", "mender"],
+         ["python", "tools/gen_angels.py", "--massing", "b4", "--kind", "archer"],
+         ["python", "tools/gen_angels.py", "--massing", "b4", "--kind", "sword"],
+         ["git", "diff", "--stat", "--exit-code", "--", "design/models"],
+         ["python", "tools/angel_anim.py", "--fixture", "design/fixtures/angel_clips.json"],
+         ["git", "diff", "--stat", "--exit-code", "--", "design/fixtures"]],
  "jobs": [
   {"name": "control_radiant_winged", "model": "design/models/sunforged_paladin_radiant_winged.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
   {"name": "angel_b2_mender", "model": "design/models/sunforged_angel_b2_mender.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
   {"name": "angel_b2_archer", "model": "design/models/sunforged_angel_b2_archer.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
   {"name": "angel_b2_sword", "model": "design/models/sunforged_angel_b2_sword.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
-  {"name": "angel_b3_mender", "model": "design/models/sunforged_angel_b3_mender.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
-  {"name": "angel_b3_archer", "model": "design/models/sunforged_angel_b3_archer.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
-  {"name": "angel_b3_sword", "model": "design/models/sunforged_angel_b3_sword.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"}
+  {"name": "angel_b4_mender", "model": "design/models/sunforged_angel_b4_mender.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_b4_archer", "model": "design/models/sunforged_angel_b4_archer.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_b4_sword", "model": "design/models/sunforged_angel_b4_sword.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"}
  ],
- "post": [["python", "tools/render/white_angels/lineup.py", "--out", "{out}"]]}
+ "post": [["python", "tools/render/white_angels/lineup.py", "--out", "{out}"],
+          ["python", "tools/render/white_angels/measure.py", "--keys", "b2,b4", "--json", "{out}/measure.json"],
+          ["python", "tools/render/white_angels/strips.py", "--out", "{out}", "--key", "b2", "--views", "rts,quarter"],
+          ["python", "tools/angel_anim.py", "--stats", "--model-key", "b2"],
+          ["python", "tools/render/white_angels/motion_check.py", "--key", "b2", "--json", "{out}/motion_check_b2.json"],
+          ["python", "tools/render/white_angels/motion_check.py", "--key", "b4", "--json", "{out}/motion_check_b4.json"]]}
