@@ -1591,6 +1591,20 @@ for _p in ("fern", "fern_b", "fern_t", "fern_b_t"):
 for _p in ("tall_grass_bottom", "tall_grass_top", "large_fern_bottom", "large_fern_top", "tall_grass_bottom_b",
            "tall_grass_top_b"):
     TARGETS[_p] = dict(TARGETS[_p], luma=0.55, sat=0.30)   # lawn L1 / L2
+# r69 (lovish Nov 6: "dull and lifeless"; his game runs NO shader - Embeddium, no Oculus): the tufts were tuned under a
+# shader (lawn L1/L2: sat 0.30, a green bias), and the biome tint multiplies that green again - without a shader they
+# drew ~0.55 of the lawn's luma, olive and faded (lovish's clip s015; the shader lane measured 0.60 under ours). Back
+# toward a near-grey tintable sprite: lighter, little chroma of their own, a warm (yellow) bias so the tint's lime
+# leans toward the meadow reference's hue (76-84) and the tips read sunlit (test_lawn_r69)
+TUFT_R69 = dict(luma=0.74, sat=0.14)
+for _sh in ("", "_b", "_c"):
+    for _sz in ("", *PLANT_SIZES):
+        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], **TUFT_R69)
+for _p in ("tall_grass_bottom", "tall_grass_top", "large_fern_bottom", "large_fern_top", "tall_grass_bottom_b",
+           "tall_grass_top_b"):
+    TARGETS[_p] = dict(TARGETS[_p], **TUFT_R69)
+for _p in ("fern", "fern_b", "fern_t", "fern_b_t"):
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.70, sat=0.08)   # a cooler rosette beside the warmer grass (r35)
 PLANT_SEEDS = (
     "grass",
     "tall_grass_bottom",
@@ -4868,7 +4882,9 @@ def m_plant(name, n):
         # red in it, so the bright tips are not neon
         # lawn L1 (lp17: the tufts read tan, 119/118/84, sat 0.31, beside Complementary's dark-green tufts): a GREEN
         # bias (hue ~130 in albedo -> ~88 tinted), the body under the lawn
-        rgb = np.stack([shade * 0.95, shade * 1.03, shade * 0.90], -1)
+        # r69 (no shader in lovish's game: the green bias x the tint read olive): a YELLOW bias again, little of it
+        # (TUFT_R69 sat 0.14), so the tint carries the green and the tufts lean toward the meadow's warm hue
+        rgb = np.stack([shade * 1.03, shade * 1.02, shade * 0.86], -1)
     t = TARGETS[name]
     alb = ps.bleed(_plant_fit(np.clip(rgb, 0, 1), alpha > 0.05, t["luma"], t["sat"]), alpha)
     H = ps.bleed(np.where(alpha > 0, H, 0.0), alpha)
@@ -6278,6 +6294,15 @@ LAWN_R64 = dict(
     flowers=0.25,                    # buttercup specks per block, baked (test_lawn_r63's specks; the real flowers
                                      # are the untinted layer below)
     band=0.35,                       # blocks: the edge band where every variant shows the common fine detail
+    # r69 (lovish Nov 6: "the grass needs major improvments it looks dull and lifeless"; his game runs no shader, where
+    # r68 drew hue 95 - lime - against his meadow refs' 76-84): life from HUE, not from more contrast. Each texel keeps
+    # its luma (every value band above holds: the range, the lit side, the dark and light tails, the patches)
+    tip_hue=0.28,                    # hue follows the blade height: the tall tips warm (R up, B down), the hollows cool
+                                     # (R down, B up); x the fraction at +-1 std of H
+    hue_jit=0.16,                    # tuft-scale hue jitter (0.25-0.8 blocks): some tufts yellower, some bluer
+    warm=0.16,                       # the whole turf toward yellow-green: R x (1 + warm), B x (1 - warm / 2)
+                                     # (0.4-1.4 block height clumps were tried: 0.15 already broke test_lawn_r65's blotch
+                                     # ceiling and 0.3 the lit side - later, with their own round)
 )
 
 # albedo colours (the game multiplies the biome tint #6FA64A; our shader then pulls R 1.025, G 0.827, B 0.827)
@@ -6405,6 +6430,14 @@ def lawn_turf(res, blocks=LAWN_SHEET_BLOCKS, variant=1, knobs=None, seed=None):
     # colour
     rel = K["relief"] / 0.16
     col = LAWN64_MID[None, None] * (1 + 0.05 * rel * H + 0.06 * rel * blade)[..., None]
+    if K["tip_hue"] > 0 or K["hue_jit"] > 0:
+        hj = K["tip_hue"] * np.clip(H, -2, 2) * (1 - flat)
+        if K["hue_jit"] > 0:
+            hj = hj + K["hue_jit"] * np.clip(dual(lambda r: _r64_band(F, blocks, 0.25, 0.8, r)), -2, 2)
+        lw = np.array([0.2126, 0.7152, 0.0722])
+        before = col @ lw
+        col = col * np.stack([1 + hj, 1 + 0.25 * hj, 1 - 1.5 * hj], -1)
+        col = col * (before / np.maximum(col @ lw, 1e-6))[..., None]   # hue only: each texel keeps its luma
     col = col + (LAWN64_LEAF[None, None] - col) * (lit * 0.9 * rel)[..., None]
     col = col + (LAWN64_UNDER[None, None] * K["under"] - col) * np.clip(shade * K["shadow"], 0, 1)[..., None]
     cl_col = LAWN64_CLOVER[None, None] * (1 + 0.12 * fine + 0.04 * slope)[..., None]       # flat, its own speckle
@@ -6417,6 +6450,8 @@ def lawn_turf(res, blocks=LAWN_SHEET_BLOCKS, variant=1, knobs=None, seed=None):
     hv = pv * K["patch"] / 0.24                                                              # hue +-6 deg at 0.24
     col = col * (1 + K["patch"] * pv)[..., None] * np.stack([1 + 0.05 * hv, np.ones_like(hv), 1 - 0.06 * hv], -1)
     col = col * (1 + K["undul"] * np.clip(U, -2, 2) / 2)[..., None]
+    if K["warm"] != 0:
+        col = col * np.array([1 + K["warm"], 1.0, 1 - K["warm"] / 2])[None, None]
     # buttercup specks and clover heads: this variant's own, clear of the edge band, each with a short west shadow
     Hf = H.copy()
     for count, rad, fc, centre in ((int(K["flowers"] * bb), 0.066, LAWN64_FLOWER, None),
