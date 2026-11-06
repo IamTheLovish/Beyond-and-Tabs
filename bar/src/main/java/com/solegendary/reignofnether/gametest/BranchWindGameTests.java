@@ -39,7 +39,8 @@ public class BranchWindGameTests {
 
     /**
      * A tree whose limbs are sway wood and whose twig is a sway fence is one tree to TreeClearing: the scan counts
-     * every limb as a log, felling removes them all (block entities included) and pays 5 energy per log.
+     * every limb as a log, felling removes them all (block entities included) and pays one tree's energy
+     * (TreeClearing.ENERGY_PER_TREE: lovish, Nov 6, "A: same per tree" - it was 5 energy per log).
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 100)
     public static void sway_limbs_fell_with_the_tree_for_wood(GameTestHelper helper) {
@@ -136,8 +137,8 @@ public class BranchWindGameTests {
                 }
             if (job.logsFelled != logs.size())
                 helper.fail("felled " + job.logsFelled + " logs, planted " + logs.size() + " (4 trunk + 3 sway wood + 1 sway fence)");
-            else if (Math.abs(job.energyCredited - logs.size() * TreeClearing.ENERGY_PER_LOG) > 0.5f)
-                helper.fail(logs.size() + " logs should credit " + logs.size() * TreeClearing.ENERGY_PER_LOG + " energy, credited " + job.energyCredited);
+            else if (Math.abs(job.energyCredited - TreeClearing.ENERGY_PER_TREE) > 0.5f)
+                helper.fail("one tree (" + logs.size() + " logs) should credit " + TreeClearing.ENERGY_PER_TREE + " energy, credited " + job.energyCredited);
             else
                 helper.succeed();
         } finally {

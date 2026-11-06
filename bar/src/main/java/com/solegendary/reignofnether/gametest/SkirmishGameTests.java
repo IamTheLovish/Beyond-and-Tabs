@@ -13400,7 +13400,7 @@ public class SkirmishGameTests {
 
     /**
      * Trees are natural reclaim (TreeClearing): a building site fells the tree in its 2-block margin - logs and
-     * leaves gone, no item dropped, 5 energy per log to the owner - and leaves a tree outside the margin alone. The
+     * leaves gone, no item dropped, one tree's energy (25) to the owner - and leaves a tree outside the margin alone. The
      * placement ghost's scan reports the same tree and energy.
      */
     @GameTest(template = ARENA, timeoutTicks = 100)

@@ -30,7 +30,8 @@ import java.util.Set;
  * Trees never obscure the game and are natural reclaim (BAR: trees are energy features you reclaim or build over).
  * <ul>
  *   <li>Placing a building fells every tree in its footprint plus a {@link #MARGIN}-block ring the moment the site
- *       is laid, crediting {@link #ENERGY_PER_LOG} energy per log to the owner. Leaves vanish with their tree.
+ *       is laid, crediting {@link #ENERGY_PER_TREE} energy per tree to the owner (each log its share, so a tree cut
+ *       short pays part). Leaves vanish with their tree.
  *       Natural logs no longer block placement (BuildingValidators): the tree is cleared instead.</li>
  *   <li>Workers' area reclaim (Ctrl+right-drag, AreaCommands) includes trees: each worker walks to its trees and
  *       fells one when it gets within {@link #FELL_REACH} blocks.</li>
@@ -45,7 +46,12 @@ import java.util.Set;
 public class TreeClearing {
 
     public static final int MARGIN = 2;
-    public static final float ENERGY_PER_LOG = 5f;
+    /**
+     * What one felled tree pays, however many logs it has (lovish, Nov 6: "A: same per tree"): today's vanilla oak -
+     * 4 to 6 logs at the old 5 energy a log - so our own trees (tools/gen_trees.py, 16-64 logs) keep the economy where
+     * it was. Each log pays ENERGY_PER_TREE / the tree's logs.
+     */
+    public static final float ENERGY_PER_TREE = 25f;
     public static final int MAX_SPAN = 96;              // per axis: fits an area-reclaim circle (radius 40) and any footprint
     static final int MAX_TREE_REACH = 7;                // a tree's logs stay within this of its trunk (big oaks, acacias)
     static final int MAX_LOGS_PER_TREE = 160;
@@ -91,13 +97,13 @@ public class TreeClearing {
         }
     }
 
-    /** What a scan found: the trees and their total logs (energy = logs * ENERGY_PER_LOG). */
+    /** What a scan found: the trees and their total logs (energy = trees * ENERGY_PER_TREE). */
     public static final class Scan {
         public final List<Tree> trees = new ArrayList<>();
         public int logs;
 
         public float energy() {
-            return logs * ENERGY_PER_LOG;
+            return trees.size() * ENERGY_PER_TREE;
         }
     }
 
@@ -208,6 +214,8 @@ public class TreeClearing {
         final ServerLevel level;
         final String owner;
         final ArrayDeque<BlockPos> logs = new ArrayDeque<>();
+        /** Each queued log's share of its tree's energy (ENERGY_PER_TREE / the tree's logs), in the order of logs. */
+        final ArrayDeque<Float> logShares = new ArrayDeque<>();
         final ArrayDeque<BlockPos> canopy = new ArrayDeque<>();
         /** The site's own blocks (a building may be made of logs or leaves): never removed. */
         final Map<BlockPos, BlockState> keep;
@@ -227,14 +235,17 @@ public class TreeClearing {
         /** Removes up to {@code budget} blocks; returns how many it spent. Public for the GameTests. */
         public int step(int budget) {
             int spent = 0, felled = 0;
+            float energy = 0;
             while (spent < budget && !logs.isEmpty()) {
                 BlockPos p = logs.poll();
+                Float share = logShares.poll();
                 spent++;
                 BlockState bs = level.getBlockState(p);
                 if (!isLog(bs) || bs.equals(keep.get(p)))
                     continue;
                 level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
                 felled++;
+                energy += share == null ? 0 : share;
             }
             while (spent < budget && !canopy.isEmpty()) {
                 BlockPos p = canopy.poll();
@@ -247,7 +258,7 @@ public class TreeClearing {
             if (felled > 0) {
                 logsFelled += felled;
                 if (owner != null && !owner.isEmpty())
-                    energyCredited += EconomyServerEvents.addReclaimedEnergy(owner, felled * ENERGY_PER_LOG);
+                    energyCredited += EconomyServerEvents.addReclaimedEnergy(owner, energy);
             }
             return spent;
         }
@@ -265,6 +276,9 @@ public class TreeClearing {
         FellJob job = new FellJob(level, owner, keep);
         for (Tree t : scan.trees) {
             job.logs.addAll(t.logs);
+            float share = t.logs.isEmpty() ? 0 : ENERGY_PER_TREE / t.logs.size();
+            for (int i = 0; i < t.logs.size(); i++)
+                job.logShares.add(share);
             job.canopy.addAll(t.canopy);
         }
         if (!job.isDone())
