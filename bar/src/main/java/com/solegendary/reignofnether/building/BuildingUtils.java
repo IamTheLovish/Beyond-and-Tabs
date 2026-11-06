@@ -235,7 +235,7 @@ public class BuildingUtils {
 
 
 
-    public static Vec3i getBuildingSize(ArrayList<BuildingBlock> blocks) {
+    public static Vec3i getBuildingSize(List<BuildingBlock> blocks) {
         BlockPos min = getMinCorner(blocks);
         BlockPos max = getMaxCorner(blocks);
         return new Vec3i(

@@ -347,6 +347,12 @@ public class CustomBuilding extends ProductionBuilding implements GarrisonableBu
         return BuildingBlockData.getBuildingBlocksFromNbt(structureNbt);
     }
 
+    /** No shipped blueprint to share: the blocks come from this building's own tag, parsed per call as before. */
+    @Override
+    public List<BuildingBlock> sharedBlockData(LevelAccessor level) {
+        return getRelativeBlockData(level);
+    }
+
     public Faction getFaction() {return Factions.NONE;}
 
     public BuildingPlaceButton getWorkerBuildButton(Keybinding hotkey) {

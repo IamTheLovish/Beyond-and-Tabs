@@ -253,6 +253,46 @@ public class BuildingBlockModGameTests {
     }
 
     /**
+     * The shared view of a blueprint (BuildingBlockData.sharedBlocksFromNbt, what the capitol ghost draws every
+     * frame) is the parsed structure itself: the same list on every call, with the copies' content, and read-only -
+     * a drawer can't move a block for everyone who places that building after it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void structure_cache_shares_a_read_only_view_for_drawing(GameTestHelper helper) {
+        String name = "villager_house";
+        List<String> problems = new ArrayList<>();
+        List<BuildingBlock> shared = BuildingBlockData.sharedBlocksFromNbt(name, helper.getLevel());
+        List<BuildingBlock> again = BuildingBlockData.sharedBlocksFromNbt(name, helper.getLevel());
+        List<BuildingBlock> copy = BuildingBlockData.getBuildingBlocksFromNbt(name, helper.getLevel());
+        if (shared.isEmpty())
+            problems.add(name + ": the shared view has no blocks");
+        if (shared.size() != copy.size())
+            problems.add(name + ": shared view " + shared.size() + " blocks, copy " + copy.size());
+        for (int i = 0; i < Math.min(shared.size(), copy.size()); i++) {
+            BuildingBlock s = shared.get(i), c = copy.get(i);
+            if (s == c)
+                problems.add(name + " block " + i + ": the copy hands out the shared block itself");
+            if (!s.getBlockPos().equals(c.getBlockPos()) || s.getBlockState() != c.getBlockState()
+                || !java.util.Objects.equals(s.getBlockNbt(), c.getBlockNbt())) {
+                problems.add(name + " block " + i + ": the shared view differs from the copy");
+                break;
+            }
+        }
+        boolean sameBacking = !shared.isEmpty() && !again.isEmpty() && shared.get(0) == again.get(0);
+        if (!sameBacking)
+            problems.add(name + ": two shared views are not backed by the same parsed blocks (parsed twice)");
+        try {
+            shared.clear();
+            problems.add(name + ": the shared view let a caller clear it");
+        } catch (UnsupportedOperationException expected) {
+            // read-only, as promised
+        }
+        if (!problems.isEmpty())
+            helper.fail("shared structure view: " + problems);
+        helper.succeed();
+    }
+
+    /**
      * A FramedBlocks slope placed the way a building places it - a structure palette entry plus the block's "nbt"
      * (FramedBlockEntity's camo: {type: framedblocks:block, state: {Name}}, FramedBlocks 9.4.3 BlockCamoContainer),
      * read by BuildingBlockData and put down by BuildingPlacement.restoreBlockEntity - keeps its camo through the

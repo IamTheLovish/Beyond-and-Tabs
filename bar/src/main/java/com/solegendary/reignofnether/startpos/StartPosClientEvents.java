@@ -159,14 +159,9 @@ public class StartPosClientEvents {
             return getPos().getIcon();
     }
 
-    @SubscribeEvent
-    public static void onChangeGamemode(PlayerEvent.PlayerChangeGameModeEvent evt) {
-        StartPos startPos = getPos();
-        if (evt.getEntity() == MC.player && startPos != null && MC.player != null) {
-            selectedFaction.equals(Factions.NONE);
-            StartPosServerboundPacket.unreservePos(startPos.pos);
-        }
-    }
+    // (a PlayerChangeGameModeEvent handler that compared the server's ServerPlayer with MC.player - the client's
+    // LocalPlayer, never the same object - used to live here: it never ran. The game-mode clears that do run are
+    // ClientGameModeHelper.cycleGameMode and GameModeClientboundPacket.)
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
@@ -188,10 +183,12 @@ public class StartPosClientEvents {
                     if (startPos.playerName.equals(MC.player.getName().getString()))
                         forceColour = 1;
                     if (capitolBuilding != null) {
-                        ArrayList<BuildingBlock> blocksToDraw = capitolBuilding.getRelativeBlockData(MC.level);
+                        // drawn every frame, per start: the parsed blueprint, shared (this read and unzipped the .nbt
+                        // twice per start per frame)
+                        List<BuildingBlock> blocksToDraw = capitolBuilding.sharedBlockData(MC.level);
                         Vec3i dimensions = BuildingUtils.getBuildingSize(blocksToDraw);
                         BlockPos bp = BuildingUtils.getBuildingOriginPos(startPos.pos, false, Rotation.NONE, dimensions);
-                        BuildingClientEvents.drawBuilding(capitolBuilding.getRelativeBlockData(MC.level), evt.getPoseStack(), bp, forceColour);
+                        BuildingClientEvents.drawBuilding(blocksToDraw, evt.getPoseStack(), bp, forceColour);
                     }
                 }
             }
@@ -204,7 +201,9 @@ public class StartPosClientEvents {
     private static final Minecraft MC = Minecraft.getInstance();
 
     public static void resetAll() {
-        selectedFaction.equals(Factions.NONE);
+        // was `selectedFaction.equals(Factions.NONE);` - a comparison whose result was thrown away, so the faction
+        // picked in one world was still "reserved" (hasReservedPos && selectedFaction != NONE) in the next
+        selectedFaction = Factions.NONE;
         isStarting = false;
         for (StartPos startPos : startPoses)
             startPos.reset();
