@@ -32,7 +32,19 @@ public final class InstanceBatch {
     public static final int TEXELS_PER_BONE = 6, FLOATS_PER_BONE = TEXELS_PER_BONE * 4;
     /** Ints per instance header: bone texel, light, overlay, colour (r | g << 8 | b << 16 | a << 24). */
     public static final int HEADER = 4;
-    public static final int KIND_CUTOUT = 0, KIND_EYES = 1;
+    /**
+     * The program a pass is drawn with: CUTOUT and TRANSLUCENT both with the lit one (vanilla's entity_translucent runs
+     * the entity cutout's exact shader code and blend; the type's own state sets its transparency), EYES with the eyes one.
+     */
+    public static final int KIND_CUTOUT = 0, KIND_EYES = 1, KIND_TRANSLUCENT = 2;
+
+    /** Is a pass of this kind (-1: a shader this path does not reproduce) drawn instanced at this colour alpha? */
+    public static boolean instanceable(int kind, float alpha) {
+        if (kind < 0)
+            return false;
+        // a fading translucent body needs vanilla's back-to-front sort of its quads; an opaque one draws the same in any order
+        return kind != KIND_TRANSLUCENT || alpha >= 1f;
+    }
 
     private float[] bones = new float[FLOATS_PER_BONE * 4096];
     private int boneFloats = 0;

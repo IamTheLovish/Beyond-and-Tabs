@@ -45,10 +45,11 @@ import java.util.function.Supplier;
  * are TAGGED by the code that starts them: the body (the render's own getBuffer), an EyesLayer (glow), a coloured cutout
  * copy (vanilla's helper: profession and clothing layers) and TeamColourLayer's mipmapped team cloth. A tagged
  * top-level part render with a render type whose shader this path reproduces (entity cutout, entity cutout no cull,
- * eyes) is instanced. Everything else draws the old way, and the unit with it:
+ * eyes, and entity translucent while the pass is opaque: PlayerModel bodies) is instanced. Everything else draws the
+ * old way, and the unit with it:
  * <ul>
  *   <li>not in the level's entity loop (portraits, the HUD), a shader pack, an outline buffer (glowing), not a unit;</li>
- *   <li>a pass whose render type is not reproduced (translucent: phasing, fading corpses) - DEMOTE;</li>
+ *   <li>a pass whose render type is not reproduced, or a translucent one with alpha < 1 (phasing, fading corpses) - DEMOTE;</li>
  *   <li>an untagged draw of a part of one of this unit's rigs (a layer re-drawing a bone, e.g. an upgrade glow) - DEMOTE;</li>
  *   <li>a tree whose parts keep moving past the rebuild cap ({@link RigCache}) - DEMOTE.</li>
  * </ul>
@@ -294,7 +295,7 @@ public final class Instancer {
                 demote(R_FOREIGN);   // a part of this unit's body drawn by an untagged layer: both draws the old way
             return oldWay(part, ps, consumer, light, overlay, r, g, b, a);
         }
-        if (tagKind < 0) {
+        if (!InstanceBatch.instanceable(tagKind, a)) {
             demote(R_TYPE);
             return oldWay(part, ps, consumer, light, overlay, r, g, b, a);
         }
@@ -473,6 +474,8 @@ public final class Instancer {
                 if (si != null && (si == GameRenderer.getRendertypeEntityCutoutNoCullShader()
                         || si == GameRenderer.getRendertypeEntityCutoutShader()))
                     kind = InstanceBatch.KIND_CUTOUT;
+                else if (si != null && si == GameRenderer.getRendertypeEntityTranslucentShader())
+                    kind = InstanceBatch.KIND_TRANSLUCENT;   // PlayerModel bodies (grunt): the cutout's code and blend
                 else if (si != null && si == GameRenderer.getRendertypeEyesShader())
                     kind = InstanceBatch.KIND_EYES;
             }

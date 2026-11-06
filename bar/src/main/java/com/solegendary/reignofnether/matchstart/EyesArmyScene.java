@@ -72,6 +72,14 @@ final class EyesArmyScene {
     private static final int ZOOM_NORMAL = 30, ZOOM_CROWD = 60;
     private static final int[] ZOOMS = { ZOOM_NORMAL, ZOOM_CROWD };
     private static final double SETTLE_S = 3, SLICE_S = 6;
+    /**
+     * The first slice of an army size starts only once the view draws the army: at least this share of the units the
+     * client knows, per frame (run 42189253540's first 100-unit slice measured 4.7 villagers - the camera was not there
+     * yet). Waits at most {@link #READY_MAX_S} more seconds, then measures anyway and says so. Fixed before any result,
+     * the same for the old and the instanced path.
+     */
+    private static final double READY_SHARE = 0.8, READY_MAX_S = 30;
+    private static long readyFrames0 = 0, readyUnits0 = 0;
     private static final int SUMMONS_PER_TICK = 25;
     /** A pixel differs when a channel moved by more than this (of 255): the rounding of light and edges stays under. */
     static final int PARITY_DELTA = 16;
@@ -306,6 +314,19 @@ final class EyesArmyScene {
         UnitInstancing.setOverride(plan.get(i));
         EyesDirector.setZoom(planZoom.get(i));
         OrthoviewClientEvents.centreCameraOnPosInstant(centre);
+        readyFrames0 = FrameParts.framesLifetime();
+        readyUnits0 = AnimProfile.viewUnitsLifetime();
+    }
+
+    /** The first slice of a size: does the view draw the army yet (units per frame since the last look)? */
+    private static boolean armyInView() {
+        long f = FrameParts.framesLifetime() - readyFrames0;
+        if (f < 2)
+            return false;
+        double perFrame = (double) (AnimProfile.viewUnitsLifetime() - readyUnits0) / f;
+        readyFrames0 = FrameParts.framesLifetime();
+        readyUnits0 = AnimProfile.viewUnitsLifetime();
+        return perFrame >= READY_SHARE * knownArmy();
     }
 
     /** True while this army size's slices run. */
@@ -314,6 +335,12 @@ final class EyesArmyScene {
         if (!measuring) {
             if (s < SETTLE_S)
                 return true;
+            if (slice == 0 && !armyInView()) {
+                if (s < SETTLE_S + READY_MAX_S)
+                    return true;
+                ReignOfNether.LOGGER.info("[Eyes] 21_army: the view drew under {}% of the {} known units for {} s; "
+                    + "measuring anyway", Math.round(READY_SHARE * 100), knownArmy(), Math.round(s));
+            }
             measuring = true;
             sliceNanos = System.nanoTime();
             frames0 = FrameParts.framesLifetime();

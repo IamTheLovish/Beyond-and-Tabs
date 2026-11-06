@@ -400,4 +400,20 @@ class RigTest {
         assertSame(e, cache.memberOf(leaves.get(0)));
         assertTrue(cache.takeRetired().size() >= 1, "the replaced rigs are handed to the GL side to free");
     }
+
+    /**
+     * Which passes this path draws (eyes run 42189253540: every grunt went the old way, "render-type" - PlayerModel
+     * bodies use entity_translucent, whose shader code and blend are vanilla's entity cutout's). A translucent pass is
+     * drawn instanced only while it is opaque: a fading one (alpha < 1) needs vanilla's back-to-front quad sort.
+     */
+    @Test
+    void translucent_passes_are_instanced_only_while_opaque() {
+        assertTrue(InstanceBatch.instanceable(InstanceBatch.KIND_CUTOUT, 1f));
+        assertTrue(InstanceBatch.instanceable(InstanceBatch.KIND_CUTOUT, 0.5f), "cutout keeps its own alpha test");
+        assertTrue(InstanceBatch.instanceable(InstanceBatch.KIND_EYES, 1f));
+        assertTrue(InstanceBatch.instanceable(InstanceBatch.KIND_TRANSLUCENT, 1f), "an opaque translucent body (grunt)");
+        assertTrue(!InstanceBatch.instanceable(InstanceBatch.KIND_TRANSLUCENT, 0.99f), "a fading body goes the old way");
+        assertTrue(!InstanceBatch.instanceable(InstanceBatch.KIND_TRANSLUCENT, 0f));
+        assertTrue(!InstanceBatch.instanceable(-1, 1f), "a shader this path does not reproduce");
+    }
 }
