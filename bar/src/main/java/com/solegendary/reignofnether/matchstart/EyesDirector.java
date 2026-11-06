@@ -205,6 +205,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (FORMING_ONLY) {    // a forming run (eyes.yml input `forming`): only scene 20, then the end
+                        step = STEP_FORMING;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -282,6 +287,19 @@ public final class EyesDirector {
                     done = EyesHeroesScene.tick(mc);
                 } catch (Exception e) {
                     ReignOfNether.LOGGER.error("[Eyes] 19_heroes failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
+            case STEP_FORMING -> {
+                boolean done;
+                try {
+                    done = EyesFormingScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 20_forming failed at tick {}, ending the tour", ticks, e);
                     done = true;
                 }
                 if (done) {
@@ -597,6 +615,8 @@ public final class EyesDirector {
     static final boolean OVERLAYS_ONLY = Boolean.getBoolean("bat.eyes.overlays");
     static final int STEP_HEROES = 24;            // 19_heroes, EyesHeroesScene: its own run only (input `heroes`)
     static final boolean HEROES_ONLY = Boolean.getBoolean("bat.eyes.heroes");
+    static final int STEP_FORMING = 25;           // 20_forming, EyesFormingScene: its own run only (input `forming`)
+    static final boolean FORMING_ONLY = Boolean.getBoolean("bat.eyes.forming");
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
     private static int scarsPhase = 0;
     private static long scarsNanos = 0;
@@ -2190,13 +2210,28 @@ public final class EyesDirector {
                 // hit particles covered the body in about half of the 10 fps frames of every attack clip (run
                 // 39295387553 for 5169d6d) - and the body is what these clips exist to show. The dummies still die
                 // under the blows, so the clip keeps its kill. rtsapi-summon loads the entity from the nbt it is given
+                int dummyAt = names.length > 6 ? Integer.parseInt(names[6]) : 2;
+                // artillery (names[6] set): the dummies stand on the real ground dummyAt blocks off (the walk ended on a
+                // ledge, and a ghoul spawned at the unit's y inside the next rise suffocated), and the battery is ORDERED
+                // to shell that spot: the run of Nov 5 (42045632661) showed it never picking the NoAI dummies by itself,
+                // so the clip held a battery standing still. The clip window is [mark - 4 s, mark + 6 s], so the still
+                // comes 4.75 s after the order: the battery turns and aims for ~2.3 s, the four rockets leave over a second and land ~1 s
+                // later (run 42056297739: at +50 ticks the clip ended on the first rocket, the tour moves on after the still), so the
+                // window [still - 4 s, still] holds the whole volley and its impacts
+                boolean artillery = names.length > 6;
+                int dummyX = (int) Math.floor(unit.getX()) + dummyAt, dummyZ = (int) Math.floor(unit.getZ());
+                int dummyY = artillery ? mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, dummyX, dummyZ) : (int) Math.floor(unit.getY());
                 if (enemyName != null)
                     for (int k = 0; k < 2; k++)
                         runCommand(mc, String.format("rtsapi-summon \"%s\" %s:zombie_unit %d %d %d {NoAI:1b}", enemyName.replace("\"", ""),
-                                ReignOfNether.MOD_ID, (int) Math.floor(unit.getX()) + 2, (int) Math.floor(unit.getY()),
-                                (int) Math.floor(unit.getZ()) - 1 + 2 * k));
+                                ReignOfNether.MOD_ID, dummyX, dummyY, dummyZ - 1 + 2 * k));
                 ReignOfNether.LOGGER.info("[Eyes] {}: two ghouls of '{}' at its feet, AI off (dummies)", names[3], enemyName);
-                closeUpAt = ticks + 100;   // several swings / throws inside the clip
+                if (artillery) {
+                    BlockPos at = new BlockPos(dummyX, dummyY, dummyZ);
+                    UnitClientEvents.sendUnitCommandManual(UnitAction.ATTACK_GROUND, -1, new int[] { closeUpId }, at);
+                    ReignOfNether.LOGGER.info("[Eyes] {}: ordered to attack the ground at {}", names[3], at.toShortString());
+                }
+                closeUpAt = ticks + (artillery ? 95 : 100);   // several swings / throws inside the clip
             }
             closeUpPhase++;
         }
@@ -2218,6 +2253,10 @@ public final class EyesDirector {
         // the quadruped rig (Lane B, PR #76): the Mossback Bison's coat, grove and gait need to be seen moving, not
         // judged from stills (07t-v are the dragon's on claude/dragon-rig, 07z the mesh A/B)
         { "MossbackBisonUnit", "07w_mossback_bison_close", "07x_mossback_bison_walk", "07y_mossback_bison_attack", "mossback_bison_unit" },
+        // the Rocket Battery's volley (Nov 5): artillery has a 7-block dead zone, so its two ghoul dummies stand 9 blocks off
+        // (optional 6th / 7th entries: the close zoom's factor, and how far the dummies stand), and the zoom is wider so the
+        // rack, the crew's lean and the four rockets leaving it share one frame
+        { "RocketBatteryUnit", "07zm_rocket_battery_close", "07zn_rocket_battery_walk", "07zo_rocket_battery_volley", "rocket_battery_unit", "1.7", "9" },
         // the Tithe Binder rig (PR #549): hover bob, the orbiting weapon wheel, soul chains and the volley need to be
         // seen moving in the game, not judged from offline sheets
         { "TitheBinderUnit", "07za_tithe_binder_close", "07zb_tithe_binder_walk", "07zc_tithe_binder_volley", "tithe_binder_unit" },
@@ -2300,7 +2339,7 @@ public final class EyesDirector {
         // past the player's floor of 10 blocks of view height (a unit was ~11% of the screen there): ~5 for a 2-block
         // body, ~7 for the golem-sized paladin - at the close tilt (55 degrees) the body fills about a third of the
         // screen height
-        float closeZoom = Math.max(5f, subject.getBbHeight() * 2.6f);
+        float closeZoom = Math.max(5f, subject.getBbHeight() * 2.6f) * (names.length > 5 ? Float.parseFloat(names[5]) : 1f);
         setZoom(closeZoom);
         placeOnScreen(mc, closeUpMiddle(subject), CLOSE_NDC_X, CLOSE_NDC_Y);
         ReignOfNether.LOGGER.info("[Eyes] {}: zooming in to {} on {} at {}", names[1], closeZoom,

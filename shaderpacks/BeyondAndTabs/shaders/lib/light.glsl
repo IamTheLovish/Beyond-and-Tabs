@@ -82,17 +82,21 @@ vec3 sunArriving(float shadow, vec2 levels, vec3 sunColour) {
     return sunColour * (shadow * smoothstep(0.05, 0.45, levels.y));
 }
 
+// the sky's fill: the part of a surface's light that ambient occlusion takes (slice 3; lit.fsh records its share,
+// composite.fsh applies the occlusion to that share only). surfaceLight adds this very term, so the two never drift
+vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 skyColour) {
+    float upness = dot(n, normalize(upPosition));
+    return skyColour * ((SKY_FILL_SIDE + (1.0 - SKY_FILL_SIDE) * upness) * mix(SKY_FILL_FLOOR, 1.0, levels.y) * ao * texAo);
+}
+
 // the light falling on a surface with view-space normal n: shadow (0..1) from lib/shadow.glsl, levels from lightLevels,
 // ao the vertex ambient occlusion (1 = open), texAo the material's own (the _n map's blue, slice 2; 1 = open): it
 // darkens the sky's fill fully and the sun at half strength - a crevice still catches some of a direct sun
 vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, float texAo, vec3 sunColour,
                   vec3 skyColour) {
-    vec3 up = normalize(upPosition);
-    float sky = levels.y;
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
     vec3 light = sunArriving(shadow, levels, sunColour) * (facing * mix(1.0, texAo, 0.5));
-    float upness = dot(n, up);
-    light += skyColour * ((SKY_FILL_SIDE + (1.0 - SKY_FILL_SIDE) * upness) * mix(SKY_FILL_FLOOR, 1.0, sky) * ao * texAo);
+    light += skyFill(n, levels, ao, texAo, skyColour);
     // no light bounced off the ground onto walls: slice 2 tried 0.20 of the sun (block critic, Oct 30) and the
     // wall-to-roof step fell from slice 1's 1.73 to 1.42 (eyes 41962082358 / 41962085182); lovish, Nov 5: "Keep the
     // strong step" - walls stay at ~58% of the roofs, so a building reads its shape from the RTS camera

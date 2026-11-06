@@ -40,6 +40,15 @@ to evoke the general feel of a late-90s RTS lobby, but no audio from Total Annih
 was sampled, traced, resynthesised or used as a reference recording; the script reads no input files. They are part
 of this project and distributed under its licence.
 
+## In-game sound effects
+
+The battle, building, ability and match sounds in `bar/src/main/resources/assets/reignofnether/sounds/sfx/` are
+**original, procedurally generated** audio from `tools/gen_sfx.py` (numpy + scipy, ffmpeg/libvorbis for the encode;
+every sound is seeded, so re-running reproduces it). The script reads no input files. Among them, `portal_forming`
+(Nov 2026: a portal or game ender forming - a rising charge, then a settle) follows only the general idea of a portal
+that forms instead of switching on; no file, function, texture or sound of any third-party pack, game or library was
+used for it or for the effect it accompanies. They are part of this project and distributed under its licence.
+
 ## Title and loading screen art
 
 The rose window, arch, filigree, candlelight and background in `bar/src/main/resources/assets/reignofnether/textures/gui/splash/`

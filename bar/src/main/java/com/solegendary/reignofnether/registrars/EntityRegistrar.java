@@ -715,6 +715,14 @@ public class EntityRegistrar {
                     .updateInterval(10)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bombard_shell").toString()));
 
+    // the Rocket Battery's rocket: the Bombard Crew's shell rules with its own flight, model and burst
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.RocketShell>> ROCKET_SHELL = ENTITIES.register("rocket_shell",
+            () -> EntityType.Builder.<com.solegendary.reignofnether.unit.units.storm.RocketShell>of(com.solegendary.reignofnether.unit.units.storm.RocketShell::new, MobCategory.MISC)
+                    .sized(0.4f, 0.4f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .updateInterval(2)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "rocket_shell").toString()));
+
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit>> EMBALMER_UNIT = ENTITIES.register("embalmer_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
