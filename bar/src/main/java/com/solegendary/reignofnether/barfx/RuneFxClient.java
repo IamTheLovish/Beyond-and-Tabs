@@ -42,7 +42,7 @@ import org.joml.Matrix4f;
  *       (its ring in the faction's hue: a white one read as a selection marker);</li>
  *   <li>motes in the faction's own shape and way of moving, kept below {@link #RISE} blocks so they stay with their
  *       caster (stars rise, ash sinks, embers are thrown, petals spiral, pixels climb lines, sparks zigzag, cogs orbit at
- *       chest height);</li>
+ *       the rim);</li>
  *   <li>the last {@link #FADE} s of the cast time fade it with a slight swell; an early end (its caster died) fades in
  *       {@link RunePool#END_FADE} s.</li>
  * </ul>
@@ -82,9 +82,10 @@ public final class RuneFxClient {
     /**
      * The rim per faction (F_* id): its core (light enough to read on sunlit grass, never pure hue, never pure white:
      * overlapping rims summed to white in round 9; round 13: neutral's and Sunforged's cores blew out to white, so they
-     * keep their hue), its halo (the faction's hue), and the dark line under both.
+     * keep their hue; round 14: Sunforged's went cream and Gravebound's, Horde's and Verdant's rims clipped to white, so
+     * they hold more of their hue too), its halo (the faction's hue), and the dark line under both.
      */
-    static final int[] CORE = {0xDCE6FF, 0xFFE896, 0xD0FF60, 0xFFB080, 0xB0FFB0, 0xC8FCFF, 0xE2D0FF, 0xFFC870};
+    static final int[] CORE = {0xDCE6FF, 0xFFDC70, 0xC4F850, 0xFF9068, 0x90F0A0, 0xC8FCFF, 0xE2D0FF, 0xFFC870};
     static final int[] HALO = {0x8FB0FF, 0xFFE070, 0x7CE000, 0xFF2A00, 0x28C850, 0x40E4FF, 0xA472FF, 0xD07818};
     static final int[] DARK = {0x202040, 0x3A1E00, 0x1A2A00, 0x3A0800, 0x0B3D1E, 0x002A3A, 0x1E0A40, 0x3A2400};
     /**
@@ -126,6 +127,11 @@ public final class RuneFxClient {
      * stacked into one soup; not smaller, round 12 wanted the rim clear of the unit's base).
      */
     static final float CROWD_R = 3, CROWD_MIN = 0.78f, CROWD_SHRINK = 0.9f;
+    /**
+     * The halo thins further in a crowd: HALO_A times 1 - HALO_CROWD per other circle within CROWD_R, not below
+     * HALO_CROWD_MIN (round 14: three or more stacked halos still summed to a white wash; the thin core keeps the shape).
+     */
+    static final float HALO_CROWD = 0.12f, HALO_CROWD_MIN = 0.45f;
     static final int CROWD_N = 3;
     /** How many circles may flash at full strength in one frame; past it every flash is dimmed to share that much. */
     static final float FLASH_CAP = 3;
@@ -141,11 +147,12 @@ public final class RuneFxClient {
     static final float MOTE_SPEED = 2;
     static final float MOTE_A = 1.0f, MOTE_HALF = 0.26f, RISE = 1.5f;
     /**
-     * Brassworks' cogs: this many orbiting at chest height (blocks, T1), at a share of the radius, rev/s, half size (round
-     * 13: ten at head height and .75 of the radius drifted over the neighbours).
+     * Brassworks' cogs: this many turning round the rim just over the ground (blocks, T1), at a share of the radius, rev/s,
+     * half size (round 13: ten at head height drifted over the neighbours; round 14: at chest height they still read as
+     * confetti off the ring, so they sit on it, evenly spaced, like a mechanism).
      */
     static final int COGS = 6;
-    static final float COG_H = 1.2f, COG_R = 0.6f, COG_SPIN = 0.6f, COG_HALF = 0.216f;
+    static final float COG_H = 0.3f, COG_R = 0.95f, COG_SPIN = 0.6f, COG_HALF = 0.216f;
 
     // the atlas: 2048 x 1152. Per faction column of 256: ring (y 0), sigil (256), 16 glyphs of 64 (512), the glyph band
     // tier (768), then at y 1024 the plain tier ring (128) | mote, beam over spark, shade (64 each)
@@ -161,6 +168,7 @@ public final class RuneFxClient {
     private static final BlockPos.MutableBlockPos POS = new BlockPos.MutableBlockPos();
     private static final boolean[] SHOWN = new boolean[RunePool.MAX];
     private static final float[] RADIUS = new float[RunePool.MAX], CROWD = new float[RunePool.MAX];
+    private static final float[] HALO_C = new float[RunePool.MAX];   // each circle's halo share, thinned in a crowd
     private static final float[] PULLD = new float[RunePool.MAX];   // each circle's pull toward the camera, blocks
     private static float flashScale = 1, sweepStart = (float) (-Math.PI / 2);
     // this frame's: detail (1 close .. 0 far), the rim core's half width, blocks per screen pixel
@@ -266,6 +274,7 @@ public final class RuneFxClient {
                         n++;
                 }
                 CROWD[i] = Math.max(CROWD_MIN, 1 / (float) Math.sqrt(1 + n));
+                HALO_C[i] = Math.max(HALO_CROWD_MIN, 1 - HALO_CROWD * n);
                 if (n >= CROWD_N)
                     RADIUS[i] *= CROWD_SHRINK;
             }
@@ -415,7 +424,8 @@ public final class RuneFxClient {
         if (near > 0.01f)
             fan(vc, m, gx, gy, gz, rr / RIM_IN_CELL, RING_SEG, reveal, sweepStart, FEATHER, t * RING_SPIN * tau,
                 u0 + CELL_U / 2, CELL_V / 2, CELL_U / 2, CELL_V / 2, 1, 1, 1, RING_A * sl * breath * near);
-        stroke(vc, m, gx, gy, gz, rr, wc * HALO_K, STROKE_SEG, reveal, HALO[f], HALO_A * sl * (1 + 0.5f * flash));
+        stroke(vc, m, gx, gy, gz, rr, wc * HALO_K, STROKE_SEG, reveal, HALO[f],
+            HALO_A * HALO_C[i] * sl * (1 + 0.5f * flash));
         float settle = 1 - SETTLE * Math.max(0, Math.min(1, (t - SETTLE_FROM) / (SETTLE_TO - SETTLE_FROM)));
         if (t > BEAT_FROM)   // the hold's beat: the hold is never still
             settle *= 1 + BEAT * Math.max(0, 1 - frac((t - BEAT_FROM) / BEAT_EVERY) * BEAT_EVERY / BEAT_T);
@@ -426,7 +436,7 @@ public final class RuneFxClient {
         if (rel >= 0 && rel < PULSE_T) {   // the release: the rim thrown out, the moment read at any zoom
             float q = rel / PULSE_T;
             float rp = rr * (PULSE_FROM + (PULSE_TO - PULSE_FROM) * ease(q));
-            stroke(vc, m, gx, gy + 0.02f, gz, rp, wc * HALO_K, STROKE_SEG, 1, HALO[f], HALO_A * (1 - q) * sl);
+            stroke(vc, m, gx, gy + 0.02f, gz, rp, wc * HALO_K, STROKE_SEG, 1, HALO[f], HALO_A * HALO_C[i] * (1 - q) * sl);
             stroke(vc, m, gx, gy + 0.02f, gz, rp, wc, STROKE_SEG, 1, CORE[f], (1 - q) * sl);
         }
     }
@@ -477,7 +487,7 @@ public final class RuneFxClient {
             float pa = PILLAR_A * flashScale * sl * (1 - rel / PILLAR_T) * near;
             pillar(vc, m, cx, cy + PILLAR_FROM * sc, cz, PILLAR_H * sc, PILLAR_HW * sc, u0 + 3 * GLYPH_U, V_FX, pa);
         }
-        // motes, each faction its own way, short lived; Brassworks' cogs orbit at head height instead
+        // motes, each faction its own way, short lived; Brassworks' cogs turn round the rim instead
         float mA = sl * Math.max(0, Math.min(1, (t - 0.2f) / 0.2f)) * MOTE_A * near;
         if (mA > 0.01f) {
             if (f == BarFx.F_BRASS) {
