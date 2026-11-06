@@ -839,15 +839,16 @@ def build_b2(kind):
     fz, wy = body["front_z"], body["waist"]
     errs = []
     if kind == "mender":
-        # 5: the lamp held up and out beside the shoulder on a short chain, ~0.45 body-widths further out than r1: hung
-        # low at the hip it still crossed the robe's hem from the RTS camera's 35 degree yaw (first r2 render)
-        g = (-9.0, wy + 3.0, fz - 0.6)
-        errs.append(grip_hold(m, ra, None, g, (1.0, 0.0, 0.0), 0.35, -1, (0.5, 0.6, 0.45),
-                              elbow_at=(-7.6, wy + 4.4, 0.2), fingers=3, on_fore=True))
-        lantern_b2(m, g, ra[1], 3.6)
-        errs.append(solve(m, la, (1.6, wy - 0.4, fz - 3.6)))
-        open_hand(m, la, 1)
-        m.contact_ok += [("right_fore", "chain")]
+        # 5: the lamp held up and out beside the shoulder on a short chain, ~0.45 body-widths further out than r1, in
+        # the LEFT hand: the RTS camera's 35 degree yaw swings the unit's right side in front of the robe (the first
+        # two r2 renders: hung at the hip, then raised on the right, it still crossed the robe from the RTS view)
+        g = (9.0, wy + 3.0, fz - 0.6)
+        errs.append(grip_hold(m, la, None, g, (1.0, 0.0, 0.0), 0.35, 1, (-0.5, 0.6, 0.45),
+                              elbow_at=(7.6, wy + 4.4, 0.2), fingers=3, on_fore=True))
+        lantern_b2(m, g, la[1], 3.6)
+        errs.append(solve(m, ra, (-1.6, wy - 0.4, fz - 3.6)))
+        open_hand(m, ra, -1)
+        m.contact_ok += [("left_fore", "chain")]
     elif kind == "archer":
         grip = (6.4, 19.0, -7.2)
         bw, Lx = bow(m, grip, 34.0, 20.0, la[1], fix=False)
