@@ -25,20 +25,24 @@ env:
   R3_COMMIT: fead253b4ca0add00df4c1d347cb7259340b7ce8      # Quarry Saint r3, the A/B's other side (full SHA)
   PY: tools/render/quarry_saint
 jobs:
-  # the key solve only when its inputs (generator, pose solver, gen_models, contact_check) changed since the key file
-  # committed on the branch (design/fixtures/quarry_saint_keys.json "_inputs"); the bakes and renders run every time
+  # r4: the key solve is per key - only the keys whose spec changed since the key file committed on the branch, all of
+  # them when the body / FK / solver version changed (pipeline.py plan); a part with nothing to solve exits early.
+  # The bakes and renders run every time.
   plan:
     if: github.ref_name == 'claude/quarry-saint'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
       solve: ${{ steps.need.outputs.solve }}
+      need: ${{ steps.need.outputs.need }}
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # an older key file's specs are read from the history
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
+      - run: pip install -q numpy pillow
       - id: need
-        run: python $PY/pipeline.py --out out/plan need-keys
+        run: python $PY/pipeline.py --out out/plan plan
 
   keys:
     needs: plan
@@ -52,10 +56,10 @@ jobs:
         include:
           - { part: 1, only: 'rest,ready,sweep_windup,slam_contact,carry' }
           - { part: 2, only: 'rest_lift,sweep_mid,sweep_contact,slam_wrench,walk_contact_R' }
-          - { part: 3, only: 'sweep_recover,sweep_follow,gatefall_windup,walk_pass_R,glance' }
+          - { part: 3, only: 'sweep_recover,sweep_follow,walk_pass_R,glance' }
           - { part: 4, only: 'slam_step,slam_mid,gatefall_contact,walk_contact_L,stagger' }
           - { part: 5, only: 'slam_pop,slam_windup,walk_pass_L,death_hit' }
-          - { part: 6, only: 'gatefall_brace,gatefall_mid,death_kneel,death_topple' }
+          - { part: 6, only: 'gatefall_brace,gatefall_mid,gatefall_windup,carry_lift,death_kneel,death_topple' }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -65,7 +69,8 @@ jobs:
         run: |
           set -euo pipefail
           python $PY/pipeline.py --out out/keys${{ matrix.part }} gen
-          python $PY/pipeline.py --out out/keys${{ matrix.part }} keys --only '${{ matrix.only }}' --tag ${{ matrix.part }}
+          python $PY/pipeline.py --out out/keys${{ matrix.part }} keys --only '${{ matrix.only }}' \
+            --need '${{ needs.plan.outputs.need }}' --tag ${{ matrix.part }}
       - uses: actions/upload-artifact@v4
         with: { name: 'qs-keys-${{ matrix.part }}', path: 'out/keys${{ matrix.part }}', retention-days: 1 }
 
