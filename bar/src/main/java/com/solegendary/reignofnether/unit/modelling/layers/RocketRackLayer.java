@@ -77,6 +77,10 @@ public class RocketRackLayer extends RenderLayer<RocketBatteryUnit, VillagerUnit
         getParentModel().body.translateAndRotate(pose);
         int overlay = LivingEntityRenderer.getOverlayCoords(unit, 0.0F);
         model.rack.render(pose, buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE)), packedLight, overlay);
+        // the orbs first as solid blue at full light, then the additive glow over them: eyes() alone only ADDS its blue
+        // to whatever is behind, so over the copper and the grass the orbs came out salmon-pink (storm critic round 2)
+        model.glow.render(pose, buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE)),
+            net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
         model.glow.render(pose, buffer.getBuffer(RenderType.eyes(TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY, glow, glow, glow, 1.0F);
         pose.popPose();
     }
