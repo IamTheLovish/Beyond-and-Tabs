@@ -36,7 +36,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_tithe_binder as G  # noqa: E402
-from gen_models import rot_mat, mat_mul, transpose, euler  # noqa: E402
+from gen_models import rot_mat, mat_mul, euler  # noqa: E402
 
 # ------------------------------------------------------------------ constants (the Java port copies these) ---------
 K_CHAIN, C_CHAIN = 0.22, 0.18          # sheet 4.3: chains, tatters, cape, lantern
