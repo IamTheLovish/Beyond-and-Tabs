@@ -125,12 +125,50 @@ public abstract class AngelUnit extends PathfinderMob implements Unit {
     public static final EntityDataAccessor<String> onDeathCommandDataAccessor =
             SynchedEntityData.defineId(AngelUnit.class, EntityDataSerializers.STRING);
 
+    /**
+     * Animation cues for the client rig (AngelDrive; the Tithe Binder's volley cue pattern): counters that step once
+     * per event, never per tick, and the unit the last cue aimed at (-1 none). The wind-up cue steps when the Seraph
+     * Archer's draw starts (its release follows ATTACK_WINDUP_TICKS - 1 ticks later); the contact cue steps on the
+     * contact itself - the archer's release, the Mender's heal. The Sword Seraph needs none: its swing is vanilla's
+     * animate packet.
+     */
+    public static final EntityDataAccessor<Integer> windupCueDataAccessor =
+            SynchedEntityData.defineId(AngelUnit.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> contactCueDataAccessor =
+            SynchedEntityData.defineId(AngelUnit.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> cueTargetDataAccessor =
+            SynchedEntityData.defineId(AngelUnit.class, EntityDataSerializers.INT);
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(ownerDataAccessor, "");
         this.entityData.define(scenarioRoleDataAccessor, -1);
         this.entityData.define(onDeathCommandDataAccessor, "");
+        this.entityData.define(windupCueDataAccessor, 0);
+        this.entityData.define(contactCueDataAccessor, 0);
+        this.entityData.define(cueTargetDataAccessor, -1);
+    }
+
+    /** The wind-up cue counter (synced): steps when the archer's draw starts. */
+    public int getWindupCue() { return this.entityData.get(windupCueDataAccessor); }
+
+    /** The contact cue counter (synced): steps on the archer's release and the Mender's heal. */
+    public int getContactCue() { return this.entityData.get(contactCueDataAccessor); }
+
+    /** The unit the last cue aimed at (synced), -1 for none. */
+    public int getCueTargetId() { return this.entityData.get(cueTargetDataAccessor); }
+
+    /** Server: a draw starts at {@code target}. */
+    public void cueWindup(@Nullable LivingEntity target) {
+        this.entityData.set(cueTargetDataAccessor, target == null ? -1 : target.getId());
+        this.entityData.set(windupCueDataAccessor, getWindupCue() + 1);
+    }
+
+    /** Server: the contact lands on {@code target} (a release, a heal). */
+    public void cueContact(@Nullable LivingEntity target) {
+        this.entityData.set(cueTargetDataAccessor, target == null ? -1 : target.getId());
+        this.entityData.set(contactCueDataAccessor, getContactCue() + 1);
     }
 
     // free: the caster paid essence for it (no population, no metal, no wreck; lovish: "angels take no population")

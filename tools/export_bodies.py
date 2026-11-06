@@ -33,6 +33,13 @@ BODIES = [
      "--plain-spec"),
     ("design/models/sunforged_dawn_paladin_v2.json", "DawnPaladinModel", "dawn_paladin_body_unit",
      "tabard,tabard_dark", "--plain-spec"),
+    # Nov 6: the Angel Caller's three summons (tools/gen_angels.py b4), plain _s maps like the Dome Cleric
+    ("design/models/sunforged_angel_b4_mender.json", "MenderAngelModel", "mender_angel_unit", "tabard,tabard_dark",
+     "--plain-spec"),
+    ("design/models/sunforged_angel_b4_archer.json", "SeraphArcherModel", "seraph_archer_unit", "tabard,tabard_dark",
+     "--plain-spec"),
+    ("design/models/sunforged_angel_b4_sword.json", "SwordSeraphModel", "sword_seraph_unit", "tabard,tabard_dark",
+     "--plain-spec"),
 ]
 TEX = "bar/src/main/resources/assets/reignofnether/textures/entities/"
 JAVA = "bar/src/main/java/com/solegendary/reignofnether/unit/modelling/models/gen/"
