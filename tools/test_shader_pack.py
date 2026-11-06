@@ -142,6 +142,41 @@ class ShaderPack(unittest.TestCase):
         self.assertTrue(1.00 <= sides[0] <= 1.10, "sunlit side at %.3f of the lawn" % sides[0])
         self.assertTrue(0.75 <= sides[1] <= 0.90, "shaded side at %.3f of the lawn" % sides[1])
 
+    def test_leaves_are_lit_as_foliage_not_as_stone(self):
+        # lovish (Nov 6): "Crowns too dark: fix lighting". In-game sweep (eyes 42190313477, tools/crown_measure.py):
+        # sunlit leaf tops already read ~1.0 of the lawn, but the faces in the crown's own shadow and the sides turned
+        # from the sun ~0.3-0.5 - sky fill only, like a stone wall. Leaves (ID_LEAVES) lean their normal LEAF_SOFT
+        # toward up and a leaf face in shadow keeps LEAF_THROUGH of the sun. At noon (sun ~60 degrees up) on this
+        # pack's own light model: a leaf side in shadow 0.45-0.70 of the open lawn (was 0.31), a crown's sunlit top
+        # unchanged, and the shaded side still at most 0.75 of the sunlit top (the crown keeps its relief)
+        settings = spc.code_of(read("lib", "settings.glsl"))
+        self.assertIsNotNone(re.search(r"#define LEAF_LIGHT 1\b", settings), "foliage light shipped on")
+        soft = spc.float_const(settings, "LEAF_SOFT", 0.0)
+        through = spc.float_const(settings, "LEAF_THROUGH", 0.0)
+        fsh = spc.code_of(read("program", "lit.fsh"))
+        self.assertIn("n = normalize(mix(n, up, LEAF_SOFT));", fsh)
+        self.assertIn("shadow = max(shadow, LEAF_THROUGH * (facing > 0.0 ? 1.0 : 0.0));", fsh)
+        self.assertIn("leaf = abs(mc_Entity.x - ID_LEAVES) < 0.5 ? 1.0 : 0.0;", spc.code_of(read("program", "lit.vsh")))
+        # the shadow pass is untouched: a tree's shadow on the lawn keeps its full mass
+        self.assertNotIn("LEAF_THROUGH", spc.code_of(read("shadow.vsh")) + spc.code_of(read("shadow.fsh")))
+        light = spc.code_of(read("lib", "light.glsl"))
+        sun = (math.cos(math.radians(60.0)), math.sin(math.radians(60.0)))   # (toward the sun's azimuth, up)
+        lawn = spc.noon_light(light, 1.0, sun[1])
+
+        def leaf_side(azimuth, through_share):
+            # a side face (normal horizontal) leaned `soft` toward up; azimuth: its horizontal dot with the sun's
+            n = (1.0 - soft, soft)
+            length = math.hypot(*n)
+            n = (n[0] / length, n[1] / length)
+            return spc.noon_light(light, n[1], n[0] * sun[0] * azimuth + n[1] * sun[1], through_share) / lawn
+        top = spc.noon_light(light, 1.0, sun[1]) / lawn
+        self.assertAlmostEqual(top, 1.0, places=6)
+        for azimuth in (1.0, 0.0, -1.0):
+            shaded = leaf_side(azimuth, through)
+            self.assertTrue(0.45 <= shaded <= 0.70, "leaf side in shadow (azimuth %+.0f) at %.3f of the lawn"
+                            % (azimuth, shaded))
+            self.assertLessEqual(shaded / top, 0.75)
+
     def test_grade_matches_the_mods_enchanted_look(self):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's
         # final.fsh copies the Enchanted column of WorldLookPass (#326); until #326 is on this branch there is no third

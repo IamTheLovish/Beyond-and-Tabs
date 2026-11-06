@@ -398,6 +398,13 @@ jobs:
                   open('run/config/' + name, 'w').write(
                       'enableShaders=true' + chr(10) + 'shaderPack=BeyondAndTabs' + chr(10) + 'disableUpdateMessage=true' + chr(10)
                       + 'maxShadowRenderDistance=12' + chr(10))
+              # an A/B of the pack's own settings (input shader_options): Iris / Oculus read a folder pack's options
+              # from shaderpacks/<folder>.txt - without it the pack runs its defaults (run 42207775041's LEAF_LIGHT=1
+              # never reached the pack)
+              ours = [kv.strip() for kv in os.environ.get('SHADER_OPTIONS', '').split(';') if kv.strip()]
+              if ours:
+                  open('run/shaderpacks/BeyondAndTabs.txt', 'w').write(chr(10).join(ours) + chr(10))
+                  print('::notice::[Eyes] our pack options: ' + '; '.join(ours))
               n = sum(len(fs) for _, _, fs in os.walk('run/shaderpacks/BeyondAndTabs'))
               got.append('BeyondAndTabs (ours, %d files from %s)' % (n, os.environ.get('GITHUB_SHA', '?')[:9]))
               print('::notice::[Eyes] shader lane files: ' + '; '.join(got))
