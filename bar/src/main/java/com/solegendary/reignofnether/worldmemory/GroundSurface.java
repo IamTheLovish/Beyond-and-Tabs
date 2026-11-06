@@ -43,11 +43,16 @@ public final class GroundSurface {
      * Returns the chunk's minimum build height - 1 for an empty column.
      */
     public static int topBlockY(LevelChunk chunk, int localX, int localZ) {
+        return topBlockY(chunk, localX, localZ, new BlockPos.MutableBlockPos());
+    }
+
+    /** {@link #topBlockY(LevelChunk, int, int)} with the caller's scratch position (the trample sampler: no allocation a cell). */
+    public static int topBlockY(LevelChunk chunk, int localX, int localZ, BlockPos.MutableBlockPos p) {
         int y = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, localX, localZ);   // the top block's Y
         int min = chunk.getMinBuildHeight();
         if (y < min)
             return min - 1;
-        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(chunk.getPos().getMinBlockX() + localX, y, chunk.getPos().getMinBlockZ() + localZ);
+        p.set(chunk.getPos().getMinBlockX() + localX, y, chunk.getPos().getMinBlockZ() + localZ);
         while (y >= min) {
             BlockState s = chunk.getBlockState(p.setY(y));
             if (!(s.getBlock() instanceof LeavesBlock) && (s.blocksMotion() || !s.getFluidState().isEmpty())) {

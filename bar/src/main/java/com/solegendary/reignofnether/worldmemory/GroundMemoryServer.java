@@ -309,7 +309,10 @@ public final class GroundMemoryServer {
                 }
                 columns.chunk = chunk;
                 mem.decayTo(now, params);
-                long[] changed = mem.addTrample(chunkX, chunkZ, ax, az, bx, bz, radius, columns);
+                long[] changed = mem.addTrample(chunkX, chunkZ, ax, az, bx, bz, radius, columns, columns.changed);
+                // the scratch mask is reused by the next walk: a chunk not dirty yet keeps its own copy (once a sync window)
+                if (GroundMemory.anyBit(changed) && !st.dirty.containsKey(key))
+                    changed = changed.clone();
                 changedCells += markChanged(st, chunk, chunkX, chunkZ, changed);
             }
         columns.chunk = null;
@@ -327,10 +330,11 @@ public final class GroundMemoryServer {
         double footY;
         int peak;
         final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        final long[] changed = new long[4];   // the walk's changed-cell mask, reused (see trampleSegment)
 
         @Override
         public int peakAt(int x, int z) {
-            int topBlock = GroundSurface.topBlockY(chunk, x & 15, z & 15);
+            int topBlock = GroundSurface.topBlockY(chunk, x & 15, z & 15, pos);
             if (Math.abs(topBlock + 1 - footY) > TRAMPLE_REACH_Y)
                 return 0;
             TrampleRules.Surface surface = TrampleSurfaces.of(chunk.getBlockState(pos.set(x, topBlock, z)));

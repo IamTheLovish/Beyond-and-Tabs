@@ -220,7 +220,13 @@ public final class GroundMemory {
      * 256-bit mask of the cells that changed.
      */
     public long[] addTrample(int chunkX, int chunkZ, double ax, double az, double bx, double bz, double radius, TramplePeaks peaks) {
-        long[] changed = new long[4];
+        return addTrample(chunkX, chunkZ, ax, az, bx, bz, radius, peaks, new long[4]);
+    }
+
+    /** {@link #addTrample} into the caller's 4-long mask, cleared first (the server sampler reuses one: no allocation a walk). */
+    public long[] addTrample(int chunkX, int chunkZ, double ax, double az, double bx, double bz, double radius, TramplePeaks peaks,
+                             long[] changed) {
+        Arrays.fill(changed, 0L);
         double vx = bx - ax, vz = bz - az, len2 = vx * vx + vz * vz;
         if (radius <= 0 || len2 <= 1e-12)
             return changed;
