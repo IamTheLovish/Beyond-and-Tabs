@@ -3,6 +3,8 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.maps.MapBuilder;
 import com.solegendary.reignofnether.maps.MapPreset;
+import com.solegendary.reignofnether.maps.TemplateTreeFeature;
+import com.solegendary.reignofnether.maps.TreeTemplates;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.resources.TreeClearing;
 
@@ -76,7 +78,7 @@ public class TreeShapeGameTests {
     static final int HALF = 9;
     static final int HEIGHT = 30;
     /** Above the arena and every other test's scratch pad (they use y 170-190); each test its own height. */
-    static final int BIOME_PAD_Y = 226, MAP_PAD_Y = 262, ENERGY_PAD_Y = 226;
+    static final int BIOME_PAD_Y = 226, MAP_PAD_Y = 262, ENERGY_PAD_Y = 226, TEMPLATE_PAD_Y = 226;
 
     /** R4: the skirmish world's biome places no vanilla tree, and places at least one tree. */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 100)
@@ -134,6 +136,59 @@ public class TreeShapeGameTests {
             return;
         }
         measureAll(helper, features, MAP_PAD_Y);
+    }
+
+    /**
+     * R1 (per tree), R2, R3 and R5 on EVERY template a reignofnether:template_tree feature can grow, in each quarter
+     * turn (mirrored on the odd ones) - not a random draw: the features' twelve samples drew birch_3 but never birch_2,
+     * and both forked / leaning birches were invisible to TreeClearing (a twig over the trunk column, Nov 6 CI run
+     * 42147017743). The mean-bare rule (R1) stays on the features: a spruce alone keeps 2 bare blocks by design.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void every_tree_template_is_one_fellable_tree(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Set<String> names = new java.util.TreeSet<>();
+        for (var e : level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).entrySet())
+            if (e.getValue().config() instanceof TemplateTreeFeature.Config c)
+                names.addAll(c.templates());
+        if (names.isEmpty()) {
+            helper.fail("no reignofnether:template_tree configured feature names a template");
+            return;
+        }
+        BlockPos centre = helper.absolutePos(new BlockPos(8, 1, 8)).atY(TEMPLATE_PAD_Y);
+        String owner = "gametest_treetemplate_" + centre.asLong();
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        ResourcesServerEvents.resourcesList.add(pool);
+        List<String> faults = new ArrayList<>();
+        int placed = 0;
+        try {
+            for (String name : names) {
+                TreeTemplates.Template t = TreeTemplates.load(name);
+                if (t == null) {
+                    faults.add(name + ": not shipped / unreadable");
+                    continue;
+                }
+                for (int turn = 0; turn < 4; turn++) {
+                    pad(level, centre);
+                    boolean mirror = turn % 2 == 1;
+                    if (TreeTemplates.place(level, t, centre, turn, mirror) <= 0) {
+                        faults.add(name + " turn " + turn + ": placed nothing");
+                        continue;
+                    }
+                    placed++;
+                    Measure m = measure(level, centre);
+                    checkTree(level, centre, owner, name + " turn " + turn + (mirror ? " mirrored" : "") + " (" + m + ")", m, faults);
+                }
+            }
+        } finally {
+            ResourcesServerEvents.resourcesList.remove(pool);
+            pad(level, centre);
+        }
+        ReignOfNether.LOGGER.info("[TreeShape] templates {}: {} placed, {} faults", names, placed, faults.size());
+        if (faults.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(faults.size() + " faults: " + String.join(" | ", faults.subList(0, Math.min(14, faults.size()))));
     }
 
     /**
@@ -263,24 +318,7 @@ public class TreeShapeGameTests {
                     }
                     grown++;
                     bareSum += m.bare;
-                    String id = e.getKey() + " #" + i + " (" + m + ")";
-                    if (m.leaves == 0) {
-                        faults.add(id + ": no leaves");
-                        continue;
-                    }
-                    if (m.bare < MIN_BARE)
-                        faults.add(id + ": R1 bare trunk " + m.bare + " < " + MIN_BARE);
-                    if (m.bare > MAX_BARE)
-                        faults.add(id + ": R1 lowest leaf " + m.bare + " up > " + MAX_BARE);
-                    if (m.fill > MAX_FOOTPRINT_FILL)
-                        faults.add(id + ": R2 crown fills " + fmt(m.fill) + " of its box from above > " + MAX_FOOTPRINT_FILL + " (a leaf block)");
-                    if (m.fill < MIN_FOOTPRINT_FILL)
-                        faults.add(id + ": R2 crown fills " + fmt(m.fill) + " of its box from above < " + MIN_FOOTPRINT_FILL + " (scattered)");
-                    if (m.unnaturalLeaves > 0)
-                        faults.add(id + ": R3 " + m.unnaturalLeaves + " leaves persistent or at distance 7 (decay / never felled)");
-                    String fell = fell(level, centre, owner, m);
-                    if (fell != null)
-                        faults.add(id + (fell.startsWith("R5") ? ": " : ": R3 ") + fell);
+                    checkTree(level, centre, owner, e.getKey() + " #" + i + " (" + m + ")", m, faults);
                 }
                 double mean = grown == 0 ? 0 : bareSum / (double) grown;
                 if (grown > 0 && mean < MIN_MEAN_BARE)
@@ -298,6 +336,27 @@ public class TreeShapeGameTests {
                 + " || " + tally);
         else
             helper.succeed();
+    }
+
+    /** R1, R2 (per tree), R3 and R5 on the tree standing on the pad at centre; faults named by id. */
+    static void checkTree(ServerLevel level, BlockPos centre, String owner, String id, Measure m, List<String> faults) {
+        if (m.leaves == 0) {
+            faults.add(id + ": no leaves");
+            return;
+        }
+        if (m.bare < MIN_BARE)
+            faults.add(id + ": R1 bare trunk " + m.bare + " < " + MIN_BARE);
+        if (m.bare > MAX_BARE)
+            faults.add(id + ": R1 lowest leaf " + m.bare + " up > " + MAX_BARE);
+        if (m.fill > MAX_FOOTPRINT_FILL)
+            faults.add(id + ": R2 crown fills " + fmt(m.fill) + " of its box from above > " + MAX_FOOTPRINT_FILL + " (a leaf block)");
+        if (m.fill < MIN_FOOTPRINT_FILL)
+            faults.add(id + ": R2 crown fills " + fmt(m.fill) + " of its box from above < " + MIN_FOOTPRINT_FILL + " (scattered)");
+        if (m.unnaturalLeaves > 0)
+            faults.add(id + ": R3 " + m.unnaturalLeaves + " leaves persistent or at distance 7 (decay / never felled)");
+        String fell = fell(level, centre, owner, m);
+        if (fell != null)
+            faults.add(id + (fell.startsWith("R5") ? ": " : ": R3 ") + fell);
     }
 
     /** A flat grass pad (dirt under it) with air above, centred on the tree's column; centre is the air above it. */
@@ -382,10 +441,23 @@ public class TreeShapeGameTests {
             for (int dz = -HALF; dz <= HALF; dz++)
                 for (int dy = 0; dy < HEIGHT; dy++) {
                     BlockState bs = level.getBlockState(p.set(centre.getX() + dx, centre.getY() + dy, centre.getZ() + dz));
-                    if (!bs.isAir() && !(dy == 0 && bs.canBeReplaced()))
+                    if (!bs.isAir() && !(dy == 0 && groundPlant(level, p, bs)))
                         return "after felling " + bs.getBlock() + " still stands at +" + dx + "," + dy + "," + dz;
                 }
         return null;
+    }
+
+    /**
+     * The ground's own cover, which felling rightly leaves: a short plant (grass, fern, or a flower of the skirt -
+     * lovish's Oct 21 reference, "the ground under a tree is never bare lawn") rooted where it stands, on the ground
+     * layer. Never wood, leaves, or anything that could not stand there by itself (a bee nest, a floating plant).
+     * Nov 6: the first PR build counted the skirt's dandelions as tree left standing; canBeReplaced() alone (grass,
+     * fern) was a narrower stand-in for "ground plants" than this method's own javadoc said.
+     */
+    static boolean groundPlant(ServerLevel level, BlockPos p, BlockState bs) {
+        if (bs.is(BlockTags.LOGS) || bs.is(BlockTags.LEAVES))
+            return false;
+        return (bs.canBeReplaced() || bs.is(BlockTags.SMALL_FLOWERS)) && bs.canSurvive(level, p);
     }
 
     static String fmt(double d) {
