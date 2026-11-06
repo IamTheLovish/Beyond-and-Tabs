@@ -125,15 +125,16 @@ class HeartwoodHallTest(unittest.TestCase):
         self.assertGreaterEqual(top - roof, 18, (roof, top))
 
     def test_crown_spreads_past_the_hall_only_high_over_it(self):
-        """The crown may be wider than the hall only because it stands high over it (lovish's references, Nov 5
-        ~22:52Z: a crown "lifted HIGH above the roof on the trunk" that "spreads wider than the house", sky between roof
-        and crown). Every cherry leaf beyond ring 5 (the cornice) stands at least 12 blocks over the roofline, and 10-35
-        % of the crown's cherry leaves stand there: wider than the hall, still a round crown over it, not a plot-wide
-        lid. Band re-set from "at most 5 % beyond ring 5" (Nov 5, when the crown stood 7-10 over the roof and a wide
-        crown would have hidden the temple). The crown kept inside the cornice (round 11): 0 % - too narrow for the
-        references. Height re-set from 14 to 12 (Nov 6, Eris.14 on the round 12 critic): the box came down from 36 to
-        28 so the RTS frame holds the crown and it hides less ground behind the hall; 28 keeps the crown's top 18 over
-        the roof (test_crown_stands_clear_above_the_roof), and the spread starts 12 over it."""
+        """The crown may be wider than the hall only because it stands high over it (lovish's reference images, Nov 5
+        ~22:52Z, in Eris.14's description of them: a crown "lifted HIGH above the roof on the trunk" that "spreads wider
+        than the house", sky between roof and crown). Every cherry leaf beyond ring 5 (the cornice) stands at least 12
+        blocks over the roofline, and 10-35 % of the crown's cherry leaves stand there: wider than the hall, still a
+        round crown over it, not a plot-wide lid. Band re-set from "at most 5 % beyond ring 5" (Nov 5, when the crown
+        stood 7-10 over the roof and a wide crown would have hidden the temple). The crown kept inside the cornice
+        (round 11): 0 % - too narrow for the references. Height re-set from 14 to 12 (Nov 6, Eris.14 on the round 12
+        critic): the box came down from 36 to 28 so the RTS frame holds the crown and it hides less ground behind the
+        hall; 28 keeps the crown's top 18 over the roof (test_crown_stands_clear_above_the_roof), and the spread starts
+        12 over it."""
         roof = self._roofline()
         crown = [q for q, n in self._solid().items() if n == "cherry_leaves"]
         out = [q for q in crown if _ring(q) > 5]

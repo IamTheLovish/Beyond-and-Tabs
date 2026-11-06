@@ -37,26 +37,26 @@ overgrown air temple; ref 106 organic arches):
   - the STAG-DRYAD FACE on the bole's south side, over the strands and under the crown: a long pale face (a forehead
     three wide over a one-wide muzzle, warm eyes either side), its pale ANTLERS branching up out of the brow into the
     crown as the tree's own boughs;
-  - a BLOSSOM CROWN of uneven lobes (Nov 2026, after two blind massing rounds: the round tiered canopy read as "a
+  - - a BLOSSOM CROWN of uneven lobes (Nov 2026, after two blind massing rounds: the round tiered canopy read as "a
     green mound" and "a bullseye from above"): cherry leaves with a flowering azalea leaf in every few cells, each lobe
     on its own bough, leaning north-east away from the RTS camera so the temple's south and west faces show under it,
     glowing fruit (ochre / verdant froglights, shroomlight) in the lobes' undersides - blossom as leaves, nothing
-    hanging. THE TALL TREE (lovish, Nov 5, on the #502 living-crowns still: "the pink tree could be taller and stick
-    out of the building so its more define", "with branches coming out of the roof"): the box rose from 22 to 30, the
-    trunk stands 10 blocks clear of the roof under a crown kept inside the cornice (ring 5), y19-29. Fable critic
-    round 1 (blind, Nov 5) on the eyes stills: four legs over a 5 x 5 base read as "a wide brown ring" and "a
+    hanging. THE TALL TREE (lovish, Nov 5, on the #502 living-crowns still: "the pink tree could be taller and stick out
+    of the building so its more define", "with branches coming out of the roof"): the box first rose from 22 to 30, the
+    trunk 10 blocks clear of the roof under a crown kept inside the cornice (ring 5), y19-29 (round 13: 28). Fable
+    critic round 1 (blind, Nov 5) on the eyes stills: four legs over a 5 x 5 base read as "a wide brown ring" and "a
     treehouse room", the oak bark as crates, the corner root arcs as "crate stacks", and no roof read - so one trunk,
     one dark bark, a roof you see, low roots, a broader crown. Round 2: the roof inside the parapet still read as "a
-    paved courtyard", the five-wide mask as "a crate hut" and the bough tips as "four pink crosses" floating - so a
-    hip roof over the whole hall, a face carved in the bark, round blossoms on the bough tips. Round 3: the mossy cobble
+    paved courtyard", the five-wide mask as "a crate hut" and the bough tips as "four pink crosses" floating - so a hip
+    roof over the whole hall, a face carved in the bark, round blossoms on the bough tips. Round 3: the mossy cobble
     pyramid read as "a second mass" the tree "perches on" - so the roof is the hall's mossy bricks a step lower, the
-    boughs reach past the eaves to all-pink blossoms at one height, and the mask has no plank-textured blocks.
-    Rounds 4-11 (blind A/B each round) settled the roof, piers, moonwells and a closed crown top; lovish's references
-    (Nov 5 ~22:52Z) then lifted the crown to y25-35 with sky between it and the roof, let it spread past the hall
-    (round, to ring 7) because it stands that high, braided the trunk and gave the stag one long face. Round 13 (Nov
-    6, the round 12 Fable critic and Eris.14): the box down to 28 so the RTS frame holds the crown (y21-27, with
-    blossom drips under its rim) and it hides less ground behind the hall; root ribs from the strands down the roof's
-    hips and the corner piers into the moss; boughs rising from the bole into the crown; thin antlers;
+    boughs reach past the eaves to all-pink blossoms at one height, and the mask has no plank-textured blocks. Rounds
+    4-11 (blind A/B each round) settled the roof, piers, moonwells and a closed crown top; lovish's references (Nov 5
+    ~22:52Z) then lifted the crown to y25-35 with sky between it and the roof, let it spread past the hall (round, to
+    ring 7) because it stands that high, braided the trunk and gave the stag one long face. Round 13 (Nov 6, the round
+    12 Fable critic and Eris.14): the box down to 28 so the RTS frame holds the crown (y21-27, with blossom drips under
+    its rim) and it hides less ground behind the hall; root ribs from the strands down the roof's hips and the corner
+    piers into the moss; boughs rising from the bole into the crown; thin antlers;
   - the GARDEN: the paving breaks up into moss and rooted dirt, stepping stones, ferns, carpets and flowers.
 
 WHAT THE SIZE TOUCHES IN THE GAME (the coordinator applies these; this file edits nothing):
@@ -72,7 +72,7 @@ WHAT THE SIZE TOUCHES IN THE GAME (the coordinator applies these; this file edit
   - CrownMotionTest (the #502 living crowns): the great crown's base is y18, its lowest leaves - the blossom drips
     under its rim (y12, y19, then y25 before);
   - CapitolLife: none. SkirmishGameTests.heartwood_hall_frees_its_seedshapers: the 15-wide footprint fits its 16-wide
-    column (it stamps from x+1); it clears 22 high, and the tree's top 14 stand in the arena's open sky.
+    column (it stamps from x+1); it clears 22 high, and the tree's top 6 rows (y22-27) stand in the arena's open sky.
 
 RULES (asserted in check()): the box; the starting types in layer 0; nothing pops off (_SunRig.check_support); leaves
 persistent with their true distance (mex_verdant._leaf_distances); no water (the moonwells are moss beds), lava,
@@ -227,10 +227,10 @@ def legs_and_trunk(c):
     """One 3 x 3 trunk from the hall's floor up through the roof to the crown: the tree stands out of the building
     (lovish, Nov 5: "the pink tree could be taller and stick out of the building so its more define"). Over the roof it
     is a single column - four legs leaning together over a 5 x 5 base read as "a wide brown ring" and "a treehouse
-    room" (Fable critic, round 1). Its centre is the hollow heart up to y13, where the centre spawn (the box centre,
-    y14, walked down) lands on the floor, and it walks out by the 3-high doorways on the axes. A verdant froglight in
-    the heart's roof is its light. The roof's stone runs up to the bark (a flare of dark stairs round its foot read
-    as "a dark-oak plate at the roof apex", Fable critic round 6)."""
+    room" (Fable critic, round 1). Its centre is the hollow heart up to y12, where the centre spawn (the box centre,
+    y13, walked down) lands on the floor, and it walks out by the 3-high doorways on the axes. A verdant froglight in
+    the heart's roof (y13) is its light. The roof's stone runs up to the bark (a flare of dark stairs round its foot
+    read as "a dark-oak plate at the roof apex", Fable critic round 6)."""
     top = H - 4
     for y in range(2, top + 1):
         for dx, dz in c.cells(1):
@@ -305,11 +305,11 @@ def boughs(c):
                 c.set(*q, WOOD, axis="y")
 
 
-# The BRAIDED TRUNK (round 12; lovish's references, Nov 5 ~22:52Z: a "thick twisted trunk", roots "gripping" the
-# building, boughs that "rise up and out" and never lie on the roof): four strands leave the bole inside the hall, break
-# out through the roof's hips on the four diagonals, stand straight up off it and then twist round the bole, closing
-# into it under the face. lovish, Nov 5: "with branches coming out of the
-# roof". The flat boughs over the roof (rounds 4-11) read as "a flat zigzag X ... branches sit ON the roof" (Fable
+# The BRAIDED TRUNK (round 12; lovish's reference images, Nov 5 ~22:52Z, in Eris.14's description of them: a "thick
+# twisted trunk", roots "gripping" the building, boughs that "rise up and out" and never lie on the roof): four strands
+# leave the bole inside the hall, break out through the roof's hips on the four diagonals, stand straight up off it and
+# then twist round the bole, closing into it under the face. lovish's own words, Nov 5: "with branches coming out of
+# the roof". The flat boughs over the roof (rounds 4-11) read as "a flat zigzag X ... branches sit ON the roof" (Fable
 # critic round 11); these stand up off it.
 STRANDS = 4
 
@@ -360,10 +360,11 @@ def strands(c):
 
 
 def ribs(c):
-    """The ROOTS that grip the hall (round 13; lovish's references: a trunk that "climbs up the side of the house and
-    wraps it", roots gripping): each strand, where it stands on the roof, sends a root rib down the roof's hip to the
-    eave corner, and on down the corner pier - the root has taken the pier's place - into the moss at its foot, where
-    it splays as two roots lying along the stair rim. The Fable critic, round 12: "the trunk is a plain column standing
+    """The ROOTS that grip the hall (round 13; lovish's reference images, in Eris.14's description of them: a trunk that
+    "climbs up the side of the house and wraps it", roots gripping): each strand, where it stands on the roof, sends
+    a root rib down the roof's hip to the eave corner, and on down the corner pier - the root has taken the pier's
+    place - into the moss at its foot, where it splays as two roots lying along the stair rim. The Fable critic, round
+    12: "the trunk is a plain column standing
     on the roof peak; the one dark block line stepping down the SW roof slope looks like a stray. Fix: run ... dark-oak
     ribs from the trunk base down the stepped roof to the hall corners and on down the walls to the moss terrace
     (roots that grip the ground)". Bark outside the walls lies along its line (the corner roots as crate stacks: see

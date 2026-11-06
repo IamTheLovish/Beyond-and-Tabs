@@ -1207,7 +1207,7 @@ LEAF = dict(persistent="true", distance="1", waterlogged="false")
 
 
 def heartwood_hall():
-    """The Verdant capitol: the World-Tree Court (tools/capitol_heartwood_hall.py, Oct 19), 15 x 30 x 15 - a world tree
+    """The Verdant capitol: the World-Tree Court (tools/capitol_heartwood_hall.py, Oct 19), 15 x 28 x 15 - a world tree
     grown up through a ruined mossy temple, roots arching over moonwells, stag-dryad faces in the trunk."""
     import capitol_heartwood_hall
     return capitol_heartwood_hall.build()

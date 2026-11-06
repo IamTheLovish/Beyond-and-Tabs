@@ -1713,7 +1713,7 @@ public class BuildingPlacement {
     }
 
     /** The centre column at the footprint's floor (minCorner's y): where "near the building" is measured on the
-     *  ground. The box centre sits half the box up - y14 on a 30-high Heartwood Hall - so a 10-block sphere round it
+     *  ground. The box centre sits half the box up - 13 up on the 28-high Heartwood Hall - so a 10-block sphere round it
      *  reached no ground at all and animals spawned against the kerb (#522 review N1). */
     public static BlockPos groundCentre(BlockPos minCorner, BlockPos centrePos) {
         return new BlockPos(centrePos.getX(), minCorner.getY(), centrePos.getZ());
