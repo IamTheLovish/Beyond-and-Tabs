@@ -77,12 +77,16 @@ class LibraryTest(unittest.TestCase):
             self.assertFalse(sorted({n for n in self.solid[i].values() if "copper" in n}), "L%d copper" % (i + 1))
 
     def test_the_grand_library_grows_and_glows(self):
-        """The upgrade reads from far: the grand stands at least 2 higher than L1 and has a light at its top (a lantern
-        or glowstone above y 9). RoN's grand is one block higher and its glowstone lies in the floor."""
+        """The upgrade reads from far: the grand stands at least 4 higher than L1, has a light at its top (a lantern or
+        glowstone above y 9) and at least 2 more lanterns than L1 (the hall lit at dusk). RoN's grand is one block higher
+        and its glowstone lies in the floor; blind round r1 (eyes 42183989119 / 42186086985: the redraw 5.5, RoN's 2.5)
+        marked the redraw's first grand down: "one extra gold band, invisible at RTS" (L1 -> L3 4, RoN's 5)."""
         t1, t2 = max(q[1] for q in self.solid[0]), max(q[1] for q in self.solid[1])
-        self.assertGreaterEqual(t2 - t1, 2, "grand top %d, L1 top %d" % (t2, t1))
+        self.assertGreaterEqual(t2 - t1, 4, "grand top %d, L1 top %d" % (t2, t1))
         lit = [q for q, n in self.solid[1].items() if n in ("lantern", "glowstone") and q[1] > 9]
         self.assertTrue(lit, "grand: no light high on the building")
+        lamps = [sum(1 for n in self.solid[i].values() if n == "lantern") for i in range(2)]
+        self.assertGreaterEqual(lamps[1] - lamps[0], 2, "lanterns L1 %d, grand %d" % tuple(lamps))
 
     def test_game_rules(self):
         """What Library.java and RoN's placement read off the structures (unchanged by the redraw): both 7 x 7; L1 has no
