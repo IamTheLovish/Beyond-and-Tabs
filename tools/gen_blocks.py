@@ -145,12 +145,12 @@ TARGETS = {
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
     # the _s blue CODE: 65-255 = subsurface scattering (light through the leaf under a shader pack)
     # round 18: leaves' tilt 18 -> 12 (every leaf edge drew a dark rim under shaders)
-    "oak_leaves":       dict(luma=0.57, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "birch_leaves":     dict(luma=0.62, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "spruce_leaves":    dict(luma=0.52, std=0.120, sat=0.04, ao=0.35, tilt=9.0, smooth=50, pore=150),
-    "acacia_leaves":    dict(luma=0.57, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "jungle_leaves":    dict(luma=0.54, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=70, pore=170),
-    "dark_oak_leaves":  dict(luma=0.51, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170),
+    "oak_leaves":       dict(luma=0.62, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "birch_leaves":     dict(luma=0.66, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "spruce_leaves":    dict(luma=0.55, std=0.120, sat=0.04, ao=0.35, tilt=9.0, smooth=50, pore=150),
+    "acacia_leaves":    dict(luma=0.62, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "jungle_leaves":    dict(luma=0.58, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=70, pore=170),
+    "dark_oak_leaves":  dict(luma=0.55, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
     "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.26, tilt=24.0, smooth=76, pore=10),   # r31: pink-grey, rust blooms
@@ -1227,9 +1227,11 @@ LEAF_GAP_COVER = 0.22         # r71: only the larger gaps stay open; r73: 0.35 -
 # tinted leaves' albedo a touch warm, so the biome's blue-green tint lands nearer the olive lawn (critic, trees r2:
 # "crowns a saturated blue-green, lawn olive; they fight")
 LEAF_FLOOR = 0.70            # r73: 0.62 -> 0.70 (critic r3: crowns still read as dark blobs)
-LEAF_WARM = (1.03, 1.00, 0.94)
-# r74 (Fable critic, trees r4, blind: r73's brighter leaves read "lime" in 5 of 6 leaf previews, under the plains
-# tint): the luma halfway back (oak 0.62 -> 0.57) and the warm cast halved (less yellow under the tint)
+LEAF_WARM = (1.06, 1.00, 0.88)
+# r75, best of r72-r74: two blind Fable critics split on the leaves' brightness (r4: r73's brighter leaves "lime";
+# r5: r73's brighter leaves better in all five leaf pairs, in game every crown ~half the lawn's luminance either
+# way) - r73's leaves stay (oak 0.62, LEAF_WARM as r72), with r74's smaller holes and r74's bark (spruce's banding
+# gone, per-plate slants, cherry level: r74 won 5 of 7 barks)
 
 
 def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0, gaps=True):
@@ -1734,7 +1736,7 @@ PROC_VARIANT_BLOCKS["mud"] = ("cube_column", {"end": "mud", "side": "mud_side"})
 TARGETS["mangrove_log"] = dict(luma=0.28, std=0.095, sat=0.40, tilt=22.0, smooth=40, pore=36)
 TARGETS["mangrove_log_top"] = dict(luma=0.36, std=0.070, sat=0.50, tilt=12.0, smooth=40, pore=30)
 LEAVES["mangrove_leaves"] = (320, 0.11, 0.055, False)
-TARGETS["mangrove_leaves"] = dict(luma=0.54, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170)
+TARGETS["mangrove_leaves"] = dict(luma=0.58, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170)
 LEAF_VARIANTS["mangrove_leaves_v2"] = "mangrove_leaves"
 LEAVES["mangrove_leaves_v2"] = LEAVES["mangrove_leaves"]
 TARGETS["mangrove_leaves_v2"] = dict(TARGETS["mangrove_leaves"])
