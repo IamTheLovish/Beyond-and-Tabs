@@ -32,14 +32,17 @@ public final class ScarRenderTypes extends RenderType {
 
     public static final ResourceLocation SCORCH_TEXTURE = new ResourceLocation(ReignOfNether.MOD_ID, "textures/decals/scorch.png");
     public static final ResourceLocation CRATER_TEXTURE = new ResourceLocation(ReignOfNether.MOD_ID, "textures/decals/crater.png");
+    public static final ResourceLocation TRAMPLE_TEXTURE = new ResourceLocation(ReignOfNether.MOD_ID, "textures/decals/trample.png");
 
     static {
         MipmappedTextures.register(SCORCH_TEXTURE);
         MipmappedTextures.register(CRATER_TEXTURE);
+        MipmappedTextures.register(TRAMPLE_TEXTURE);
     }
 
     public static final RenderType SCORCH = decal("reignofnether_scar_scorch", SCORCH_TEXTURE);
     public static final RenderType CRATER = decal("reignofnether_scar_crater", CRATER_TEXTURE);
+    public static final RenderType TRAMPLE = decal("reignofnether_scar_trample", TRAMPLE_TEXTURE);
 
     private static RenderType decal(String name, ResourceLocation texture) {
         return create(name, DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, true,

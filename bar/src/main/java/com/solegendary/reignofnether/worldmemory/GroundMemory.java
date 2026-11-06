@@ -194,10 +194,27 @@ public final class GroundMemory {
      * everywhere) is the caller's per-cell peak (the surface's wear); {@code allowed} the column filter as for the discs.
      * Returns the 256-bit mask of the cells that changed.
      */
-    /** Slice 2 (trampled ground): red-first stub, the stamp lands in the next commit. */
     public long[] addTrampleCapsule(int chunkX, int chunkZ, double ax, double az, double bx, double bz, double radius,
                                     int peak, int[] peaks, long[] allowed) {
-        return new long[4];
+        long[] changed = new long[4];
+        if (radius <= 0 || (peak <= 0 && peaks == null))
+            return changed;
+        int ox = chunkX << 4, oz = chunkZ << 4;
+        int x0 = Math.max(ox, (int) Math.floor(Math.min(ax, bx) - radius)), x1 = Math.min(ox + 15, (int) Math.floor(Math.max(ax, bx) + radius));
+        int z0 = Math.max(oz, (int) Math.floor(Math.min(az, bz) - radius)), z1 = Math.min(oz + 15, (int) Math.floor(Math.max(az, bz) + radius));
+        for (int x = x0; x <= x1; x++)
+            for (int z = z0; z <= z1; z++) {
+                int cell = index(x - ox, z - oz);
+                if (allowed != null && !bit(allowed, cell))
+                    continue;
+                float w = TrampleRules.capsuleWeight(x + 0.5, z + 0.5, ax, az, bx, bz, radius);
+                if (w <= 0)
+                    continue;
+                int p = peaks == null ? peak : peaks[cell];
+                if (add(cell, TRAMPLE, Math.round(p * w)))
+                    setBit(changed, cell);
+            }
+        return changed;
     }
 
     private long[] stampDisc(int chunkX, int chunkZ, double cx, double cz, double radius, double core, int peak,

@@ -148,7 +148,7 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.heroes && 5 || inputs.forming && 8 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.heroes && 5 || inputs.forming && 8 || inputs.scars && 13 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
       SCARS: ${{ inputs.scars && '1' || '0' }}
       FOG: ${{ inputs.fog && '1' || '0' }}
       OVERLAYS: ${{ inputs.overlays && '1' || '0' }}
@@ -662,10 +662,11 @@ jobs:
             grep -h "20_forming_after: " out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -1 | sed 's/^/::notice::/' || true
             [ "$got" -ge 8 ] || { echo "::error::only $got forming stills (expected 8)"; exit 1; }
           fi
-          if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
+          if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the 13 stills of scene 16 (7 scars + 6 trample off / on)
             got=$(find out -name 'bat_eyes_16_scars_*.png' | wc -l)
             ls out | grep '^bat_eyes_16_' | sed 's/^/::notice::[Eyes] still /' || true
-            [ "$got" -ge 6 ] || { echo "::error::only $got scars stills (expected 6)"; exit 1; }
+            grep -h "16 trample A/B" out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -1 | sed 's/^/::notice::/' || true
+            [ "$got" -ge 13 ] || { echo "::error::only $got scars stills (expected 13: 7 scars + 6 trample off / on)"; exit 1; }
           fi
           if [ -n "${STRUCTURE_STILLS:-}" ]; then   # a structure-photo run: five stills per structure
             got=$(find out -name 'bat_eyes_15_*.png' | wc -l)

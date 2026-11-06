@@ -20,8 +20,8 @@ import java.util.function.LongFunction;
 
 /**
  * Builds one 64x64-block region's decal geometry from the client's field copies (GroundMemoryClient): per cell one
- * quad per active layer (scorch, crater), each on the column's real top face (GroundSurface), lit by the block light
- * above it, tinted like fogged terrain where the fog of war hides the column.
+ * quad per active layer (trample, scorch, crater), each on the column's real top face (GroundSurface), lit by the block
+ * light above it, tinted like fogged terrain where the fog of war hides the column.
  * <p>
  * What makes it read as ground rather than discs (claude/world-that-remembers.md 4.1, 4.2, ART-FAULTS):
  * <ul>
@@ -55,24 +55,29 @@ final class ScarRegionMesh {
 
     final int rx, rz, ox, oz;
     private final ClientLevel level;
+    /** Whether the trample layer is built at all (GroundMemoryClient.drawTrample: the eyes run's on / off A/B). */
+    private final boolean withTrample;
     // the field round the region (one cell of padding for the corner samples), 0 where no chunk copy exists
     private final byte[] scorch = new byte[W * W];
     private final byte[] crater = new byte[W * W];
+    private final byte[] trample = new byte[W * W];
     private boolean anyMark = false;
     private boolean chunkMissing = false;
     private int row = 0;
-    private int scorchQuads = 0, craterQuads = 0;
+    private int scorchQuads = 0, craterQuads = 0, trampleQuads = 0;
     private float minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
-    private final BufferBuilder scorchBuf, craterBuf;
+    private final BufferBuilder scorchBuf, craterBuf, trampleBuf;
     private final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
     private final LevelChunk[] chunks = new LevelChunk[16];
     // per-cell scratch (no garbage per cell)
-    private final float[] core = new float[4], rim = new float[4];
+    private final float[] core = new float[4], rim = new float[4], tv = new float[4];
     private final int[] cr = new int[4], cg = new int[4], cb = new int[4];
 
     ScarRegionMesh(ClientLevel level, int rx, int rz, LongFunction<GroundMemory> fields, DecayParams params,
-                   BufferBuilder scorchBuf, BufferBuilder craterBuf) {
+                   BufferBuilder scorchBuf, BufferBuilder craterBuf, BufferBuilder trampleBuf, boolean withTrample) {
         this.level = level;
+        this.trampleBuf = trampleBuf;
+        this.withTrample = withTrample;
         this.rx = rx;
         this.rz = rz;
         this.ox = rx << 6;
@@ -94,16 +99,18 @@ final class ScarRegionMesh {
                         if (x < 0 || z < 0 || x >= W || z >= W)
                             continue;
                         int cell = GroundMemory.index(lx, lz);
-                        int s = mem.scorch(cell), d = mem.crater(cell);
+                        int s = mem.scorch(cell), d = mem.crater(cell), t = withTrample ? mem.trample(cell) : 0;
                         scorch[z * W + x] = (byte) s;
                         crater[z * W + x] = (byte) d;
-                        if (inside && (s != 0 || d != 0))
+                        trample[z * W + x] = (byte) t;
+                        if (inside && (s != 0 || d != 0 || t >= TrampleRules.FLAT_FROM))
                             anyMark = true;
                     }
             }
         if (anyMark) {
             scorchBuf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY);
             craterBuf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY);
+            trampleBuf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY);
             for (int i = 0; i < 16; i++)
                 chunks[i] = level.getChunkSource().getChunk((ox >> 4) + (i & 3), (oz >> 4) + (i >> 2), ChunkStatus.FULL, false);
         }
@@ -125,6 +132,10 @@ final class ScarRegionMesh {
 
     int craterQuads() {
         return craterQuads;
+    }
+
+    int trampleQuads() {
+        return trampleQuads;
     }
 
     float minY() {
@@ -158,12 +169,12 @@ final class ScarRegionMesh {
         int tint = FogOfWarClientEvents.FOG_TINT_RGB;
         boolean fogOn = FogOfWarClientEvents.isEnabled();
         for (int x = 0; x < SIZE; x++) {
-            int s = field(scorch, x, z), d = field(crater, x, z);
+            int s = field(scorch, x, z), d = field(crater, x, z), tr = field(trample, x, z);
             // a cell draws when it or any neighbour round its corners holds a value (the corner fade reaches in)
-            boolean any = s != 0 || d != 0;
+            boolean any = s != 0 || d != 0 || tr != 0;
             for (int dz = -1; dz <= 1 && !any; dz++)
                 for (int dx = -1; dx <= 1 && !any; dx++)
-                    any = field(scorch, x + dx, z + dz) != 0 || field(crater, x + dx, z + dz) != 0;
+                    any = field(scorch, x + dx, z + dz) != 0 || field(crater, x + dx, z + dz) != 0 || field(trample, x + dx, z + dz) != 0;
             if (!any)
                 continue;
             int wx = ox + x, wz = oz + z;
@@ -183,6 +194,35 @@ final class ScarRegionMesh {
             int ground = groundColour(wx, top - 1, wz);
             boolean fogged = fogOn && !FogOfWarClientEvents.isBlockVisible(wx, wz);
             boolean drew = false;
+            // trampled ground first (it lies under the scorch and the craters): the corner means, patchy with the noise
+            if (withTrample && trampleCorners(x, z)) {
+                TrampleRules.Surface surface = TrampleSurfaces.of(level.getBlockState(pos.set(wx, top - 1, wz)));
+                if (surface != TrampleRules.Surface.NONE) {
+                    for (int i = 0; i < 4; i++) {
+                        int argb = TrampleRules.lookArgb(Math.round(tv[i]), surface, ground);
+                        int r = (argb >> 16) & 255, g = (argb >> 8) & 255, b = argb & 255;
+                        if (fogged) {
+                            r = fog(r, tint >> 16);
+                            g = fog(g, tint >> 8);
+                            b = fog(b, tint);
+                        }
+                        cr[i] = r;
+                        cg[i] = g;
+                        cb[i] = b;
+                        core[i] = (argb >>> 24) / 255f;
+                    }
+                    if (core[0] + core[1] + core[2] + core[3] > 0.004f) {
+                        float yt = (float) h + LIFT * 0.6f;
+                        float u0 = Math.floorMod(wx, 64) / TILE, v0 = Math.floorMod(wz, 64) / TILE, u1 = u0 + 1 / TILE, v1 = v0 + 1 / TILE;
+                        vertex(trampleBuf, x, yt, z, u0, v0, cr[0], cg[0], cb[0], core[0], light);
+                        vertex(trampleBuf, x, yt, z + 1, u0, v1, cr[3], cg[3], cb[3], core[3], light);
+                        vertex(trampleBuf, x + 1, yt, z + 1, u1, v1, cr[2], cg[2], cb[2], core[2], light);
+                        vertex(trampleBuf, x + 1, yt, z, u1, v0, cr[1], cg[1], cb[1], core[1], light);
+                        trampleQuads++;
+                        drew = true;
+                    }
+                }
+            }
             // corner samples: 0 = (x,z) 1 = (x+1,z) 2 = (x+1,z+1) 3 = (x,z+1)
             float a0 = scorchAlpha(x, z), a1 = scorchAlpha(x + 1, z), a2 = scorchAlpha(x + 1, z + 1), a3 = scorchAlpha(x, z + 1);
             if (a0 + a1 + a2 + a3 > 0.004f) {
@@ -230,6 +270,25 @@ final class ScarRegionMesh {
                 maxY = Math.max(maxY, y + 0.1f);
             }
         }
+    }
+
+    /**
+     * The trample value at the four corners of cell (x, z) into {@link #tv} (corner order as the quads'), each the mean
+     * of the four cells round it, made patchy by world-anchored noise (+-15%) so a track's edge frays like grass does;
+     * false when all four are under the first visible step.
+     */
+    private boolean trampleCorners(int x, int z) {
+        tv[0] = trampleCorner(x, z);
+        tv[1] = trampleCorner(x + 1, z);
+        tv[2] = trampleCorner(x + 1, z + 1);
+        tv[3] = trampleCorner(x, z + 1);
+        return tv[0] >= TrampleRules.FLAT_FROM || tv[1] >= TrampleRules.FLAT_FROM || tv[2] >= TrampleRules.FLAT_FROM
+            || tv[3] >= TrampleRules.FLAT_FROM;
+    }
+
+    private float trampleCorner(int x, int z) {
+        float v = corner(trample, x, z);
+        return v <= 0 ? 0 : v * (0.85f + 0.3f * noise(ox + x, oz + z, 53));
     }
 
     /** Scorch alpha at a corner: a smooth ramp of the mean value over a ragged, world-anchored threshold. */

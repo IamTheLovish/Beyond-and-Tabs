@@ -30,9 +30,13 @@ import java.util.Set;
 /**
  * The client side of the ground memory (claude/world-that-remembers.md 3.3): the field copies the server sends
  * ({@link #ingest}), kept per chunk independently of the chunk cache so a chunk out of view, out of range or under
- * the fog keeps the scars as last seen; and the decal mesh - one vertex buffer per 64x64-block region per layer,
- * rebuilt when its field, its ground, its light or its fog changes, drawn with vanilla's entity-translucent state so
- * it looks the same with or without a shader pack.
+ * the fog keeps the scars as last seen; and the decal mesh - one vertex buffer per 64x64-block region per layer
+ * (trampled ground, scorch, craters), rebuilt when its field, its ground, its light or its fog changes, drawn with
+ * vanilla's entity-translucent state so it looks the same with or without a shader pack.
+ * <p>
+ * Trample (slice 2) changes every sync pass while an army marches, so a change that touches only the trample channel
+ * makes a region "soft" dirty: it is rebuilt at most every TrampleRules.TRAMPLE_REBUILD_MS. A scorch or crater change,
+ * a block, the fog or a decay step makes it "hard" dirty and is rebuilt at once, as before.
  * <p>
  * Budgets: at most one region is (re)built per frame and the build is spread over frames in row steps
  * ({@link #ROWS_PER_STEP}); regions outside the frustum are not drawn; the client holds at most {@link #MAX_CHUNKS}
@@ -60,7 +64,13 @@ public final class GroundMemoryClient {
     private static ClientLevel lastLevel = null;
     private static long lastQuantum = Long.MIN_VALUE;
     private static long lastMissingCheck = 0;
-    private static final BufferBuilder SCORCH_BUF = new BufferBuilder(256 * 1024), CRATER_BUF = new BufferBuilder(256 * 1024);
+    private static final BufferBuilder SCORCH_BUF = new BufferBuilder(256 * 1024), CRATER_BUF = new BufferBuilder(256 * 1024),
+        TRAMPLE_BUF = new BufferBuilder(256 * 1024);
+    /**
+     * Whether the trample layer is built and drawn (on in play; the eyes scene turns it off and on over the same pad,
+     * so the layer's frame cost is measured inside one run). Flipping it re-meshes every region.
+     */
+    private static boolean drawTrample = true;
     private static ScarRegionMesh building = null;
     private static Region buildingRegion = null;
     private static boolean failedOnce = false;
@@ -68,14 +78,20 @@ public final class GroundMemoryClient {
     // stats for the eyes log and the frame profile
     static int quadsDrawn = 0, regionsDrawn = 0, regionsHeld = 0, rebuilds = 0;
     static double lastBuildMs = 0, lastDrawMs = 0;
+    // the eyes scene's frame-cost window: build + draw milliseconds summed over the frames since costReset()
+    private static double costMsSum = 0;
+    private static int costFrames = 0;
 
     /** One 64x64 region's geometry. */
     static final class Region {
         final int rx, rz;
-        VertexBuffer scorch, crater;
-        int scorchQuads, craterQuads;
+        VertexBuffer scorch, crater, trample;
+        int scorchQuads, craterQuads, trampleQuads;
         float minY = 0, maxY = 0;
         boolean dirty = true;
+        /** The dirtiness is a scorch / crater / block / fog / decay change (rebuild now), not trample alone. */
+        boolean hard = true;
+        long lastBuiltMs = Long.MIN_VALUE / 2;
         boolean chunkMissing = false;
 
         Region(int rx, int rz) {
@@ -92,7 +108,11 @@ public final class GroundMemoryClient {
                 crater.close();
                 crater = null;
             }
-            scorchQuads = craterQuads = 0;
+            if (trample != null) {
+                trample.close();
+                trample = null;
+            }
+            scorchQuads = craterQuads = trampleQuads = 0;
         }
     }
 
@@ -146,6 +166,7 @@ public final class GroundMemoryClient {
     private static void apply(GroundMemoryClientboundPacket.Update u) {
         long key = ChunkPos.asLong(u.chunkX, u.chunkZ);
         GroundMemory mem = CHUNKS.getAndMoveToLast(key);
+        boolean fresh = mem == null;
         if (mem == null) {
             mem = new GroundMemory(u.decayTick);
             CHUNKS.putAndMoveToLast(key, mem);
@@ -155,8 +176,20 @@ public final class GroundMemoryClient {
                 dirtyRegionsOfChunk(ChunkPos.getX(first), ChunkPos.getZ(first));
             }
         }
+        long before = fresh ? 0 : scarSignature(mem);
         u.applyTo(mem, params);
-        dirtyRegionsOfChunk(u.chunkX, u.chunkZ);
+        dirtyRegionsOfChunk(u.chunkX, u.chunkZ, fresh || scarSignature(mem) != before);
+    }
+
+    /** A hash of every channel but trample: equal before and after an update = the update changed trample only. */
+    static long scarSignature(GroundMemory mem) {
+        byte[] c = mem.cells();
+        if (c == null)
+            return 0;
+        long h = 1125899906842597L;
+        for (int i = 0; i < c.length; i += GroundMemory.CHANNELS)
+            h = 31 * (31 * (31 * h + c[i + GroundMemory.SCORCH]) + c[i + GroundMemory.CRATER_STAIN]) + c[i + GroundMemory.STAIN];
+        return h;
     }
 
     /** The field copy of a chunk, or null. */
@@ -178,38 +211,53 @@ public final class GroundMemoryClient {
         return ChunkPos.asLong(rx, rz);
     }
 
-    private static void dirtyRegion(int rx, int rz) {
+    private static void dirtyRegion(int rx, int rz, boolean hard) {
         long key = regionKey(rx, rz);
         Region r = REGIONS.get(key);
         if (r == null) {
             r = new Region(rx, rz);
             REGIONS.put(key, r);
         }
+        if (!r.dirty)
+            r.hard = hard;
+        else
+            r.hard |= hard;
         r.dirty = true;
     }
 
     /** The region holding a chunk, and the neighbours whose corner samples reach into it. */
     static void dirtyRegionsOfChunk(int cx, int cz) {
+        dirtyRegionsOfChunk(cx, cz, true);
+    }
+
+    /** As above; {@code hard} = false for a change of the trample channel alone (rebuilt on the throttle). */
+    static void dirtyRegionsOfChunk(int cx, int cz, boolean hard) {
         int rx = cx >> 2, rz = cz >> 2;
         int x0 = (cx & 3) == 0 ? rx - 1 : rx, x1 = (cx & 3) == 3 ? rx + 1 : rx;
         int z0 = (cz & 3) == 0 ? rz - 1 : rz, z1 = (cz & 3) == 3 ? rz + 1 : rz;
         for (int x = x0; x <= x1; x++)
             for (int z = z0; z <= z1; z++)
-                dirtyRegion(x, z);
+                dirtyRegion(x, z, hard);
+    }
+
+    /** Hard-dirties one region if it exists (a block or a decay step). */
+    private static void hardDirty(Region r) {
+        if (r != null) {
+            r.dirty = true;
+            r.hard = true;
+        }
     }
 
     static void onBlockChanged(int x, int z) {
         if (REGIONS.isEmpty())
             return;
         int rx = x >> 6, rz = z >> 6;
-        Region r = REGIONS.get(regionKey(rx, rz));
-        if (r != null)
-            r.dirty = true;
+        hardDirty(REGIONS.get(regionKey(rx, rz)));
         // a block on a region's edge changes the corner samples of the next region too
-        if ((x & 63) == 0 && (r = REGIONS.get(regionKey(rx - 1, rz))) != null) r.dirty = true;
-        if ((x & 63) == 63 && (r = REGIONS.get(regionKey(rx + 1, rz))) != null) r.dirty = true;
-        if ((z & 63) == 0 && (r = REGIONS.get(regionKey(rx, rz - 1))) != null) r.dirty = true;
-        if ((z & 63) == 63 && (r = REGIONS.get(regionKey(rx, rz + 1))) != null) r.dirty = true;
+        if ((x & 63) == 0) hardDirty(REGIONS.get(regionKey(rx - 1, rz)));
+        if ((x & 63) == 63) hardDirty(REGIONS.get(regionKey(rx + 1, rz)));
+        if ((z & 63) == 0) hardDirty(REGIONS.get(regionKey(rx, rz - 1)));
+        if ((z & 63) == 63) hardDirty(REGIONS.get(regionKey(rx, rz + 1)));
     }
 
     /** A client chunk arrived (WorldMemoryClientEvents): its regions need the real ground heights. */
@@ -252,14 +300,14 @@ public final class GroundMemoryClient {
         if (q != lastQuantum) {
             if (lastQuantum != Long.MIN_VALUE)
                 for (Region r : REGIONS.values())
-                    r.dirty = true;   // a decay step: every region re-meshes over the next frames
+                    hardDirty(r);   // a decay step: every region re-meshes over the next frames
             lastQuantum = q;
         }
         if (now - lastMissingCheck >= MISSING_RECHECK_TICKS) {
             lastMissingCheck = now;
             for (Region r : REGIONS.values())
                 if (r.chunkMissing)
-                    r.dirty = true;
+                    hardDirty(r);
         }
         Vec3 cam = camera.getPosition();
         long t0 = System.nanoTime();
@@ -268,6 +316,44 @@ public final class GroundMemoryClient {
         t0 = System.nanoTime();
         draw(poseStack, cam, projection, frustum);
         lastDrawMs = (System.nanoTime() - t0) / 1e6;
+        costMsSum += lastBuildMs + lastDrawMs;
+        costFrames++;
+    }
+
+    /** Turns the trample layer's building and drawing on or off (the eyes A/B); every region re-meshes. */
+    public static void setDrawTrample(boolean on) {
+        if (on == drawTrample)
+            return;
+        drawTrample = on;
+        // every held chunk's regions, not only the regions that exist: a region holding trample alone was dropped as
+        // blank while the layer was off, and must come back
+        for (long key : CHUNKS.keySet())
+            dirtyRegionsOfChunk(ChunkPos.getX(key), ChunkPos.getZ(key), true);
+    }
+
+    public static boolean drawTrample() {
+        return drawTrample;
+    }
+
+    /** Starts a frame-cost window (the eyes scene: the same pad, trample off then on). */
+    public static void costReset() {
+        costMsSum = 0;
+        costFrames = 0;
+    }
+
+    /** Mean build + draw milliseconds per frame since {@link #costReset}, and the frame count. */
+    public static double[] costMean() {
+        return new double[] { costFrames == 0 ? 0 : costMsSum / costFrames, costFrames };
+    }
+
+    /** Whether no region is still dirty or being built (the eyes scene waits for a settled mesh before measuring). */
+    public static boolean settled() {
+        if (building != null)
+            return false;
+        for (Region r : REGIONS.values())
+            if (r.dirty)
+                return false;
+        return true;
     }
 
     /** Continues the region being built, or starts the nearest dirty one; at most one region per frame. */
@@ -275,8 +361,9 @@ public final class GroundMemoryClient {
         if (building == null) {
             Region pick = null;
             double best = Double.MAX_VALUE;
+            long nowMs = System.currentTimeMillis();
             for (Region r : REGIONS.values()) {
-                if (!r.dirty)
+                if (!r.dirty || !TrampleRules.rebuildDue(r.hard, nowMs, r.lastBuiltMs))
                     continue;
                 double dx = (r.rx << 6) + 32 - cam.x, dz = (r.rz << 6) + 32 - cam.z;
                 double d = dx * dx + dz * dz;
@@ -288,7 +375,10 @@ public final class GroundMemoryClient {
             if (pick == null)
                 return;
             pick.dirty = false;
-            ScarRegionMesh mesh = new ScarRegionMesh(level, pick.rx, pick.rz, GroundMemoryClient::field, params, SCORCH_BUF, CRATER_BUF);
+            pick.hard = false;
+            pick.lastBuiltMs = nowMs;
+            ScarRegionMesh mesh = new ScarRegionMesh(level, pick.rx, pick.rz, GroundMemoryClient::field, params, SCORCH_BUF, CRATER_BUF,
+                TRAMPLE_BUF, drawTrample);
             if (mesh.isBlank()) {
                 pick.close();
                 REGIONS.remove(regionKey(pick.rx, pick.rz));
@@ -309,9 +399,22 @@ public final class GroundMemoryClient {
     }
 
     private static void upload(Region r, ScarRegionMesh mesh) {
-        BufferBuilder.RenderedBuffer scorch = SCORCH_BUF.end(), crater = CRATER_BUF.end();
+        BufferBuilder.RenderedBuffer scorch = SCORCH_BUF.end(), crater = CRATER_BUF.end(), trample = TRAMPLE_BUF.end();
         r.scorchQuads = mesh.scorchQuads();
         r.craterQuads = mesh.craterQuads();
+        r.trampleQuads = mesh.trampleQuads();
+        if (r.trampleQuads > 0) {
+            if (r.trample == null)
+                r.trample = new VertexBuffer(VertexBuffer.Usage.STATIC);
+            r.trample.bind();
+            r.trample.upload(trample);
+        } else {
+            trample.release();
+            if (r.trample != null) {
+                r.trample.close();
+                r.trample = null;
+            }
+        }
         r.chunkMissing = mesh.chunkMissing();
         r.minY = mesh.minY();
         r.maxY = mesh.maxY();
@@ -343,7 +446,7 @@ public final class GroundMemoryClient {
     }
 
     private static boolean inView(Region r, Vec3 cam, Frustum frustum) {
-        if (r.scorchQuads + r.craterQuads == 0)
+        if (r.scorchQuads + r.craterQuads + r.trampleQuads == 0)
             return false;
         double x0 = r.rx << 6, z0 = r.rz << 6;
         if (!OrthoviewClientEvents.isEnabled()) {
@@ -364,17 +467,24 @@ public final class GroundMemoryClient {
         if (REGIONS.isEmpty())
             return;
         Matrix4f pose = poseStack.last().pose();
-        drawLayer(ScarRenderTypes.SCORCH, true, pose, cam, projection, frustum);
-        drawLayer(ScarRenderTypes.CRATER, false, pose, cam, projection, frustum);
+        // the trampled ground lies under the scorch, the scorch under the craters (translucent, no depth write: the
+        // draw order is the layering)
+        if (drawTrample)
+            drawLayer(ScarRenderTypes.TRAMPLE, LAYER_TRAMPLE, pose, cam, projection, frustum);
+        drawLayer(ScarRenderTypes.SCORCH, LAYER_SCORCH, pose, cam, projection, frustum);
+        drawLayer(ScarRenderTypes.CRATER, LAYER_CRATER, pose, cam, projection, frustum);
     }
 
-    private static void drawLayer(RenderType type, boolean scorchLayer, Matrix4f pose, Vec3 cam, Matrix4f projection, Frustum frustum) {
+    static final int LAYER_SCORCH = 0, LAYER_CRATER = 1, LAYER_TRAMPLE = 2;
+
+    private static void drawLayer(RenderType type, int layer, Matrix4f pose, Vec3 cam, Matrix4f projection, Frustum frustum) {
         boolean any = false;
         ShaderInstance shader = null;
         Matrix4f mv = new Matrix4f();
+        boolean scorchLayer = layer == LAYER_SCORCH;
         for (Region r : REGIONS.values()) {
-            VertexBuffer vbo = scorchLayer ? r.scorch : r.crater;
-            int quads = scorchLayer ? r.scorchQuads : r.craterQuads;
+            VertexBuffer vbo = layer == LAYER_SCORCH ? r.scorch : layer == LAYER_CRATER ? r.crater : r.trample;
+            int quads = layer == LAYER_SCORCH ? r.scorchQuads : layer == LAYER_CRATER ? r.craterQuads : r.trampleQuads;
             if (vbo == null || quads == 0 || !inView(r, cam, frustum))
                 continue;
             if (!any) {

@@ -47,32 +47,49 @@ public final class TrampleRules {
 
     /** The surface of a top block by its registry id ("minecraft:grass_block"). Anything not listed is NONE. */
     public static Surface surfaceOf(String blockId) {
-        return Surface.NONE;   // red-first stub: the behaviour lands in the next commit
+        if (blockId == null)
+            return Surface.NONE;
+        return switch (blockId) {
+            case "minecraft:grass_block", "minecraft:podzol", "minecraft:mycelium", "minecraft:moss_block" -> Surface.GRASS;
+            case "minecraft:dirt", "minecraft:coarse_dirt", "minecraft:rooted_dirt", "minecraft:mud", "minecraft:farmland",
+                 "minecraft:clay", "minecraft:soul_soil", "minecraft:muddy_mangrove_roots" -> Surface.SOIL;
+            case "minecraft:sand", "minecraft:red_sand", "minecraft:gravel", "minecraft:soul_sand" -> Surface.SAND;
+            case "minecraft:snow", "minecraft:snow_block", "minecraft:powder_snow" -> Surface.SNOW;
+            default -> Surface.NONE;
+        };
     }
 
     /** How much wider than a militia a body is, clamped to [{@link #MIN_SCALE}, {@link #MAX_SCALE}]. */
     public static float scaleFor(double bodyWidth) {
-        return 1f;   // red-first stub: the behaviour lands in the next commit
+        if (!(bodyWidth > 0))
+            return MIN_SCALE;
+        return (float) Math.max(MIN_SCALE, Math.min(MAX_SCALE, bodyWidth / REFERENCE_WIDTH));
     }
 
     /** One pass's peak wear at the centre of a unit's track on a GRASS surface (scaled by the surface's wear). */
     public static int peakFor(double bodyWidth) {
-        return 0;   // red-first stub: the behaviour lands in the next commit
+        return Math.max(1, Math.round(BASE_PEAK * scaleFor(bodyWidth)));
     }
 
     /** The track's half-width: a little wider than the body (feet spread, the grass round them bends too). */
     public static double radiusFor(double bodyWidth) {
-        return 0;   // red-first stub: the behaviour lands in the next commit
+        double w = bodyWidth > 0 ? bodyWidth : REFERENCE_WIDTH;
+        return Math.max(0.6, Math.min(3.0, 0.45 + w * 0.5));
     }
 
     /** Whether a move between two samples is a walk that wears the ground. */
     public static boolean walked(double dx, double dz) {
-        return false;   // red-first stub: the behaviour lands in the next commit
+        double d2 = dx * dx + dz * dz;
+        return d2 >= MIN_STEP * MIN_STEP && d2 <= MAX_STEP * MAX_STEP;
     }
 
     /** Distance from (px, pz) to the segment (ax, az)-(bx, bz). */
     public static double segmentDistance(double px, double pz, double ax, double az, double bx, double bz) {
-        return Double.MAX_VALUE;   // red-first stub: the behaviour lands in the next commit
+        double vx = bx - ax, vz = bz - az;
+        double len2 = vx * vx + vz * vz;
+        double t = len2 <= 1e-12 ? 0 : Math.max(0, Math.min(1, ((px - ax) * vx + (pz - az) * vz) / len2));
+        double dx = px - (ax + t * vx), dz = pz - (az + t * vz);
+        return Math.sqrt(dx * dx + dz * dz);
     }
 
     /**
@@ -82,7 +99,15 @@ public final class TrampleRules {
      * a dotted track. A zero-length segment wears nothing.
      */
     public static float capsuleWeight(double px, double pz, double ax, double az, double bx, double bz, double radius) {
-        return 0;   // red-first stub: the behaviour lands in the next commit
+        double vx = bx - ax, vz = bz - az;
+        double len2 = vx * vx + vz * vz;
+        if (len2 <= 1e-12)
+            return 0;
+        double t = ((px - ax) * vx + (pz - az) * vz) / len2;
+        if (t <= 0 || t > 1)
+            return 0;
+        double dx = px - (ax + t * vx), dz = pz - (az + t * vz);
+        return GroundMemory.discWeight(Math.sqrt(dx * dx + dz * dz), radius, CORE);
     }
 
     // ------------------------------------------------------------------ the look
@@ -121,7 +146,40 @@ public final class TrampleRules {
      * (the top block's map colour) mixed in by {@link #GROUND_MIX}. Alpha 0 below {@link #FLAT_FROM}.
      */
     public static int lookArgb(int value, Surface surface, int groundRgb) {
-        return 0;   // red-first stub: the behaviour lands in the next commit
+        if (surface == null || surface == Surface.NONE || value < FLAT_FROM)
+            return 0;
+        float v = Math.min(255, value);
+        // how far along the track is: 0 at the first trace, 1 at full wear
+        float k = smooth(FLAT_FROM, 255, v);
+        int r, g, b;
+        float a;
+        switch (surface) {
+            case GRASS -> {
+                float t = smooth(110, WORN_FROM, v);   // flattened -> worn
+                r = mix(FLAT_R, WORN_R, t);
+                g = mix(FLAT_G, WORN_G, t);
+                b = mix(FLAT_B, WORN_B, t);
+                // flattened grass reaches its full lift by ~110 (a squad's pass), then the soil takes over
+                a = FLAT_ALPHA * smooth(FLAT_FROM, 110, v) * (1 - t) + WORN_ALPHA * t * k;
+            }
+            case SOIL -> {
+                r = SOIL_R; g = SOIL_G; b = SOIL_B;
+                a = SOIL_ALPHA * k;
+            }
+            case SAND -> {
+                r = SAND_R; g = SAND_G; b = SAND_B;
+                a = SAND_ALPHA * k;
+            }
+            default -> {
+                r = SNOW_R; g = SNOW_G; b = SNOW_B;
+                a = SNOW_ALPHA * k;
+            }
+        }
+        r = mix(r, (groundRgb >> 16) & 255, GROUND_MIX);
+        g = mix(g, (groundRgb >> 8) & 255, GROUND_MIX);
+        b = mix(b, groundRgb & 255, GROUND_MIX);
+        int ai = Math.max(0, Math.min(255, Math.round(a * 255)));
+        return (ai << 24) | (r << 16) | (g << 8) | b;
     }
 
     // ------------------------------------------------------------------ the client's rebuild throttle
@@ -134,6 +192,6 @@ public final class TrampleRules {
      * once {@link #TRAMPLE_REBUILD_MS} have passed since the region's last build.
      */
     public static boolean rebuildDue(boolean hard, long nowMs, long lastBuiltMs) {
-        return false;   // red-first stub: the behaviour lands in the next commit
+        return hard || nowMs - lastBuiltMs >= TRAMPLE_REBUILD_MS;
     }
 }
