@@ -42,22 +42,44 @@ CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "fe
 # fresh Sound Culling (3 days old) or Particle Core could change under testers between two pack builds.
 # Canary (server tick) is NOT here: it changes vanilla code our mod also hooks, so it waits for a CI run of every
 # GameTest with it loaded. Dynamic Lights Reforged is CurseForge-only, and this pack uses Modrinth only.
-# Oculus (the shader loader) is NOT here since Oct 29: it shipped only to carry Complementary Reimagined, whose author
-# refused us permission to ship it, and a loader with no shader pack does nothing for players. It comes back with our
-# own shader pack. Nothing we ship may include Complementary (tools/test_pack_no_complementary.py).
+# Oculus (the shader loader, LGPL v3) left on Oct 29 with Complementary Reimagined, whose author refused us permission
+# to ship it. It is back (lovish, Nov 5: "Yes, shader on, MEDIUM default (Recommended)") to load OUR shader pack, which
+# ships as plain files of shaderpacks/BeyondAndTabs (our_shader_pack, below) with Oculus switched on in its config.
+# Pinned to 1.20.1-1.8.0: the version every shader eyes run used with Embeddium 0.3.31 (lovish's Embeddium).
+# Nothing we ship may include Complementary (tools/test_pack_no_complementary.py).
 EXTRA_PROJECTS = ("spark", "macaws-bridges", "macaws-paths-and-pavings", "macaws-lights-and-lamps",
-                  "sound-physics-remastered", "packet-fixer", "sound-culling", "particle-core", "fallingleavesforge")
+                  "sound-physics-remastered", "packet-fixer", "sound-culling", "particle-core", "fallingleavesforge",
+                  "oculus")
 # project slug -> exact Modrinth version_number; a pinned project that has no such Forge 1.20.1 version fails the build
 PINNED_VERSIONS = {"packet-fixer": "3.3.2", "sound-culling": "2.1.0", "particle-core": "0.3.3+1.20.1+forge",
-                   "fallingleavesforge": "1.20.1-2.1.2"}
+                   "fallingleavesforge": "1.20.1-2.1.2", "oculus": "1.20.1-1.8.0"}
 # top-level extras that only the client runs (a dedicated server may leave them out, like CLIENT_ONLY below)
-CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core", "fallingleavesforge")
+CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core", "fallingleavesforge", "oculus")
 # files the Mac pack drops: Embeddium and ImmediatelyFast misbehave on macOS drivers, and an addon that needs
 # Embeddium (Embeddium Extra = rubidium-extra) would crash the Mac pack if it slipped through (research Oct 21).
 # One list for macpack.yml, build_packwiz.py and publish-pack's guard.
 # "oculus" stays as a guard: it needs Embeddium, so a future Oculus (our own shader pack) must not reach the Mac pack
 MAC_SKIP = ("embeddium", "immediatelyfast", "rubidium-extra", "oculus")
 HERE = os.path.dirname(os.path.abspath(__file__))
+# our own shader pack, shipped as its plain files (never a zip or a download - tools/test_pack_no_complementary.py),
+# and Oculus' config with it switched on: written once (the packs preserve it), so a player who turns shaders off (K)
+# keeps that. Oculus reads oculus.properties; iris.properties too, as the eyes workflow writes both
+SHADER_PACK_DIR = os.path.join(HERE, "..", "shaderpacks", "BeyondAndTabs")
+SHADER_CONFIG = "enableShaders=true\nshaderPack=BeyondAndTabs\ndisableUpdateMessage=true\n"
+SHADER_CONFIG_FILES = ("config/oculus.properties", "config/iris.properties")
+
+
+def our_shader_pack():
+    """[(instance-relative path, bytes)] of every file of our shader pack, byte for byte as in the repo."""
+    out = []
+    for base, dirs, names in os.walk(SHADER_PACK_DIR):
+        dirs.sort()
+        for n in sorted(names):
+            p = os.path.join(base, n)
+            rel = os.path.relpath(p, SHADER_PACK_DIR).replace(os.sep, "/")
+            with open(p, "rb") as f:
+                out.append(("shaderpacks/BeyondAndTabs/" + rel, f.read()))
+    return out
 # our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
 REQUIRED_FILES = ("alexsmobs-", "citadel-", "mcw-roofs-", "mcw-mcwwindows-", "mcw-mcwfences-", "chipped-forge-",
@@ -232,6 +254,10 @@ def main():
     with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("modrinth.index.json", text)
         z.write(our_jar, "overrides/mods/" + OUR_JAR_NAME)
+        for rel, data in our_shader_pack():                   # our shader pack, on by default (Oculus' config)
+            z.writestr("overrides/" + rel, data)
+        for rel in SHADER_CONFIG_FILES:
+            z.writestr("overrides/" + rel, SHADER_CONFIG)
     with zipfile.ZipFile(pack) as z:
         if z.testzip() is not None:
             sys.exit("::error::mrpack failed its zip test")

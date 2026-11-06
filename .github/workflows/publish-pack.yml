@@ -85,11 +85,18 @@ jobs:
           live() { curl -fsSL "https://raw.githubusercontent.com/$PACK_REPO/main/windows/$1" 2>/dev/null | sed -n 's/^hash = "\(.*\)"$/\1/p'; }
           jar_now=$(sha512sum "$jar" | cut -d' ' -f1)
           rp_now=$(sha512sum dl/BeyondAndTabs-Realistic.zip | cut -d' ' -f1)
+          # our shader pack ships as plain pack files (Nov 5, ON by default): its files' sha256s, as index.toml lists
+          # them, in the repo and in the live pack - a shader-only change must publish too
+          sp_now=$(cd shaderpacks/BeyondAndTabs && find . -type f | sed 's|^\./||' | LC_ALL=C sort \
+                   | while read -r f; do echo "shaderpacks/BeyondAndTabs/$f $(sha256sum "$f" | cut -d' ' -f1)"; done)
+          sp_live=$(curl -fsSL "https://raw.githubusercontent.com/$PACK_REPO/main/windows/index.toml" 2>/dev/null \
+                    | python3 -c "import re,sys; t=sys.stdin.read(); [print(f, h) for f, h in sorted(re.findall(r'file = \"(shaderpacks/[^\"]+)\"\nhash = \"([0-9a-f]+)\"', t))]")
           if [ "${{ github.event_name }}" != workflow_dispatch ] \
              && [ "$(live mods/beyondandtabs.pw.toml)" = "$jar_now" ] \
-             && [ "$(live resourcepacks/beyondandtabs-realistic.pw.toml)" = "$rp_now" ]; then
+             && [ "$(live resourcepacks/beyondandtabs-realistic.pw.toml)" = "$rp_now" ] \
+             && [ "$sp_live" = "$sp_now" ]; then
             echo "SKIP=1" >> "$GITHUB_ENV"
-            echo "Testers already have this exact jar and resource pack - nothing to publish."
+            echo "Testers already have this exact jar, resource pack and shader pack - nothing to publish."
             echo "### Nothing to publish - testers already have this build" >> "$GITHUB_STEP_SUMMARY"
           fi
 
@@ -215,14 +222,14 @@ jobs:
             if [ "$variant" = mac ] && ls mods | grep -qiE 'embeddium|immediatelyfast|rubidium-extra|oculus'; then
               echo "::error::mac pack contains Embeddium, ImmediatelyFast, Embeddium Extra or Oculus"; exit 1
             fi
-            # Complementary Reimagined (and any shader pack) must not reach testers: its author refused us permission
-            # (Oct 29). Checked by file name and by content (settings files, metafiles) over the whole install.
+            # Complementary Reimagined (and any other shader pack) must not reach testers: its author refused us
+            # permission (Oct 29). Checked by file name and by content (settings files, metafiles) over the whole install.
             if find . -iname '*complementary*' | grep -q . || grep -rIqi complementary . ; then
               echo "::error::$variant pack contains Complementary Reimagined"; exit 1
             fi
-            if [ -d shaderpacks ] && ls shaderpacks | grep -q .; then
-              echo "::error::$variant pack has a shader pack"; exit 1
-            fi
+            # our own pack ships ON (#554): Windows has exactly shaderpacks/BeyondAndTabs, byte for byte, and Oculus'
+            # config on with it; Mac has neither (pack/check_tester_install.py, tested offline)
+            python3 "$GITHUB_WORKSPACE/pack/check_tester_install.py" "$variant" . "$GITHUB_WORKSPACE/shaderpacks/BeyondAndTabs"
             cd ../..
           done
 
