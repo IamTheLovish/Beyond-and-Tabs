@@ -1,10 +1,8 @@
 package com.solegendary.reignofnether.mixin;
 
 import com.solegendary.reignofnether.environment.light.LeafLight;
-import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,12 +24,7 @@ public abstract class LeafShadeMixin {
     @Inject(method = "getShadeBrightness", at = @At("HEAD"), cancellable = true)
     private void reignofnether$leafShade(BlockState state, BlockGetter level, BlockPos pos,
                                          CallbackInfoReturnable<Float> cir) {
-        if ((Object) this instanceof LeavesBlock leaves && porous(leaves))
+        if ((Object) this instanceof LeavesBlock leaves && LeafLight.porous(leaves))
             cir.setReturnValue(LeafLight.leafShade());
-    }
-
-    private static boolean porous(Block block) {
-        return block != BlockRegistrar.DECAYABLE_NETHER_WART_BLOCK.get()
-            && block != BlockRegistrar.DECAYABLE_WARPED_WART_BLOCK.get();
     }
 }

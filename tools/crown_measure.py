@@ -14,6 +14,8 @@ Per sweep still:
   lawn     median luma of the open lawn: the mask still's green pixels inside the crowns' bounding box (widened by
            LAWN_MARGIN), at least LAWN_GAP px from any crown or other object (their shadows and AO), median so a
            shadow or a tuft does not move it
+  green    the same over the green crowns only (green-dominant crown pixels in the sweep's first still: every crown
+           but cherry's pink) - green_ratio is the number the band is judged on
   ratio    crown / lawn - the lane's band, fixed before any lighting change: 0.75-0.88 (crown-lighting-notes.md)
   per crown, each connected crown of at least MIN_CROWN px: its own mean luma and ratio, left to right
 Luma = Rec.709 on sRGB 0..1, as tools/lawn_measure.py.
@@ -32,7 +34,7 @@ from PIL import Image
 
 LUMA = np.array([0.2126, 0.7152, 0.0722])
 MIN_CROWN = 150          # px: a crown smaller than this is an edge fleck, not a crown
-LAWN_GAP = 12            # px kept off any crown or object (~0.4 block at zoom 30)
+LAWN_GAP = 16            # px kept off any crown or object: past the AO a leaf block casts on the lawn (~half a block at zoom 30)
 LAWN_MARGIN = 0.10       # the crowns' bounding box widened by this share for the lawn
 BAND = (0.75, 0.88)
 
@@ -141,14 +143,15 @@ def measure(still_rgb, crowns, lawn, comps):
 
 
 def sweep_stills(folder, label, view):
-    """{shade: path} for bat_eyes_<label>_<view>_leafao<v>.png in the folder."""
+    """{tag: path} for bat_eyes_<label>_<view>_leafao<ao>[f<face lift>].png in the folder, in (ao, face) order."""
     out = {}
-    pat = re.compile(re.escape("bat_eyes_%s_%s_leafao" % (label, view)) + r"([0-9.]+)\.png$")
+    pat = re.compile(re.escape("bat_eyes_%s_%s_leafao" % (label, view)) + r"([0-9]+\.[0-9]+)(?:f([0-9]+\.[0-9]+))?\.png$")
     for p in glob.glob(os.path.join(folder, "bat_eyes_%s_%s_leafao*.png" % (label, view))):
         m = pat.search(os.path.basename(p))
         if m:
-            out[float(m.group(1))] = p
-    return dict(sorted(out.items()))
+            key = (float(m.group(1)), float(m.group(2) or 0.0))
+            out[key] = p
+    return {("%.2f" % k[0]) + ("f%.2f" % k[1] if k[1] > 0 else ""): out[k] for k in sorted(out)}
 
 
 def run(folder, label="15_wood_sampler", view="rts"):
@@ -159,7 +162,18 @@ def run(folder, label="15_wood_sampler", view="rts"):
     stills = sweep_stills(folder, label, view)
     if not stills:
         raise FileNotFoundError("no bat_eyes_%s_%s_leafao*.png in %s" % (label, view, folder))
-    return {"%.2f" % v: measure(load(p), crowns, lawn, comps) for v, p in stills.items()}
+    # the green crowns (every crown but cherry's pink): green-dominant crown pixels in the first still of the sweep,
+    # one pixel set for every still - lovish's "too dark" is about these
+    ref = load(next(iter(stills.values())))
+    green = crowns & (ref[..., 1] >= ref[..., 0]) & (ref[..., 1] >= ref[..., 2])
+    res = {}
+    for tag, p in stills.items():
+        rgb = load(p)
+        r = measure(rgb, crowns, lawn, comps)
+        r["green"] = round(float(luma(rgb)[green].mean()), 4)
+        r["green_ratio"] = round(r["green"] / r["lawn"], 4)
+        res[tag] = r
+    return res
 
 
 def main(argv=None):
@@ -173,8 +187,10 @@ def main(argv=None):
     print("crown_measure %s %s (band %.2f-%.2f)" % (a.label, a.view, BAND[0], BAND[1]))
     for v, r in res.items():
         inband = BAND[0] <= r["ratio"] <= BAND[1]
-        print("  leaf AO %s: crown %.3f lawn %.3f ratio %.3f %s (crown %d px, lawn %d px)" % (
-            v, r["crown"], r["lawn"], r["ratio"], "IN BAND" if inband else "out", r["crown_px"], r["lawn_px"]))
+        ginband = BAND[0] <= r["green_ratio"] <= BAND[1]
+        print("  leaf AO %s: crown %.3f lawn %.3f ratio %.3f %s | green crowns %.3f ratio %.3f %s (crown %d px, lawn %d px)" % (
+            v, r["crown"], r["lawn"], r["ratio"], "IN BAND" if inband else "out", r["green"], r["green_ratio"],
+            "IN BAND" if ginband else "out", r["crown_px"], r["lawn_px"]))
         print("    per crown: " + "  ".join("%.2f" % c["ratio"] for c in r["crowns"]))
     if a.json:
         with open(a.json, "w", encoding="utf-8") as f:

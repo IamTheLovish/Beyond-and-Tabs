@@ -92,6 +92,19 @@ class CrownMeasure(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cm.run(d, "15_x", "rts")
 
+    def test_face_lift_stills_and_the_green_crowns(self):
+        # leafao<ao>f<face> names sort by (ao, face); the green number leaves a pink (cherry) crown out
+        green, pink = (40, 60, 30), (200, 150, 180)
+        with tempfile.TemporaryDirectory() as d:
+            still, mask = scene((green, pink))
+            for name in ("0.20", "0.50f1.00", "0.50f0.50"):
+                write(d, "bat_eyes_15_x_rts_leafao%s.png" % name, still)
+            write(d, "bat_eyes_15_x_rts_leafmask.png", mask)
+            res = cm.run(d, "15_x", "rts")
+        self.assertEqual(list(res), ["0.20", "0.50f0.50", "0.50f1.00"])
+        self.assertAlmostEqual(res["0.20"]["green_ratio"], luma(green) / luma(LAWN), places=3)
+        self.assertGreater(res["0.20"]["ratio"], res["0.20"]["green_ratio"])
+
     def test_the_band_is_the_one_fixed_before_the_change(self):
         # crown-lighting-notes.md, Nov 6, before any lighting code: 0.75-0.88 of the lawn
         self.assertEqual(cm.BAND, (0.75, 0.88))

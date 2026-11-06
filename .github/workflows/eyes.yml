@@ -120,7 +120,7 @@ on:
         required: false
         default: ''
       leaf_ao:
-        description: "Structure photos: the crown lighting sweep - leaf AO shades 0..1, comma-separated (e.g. 0.2,0.5,0.8; 0.2 = vanilla): per shade the RTS and RTS-close stills (15_<name>_rts_leafao<v>, a frame bench), then a magenta leaf mask (15_<name>_rts_leafmask) for tools/crown_measure.py"
+        description: "Structure photos: the crown lighting sweep - leaf AO shades 0..1, comma-separated, each optionally :face lift 0..1 without a shader pack (e.g. 0.2,0.5:1; 0.2 = vanilla): per entry the RTS and RTS-close stills (15_<name>_rts_leafao<v>, a frame bench), then a magenta leaf mask (15_<name>_rts_leafmask) for tools/crown_measure.py"
         required: false
         default: ''
       shader_options:
@@ -327,7 +327,7 @@ jobs:
         if: env.LEAF_AO != '' && env.STRUCTURES != ''
         run: |
           set -euo pipefail
-          echo "$LEAF_AO" | grep -qE '^[01](\.[0-9]+)?(,[01](\.[0-9]+)?)*$' || { echo "::error::leaf_ao must be shades like 0.2,0.5,0.8"; exit 1; }
+          echo "$LEAF_AO" | grep -qE '^[01](\.[0-9]+)?(:[01](\.[0-9]+)?)?(,[01](\.[0-9]+)?(:[01](\.[0-9]+)?)?)*$' || { echo "::error::leaf_ao must be shades like 0.2,0.5,0.8 or ao:face pairs like 0.2:0,0.5:1"; exit 1; }
           echo "EYES_JVM_EXTRA=${EYES_JVM_EXTRA:-} -Dbat.eyes.leafAo=$LEAF_AO" >> "$GITHUB_ENV"
           echo "::notice::[Eyes] crown lighting sweep: leaf AO shades $LEAF_AO"
       - name: Scars scene only (dispatch input `scars`; EyesDirector scene 16)

@@ -982,20 +982,23 @@ public final class EyesDirector {
      * swapped for magenta concrete (15_<name>_rts_leafmask, _rts_close_leafmask: the crown mask tools/crown_measure.py
      * reads) and the structure stamped back.
      */
-    static final List<Float> LEAF_SWEEP = parseShades(System.getProperty("bat.eyes.leafAo", ""));
+    static final List<float[]> LEAF_SWEEP = parseShades(System.getProperty("bat.eyes.leafAo", ""));
     private static int leafIndex = 0;
     private static long leafLastRebuilds = -1, leafQuietSince = 0;
     static final long SHADE_ARMY_TIME = 6000;          // noon: the shadow the shade-army still is judged in
     static final String SHADE_ARMY_TAG = "bat_eyes_shade";
 
-    static List<Float> parseShades(String raw) {
-        List<Float> out = new ArrayList<>();
+    /** "ao" or "ao:face" entries (the leaf AO shade, the leaf face lift without a shader pack - LeafLight), each 0..1. */
+    static List<float[]> parseShades(String raw) {
+        List<float[]> out = new ArrayList<>();
         for (String s : raw.split(","))
             if (!s.isBlank()) {
                 try {
-                    float v = Float.parseFloat(s.trim());
-                    if (v >= 0F && v <= 1F)
-                        out.add(v);
+                    String[] p = s.trim().split(":");
+                    float v = Float.parseFloat(p[0]);
+                    float f = p.length > 1 ? Float.parseFloat(p[1]) : 0F;
+                    if (v >= 0F && v <= 1F && f >= 0F && f <= 1F)
+                        out.add(new float[] { v, f });
                     else
                         ReignOfNether.LOGGER.warn("[Eyes] bat.eyes.leafAo: '{}' is not a shade 0..1 - skipped", s.trim());
                 } catch (NumberFormatException e) {
@@ -1398,6 +1401,7 @@ public final class EyesDirector {
                     if (phaseSeconds() > 30) {
                         ReignOfNether.LOGGER.error("[Eyes] {}_leaf sweep: the server never placed it again - skipped", label);
                         com.solegendary.reignofnether.environment.light.LeafLight.setEyesShade(Float.NaN);
+                        com.solegendary.reignofnether.environment.light.LeafLight.setEyesFaceLift(Float.NaN);
                         afterArmy(mc);
                     }
                     return;
@@ -1527,9 +1531,13 @@ public final class EyesDirector {
 
     /** The fog of war off again, the structure stamped again, the RTS view at the default zoom over it. */
     private static void startLeafSweep(Minecraft mc, String entry, String label) {
-        ReignOfNether.LOGGER.info("[Eyes] {}_leaf sweep: leaf AO shades {} (vanilla {}, shipped {})", label, LEAF_SWEEP,
-            com.solegendary.reignofnether.environment.light.LeafLight.SOLID_SHADE,
-            com.solegendary.reignofnether.environment.light.LeafLight.LEAF_SHADE);
+        StringBuilder list = new StringBuilder();
+        for (float[] e : LEAF_SWEEP)
+            list.append(list.length() == 0 ? "" : ", ").append(e[0]).append(':').append(e[1]);
+        ReignOfNether.LOGGER.info("[Eyes] {}_leaf sweep: leaf AO shade : face lift {} (vanilla {}:0, shipped {}:{})", label,
+            list, com.solegendary.reignofnether.environment.light.LeafLight.SOLID_SHADE,
+            com.solegendary.reignofnether.environment.light.LeafLight.LEAF_SHADE,
+            com.solegendary.reignofnether.environment.light.LeafLight.FACE_LIFT);
         keepFogOff(mc, label);
         if (!OrthoviewClientEvents.isEnabled())
             OrthoviewClientEvents.toggleEnable();
@@ -1547,15 +1555,18 @@ public final class EyesDirector {
         var server = mc.getSingleplayerServer();
         server.execute(() -> server.overworld().setDayTime(6000));
         if (leafIndex < LEAF_SWEEP.size()) {
-            com.solegendary.reignofnether.environment.light.LeafLight.setEyesShade(LEAF_SWEEP.get(leafIndex));
+            float[] e = LEAF_SWEEP.get(leafIndex);
+            com.solegendary.reignofnether.environment.light.LeafLight.setEyesShade(e[0]);
+            com.solegendary.reignofnether.environment.light.LeafLight.setEyesFaceLift(e[1]);
             mc.levelRenderer.allChanged();
-            ReignOfNether.LOGGER.info("[Eyes] {}_leaf sweep: shade {} - the world re-meshed", label, LEAF_SWEEP.get(leafIndex));
+            ReignOfNether.LOGGER.info("[Eyes] {}_leaf sweep: AO shade {}, face lift {} - the world re-meshed", label, e[0], e[1]);
             leafLastRebuilds = -1;
             nextPhase(31);
             return;
         }
         // the mask: the shipped shade back, every leaf block in the structure's box magenta concrete
         com.solegendary.reignofnether.environment.light.LeafLight.setEyesShade(Float.NaN);
+        com.solegendary.reignofnether.environment.light.LeafLight.setEyesFaceLift(Float.NaN);
         BlockPos o = structureOrigin;
         net.minecraft.core.Vec3i sz = structureSize;
         server.execute(() -> {
@@ -1578,9 +1589,11 @@ public final class EyesDirector {
         nextPhase(34);
     }
 
-    /** The still-name tag of the current shade: leafao0.20, leafao0.65, ... */
+    /** The still-name tag of the current entry: leafao0.20, or leafao0.50f1.00 with a face lift. */
     private static String leafTag() {
-        return String.format(java.util.Locale.ROOT, "leafao%.2f", LEAF_SWEEP.get(Math.min(leafIndex, LEAF_SWEEP.size() - 1)));
+        float[] e = LEAF_SWEEP.get(Math.min(leafIndex, LEAF_SWEEP.size() - 1));
+        return e[1] > 0F ? String.format(java.util.Locale.ROOT, "leafao%.2ff%.2f", e[0], e[1])
+            : String.format(java.util.Locale.ROOT, "leafao%.2f", e[0]);
     }
 
     /** True once the renderer has built no section for 1.5 s (perf.SectionRebuilds, as the fog scene's re-mesh wait). */
@@ -1641,9 +1654,11 @@ public final class EyesDirector {
                     }
                 }
             }
-        ReignOfNether.LOGGER.info("[Eyes] {}: leaf AO shade {}; {} leaf blocks, sky light at them mean {} (min {}); "
+        ReignOfNether.LOGGER.info("[Eyes] {}: leaf AO shade {}, face lift {} (shader pack {}); {} leaf blocks, sky light at them mean {} (min {}); "
                 + "{} open lawn cells, sky light mean {} (min {}); fog of war {}; re-mesh {}", still,
-            com.solegendary.reignofnether.environment.light.LeafLight.leafShade(), leaves,
+            com.solegendary.reignofnether.environment.light.LeafLight.leafShade(),
+            com.solegendary.reignofnether.environment.light.LeafLight.faceLift(),
+            com.solegendary.reignofnether.postfx.ShaderPacks.inUse() ? "on" : "off", leaves,
             String.format(java.util.Locale.ROOT, "%.2f", leaves == 0 ? 0.0 : leafSky / (double) leaves), leafMin, lawn,
             String.format(java.util.Locale.ROOT, "%.2f", lawn == 0 ? 0.0 : lawnSky / (double) lawn), lawnMin,
             com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isEnabled() ? "ON" : "off",

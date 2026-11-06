@@ -59,6 +59,14 @@ const float ambientOcclusionLevel = 1.0;
 // camera's ~65 degrees down never reaches (water there is ~2% mirror), so from above it costs one fetch per pixel
 #define SSR 1 // [0 1]
 
+// leaves lit as foliage, not as stone (lovish, Nov 6: "Crowns too dark: fix lighting"): a face of a crown is leaves
+// turned every way, so its normal leans LEAF_SOFT of the way toward up, and a crown is mostly air between its leaves,
+// so a leaf face in the crown's own shadow still gets LEAF_THROUGH of the sun. Only leaves receive it (lit.fsh): a
+// tree's shadow on the lawn keeps its mass. Off: leaves lit like any block (the A/B, tools/crown_measure.py)
+#define LEAF_LIGHT 0 // [0 1]
+const float LEAF_SOFT = 0.5;
+const float LEAF_THROUGH = 0.35;
+
 // plants and leaves move in the wind (lib/wind.glsl): gusts rolling across the lawn, leaves shimmering. Off: still
 #define WIND 1 // [0 1]
 // how far they move: 1 = a grass tuft's top ~0.08 block at a full gust

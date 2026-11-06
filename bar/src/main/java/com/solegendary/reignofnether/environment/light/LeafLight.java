@@ -1,5 +1,9 @@
 package com.solegendary.reignofnether.environment.light;
 
+import com.solegendary.reignofnether.registrars.BlockRegistrar;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LeavesBlock;
+
 /**
  * How dark a leaf block makes the faces round it in smooth lighting (ambient occlusion) - the one entry every tree
  * crown's light goes through, with or without our shader pack (lovish, Nov 6: "Crowns too dark: fix lighting").
@@ -26,7 +30,43 @@ public final class LeafLight {
     /** A leaf block's AO shade as a neighbour: see the class comment and crown-lighting notes for how it was chosen. */
     public static final float LEAF_SHADE = SOLID_SHADE;
 
+    /**
+     * Without a shader pack: how far a leaf face's directional shade moves from vanilla's solid-cube table (up 1.0,
+     * north / south 0.8, east / west 0.6, down 0.5 - ClientLevel.getShade in the overworld) toward the top's 1.0.
+     * A face of leaves is leaves turned every way, never a flat wall: 0 = vanilla, 1 = every face lit like the top.
+     * Our shader pack ignores vanilla's face shade (oldLighting=false) and lights leaves itself (lit.fsh LEAF_SOFT).
+     */
+    public static final float FACE_LIFT = 0.0F;
+
     private static volatile float eyesShade = Float.NaN;
+    private static volatile float eyesFaceLift = Float.NaN;
+
+    /** The face lift now (the eyes sweep's while it runs). */
+    public static float faceLift() {
+        float f = eyesFaceLift;
+        return Float.isNaN(f) ? FACE_LIFT : f;
+    }
+
+    /** The eyes sweep only: a face lift to photograph, or NaN for the shipped one. The caller re-meshes the world. */
+    public static void setEyesFaceLift(float lift) {
+        eyesFaceLift = lift;
+    }
+
+    /** Vanilla's directional shade of a block face in the overworld: index 0 down, 1 up, 2-3 north / south, 4-5 west / east. */
+    public static float vanillaFaceShade(int directionIndex) {
+        return switch (directionIndex) {
+            case 0 -> 0.5F;
+            case 1 -> 1.0F;
+            case 2, 3 -> 0.8F;
+            default -> 0.6F;
+        };
+    }
+
+    /** A leaf face's directional shade: vanilla's moved {@code lift} of the way toward the top's 1.0. */
+    public static float leafFaceShade(int directionIndex, float lift) {
+        float v = vanillaFaceShade(directionIndex);
+        return v + lift * (1.0F - v);
+    }
 
     /** The shade a see-through leaf block gives its neighbours now (the eyes sweep's value while it runs). */
     public static float leafShade() {
@@ -37,6 +77,14 @@ public final class LeafLight {
     /** The eyes sweep only: a value to photograph, or NaN for the shipped one. The caller re-meshes the world. */
     public static void setEyesShade(float shade) {
         eyesShade = shade;
+    }
+
+    /** A see-through leaf block: every LeavesBlock but the mod's decayable wart blocks (leaves to the game, solid wart
+     * to the eye). The renderer-side entries (LeafShadeMixin, LeafFaces) both ask this. */
+    public static boolean porous(Block block) {
+        return block instanceof LeavesBlock
+            && block != BlockRegistrar.DECAYABLE_NETHER_WART_BLOCK.get()
+            && block != BlockRegistrar.DECAYABLE_WARPED_WART_BLOCK.get();
     }
 
     /**
