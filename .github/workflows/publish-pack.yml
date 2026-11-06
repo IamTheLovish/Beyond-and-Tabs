@@ -222,14 +222,14 @@ jobs:
             if [ "$variant" = mac ] && ls mods | grep -qiE 'embeddium|immediatelyfast|rubidium-extra|oculus'; then
               echo "::error::mac pack contains Embeddium, ImmediatelyFast, Embeddium Extra or Oculus"; exit 1
             fi
-            # Complementary Reimagined (and any shader pack) must not reach testers: its author refused us permission
-            # (Oct 29). Checked by file name and by content (settings files, metafiles) over the whole install.
+            # Complementary Reimagined (and any other shader pack) must not reach testers: its author refused us
+            # permission (Oct 29). Checked by file name and by content (settings files, metafiles) over the whole install.
             if find . -iname '*complementary*' | grep -q . || grep -rIqi complementary . ; then
               echo "::error::$variant pack contains Complementary Reimagined"; exit 1
             fi
-            if [ -d shaderpacks ] && ls shaderpacks | grep -q .; then
-              echo "::error::$variant pack has a shader pack"; exit 1
-            fi
+            # our own pack ships ON (#554): Windows has exactly shaderpacks/BeyondAndTabs, byte for byte, and Oculus'
+            # config on with it; Mac has neither (pack/check_tester_install.py, tested offline)
+            python3 "$GITHUB_WORKSPACE/pack/check_tester_install.py" "$variant" . "$GITHUB_WORKSPACE/shaderpacks/BeyondAndTabs"
             cd ../..
           done
 
