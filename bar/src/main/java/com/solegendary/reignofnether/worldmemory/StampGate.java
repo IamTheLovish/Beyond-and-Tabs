@@ -18,7 +18,9 @@ public final class StampGate {
 
     /** True when the column's chunk is loaded, whatever the world's height range. */
     public static boolean columnLoaded(LevelHeightAccessor world, ChunkPresence chunks, int bx, int bz) {
-        // today's check, Level.isLoaded(new BlockPos(bx, 0, bz)) spelled out: a y outside the build height is "not loaded"
-        return !world.isOutsideBuildHeight(0) && chunks.hasChunk(bx >> 4, bz >> 4);
+        // the chunk, never a block at a fixed y: Level.isLoaded(new BlockPos(bx, 0, bz)) is false wherever y 0 is outside
+        // the build height, and the battlefield world starts at y 48, so that check refused every scorch and crater in a
+        // real match (eyes scars run 42217669387 on main's jar: "0 chunks marked on the server")
+        return chunks.hasChunk(bx >> 4, bz >> 4);
     }
 }
