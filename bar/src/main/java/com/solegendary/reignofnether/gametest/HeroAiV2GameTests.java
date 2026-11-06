@@ -96,6 +96,8 @@ public class HeroAiV2GameTests {
      * order"). The problem says where the unit was and whether its chunk was entity-ticking.
      */
     static String unreachable(GameTestHelper helper, Mob unit, UnitAction action) {
+        ReignOfNether.LOGGER.info("GameTest [HeroReady] {} {} order at test tick {}: in level {}, {}", unit.getEncodeId(), action,
+            helper.getTick(), helper.getLevel().getEntity(unit.getId()) == unit, ArenaReady.describe(helper.getLevel(), java.util.List.of(unit)));
         if (helper.getLevel().getEntity(unit.getId()) == unit)
             return null;
         return "setup: the " + action + " order at test tick " + helper.getTick()
