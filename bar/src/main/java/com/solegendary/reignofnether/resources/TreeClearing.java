@@ -112,7 +112,7 @@ public class TreeClearing {
     /**
      * The trees whose trunk stands in the box min..max (x/z), with its base between {@code baseMinY} and
      * {@code baseMaxY}. One heightmap lookup per column; a column whose top block is a log is walked down to its
-     * base. Clamped to {@link #MAX_SPAN} per axis.
+     * base (past a branch crossing over the trunk: {@link #trunkBelow}). Clamped to {@link #MAX_SPAN} per axis.
      */
     public static Scan scan(Level level, int minX, int minZ, int maxX, int maxZ, int baseMinY, int baseMaxY) {
         Scan out = new Scan();
@@ -134,7 +134,9 @@ public class TreeClearing {
                 int y = top, walked = 0;
                 while (walked++ < MAX_TRUNK_WALK && isLog(level.getBlockState(m.set(x, y - 1, z))))
                     y--;
-                if (y < baseMinY || y > baseMaxY || !isSoil(level.getBlockState(m.set(x, y - 1, z))))
+                if (!isSoil(level.getBlockState(m.set(x, y - 1, z))))
+                    y = trunkBelow(level, m, x, z, Math.min(y - 1, baseMaxY), baseMinY);
+                if (y < baseMinY || y > baseMaxY)
                     continue;
                 BlockPos base = new BlockPos(x, y, z);
                 if (claimed.contains(base))
@@ -146,6 +148,19 @@ public class TreeClearing {
                 }
             }
         return out;
+    }
+
+    /**
+     * The column's top log stood over air or leaves, not soil: a branch or twig crossing above the trunk (a forked or
+     * leaning crown - the tree shapes lane's birch_2 / birch_3 were never seen as trees, Nov 6). The trunk may still
+     * stand lower in the same column: the highest log on soil from {@code fromY} down to {@code minY}, else
+     * Integer.MIN_VALUE. At most fromY - minY + 1 lookups, only for such columns.
+     */
+    static int trunkBelow(Level level, BlockPos.MutableBlockPos m, int x, int z, int fromY, int minY) {
+        for (int y = fromY; y >= minY; y--)
+            if (isLog(level.getBlockState(m.set(x, y, z))) && isSoil(level.getBlockState(m.set(x, y - 1, z))))
+                return y;
+        return Integer.MIN_VALUE;
     }
 
     /** Flood one tree from its trunk base; null if it is not a natural tree (no natural canopy, or in a building). */

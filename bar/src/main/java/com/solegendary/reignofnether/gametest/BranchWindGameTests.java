@@ -137,6 +137,10 @@ public class BranchWindGameTests {
                 }
             if (job.logsFelled != logs.size())
                 helper.fail("felled " + job.logsFelled + " logs, planted " + logs.size() + " (4 trunk + 3 sway wood + 1 sway fence)");
+            // The energy check, kept as strict: the same +-0.5 around an exact value. Its expected value moved from
+            // logs * ENERGY_PER_LOG (8 * 5 = 40) to ENERGY_PER_TREE (25) in ad5926eb, lovish's Nov 6 rule "A: same per
+            // tree"; TreeShapeGameTests.felled_trees_pay_one_tree_of_energy_whatever_their_size pins it on 5- and
+            // 44-log trees, and R5 on every grown template.
             else if (Math.abs(job.energyCredited - TreeClearing.ENERGY_PER_TREE) > 0.5f)
                 helper.fail("one tree (" + logs.size() + " logs) should credit " + TreeClearing.ENERGY_PER_TREE + " energy, credited " + job.energyCredited);
             else
