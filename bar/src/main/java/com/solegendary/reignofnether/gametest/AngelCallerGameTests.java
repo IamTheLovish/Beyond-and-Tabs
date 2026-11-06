@@ -963,11 +963,13 @@ public class AngelCallerGameTests {
         double[] nearestHit = { Double.MAX_VALUE };
         int[] groundedEarly = { 0 }, seenEarly = { 0 }, hits = { 0 };
         boolean[] aliveLate = { false }, goneAfter = { false };
-        helper.runAfterDelay(cast, () -> {
+        // RED ONLY, never ships (#566): the Sword call goes in before the caster's first entity tick, the state the
+        // flaky shard-8 runs hit at their tick-2 click, now on every run
+        {
             click(level, caster, CallAngel.Kind.SWORD);
             List<AngelUnit> as = angels(caster, CallAngel.Kind.SWORD);
             angel[0] = as.isEmpty() ? null : as.get(0);
-        });
+        }
         helper.runAfterDelay(foeAt, () -> {
             foe[0] = still(helper, EntityRegistrar.IRON_GOLEM_UNIT.get(), foeOwner, 3, 10);
             if (foe[0] != null) {
