@@ -107,14 +107,21 @@ def apply(rgb, x, z, salt, k):
     else:
         hm = k["HUE_MOTTLE"] * _octaves(x + 999, z + 333, salt * 8 + 60, k["MOTTLE_CELLS"], k["MOTTLE_WEIGHTS"], k)
     g = "GRASS_" if grass else ""
-    v = (1 + k[g + "VALUE"] * f) * (1 - k[g + "CLUMP_DARK"] * m) * (1 + 0.10 * s) * (1 + k[g + "MOTTLE"] * np.where(mottle > 0, mottle, 1.6 * mottle))
+    mv, hw = 1.0, 0.0
+    if grass and "GRASS_MASS_CELLS" in k:          # round 9 (r70): grass's masses of light and shade
+        mf = shape(_octaves(x - 2203, z + 4421, salt * 8 + 80, k["GRASS_MASS_CELLS"], k["GRASS_MASS_WEIGHTS"], k),
+                   k["GRASS_MASS_CONTRAST"])
+        mf = np.clip(mf + k["GRASS_MASS_BIAS"], -1, 1)
+        mv = 1 + k["GRASS_MASS_VALUE"] * np.where(mf > 0, k["GRASS_MASS_LIGHT"] * mf, mf)
+        hw = k["GRASS_MASS_HUE"] * mf
+    v = (1 + k[g + "VALUE"] * f) * (1 - k[g + "CLUMP_DARK"] * m) * (1 + 0.10 * s) * (1 + k[g + "MOTTLE"] * np.where(mottle > 0, mottle, 1.6 * mottle)) * mv
     d = v - 1
     v = 1 + np.where(d > 0, k["SOFT_LIGHT"] * np.tanh(d / k["SOFT_LIGHT"]), -k["SOFT_DARK"] * np.tanh(-d / k["SOFT_DARK"]))
     dp, dn = np.maximum(dry, 0), np.minimum(dry, 0)
     o = k["OLIVE_GRASS"] if salt == 1 else k["OLIVE"]   # GrassTint.GRASS = 1
-    r = ((rgb >> 16) & 0xFF) * o[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s) * (1 - 0.02 * m)
+    r = ((rgb >> 16) & 0xFF) * o[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s) * (1 - 0.02 * m) * (1 + hw)
     g = ((rgb >> 8) & 0xFF) * o[1] * v * (1 - 0.01 * dp - 0.03 * dn) * (1 + 0.04 * s)
-    b = (rgb & 0xFF) * o[2] * v * (1 - 0.9 * np.maximum(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m)
+    b = (rgb & 0xFF) * o[2] * v * (1 - 0.9 * np.maximum(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m) * (1 - hw)
     return np.clip(np.stack([r, g, b], -1), 0, 255)
 
 

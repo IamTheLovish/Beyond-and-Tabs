@@ -112,13 +112,31 @@ public final class GrassTint {
      * rounds 1-7 (the crowns were tuned on them). tools/test_lawn_r66.py, GrassTintTest.
      */
     static final double[] GRASS_CELLS = {20.0, 8.0, 3.5};
-    static final double[] GRASS_WEIGHTS = {1.0, 0.7, 0.5};
+    static final double[] GRASS_WEIGHTS = {1.0, 0.5, 0.2};   // round 9 (r70): {1, 0.7, 0.5} - the masses carry the contrast now
     static final double GRASS_CONTRAST = 2.0;
-    static final double GRASS_VALUE = 0.15;
+    static final double GRASS_VALUE = 0.10;                  // round 9 (r70): 0.15
     static final double[] GRASS_HUE_CELLS = {12.0, 6.0};
     static final double GRASS_HUE_MOTTLE = 0.05;
     static final double GRASS_CLUMP_DARK = 0.0;
     static final double GRASS_MOTTLE = 0.0;
+
+    /**
+     * Round 9, grass only (Nov 6, lawn round 70). lovish: "I want natural contrast that makes the grass look good like
+     * the realistic minecraft art I sent you". The r69 blind critic: the gap is "macro contrast" - his references set
+     * shade beside sunlit turf several blocks across, while round 8's drifts held block luma to about +-10% (7% of a
+     * meadow 10%+ below its median). lovish (03:12Z): "Allow big masses (Recommended)". So the grass gets masses of
+     * light and shade on their own field: shaped octaves at 18 and 10 blocks, biased toward shade. The shade side
+     * darkens by up to GRASS_MASS_VALUE and turns a little cooler; the sunlit side lightens by GRASS_MASS_LIGHT of
+     * that and turns a little warmer. GRASS_WEIGHTS and GRASS_VALUE step back so the 2-6 block blotch scale stays
+     * calm. Inside the soft limit, the readability floor and the colour step. tools/test_lawn_r70.py.
+     */
+    static final double[] GRASS_MASS_CELLS = {18.0, 10.0};
+    static final double[] GRASS_MASS_WEIGHTS = {1.0, 0.2};
+    static final double GRASS_MASS_CONTRAST = 1.3;
+    static final double GRASS_MASS_BIAS = -0.2;
+    static final double GRASS_MASS_VALUE = 0.25;
+    static final double GRASS_MASS_LIGHT = 0.4;
+    static final double GRASS_MASS_HUE = 0.04;
 
     private GrassTint() {
     }
@@ -156,15 +174,24 @@ public final class GrassTint {
         double hm = grass
                 ? GRASS_HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, GRASS_HUE_CELLS, MOTTLE_WEIGHTS)
                 : HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, MOTTLE_CELLS, MOTTLE_WEIGHTS);
+        double mv = 1, hw = 0;   // round 9: grass's masses of light and shade
+        if (grass) {
+            double mf = shape(octaves(x - 2203, z + 4421, salt * 8 + 80, GRASS_MASS_CELLS, GRASS_MASS_WEIGHTS),
+                    GRASS_MASS_CONTRAST);
+            mf = Math.max(-1, Math.min(1, mf + GRASS_MASS_BIAS));
+            mv = 1 + GRASS_MASS_VALUE * (mf > 0 ? GRASS_MASS_LIGHT * mf : mf);
+            hw = GRASS_MASS_HUE * mf;
+        }
         double v = (1 + (grass ? GRASS_VALUE : VALUE) * f) * (1 - (grass ? GRASS_CLUMP_DARK : CLUMP_DARK) * m)
-                * (1 + 0.10 * s) * (1 + (grass ? GRASS_MOTTLE : MOTTLE) * (mottle > 0 ? mottle : 1.6 * mottle));
+                * (1 + 0.10 * s) * (1 + (grass ? GRASS_MOTTLE : MOTTLE) * (mottle > 0 ? mottle : 1.6 * mottle)) * mv;
         v = v > 1 ? 1 + SOFT_LIGHT * Math.tanh((v - 1) / SOFT_LIGHT) : 1 - SOFT_DARK * Math.tanh((1 - v) / SOFT_DARK);
         double dp = Math.max(dry, 0), dn = Math.min(dry, 0);
         double[] o = salt == GRASS ? OLIVE_GRASS : CANOPY;
         double r = ((rgb >> 16) & 0xFF) * o[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s)
-                * (1 - 0.02 * m);
+                * (1 - 0.02 * m) * (1 + hw);
         double g = ((rgb >> 8) & 0xFF) * o[1] * v * (1 - 0.01 * dp - 0.03 * dn) * (1 + 0.04 * s);
-        double b = (rgb & 0xFF) * o[2] * v * (1 - 0.9 * Math.max(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m);
+        double b = (rgb & 0xFF) * o[2] * v * (1 - 0.9 * Math.max(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m)
+                * (1 - hw);
         return (channel(r) << 16) | (channel(g) << 8) | channel(b);
     }
 
