@@ -3,8 +3,9 @@
 [{"name": str, "model": path, "team": "a,b", "owner": "#rrggbb", "views": "front,quarter,side,rts",
   "poses": {name: {bone: [x,y,z]}} or "@file", "args": [extra game_preview args]}]
 and runs tools/game_preview.py for each (red and blue owners unless "owner" is given). Optional "pre": a list of
-commands (argv lists) run first from the repo root (generators). Every step's exit code is logged; one failing job
-fails the run at the end."""
+commands (argv lists) run first from the repo root (generators); optional "post": commands run last ("{out}" in an
+argument becomes the output folder: tools/render/white_angels/lineup.py composes the far and silhouette lineups).
+Every step's exit code is logged; one failing job fails the run at the end."""
 import argparse
 import json
 import os
@@ -45,7 +46,8 @@ def main():
             argv += j.get("args", [])
             bad += run(argv) != 0
     for cmd in spec.get("post", []):
-        bad += run([sys.executable if c == "python" else c for c in cmd]) != 0
+        # post steps compose from the stills: "{out}" in an argument is the output folder
+        bad += run([sys.executable if c == "python" else c.replace("{out}", out) for c in cmd]) != 0
     print(f"done, {bad} failing step(s)")
     sys.exit(1 if bad else 0)
 

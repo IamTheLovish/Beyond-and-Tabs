@@ -1,4 +1,14 @@
-{"jobs": [
-  {"name": "control_radiant_winged", "model": "design/models/sunforged_paladin_radiant_winged.json",
-   "views": "front,quarter,side,rts,topdown", "args": ["--art-check"]}
-]}
+{"pre": [["python", "tools/gen_angels.py", "--all"]],
+ "jobs": [
+  {"name": "control_radiant_winged", "model": "design/models/sunforged_paladin_radiant_winged.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"]},
+  {"name": "angel_a_mender", "model": "design/models/sunforged_angel_a_mender.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_a_archer", "model": "design/models/sunforged_angel_a_archer.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_a_sword", "model": "design/models/sunforged_angel_a_sword.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_b_mender", "model": "design/models/sunforged_angel_b_mender.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_b_archer", "model": "design/models/sunforged_angel_b_archer.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_b_sword", "model": "design/models/sunforged_angel_b_sword.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_c_mender", "model": "design/models/sunforged_angel_c_mender.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_c_archer", "model": "design/models/sunforged_angel_c_archer.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"},
+  {"name": "angel_c_sword", "model": "design/models/sunforged_angel_c_sword.json", "views": "front,quarter,side,rts,topdown", "args": ["--art-check"], "team": "tabard,tabard_dark"}
+ ],
+ "post": [["python", "tools/render/white_angels/lineup.py", "--out", "{out}"]]}
