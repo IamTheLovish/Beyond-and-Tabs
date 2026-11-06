@@ -21,9 +21,10 @@ const bool shadowHardwareFiltering = false;
 // soft shadows (slice 3, lib/shadow.glsl): sharp at the caster's foot, softer the farther the shadow falls, as the
 // sun's disc makes them. Off: slice 1's crisp edge everywhere
 #define SOFT_SHADOWS 1 // [0 1]
-// how much of the sun a plant's shadow takes (grass, flowers, crops: ID_FOLIAGE). lovish, Nov 5: "Try faint shadow +
-// lit side"; from Oct 28 they cast none, as hard shadows read as dark stars under every tuft. 0.30 leaves the ground
-// under a tuft at ~0.82 of the open lawn at noon (tools/test_shader_pack.py holds 0.80-0.92)
+// how much of the sun a plant's shadow takes (grass, flowers, crops: ID_FOLIAGE, and the upper half of a two-block
+// plant: ID_FOLIAGE_UPPER - shadow.vsh). lovish, Nov 5: "Try faint shadow + lit side"; from Oct 28 they cast none,
+// as hard shadows read as dark stars under every tuft. 0.30 leaves the ground under a tuft at ~0.82 of the open lawn
+// at noon (tools/test_shader_pack.py holds 0.80-0.92)
 const float PLANT_SHADOW = 0.30;
 // ...for a high sun: as it sinks, a tuft's shadow stretches into a long streak (1.5-2 blocks at golden hour striped
 // the lawn darker than the units on it, Fable critic, Nov 5), so the plants' shadow fades out between these sun
@@ -64,6 +65,18 @@ const float ambientOcclusionLevel = 1.0;
 // camera's ~65 degrees down never reaches (water there is ~2% mirror), so from above it costs one fetch per pixel
 #define SSR 1 // [0 1]
 
-// block ids from block.properties
-#define ID_FOLIAGE 10001.0
+// plants and leaves move in the wind (lib/wind.glsl): gusts rolling across the lawn, leaves shimmering. Off: still
+#define WIND 1 // [0 1]
+// how far they move: 1 = a grass tuft's top ~0.08 block at a full gust
+#define WIND_STRENGTH 1.0 // [0.5 0.75 1.0 1.5 2.0]
+// cloud shadows (lib/clouds.glsl): soft patches drifting with the wind that take up to 30% of the sun, never the sky
+#define CLOUD_SHADOWS 1 // [0 1]
+// sharper block textures in the RTS view: mip levels the terrain's texture reads are pulled finer under the ortho
+// camera (0 = the hardware's choice; 1 = a whole level finer, visibly shimmering as the camera pans). README: trade-off
+#define TEXTURE_SHARPNESS 0.5 // [0.0 0.25 0.5 0.75 1.0]
+
+// block ids from block.properties (each id once: tools/test_shader_pack.py)
+#define ID_FOLIAGE 10001.0             // plants, and the lower half of two-block ones
 #define ID_WATER 10002.0
+#define ID_FOLIAGE_UPPER 10003.0       // the upper half of a two-block plant
+#define ID_LEAVES 10004.0

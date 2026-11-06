@@ -74,7 +74,9 @@ PDI, PDIS = "polished_diorite", "polished_diorite_stairs"
 # the options; its BASE is the cathedral that shipped before)
 WALL = PDI                          # the church's walls: arms, fronts, towers, buttress piers, crossing corners
 CROWN_WALL = PDI                   # the crossing tower's walls over the roofs
-ROOF, ROOFS = PDI, PDIS            # roof ridges / spire caps, and the roof and spire stairs
+ROOF, ROOFS = "bone_block", PDIS   # the crossing's top course / spire cap in bone (cream, the kit's accent on the ribs
+                                   # and skulls: Fable critic A, Nov 4 - polished diorite read as a snow cap), and the
+                                   # roof and spire stairs
 TOWER_TOP = 12                     # the corner towers' band (their spires rise 4 over it)
 OPEN_CORNERS = True                # no corner towers or flying buttresses: the cross's re-entrant corners stay open
 CORNER_NEEDLES = False             # with OPEN_CORNERS: a slim blackstone needle in each re-entrant corner
@@ -84,8 +86,10 @@ DARK_CORNERS = False               # the podium terrace in the cross's open corn
 QUIET_GROUND = True                # no soul lanterns at ground level (stair cheeks, graves): the light gathers on the crossing
 CROSSING_LIGHTS = True             # the soul lanterns gather on the crossing (rib needles) - none on the gable finials
 CROSS_PODIUM = True                # the podium only under the arms: the cross's corners drop to a mossy grave lawn
-NEEDLE_TOP = 19                    # with ARM_NEEDLES: the needle's last wall post (the skull sits on it)
-AIR_CORNERS = True                 # with CROSS_PODIUM: the corners' layer 0 left empty - the field's own lawn runs in flush
+NEEDLE_TOP = 16                    # with ARM_NEEDLES: the needle's last wall post (the skull sits on it); was 19 - the
+                                   # arm skulls at y20 matched the crossing (Fable critic A, Nov 4: the centre must lead)
+AIR_CORNERS = False                # with CROSS_PODIUM: True left the corners' layer 0 empty; since Nov 4 (Fable critic A)
+                                   # they are the faction's BLIGHT lawn with graves laid flat, nothing above layer 0
 PALE_CROWN = True                  # the crossing's cornice and belfry eaves pale too: the crossing owns the brightest group
 WALL_PIERS = True                  # dark piers at the arm fronts' corners and a dark string course: less pale wall area
 DARK_ROSES = True                  # the rose windows without their glowing heart (two lit roses facing the camera = eyes)
@@ -208,10 +212,16 @@ def cross_podium(c):
                 c.set(dx, 0, dz, DTW)                           # a headstone standing in the field's own lawn
         elif min(abs(dx), abs(dz)) >= 3:
             h = hsh(dx, dz)
-            c.set(dx, 0, dz, ("moss_block", "moss_block", "podzol", "moss_block", "rooted_dirt")[h % 5],
-                  **({"snowy": "false"} if h % 5 == 2 else {}))
-            if max(abs(dx), abs(dz)) <= 5 and h % 7 == 0:
-                c.set(dx, 1, dz, DTW)                           # a headstone in the lawn
+            name = ("podzol", "soul_soil", "coarse_dirt", "podzol", "soul_soil", "rooted_dirt")[h % 6]
+            c.set(dx, 0, dz, name, **({"snowy": "false"} if name == "podzol" else {}))
+    if not AIR_CORNERS:
+        # the graves, grouped against the podium in each corner and laid flat in the blight (layer 0 only: the cross
+        # stays the outline): two headstones on the arm's flank with their lids, a bone half-sunk beyond them
+        for (sx, sz) in CORNERS:
+            for k in (4, 6):
+                c.set(sx * 3, 0, sz * k, DTW)                   # a headstone against the arm
+                c.slab(sx * 4, 0, sz * k, "deepslate_brick_slab")   # its lid
+            c.set(sx * 5, 0, sz * 5, "bone_block", axis="x")
     for face, o in O4.items():
         F = FRONT[face]
         for a in range(0, F + 2):
@@ -230,11 +240,7 @@ def cross_podium(c):
         for a in range(F + 3, R + 1):                           # the approach flags out to the plot's edge
             for t in (-1, 0, 1):
                 c.st(o, a, t, 0, inward(o), "top", "stone_brick_stairs")
-    if AIR_CORNERS:
-        c.put(O4["north"], R, 0, 0, "stone_bricks")             # the starting types all sit in layer 0
-    else:
-        c.set(R, 0, R, "stone_bricks")
-        c.set(-R, 0, -R, "stone_bricks")
+    c.put(O4["north"], R, 0, 0, "stone_bricks")                 # the starting types all sit in layer 0
 
 
 # ====================================================================================================== church
@@ -383,7 +389,7 @@ def crossing(c):
         c.st(o, 3, 0, 11, outward(o), "top", DBS)               # the lancet's sill over the ridge
         for t in (-1, 0, 1):
             c.st(o, 3, t, 14, inward(o), "top", DBS)            # the cornice corbels
-            c.put(o, 2, t, 14, ROOF if PALE_CROWN else PBB)
+            c.put(o, 2, t, 14, ROOF if PALE_CROWN else PBB, **({"axis": "y"} if PALE_CROWN else {}))
     for (sx, sz) in CORNERS:
         for y in range(3, 11):
             c.set(sx * 2, y, sz * 2, WALL)
@@ -403,8 +409,10 @@ def crossing(c):
     c.set(0, 16, 0, PBB)                                        # the beam the bell hangs from
     # the spire
     c.ring_stairs(1, 17, name=ROOFS)
-    c.set(0, 17, 0, ROOF)
-    c.set(0, 18, 0, CPB)
+    c.set(0, 17, 0, ROOF, axis="y")
+    # ONE strong cold light at the spire's foot (Fable critic C F5, Nov 4: five soul lanterns, light 10, did not read at
+    # dusk and the Ashborn and Gravebound capitols were dusk twins - a warm crater there, a cold crossing here)
+    c.set(0, 18, 0, "sea_lantern")
     for y in (19, 20):
         c.set(0, y, 0, PBW)
     c.set(0, 21, 0, "soul_lantern", **LANTERN)

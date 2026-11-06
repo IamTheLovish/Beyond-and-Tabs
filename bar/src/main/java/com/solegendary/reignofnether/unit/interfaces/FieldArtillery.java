@@ -5,7 +5,9 @@ import com.solegendary.reignofnether.unit.SetUp;
 /**
  * The shell-lobbing field artillery: Bombard Crew, Mortar Crawler, Rocket Battery and Mortar Galley (every unit that
  * fires {@link com.solegendary.reignofnether.unit.units.tide.BombardShell} from the ground except the Iron Leviathan
- * Engine, a T3 with its own role). Lovish, Oct 24: massed shell artillery formed an unapproachable death ball, so
+ * Engine, a T3 with its own role; the Rocket Battery's rocket is its
+ * {@link com.solegendary.reignofnether.unit.units.storm.RocketShell} subclass: its own flight and look, every rule below
+ * and in the burst shared). Lovish, Oct 24: massed shell artillery formed an unapproachable death ball, so
  * <ul>
  * <li>it <b>cannot hit air</b> ({@link AttackerUnit#canTargetAir}): no flyer is ever its target, and its shells pass
  * through flyers and never splash them - anti-air and flyers are the answer to a gun line;</li>
