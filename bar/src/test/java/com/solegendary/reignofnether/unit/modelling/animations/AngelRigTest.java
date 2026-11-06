@@ -30,7 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * and driver arrive together, and the port follows them).
  *
  * <p>Then the motion rules the spec must keep, checked on the rig itself every tick: no joint turns more than 45 deg
- * in one tick in any clip (local rotation, rest included, from the b4 bodies' design/models JSON), and the wing phase is
+ * in one tick in any clip (every bone, props and hidden bones included; local rotation, rest included, from the b4
+ * bodies' design/models JSON), and the wing phase is
  * STATE (changing beatTicks mid-flight never jumps the wing more than a normal step; never age / period, #303). Last,
  * the DSL -> ModelPart sign mapping of {@link AngelRig#apply}.
  */
@@ -276,11 +277,11 @@ class AngelRigTest {
         return Math.toDegrees(Math.acos(Math.max(-1.0, Math.min(1.0, (tr - 1.0) / 2.0))));
     }
 
-    /** Every bone's local rotation (rest + the pose's delta), null for a bone the body lacks or the pose hides. */
+    /** Every bone's local rotation (rest + the pose's delta), null for a bone the body lacks (hidden ones count). */
     private static double[][][] local(double[][] rest, AngelRig.Pose pose) {
         double[][][] r = new double[AngelRig.N][][];
         for (int b = 0; b < AngelRig.N; b++)
-            if (rest[b] != null && !pose.hidden[b])
+            if (rest[b] != null)
                 r[b] = rmat(rest[b][0] + pose.rot[b][0], rest[b][1] + pose.rot[b][1], rest[b][2] + pose.rot[b][2]);
         return r;
     }

@@ -51,7 +51,22 @@ public final class AngelRig {
     static final double BEAT_EASE = 0.12;
     static final double[] FOLD_HAND = {40.0, 40.0, 40.0};
     static final double[] FOLD_FORE = {20.0, 20.0, 20.0};
-    static final double FOLD_TIPS = 15.0;
+    static final double FOLD_TIPS = 4.0;
+    static final double GLIDE_BOB = 1.2, GLIDE_DIH = 4.0;
+    /** The attack downstroke's fore / hand lag (ticks) per kind. */
+    static final double[][] STROKE_LAG = {{1.0, 2.0}, {0.5, 1.0}, {1.0, 2.0}};
+    /** No flight turns more than this about its own long axis (body frame). */
+    static final double PITCH_CAP = 45.0;
+    /** The b4 flight cubes' rotations in their bone (left side; the right mirrors to (rx, -ry, -rz)): hand, tips. */
+    static final double[][][][] FEATHERS = {
+        {{{-20.7, 14.5, 3.6}},
+            {{-69.1, 68.5, -58.7}, {-37.8, 56.1, -23.8}, {-27.4, 42.0, -10.1}, {-22.9, 28.6, -2.5}}},
+        {{{-20.3, 9.4, 6.5}, {-20.5, 11.8, 5.6}},
+            {{-37.8, 56.1, -22.8}, {-27.4, 42.0, -9.2}, {-22.1, 24.7, 0.4}}},
+        {{{-20.1, 6.0, 9.8}, {-20.1, 4.4, 10.4}},
+            {{-33.1, 51.2, -14.9}, {-25.5, 37.5, -4.2}, {-22.1, 24.6, 2.4}, {-20.6, 13.1, 7.1}}},
+    };
+    static final double ARRIVE_DROP = 14.0, DEATH_LIFT = 14.0, UNFURL_LEVEL = 5.0;
     static final double LAG_FORE = 2.0, LAG_HAND = 3.0, LAG_BOB = 3.0, LAG_PITCH = 3.0;
     static final int GLIDE_TICKS = 20, GLIDE_AFTER = 2;
     static final double ROLL_PER_YAW = 6.0, ROLL_CAP = 35.0, ROLL_A = 0.45;
@@ -82,6 +97,8 @@ public final class AngelRig {
     static final double[] BOW_LONG = {0.342, 0.94, 0.0}, BOW_FACE = {0.0, 0.0, -1.0};
     static final double[] AIM = {0.0, -0.342, -0.94};
     static final double[] SWORD_BLADE = {-0.16, 0.766, 0.643};
+    /** The cut: (tick, share of the arc); the guard is reached 2 ticks before the first (held), contact stays t10. */
+    static final double[][] SWORD_CUT = {{7, 0.0}, {8, 0.15}, {9, 0.40}, {10, 0.63}, {11, 0.81}, {12, 0.93}};
 
     // ------------------------------------------------------------------ bones -------------------------------------
     /** Every bone the rig writes, over all three bodies (a body without one skips it). */
@@ -551,51 +568,59 @@ public final class AngelRig {
         return wingCycle(k, p, B, amp, sweepAmp, 0.0, 0.0, Double.NaN, 1.0);
     }
 
-    // the death / arrival "flame" and the arrival's air brake, as (arm, fore, hand) pairs and the tips' fold
-    static final double[] FLAME = {30.0, -10.0, 15.0, 10.0, 15.0, 5.0, 0.0, 5.0};
-    static final double[] AIRBRAKE = {22.0, 12.0, 0.0, -10.0, 6.0, -16.0};
+    // the death / arrival cocoon (wings closed up over the shoulders), as (arm, fore, hand) pairs, an unused
+    // supination slot and the tips' fold
+    static final double[] COCOON = {60.0, 5.0, 10.0, 0.0, 5.0, 0.0, 0.0, 0.0};
 
     static double[] arriveWing(int k, int t, double B) {
-        double[] w = new double[8];
-        if (t <= 18) {
-            double lift = keys(t, new double[][]{{0, 0.0}, {16, 0.0}, {17, 5.0}, {18, 5.0}});
-            double fl = 3.0 * Math.sin(2.0 * Math.PI * t / 8.0) * (1.0 - smooth((t - 12.0) / 4.0));
-            w[W_ARM] = AIRBRAKE[0] + lift + fl;
-            w[W_ARM + 1] = AIRBRAKE[1];
-            w[W_FORE] = AIRBRAKE[2];
-            w[W_FORE + 1] = AIRBRAKE[3];
-            w[W_HAND] = AIRBRAKE[4] - fl;
-            w[W_HAND + 1] = AIRBRAKE[5];
-            return w;
-        }
-        if (t <= 24) {
-            double u = (t - 18) / 6.0;
-            double top = AIRBRAKE[0] + 5.0;
-            double mid = 0.5 * (UP[k] + DN);
-            double bottom = mid + 1.4 * (DN - mid);
-            double ea = es(top, bottom, u), ef = es(top, bottom, Math.max(0.0, u - 1.0 / 6.0)),
-                eh = es(top, bottom, Math.max(0.0, u - 2.0 / 6.0));
-            double op = smooth(u / 0.5);
-            w[W_ARM] = ea;
-            w[W_ARM + 1] = AIRBRAKE[1] * (1.0 - op);
-            w[W_FORE] = ef - ea;
-            w[W_FORE + 1] = AIRBRAKE[3] * (1.0 - op);
-            w[W_HAND] = eh - ef + AIRBRAKE[4] * (1.0 - op);
-            w[W_HAND + 1] = AIRBRAKE[5] * (1.0 - op);
-            return w;
-        }
-        double[] wa = arriveWing(k, 24, B);
-        double[] wb = wingCycle(k, (t - 29.0) / B, B, 1.0, 1.0);
-        double u = smooth((t - 24) / 6.0);
+        double[] top = wingCycle(k, 0.0, B, 1.0, 1.0);
+        double w = smooth((t - 14.0) / 9.0);
+        double[] out = new double[8];
         for (int i = 0; i < 6; i++)
-            w[i] = lerp(wa[i], wb[i], u);
-        w[W_TIPS] = lerp(wa[W_TIPS], wb[W_TIPS], u);
-        w[W_SUP] = lerp(wa[W_SUP], wb[W_SUP], u);
-        return w;
+            out[i] = lerp(COCOON[i], top[i], w);
+        out[W_ARM] = keys(t, new double[][]{{14, COCOON[W_ARM]}, {23, UNFURL_LEVEL}, {25, UNFURL_LEVEL - 10.0},
+            {29, top[W_ARM]}});
+        out[W_ARM] += 2.0 * Math.sin(2.0 * Math.PI * t / 10.0) * (1.0 - smooth((t - 8.0) / 6.0));
+        out[W_TIPS] = lerp(COCOON[W_TIPS], top[W_TIPS], w);
+        out[W_SUP] = top[W_SUP] * w;
+        return out;
     }
 
-    private static double es(double top, double bottom, double v) {
-        return top + (bottom - top) * v * v * (2.2 - 1.2 * v);
+    /** How far a flight (its cube's rotation R in the body frame) is turned about its own long axis off flat. */
+    static double featherPitch(double[][] R) {
+        double[] n = mv(R, new double[]{0.0, 1.0, 0.0}), l = mv(R, new double[]{0.0, 0.0, 1.0});
+        if (Math.abs(l[1]) > 0.985)
+            return 0.0;
+        double[] n0 = unit(new double[]{-l[1] * l[0], 1.0 - l[1] * l[1], -l[1] * l[2]});
+        return Math.toDegrees(Math.atan2(dot(cross(n0, n), l), dot(n0, n)));
+    }
+
+    /** The bone's rotation L (under P) twisted back about its flights' mean long axis to the cap; null if none is over. */
+    static double[][] capPitch(double[][] P, double[][] L, double[][][] Rc) {
+        double[] sum = new double[3];
+        for (double[][] R : Rc) {
+            double[] z = mv(R, new double[]{0.0, 0.0, 1.0});
+            for (int i = 0; i < 3; i++)
+                sum[i] += z[i];
+        }
+        double[] ax = unit(sum);
+        boolean changed = false;
+        for (int it = 0; it < 3; it++) {
+            double[][] PL = mmul(P, L);
+            double s = 0.0;
+            boolean first = true;
+            for (double[][] R : Rc) {
+                double f = featherPitch(mmul(PL, R));
+                if (first || Math.abs(f) > Math.abs(s))
+                    s = f;
+                first = false;
+            }
+            if (Math.abs(s) <= PITCH_CAP + 0.25)
+                break;
+            L = mmul(L, axisMat(ax, -(s - Math.copySign(PITCH_CAP, s))));
+            changed = true;
+        }
+        return changed ? L : null;
     }
 
     // ------------------------------------------------------------------ the arms --------------------------------
@@ -609,6 +634,29 @@ public final class AngelRig {
         double[] q = add(a, fb);
         double[] hq = mv(Ra, q);
         return new double[][]{add(S, hq), mv(Ra, a)};
+    }
+
+    /** The rotation w of the way from ra to rb (about the one axis of ra^T rb). */
+    static double[][] rotLerp(double[][] ra, double[][] rb, double w) {
+        double[][] D = mmul(mT(ra), rb);
+        double ang = Math.toDegrees(Math.acos(clamp((D[0][0] + D[1][1] + D[2][2] - 1.0) / 2.0, -1.0, 1.0)));
+        double[] ax = {D[2][1] - D[1][2], D[0][2] - D[2][0], D[1][0] - D[0][1]};
+        if (ang < 1e-6 || dot(ax, ax) < 1e-12)
+            return w < 0.5 ? ra : rb;
+        return mmul(ra, axisMat(ax, ang * w));
+    }
+
+    private static double[][] stow;
+
+    /** The arrow's rotation in the draw hand's fore as it appears at attack t3: where it rests while hidden. */
+    static double[][] arrowStow() {
+        if (stow == null) {
+            Attack a = attackTracks(1, 3, 0);
+            double[] phi = new double[1];
+            double[][] ra = ikArm(1, 1, a.ikR, a.poleR, phi);
+            stow = mmul(mT(mmul(ra, rmat(phi[0], 0.0, 0.0))), align(new double[]{0.0, 0.0, -1.0}, a.aim));
+        }
+        return stow;
     }
 
     /** Two-bone IK (the driver's ik_arm): the upper arm's rotation (body frame); phiOut[0] = the fore's hinge (deg). */
@@ -736,12 +784,35 @@ public final class AngelRig {
             double[] over = unit(new double[]{dirs[3][0] + 0.22 * (dirs[3][0] - dirs[2][0]),
                 dirs[3][1] + 0.22 * (dirs[3][1] - dirs[2][1]), dirs[3][2] + 0.22 * (dirs[3][2] - dirs[2][2])});
             double[] D0 = mv(rmat(SWORD_CARRY), SWORD_BLADE);
-            o.ikR = vkeys(t, new double[]{0, 6, 8, 9, 10, 11, 12, 13, 16, 20, 25}, new double[][]{R0, pts[0], pts[0],
-                along(pts, fr, 0.25), along(pts, fr, 0.53), along(pts, fr, 0.79), along(pts, fr, 0.95), pts[3], pts[3],
-                v3(-3.0, 20.5, -8.0), R0});
-            o.blade = unit(vkeys(t, new double[]{0, 6, 8, 9, 10, 11, 12, 13, 14, 16, 20, 25}, new double[][]{D0, dirs[0],
-                dirs[0], unit(along(dirs, fr, 0.25)), unit(along(dirs, fr, 0.53)), unit(along(dirs, fr, 0.79)),
-                unit(along(dirs, fr, 0.95)), over, dirs[3], dirs[3], v3(0.0, 0.3, -0.95), D0}));
+            int nc = SWORD_CUT.length;
+            double[] tkI = new double[nc + 6], tkB = new double[nc + 7];
+            double[][] vI = new double[nc + 6][], vB = new double[nc + 7][];
+            tkI[0] = 0;
+            vI[0] = R0;
+            tkI[1] = SWORD_CUT[0][0] - 2;
+            vI[1] = pts[0];
+            tkB[0] = 0;
+            vB[0] = D0;
+            tkB[1] = SWORD_CUT[0][0] - 2;
+            vB[1] = dirs[0];
+            for (int i = 0; i < nc; i++) {
+                tkI[2 + i] = tkB[2 + i] = SWORD_CUT[i][0];
+                vI[2 + i] = along(pts, fr, SWORD_CUT[i][1]);
+                vB[2 + i] = unit(along(dirs, fr, SWORD_CUT[i][1]));
+            }
+            double[] tI = {13, 16, 20, 25}, tB = {13, 14, 16, 20, 25};
+            double[][] wI = {pts[3], pts[3], v3(-3.0, 20.5, -8.0), R0};
+            double[][] wB = {over, dirs[3], dirs[3], v3(0.0, 0.3, -0.95), D0};
+            for (int i = 0; i < 4; i++) {
+                tkI[2 + nc + i] = tI[i];
+                vI[2 + nc + i] = wI[i];
+            }
+            for (int i = 0; i < 5; i++) {
+                tkB[2 + nc + i] = tB[i];
+                vB[2 + nc + i] = wB[i];
+            }
+            o.ikR = vkeys(t, tkI, vI);
+            o.blade = unit(vkeys(t, tkB, vB));
             o.poleR = vkeys(t, new double[]{0, 6, 20, 25}, new double[][]{eR, v3(-1.0, -0.5, 0.4), v3(-1.0, -0.5, 0.4), eR});
             double[] hd = unit(dirs[0]);
             o.planeHd = hd;
@@ -806,7 +877,9 @@ public final class AngelRig {
         double targetBeat = lerp(HOVER_T[k], FLY_T[k], fw) * st.tempo;
         st.beat += (targetBeat - st.beat) * BEAT_EASE;
         double B = st.beat;
-        if (st.glide > 0)
+        if (st.arriveT >= 0)      // the arrival keys its own wings; the phase lands on 0 at its last tick
+            st.phase = frac((st.arriveT - (ARRIVE_LEN - 1)) / B);
+        else if (st.glide > 0)
             st.glide--;
         else
             st.phase += 1.0 / B;
@@ -846,31 +919,33 @@ public final class AngelRig {
         double arDy = 0, arScale = 1, arWhite = 0, arAlpha = 1, arBodyRx = 0, arHeadRx = 0, arLegs = 0;
         if (arr) {
             double u = clamp(t / 20.0, 0.0, 1.0);
-            arDy = 24.0 * (1.0 - u) * (1.0 - u) + keys(t, k2(0, 0.0, 19, 0.0, 23, 1.5, 30, 0.0));
-            arScale = 0.85 + 0.15 * smooth(t / 10.0);
-            arWhite = 1.0 - smooth((t - 2.0) / 10.0);
+            arDy = ARRIVE_DROP * (1.0 - u) * (1.0 - u) + keys(t, k2(0, 0.0, 17, 0.0, 23, 1.5, 29, 0.0));
+            arScale = 0.85 + 0.15 * smooth(t / 12.0);
+            arWhite = 1.0 - smooth((t - 10.0) / 10.0);
             arAlpha = smooth(t / 6.0);
-            arBodyRx = keys(t, k2(0, 0.0, 8, 6.0, 16, 14.0, 22, 4.0, 30, 0.0));
+            arBodyRx = keys(t, k2(0, 0.0, 8, 6.0, 16, 10.0, 22, 4.0, 30, 0.0));
             arHeadRx = keys(t, k2(0, -6.0, 20, -10.0, 30, 0.0));
             arLegs = keys(t, k2(0, 0.0, 8, 0.3, 16, 1.0, 22, 1.0, 30, 0.0));
         }
         // death_tracks
         double dDy = 0, dStretch = 1, dWhite = 0, dAlpha = 1, dHaloAlpha = 1, dHeadRx = 0, dArmsOpen = 0, dWingW = 0;
         if (dead) {
-            dDy = 8.0 * smooth((d - 2.0) / 14.0);
+            dDy = DEATH_LIFT * smooth((d - 2.0) / 16.0);
             dStretch = 1.0 + 0.06 * smooth((d - 4.0) / 12.0);
-            dWhite = smooth((d - 4.0) / 10.0);
-            dAlpha = 1.0 - smooth((d - 8.0) / 12.0);
-            dHaloAlpha = 1.0 - smooth((d - 14.0) / 6.0);
+            dWhite = smooth((d - 6.0) / 8.0);
+            dAlpha = 1.0 - smooth((d - 9.0) / 11.0);
+            dHaloAlpha = dAlpha;
             dHeadRx = keys(d, k2(0, 0.0, 3, -12.0, 8, -4.0, 14, 8.0, 20, 10.0));
             dArmsOpen = keys(d, k2(0, 0.0, 5, 1.0));
-            dWingW = keys(d, k2(0, 0.0, 6, 1.0));
+            dWingW = keys(d, k2(0, 0.0, 2, 0.0, 8, 1.0));
         }
         out.reset();
         // -- body
         double breath = Math.sin(2.0 * Math.PI * (st.beats + p) / BREATH_BEATS);
         double bobAmp = BOB[k] * lerp(1.0, 0.6, fw);
         double bob = bobAmp * bob0(p - LAG_BOB / B) * (1.0 - gw);
+        double gth = 2.0 * Math.PI * (GLIDE_TICKS - st.glide) / GLIDE_TICKS;   // the glide's own breath (one wave)
+        bob -= GLIDE_BOB * Math.cos(gth) * gw;
         if (arr)
             bob *= smooth((st.arriveT - 24) / 6.0);
         double brake = clamp(-acc / 0.08, 0.0, 1.0);
@@ -906,6 +981,7 @@ public final class AngelRig {
             body[0] += arBodyRx;
             out.white = arWhite;
             out.alpha = arAlpha;
+            out.haloAlpha = arAlpha;
             out.scale[BODY][0] = out.scale[BODY][1] = out.scale[BODY][2] = arScale;
         }
         if (dead) {
@@ -933,7 +1009,7 @@ public final class AngelRig {
             double[] w = wingCycle(k, p, B, aSide, sweepAmp, -12.0 * inner, 15.0 * inner, ampUp, 1.0);
             double sup = w[W_SUP] * (1.0 - gw);
             if (gw > 0.001) {
-                double[] gp = {8.0, 0.0, 0.0, 0.0, -6.0 + 3.0 * Math.sin(2.0 * Math.PI * st.glide / 30.0), 0.0};
+                double[] gp = {8.0 + GLIDE_DIH * Math.sin(gth), 0.0, 0.0, 0.0, -6.0 + 3.0 * Math.sin(2.0 * Math.PI * st.glide / 30.0), 0.0};
                 for (int i = 0; i < 6; i++)
                     w[i] = lerp(w[i], gp[i], gw);
                 w[W_TIPS] *= 1.0 - gw;
@@ -950,8 +1026,9 @@ public final class AngelRig {
                 } else {
                     double bot = wingCycle(k, BOTTOM1 - 0.001, B, aSide, sweepAmp)[W_ARM];
                     double ut = (at - s0 + 1.0) / sl;
-                    double ea = esClamp(top[W_ARM], bot, ut), ef = esClamp(top[W_ARM], bot, ut - 1.0 / sl),
-                        eh = esClamp(top[W_ARM], bot, ut - 2.0 / sl);
+                    double lf = STROKE_LAG[k][0], lh = STROKE_LAG[k][1];
+                    double ea = esClamp(top[W_ARM], bot, ut), ef = esClamp(top[W_ARM], bot, ut - lf / sl),
+                        eh = esClamp(top[W_ARM], bot, ut - lh / sl);
                     w[W_ARM] = ea;
                     w[W_ARM + 1] = top[W_ARM + 1] * (1.0 - ut);
                     w[W_FORE] = ef - ea;
@@ -975,8 +1052,8 @@ public final class AngelRig {
             }
             if (dead) {
                 for (int i = 0; i < 6; i++)
-                    w[i] = lerp(w[i], FLAME[i], dWingW);
-                w[W_TIPS] = lerp(w[W_TIPS], FLAME[W_TIPS], dWingW);
+                    w[i] = lerp(w[i], COCOON[i], dWingW);
+                w[W_TIPS] = lerp(w[W_TIPS], COCOON[W_TIPS], dWingW);
                 sup = lerp(sup, SUPINATE, dWingW);
             }
             double handAbs = w[W_ARM] + w[W_FORE] + w[W_HAND];
@@ -986,6 +1063,23 @@ public final class AngelRig {
             set(out.rot[WING_FORE[si]], sup, -side * w[W_FORE + 1], side * w[W_FORE]);
             set(out.rot[WING_HAND[si]], 0.0, -side * w[W_HAND + 1], side * w[W_HAND]);
             set(out.rot[WING_TIPS[si]], 0.0, -side * w[W_TIPS], side * tipsRel);
+            // the pitch cap: the hand, then the tips, twisted back about their flights so none stands edge-on
+            double[][] P = mmul(rmat(out.rot[WING_ARM[si]]), rmat(out.rot[WING_FORE[si]]));
+            for (int part = 0; part < 2; part++) {
+                int bn = part == 0 ? WING_HAND[si] : WING_TIPS[si];
+                double[][] L = rmat(out.rot[bn]);
+                double[][] cubes = FEATHERS[k][part];
+                double[][][] Rc = new double[cubes.length][][];
+                for (int c = 0; c < cubes.length; c++)
+                    Rc[c] = rmat(cubes[c][0], side * cubes[c][1], side * cubes[c][2]);
+                double[][] L2 = capPitch(P, L, Rc);
+                if (L2 != null) {
+                    double[] e = euler(L2);
+                    set(out.rot[bn], e[0], e[1], e[2]);
+                    L = L2;
+                }
+                P = mmul(P, L);
+            }
         }
         // -- arms and props
         double[][] rest = REST[k];
@@ -1058,7 +1152,7 @@ public final class AngelRig {
             set(out.rot[LANTERN], clamp(lx.x, -30.0, 30.0), 0.0, clamp(lz.x, -30.0, 30.0));
         }
         if (k == 1)
-            archer(A, rest, R_la, R_lf, R_ra, R_rf, out);
+            archer(A, at, rest, R_la, R_lf, R_ra, R_rf, out);
         if (k == 2) {
             double[][] W0 = mmul(mmul(rmat(rest[ARM_B[1]]), rmat(rest[FORE_B[1]])), rmat(rest[SWORD]));
             double[][] W_carry = mmul(rmat(SWORD_CARRY), W0);
@@ -1176,7 +1270,7 @@ public final class AngelRig {
     }
 
     /** The archer's bow aimed (drawn), its string halves to the draw hand, the arrow on the hand. */
-    private static void archer(Attack A, double[][] rest, double[][] R_la, double[][] R_lf, double[][] R_ra,
+    private static void archer(Attack A, int at, double[][] rest, double[][] R_la, double[][] R_lf, double[][] R_ra,
                                double[][] R_rf, Pose out) {
         int k = 1;
         double bw = A != null ? A.bow : 0.0;
@@ -1217,7 +1311,12 @@ public final class AngelRig {
         }
         double[] grip = xFore(Gl, El, Sl, R_lf, R_la);
         double[] adir = (A != null && A.bow > 0.0) ? aim : sub(grip, hand);
-        deltaOnRest(rest[ARROW], mmul(mT(mmul(R_ra, R_rf)), align(new double[]{0.0, 0.0, -1.0}, adir)), out.rot[ARROW]);
+        double[][] L_arrow = mmul(mT(mmul(R_ra, R_rf)), align(new double[]{0.0, 0.0, -1.0}, adir));
+        // hidden, the arrow rests in the hand in the pose it appears in (t3), easing there from the shot over 8 ticks
+        double vis = (A != null && A.arrow) ? 1.0 : (A != null && at > 15) ? 1.0 - smooth((at - 15.0) / 8.0) : 0.0;
+        if (vis < 1.0)
+            L_arrow = rotLerp(arrowStow(), L_arrow, vis);
+        deltaOnRest(rest[ARROW], L_arrow, out.rot[ARROW]);
         if (!(A != null && A.arrow))
             out.hidden[ARROW] = true;
     }
