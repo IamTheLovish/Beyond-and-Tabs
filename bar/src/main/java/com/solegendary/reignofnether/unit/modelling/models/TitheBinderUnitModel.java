@@ -84,6 +84,10 @@ public class TitheBinderUnitModel extends TitheBinderModel<TitheBinderUnit> impl
 
     /** Weapon k (1-10) draws its far stand-in (true) or its own cubes (false). */
     public void weaponLod(int k, boolean far) {
+        // the rig counts more slots (TitheBinderRig.MAX_WEAPONS, its flying ones) than the body has weapons: a loop over
+        // the rig's slots reaches k = 11 (eyes run 42216961697 crashed the client here, "Index 11 out of bounds")
+        if (k < 1 || k > TitheLedger.MAX_WEAPONS)
+            return;
         for (ModelPart p : weaponsNear[k])
             p.skipDraw = far;
         if (weaponsFar[k] != null)
