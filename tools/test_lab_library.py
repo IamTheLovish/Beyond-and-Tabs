@@ -118,6 +118,16 @@ class LibraryTest(unittest.TestCase):
                     got = {q: n for q, (n, _) in S.load(shipped).blocks.items() if n not in S.AIR}
                     self.assertEqual(got, want, shipped)
 
+    def test_build_time_stays_rons(self):
+        """Library.java pins buildTimeBlocks to RoN's library's 99 blocks (as Graveyard.java does for its 99-block yard):
+        without it the build time follows the block count, and the redraw's ~240 blocks would build ~2.4x slower - a
+        balance change the art has no business making. Main: no buildTimeBlocks in Library.java."""
+        java = os.path.join(ROOT, "bar", "src", "main", "java", "com", "solegendary", "reignofnether", "building",
+                            "buildings", "villagers", "Library.java")
+        with open(java, encoding="utf-8") as f:
+            src = f.read()
+        self.assertIn("this.buildTimeBlocks = 99;", src)
+
 
 if __name__ == "__main__":
     unittest.main()
