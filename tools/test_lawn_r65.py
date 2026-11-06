@@ -10,7 +10,8 @@ landed in game and he said "The grass looks blotchy" (16:53 ET). D = A + B + C:
 plus the critic's flower heads: ~3 screen px with a lighter 1 px centre.
 These pin D's intent (tests written with the art, red against round 64's generator - noted in the commit):
 - no scorch marks: near-black brown (hue < 80, L < 0.22 under our gain) under 0.05% of the mip (r64 1.2%)
-- the 2+ block share at the test mip no more than 0.18 (r64 0.26; D 0.10; the r62 band's floor 0.08 still holds)
+- the 2+ block share at the test mip no more than 0.18 (r64 0.26; D 0.10; the r62 band's floor 0.08 still holds);
+  re-set Nov 6 for round 70 (lovish "Allow big masses"): the 2-6 block share at most 0.05, the 2+ share at most 0.30
 - every clover sprite's outer 3 texels empty
 - flower heads 70+ texels (~2.6 px across at 128 texels per block, 30 screen px per block), each one's centre third
   brighter than its outer ring
@@ -41,10 +42,17 @@ class LawnRound65Test(unittest.TestCase):
         self.assertLess(float(scorch.mean()), 0.0005)
 
     def test_patches_not_blotchy(self):
-        """2+ block wavelengths carry no more than 0.18 of the luma variance (3 x 3 sheets times the world colour
-        field, plain lane - lovish Nov 5: "Yes, as the player sees it"); the band's floor 0.08 is test_lawn_r62's."""
+        """3 x 3 sheets times the world colour field, plain lane (lovish Nov 5: "Yes, as the player sees it").
+        - The blotch scale stays calm: 2-6 block wavelengths carry no more than 0.05 of the luma variance. r64's
+          "blotchy" patches were 2-6 blocks; r69 measures 0.022 here.
+        - All 2+ block wavelengths stay at or under test_lawn_r62's ceiling, 0.30. The floor is r62's 0.08.
+        Re-set Nov 6 for round 70 (was: 2+ blocks <= 0.18). After r69 the blind critic named the gap "macro contrast":
+        light and dark masses at 6-12 blocks. Those masses are 2+ block variance by definition, so the 0.18 cap
+        forbade them. lovish (03:12Z Nov 6, via Eris.16): "Allow big masses (Recommended)". The cap moves to r62's
+        ceiling, and the scale he called blotchy gets its own, tighter cap."""
         L = sim.luma(r64.world_mip())
-        self.assertLessEqual(r64.band_share(L, 64, 1e9, wavelength=True), 0.18)
+        self.assertLessEqual(r64.band_share(L, 64, 192, wavelength=True), 0.05)
+        self.assertLessEqual(r64.band_share(L, 64, 1e9, wavelength=True), 0.30)
 
     def test_clover_leaves_clear_of_the_block_edge(self):
         self.assertGreaterEqual(gen_blocks.CLOVER_MARGIN, 0.02)
