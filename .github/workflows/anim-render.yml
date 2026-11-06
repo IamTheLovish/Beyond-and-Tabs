@@ -22,7 +22,9 @@ env:
   BLENDER_SERIES: Blender5.2
   # https://download.blender.org/release/Blender5.2/blender-5.2.3.sha256 (linux-x64 line), pinned here
   BLENDER_SHA256: 78486c018b4443efe5e75ab54c290ed8c15abafd249b862c2c9ce2530a918eec
-  R3_COMMIT: fead253b4ca0add00df4c1d347cb7259340b7ce8      # Quarry Saint r3, the A/B's other side (full SHA)
+  # the blind A/B's other side, built from its own checkout (full SHA): round 4 against r3b (bb79799c)
+  R3_COMMIT: bb79799cce670ed3a31ac96e2695f8fac6dba3fa
+  AB_BASE_NAME: r3b
   PY: tools/render/quarry_saint
 jobs:
   # r4: the key solve is per key - only the keys whose spec changed since the key file committed on the branch, all of
@@ -108,7 +110,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Check out r3 (${{ env.R3_COMMIT }}) beside it for the A/B
+      - name: Check out the A/B baseline (${{ env.AB_BASE_NAME }} ${{ env.R3_COMMIT }}) beside it
         uses: actions/checkout@v4
         with: { ref: '${{ env.R3_COMMIT }}', path: r3side, fetch-depth: 0 }
       - uses: actions/setup-python@v5
@@ -171,7 +173,7 @@ jobs:
             --clips fixture:art/frames/r3b_fixture.json --step 2 --verify --out art/frames/r3b.json | tee art/frames/r3b_export.log
           python $PY/to_blender_fixture.py r3side art/frames/r3_fixture.json
           python tools/blender/export_frames.py --repo r3side --model r3side/design/models/sunforged_quarry_saint.json \
-            --unit quarry_saint --clips fixture:art/frames/r3_fixture.json --names idle,slam --step 2 --verify \
+            --unit quarry_saint --clips fixture:art/frames/r3_fixture.json --names idle,slam,sweep,gatefall --step 2 --verify \
             --out art/frames/r3.json | tee art/frames/r3_export.log
           echo "export_frames=$(( $(date +%s) - start ))" >> art/steps.txt
       - name: Blender sheets (Workbench) - r3b views, turnaround, clip frames at rts 42 and tactical 21
@@ -189,12 +191,13 @@ jobs:
             --clips walk,sweep,slam,gatefall,glance,stagger,death --rows profile:42,rts:42,rts:21
           echo "blender_r3b=$(( $(date +%s) - start ))" >> art/steps.txt
           start=$(date +%s)
-          run art/frames/r3.json art/blender_r3 --tag r3 --sheets views,clips --clips slam --rows rts:42,rts:21
+          run art/frames/r3.json art/blender_r3 --tag r3 --sheets views,clips --clips slam,sweep,gatefall --rows rts:42,rts:21
           echo "blender_r3=$(( $(date +%s) - start ))" >> art/steps.txt
-      - name: Blind A/B (r3b vs r3, each from its own checkout)
+      - name: Blind A/B (this commit vs the baseline, each from its own checkout)
         run: |
           set -euo pipefail
-          python $PY/ab.py --a "r3b (this commit)=art/blender/cells:r3b" --b "r3 ($R3_COMMIT)=art/blender_r3/cells:r3" --out art/ab
+          python $PY/ab.py --a "this commit ($GITHUB_SHA)=art/blender/cells:r3b" \
+            --b "$AB_BASE_NAME ($R3_COMMIT)=art/blender_r3/cells:r3" --out art/ab
           mv art/ab/ab-mapping.txt art/ab-mapping.txt
       - name: Job summary
         if: always()
