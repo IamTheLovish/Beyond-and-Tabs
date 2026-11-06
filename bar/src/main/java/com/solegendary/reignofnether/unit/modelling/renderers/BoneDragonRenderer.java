@@ -17,8 +17,12 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+
+import org.joml.Matrix4f;
+import org.joml.Vector4f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -82,6 +86,54 @@ public class BoneDragonRenderer extends MobRenderer<BoneDragonUnit, BoneDragonUn
             sail.get(i).skipDraw = true;
         super.render(entity, yaw, partialTick, poseStack, buffers, light);
         this.model.drawAll();
+        if (entity.isBreathingClient())
+            findJaws(entity, partialTick);
+    }
+
+    /** The jaws' bones from the body down, as the model was just posed (the head's chain; the jaw hangs off the head). */
+    private static final String[] JAW_CHAIN = { "body", "neck_1", "neck_2", "neck_3", "neck_4", "neck_5", "neck_6",
+        "neck_7", "neck_8", "head" };
+    /** The snout's tip in the head's space and the lower jaw's tip in the jaw's (blocks: design px / 16). */
+    private static final float SNOUT_Y = 1f / 16, SNOUT_Z = -15f / 16, JAW_TIP_Y = 2f / 16, JAW_TIP_Z = -13.5f / 16;
+
+    /**
+     * Where the fire comes out (BreathFx): between the snout and the lower jaw's tip of the model as posed this frame,
+     * in world space - LivingEntityRenderer's own transform (the body yaw, this renderer's pitch, the -1 flip, the draw
+     * scale, the 1.501 drop) and then the bone chain. Only while it breathes: ~12 matrix steps a frame.
+     */
+    private void findJaws(BoneDragonUnit e, float partialTick) {
+        PoseStack ps = new PoseStack();
+        ps.translate(Mth.lerp(partialTick, e.xo, e.getX()), Mth.lerp(partialTick, e.yo, e.getY()),
+            Mth.lerp(partialTick, e.zo, e.getZ()));
+        ps.mulPose(Axis.YP.rotationDegrees(180f - Mth.rotLerp(partialTick, e.yBodyRotO, e.yBodyRot)));
+        ps.mulPose(Axis.XP.rotationDegrees(e.getXRot()));
+        ps.scale(-1f, -1f, 1f);
+        ps.scale(DRAW_SCALE, DRAW_SCALE, DRAW_SCALE);
+        ps.translate(0f, -1.501f, 0f);
+        this.model.root().translateAndRotate(ps);
+        for (String bone : JAW_CHAIN) {
+            ModelPart part = this.model.bones.get(bone);
+            if (part == null)
+                return;
+            part.translateAndRotate(ps);
+        }
+        Matrix4f head = new Matrix4f(ps.last().pose());
+        Vector4f snout = head.transform(new Vector4f(0f, SNOUT_Y, SNOUT_Z, 1f));
+        Vector4f pivot = head.transform(new Vector4f(0f, 0f, 0f, 1f));
+        ModelPart jaw = this.model.bones.get("jaw");
+        if (jaw == null)
+            return;
+        jaw.translateAndRotate(ps);
+        Vector4f tip = ps.last().pose().transform(new Vector4f(0f, JAW_TIP_Y, JAW_TIP_Z, 1f));
+        double dx = snout.x() - pivot.x(), dy = snout.y() - pivot.y(), dz = snout.z() - pivot.z();
+        double l = Math.max(1.0e-6, Math.sqrt(dx * dx + dy * dy + dz * dz));
+        e.clientJaws[0] = (snout.x() + tip.x()) / 2;
+        e.clientJaws[1] = (snout.y() + tip.y()) / 2;
+        e.clientJaws[2] = (snout.z() + tip.z()) / 2;
+        e.clientJaws[3] = dx / l;
+        e.clientJaws[4] = dy / l;
+        e.clientJaws[5] = dz / l;
+        e.clientJawsAt = com.solegendary.reignofnether.barfx.BreathFx.now();
     }
 
     /** The membrane alone, translucent, in the same pose the body was just drawn in. */
