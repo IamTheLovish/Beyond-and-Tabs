@@ -450,12 +450,26 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
             tickHits(sl);
             tickHook(sl);
             int event = ledger.tick(now());
+            // a bind: a few souls at the ribs (the rig's bind clip - lash, orb, flash, forge line - is the show)
             if (event > 0)
-                sl.sendParticles(ParticleTypes.SOUL, getX(), getY() + getBbHeight() * 0.6, getZ(), 12, 0.4, 0.4, 0.4, 0.03);
+                sl.sendParticles(ParticleTypes.SOUL, getX(), getY() + getBbHeight() * 0.6, getZ(), 4, 0.25, 0.25, 0.25, 0.02);
             else if (event < 0)
                 sl.sendParticles(ParticleTypes.SMOKE, getX(), getY() + getBbHeight() * 0.7, getZ(), 8, 0.5, 0.3, 0.5, 0.01);
             syncLedger();
         }
+    }
+
+    /**
+     * No vanilla potion swirls round the Binder (in-game critic r2: about a dozen teal swirl glyphs scattered round a
+     * walking Binder - LivingEntity.tickEffects spawns one effect particle every other tick in the effect's colour
+     * while any visible effect is on, and they trail behind a moving unit). Its effects still work and still show in
+     * the HUD; only the synced particle colour is cleared (server side, where vanilla sets it), so its own 1 px soul
+     * motes (TitheBinderRenderer) are the only specks round it.
+     */
+    @Override
+    protected void updateInvisibilityStatus() {
+        super.updateInvisibilityStatus();
+        removeEffectParticles();
     }
 
     // ------------------------------------------------------------------------------------------- the volley
