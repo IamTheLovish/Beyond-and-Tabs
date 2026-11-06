@@ -1,0 +1,191 @@
+# anim-render: the Quarry Saint's offline pipeline and critic sheets on GitHub-hosted runners (lovish, Nov 6: renders
+# on GitHub runners only while he plays; never self-hosted, never pc-1). This file lives ONLY on the render branches
+# (claude/quarry-saint and the like), never on a PR branch: a workflow reaching main needs its own review and lovish's OK.
+#
+# keys (6 parallel parts: the solved key poses) -> bake (3 parallel clips: both arms solved per tick) -> render (the
+# key file, the clip fixture, the game export, measurements, game_preview colour stills, Blender Workbench sheets via
+# tools/blender, and the blind A/B against r3 = fead253b built from its own checkout). Downloads: blender.org and PyPI
+# only. No secrets.
+name: anim-render
+on:
+  push:
+    branches: [claude/quarry-saint, claude/grave-spiders, claude/soul-pyre-body]
+    paths: ['tools/**', 'design/**', '.github/workflows/anim-render.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: anim-render-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  BLENDER_VERSION: 5.2.3
+  BLENDER_SERIES: Blender5.2
+  # https://download.blender.org/release/Blender5.2/blender-5.2.3.sha256 (linux-x64 line), pinned here
+  BLENDER_SHA256: 78486c018b4443efe5e75ab54c290ed8c15abafd249b862c2c9ce2530a918eec
+  R3_COMMIT: fead253b
+  PY: tools/render/quarry_saint
+jobs:
+  keys:
+    if: github.ref_name == 'claude/quarry-saint'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { part: 1, only: 'rest,ready,sweep_windup,slam_contact,carry' }
+          - { part: 2, only: 'rest_lift,sweep_mid,sweep_contact,slam_wrench,walk_contact_R' }
+          - { part: 3, only: 'sweep_recover,sweep_follow,gatefall_windup,walk_pass_R,glance' }
+          - { part: 4, only: 'slam_step,slam_mid,gatefall_contact,walk_contact_L,stagger' }
+          - { part: 5, only: 'slam_pop,slam_windup,walk_pass_L,death_hit' }
+          - { part: 6, only: 'gatefall_brace,gatefall_mid,death_kneel,death_topple' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q numpy pillow
+      - name: Solve key poses (part ${{ matrix.part }})
+        run: |
+          set -euo pipefail
+          python $PY/pipeline.py --out out/keys${{ matrix.part }} gen
+          python $PY/pipeline.py --out out/keys${{ matrix.part }} keys --only '${{ matrix.only }}' --tag ${{ matrix.part }}
+      - uses: actions/upload-artifact@v4
+        with: { name: 'qs-keys-${{ matrix.part }}', path: 'out/keys${{ matrix.part }}', retention-days: 1 }
+
+  bake:
+    needs: keys
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: true
+      matrix:
+        clip: [sweep, slam, gatefall]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q numpy pillow
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'qs-keys-*', path: parts }
+      - name: Bake both arms per tick (${{ matrix.clip }})
+        run: |
+          set -euo pipefail
+          python $PY/pipeline.py --out out/bake_${{ matrix.clip }} gen keyfile --parts parts
+          python $PY/pipeline.py --out out/bake_${{ matrix.clip }} bake --clip ${{ matrix.clip }}
+      - uses: actions/upload-artifact@v4
+        with: { name: 'qs-bake-${{ matrix.clip }}', path: 'out/bake_${{ matrix.clip }}', retention-days: 1 }
+
+  render:
+    needs: bake
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out r3 (${{ env.R3_COMMIT }}) beside it for the A/B
+        uses: actions/checkout@v4
+        with: { ref: '${{ env.R3_COMMIT }}', path: r3side, fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q numpy pillow
+      - name: Install the GL runtime Blender's Workbench needs headless (Mesa, EGL, Xvfb fallback)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q xvfb libgl1-mesa-dri libegl1 libgl1 libxi6 libxxf86vm1 libxfixes3 libxrender1 \
+            libxkbcommon0 libsm6 libice6 fonts-dejavu-core
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'qs-*', path: parts }
+      - name: Key file, bakes, fixture, game export
+        run: |
+          set -euo pipefail
+          mkdir -p art
+          python $PY/pipeline.py --out art gen keyfile --parts parts
+          python $PY/pipeline.py --out art mergebake --parts parts
+          python $PY/pipeline.py --out art fixture export
+          # the generated files, to be committed from the artifact (the runner never pushes)
+          mkdir -p art/generated
+          cp design/fixtures/quarry_saint_keys.json design/fixtures/quarry_saint_clips.json \
+             design/models/sunforged_quarry_saint.json \
+             bar/src/main/java/com/solegendary/reignofnether/unit/modelling/models/gen/QuarrySaintModel.java \
+             bar/src/main/resources/assets/reignofnether/textures/entities/quarry_saint_unit*.png art/generated/
+          for d in parts/*; do n=$(basename "$d"); [ -f "$d/pipeline.log" ] && { echo "== $n"; cat "$d/pipeline.log"; } >> art/pipeline_parts.log; [ -f "$d/timings.json" ] && cp "$d/timings.json" "art/timings_$n.json"; done
+          cat art/pipeline_parts.log
+      - name: Measurements + game_preview colour stills
+        run: |
+          set -euo pipefail
+          start=$(date +%s)
+          python $PY/stills.py --out art measure stills
+          echo "stills_measure=$(( $(date +%s) - start ))" >> art/steps.txt
+      - name: Cache Blender ${{ env.BLENDER_VERSION }}
+        id: blender-cache
+        uses: actions/cache@v4
+        with: { path: ~/blender, key: 'blender-${{ env.BLENDER_VERSION }}-linux-x64-${{ env.BLENDER_SHA256 }}' }
+      - name: Download Blender ${{ env.BLENDER_VERSION }} (blender.org, pinned SHA256)
+        if: steps.blender-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p dl ~/blender
+          TAR="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          curl -fsSL --retry 3 -o "dl/$TAR" "https://download.blender.org/release/${BLENDER_SERIES}/$TAR"
+          have=$(sha256sum "dl/$TAR" | awk '{print $1}')
+          echo "pinned   $BLENDER_SHA256"; echo "download $have"
+          test "$have" = "$BLENDER_SHA256"
+          tar -xJf "dl/$TAR" -C ~/blender --strip-components=1
+          rm -rf dl
+      - name: Blender smoke test
+        run: |
+          echo "BLENDER=$HOME/blender/blender" >> "$GITHUB_ENV"
+          "$HOME/blender/blender" --background --version
+      - name: Frames (export_frames, the repo's bone math) for r3b and r3
+        run: |
+          set -euo pipefail
+          start=$(date +%s)
+          python $PY/to_blender_fixture.py . art/frames/r3b_fixture.json
+          python tools/blender/export_frames.py --model design/models/sunforged_quarry_saint.json --unit quarry_saint \
+            --clips fixture:art/frames/r3b_fixture.json --step 2 --verify --out art/frames/r3b.json | tee art/frames/r3b_export.log
+          python $PY/to_blender_fixture.py r3side art/frames/r3_fixture.json
+          python tools/blender/export_frames.py --repo r3side --model r3side/design/models/sunforged_quarry_saint.json \
+            --unit quarry_saint --clips fixture:art/frames/r3_fixture.json --names idle,slam --step 2 --verify \
+            --out art/frames/r3.json | tee art/frames/r3_export.log
+          echo "export_frames=$(( $(date +%s) - start ))" >> art/steps.txt
+      - name: Blender sheets (Workbench) - r3b views, turnaround, clip frames at rts 42 and tactical 21
+        run: |
+          set -euo pipefail
+          run() {
+            if ! "$BLENDER" --background --python-exit-code 1 --python tools/blender/dsl_render.py -- "$@"; then
+              echo "::warning::headless Workbench failed - retrying under Xvfb"
+              xvfb-run -a -s "-screen 0 1600x1200x24" "$BLENDER" --background --python-exit-code 1 \
+                --python tools/blender/dsl_render.py -- "$@"
+            fi
+          }
+          start=$(date +%s)
+          run art/frames/r3b.json art/blender --tag r3b --sheets views,turnaround,clips \
+            --clips walk,sweep,slam,gatefall,glance,stagger,death --rows profile:42,rts:42,rts:21
+          echo "blender_r3b=$(( $(date +%s) - start ))" >> art/steps.txt
+          start=$(date +%s)
+          run art/frames/r3.json art/blender_r3 --tag r3 --sheets views,clips --clips slam --rows rts:42,rts:21
+          echo "blender_r3=$(( $(date +%s) - start ))" >> art/steps.txt
+      - name: Blind A/B (r3b vs r3, each from its own checkout)
+        run: |
+          set -euo pipefail
+          python $PY/ab.py --a "r3b (this commit)=art/blender/cells:r3b" --b "r3 ($R3_COMMIT)=art/blender_r3/cells:r3" --out art/ab
+          mv art/ab/ab-mapping.txt art/ab-mapping.txt
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            [ -f art/summary.md ] && cat art/summary.md
+            echo; echo "### runner steps (s)"; [ -f art/steps.txt ] && sed 's/^/- /' art/steps.txt
+            echo; echo "### pipeline parts (keys / bakes, s)"
+            for f in art/timings_*.json art/timings.json; do [ -f "$f" ] && echo "- $(basename "$f"): $(cat "$f" | tr -d '\n ')"; done
+            echo; echo "### Blender sheet times"
+            for f in art/blender/*_timings.json art/blender_r3/*_timings.json; do [ -f "$f" ] && echo "- $(basename "$f"): $(cat "$f" | tr -d '\n')"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 'quarry-saint-r3b-${{ github.sha }}'
+          path: |
+            art
+            !art/blender/cells
+            !art/blender_r3/cells
+          retention-days: 7
