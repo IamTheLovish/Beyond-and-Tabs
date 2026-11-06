@@ -193,17 +193,26 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
     }
 
     /**
-     * Where a flyer flies to shoot a building's block: short of its range from the block, toward where it is, on the
-     * ground there (FlyingMoveToTargetGoal holds its altitude over the ground under a target). Sent at the block itself,
-     * the ground under it is the building, so a flyer ended over the roof, mostly out of range (the Seraph Archer's test,
+     * Where a flyer flies to shoot a building's block: inside its reach of the block, toward where it is, on the ground
+     * there (FlyingMoveToTargetGoal holds its altitude over the ground under a target). Sent at the block itself, the
+     * ground under it is the building, so a flyer ended over the roof, mostly out of range (the Seraph Archer's test,
      * flake-stress 42103967138: 2 of 8 never hit, the rest 1-2 hits in 10 s where 6 fit).
+     * <p>
+     * The shot is measured in 3D to the block's top ({@link #tick}), so the flat stand-off comes from the reach left
+     * after the flyer's height above it (FlyerStandoff; review r1: a flat range - 3 parked a Sky Corsair, range 13 at 10 up,
+     * where the tower's lowest blocks were 13-14 away). Too high for any stand-off, or no ground within 16 below the spot:
+     * the block itself, as before.
      */
     private BlockPos flyerStandoff(BlockPos bp) {
-        float range = ((AttackerUnit) this.mob).getAttackRange();
-        BlockPos p = com.solegendary.reignofnether.util.MyMath.getXZRangeLimitedBlockPos(bp, this.mob.getOnPos(), Math.max(1f, range - 3f));
+        double flat = FlyerStandoff.flat(((AttackerUnit) this.mob).getAttackRange(), this.mob.getY() - (bp.getY() + 1.0));
+        if (flat == FlyerStandoff.BLOCK)
+            return bp;   // as high above the block as its reach, or higher: no stand-off reaches it, fly at it (as before)
+        BlockPos p = com.solegendary.reignofnether.util.MyMath.getXZRangeLimitedBlockPos(bp, this.mob.getOnPos(), (float) flat);
         BlockPos g = new BlockPos(p.getX(), buildingTarget != null ? buildingTarget.originPos.getY() : bp.getY(), p.getZ());
         for (int i = 0; i < 16 && this.mob.level().getBlockState(g).isAir(); i++)
             g = g.below();
+        if (this.mob.level().getBlockState(g).isAir())
+            return bp;
         for (int i = 0; i < 16 && !this.mob.level().getBlockState(g.above()).isAir(); i++)
             g = g.above();
         return g;
