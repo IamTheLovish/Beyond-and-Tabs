@@ -62,6 +62,12 @@ public final class GameTestChunks {
      */
     public static final long WAIT_MS = 60_000L;
 
+    /** STUB (tests first): the gate's readiness check, not written yet - it calls every chunk ready. */
+    @javax.annotation.Nullable
+    public static long[] firstNotEntityReady(ServerLevel level, List<long[]> chunks, int y) {
+        return null;
+    }
+
     /** Absolute ceiling on one wait, well under the 40-minute CI watchdog so a verdict still gets written. */
     public static final long HARD_CAP_MS = 15 * 60_000L;
 
