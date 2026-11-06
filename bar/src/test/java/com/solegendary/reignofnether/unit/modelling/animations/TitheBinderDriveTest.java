@@ -141,6 +141,48 @@ class TitheBinderDriveTest {
         assertTrue(d.current().slotOn[1], "the hook is docked again");
     }
 
+    /** Two drives on one seed in lockstep: only the turning one's lantern rolls left, a few degrees, and swings home. */
+    @Test
+    void a_turn_swings_the_lantern_a_few_degrees_behind_the_body_and_it_settles() {
+        TitheBinderDrive turning = new TitheBinderDrive(1L), straight = new TitheBinderDrive(1L);
+        int tick = 0;
+        turning.catchUp(tick);
+        straight.catchUp(tick);
+        for (int i = 0; i < 5; i++) {
+            turning.catchUp(++tick);
+            straight.catchUp(tick);
+        }
+        turning.signals.yawRate = 20.0;                 // turning to its right, 20 degrees a tick
+        double most = 0.0;
+        for (int i = 0; i < 8; i++) {
+            turning.catchUp(++tick);
+            straight.catchUp(tick);
+            double lag = turning.current().rot[TitheBinderRig.LANTERN_CHAIN][2]
+                - straight.current().rot[TitheBinderRig.LANTERN_CHAIN][2];
+            assertTrue(lag >= -1e-9, "the lantern lags to the unit's left (+z), never leads: " + lag);
+            most = Math.max(most, lag);
+        }
+        assertTrue(most > 3.0, "a visible swing while turning, got " + most);
+        assertTrue(most < TitheBinderDrive.SWING_MAX * 2.0, "a few degrees, not a fling: " + most);
+        turning.signals.yawRate = 0.0;
+        boolean back = false;
+        for (int i = 0; i < 12; i++) {
+            turning.catchUp(++tick);
+            straight.catchUp(tick);
+            back |= turning.current().rot[TitheBinderRig.LANTERN_CHAIN][2]
+                < straight.current().rot[TitheBinderRig.LANTERN_CHAIN][2];
+        }
+        assertTrue(back, "it swings back past rest when the turn stops (a pendulum, not a lerp)");
+        for (int i = 0; i < 80; i++) {
+            turning.catchUp(++tick);
+            straight.catchUp(tick);
+        }
+        assertEquals(straight.current().rot[TitheBinderRig.LANTERN_CHAIN][2],
+            turning.current().rot[TitheBinderRig.LANTERN_CHAIN][2], 0.25, "settled");
+        assertEquals(straight.current().rot[TitheBinderRig.LANTERN_CHAIN][0],
+            turning.current().rot[TitheBinderRig.LANTERN_CHAIN][0], 1e-9, "the rig's own (lean) swing is untouched");
+    }
+
     @Test
     void catch_up_steps_once_per_tick_and_starts_over_when_far_behind() {
         TitheBinderDrive d = drive(1);

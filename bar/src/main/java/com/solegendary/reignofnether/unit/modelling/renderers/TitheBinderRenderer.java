@@ -41,13 +41,15 @@ import org.joml.Vector3f;
  * poses by partialTick. Vanilla's sideways death flip is off: the rig plays its own death (sheet 5.6).
  *
  * <p>{@link FxLayer}, after the body, draws what is not bone-tree: the flying weapons (the volley's, the falling ones at
- * death, the Grave Hook) from the pose's fly* fields, then the light, additive and untextured (BarFxRenderTypes, no new
- * shader): the soul-chain ribbons hub -> weapon, the count halo over the hood (one notch per weapon, the lit ones the
- * count, its ring growing with it), the impact flashes, the lantern's glow, the bind's lash, orb, flash and forge line,
- * the flight streaks and the shatter sparks. Far LOD (GeneratedBodies.wantsDetail false, the tactical band): the thin
- * docked chains (under 1.5 px), the streaks, the bind's lash and forge line, the shatter sparks and every impact flash
- * after the first are culled; the halo (bigger notches), the weapons (their far stand-ins), the thrown chains (held to
- * 1.5 px), the lantern, the orb and the flashes stay. Nothing is allocated per frame.
+ * death, the Grave Hook) from the pose's fly* fields; then, alpha blended and untextured (BarFxRenderTypes, no new
+ * shader), the hover's own ground shadow (a soft 14 x 12 px ellipse; vanilla's 16 px disc is off) and the hem chains as
+ * dark rods into the hover gap; then the light, additive: the volley's telegraph wedge on the ground, the soul-chain
+ * ribbons hub -> weapon, the count halo over the hood (ten dots, exactly N bright, its ring growing with N), the impact
+ * flashes, the lantern's glow, the bind's lash, orb, flash and forge line, the flight streaks and the shatter sparks.
+ * Far LOD (GeneratedBodies.wantsDetail false, the tactical band): the thin docked chains (under 1.5 px), the streaks,
+ * the bind's lash and forge line, the shatter sparks and every impact flash after the first are culled; the halo
+ * (bigger dots), the weapons (their far stand-ins, drawn thicker in flight), the thrown chains (held to 1.5 px), the
+ * shadow, the hem rods, the wedge, the lantern, the orb and the flashes stay. Nothing is allocated per frame.
  */
 @OnlyIn(Dist.CLIENT)
 public class TitheBinderRenderer extends MobRenderer<TitheBinderUnit, TitheBinderUnitModel> {
@@ -58,14 +60,54 @@ public class TitheBinderRenderer extends MobRenderer<TitheBinderUnit, TitheBinde
 
     // design sheet 2.3 palette (0xRRGGBB)
     static final int SOUL_GLOW = 0x62F3CB, SOUL_CORE = 0x34DBA3, SOUL_DIM = 0x1B6D53, WHITE_HOT = 0xE9FFF8;
+    /** The hover's ground shadow and the hem chains' rods: near-black, and a dark rusted iron. */
+    static final int SHADOW = 0x0A0A0C, HEM_ROD = 0x35281F;
     /** px: the thinnest chain kept far, and the width far chains are held to (sheet 4.4). */
     static final double FAR_MIN_WIDTH = 1.5;
     /** px: a chain longer than this fades, down to 40% (sheet 4.4: beyond 3 blocks). */
     static final double FADE_LENGTH = 48.0;
+    /**
+     * Count halo (ingame critic r1: ten equal dashes read as a selection ring at N = 1): exactly N lit dots, 2 px of
+     * soul_glow near (3 px far), and 10 - N dim dots of soul_dim at alpha 0.25.
+     */
+    static final float HALO_DOT = 2.0f, HALO_DOT_FAR = 3.0f, HALO_LIT_ALPHA = 1.0f, HALO_DIM_ALPHA = 0.25f;
+    /** Hover shadow (sheet 6): a soft ellipse 14 x 12 px (side x front-back) at alpha 0.45, a hair above the ground. */
+    static final float SHADOW_W = 14f, SHADOW_D = 12f, SHADOW_ALPHA = 0.45f, SHADOW_LIFT = 0.25f;
+    /** The hem chains drawn again as dark rods into the hover gap: 1.5 px wide (opaque-ish far, lighter near). */
+    static final double HEM_ROD_WIDTH = 1.5;
+    static final float HEM_ROD_ALPHA = 0.6f, HEM_ROD_ALPHA_FAR = 0.9f;
+    /**
+     * Far LOD: a flying weapon's cross-section (its stand-in is 2 x 1.2 px, x the flight scale 1.5) is drawn this much
+     * thicker, so its thinnest side is >= 4 px at 21 px a block (1.2 x 1.5 x 1.7 = 3.06 model px = 4.0 screen px); its
+     * length stays.
+     */
+    static final float FAR_FLY_THICK = 1.7f;
+    /**
+     * The volley's telegraph (sheet 6, attack): a faint 30-degree ground wedge toward the target over the clip's t0-12,
+     * from the hover's edge out to the target (8 px to at most 48 px), soul_glow fading to nothing at its tip.
+     */
+    static final int WEDGE_END = 12, WEDGE_SEGS = 3;
+    static final double WEDGE_HALF_DEG = 15.0, WEDGE_R0 = 8.0, WEDGE_R1_MIN = 24.0, WEDGE_R1_MAX = 48.0;
+    static final float WEDGE_ALPHA = 0.28f;
+    /** The shadow's fan: 16 segments round, the solid core to 0.7 of the radius, a soft fringe to the edge. */
+    private static final int SHADOW_SEGS = 16;
+    private static final float[] SHADOW_COS = new float[SHADOW_SEGS + 1], SHADOW_SIN = new float[SHADOW_SEGS + 1];
+    static {
+        for (int i = 0; i <= SHADOW_SEGS; i++) {
+            SHADOW_COS[i] = (float) Math.cos(2 * Math.PI * i / SHADOW_SEGS);
+            SHADOW_SIN[i] = (float) Math.sin(2 * Math.PI * i / SHADOW_SEGS);
+        }
+    }
+    private static final String[] HEM = {"hem_chain_1", "hem_chain_2", "hem_chain_3"};
+    /** Where each hem chain's rod starts in its own bone (the links' centre line, model px). */
+    private static final float[] HEM_TOP_Z = {-0.6f, -0.6f, 0.6f};
+    /** The second segment's tip below its own pivot (the broken shackle's end, model px). */
+    private static final float HEM_TIP_Y = 3.9f;
 
     private final RenderType weaponBody = MipRenderTypes.body(TEXTURE);
     private final RenderType weaponGlow = MipRenderTypes.glow(GLOW_TEXTURE);
     private final ModelPart[] headPath, lanternPath;
+    private final ModelPart[][] hemPaths = new ModelPart[3][], hemTipPaths = new ModelPart[3][];
 
     // scratch for the effects pass (the render thread only)
     private VertexConsumer vc;
@@ -73,12 +115,18 @@ public class TitheBinderRenderer extends MobRenderer<TitheBinderUnit, TitheBinde
     private final Matrix4f partM = new Matrix4f();
     private final Quaternionf partQ = new Quaternionf();
     private final Vector3f view = new Vector3f(), right = new Vector3f(), up = new Vector3f(), pt = new Vector3f();
+    private final Vector3f rodA = new Vector3f(), rodB = new Vector3f(), rodC = new Vector3f();
     private final float[] prevA = new float[3], prevB = new float[3];
 
     public TitheBinderRenderer(EntityRendererProvider.Context context) {
-        super(context, new TitheBinderUnitModel(context.bakeLayer(TitheBinderModel.LAYER_LOCATION)), 0.5f);
+        // no vanilla shadow (a 16 px disc the hem seemed to touch): FxLayer draws the hover's own, smaller and softer
+        super(context, new TitheBinderUnitModel(context.bakeLayer(TitheBinderModel.LAYER_LOCATION)), 0f);
         this.headPath = this.model.path("head");
         this.lanternPath = this.model.path("lantern_core");
+        for (int i = 0; i < 3; i++) {
+            this.hemPaths[i] = this.model.path(HEM[i]);
+            this.hemTipPaths[i] = this.model.path(HEM[i] + "_b");
+        }
         this.addLayer(new TeamColourLayer<>(this));
         this.addLayer(GeneratedBodies.glow(this, NAME));
         this.addLayer(new FxLayer(this));
@@ -127,6 +175,7 @@ public class TitheBinderRenderer extends MobRenderer<TitheBinderUnit, TitheBinde
         double sin = Math.sin(yaw), cos = Math.cos(yaw);
         double dx = e.getX() - e.xo, dz = e.getZ() - e.zo;
         s.speed = Math.max(0.0, -dx * sin + dz * cos);      // along the facing (-sin, cos)
+        s.yawRate = Mth.wrapDegrees(e.yBodyRot - e.yBodyRotO);   // + = turning to its right (the lantern lags)
         s.weapons = e.getWeapons();
         s.hurtTime = e.hurtTime;
         s.dead = e.isDeadOrDying();
@@ -197,8 +246,15 @@ public class TitheBinderRenderer extends MobRenderer<TitheBinderUnit, TitheBinde
             boolean far = !GeneratedBodies.wantsDetail(entity);
             flyingWeapons(pose, buffers, light, p, far);
             camera(entity, partialTick);
-            vc = buffers.getBuffer(BarFxRenderTypes.ADDITIVE);
             mat = pose.last().pose();
+            // the dark things first, alpha blended (BarFx's scorch-decal type): the hover's shadow, the hem chains' rods
+            vc = buffers.getBuffer(BarFxRenderTypes.TRANSLUCENT);
+            float body = (float) Math.max(0.0, Math.min(1.0, p.alpha));
+            shadow(SHADOW_ALPHA * body);
+            hemRods(far, body);
+            // then the light, additive
+            vc = buffers.getBuffer(BarFxRenderTypes.ADDITIVE);
+            wedge(d);
             ribbons(p, far);
             halo(p, d.weapons(), far);
             lantern(p, ageInTicks);
@@ -234,8 +290,9 @@ public class TitheBinderRenderer extends MobRenderer<TitheBinderUnit, TitheBinde
             w.yRot = (float) Math.toRadians(rot[1]);
             w.zRot = (float) Math.toRadians(-rot[2]);
             float s = (float) p.flyScale[k];
-            w.xScale = s;
-            w.yScale = s;
+            float thick = far ? s * FAR_FLY_THICK : s;   // far: the stand-in's cross-section >= 4 px, its length as is
+            w.xScale = thick;
+            w.yScale = thick;
             w.zScale = s;
             w.visible = true;
             this.model.weaponLod(k, far);
@@ -279,24 +336,106 @@ public class TitheBinderRenderer extends MobRenderer<TitheBinderUnit, TitheBinde
         }
     }
 
-    /** The count halo over the hood: 10 notches, the first N lit, on a ring that grows with N; it dips on a hit. */
+    /**
+     * The count halo over the hood: 10 dots on a ring that grows with N, exactly the lit count (Pose.halo: N, less the
+     * weapons shattered at death) bright and the rest dim, so N = 1 reads as one bright dot; it dips on a hit. The ring
+     * stands 13 px over the head pivot, above the hood's crown, so the RTS camera (~52 deg down) sees all of it.
+     */
     private void halo(TitheBinderRig.Pose p, int n, boolean far) {
         partPoint(headPath, 0f, -13f, 0.5f, pt);
         float cx = pt.x(), cy = pt.y() + (float) (p.haloDip / 16.0), cz = pt.z();
         float r = (6.5f + 0.25f * (Math.max(1, Math.min(10, n)) - 1)) / 16f;
-        float len = (far ? 1.6f : 1.0f) / 16f, wid = (far ? 0.9f : 0.5f) / 16f;
-        int lit = Math.min(10, p.halo);
+        float h = (far ? HALO_DOT_FAR : HALO_DOT) / 32f;               // half the dot's side, in blocks
+        int lit = Math.max(0, Math.min(10, p.halo));
         for (int i = 0; i < 10; i++) {
             double th = Math.toRadians(36.0 * i);
-            float sn = (float) Math.sin(th), cs = (float) Math.cos(th);
-            float x = cx - sn * r, z = cz - cs * r;
-            float tx = -cs * len, tz = sn * len, rx = -sn * wid, rz = -cs * wid;
-            int rgb = i < lit ? SOUL_GLOW : SOUL_DIM;
-            float a = i < lit ? 0.9f : 0.35f;
-            v(x - tx - rx, cy, z - tz - rz, rgb, a);
-            v(x + tx - rx, cy, z + tz - rz, rgb, a);
-            v(x + tx + rx, cy, z + tz + rz, rgb, a);
-            v(x - tx + rx, cy, z - tz + rz, rgb, a);
+            float x = cx - (float) Math.sin(th) * r, z = cz - (float) Math.cos(th) * r;
+            if (i < lit)
+                billboard(x, cy, z, h, SOUL_GLOW, HALO_LIT_ALPHA);
+            else
+                billboard(x, cy, z, h, SOUL_DIM, HALO_DIM_ALPHA);
+        }
+    }
+
+    // ------------------------------------------------------------------ the ground: shadow, hem rods, wedge
+
+    /**
+     * The hover's shadow (sheet 6): a soft dark ellipse, SHADOW_W x SHADOW_D px, under the unit's origin a hair above
+     * the ground. Drawn as BarFxClient.drawDecal draws a scorch mark: a fan with a solid core to 0.7 of the radius and
+     * a fringe fading to nothing at the rim.
+     */
+    private void shadow(float a) {
+        if (a < 0.01f)
+            return;
+        float y = my(SHADOW_LIFT), rx = SHADOW_W / 32f, rz = SHADOW_D / 32f;
+        for (int i = 0; i < SHADOW_SEGS; i++) {
+            float c0 = SHADOW_COS[i], s0 = SHADOW_SIN[i], c1 = SHADOW_COS[i + 1], s1 = SHADOW_SIN[i + 1];
+            float ix0 = c0 * rx * 0.7f, iz0 = s0 * rz * 0.7f, ix1 = c1 * rx * 0.7f, iz1 = s1 * rz * 0.7f;
+            v(0f, y, 0f, SHADOW, a);                                     // the core (a fan quad, centre twice)
+            v(ix0, y, iz0, SHADOW, a * 0.85f);
+            v(ix1, y, iz1, SHADOW, a * 0.85f);
+            v(0f, y, 0f, SHADOW, a);
+            v(ix0, y, iz0, SHADOW, a * 0.85f);                           // the soft fringe
+            v(c0 * rx, y, s0 * rz, SHADOW, 0f);
+            v(c1 * rx, y, s1 * rz, SHADOW, 0f);
+            v(ix1, y, iz1, SHADOW, a * 0.85f);
+        }
+    }
+
+    /**
+     * The three hem chains again as dark rods (HEM_ROD_WIDTH px) from where they leave the hem to the broken shackle's
+     * end, through the posed bones (they swing with their springs): they hang into the hover gap and never reach the
+     * ground, which is how the gap reads from above (sheet 2.1).
+     */
+    private void hemRods(boolean far, float body) {
+        float a = (far ? HEM_ROD_ALPHA_FAR : HEM_ROD_ALPHA) * body;
+        if (a < 0.01f)
+            return;
+        float hw = (float) (HEM_ROD_WIDTH / 32.0);
+        for (int i = 0; i < 3; i++) {
+            if (hemPaths[i].length == 0 || hemTipPaths[i].length == 0)
+                continue;
+            partPoint(hemPaths[i], 0f, 0f, HEM_TOP_Z[i], rodA);
+            partPoint(hemTipPaths[i], 0f, 0f, 0f, rodB);
+            partPoint(hemTipPaths[i], 0f, HEM_TIP_Y, 0f, rodC);
+            rod(rodA, rodB, hw, HEM_ROD, a);
+            rod(rodB, rodC, hw, HEM_ROD, a);
+        }
+    }
+
+    /**
+     * The volley's telegraph: over the clip's t0-WEDGE_END a faint 30-degree wedge on the ground toward the target
+     * (the victim's chest as the client sees it this tick, else straight ahead), fading in over 3 ticks and out over
+     * the last 3, from the hover's edge out toward the target, its tip fading to nothing.
+     */
+    private void wedge(TitheBinderDrive d) {
+        if (d.clip() != TitheBinderRig.Clip.VOLLEY)
+            return;
+        int t = d.clipTick() - 1;                                      // the tick the newest pose was stepped at
+        if (t < 0 || t > WEDGE_END)
+            return;
+        float env = Math.min(1f, (t + 1) / 3f) * Math.min(1f, (WEDGE_END + 1 - t) / 3f);
+        float a = WEDGE_ALPHA * env;
+        TitheBinderDrive.Signals s = d.signals;
+        double tx = s.volleyHasTarget ? s.volleyTarget[0] : 0.0, tz = s.volleyHasTarget ? s.volleyTarget[2] : -1.0;
+        double len = Math.sqrt(tx * tx + tz * tz);
+        if (len < 1e-6) {
+            tx = 0.0;
+            tz = -1.0;
+            len = 1.0;
+        }
+        double dx = tx / len, dz = tz / len;
+        double r1 = Math.max(WEDGE_R1_MIN, Math.min(WEDGE_R1_MAX, len - 4.0));
+        float y = my(SHADOW_LIFT + 0.1f);
+        double step = Math.toRadians(2.0 * WEDGE_HALF_DEG / WEDGE_SEGS), phi0 = -Math.toRadians(WEDGE_HALF_DEG);
+        for (int i = 0; i < WEDGE_SEGS; i++) {
+            double pa = phi0 + step * i, pb = pa + step;
+            double ca = Math.cos(pa), sa = Math.sin(pa), cb = Math.cos(pb), sb = Math.sin(pb);
+            double ax = dx * ca - dz * sa, az = dx * sa + dz * ca, bx = dx * cb - dz * sb, bz = dx * sb + dz * cb;
+            v(mx(ax * WEDGE_R0), y, mz(az * WEDGE_R0), SOUL_GLOW, a);
+            v(mx(ax * r1), y, mz(az * r1), SOUL_GLOW, 0f);
+            v(mx(bx * r1), y, mz(bz * r1), SOUL_GLOW, 0f);
+            v(mx(bx * WEDGE_R0), y, mz(bz * WEDGE_R0), SOUL_GLOW, a);
         }
     }
 
@@ -420,6 +559,15 @@ public class TitheBinderRenderer extends MobRenderer<TitheBinderUnit, TitheBinde
             py = y;
             pz = z;
         }
+    }
+
+    /** One straight camera-facing strip a -> b, already in model space (blocks), {@code hw} half wide. */
+    private void rod(Vector3f a, Vector3f b, float hw, int rgb, float alpha) {
+        side(b.x() - a.x(), b.y() - a.y(), b.z() - a.z(), hw, prevA);
+        v(a.x() - prevA[0], a.y() - prevA[1], a.z() - prevA[2], rgb, alpha);
+        v(a.x() + prevA[0], a.y() + prevA[1], a.z() + prevA[2], rgb, alpha);
+        v(b.x() + prevA[0], b.y() + prevA[1], b.z() + prevA[2], rgb, alpha);
+        v(b.x() - prevA[0], b.y() - prevA[1], b.z() - prevA[2], rgb, alpha);
     }
 
     /** One straight strip a -> b (DSL px). */

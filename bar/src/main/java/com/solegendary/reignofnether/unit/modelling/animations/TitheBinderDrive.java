@@ -46,11 +46,21 @@ public final class TitheBinderDrive {
     static final double[] DEFAULT_CORPSE = {-20.0, 4.0, -28.0};
     /** Where the hook flies when its target is not on this client: 6 blocks ahead. */
     static final double[] DEFAULT_HOOK = {0.0, 14.0, -96.0};
+    /**
+     * The lantern's sideways swing (ingame critic r1: "the lantern doesn't visibly swing"): its chain rolls toward the
+     * unit's left while the body turns right (it lags the yaw), SWING_GAIN deg per deg/tick of turn, at most SWING_MAX,
+     * on the chains' own spring (sheet 4.3, K_CHAIN / C_CHAIN: about one overshoot back), plus an idle sway of
+     * SWAY_DEG over SWAY_TICKS. The rig's own lantern spring (the lean, x) is untouched.
+     */
+    public static final double SWING_GAIN = 0.45, SWING_MAX = 12.0, SWAY_DEG = 2.0;
+    static final int SWAY_TICKS = 48;
 
     /** What the unit shows this tick, in plain numbers (the renderer fills it from the entity). */
     public static final class Signals {
         /** Horizontal speed along the body's facing, blocks per tick (backwards counts as 0). */
         public double speed;
+        /** Degrees the body turned this tick (yBodyRot - yBodyRotO, wrapped): + = turning to its right. */
+        public double yawRate;
         /** Bound weapons, 1-10 (TitheBinderUnit.getWeapons). */
         public int weapons = 1;
         /** The server's volley cue counter (steps once per wind-up) and the victim's chest in model px, if seen. */
@@ -82,6 +92,9 @@ public final class TitheBinderDrive {
     private int still;
     private int fidgetIn;
     private long rand;
+    // the lantern's sideways swing (deg, deg/tick) and the idle sway's clock
+    private double swing, swingV;
+    private int swayT;
     // Grave Hook
     private int hookAge = -1;
     private boolean hookLost, hookSeen;
@@ -170,6 +183,8 @@ public final class TitheBinderDrive {
         lastHurt = s.hurtTime;
         hookAge = -1;
         speed = 0.0;
+        swing = swingV = 0.0;
+        swayT = 0;
         still = IDLE_AFTER;
         fidgetIn = nextFidget();
         begin(s.dead ? Clip.DEATH : Clip.IDLE, 0);
@@ -187,8 +202,23 @@ public final class TitheBinderDrive {
         in.t = t;
         in.speed = clip == Clip.MOVE ? speed : 0.0;
         TitheBinderRig.step(st, in, cur);
+        swingLantern();
         hook();
         t++;
+    }
+
+    /** Adds the lantern's sideways swing onto {@code cur} (DSL degrees: + rolls the lantern to the unit's left). */
+    private void swingLantern() {
+        swayT = (swayT + 1) % SWAY_TICKS;
+        if (clip == Clip.DEATH) {
+            swing = swingV = 0.0;
+            return;
+        }
+        double turn = Math.max(-SWING_MAX, Math.min(SWING_MAX, SWING_GAIN * signals.yawRate));
+        double target = turn + SWAY_DEG * Math.sin(2 * Math.PI * swayT / SWAY_TICKS);
+        swingV += TitheBinderRig.K_CHAIN * (target - swing) - TitheBinderRig.C_CHAIN * swingV;
+        swing += swingV;
+        cur.rot[TitheBinderRig.LANTERN_CHAIN][2] += swing;
     }
 
     private void begin(Clip c, int length) {
