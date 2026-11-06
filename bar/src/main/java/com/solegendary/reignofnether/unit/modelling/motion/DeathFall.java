@@ -135,6 +135,22 @@ public final class DeathFall {
         return hurtTime > 0 || (deathTime > 0 && !owned);
     }
 
+    /** RED STUB (DeathFallHoverTest first): the hover death's impact tick. */
+    public static float hoverImpactTick(float kind, int id) {
+        return 0f;
+    }
+
+    /** RED STUB: how far a hovering body has dropped at t, px. */
+    public static float hoverDropPx(float t, float kind, int id, float hoverPx) {
+        return 0f;
+    }
+
+    /** RED STUB: a hovering body's death pose - nothing moves yet. */
+    public static void poseHover(float[] s, int b, int id, float t, float hoverPx, float halfPx, float[] out) {
+        for (int i = 0; i < OUT; i++)
+            out[i] = 0f;
+    }
+
     /** How far the body has sunk at deathTime t, blocks: 0 until HOLD_END, then down to SINK_BLOCKS at END. */
     public static float sinkBlocks(float t) {
         if (!(t > HOLD_END))
