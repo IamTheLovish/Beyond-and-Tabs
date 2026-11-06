@@ -20,7 +20,11 @@ public final class TrampleSurfaces {
     public static TrampleRules.Surface of(BlockState state) {
         if (state == null)
             return TrampleRules.Surface.NONE;
-        return CACHE.computeIfAbsent(state.getBlock(), b -> {
+        Block block = state.getBlock();
+        TrampleRules.Surface known = CACHE.get(block);   // the hot path: a plain read, no lambda, no lock
+        if (known != null)
+            return known;
+        return CACHE.computeIfAbsent(block, b -> {
             ResourceLocation id = BuiltInRegistries.BLOCK.getKey(b);
             return TrampleRules.surfaceOf(id == null ? null : id.toString());
         });

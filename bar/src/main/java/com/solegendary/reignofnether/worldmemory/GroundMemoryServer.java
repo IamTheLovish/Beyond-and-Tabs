@@ -262,10 +262,8 @@ public final class GroundMemoryServer {
     /** A column whose top is further than this from the walker's feet is a ledge or a roof beside the path: unworn. */
     public static final double TRAMPLE_REACH_Y = 1.5;
 
-    private static final int[] TRAMPLE_PEAKS = new int[GroundMemory.CELLS];   // server thread only
-
     /**
-     * One walker's path since its last sample, (ax, az) to (bx, bz) with its feet at {@code footY}: the capsule of
+     * One walker's path since its last sample, (ax, az) to (bx, bz) with its feet at {@code footY}: the strip of
      * {@link TrampleRules#radiusFor} its body width, worn by {@link TrampleRules#peakFor} times each column's surface
      * wear, on the soft ground at the walker's own level (TrampleRules.surfaceOf; never water, stone or a roof beside
      * it). The sampler calls this for every unit; the eyes scene calls it for its scripted march. Returns the cells
@@ -274,14 +272,20 @@ public final class GroundMemoryServer {
     public static int trampleSegment(ServerLevel level, double ax, double az, double bx, double bz, double footY, double bodyWidth) {
         if (!enabled || level == null || level.isClientSide())
             return 0;
+        return trampleSegment(level, state(level), ax, az, bx, bz, footY, bodyWidth);
+    }
+
+    private static int trampleSegment(ServerLevel level, LevelState st, double ax, double az, double bx, double bz,
+                                      double footY, double bodyWidth) {
         if (!Double.isFinite(ax) || !Double.isFinite(az) || !Double.isFinite(bx) || !Double.isFinite(bz) || !Double.isFinite(footY))
             return 0;
         double radius = TrampleRules.radiusFor(bodyWidth);
-        int peak = TrampleRules.peakFor(bodyWidth);
         long now = level.getGameTime();
-        LevelState st = state(level);
         int minCx = (int) Math.floor(Math.min(ax, bx) - radius) >> 4, maxCx = (int) Math.floor(Math.max(ax, bx) + radius) >> 4;
         int minCz = (int) Math.floor(Math.min(az, bz) - radius) >> 4, maxCz = (int) Math.floor(Math.max(az, bz) + radius) >> 4;
+        Columns columns = COLUMNS;
+        columns.footY = footY;
+        columns.peak = TrampleRules.peakFor(bodyWidth);
         int changedCells = 0;
         for (int chunkX = minCx; chunkX <= maxCx; chunkX++)
             for (int chunkZ = minCz; chunkZ <= maxCz; chunkZ++) {
@@ -289,43 +293,40 @@ public final class GroundMemoryServer {
                 GroundMemory mem = GroundMemoryCapability.of(chunk);
                 if (mem == null)
                     continue;
-                long[] allowed = trampleColumns(chunk, ax, az, bx, bz, footY, radius, peak);
-                if (!GroundMemory.anyBit(allowed))
-                    continue;
+                columns.chunk = chunk;
                 mem.decayTo(now, params);
-                long[] changed = mem.addTrampleCapsule(chunkX, chunkZ, ax, az, bx, bz, radius, peak, TRAMPLE_PEAKS, allowed);
+                long[] changed = mem.addTrample(chunkX, chunkZ, ax, az, bx, bz, radius, columns);
                 changedCells += markChanged(st, chunk, chunkX, chunkZ, changed);
             }
+        columns.chunk = null;
         st.trampleCells += changedCells;
         return changedCells;
     }
 
     /**
-     * The columns of a chunk inside the capsule whose top block is soft ground near the walker's feet; fills
-     * {@link #TRAMPLE_PEAKS} with each one's peak (the surface's wear).
+     * Which columns a walk wears, asked only for the cells inside its strip: the top block (the same finder the decal mesh
+     * uses) must be within {@link #TRAMPLE_REACH_Y} of the feet and soft ground; the peak is scaled by the surface's
+     * wear. One reused instance (server thread only), so a walk allocates nothing for it.
      */
-    static long[] trampleColumns(LevelChunk chunk, double ax, double az, double bx, double bz, double footY, double radius, int peak) {
-        long[] allowed = new long[4];
-        int ox = chunk.getPos().getMinBlockX(), oz = chunk.getPos().getMinBlockZ();
-        int x0 = Math.max(ox, (int) Math.floor(Math.min(ax, bx) - radius)), x1 = Math.min(ox + 15, (int) Math.floor(Math.max(ax, bx) + radius));
-        int z0 = Math.max(oz, (int) Math.floor(Math.min(az, bz) - radius)), z1 = Math.min(oz + 15, (int) Math.floor(Math.max(az, bz) + radius));
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        for (int x = x0; x <= x1; x++)
-            for (int z = z0; z <= z1; z++) {
-                if (TrampleRules.segmentDistance(x + 0.5, z + 0.5, ax, az, bx, bz) >= radius)
-                    continue;
-                int topBlock = GroundSurface.topBlockY(chunk, x & 15, z & 15);
-                if (Math.abs(topBlock + 1 - footY) > TRAMPLE_REACH_Y)
-                    continue;
-                TrampleRules.Surface surface = TrampleSurfaces.of(chunk.getBlockState(pos.set(x, topBlock, z)));
-                if (surface == TrampleRules.Surface.NONE)
-                    continue;
-                int cell = GroundMemory.index(x - ox, z - oz);
-                TRAMPLE_PEAKS[cell] = Math.max(1, Math.round(peak * surface.wear));
-                GroundMemory.setBit(allowed, cell);
-            }
-        return allowed;
+    private static final class Columns implements GroundMemory.TramplePeaks {
+        LevelChunk chunk;
+        double footY;
+        int peak;
+        final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        @Override
+        public int peakAt(int x, int z) {
+            int topBlock = GroundSurface.topBlockY(chunk, x & 15, z & 15);
+            if (Math.abs(topBlock + 1 - footY) > TRAMPLE_REACH_Y)
+                return 0;
+            TrampleRules.Surface surface = TrampleSurfaces.of(chunk.getBlockState(pos.set(x, topBlock, z)));
+            if (surface == TrampleRules.Surface.NONE)
+                return 0;
+            return Math.max(1, Math.round(peak * surface.wear));
+        }
     }
+
+    private static final Columns COLUMNS = new Columns();
 
     /** Books a stamp's changed cells for the next sync pass; returns how many. */
     private static int markChanged(LevelState st, LevelChunk chunk, int chunkX, int chunkZ, long[] changed) {
@@ -362,7 +363,7 @@ public final class GroundMemoryServer {
             if (at != null) {
                 double px = at[0], pz = at[1];
                 if (le.onGround() && !le.isPassenger() && !le.isInWater() && TrampleRules.walked(x - px, z - pz)) {
-                    trampleSegment(level, px, pz, x, z, le.getY(), le.getBbWidth());
+                    trampleSegment(level, st, px, pz, x, z, le.getY(), le.getBbWidth());
                     walks++;
                 }
             } else

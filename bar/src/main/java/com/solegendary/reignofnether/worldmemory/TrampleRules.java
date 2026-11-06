@@ -5,8 +5,8 @@ package com.solegendary.reignofnether.worldmemory;
  * JUnit checks every number (TrampleRulesTest).
  * <p>
  * Units walking over soft ground wear it. Each unit's path since the last sample is stamped into the field's
- * {@link GroundMemory#TRAMPLE} channel as a capsule (GroundMemory.addTrampleCapsule), so a cell the unit crossed is
- * worn once per pass, whatever the unit's speed or the sample spacing. The stamp saturates at 255: a road that is used
+ * {@link GroundMemory#TRAMPLE} channel as a strip with flat ends (GroundMemory.addTrample), so a cell the unit crossed
+ * is worn once per pass, whatever the unit's speed or the sample spacing. The stamp saturates at 255: a road that is used
  * all match stops changing, so it stops costing sync bytes and mesh rebuilds. Decay is DecayParams' trample half-life
  * (8 minutes, to nothing).
  * <p>
@@ -39,7 +39,7 @@ public final class TrampleRules {
     /** One militia pass, at the centre of its track (12 militia flatten the grass, 20+ wear it to soil). */
     public static final int BASE_PEAK = 12;
     public static final float MIN_SCALE = 0.75f, MAX_SCALE = 4f;
-    /** The part of the capsule's radius worn at the full peak (then a smooth fall to the edge). */
+    /** The part of the strip's half-width worn at the full peak (then a smooth fall to the edge). */
     public static final double CORE = 0.4;
 
     /** Where the look turns from flattened grass to worn soil, in channel units. */
@@ -81,33 +81,6 @@ public final class TrampleRules {
     public static boolean walked(double dx, double dz) {
         double d2 = dx * dx + dz * dz;
         return d2 >= MIN_STEP * MIN_STEP && d2 <= MAX_STEP * MAX_STEP;
-    }
-
-    /** Distance from (px, pz) to the segment (ax, az)-(bx, bz). */
-    public static double segmentDistance(double px, double pz, double ax, double az, double bx, double bz) {
-        double vx = bx - ax, vz = bz - az;
-        double len2 = vx * vx + vz * vz;
-        double t = len2 <= 1e-12 ? 0 : Math.max(0, Math.min(1, ((px - ax) * vx + (pz - az) * vz) / len2));
-        double dx = px - (ax + t * vx), dz = pz - (az + t * vz);
-        return Math.sqrt(dx * dx + dz * dz);
-    }
-
-    /**
-     * The wear a cell centre at (px, pz) takes from one pass along the segment: 1 in the core, falling to 0 at the
-     * radius, across the walk. The ends are FLAT: only points whose projection falls in (a, b] are worn, so one walk's
-     * consecutive samples tile its path - a round cap at every sample point would wear a bead of double depth there,
-     * a dotted track. A zero-length segment wears nothing.
-     */
-    public static float capsuleWeight(double px, double pz, double ax, double az, double bx, double bz, double radius) {
-        double vx = bx - ax, vz = bz - az;
-        double len2 = vx * vx + vz * vz;
-        if (len2 <= 1e-12)
-            return 0;
-        double t = ((px - ax) * vx + (pz - az) * vz) / len2;
-        if (t <= 0 || t > 1)
-            return 0;
-        double dx = px - (ax + t * vx), dz = pz - (az + t * vz);
-        return GroundMemory.discWeight(Math.sqrt(dx * dx + dz * dz), radius, CORE);
     }
 
     // ------------------------------------------------------------------ the look
