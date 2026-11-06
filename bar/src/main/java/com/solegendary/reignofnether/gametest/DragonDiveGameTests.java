@@ -47,7 +47,7 @@ public class DragonDiveGameTests {
         boolean at(int tick);
     }
 
-    private static void everyTick(GameTestHelper helper, int ticks, Step step) {
+    static void everyTick(GameTestHelper helper, int ticks, Step step) {
         final boolean[] over = { false };
         for (int t = 1; t <= ticks; t++) {
             final int tick = t;
@@ -59,7 +59,7 @@ public class DragonDiveGameTests {
     }
 
     /** Ends the test (succeed when no problems, else fail with them) and says the steps are over. */
-    private static boolean finish(GameTestHelper helper, List<String> problems, Runnable clean) {
+    static boolean finish(GameTestHelper helper, List<String> problems, Runnable clean) {
         if (clean != null)
             clean.run();
         if (problems.isEmpty())
