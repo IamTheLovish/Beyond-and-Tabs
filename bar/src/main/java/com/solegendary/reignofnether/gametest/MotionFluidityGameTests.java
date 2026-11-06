@@ -48,8 +48,9 @@ import java.util.function.Supplier;
  * packets, teleports), then the drawn walk per jittery clock: speed cv / % of client ticks the unit stands still for
  * vanilla's lerp ("now") and the game's stamped playback ("buf", with its lag behind the newest tick heard), and the
  * position packets vanilla's lerp tracked every tick would cost ("e1 pos"). A ground lane adds where the drawn body's
- * feet stand against its blocks ("gnd", step 3 A). The crowd adds what idle units do after arriving. The asserts only guard the measurement itself (the unit moved); the bounds come with
- * the fixes, from these numbers.
+ * feet stand against its blocks ("gnd", step 3 A), and a "[MotionGnd]" line the client ticks around its worst sink and
+ * float. The crowd adds what idle units do after arriving. The asserts guard the measurement itself (the unit moved)
+ * and, on the stepped lanes, the ground under the drawn body ({@link Gnd}); the other bounds come with their fixes.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -90,28 +91,29 @@ public class MotionFluidityGameTests {
 
     @GameTest(template = ARENA, timeoutTicks = SETUP + WALK_TICKS + 80, batch = BATCH)
     public static void motion_measure_infantry_on_flat_and_stepped_ground(GameTestHelper helper) {
-        lanes(helper, "infantry Vindicator", EntityRegistrar.VINDICATOR_UNIT::get, 16, false);
+        lanes(helper, "infantry Vindicator", EntityRegistrar.VINDICATOR_UNIT::get, 16, true, false);
     }
 
     @GameTest(template = ARENA, timeoutTicks = SETUP + WALK_TICKS + 80, batch = BATCH)
     public static void motion_measure_beast_on_flat_and_stepped_ground(GameTestHelper helper) {
-        lanes(helper, "beast Mossback Bison", EntityRegistrar.MOSSBACK_BISON_UNIT::get, 17, false);
+        lanes(helper, "beast Mossback Bison", EntityRegistrar.MOSSBACK_BISON_UNIT::get, 17, false, false);
     }
 
     @GameTest(template = ARENA, timeoutTicks = SETUP + WALK_TICKS + 80, batch = BATCH)
     public static void motion_measure_large_unit_on_flat_and_stepped_ground(GameTestHelper helper) {
-        lanes(helper, "large War Mammoth", EntityRegistrar.WAR_MAMMOTH_UNIT::get, 18, false);
+        lanes(helper, "large War Mammoth", EntityRegistrar.WAR_MAMMOTH_UNIT::get, 18, false, false);
     }
 
     @GameTest(template = ARENA, timeoutTicks = SETUP + WALK_TICKS + 80, batch = BATCH)
     public static void motion_measure_flyer_over_flat_and_stepped_ground(GameTestHelper helper) {
-        lanes(helper, "flyer Gyrocopter", EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT::get, 19, true);
+        lanes(helper, "flyer Gyrocopter", EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT::get, 19, false, true);
     }
 
     // ------------------------------------------------------------------------------------------------ the lanes
 
+    /** {@code man}: the unit is held to a man's ground bounds ({@link Gnd}), not a beast's. */
     private static void lanes(GameTestHelper helper, String kind, Supplier<? extends EntityType<? extends Mob>> type,
-                              int padIndex, boolean flyer) {
+                              int padIndex, boolean man, boolean flyer) {
         TestCleanup.rtsPathfinding(helper);
         WalkLineGameTests.Pad pad = WalkLineGameTests.Pad.lay(helper, padIndex);
         // a glass wall between the lanes, so neither walk can step round the other's ground
@@ -172,7 +174,7 @@ public class MotionFluidityGameTests {
                 }
             if (!probes[0].done || !probes[1].done)
                 return;
-            List<String> problems = new ArrayList<>();
+            List<String> problems = new ArrayList<>(), worse = new ArrayList<>();
             for (int i = 0; i < 2; i++) {
                 String ground = i == 0 ? "flat" : "stepped";
                 Probe p = probes[i];
@@ -180,9 +182,14 @@ public class MotionFluidityGameTests {
                 if (p.walked() < 8)
                     problems.add(ground + " lane: walked only " + String.format(Locale.ROOT, "%.1f", p.walked())
                         + " blocks in " + p.ticks() + " ticks");
+                String bad = i == 1 && p.gnd != null ? p.gnd.broken(man) : null;
+                if (bad != null)
+                    worse.add(bad);
             }
             if (!problems.isEmpty())
                 helper.fail(kind + ": the measurement has no walk to judge: " + String.join("; ", problems));
+            else if (!worse.isEmpty())
+                helper.fail(kind + " on the stepped lane is drawn off its ground: " + String.join("; ", worse));
             else
                 helper.succeed();
         });
@@ -377,6 +384,30 @@ public class MotionFluidityGameTests {
 
     // ------------------------------------------------------------------------------------------------ one unit
 
+    /**
+     * The ground under one drawn walk ("gnd", step 3 A), today (upright) and tilted: the mean |gap| per foot pad, the
+     * worst float over the frames that show the unit on the ground (the hop up a step floats by design), the worst sink
+     * over all of them. The bounds were set before the run that judges them (Eris.16's round 1 review of #551, Nov 6): a
+     * beast stands at most half today's mean gap off the ground, floats at most three quarters of today's worst and never
+     * sinks deeper than today's worst; a man stays upright by design (3 degrees of tilt at most) and is never drawn
+     * worse than today, with 0.02 blocks of slack on his sink.
+     */
+    record Gnd(double meanToday, double mean, double floatToday, double floatMax, double sinkToday, double sinkMax) {
+        /** What breaks the bounds, or null. */
+        String broken(boolean man) {
+            List<String> out = new ArrayList<>();
+            if (mean > (man ? meanToday : 0.5 * meanToday) + 1e-9)
+                out.add("the feet stand off the ground");
+            if (floatMax > (man ? floatToday : 0.75 * floatToday) + 1e-9)
+                out.add("a foot floats over a step");
+            if (sinkMax > sinkToday + (man ? 0.02 : 0.0) + 1e-9)
+                out.add("a foot sinks deeper into a step than today");
+            return out.isEmpty() ? null : String.join(", ", out) + String.format(Locale.ROOT,
+                " (mean gap %.3f > %.3f, worst float on the ground %.2f > %.2f, worst sink %.2f > %.2f)", meanToday, mean,
+                floatToday, floatMax, sinkToday, sinkMax);
+        }
+    }
+
     /** One unit under measurement: its motion each server tick, and the packets a copy of its tracker sent. */
     static final class Probe {
         final Mob mob;
@@ -394,6 +425,9 @@ public class MotionFluidityGameTests {
         final float yaw0;
         int tick = 0, teleports = 0, rotOnly = 0, idleFrom = -1;
         boolean done = false;
+        // the ground under the drawn body, once logged (null for a flyer), and its worst frames' story
+        Gnd gnd = null;
+        String gndStory = null;
         // how near the goal the walk's window ends: 3 blocks on a lane; in the crowd, which spreads round one point, 6 -
         // so a unit standing there while the others arrive is not counted as stopping on the way
         double arrive = 3;
@@ -583,45 +617,129 @@ public class MotionFluidityGameTests {
             }
             long e1 = sent1.stream().filter(p -> p.hasPos() && p.tick() >= from && p.tick() < to).count();
             ReignOfNether.LOGGER.warn(serverPart + groundPart + client + " | e1 pos " + e1);
+            // its own prefix: not folded into the [Motion] notice (the job's log keeps it whole)
+            if (gndStory != null)
+                ReignOfNether.LOGGER.warn("[MotionGnd] " + what + ":" + gndStory);
         }
 
         /**
          * The ground under the drawn body (GroundTilt, step 3 A) over the walk's window, for the playback's drawn path:
          * the four foot pads drawn as today (upright at the drawn position) and with the ground's tilt and drop, against
-         * this lane's real blocks - "gnd" the mean |gap| per pad, "f" the worst float, "s" the worst sink, each today >
-         * tilted, blocks.
+         * this lane's real blocks - "gnd" the mean |gap| per pad, "f" the worst float over the frames that show the unit
+         * on the ground ({@link #drawnOnGround}), "s" the worst sink over all, each today > tilted, blocks. The ground's
+         * "on the ground" is the client's (the newest tick heard), as AnimStates reads {@code onGround()}.
          */
         private String ground(ClientView.Drawn d, int from, int to) {
             GroundTilt.Ground g = GroundTilt.of(mob.level());
             float[] s = new float[AnimState.STRIDE];
             float[] target = new float[3];
             double[] feet = new double[4], today = new double[4];
+            int n = d.x.length;
+            // each client tick, for the worst frames' story
+            double[] tgt = new double[n], drop = new double[n], sink = new double[n], flt = new double[n],
+                sinkToday = new double[n];
+            boolean[] newest = new boolean[n], settled = new boolean[n];
             double sum = 0, sumToday = 0, pads = 0, padsToday = 0, floatMax = 0, floatToday = 0, sinkMax = 0,
-                sinkToday = 0;
+                sinkTodayMax = 0;
+            int worstSink = -1, worstFloat = -1;
             float width = mob.getBbWidth();
             boolean fresh = true;
-            for (int c = 0; c < d.x.length; c++) {
+            for (int c = 0; c < n; c++) {
                 int at = Math.max(0, Math.min(d.serverTickAt[c], track.size() - 1));
                 boolean grounded = track.get(at)[4] == 1;
                 GroundTilt.target(g, d.x[c], d.y[c], d.z[c], d.yaw[c], width, grounded, target);
                 GroundTilt.step(s, 0, target, d.y[c], fresh);
                 fresh = false;
+                newest[c] = grounded;
+                tgt[c] = target[2];
+                drop[c] = GroundTilt.dropAt(s, 0, 1f);
                 if (d.serverTickAt[c] < from || d.serverTickAt[c] >= to)
                     continue;
                 GroundTilt.feet(g, d.x[c], d.y[c], d.z[c], d.yaw[c], width, GroundTilt.pitchAt(s, 0, 1f),
                     GroundTilt.rollAt(s, 0, 1f), GroundTilt.dropAt(s, 0, 1f), feet);
                 GroundTilt.feet(g, d.x[c], d.y[c], d.z[c], d.yaw[c], width, 0f, 0f, 0f, today);
+                settled[c] = drawnOnGround(d, c, at);
+                sink[c] = feet[1];
+                flt[c] = feet[0];
+                sinkToday[c] = today[1];
                 sum += feet[2];
                 pads += feet[3];
                 sumToday += today[2];
                 padsToday += today[3];
-                floatMax = Math.max(floatMax, feet[0]);
-                floatToday = Math.max(floatToday, today[0]);
-                sinkMax = Math.max(sinkMax, feet[1]);
-                sinkToday = Math.max(sinkToday, today[1]);
+                if (settled[c]) {
+                    if (feet[0] > floatMax) {
+                        floatMax = feet[0];
+                        worstFloat = c;
+                    }
+                    floatToday = Math.max(floatToday, today[0]);
+                }
+                if (feet[1] > sinkMax) {
+                    sinkMax = feet[1];
+                    worstSink = c;
+                }
+                sinkTodayMax = Math.max(sinkTodayMax, today[1]);
             }
-            return String.format(Locale.ROOT, " gnd %.2f>%.2f f%.2f>%.2f s%.2f>%.2f;", sumToday / Math.max(1, padsToday),
-                sum / Math.max(1, pads), floatToday, floatMax, sinkToday, sinkMax);
+            gnd = new Gnd(sumToday / Math.max(1, padsToday), sum / Math.max(1, pads), floatToday, floatMax, sinkTodayMax,
+                sinkMax);
+            StringBuilder story = new StringBuilder();
+            if (worstSink >= 0 && sinkMax > 0.005)
+                story.append(" | sink ").append(frames(d, g, width, worstSink, tgt, drop, sink, flt, sinkToday, newest,
+                    settled));
+            if (worstFloat >= 0 && floatMax > 0.005)
+                story.append(" | float ").append(frames(d, g, width, worstFloat, tgt, drop, sink, flt, sinkToday, newest,
+                    settled));
+            gndStory = story.length() == 0 ? null : story.toString();
+            return String.format(Locale.ROOT, " gnd %.2f>%.2f f%.2f>%.2f s%.2f>%.2f;", gnd.meanToday(), gnd.mean(),
+                gnd.floatToday(), gnd.floatMax(), gnd.sinkToday(), gnd.sinkMax());
+        }
+
+        /**
+         * Whether a drawn frame shows the unit on the ground: the server tick whose position the frame is drawn nearest
+         * (the playback draws a few ticks behind the newest it heard), and the ticks either side of it, were all on the
+         * ground - the hop up a step and a fall are not.
+         */
+        private boolean drawnOnGround(ClientView.Drawn d, int c, int at) {
+            int best = at;
+            double bestDist = Double.MAX_VALUE;
+            for (int k = at; k >= Math.max(0, at - 12); k--) {
+                double[] p = track.get(k);
+                double dist = Math.hypot(p[0] - d.x[c], p[2] - d.z[c]);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = k;
+                }
+            }
+            for (int k = Math.max(0, best - 1); k <= Math.min(track.size() - 1, best + 1); k++)
+                if (track.get(k)[4] != 1)
+                    return false;
+            return true;
+        }
+
+        /**
+         * A worst frame's story: where it is drawn, each foot pad's ground against its drawn height (front right, front
+         * left, back right, back left; "-" none), then the client ticks from 6 before to 2 after it: [offset, drawn
+         * height and its move, on the ground by the newest tick heard (g/a) and as drawn (G/A), the drop's target and
+         * value, today's > the tilted sink, the tilted float].
+         */
+        private String frames(ClientView.Drawn d, GroundTilt.Ground g, float width, int c, double[] tgt, double[] drop,
+                              double[] sink, double[] flt, double[] sinkToday, boolean[] newest, boolean[] settled) {
+            StringBuilder b = new StringBuilder(String.format(Locale.ROOT, "c%d srv%d x%.2f z%.2f yaw%.0f pads", c,
+                d.serverTickAt[c], d.x[c], d.z[c], d.yaw[c]));
+            float yr = d.yaw[c] * Mth.DEG_TO_RAD;
+            double fx = -Mth.sin(yr), fz = Mth.cos(yr), rx = -Mth.cos(yr), rz = -Mth.sin(yr);
+            double along = GroundTilt.SPAN * width, across = GroundTilt.SIDE * width, r = GroundTilt.footRadius(width);
+            for (int a = 1; a >= -1; a -= 2)
+                for (int l = 1; l >= -1; l -= 2) {
+                    double h = GroundTilt.foot(g, d.x[c] + a * fx * along + l * rx * across,
+                        d.z[c] + a * fz * along + l * rz * across, r, d.y[c]);
+                    b.append(Double.isNaN(h) ? " -" : String.format(Locale.ROOT, " %+.2f", h - d.y[c]));
+                }
+            b.append(':');
+            for (int k = Math.max(0, c - 6); k <= Math.min(d.x.length - 1, c + 2); k++)
+                b.append(String.format(Locale.ROOT, " [%d y%.2f%+.2f %s%s t%.2f d%.2f s%.2f>%.2f f%.2f]", k - c, d.y[k],
+                    k > 0 ? d.y[k] - d.y[k - 1] : 0.0, newest[k] ? "g" : "a", settled[k] ? "G" : "A", tgt[k], drop[k],
+                    sinkToday[k], sink[k], flt[k]));
+            return b.toString();
         }
 
         /** After the idle mark: horizontal distance moved, degrees the body turned, position packets sent. */

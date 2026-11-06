@@ -20,6 +20,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the ground, never float more than three quarters of today's worst, never sink deeper than today's worst, and the
  * body's height never moves more in one client tick than today's does (the step is not drawn poppier). A man (a
  * Vindicator) is never drawn worse than today. On flat ground nothing changes at all.
+ * <p>
+ * Round 2 (Eris.16's review of #551, Nov 6): the drop follows the ground, never the unit's own motion. A body moving
+ * through the air (a throw, a jump, knockback) is drawn at its own height, and a teleport up onto a ledge never draws a
+ * foot deeper into the ground than today's upright body.
  */
 class GroundTiltTest {
 
@@ -126,10 +130,59 @@ class GroundTiltTest {
     void a_man_crossing_a_step_is_never_drawn_worse_than_today() {
         Walk w = walk(GroundTiltTest::stepped, 0.6f, 0.131);
         String why = "Vindicator (0.6 wide, 0.131 a tick) on the stepped lane: " + w.brief();
-        assertTrue(w.maxTilt() <= GroundTilt.NARROW_DEG + 1e-4, "a man tilts like a beast: " + why);
+        assertTrue(w.maxTilt() <= 3.0 + 1e-4, "a man tilts like a beast: " + why);
         assertTrue(w.mean() <= w.meanToday() + 1e-9, "the feet stand further off the ground than today: " + why);
         assertTrue(w.sinkMax() <= w.sinkToday() + 1e-9, "a foot sinks deeper into a step than today: " + why);
         assertTrue(w.bodyStep() <= w.bodyStepToday() + 1e-9, "the step is drawn poppier than today: " + why);
+    }
+
+    private static final float[] WIDTHS = { 0.6f, 1.95f, 3.315f };
+
+    @Test
+    void a_body_moving_through_the_air_is_drawn_at_its_own_height() {
+        GroundTilt.Ground g = ground(bx -> 0.0);
+        float[] target = new float[3];
+        for (float width : WIDTHS) {
+            float[] s = new float[AnimState.STRIDE];
+            double x = 5.5, z = 5.5, y = 0.0;
+            GroundTilt.target(g, x, y, z, EAST, width, true, target);
+            GroundTilt.step(s, 0, target, y, true);
+            // up 0.5 a client tick for 4 ticks, then down again: off the ground the whole way
+            for (int t = 0; t < 8; t++) {
+                y += t < 4 ? 0.5 : -0.5;
+                GroundTilt.target(g, x, y, z, EAST, width, false, target);
+                GroundTilt.step(s, 0, target, y, false);
+                assertEquals(0.0, GroundTilt.dropAt(s, 0, 1f), 0.0,
+                    width + " wide, client tick " + t + ", drawn at height " + y + ": the drop pulls the body down");
+            }
+        }
+    }
+
+    @Test
+    void a_teleport_up_onto_a_ledge_never_draws_a_foot_deeper_than_today() {
+        GroundTilt.Ground g = ground(bx -> bx >= 15 ? 2.0 : 0.0);
+        float[] target = new float[3];
+        double[] feet = new double[4], today = new double[4];
+        for (float width : WIDTHS) {
+            float[] s = new float[AnimState.STRIDE];
+            double z = 5.5;
+            boolean fresh = true;
+            // 5 client ticks standing at x 2.5, vanilla's 3-tick teleport lerp onto the ledge at (20.5, 2), then 10
+            // ticks standing there; the client keeps the unit on the ground throughout
+            for (int t = 0; t < 18; t++) {
+                double k = Mth.clamp((t - 4) / 3.0, 0.0, 1.0);
+                double x = 2.5 + (20.5 - 2.5) * k, y = 2.0 * k;
+                GroundTilt.target(g, x, y, z, EAST, width, true, target);
+                GroundTilt.step(s, 0, target, y, fresh);
+                fresh = false;
+                GroundTilt.feet(g, x, y, z, EAST, width, GroundTilt.pitchAt(s, 0, 1f), GroundTilt.rollAt(s, 0, 1f),
+                    GroundTilt.dropAt(s, 0, 1f), feet);
+                GroundTilt.feet(g, x, y, z, EAST, width, 0f, 0f, 0f, today);
+                assertTrue(feet[1] <= today[1] + 1e-6, String.format(Locale.ROOT,
+                    "%s wide, client tick %d at (%.2f, %.2f): a foot sinks %.2f into the ground, today %.2f (drop %.2f)",
+                    width, t, x, y, feet[1], today[1], GroundTilt.dropAt(s, 0, 1f)));
+            }
+        }
     }
 
     @Test
