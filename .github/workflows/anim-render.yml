@@ -22,7 +22,7 @@ env:
   BLENDER_SERIES: Blender5.2
   # https://download.blender.org/release/Blender5.2/blender-5.2.3.sha256 (linux-x64 line), pinned here
   BLENDER_SHA256: 78486c018b4443efe5e75ab54c290ed8c15abafd249b862c2c9ce2530a918eec
-  R3_COMMIT: fead253b
+  R3_COMMIT: fead253b4ca0add00df4c1d347cb7259340b7ce8      # Quarry Saint r3, the A/B's other side (full SHA)
   PY: tools/render/quarry_saint
 jobs:
   keys:
