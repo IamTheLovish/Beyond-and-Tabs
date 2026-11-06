@@ -584,6 +584,78 @@ def _xyz(c, o, a, t, y):
     return x, y, z
 
 
+# a vine hangs only on a full face; these blocks have none (or not all six)
+_NOT_FULL = ("air", "vine", "_stairs", "_slab", "_wall", "_fence", "_fence_gate", "_pane", "iron_bars", "_carpet",
+             "lantern", "torch", "_trapdoor", "_door", "chain", "candle", "_petals", "fern", "grass", "_button",
+             "lily_of_the_valley", "azure_bluet", "oxeye_daisy", "allium", "cornflower", "dandelion", "poppy", "tulip")
+# blocks whose state follows their neighbours: the nbt stores the shape they take with every neighbour standing, so
+# the game re-shapes them while a neighbour is still missing, and each re-shape updates their own neighbours
+_RESHAPES = ("_stairs", "_wall", "_fence", "_pane", "iron_bars")
+
+
+def vines_knocked_off(blocks):
+    """The vines the game knocks off while it lays the hall: in the nbt's order (y, then z, then x - what
+    gen_structures.Structure.write writes, and what the settle and count GameTests lay bottom up), each set updating
+    its neighbours' shapes. A vine re-checks its faces on an update from any side but below and turns to air when no
+    face has a full block behind it (or the same face on a vine above); a stair, wall, fence or pane beside a newly set
+    block may re-shape and pass the update on. built_blocks_still_count_after_the_world_settles lost the round-13
+    vines at (3,6,2) and (11,6,2) so: each hung on a pier cell laid after it (z 3 comes after z 2), and the eave stair
+    beside it (set, or re-shaped by its own neighbour) updated it first. blocks: {(x, y, z): (name, props)}."""
+    side = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+    laid, lost = {}, []
+
+    def holds(q):
+        _, p = laid[q]
+        for f, (dx, dz) in side.items():
+            if str(p.get(f, "false")) != "true":
+                continue
+            n = laid.get((q[0] + dx, q[1], q[2] + dz))
+            if n and not any(n[0] == k or n[0].endswith(k) for k in _NOT_FULL):
+                return True
+            a = laid.get((q[0], q[1] + 1, q[2]))
+            if a and a[0] == "vine" and str(a[1].get(f, "false")) == "true":
+                return True
+        return False
+
+    def reshapes(n, by):
+        """Whether the block n may change its state when `by` is set beside it: a stair turns its corner after the
+        stairs beside it; a wall, fence or pane connects to any block but a vine."""
+        if n.endswith("_stairs"):
+            return by.endswith("_stairs")
+        return n.endswith(_RESHAPES) and by != "vine"
+
+    def touch(q, name, depth):
+        """q was set or re-shaped (name), or a vine at q fell (name "air"): update the cells it is above or beside."""
+        for d in ((1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1), (0, -1, 0), (0, 1, 0)):
+            n = (q[0] + d[0], q[1] + d[1], q[2] + d[2])
+            if n not in laid:
+                continue
+            if laid[n][0] == "vine":
+                if d != (0, 1, 0) and not holds(n):     # an update from below leaves a vine as it is
+                    del laid[n]
+                    lost.append(n)
+                    touch(n, "air", depth)
+            elif depth and name != "air" and reshapes(laid[n][0], name):
+                touch(n, laid[n][0], depth - 1)
+
+    for q in sorted(blocks, key=lambda p: (p[1], p[2], p[0])):
+        if blocks[q][0] in ("air", "cave_air"):
+            continue
+        laid[q] = blocks[q]
+        touch(q, blocks[q][0], 1)
+    return sorted(lost)
+
+
+def drop_loose_vines(rig):
+    """Leave out the vines the lay would knock off (vines_knocked_off), until none would fall."""
+    while True:
+        lost = vines_knocked_off(rig.b)
+        if not lost:
+            return
+        for q in lost:
+            del rig.b[q]
+
+
 # ====================================================================================================== build
 def build():
     c = tc.Cap(R, H)
@@ -604,6 +676,7 @@ def build():
     hall_dressing(c)
     mv._leaf_distances(c.rig)
     c.rig.settle()
+    drop_loose_vines(c.rig)
     c.rig.check_support("heartwood_hall")
     return c.rig.structure()
 
@@ -629,6 +702,8 @@ def check(s, box=(2 * R + 1, H, 2 * R + 1)):
     bad = sorted({nm for nm in names.values() if any(nm == f or nm.endswith(f) or nm.startswith(f) for f in FORBIDDEN)
                   and nm != "water_cauldron"})
     assert not bad, "forbidden blocks: %s" % bad
+    lost = vines_knocked_off({q: (nm, dict(pr)) for q, (nm, pr) in full.items()})
+    assert not lost, "vines the game knocks off while laying the hall: %s" % lost
     # plants (flowers, ferns, petals) stand on soil, or vanilla pops them off
     for (x, y, z), nm in names.items():
         if nm in FLOWERS + ("pink_petals",) and nm != "moss_carpet":

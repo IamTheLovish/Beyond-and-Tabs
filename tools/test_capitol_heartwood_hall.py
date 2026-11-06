@@ -240,6 +240,14 @@ class HeartwoodHallTest(unittest.TestCase):
                         break
         self.assertLessEqual(hidden, HIDDEN_MAX, hidden)
 
+    def test_every_vine_survives_the_lay(self):
+        """Laid bottom up in the nbt's order with block updates (what built_blocks_still_count_after_the_world_settles
+        and blocks_standing_before_the_count_still_finish_the_building do), no vine falls off: round 13's build 42139034765
+        lost the vines at (3,6,2) and (11,6,2), each hung on a pier cell laid after it, and the building never counted
+        as built. The replay is capitol_heartwood_hall.vines_knocked_off."""
+        import capitol_heartwood_hall as hh
+        self.assertEqual(hh.vines_knocked_off(self.b.blocks), [])
+
     def test_data_and_assets_copies_match(self):
         with open(NBT, "rb") as f, open(NBT_ASSETS, "rb") as g:
             self.assertEqual(f.read(), g.read())
