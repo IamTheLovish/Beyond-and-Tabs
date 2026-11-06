@@ -126,8 +126,12 @@ public class RocketShellGameTests {
         return true;
     }
 
-    /** Most test ticks a test waits for its units to start ticking (every test here has at least 60). */
-    static final int READY_WAIT = 30;
+    /**
+     * Most test ticks a test waits for its units to start ticking: 150, as the other tests that wait on ArenaReady (a loaded
+     * shard of the full suite left the guard test's units not ticking after 30: PR build 42134022593, shard 8, "tickCount 0,
+     * entity-ticking false"). Every test here times out at 300, so a wait of 150 leaves the test its own time.
+     */
+    static final int READY_WAIT = 150;
 
     static String fmt(double d) {
         return String.format(Locale.ROOT, "%.2f", d);
@@ -139,7 +143,7 @@ public class RocketShellGameTests {
      * A volley from a Rocket Battery is four rockets, three ticks apart, and every one is a RocketShell of the rocket
      * entity type - none a BombardShell.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_battery_fires_rocket_shells_not_bombard_shells(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "type");
@@ -191,7 +195,7 @@ public class RocketShellGameTests {
      * leaves with, and a plain shell's burst still takes 0.8 of its damage off a unit a block from the centre. A guard
      * that passes before and after the rocket's split by design: the split must not move these.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_other_artillery_still_fires_plain_bombard_shells(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "others"), foeOwner = owner + "_foe";
@@ -282,7 +286,7 @@ public class RocketShellGameTests {
      * identical building next to it. The shared artillery rules (falloff, building multiple, the global building
      * multiplier) stay at one entry, so the balance does not fork.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_hits_a_unit_and_a_building_for_the_stated_damage(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "dmg"), foeOwner = owner + "_foe";
@@ -415,7 +419,7 @@ public class RocketShellGameTests {
      * than two thirds as long, peaks lower than 0.7 of the mortar's arc yet still arcs (a boost, not a laser), and lands
      * within two blocks of the aim. The mortar's flight (20 + 13 = 33 ticks) is the control in the same run.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_flies_faster_and_flatter_than_a_bombard_shell_to_the_same_spot(GameTestHelper helper) {
         String owner = owner(helper, "flight");
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -506,7 +510,7 @@ public class RocketShellGameTests {
      * Each volley starts the launch animation (its ticks left start at the full length), it runs down as the ticks pass,
      * it is gone when the length has gone by, and a volley the battery refuses (inside its dead zone) starts nothing.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_battery_runs_its_launch_animation_for_each_volley(GameTestHelper helper) {
         String owner = owner(helper, "anim");
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -560,7 +564,7 @@ public class RocketShellGameTests {
      * own rod (RocketRackGeometry), the rod the model draws it on, and no two share a spot - the old launch point was one
      * spot above the head for all four.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_bolts_leave_from_the_tips_of_the_rods_not_the_hat(GameTestHelper helper) {
         String owner = owner(helper, "rods");
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -617,7 +621,7 @@ public class RocketShellGameTests {
      * The rack shows the attack cooldown the unit already has: the ticks until the next volley can go (clamped to the
      * reload window) and whether the crew has a target are synced for the client, nothing changes about when it fires.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_rack_shows_the_reload_and_the_charge_of_the_cooldown(GameTestHelper helper) {
         String owner = owner(helper, "reload");
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
