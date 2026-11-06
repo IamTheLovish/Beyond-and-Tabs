@@ -1,0 +1,30 @@
+# wa-render: the White Angels art lane's offline stills on GitHub-hosted runners (lovish, Nov 6: renders on GitHub
+# runners only while he plays; never self-hosted, never pc-1). This file lives ONLY on claude/white-angels-render, never
+# on a PR branch: a workflow reaching main needs its own review and lovish's OK. No secrets; downloads from PyPI only.
+name: wa-render
+on:
+  push:
+    branches: [claude/white-angels-render]
+    paths: ['tools/**', 'design/**', '.github/workflows/wa-render.yml']
+permissions:
+  contents: read
+concurrency:
+  group: wa-render-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q numpy pillow
+      - name: Render (tools/render/white_angels/render.py)
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python tools/render/white_angels/render.py --out out 2>&1 | tee out/render.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'wa-render-${{ github.sha }}', path: out, retention-days: 7 }

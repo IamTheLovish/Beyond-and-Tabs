@@ -1,0 +1,4 @@
+{"jobs": [
+  {"name": "control_radiant_winged", "model": "design/models/sunforged_paladin_radiant_winged.json",
+   "views": "front,quarter,side,rts,topdown", "args": ["--art-check"]}
+]}
