@@ -233,6 +233,57 @@ class BarracksTest(unittest.TestCase):
             pale = sorted(q for q in hem if not any(d in s.get(q, "") for d in G.DARK))
             self.assertFalse(pale, "L%d hem not dark at %s" % (i + 1, pale))
 
+    # ---- round 2 (the all-factions blind Fable sweep, Nov 6, eyes on main jar 42137577884: barracks 3 / 10, the
+    # game's weakest; #526's own blind round asked the same): "flat polished-quartz slab roofs, no pitch and no ridge -
+    # three white rectangles", "a bare quartz pillar with a gold cube"; the bar (lovish's TomatoN castle) wants dark
+    # steep roofs and slim towers with crown bands. ----
+    def test_wing_roofs_are_dark_and_pitched(self):
+        """At L1 every wing has a dark pitched roof: on each wing the back cell's top is higher than the front cell's
+        (a slope down to the court, the ridge on the outer wall), and both tops are dark. Main: a white diorite deck
+        with a slab parapet over the front - the front is the higher one and nothing on top is dark."""
+        t = tops(self.solid[0])
+        s = self.solid[0]
+        wings = [((x, 0), (x, 1)) for x in range(0, 6)] + [((0, z), (1, z)) for z in (2, 3)] + \
+            [((9, z), (8, z)) for z in (5, 6)]
+        flat = [(b, f) for b, f in wings if not t.get(b, -1) > t.get(f, -1)]
+        self.assertFalse(flat, "L1 wing cells not pitched (back, front): %s" % flat)
+        pale = sorted(c for b, f in wings for c in (b, f)
+                      if not any(d in s.get((c[0], t[c], c[1]), "") for d in G.DARK + ("lantern",)))
+        self.assertFalse(pale, "L1 wing tops not dark: %s" % pale)
+
+    def test_keep_wears_a_dark_roof_over_a_gold_band(self):
+        """L1 and L2: the keep ends in a dark steep roof - of its 16 columns at least 12 have a dark top (the rest:
+        the finial) - over a gold crown band, the wall's top course (y KW) gold all the way round its two camera faces
+        (west x 6, south z 3). Main: a white crenellated tier and a gold base, the band's cells quartz."""
+        for i in (0, 1):
+            s = self.solid[i]
+            t = tops(s)
+            keep = [(x, z) for x in range(L.KX0, L.KX1 + 1) for z in range(L.KZ0, L.KZ1 + 1)]
+            dark = [c for c in keep if any(d in s.get((c[0], t[c], c[1]), "") for d in G.DARK)]
+            self.assertGreaterEqual(len(dark), 12, "L%d keep tops dark %d of 16" % (i + 1, len(dark)))
+            band = [(L.KX0, L.KW, z) for z in range(L.KZ0, L.KZ1 + 1)] + \
+                [(x, L.KW, L.KZ1) for x in range(L.KX0, L.KX1 + 1)]
+            bare = sorted(q for q in band if s.get(q) != "gold_block")
+            self.assertFalse(bare, "L%d crown band not gold at %s" % (i + 1, bare))
+
+    def test_l3_keeps_its_dark_roofs_and_the_spire_climbs(self):
+        """Round 3 (blind r2 on eyes 42170353722: round 2 won 5 / 4 but L1 -> L3 fell 5 -> 3, "L3 removes the dark roofs
+        entirely, an all-white crenellated box"; "the tower roof is three flat steps barely above the wings, no
+        spire"): at L3 at least 24 of the crown tier's 36 cells (x 4..9, z 0..5) and every north wing cell west of it
+        (x 0..3, z 0..1) have a dark top; at L1 the keep's roof climbs at least 3 cells from its eaves to its peak
+        (the spire), under the finial."""
+        s, t = self.solid[2], tops(self.solid[2])
+        tier = [(x, z) for x in range(4, 10) for z in range(0, 6)]
+        dark = [c for c in tier if any(d in s.get((c[0], t[c], c[1]), "") for d in G.DARK)]
+        self.assertGreaterEqual(len(dark), 24, "L3 crown tier dark tops %d of 36" % len(dark))
+        wing = sorted(c for c in [(x, z) for x in range(0, 4) for z in (0, 1)]
+                      if not any(d in s.get((c[0], t[c], c[1]), "") for d in G.DARK))
+        self.assertFalse(wing, "L3 north wing tops not dark at %s" % wing)
+        t1 = tops(self.solid[0])
+        roof = {c: t1[c] for c in [(x, z) for x in range(L.KX0, L.KX1 + 1) for z in range(L.KZ0, L.KZ1 + 1)]
+                if c != L.FINIAL}
+        self.assertGreaterEqual(max(roof.values()) - min(roof.values()), 3, "L1 keep roof eaves -> peak %s" % roof)
+
     def test_shipped_is_the_generator_and_keeps_the_game_rules(self):
         """barracks*.nbt (data and assets) are what tools/lab_barracks.py draws, and its check_levels passes on them
         (footprint, the upgrade chain, the start type, the spawn columns, no pockets, every spawn walks out)."""

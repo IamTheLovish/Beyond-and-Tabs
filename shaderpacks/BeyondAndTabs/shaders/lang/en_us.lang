@@ -1,3 +1,11 @@
+profile=Profile
+profile.comment=Press K to turn the shader pack off or on (off is the plain game look), O to open this screen. Pick LOW on a weaker PC.
+profile.LOW=Low
+profile.LOW.comment=Fastest: smaller, nearer shadows; no ambient occlusion, bloom, caustics, water reflections, material maps, wind, cloud shadows or texture sharpening.
+profile.MEDIUM=Medium
+profile.MEDIUM.comment=The default: every effect on, shadows at 2048 out to 160 blocks.
+profile.HIGH=High
+profile.HIGH.comment=Sharpest: shadows at 4096 out to 224 blocks. Needs a strong GPU.
 option.shadowMapResolution=Shadow quality
 option.shadowMapResolution.comment=Texels of the sun's shadow map. The RTS view fits the map to what is on screen, so it is sharpest zoomed in.
 option.shadowDistance=Shadow distance
