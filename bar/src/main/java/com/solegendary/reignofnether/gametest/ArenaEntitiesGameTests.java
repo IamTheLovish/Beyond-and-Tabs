@@ -43,6 +43,19 @@ public class ArenaEntitiesGameTests {
      */
     @GameTest(template = ARENA, batch = "arena_entities_are_ready_when_a_test_starts", timeoutTicks = 40)
     public static void arena_entities_are_ready_when_a_test_starts(GameTestHelper helper) {
+        TerrainGameTests.finish(helper, readyAtStart(helper, "gametest_arena_entities"));
+    }
+
+    /**
+     * The same check in the default batch (a full-size one), the second case (Command Center Eris.16): it did not show
+     * the race before the gate (42141743756, 0 of 3) and must stay clean with it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void arena_entities_are_ready_in_a_full_batch(GameTestHelper helper) {
+        TerrainGameTests.finish(helper, readyAtStart(helper, "gametest_arena_entities_full"));
+    }
+
+    static List<String> readyAtStart(GameTestHelper helper, String owner) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
         BlockPos a = helper.absolutePos(BlockPos.ZERO), b = helper.absolutePos(new BlockPos(15, 0, 15));
@@ -61,7 +74,7 @@ public class ArenaEntitiesGameTests {
         if (!notReady.isEmpty())
             problems.add(notReady.size() + " of the arena's " + chunks + " chunks not ready for entities at the test's start: "
                 + String.join(" ", notReady));
-        Mob m = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), "gametest_arena_entities", 8, 8);
+        Mob m = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, 8, 8);
         if (m == null) {
             problems.add("could not spawn the unit");
         } else {
@@ -72,6 +85,6 @@ public class ArenaEntitiesGameTests {
                 problems.add("a unit spawned at the test's start is not in the level: getEntity " + inLevel
                     + ", getEntitiesOfClass " + scanned + " (at " + m.blockPosition().toShortString() + ")");
         }
-        TerrainGameTests.finish(helper, problems);
+        return problems;
     }
 }
