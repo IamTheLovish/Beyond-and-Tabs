@@ -248,7 +248,11 @@ public class CombatEngineerGameTests {
      * AC-1 (builder abilities removed, 2026-10-26): no builder or combat engineer in any faction has an ability of its
      * own - only its building / placement buttons (which are not abilities). Checked on the seven combat engineers and on
      * every worker, constructor or builder-adjacent unit that used to carry one (Villager, Zombie Villager, Bonewright,
-     * Embalmer, Seedshaper, Elder Druid, Shipwright, Harbourmaster, Geomancer, Ley Master, Tinker).
+     * Embalmer, Seedshaper, Elder Druid, Harbourmaster, Geomancer, Ley Master, Tinker).
+     * <p>
+     * One exception, lovish's (Nov 6 2026, via Command Center Eris.17's buttons): "Keep it for Light Grid only". The
+     * Light Grid's T1 worker, the Builder Drone (entity shipwright_unit until the cleanup slice), keeps Draw Grid
+     * (RaiseTidepool) - and only that one ability. Every other builder, the Harbourmaster included, still has none.
      */
     @GameTest(template = ARENA)
     public static void ac1_builders_and_engineers_have_no_abilities(GameTestHelper helper) {
@@ -262,7 +266,6 @@ public class CombatEngineerGameTests {
         types.add(EntityRegistrar.EMBALMER_UNIT.get());
         types.add(EntityRegistrar.SEEDSHAPER_UNIT.get());
         types.add(EntityRegistrar.ELDER_DRUID_UNIT.get());
-        types.add(EntityRegistrar.SHIPWRIGHT_UNIT.get());
         types.add(EntityRegistrar.HARBOURMASTER_UNIT.get());
         types.add(EntityRegistrar.GEOMANCER_UNIT.get());
         types.add(EntityRegistrar.LEY_MASTER_UNIT.get());
@@ -278,6 +281,18 @@ public class CombatEngineerGameTests {
             if (abilities != null && !abilities.get().isEmpty())
                 problems.add(type + " still has abilities: " + abilities.get().stream().map(a -> a.getClass().getSimpleName()).toList());
             m.discard();
+        }
+        // the one exception (lovish, Nov 6): the Light Grid Builder Drone carries Draw Grid and nothing else
+        Mob drone = EntityRegistrar.SHIPWRIGHT_UNIT.get().create(level);
+        if (!(drone instanceof Unit du)) {
+            problems.add("the Light Grid Builder Drone could not be created as a unit");
+        } else {
+            var abilities = du.getAbilities();
+            List<String> names = abilities == null ? List.<String>of()
+                : abilities.get().stream().map(a -> a.getClass().getSimpleName()).toList();
+            if (!names.equals(List.of("RaiseTidepool")))
+                problems.add("the Light Grid Builder Drone should carry Draw Grid (RaiseTidepool) only, has " + names);
+            drone.discard();
         }
         finish(helper, problems);
     }
