@@ -6602,6 +6602,9 @@ def write_models():
     # r71: the barks' variants on logs and wood blocks, every axis (vanilla's turns: a log on its side draws the
     # horizontal column model turned; a wood block is bark on all six faces)
     for w in LOG_VARIANT_WOODS:
+        # the base log on its side, ours for every wood: vanilla 1.20.1 has no cherry_log_horizontal (eyes
+        # 42143470229: "Unable to load model: 'minecraft:block/cherry_log_horizontal'"); the others match vanilla's
+        model(w + "_log_horizontal", "minecraft:block/cube_column_horizontal", {"end": w + "_log_top", "side": w + "_log"})
         logs, horiz, woods = [w + "_log"], [w + "_log_horizontal"], [w + "_wood"]
         for k in range(2, PROC_VARIANTS + 1):
             side = "%s_log_v%d" % (w, k)
