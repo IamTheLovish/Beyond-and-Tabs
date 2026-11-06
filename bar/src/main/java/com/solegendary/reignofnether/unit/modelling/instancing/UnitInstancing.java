@@ -66,6 +66,11 @@ public final class UnitInstancing {
         return FRAME_SECTION;
     }
 
+    /** The eyes parity's diagnostic: true sends the translucent bodies (PlayerModel units) the old way, the rest instanced. */
+    public static void setTranslucentOff(boolean off) {
+        Instancer.translucentOff = off;
+    }
+
     /** The same-frame vertex check over the next {@code frames} frames (the eyes army scene). */
     public static void startVertexParity(int frames) {
         Instancer.startParity(frames);

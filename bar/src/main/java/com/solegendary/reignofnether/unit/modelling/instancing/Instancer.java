@@ -92,6 +92,7 @@ public final class Instancer {
     static int tagKind = -1;
     static boolean tagged = false;
     static boolean bypass = false;   // the replay and the vertex check draw through the old path on purpose
+    static boolean translucentOff = false;   // the eyes parity's diagnostic frame: translucent bodies the old way
     private static final List<RigCache.Entry> unitRigs = new ArrayList<>(8);
     private static final List<Pass> unitPasses = new ArrayList<>(8);
 
@@ -295,7 +296,7 @@ public final class Instancer {
                 demote(R_FOREIGN);   // a part of this unit's body drawn by an untagged layer: both draws the old way
             return oldWay(part, ps, consumer, light, overlay, r, g, b, a);
         }
-        if (!InstanceBatch.instanceable(tagKind, a)) {
+        if (!InstanceBatch.instanceable(tagKind, a) || (translucentOff && tagKind == InstanceBatch.KIND_TRANSLUCENT)) {
             demote(R_TYPE);
             return oldWay(part, ps, consumer, light, overlay, r, g, b, a);
         }

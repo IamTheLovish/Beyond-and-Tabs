@@ -115,7 +115,7 @@ final class EyesArmyScene {
     private static boolean listening = false;
     private static boolean hideUnits = false;
     private static int captureStep = -1, captureWait = 0;
-    private static final String[] CAPTURE = { "old1", "old2", "hidden", "new1", "new2", "old3" };
+    private static final String[] CAPTURE = { "old1", "old2", "hidden", "new1", "new2", "old3", "newNoTr" };
     private static final NativeImage[] captured = new NativeImage[CAPTURE.length];
     private static boolean captureDone = false;
 
@@ -533,6 +533,7 @@ final class EyesArmyScene {
         if (captureStep >= CAPTURE.length) {
             hideUnits = false;
             UnitInstancing.setOverride(false);
+            UnitInstancing.setTranslucentOff(false);
             captureDone = true;
             return;
         }
@@ -543,6 +544,7 @@ final class EyesArmyScene {
     private static void setMode(String name) {
         hideUnits = name.equals("hidden");
         UnitInstancing.setOverride(name.startsWith("new"));
+        UnitInstancing.setTranslucentOff(name.equals("newNoTr"));   // diagnostic: translucent bodies the old way
     }
 
     private static boolean parityGiveUp(Minecraft mc, String why) {
@@ -555,6 +557,7 @@ final class EyesArmyScene {
         captureStep = -1;
         hideUnits = false;
         UnitInstancing.setOverride(null);
+        UnitInstancing.setTranslucentOff(false);
         if (mc.screen instanceof Freeze)
             mc.setScreen(null);
         mc.options.hideGui = false;
@@ -606,11 +609,30 @@ final class EyesArmyScene {
         boolean pass = controlOk && parity >= 0 && floor >= 0 && parity <= allowed;
         save(mc, new1, "21_army_instanced");
         saveDiff(mc, old1, new1, "21_army_diff");
+        diagnostics(mc);
         ReignOfNether.LOGGER.info("[Eyes] 21_army parity: {} - old vs instanced {} px ({}%) differ by more than {}/255, "
                         + "allowed {} (floor {}: old vs old {}, instanced vs instanced {}, old vs old later {}; + {}% of {} px); {}",
                 pass ? "PASS" : "FAIL", parity, f2(100.0 * parity / px), PARITY_DELTA, allowed, floor, floorOld, floorNew,
                 drift, f2(100 * PARITY_SLACK), px, controlText);
         closeAll();
+    }
+
+    /**
+     * Not the verdict: where the frames part, so a FAIL names its cause. The other frames saved, and old vs a frame
+     * drawn instanced except the translucent bodies (PlayerModel units, which go the old way in it).
+     */
+    private static void diagnostics(Minecraft mc) {
+        NativeImage old1 = captured[0], old2 = captured[1], new2 = captured[4], old3 = captured[5], noTr = captured[6];
+        save(mc, old2, "21_army_old2");
+        save(mc, old3, "21_army_old3");
+        save(mc, new2, "21_army_instanced2");
+        saveDiff(mc, old1, old2, "21_army_diff_old_old");
+        if (noTr != null) {
+            save(mc, noTr, "21_army_instanced_tr_old");
+            saveDiff(mc, old1, noTr, "21_army_diff_tr_old");
+        }
+        ReignOfNether.LOGGER.info("[Eyes] 21_army parity diagnostic (not the verdict): old vs instanced with the translucent "
+                + "bodies the old way {} px differ by more than {}/255", differing(old1, noTr), PARITY_DELTA);
     }
 
     private static void closeAll() {
@@ -628,6 +650,8 @@ final class EyesArmyScene {
     }
 
     private static void save(Minecraft mc, NativeImage img, String name) {
+        if (img == null)
+            return;
         try {
             img.writeToFile(shotFile(mc, name));
             ReignOfNether.LOGGER.info("[Eyes] clip-mark {} {}", name, System.currentTimeMillis());
