@@ -22,6 +22,7 @@ import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.UnitDamage;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.modelling.animations.TitheBinderDrive;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -161,6 +162,18 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
     /** Half a bind waits for its other half: the renderer's ghost in the next slot. */
     public static final EntityDataAccessor<Boolean> halfBindDataAccessor =
         SynchedEntityData.defineId(TitheBinderUnit.class, EntityDataSerializers.BOOLEAN);
+    /**
+     * Animation cues for the client rig (TitheBinderDrive): a counter that steps once per event, and the unit it aims
+     * at (-1: none, or a building). Set once per volley wind-up / Grave Hook throw, never per tick.
+     */
+    public static final EntityDataAccessor<Integer> volleyCueDataAccessor =
+        SynchedEntityData.defineId(TitheBinderUnit.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> volleyTargetDataAccessor =
+        SynchedEntityData.defineId(TitheBinderUnit.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> hookCueDataAccessor =
+        SynchedEntityData.defineId(TitheBinderUnit.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> hookTargetDataAccessor =
+        SynchedEntityData.defineId(TitheBinderUnit.class, EntityDataSerializers.INT);
 
     @Override
     protected void defineSynchedData() {
@@ -170,6 +183,60 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
         this.entityData.define(onDeathCommandDataAccessor, "");
         this.entityData.define(weaponsDataAccessor, TitheLedger.START_WEAPONS);
         this.entityData.define(halfBindDataAccessor, false);
+        this.entityData.define(volleyCueDataAccessor, 0);
+        this.entityData.define(volleyTargetDataAccessor, -1);
+        this.entityData.define(hookCueDataAccessor, 0);
+        this.entityData.define(hookTargetDataAccessor, -1);
+    }
+
+    /** Client only: this unit's animation driver, made by TitheBinderRenderer on the first draw (null on the server). */
+    @Nullable
+    public TitheBinderDrive clientDrive;
+
+    /** The volley cue counter (synced): steps when a volley's wind-up starts. */
+    public int getVolleyCue() {
+        return this.entityData.get(volleyCueDataAccessor);
+    }
+
+    /** The unit the last volley cue aimed at (synced), -1 for none or a building. */
+    public int getVolleyTargetId() {
+        return this.entityData.get(volleyTargetDataAccessor);
+    }
+
+    /** The Grave Hook cue counter (synced): steps when the hook is thrown. */
+    public int getHookCue() {
+        return this.entityData.get(hookCueDataAccessor);
+    }
+
+    /** The unit the hook is on (synced), -1 once the hook is over or let go. */
+    public int getHookTargetId() {
+        return this.entityData.get(hookTargetDataAccessor);
+    }
+
+    // the volley cue (server): the wind-up seen last tick, and when the last cue went out (game time)
+    private boolean windingUp = false;
+    private long lastVolleyCue = Long.MIN_VALUE / 2;
+
+    private void cueVolley(int targetId) {
+        this.entityData.set(volleyTargetDataAccessor, targetId);
+        this.entityData.set(volleyCueDataAccessor, getVolleyCue() + 1);
+        lastVolleyCue = level().getGameTime();
+    }
+
+    /**
+     * Server: steps the volley cue on the first tick of a wind-up, mirroring UnitRangedAttackGoal's own condition (a
+     * live target in range, the cooldown run out; not its line-of-sight check); the goal's private wind-up counter
+     * starts on the next tick, so the client's clip t0 lands about one tick before it and its strike (t13) on the
+     * volley (wind-up 14).
+     */
+    private void tickVolleyCue() {
+        LivingEntity target = getTarget();
+        boolean winding = attackGoal != null && target != null && target.isAlive()
+            && attackGoal.getAttackCooldown() <= 0 && !this.hasEffect(MobEffectRegistrar.DISARM.get())
+            && distanceTo(target) <= getAttackRange();
+        if (winding && !windingUp)
+            cueVolley(target.getId());
+        windingUp = winding;
     }
 
     @Nullable
@@ -372,6 +439,7 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
         if (level() instanceof ServerLevel sl && isAlive()) {
             if (buildingClock != null)
                 buildingClock.tickAttackCooldown();
+            tickVolleyCue();
             tickHits(sl);
             tickHook(sl);
             int event = ledger.tick(now());
@@ -389,6 +457,9 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
     public void performUnitRangedAttack(LivingEntity target, float velocity) {
         if (target == null || !(level() instanceof ServerLevel sl) || this.hasEffect(MobEffectRegistrar.DISARM.get()))
             return;
+        // the cue normally went out at the wind-up's start; a volley whose wind-up it missed still shows (late)
+        if (sl.getGameTime() - lastVolleyCue > TitheLedger.WINDUP_TICKS + 2)
+            cueVolley(target.getId());
         volley(sl, new Volley(target.getId(), target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(), null),
             Math.sqrt(distanceToSqr(target)));
         if (target instanceof Unit unit)
@@ -403,6 +474,7 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
         BuildingPlacement building = BuildingUtils.findBuilding(false, BlockPos.containing(x, y - 0.5, z));
         if (building == null || !building.isAttackable())
             return;
+        cueVolley(-1);   // a building volley has no wind-up of its own: the clip starts at the shot
         volley(sl, new Volley(-1, x, y, z, building), Math.sqrt(distanceToSqr(x, y, z)));
     }
 
@@ -544,6 +616,8 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
         hookMoved = 0;
         hookFallbacks = 0;
         hookTrailNote = null;
+        this.entityData.set(hookTargetDataAccessor, target.getId());
+        this.entityData.set(hookCueDataAccessor, getHookCue() + 1);
         return null;
     }
 
@@ -551,6 +625,7 @@ public class TitheBinderUnit extends Monster implements Unit, AttackerUnit, Rang
         hookTargetId = -1;
         hookAge = -1;
         hookMover = null;
+        this.entityData.set(hookTargetDataAccessor, -1);   // the client reels the hook home
     }
 
     private void tickHook(ServerLevel sl) {
