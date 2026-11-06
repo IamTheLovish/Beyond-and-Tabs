@@ -21,6 +21,7 @@ NBT = os.path.join(RES, "data", "reignofnether", "structures", "heartwood_hall.n
 NBT_ASSETS = os.path.join(RES, "assets", "reignofnether", "structures", "heartwood_hall.nbt")
 C = 7
 STONE = ("stone_brick", "cobblestone", "calcite")
+HIDDEN_MAX = 125                   # ground cells the hall may hide from the RTS camera (main 90, round 12 165)
 
 
 def _ring(q):
@@ -199,6 +200,45 @@ class HeartwoodHallTest(unittest.TestCase):
             mat = [q for q, n in self.names.items() if n == "moss_carpet" and q[1] == 1 and _ring(q) >= 5
                    and (q[0] - C) * sx >= 4 and (q[2] - C) * sz >= 4]
             self.assertGreaterEqual(len(mat), 4, ((sx, sz), mat))
+
+    # ------------------------------------------------------------------ round 13 (Eris.14 on the round 12 critic)
+    def test_the_rts_view_holds_the_whole_tree(self):
+        """At the RTS camera's normal zoom (the rts still: OrthoviewClientEvents' frame, 30 blocks tall, centred on
+        the footprint at 0.3 of the height) the whole building is in the frame with a margin: its highest corner stays
+        under 95 % of the half-height. Round 12 (box 36): the frame's top edge cut the crown's top off ("crown is
+        clipped by the frame top; it extends above the normal camera view", Fable critic round 12)."""
+        import itertools
+        import numpy as np
+        solid = list(self._solid())
+        size = tuple(max(q[i] for q in solid) + 1 for i in range(3))
+        _, c, _, r, u, hw, hh = G.still_camera(size, "rts")
+        top = max((np.array(q, float) + d - c) @ u for q in solid for d in itertools.product((0, 1), repeat=3))
+        self.assertLessEqual(top / hh, 0.95, (size, top / hh))
+
+    def test_the_crown_hides_little_ground_behind_the_hall(self):
+        """A unit standing behind the hall stays in sight: of the ground cells outside the footprint, at most
+        HIDDEN_MAX have the RTS camera's ray to a unit's head (1.8 over the ground) blocked by the building. The hall on
+        main (box 22): 90; round 11 (30): 124; round 12 (36): 165 - the crown lifted high over a lean that falls
+        away from the camera hid units behind it (Eris.14 on the round 12 critic, Nov 6)."""
+        import math
+        p = math.radians(G.rts_pitch(30.0))
+        back = (-math.cos(p) / math.sqrt(2), math.sin(p), math.cos(p) / math.sqrt(2))   # towards the camera
+        solid = set(self._solid())
+        top = max(q[1] for q in solid)
+        hidden = 0
+        for gx in range(-12, 28):
+            for gz in range(-12, 28):
+                if 0 <= gx < 15 and 0 <= gz < 15:
+                    continue
+                t = 0.0
+                while 1.8 + back[1] * t <= top + 1.5:
+                    t += 0.25
+                    q = (math.floor(gx + 0.5 + back[0] * t), math.floor(1.8 + back[1] * t),
+                         math.floor(gz + 0.5 + back[2] * t))
+                    if q in solid:
+                        hidden += 1
+                        break
+        self.assertLessEqual(hidden, HIDDEN_MAX, hidden)
 
     def test_data_and_assets_copies_match(self):
         with open(NBT, "rb") as f, open(NBT_ASSETS, "rb") as g:
