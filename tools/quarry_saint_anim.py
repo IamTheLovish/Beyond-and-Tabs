@@ -181,6 +181,58 @@ SHIN_LEN = math.sqrt(sum(v * v for v in SHIN_VEC))
 SHIN_DELTA = math.degrees(math.atan2(-SHIN_VEC[2], -SHIN_VEC[1]))         # its forward lean at rest (deg)
 
 
+def q_of(R):
+    """A unit quaternion (w, x, y, z) of a rotation matrix."""
+    tr_ = R[0][0] + R[1][1] + R[2][2]
+    if tr_ > 0:
+        s = math.sqrt(tr_ + 1.0) * 2
+        return (0.25 * s, (R[2][1] - R[1][2]) / s, (R[0][2] - R[2][0]) / s, (R[1][0] - R[0][1]) / s)
+    if R[0][0] > R[1][1] and R[0][0] > R[2][2]:
+        s = math.sqrt(1.0 + R[0][0] - R[1][1] - R[2][2]) * 2
+        return ((R[2][1] - R[1][2]) / s, 0.25 * s, (R[0][1] + R[1][0]) / s, (R[0][2] + R[2][0]) / s)
+    if R[1][1] > R[2][2]:
+        s = math.sqrt(1.0 + R[1][1] - R[0][0] - R[2][2]) * 2
+        return ((R[0][2] - R[2][0]) / s, (R[0][1] + R[1][0]) / s, 0.25 * s, (R[1][2] + R[2][1]) / s)
+    s = math.sqrt(1.0 + R[2][2] - R[0][0] - R[1][1]) * 2
+    return ((R[1][0] - R[0][1]) / s, (R[0][2] + R[2][0]) / s, (R[1][2] + R[2][1]) / s, 0.25 * s)
+
+
+def mat_of(q):
+    w, x, y, z = q
+    return ((1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)),
+            (2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)),
+            (2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)))
+
+
+def slerp(qa, qb, u):
+    d = sum(qa[i] * qb[i] for i in range(4))
+    if d < 0:
+        qb, d = tuple(-v for v in qb), -d
+    if d > 0.9995:
+        q = tuple(qa[i] + (qb[i] - qa[i]) * u for i in range(4))
+    else:
+        om = math.acos(max(-1.0, min(1.0, d)))
+        s0, s1 = math.sin((1 - u) * om) / math.sin(om), math.sin(u * om) / math.sin(om)
+        q = tuple(qa[i] * s0 + qb[i] * s1 for i in range(4))
+    n = math.sqrt(sum(v * v for v in q))
+    return tuple(v / n for v in q)
+
+
+def interp_rot(bone, da, db, u):
+    """r3b: a bone's delta between two keys by quaternion slerp of its TOTAL rotation (rest + delta), back to a delta
+    the game adds component-wise. A component-wise lerp of Euler angles swung a fist through a far-off orientation when
+    a key's angles sat near the +-180 wrap (the r3 sweep / slam clips: the left fist up to 38 px off the haft)."""
+    if u <= 0.0:
+        return list(da)
+    if u >= 1.0:
+        return list(db)
+    rest = REST_ROT.get(bone, [0.0, 0.0, 0.0])
+    Ra = rot_mat(*[rest[i] + da[i] for i in range(3)])
+    Rb = rot_mat(*[rest[i] + db[i] for i in range(3)])
+    tot = euler(mat_of(slerp(q_of(Ra), q_of(Rb), u)))
+    return [wrap(tot[i] - rest[i]) for i in range(3)]
+
+
 def key(name):
     return KEYS[name]
 
@@ -208,7 +260,7 @@ def blend_keys(table, t):
         if n.startswith("_"):
             continue
         ra, rb = ka.get(n, [0.0, 0.0, 0.0]), kb.get(n, [0.0, 0.0, 0.0])
-        rot[n] = [ra[i] + (wrap(rb[i] - ra[i])) * u for i in range(3)]
+        rot[n] = interp_rot(n, ra, rb, u)
     ma = ka.get("_move", {}).get("pelvis", [0.0, 0.0, 0.0])
     mb = kb.get("_move", {}).get("pelvis", [0.0, 0.0, 0.0])
     move = [ma[i] + (mb[i] - ma[i]) * u for i in range(3)]
@@ -499,7 +551,7 @@ def baked_arms(clip, t):
     a_, b_ = at(t - 1), at(t + 1)
     if a_ is None or b_ is None:
         return None
-    return {n: [a_[n][i] + wrap(b_[n][i] - a_[n][i]) * 0.5 for i in range(3)] for n in a_}
+    return {n: interp_rot(n, a_[n], b_[n], 0.5) for n in a_}
 
 
 def add(rot, n, d):
@@ -621,7 +673,7 @@ def walk(st, inp, t, fx):
         if n.startswith("_") or n in ("pelvis", "thigh_r", "thigh_l", "shin_r", "shin_l", "foot_r", "foot_l"):
             continue
         ra, rc = ka.get(n, [0.0, 0.0, 0.0]), kc.get(n, [0.0, 0.0, 0.0])
-        rot[n] = [ra[i] + wrap(rc[i] - ra[i]) * c for i in range(3)]
+        rot[n] = interp_rot(n, ra, rc, c)
     ank = {}
     planted = []
     stance_z = 0.0
