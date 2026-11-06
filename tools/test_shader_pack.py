@@ -147,6 +147,19 @@ class ShaderPack(unittest.TestCase):
         self.assertAlmostEqual(fade(40.0), 1.0, delta=1e-3)   # a 1-block tuft's shadow <= 1.2 blocks long
         self.assertAlmostEqual(fade(20.0), 0.0, delta=1e-3)   # golden hour: no streak (it would be 2.7 blocks)
         self.assertTrue(all(fade(a) <= fade(a + 1.0) for a in range(0, 90)))   # never darker as the sun sinks
+        # a faded-out plant writes no depth (Eris.16, #544 r1): the map keeps the nearest caster, so a tuft written at
+        # opacity 0 in front of a solid caster (a slope, a bank, a low wall) would read fully lit where main reads 0.7.
+        # shadow.fsh discards a caster under CASTER_NONE - which a plant's opacity is at 20 degrees and below, and
+        # never at 40 and up (and a solid caster, 1, never is)
+        sfsh = spc.code_of(read("shadow.fsh"))
+        self.assertIn("if (texture2D(texture, texcoord).a < 0.1 || casterOpacity < CASTER_NONE) discard;", sfsh)
+        self.assertLess(sfsh.index("casterOpacity < CASTER_NONE"), sfsh.index("gl_FragData[0] ="))
+        none = spc.float_const(sfsh, "CASTER_NONE")
+        plant = spc.float_const(settings, "PLANT_SHADOW", 0.0)
+        self.assertLess(plant * fade(20.0), none)
+        self.assertLess(plant * fade(10.0), none)
+        self.assertGreater(plant * fade(40.0), none)
+        self.assertTrue(0.0 < none <= 1.0 / 255)          # under one 8-bit step: nothing visible is dropped
         # lit.fsh hands the lookup whether the pixel is a plant; the water's bed never is
         fsh = spc.code_of(read("program", "lit.fsh"))
         self.assertIn("shadow = sunShadow(playerPos, worldNormal, fit, foliage);", fsh)
