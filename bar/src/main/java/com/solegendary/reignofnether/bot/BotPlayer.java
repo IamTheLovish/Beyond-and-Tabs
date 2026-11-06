@@ -736,10 +736,23 @@ public class BotPlayer {
                         lab.centrePos.toShortString(), lab.isBuilt, lab.getBlocksPlaced(), lab.getBlocksTotal(), lab.getBlocksPlacedPercent() * 100,
                         lab.getBuilders().size(), near, nearest == Double.MAX_VALUE ? -1 : nearest);
                 }
-                com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Bot] {} T2LAB GameTest diag at {}: tier2 {}, researching {}, t1 lab {} finished {}, lab {}, metal fill {}, workers {}",
+                // DIAG 2: where the metal goes - the stream's income and expense, and every build and queue drawing on it
+                java.util.Map<String, Integer> building = new java.util.TreeMap<>(), queued = new java.util.TreeMap<>();
+                for (BuildingPlacement bp : buildings) {
+                    if (!bp.isBuilt)
+                        building.merge(bp.getBuilding().name + (bp.getBuilders().isEmpty() ? " (no builders)" : ""), 1, Integer::sum);
+                    if (bp instanceof ProductionPlacement pp)
+                        for (var ap : pp.productionQueue)
+                            queued.merge(ap.item == null ? "?" : ap.item.getItemName(), 1, Integer::sum);
+                }
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Bot] {} T2LAB GameTest diag at {}: tier2 {}, researching {}, t1 lab {} finished {}, lab {}, metal fill {}, workers {};"
+                        + " metal income {}/s expense {}/s stall {}, T2 save {}, building {}, queued {}",
                     name, String.format(java.util.Locale.ROOT, "%d:%02d", gameTime / 1200, gameTime / 20 % 60), tier2, researchingT2,
                     t1Req == null ? "none" : t1Req.name, t1Req != null && com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, t1Req),
-                    labState, String.format(java.util.Locale.ROOT, "%.2f", metalFill), workers.size());
+                    labState, String.format(java.util.Locale.ROOT, "%.2f", metalFill), workers.size(),
+                    String.format(java.util.Locale.ROOT, "%.1f", eco.effectiveMetalIncome() + eco.metalConverted),
+                    String.format(java.util.Locale.ROOT, "%.1f", eco.metalExpense), String.format(java.util.Locale.ROOT, "%.2f", eco.stall),
+                    t2SaveSince < 0 ? "no" : "since " + (t2SaveSince / 1200) + ":" + String.format(java.util.Locale.ROOT, "%02d", t2SaveSince / 20 % 60), building, queued);
             }
             // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction). Behind the tech buildings:
             // ahead of them, a floating easy bot whose Dungeon was cancelled once laid annexes every think and never
