@@ -2,11 +2,13 @@ package com.solegendary.reignofnether.barfx;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-/** Untextured coloured-quad render types for the battle effects. Client only. */
+/** Coloured-quad render types for the battle effects (untextured, and the rune atlas). Client only. */
 @OnlyIn(Dist.CLIENT)
 public final class BarFxRenderTypes extends RenderType {
     private BarFxRenderTypes(String n, VertexFormat f, VertexFormat.Mode m, int b, boolean c, boolean s, Runnable a, Runnable r) {
@@ -33,4 +35,30 @@ public final class BarFxRenderTypes extends RenderType {
             CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setCullState(NO_CULL)
                     .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
                     .setTransparencyState(LIGHTNING_TRANSPARENCY).createCompositeState(false));
+
+    /**
+     * The rune atlas (tools/gen_rune_textures.py): rings, sigils, glyphs, the stacked bands and the small sprites (mote,
+     * beam, spark, the underlay's soft disc) per faction, colours baked in.
+     */
+    public static final ResourceLocation RUNE_ATLAS = new ResourceLocation("reignofnether", "textures/fx/rune_atlas.png");
+
+    /** Rune circles (RuneFxClient): the atlas, linear filtered, added on top like the other light. */
+    public static final RenderType RUNES = create("reignofnether_barfx_runes", DefaultVertexFormat.POSITION_COLOR_TEX,
+            VertexFormat.Mode.QUADS, 1 << 16, false, false,
+            CompositeState.builder().setShaderState(new ShaderStateShard(GameRenderer::getPositionColorTexShader))
+                    .setTextureState(new TextureStateShard(RUNE_ATLAS, true, false)).setCullState(NO_CULL)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
+                    .setTransparencyState(LIGHTNING_TRANSPARENCY).createCompositeState(false));
+
+    /**
+     * The rune circles' dark underlay, drawn before {@link #RUNES}: the atlas's soft disc in black at a low alpha,
+     * ordinarily blended. Additive light can only brighten, so on sunlit grass a green rune loses to the grass; a
+     * slightly darker ground under it is the contrast the light needs.
+     */
+    public static final RenderType RUNES_SHADE = create("reignofnether_barfx_runes_shade", DefaultVertexFormat.POSITION_COLOR_TEX,
+            VertexFormat.Mode.QUADS, 1 << 14, false, false,
+            CompositeState.builder().setShaderState(new ShaderStateShard(GameRenderer::getPositionColorTexShader))
+                    .setTextureState(new TextureStateShard(RUNE_ATLAS, true, false)).setCullState(NO_CULL)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY).createCompositeState(false));
 }

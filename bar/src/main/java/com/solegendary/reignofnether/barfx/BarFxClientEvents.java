@@ -19,6 +19,19 @@ public class BarFxClientEvents {
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_FX);
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS) {
+                // the rune circles' ground layer, before the entities: units stand over their circle
+                try {
+                    BarFxClient.onRenderGround(evt.getPoseStack(), evt.getCamera(), evt.getPartialTick());
+                } catch (Exception e) {
+                    if (!failedOnce) {
+                        failedOnce = true;
+                        com.solegendary.reignofnether.ReignOfNether.LOGGER.error("BarFx ground render failed", e);
+                    }
+                    BarFxClient.clear();
+                }
+                return;
+            }
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
                 return;
             // the ground memory's decal mesh first (worldmemory/GroundMemoryClient): BarFx's glow and smoke sit on top of

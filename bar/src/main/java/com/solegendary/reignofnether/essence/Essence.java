@@ -63,7 +63,8 @@ public final class Essence {
 
     /**
      * Spends {@code amount}: true and taken, or false with nothing changed (short of essence, or not a carrier). A
-     * caster checks every other condition of its cast first and spends last, so a refusal never costs essence.
+     * caster checks every other condition of its cast first and spends last, so a refusal never costs essence - and a
+     * spend is a cast: it starts the caster's rune circle (barfx/RuneFx.cast).
      */
     public static boolean trySpend(LivingEntity carrier, int amount) {
         if (amount < 0 || !isCarrier(carrier))
@@ -72,6 +73,12 @@ public final class Essence {
         if (have < amount)
             return false;
         carrier.getPersistentData().putInt(KEY, have - amount);
+        // a spend is a cast (every caster spell spends last): its faction's rune circle under the caster (barfx/RuneFx)
+        if (amount > 0) {
+            try {
+                com.solegendary.reignofnether.barfx.RuneFx.cast(carrier);
+            } catch (Exception ignored) { }   // a visual never breaks the spell
+        }
         return true;
     }
 

@@ -157,7 +157,8 @@ public class GhostFurnace extends Ability {
         }
         Entity e = UnitServerEvents.spawnMob(EntityRegistrar.GHOST_FURNACE_UNIT.get(), sl, cell.below(), owner);   // stands on top of the given block
         if (!(e instanceof GhostFurnaceUnit furnace)) {
-            Essence.add(caster, ESSENCE_COST);   // nothing came of it: the essence goes back
+            Essence.add(caster, ESSENCE_COST);   // nothing came of it: the essence goes back, and the rune circle ends
+            com.solegendary.reignofnether.barfx.RuneFx.stop(sl, caster.getId());
             if (e != null)
                 e.discard();
             return null;

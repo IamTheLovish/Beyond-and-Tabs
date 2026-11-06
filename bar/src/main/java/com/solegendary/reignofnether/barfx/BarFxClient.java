@@ -87,6 +87,8 @@ public final class BarFxClient {
     static float leftX = 1, leftY, leftZ, upX, upY = 1, upZ;
     static boolean ortho = false;
     static float zoom = 30;
+    /** The window's width over its height (the RTS view is zoom blocks tall, zoom x aspect wide). */
+    static float aspect = 16 / 9f;
 
     // camera shake
     static float shakeAmt = 0;
@@ -172,6 +174,7 @@ public final class BarFxClient {
     public static void clear() {
         live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; craterCount = 0; shakeAmt = 0;
         DomeFx.clear();
+        RuneFxClient.clear();
         FormingFx.clear();
     }
 
@@ -188,6 +191,7 @@ public final class BarFxClient {
                 // (SfxClient does its own fog and distance checks and rate limits)
                 com.solegendary.reignofnether.sounds.SfxClient.onFx(e);
                 if (e.type == BarFx.DOME) { DomeFx.ingest(e, clock); continue; }   // kept even off screen: it lasts seconds
+                if (e.type == BarFx.RUNE) { RuneFxClient.ingest(e, clock); continue; }   // fog-filtered on the server; lit test when drawn
                 if (e.type == BarFx.FORMING) { FormingFx.ingest(e, clock); continue; }   // the same: ~1.6 s, spawns when near
                 if (e.type == BarFx.SFX || !visible(e.x, e.y, e.z)) continue;
                 switch (e.type) {
@@ -231,6 +235,19 @@ public final class BarFxClient {
             return (float) Math.sqrt(px * px + py * py + pz * pz);
         }
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    /**
+     * Whether (x, y, z) lies within {@code margin} blocks of the screen: in the RTS view, of the orthographic frame's
+     * rectangle (zoom tall, zoom x aspect wide, measured along the camera's own left and up axes); in first person,
+     * {@link #near}. Tighter than near() in the RTS view, which keeps a round area well past the frame's edges.
+     */
+    static boolean onScreen(float x, float y, float z, float margin) {
+        if (!ortho)
+            return near(x, y, z, margin);
+        float dx = x - camX, dy = y - camY, dz = z - camZ;
+        float side = Math.abs(dx * leftX + dy * leftY + dz * leftZ), high = Math.abs(dx * upX + dy * upY + dz * upZ);
+        return high < zoom / 2 + margin && side < zoom / 2 * aspect + margin;
     }
 
     static boolean near(float x, float y, float z, float margin) {
@@ -1070,6 +1087,31 @@ public final class BarFxClient {
 
     // ------------------------------------------------------------------ frame: step + draw
 
+    /** This frame's camera, for every pass that draws (the rune circles' ground pass runs before the frame's step). */
+    private static void camera(Camera camera) {
+        Vec3 cp = camera.getPosition();
+        camX = (float) cp.x; camY = (float) cp.y; camZ = (float) cp.z;
+        Vector3f look = camera.getLookVector(), left = camera.getLeftVector(), up = camera.getUpVector();
+        lookX = look.x(); lookY = look.y(); lookZ = look.z();
+        leftX = left.x(); leftY = left.y(); leftZ = left.z();
+        upX = up.x(); upY = up.y(); upZ = up.z();
+        ortho = OrthoviewClientEvents.isEnabled();
+        zoom = OrthoviewClientEvents.getZoom();
+        var win = Minecraft.getInstance().getWindow();
+        aspect = win.getScreenWidth() / (float) Math.max(1, win.getScreenHeight());   // as OrthoviewClientEvents frames it
+    }
+
+    /**
+     * Before the entities (RenderLevelStageEvent AFTER_CUTOUT_BLOCKS): the rune circles' ground layer, so the units
+     * stand over it. On the clock of the last step (one frame old; the light above draws on the same clock).
+     */
+    public static void onRenderGround(PoseStack poseStack, Camera camera, float partialTick) {
+        if (MC.level == null || MC.level != lastLevel)
+            return;
+        camera(camera);
+        RuneFxClient.renderGround(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
+    }
+
     public static void onRenderFrame(PoseStack poseStack, Camera camera, float partialTick) {
         ClientLevel level = MC.level;
         if (level == null) { if (!live.isEmpty() || !decals.isEmpty()) clear(); lastLevel = null; return; }
@@ -1082,15 +1124,7 @@ public final class BarFxClient {
         clock += dt;
         shakeAmt *= (float) Math.exp(-dt * 5);
 
-        // camera
-        Vec3 cp = camera.getPosition();
-        camX = (float) cp.x; camY = (float) cp.y; camZ = (float) cp.z;
-        Vector3f look = camera.getLookVector(), left = camera.getLeftVector(), up = camera.getUpVector();
-        lookX = look.x(); lookY = look.y(); lookZ = look.z();
-        leftX = left.x(); leftY = left.y(); leftZ = left.z();
-        upX = up.x(); upY = up.y(); upZ = up.z();
-        ortho = OrthoviewClientEvents.isEnabled();
-        zoom = OrthoviewClientEvents.getZoom();
+        camera(camera);
 
         trailAcc += dt;
         if (trailAcc >= 1 / 30f) {
@@ -1128,6 +1162,8 @@ public final class BarFxClient {
         // barriers (DomeFx) are drawn first: the light below sits on top of them
         if (!DomeFx.isEmpty())
             DomeFx.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
+        // rune circles (RuneFxClient): their light above the ground (the ground layer drew before the entities)
+        RuneFxClient.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
         if (live.isEmpty() && decals.isEmpty()) return;
 
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();

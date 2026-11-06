@@ -50,6 +50,7 @@ public class BarFxServerEvents {
         if (evt.phase != TickEvent.Phase.END || !(evt.level instanceof ServerLevel sl))
             return;
         try {
+            RuneFx.tick(sl);
             BarFx.flush(sl);
         } catch (Exception ignored) { }
     }
@@ -154,6 +155,7 @@ public class BarFxServerEvents {
             LivingEntity e = evt.getEntity();
             if (e == null || e.level().isClientSide() || e instanceof ArmorStand || evt.isCanceled())
                 return;
+            RuneFx.onDeath(e);   // a caster's rune circle ends with it
             byte kind = BarFx.D_FLESH;
             if (e instanceof AbstractGolem || e instanceof Blaze || e instanceof Ghast || e instanceof Vex ||
                 e instanceof WitherBoss)
