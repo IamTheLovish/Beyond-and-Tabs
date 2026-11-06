@@ -343,7 +343,7 @@ def lantern(m, hand_pt, fore, chain_len, cage=(3.5, 4.5)):
     attach(m, ln, "chain", (hx, top, hz))
 
 
-def bow(m, grip, length, lean_out, fore, depth=2.6, fix=True):
+def bow(m, grip, length, lean_out, fore, depth=2.6, fix=True, string=True):
     """A recurve bow held at its grip: the long axis leaning `lean_out` degrees outward (+x), the limbs bowed toward
     the target (-z), horn-gold tips flicked forward, a string between the tips."""
     b = m.bone("bow", list(grip))
@@ -363,10 +363,52 @@ def bow(m, grip, length, lean_out, fore, depth=2.6, fix=True):
     for t in (-1.0, 1.0):
         b.box_at(P(t), (1.1, 1.1, 1.1), "gold")
     s0, s1 = _add(P(-1.0), (0, 0, 0.5)), _add(P(1.0), (0, 0, 0.5))
-    slab(b, lerp(s0, s1, 0.5), sub(s1, s0), (1.0, 0.0, 0.0), (0.4, 0.4, math.dist(s0, s1)), "string")
+    if string:
+        slab(b, lerp(s0, s1, 0.5), sub(s1, s0), (1.0, 0.0, 0.0), (0.4, 0.4, math.dist(s0, s1)), "string")
+    b.string_ends = (s0, s1)
     if fix:
         attach(m, b, fore, grip)
     return b, Lx
+
+
+def turn_down_to(u):
+    """DSL degrees of the rotation that turns -y onto direction u (the smallest one)."""
+    from gen_models import euler
+    a, b = (0.0, -1.0, 0.0), _unit(u)
+    ax = _cross(a, b)
+    sn = math.sqrt(_dot(ax, ax))
+    if sn < 1e-9:
+        return [0.0, 0.0, 0.0]
+    x, y, z = _mul(ax, 1.0 / sn)
+    c = _dot(a, b)
+    C = 1.0 - c
+    R = ((c + x * x * C, x * y * C - z * sn, x * z * C + y * sn),
+         (y * x * C + z * sn, c + y * y * C, y * z * C - x * sn),
+         (z * x * C - y * sn, z * y * C + x * sn, c + z * z * C))
+    return euler(R)
+
+
+def bow_string_b4(m, bw, la_fore):
+    """Round 4 archer: the bow's string as two halves the rig can draw - string_top / string_bot, each pivoted on its
+    bow tip with ONE cube hanging along its own -y to the string's middle (so the rig turns it at the draw hand and
+    stretches it with a y scale); at rest they meet as the slack string."""
+    s0, s1 = bw.string_ends
+    mid = lerp(s0, s1, 0.5)
+    for name, tip in (("string_bot", s0), ("string_top", s1)):
+        L = math.dist(tip, mid) + 0.2
+        sb = m.bone(name, list(tip))
+        sb.box_at((tip[0], tip[1] - L / 2, tip[2]), (0.4, L, 0.4), "string")
+        attach(m, sb, "bow", tip, turn=turn_down_to(sub(mid, tip)))
+
+
+def arrow_b4(m, hand, ra_fore):
+    """Round 4 archer: the nocked arrow, one bone on the draw hand (a shaft along its -z, a gold head, white
+    fletching); the rig shows it from the nock to the release and points it at the bow."""
+    ab = m.bone("arrow", list(hand))
+    ab.box_at((hand[0], hand[1], hand[2] - 4.6), (0.45, 0.45, 9.2), "bow_dark")
+    ab.box_at((hand[0], hand[1], hand[2] - 9.4), (0.8, 0.8, 0.8), "gold")
+    ab.box_at((hand[0], hand[1], hand[2] - 0.8), (0.2, 1.1, 1.6), "string")
+    attach(m, ab, ra_fore, hand)
 
 
 def quiver(m, base, top):
@@ -831,6 +873,8 @@ def build_b2(kind, rnd=2):
     if rnd == 3:
         pal["sun"] = "#ffe188"                 # round 3, 3: the halo's gold ~20% less saturated (#ffd96a)
         pal["halo_gold"] = "#d4af5a"           # the Mender's disc face (gold #d4a63c, ~20% less saturated)
+    if rnd == 4:
+        pal["halo_rim"] = "#9c7424"            # motion round 2: a 1 px darker gold rim (reads on the cream wing)
     # round 4 (B4): B3 with ONE change - B2's halo back (geometry and colours: the ring's tube 2.1 px in sun #ffd96a,
     # the Mender's gold disc); the blind critic read B2's ring at far and lost B3's (a 1 px smudge on the grass)
     m = Model("%s - %s (massing %s)" % (NAMES[kind], MASSING[key], key.upper()), "sunforged",
@@ -852,6 +896,12 @@ def build_b2(kind, rnd=2):
         # 4: the tube 2.1 px, the ring widened to 10.5 and raised 1 px so its hole stays open over the crown (the
         # first r2 render: a 9 px ring with the thick tube closed into a blob with the head at far)
         halo_ring(m, (0.0, chin + H + 0.4, back + 2.0), 10.5, 2.1, 1.2, 25.0, n=8)
+    if rnd == 4:
+        # the rim: a 0.5 px ring just outside the halo's outer edge (ring: 10.5 OD; the Mender's disc: 9 OD)
+        hb = m.bones["halo"]
+        c = tuple(hb.pivot)
+        ring(hb, c, (4.5 if kind == "mender" else 5.25) + 0.25, 8, 0.5, 0.9 if kind == "mender" else 1.2,
+             "halo_rim")
     sx, sy, sz = body["shoulder"]
     la = arm_b2(m, 1, (sx, sy, sz), body["up"], body["fore"], body["arm_w"], body["sleeve"], body["fore_c"],
                 body["cuff"])
@@ -872,11 +922,16 @@ def build_b2(kind, rnd=2):
         m.contact_ok += [("left_fore", "chain")]
     elif kind == "archer":
         grip = (6.4, 19.0, -7.2)
-        bw, Lx = bow(m, grip, 34.0, 20.0, la[1], fix=False)
+        bw, Lx = bow(m, grip, 34.0, 20.0, la[1], fix=False, string=(rnd != 4))
         errs.append(grip_hold(m, la, "bow", grip, Lx, 0.62, 1, (-0.1, 0.4, 0.9), elbow_at=(6.4, 20.8, -2.6)))
         attach(m, bw, la[1], grip)
+        if rnd == 4:
+            bow_string_b4(m, bw, la[1])
         errs.append(solve(m, ra, (-sx - 0.4, wy - 1.0, fz - 1.2)))
         open_hand(m, ra, -1)
+        if rnd == 4:
+            arrow_b4(m, m.fk(ra[1], (ra[2][0], ra[2][1] - 1.2, ra[2][2] - 0.2)), ra[1])
+            m.contact_ok += [("right_fore", "arrow"), ("bow", "string_top"), ("bow", "string_bot")]
         bz = body["back_z"] + 0.6
         quiver(m, (-0.6, 12.8, bz), (-1.4, 20.2, bz))
     else:
