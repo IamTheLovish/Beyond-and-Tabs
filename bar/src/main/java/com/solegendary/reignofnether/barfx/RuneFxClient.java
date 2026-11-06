@@ -73,11 +73,24 @@ public final class RuneFxClient {
      * The cost cuts (the zoom-30 budget, Eris.15): a wide soft stroke (the halo, the dark line: wider than SOFT_K core
      * widths) takes chords within SAG_SOFT_PX, its fading edges hide the corners; a stroke thinner than THIN_PX on
      * screen is one strip of the same light, not three (its two fading strips would be under a pixel); and a circle
-     * off the screen is not drawn ({@link BarFxClient#onScreen}). Always on in play; the eyes scene turns them off on
-     * half its slices to time the old path on the same runner.
+     * off the screen is not drawn ({@link BarFxClient#onScreen}, with a margin of the release pulse's reach and the
+     * sigil's height, so a circle half on the screen is drawn whole and none pops at the edge). Always on: the shipped
+     * path. Only an eyes run (-Dbat.eyes=true) can turn them off, on half its slices, to time the old path on the same
+     * runner ({@link #eyesOldPath}); nothing else reaches the switch.
      */
     static final float SAG_SOFT_PX = 1.0f, SOFT_K = 1.5f, THIN_PX = 1.75f;
-    public static boolean lean = true;
+    private static final boolean EYES = Boolean.getBoolean("bat.eyes");
+    private static boolean lean = true;
+
+    /** The eyes scene's A/B: draw without the cost cuts while {@code old}. Outside an eyes run it does nothing. */
+    public static void eyesOldPath(boolean old) {
+        lean = !(old && EYES);
+    }
+
+    /** Whether the cost cuts are on (always, outside an eyes run's old-path slices). */
+    public static boolean lean() {
+        return lean;
+    }
     /** Slices over which the sweep's leading edge fades in. */
     static final int FEATHER = 3;
     /** The outer rim sits at this share of a ring cell's width. */

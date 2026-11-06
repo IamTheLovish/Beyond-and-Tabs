@@ -65,7 +65,7 @@ import java.util.List;
  * showed arcs where a game at full frame rate holds whole circles).
  * Adds the still 18_overlays_runes_close (zoom 15 over the centre squad) and a "[Eyes] 18_overlays runes" line per slice
  * and per zoom: the circles' draw time per frame (RuneFxClient's own counter) and how many were held.
- * With runes the measurement runs the order twice, RuneFxClient.lean (its cost cuts) on for half of each zoom's slices
+ * With runes the measurement runs the order twice, RuneFxClient's cost cuts on for half of each zoom's slices
  * and off for the other half, ABBA then BAAB in time: "runes A/B" gives both paths' ms and vertices per frame from the
  * same runner (Eris.15: runner speed drifts about 1 ms between runs). The budget line reads the lean slices, as played.
  * <p>
@@ -312,7 +312,7 @@ final class EyesOverlaysScene {
         results.clear();
         runeRows.clear();
         runeNext = new float[0];
-        RuneFxClient.lean = true;
+        RuneFxClient.eyesOldPath(false);
         next(1);
     }
 
@@ -460,7 +460,7 @@ final class EyesOverlaysScene {
         measuring = false;
         sliceNanos = System.nanoTime();
         EyesDirector.setZoom(zoomAt(i));
-        RuneFxClient.lean = RUNES == 0 || leanAt(i);
+        RuneFxClient.eyesOldPath(RUNES > 0 && !leanAt(i));
         OrthoviewClientEvents.centreCameraOnPosInstant(centre);
     }
 
@@ -524,7 +524,7 @@ final class EyesOverlaysScene {
         if (RUNES > 0) {
             double runeMs = (RuneFxClient.renderNanos() - runeNs0) / 1e6 / n;
             double verts = (RuneFxClient.vertices() - runeVerts0) / (double) n;
-            boolean lean = RuneFxClient.lean;
+            boolean lean = RuneFxClient.lean();
             runeRows.add(new double[] { zoomAt(slice), runeMs, RuneFxClient.live(), lean ? 1 : 0, verts });
             ReignOfNether.LOGGER.info("[Eyes] 18_overlays runes slice {}/{}: zoom {}, {}, {} casters, {} circles held: {} ms/frame, "
                     + "{} vertices/frame", slice + 1, slices(), zoomAt(slice), lean ? "lean" : "old path", runeCasters.size(),
@@ -584,7 +584,7 @@ final class EyesOverlaysScene {
     }
 
     private static void runeSummary() {
-        RuneFxClient.lean = true;
+        RuneFxClient.eyesOldPath(false);
         for (int zoom : ZOOMS) {
             List<double[]> rows = new ArrayList<>(), old = new ArrayList<>();
             for (double[] r : runeRows)
