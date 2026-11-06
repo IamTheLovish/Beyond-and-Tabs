@@ -53,10 +53,12 @@ public final class GroundTilt {
      */
     public static final float TILT_STEP = 12f, DROP_STEP = 0.3f;
     /**
-     * The most the drawn body's height (the unit's drawn height plus the drop) moves in one client tick, blocks: a
-     * little under the playback's own drawn rise (0.34, "r0.34" in the [Motion] notice). Without it the drop pulled the
-     * body down onto the lower ground while the unit's drawn height was still falling after it, and a Bison came down
-     * a step 0.52 in one tick (CI #551's first green).
+     * The most the drop adds to the drawn body's move in one client tick, blocks: the body's height (the unit's drawn
+     * height plus the drop) moves at most this much, or the unit's own drawn move when that is more - a little under
+     * the playback's own drawn rise (0.34, "r0.34" in the [Motion] notice). Without it the drop pulled the body down
+     * onto the lower ground while the unit's drawn height was still falling after it, and a Bison came down a step 0.52
+     * in one tick (CI #551's first green). It only ever holds the drop back: it never pushes the drop against the unit's
+     * own move (#551 round 1 review, N1: a throw, a jump or a teleport up drew the body up to 0.75 under its height).
      */
     public static final float BODY_STEP = 0.33f;
 
@@ -181,9 +183,10 @@ public final class GroundTilt {
 
     /**
      * One client tick of the drawn tilt and drop toward {@code target} ({@link #target}'s out), the unit drawn at height
-     * {@code y}: each moves at most {@link #TILT_STEP} / {@link #DROP_STEP}, and the drop no further than keeps the
-     * body's height (y plus the drop) within {@link #BODY_STEP} of last tick's; a fresh slot starts where the ground puts
-     * it.
+     * {@code y}: each moves at most {@link #TILT_STEP} / {@link #DROP_STEP} toward it, never past it or away from it. The
+     * drop follows the ground, never the unit's own move: it never deepens while the unit's drawn height rises (a hop,
+     * a throw, a jump, a teleport up), and where it moves the same way as that height it adds at most up to
+     * {@link #BODY_STEP} to the body's move. A fresh slot starts where the ground puts it.
      */
     public static void step(float[] s, int b, float[] target, double y, boolean fresh) {
         float last = s[b + GROUND_Y];
@@ -196,10 +199,12 @@ public final class GroundTilt {
             float lim = k == 2 ? DROP_STEP : TILT_STEP;
             float next = fresh ? t : cur + Mth.clamp(t - cur, -lim, lim);
             if (k == 2 && !fresh) {
-                float body = dy + (next - cur);
-                if (Math.abs(body) > BODY_STEP)
-                    next = cur + Math.copySign(BODY_STEP, body) - dy;
-                next = Mth.clamp(next, -MAX_DROP, 0f);
+                float move = next - cur;
+                if (move < 0f)          // deeper: never under a rising body; with a falling one, the body within BODY_STEP
+                    move = dy > 0f ? 0f : -Math.min(-move, Math.max(0f, BODY_STEP + dy));
+                else if (move > 0f && dy > 0f)    // back up while the body rises: within BODY_STEP
+                    move = Math.min(move, Math.max(0f, BODY_STEP - dy));
+                next = Mth.clamp(cur + move, -MAX_DROP, 0f);
             }
             s[b + GROUND_PREV + k] = fresh ? next : cur;
             s[b + GROUND + k] = next;

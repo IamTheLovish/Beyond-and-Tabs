@@ -78,7 +78,7 @@ public final class AnimState {
      */
     public static final int GROUND = SP_TURN + Life.SPRING, GROUND_PREV = GROUND + 3, GROUND_Y = GROUND_PREV + 3;
 
-    /** Floats per unit (room left for foot IK). */
+    /** Floats per unit. GROUND_Y takes the last one: foot IK (or anything else) must grow it. */
     public static final int STRIDE = 80;
 
     /** HIT_SIZE values. */
