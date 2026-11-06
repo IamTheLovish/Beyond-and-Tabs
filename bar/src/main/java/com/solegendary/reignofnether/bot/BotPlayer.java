@@ -71,7 +71,8 @@ public class BotPlayer {
         if (faction.equals(Factions.PIGLINS))
             return new Kit(Buildings.CENTRAL_PORTAL, null, null,   // no house (no supply: lovish, Oct 29) or farm
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
-                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
+                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER,
+                            ProductionItems.VOODOO_SHAMAN),   // T1 essence caster: autocasts Hex and Blood Totem; Spirit Puppet and Empower stay manual
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
                     List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST,
                             ProductionItems.GOREHORN_RHINO),   // big-units T2 beast
@@ -297,8 +298,9 @@ public class BotPlayer {
 
     /**
      * The fighters of the army list that count toward {@code t2MinArmy}: an essence caster is support, not army (lovish,
-     * Oct 31: "Count as support") - the Voodoo Shaman is the one caster that is also an AttackerUnit, so it marches in
-     * the army list, but like every other healer and caster it does not make the army a bot fields before Tier 2.
+     * Oct 31: "Count as support") - the Voodoo Shaman and the Gravebound Tombcaller are casters that are also
+     * AttackerUnits, so they march in the army list, but like every other healer and caster they do not make the army a
+     * bot fields before Tier 2.
      */
     public static int t2Fighters(List<? extends LivingEntity> army) {
         int n = 0;
@@ -316,11 +318,21 @@ public class BotPlayer {
      */
     static boolean isCasterItem(ProductionItem item) {
         return item == ProductionItems.ANGEL_CALLER || item == ProductionItems.TOMBCALLER
-            || item == ProductionItems.SPARK_SAGE || item == ProductionItems.SOUL_ENGINEER;
+            || item == ProductionItems.SPARK_SAGE || item == ProductionItems.SOUL_ENGINEER
+            || item == ProductionItems.VOODOO_SHAMAN;
     }
 
     /** Before Tier 2 with fewer than t2MinArmy fighters (t2Fighters): T1 labs train no casters (set each think). */
     boolean fightersFirst = false;
+
+    /**
+     * The army half of the Tier 2 gate: {@code minArmy} fighters, or half of them from
+     * {@link BotTuning#T2_PATIENCE_MINUTES} after the earliest minute {@code t2Minute}.
+     */
+    public static boolean t2ArmyOut(long minutes, List<? extends LivingEntity> army, int t2Minute, int minArmy) {
+        int need = minutes >= t2Minute + BotTuning.T2_PATIENCE_MINUTES ? minArmy / 2 : minArmy;
+        return t2Fighters(army) >= need;
+    }
 
     /**
      * Whether the bot may start Tier 2: it has a finished army lab, has fielded {@code t2MinArmy} fighters (the army comes
@@ -328,18 +340,26 @@ public class BotPlayer {
      * BOT_MIN_ENERGY_INCOME. {@link BotTuning#T2_PATIENCE_MINUTES} after the earliest minute it goes anyway with a lab
      * and half the army, so a map with few patches cannot stop it for ever.
      */
-    boolean t2Ready(long minutes, int fighters, float energyIncome, List<BuildingPlacement> buildings) {
+    boolean t2Ready(long minutes, List<? extends LivingEntity> army, float energyIncome, List<BuildingPlacement> buildings) {
         boolean labBuilt = false;
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && isLab(bp))
                 labBuilt = true;
-        if (!labBuilt)
+        if (!labBuilt || !t2ArmyOut(minutes, army, tuning.t2Minute(), tuning.t2MinArmy()))
             return false;
         if (minutes >= tuning.t2Minute() + BotTuning.T2_PATIENCE_MINUTES)
-            return fighters >= tuning.t2MinArmy() / 2;
-        return fighters >= tuning.t2MinArmy()
-            && metalIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_METAL_INCOME
+            return true;
+        return metalIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_METAL_INCOME
             && energyIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_ENERGY_INCOME;
+    }
+
+    /**
+     * Whether an easy bot holds its T1 repeat queues for the T2 lab (step 5 of think): the lab is missing, Tier 2 is in
+     * or its research is starved, the bot is not floating and the tier gate's {@code minArmy} fighters are out.
+     */
+    public static boolean wantsT2Save(boolean t2LabMissing, boolean tier2, boolean researchStarved, boolean floating,
+                                      List<? extends LivingEntity> army, int minArmy) {
+        return t2LabMissing && (tier2 || researchStarved) && !floating && t2Fighters(army) >= minArmy;
     }
 
     /**
@@ -807,7 +827,7 @@ public class BotPlayer {
         // ready to tech: the capitol stops training workers so its queue empties and the research can start (a hard bot's
         // worker target keeps growing, so its queue was never empty and it only teched after twelve minutes)
         techPending = !tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
-            && t2Ready(minutes, t2Fighters(army), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
+            && t2Ready(minutes, army, averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
         if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (techDiagOn)
@@ -867,7 +887,7 @@ public class BotPlayer {
         if (!t2LabMissing)
             t2SaveSince = -1;
         boolean researchStarved = !tier2 && researching && metalFill < 0.1f;
-        boolean wantsT2Save = t2LabMissing && (tier2 || researchStarved) && !floating() && t2Fighters(army) >= tuning.t2MinArmy();
+        boolean wantsT2Save = wantsT2Save(t2LabMissing, tier2, researchStarved, floating(), army, tuning.t2MinArmy());
         if (wantsT2Save && t2SaveSince < 0)
             t2SaveSince = gameTime;
         boolean savingForT2Lab = wantsT2Save && gameTime - t2SaveSince < T2_SAVE_MAX_TICKS;
@@ -1121,28 +1141,56 @@ public class BotPlayer {
      * a patch that fails this often is given up for the match rather than tried every two minutes forever.
      */
     final java.util.Map<BlockPos, Integer> patchFailures = new java.util.HashMap<>();
-    static final int PATCH_GIVE_UP = 3;
+    public static final int PATCH_GIVE_UP = 3;
 
     /**
      * An extractor over a patch: the 5x5 footprint may sit anywhere that still covers the patch block, and the
      * ground may be a block off the recorded centre (terrain edits, a stamp next to a river), so try those first.
      */
-    boolean placeExtractor(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
+    public boolean placeExtractor(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
         // (counted like placeNear: a soak run where every extractor failed used to read "placeFailures 0")
+        reservedBySide = false;
         boolean ok = placeExtractorImpl(level, patch, workers);
         if (ok) {
             placed(level.getGameTime());
             patchFailures.remove(patch);
         } else {
-            int n = workers.isEmpty() ? 0 : patchFailures.merge(patch, 1, Integer::sum);   // no worker = not the patch's fault
+            // no worker, or a site our side has ordered there (an ally's, the 3-bot T2 test: diag 41947369685 read
+            // {overlaps_blueprint=27} on a free, flat, dry patch): not the patch's fault, so never toward giving it up
+            boolean notThePatch = workers.isEmpty() || reservedBySide;
+            int n = notThePatch ? 0 : patchFailures.merge(patch, 1, Integer::sum);
             placeFailed(level.getGameTime(), kit.extractor(), "no valid footprint over the patch at " + patch.toShortString()
-                + (workers.isEmpty() ? " (no workers)" : "") + (n >= PATCH_GIVE_UP ? " - given up" : ""));
+                + (workers.isEmpty() ? " (no workers)" : reservedBySide ? " (our side has a site ordered there)" : "")
+                + (n >= PATCH_GIVE_UP ? " - given up" : ""));
         }
         return ok;
     }
 
+    /** Set by placeExtractorImpl: an origin over the patch was refused for a pending site of this bot's side. */
+    private boolean reservedBySide = false;
+
+    /** How often the patch was refused for its own sake (PATCH_GIVE_UP gives it up for the match). Public for the game test. */
+    public int patchFailureCount(BlockPos patch) {
+        return patchFailures.getOrDefault(patch, 0);
+    }
+
+    /**
+     * Has this bot's side ordered a site over the patch - its own or an ally's pending blueprint within 10 blocks?
+     * Then the patch is taken: Blueprints.reserves keeps it for the side, so any extractor of ours there is refused.
+     * Public for the game test.
+     */
+    public boolean patchTakenBySide(BlockPos patch) {
+        for (BuildingPlacement bp : com.solegendary.reignofnether.building.Blueprints.all())
+            if ((bp.ownerName.equals(name) || com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(name, bp.ownerName))
+                    && bp.originPos.distSqr(patch) < 10 * 10)
+                return true;
+        return false;
+    }
+
     /** The origins placeExtractorImpl tries over a patch centre, in order (public: the footprint game test walks the same list). */
     public static final int[] EXTRACTOR_DY = { 0, -1, 1 };
+    /** BuildingValidators' refusal for a placement over a pending site of the owner's side. */
+    static final String OVERLAPS_BLUEPRINT = "building.reignofnether.overlaps_blueprint";
     public static final int[][] EXTRACTOR_OFFSETS = { {-2, -2}, {-1, -2}, {-2, -1}, {-3, -2}, {-2, -3}, {-1, -1}, {-3, -3}, {-1, -3}, {-3, -1} };
 
     boolean placeExtractorImpl(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
@@ -1152,8 +1200,12 @@ public class BotPlayer {
         for (int dy : EXTRACTOR_DY)
             for (int[] o : EXTRACTOR_OFFSETS) {
                 BlockPos origin = new BlockPos(patch.getX() + o[0], patch.getY() + dy, patch.getZ() + o[1]);
-                if (!BuildingValidators.isPlacementValid(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true))
+                String refused = BuildingValidators.getPlacementValidityError(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true);
+                if (refused != null) {
+                    if (refused.equals(OVERLAPS_BLUEPRINT))
+                        reservedBySide = true;
                     continue;
+                }
                 workers.sort(java.util.Comparator.<LivingEntity>comparingInt(u -> buildsTech(u, kit.extractor()) ? 1 : 0)
                     .thenComparingDouble(u -> u.blockPosition().distSqr(origin)));   // tech builders last (placeNearImpl)
                 return BuildingServerEvents.placeBuilding(kit.extractor(), origin, Rotation.NONE, name,
@@ -1179,9 +1231,8 @@ public class BotPlayer {
             for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
                 if (!bp.isDestroyedServerside && bp.originPos.distSqr(p) < 10 * 10)
                     return false;
-            for (BuildingPlacement bp : com.solegendary.reignofnether.building.Blueprints.pendingOf(name))
-                if (bp.originPos.distSqr(p) < 10 * 10)
-                    return false;   // an extractor already ordered there
+            if (patchTakenBySide(p))
+                return false;   // an extractor already ordered there, by this bot or an ally
             BlockPos enemy = nearestEnemyBuildingAny(p);
             return enemy == null || enemy.distSqr(p) >= 45 * 45 || enemy.distSqr(p) >= p.distSqr(home);
         });

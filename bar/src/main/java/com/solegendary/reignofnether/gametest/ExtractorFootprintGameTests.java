@@ -198,6 +198,70 @@ public class ExtractorFootprintGameTests {
     }
 
     /**
+     * A patch stamped where a tree stands (CI 41930006194, the bots' T2 test, Nov 4: "no build progress for 45 s at 1606,
+     * 82, -325 ... builders in range 0 of 8 ordered, nearest worker 3.8 blocks away at 1606, 75, -320" - every builder
+     * stood at y 75 within 1.5 blocks of the site's approach cell at y 83, under it). solidTop walks down to the first
+     * solid-render block and a log is one, so the patch was recorded on the trunk's top log; the pad is levelled there
+     * with 4 blocks of fill under it - a platform floating above the workers' ground. A log is not ground: the patch
+     * must sit on the grass the tree grows from, and every faction's extractor must fit on it.
+     */
+    @GameTest(template = ARENA)
+    public static void a_patch_stamped_on_a_tree_sits_on_the_ground_under_it(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 220;
+        int cx = base.getX(), cz = base.getZ();
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 8, y - 1, cz - 8), new BlockPos(cx + 8, y + 12, cz + 8));
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        // an oak on the patch centre: a 6-log trunk under a crown of leaves (persistent, so they do not decay mid-test)
+        net.minecraft.world.level.block.state.BlockState leaf = net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+        for (int k = 1; k <= 6; k++)
+            level.setBlock(new BlockPos(cx, y + k, cz), net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState(), 2);
+        for (int dx = -2; dx <= 2; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                for (int k = 5; k <= 8; k++)
+                    if ((dx != 0 || dz != 0 || k > 6) && Math.abs(dx) + Math.abs(dz) <= (k == 8 ? 1 : 3))
+                        level.setBlock(new BlockPos(cx + dx, y + k, cz + dz), leaf, 2);
+        MetalPatches.forgetAll();
+        try {
+            int top = MetalPatches.solidTop(level, cx, cz);
+            if (top != y) {
+                helper.fail("solidTop under an oak read y " + top + " (the trunk's top log is y " + (y + 6)
+                    + "); the ground is the grass at y " + y);
+                return;
+            }
+            MetalPatches.stamp(level, cx, cz);
+            BlockPos centre = new BlockPos(cx, y, cz);
+            if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK)) {
+                helper.fail("stamp() under an oak left no patch block on the ground at " + centre);
+                return;
+            }
+            List<String> refused = new ArrayList<>();
+            for (ResourceLocation key : new ArrayList<>(Factions.PLAYABLE_FACTIONS)) {
+                Faction f = Factions.getFaction(key);
+                Building e = Factions.isLive(f) ? FactionTraits.of(f).metalExtractor.get() : null;
+                if (e == null)
+                    continue;
+                String err = BuildingValidators.getPlacementValidityError(level, e, centre.offset(-2, 0, -2), "gametest_footprint",
+                    Rotation.NONE, false, false, true);
+                if (err != null)
+                    refused.add(e.structureName + " " + err);
+            }
+            if (refused.isEmpty())
+                helper.succeed();
+            else
+                helper.fail("a patch stamped under an oak refuses: " + refused + " (pad " + obstructions(level, centre) + ")");
+        } finally {
+            MetalPatches.forgetAll();
+        }
+    }
+
+    /**
      * A patch cut into a hillside (flake-stress 40609781800: "pad dry (rim +9)", every obstruction "+9 grass_block" or
      * "+9 dirt_path"): the pad clears 8 up, the hill's top stays as a roof over the footprint and the extractor clips it.
      * A platform high above the terrain with a mound 12 tall over two rows of the pad, then the player's origin.
@@ -243,6 +307,78 @@ public class ExtractorFootprintGameTests {
                 helper.succeed();
             else
                 helper.fail("a patch stamped against a hill 12 tall refuses: " + refused + " (pad " + obstructions(level, centre) + ")");
+        } finally {
+            MetalPatches.forgetAll();
+        }
+    }
+
+    /**
+     * Review r1 on PR 408: a pad that overlaps an earlier, lower pad is levelled to that pad's height (PadHeight), but
+     * drySpot checked the water only at the patch's own ground - and the leveller leaves a cell with water at the pad's
+     * height alone. A river bank: own ground at G, an earlier pad 6 off at G - 1 (it still overlaps: one shared column,
+     * outside the extractor's 5x5), and a pond cell at G - 1 inside this patch's footprint. Snapped down to G - 1 the pond
+     * stayed in the footprint and every faction's extractor was refused; the pad must keep G (dry) and fill the pond.
+     * A platform high above the terrain, as the bamboo and hill tests.
+     */
+    @GameTest(template = ARENA)
+    public static void a_stamped_patch_beside_a_lower_pad_keeps_a_pond_out_of_its_footprint(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 250;
+        int cx = base.getX(), cz = base.getZ(), ax = cx - 6;   // the earlier pad's centre, 6 off: they share column cx - 3
+        var dirt = net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState();
+        var grass = net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState();
+        var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+        // put back when the test ends, pass or fail (the other platforms at this slot sit at 220 and 230)
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 10, y - 5, cz - 8), new BlockPos(cx + 8, y + 10, cz + 8));
+        for (int dx = -10; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                boolean low = dx <= -3;   // the earlier pad's ground, one lower
+                for (int k = 4; k >= 1; k--)
+                    level.setBlock(new BlockPos(cx + dx, y - k, cz + dz), dirt, 3);
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), low ? grass : dirt, 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), low ? air : grass, 3);
+            }
+        BlockPos pond = new BlockPos(cx + 2, y - 1, cz + 2);   // in the footprint (cx - 2 .. cx + 2), one below the ground
+        level.setBlock(pond.above(), air, 3);
+        level.setBlock(pond, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
+        MetalPatches.forgetAll();
+        try {
+            MetalPatches.stamp(level, ax, cz);
+            MetalPatches.stamp(level, cx, cz);
+            int padY = Integer.MIN_VALUE;
+            for (int k = y + 2; k >= y - 3; k--)
+                if (level.getBlockState(new BlockPos(cx, k, cz)).is(MetalPatches.PATCH_BLOCK)) {
+                    padY = k;
+                    break;
+                }
+            if (padY == Integer.MIN_VALUE) {
+                helper.fail("stamp() left no patch block at [" + cx + ", " + cz + "] between " + (y - 3) + " and " + (y + 2));
+                return;
+            }
+            BlockPos centre = new BlockPos(cx, padY, cz);
+            List<String> wet = new ArrayList<>();
+            for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                    for (int k = padY; k <= padY + 1; k++)
+                        if (!level.getBlockState(new BlockPos(cx + dx, k, cz + dz)).getFluidState().isEmpty())
+                            wet.add(dx + "," + dz + " at " + k);
+            List<String> refused = new ArrayList<>();
+            for (ResourceLocation key : new ArrayList<>(Factions.PLAYABLE_FACTIONS)) {
+                Faction f = Factions.getFaction(key);
+                Building e = Factions.isLive(f) ? FactionTraits.of(f).metalExtractor.get() : null;
+                if (e == null)
+                    continue;
+                String err = BuildingValidators.getPlacementValidityError(level, e, centre.offset(-2, 0, -2), "gametest_footprint",
+                    Rotation.NONE, false, false, true);
+                if (err != null)
+                    refused.add(e.structureName + " " + err);
+            }
+            if (wet.isEmpty() && refused.isEmpty())
+                helper.succeed();
+            else
+                helper.fail("a patch at ground " + y + " beside a pad at " + (y - 1) + " was levelled to " + padY
+                    + " with water in its footprint " + wet + "; refused: " + refused + " (pad " + obstructions(level, centre) + ")");
         } finally {
             MetalPatches.forgetAll();
         }
@@ -392,5 +528,75 @@ public class ExtractorFootprintGameTests {
                     cells.add(dx + "," + dz + "," + dy + (fluid.isSource() ? " src" : " flow" + fluid.getAmount()) + "/" + below);
                 }
         return cells.toString();
+    }
+
+    /**
+     * The second mode of bots_reach_tier_2 (Overseer round 15 on #513; diag 41947369685): the three bots of that test
+     * are allies, and every "no valid footprint over the patch" was {overlaps_blueprint=27} on a dry, flat, free
+     * patch - an ALLY's pending extractor reserves it (Blueprints.reserves counts the side). freePatch skipped only the
+     * bot's own blueprints, so it kept picking the patch, each refusal counted toward PATCH_GIVE_UP, and after three the
+     * patch was given up for the match - also when the ally's site was then cancelled - and the bot sat on 3 extractors
+     * (8 metal/s) from minute 2 to 17. A patch an ally has ordered is taken, and refusing it is not the patch's fault.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void a_patch_an_ally_has_ordered_is_skipped_and_never_given_up(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 220;
+        int cx = base.getX(), cz = base.getZ();
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 8, y - 1, cz - 8), new BlockPos(cx + 8, y + 12, cz + 8));
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                for (int k = 1; k <= 12; k++)
+                    level.setBlock(new BlockPos(cx + dx, y + k, cz + dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
+        long tag = helper.absolutePos(BlockPos.ZERO).asLong();
+        String me = "gametest_patch_me_" + tag, ally = "gametest_patch_ally_" + tag;
+        Building extractor = FactionTraits.of(Factions.VILLAGERS).metalExtractor.get();
+        MetalPatches.forgetAll();
+        com.solegendary.reignofnether.building.BuildingPlacement order = null;
+        net.minecraft.world.entity.Mob worker = null;
+        try {
+            MetalPatches.stamp(level, cx, cz);
+            BlockPos centre = new BlockPos(cx, y, cz);
+            if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK)) {
+                helper.fail("stamp() left no patch block at " + centre.toShortString());
+                return;
+            }
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally);
+            order = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(extractor, level,
+                centre.offset(-2, 0, -2), Rotation.NONE, ally, false);
+            if (order == null) {
+                helper.fail("could not make the ally's extractor placement");
+                return;
+            }
+            com.solegendary.reignofnether.building.Blueprints.add(order);   // the ally's worker is on its way
+            BotPlayer bot = new BotPlayer(me, Factions.VILLAGERS, BotPlayer.Difficulty.HARD, centre.offset(20, 1, 0));
+            worker = helper.spawn(net.minecraft.world.entity.EntityType.PIG, new BlockPos(8, 2, 8));
+            List<String> problems = new ArrayList<>();
+            if (!bot.patchTakenBySide(centre))
+                problems.add("a patch with an ally's pending extractor on it is not taken (freePatch picks it)");
+            for (int i = 0; i < BotPlayer.PATCH_GIVE_UP + 1; i++)
+                bot.placeExtractor(level, centre, new ArrayList<>(List.of(worker)));
+            if (bot.patchFailureCount(centre) > 0)
+                problems.add("refused " + (BotPlayer.PATCH_GIVE_UP + 1) + " times for the ally's reservation, the patch has "
+                    + bot.patchFailureCount(centre) + " failures (" + BotPlayer.PATCH_GIVE_UP + " give it up for the match)");
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+            if (bot.patchTakenBySide(centre))
+                problems.add("a non-ally's pending extractor counts as taken (it reserves nothing for this bot)");
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            if (order != null)
+                com.solegendary.reignofnether.building.Blueprints.cancel(order, null);
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+            if (worker != null)
+                worker.discard();
+            MetalPatches.forgetAll();
+        }
     }
 }

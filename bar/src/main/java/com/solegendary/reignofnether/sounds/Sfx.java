@@ -62,14 +62,15 @@ public enum Sfx {
     DESTROYED_TIDE("destroyed_tide", Category.BUILDINGS, 1.0f, 8),
     DESTROYED_STORM("destroyed_storm", Category.BUILDINGS, 1.0f, 8),
     DESTROYED_BRASS("destroyed_brass", Category.BUILDINGS, 1.0f, 8),
-    // construction "loop": one quiet granule per gap near busy builders (BarFx NANO tint = faction)
-    NANO_SUNFORGED("nano_sunforged", Category.BUILDINGS, 0.3f, 10),
-    NANO_GRAVEBOUND("nano_gravebound", Category.BUILDINGS, 0.3f, 10),
-    NANO_HORDE("nano_horde", Category.BUILDINGS, 0.3f, 10),
-    NANO_VERDANT("nano_verdant", Category.BUILDINGS, 0.3f, 10),
-    NANO_TIDE("nano_tide", Category.BUILDINGS, 0.3f, 10),
-    NANO_STORM("nano_storm", Category.BUILDINGS, 0.3f, 10),
-    NANO_BRASS("nano_brass", Category.BUILDINGS, 0.3f, 10),
+    // construction "loop": one quiet granule now and then near busy builders (BarFx NANO tint = faction); the cadence
+    // is NanoCadence's, the volume 0.3 -> 0.2 (Oct 29: "workers buzzing as they build")
+    NANO_SUNFORGED("nano_sunforged", Category.BUILDINGS, 0.2f, 10),
+    NANO_GRAVEBOUND("nano_gravebound", Category.BUILDINGS, 0.2f, 10),
+    NANO_HORDE("nano_horde", Category.BUILDINGS, 0.2f, 10),
+    NANO_VERDANT("nano_verdant", Category.BUILDINGS, 0.2f, 10),
+    NANO_TIDE("nano_tide", Category.BUILDINGS, 0.2f, 10),
+    NANO_STORM("nano_storm", Category.BUILDINGS, 0.2f, 10),
+    NANO_BRASS("nano_brass", Category.BUILDINGS, 0.2f, 10),
     RECLAIM_TICK("reclaim_tick", Category.BUILDINGS, 0.35f, 12),
     RECLAIM_DONE("reclaim_done", Category.BUILDINGS, 0.6f, 6),
     GATE_OPEN("gate_open", Category.BUILDINGS, 0.8f, 10),
@@ -104,7 +105,10 @@ public enum Sfx {
     STINGER_VERDANT("stinger_verdant", Category.ANNOUNCER, 0.7f, 40),
     STINGER_TIDE("stinger_tide", Category.ANNOUNCER, 0.7f, 40),
     STINGER_STORM("stinger_storm", Category.ANNOUNCER, 0.7f, 40),
-    STINGER_BRASS("stinger_brass", Category.ANNOUNCER, 0.7f, 40);
+    STINGER_BRASS("stinger_brass", Category.ANNOUNCER, 0.7f, 40),
+    // ---- the forming moment (barfx/PortalForming): a portal or a game ender forms - a rising charge, then a settle.
+    // At the END: the BarFx SFX event carries the ordinal
+    PORTAL_FORMING("portal_forming", Category.BUILDINGS, 0.9f, 10);
 
     /** The five volume groups of the Sound settings page (ANNOUNCER shares the announcer voice's volume). */
     public enum Category { UNITS, BUILDINGS, ABILITIES, ANNOUNCER, UI }

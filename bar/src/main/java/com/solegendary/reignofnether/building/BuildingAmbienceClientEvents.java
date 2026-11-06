@@ -264,7 +264,7 @@ public class BuildingAmbienceClientEvents {
     /** The capitols' own spots: the Temple of the Sun's gold crown and the gold bosses over its south and west
      *  porches (tools/capitol_town_centre.py, Oct 19), the Necropolis Cathedral's four tower-spire soul lanterns and its
      *  crown (tools/capitol_mausoleum.py, Oct 19), the Central Portal's four braziers (tools/gen_capitol_details.py), the
-     *  Grand Foundry's pressure dome and four south / west blast furnaces (tools/capitol_foundry_hall.py), the Admiral's
+     *  Works' furnace hood (east portal) and four south / west blast furnaces (tools/capitol_foundry_hall.py), the Admiral's
      *  Beacon's lighthouse vane and dock (tools/capitol_wreck_harbour.py), the Pagoda of a Thousand Storms' crown rod
      *  and corner rods (tools/capitol_jade_pagoda.py), the World-Tree Court's falling petals
      *  (tools/capitol_heartwood_hall.py, Oct 19). Others breathe from their roofline. */
@@ -275,7 +275,7 @@ public class BuildingAmbienceClientEvents {
             new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL }),
         "central_portal", new Spots(new double[] { 1.5, 3.7, 2.5, 9.5, 3.7, 2.5, 1.5, 3.7, 6.5, 9.5, 3.7, 6.5 },
             new Fx[] { Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }),
-        "foundry_hall", new Spots(new double[] { 2.5, 13.0, 12.5, 4.5, 2.6, 12.2, 10.5, 2.6, 12.2, 2.8, 2.6, 4.5, 2.8, 2.6, 10.5 },
+        "foundry_hall", new Spots(new double[] { 12.5, 8.0, 7.5, 4.5, 2.6, 12.2, 10.5, 2.6, 12.2, 2.8, 2.6, 4.5, 2.8, 2.6, 10.5 },
             new Fx[] { Fx.STEAM, Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }),
         "wreck_harbour", new Spots(new double[] { 7.5, 22.1, 2.5, 2.0, 1.15, 6.5, 2.0, 1.15, 9.5 },
             new Fx[] { Fx.GLINT, Fx.SPLASH, Fx.SPLASH }),

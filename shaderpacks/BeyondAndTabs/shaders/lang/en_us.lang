@@ -1,3 +1,11 @@
+profile=Profile
+profile.comment=Press K to turn the shader pack off or on (off is the plain game look), O to open this screen. Pick LOW on a weaker PC.
+profile.LOW=Low
+profile.LOW.comment=Fastest: smaller, nearer shadows; no ambient occlusion, bloom, caustics, water reflections, material maps, wind, cloud shadows or texture sharpening.
+profile.MEDIUM=Medium
+profile.MEDIUM.comment=The default: every effect on, shadows at 2048 out to 160 blocks.
+profile.HIGH=High
+profile.HIGH.comment=Sharpest: shadows at 4096 out to 224 blocks. Needs a strong GPU.
 option.shadowMapResolution=Shadow quality
 option.shadowMapResolution.comment=Texels of the sun's shadow map. The RTS view fits the map to what is on screen, so it is sharpest zoomed in.
 option.shadowDistance=Shadow distance
@@ -6,6 +14,20 @@ option.sunPathRotation=Sun tilt
 option.sunPathRotation.comment=Tilts the sun's path so noon still throws shadows you can see from above (30 = lovish's pick).
 option.HAZE_STRENGTH=Distance haze
 option.HAZE_STRENGTH.comment=How much air shows over distant ground (1 = the game's own look).
+option.BLOOM=Bloom
+option.BLOOM.comment=A small halo round lanterns, glowing parts and bright glints on metal. Lit ground never blooms.
+value.BLOOM.0=Off
+value.BLOOM.1=On
+option.SOFT_SHADOWS=Soft shadows
+option.SOFT_SHADOWS.comment=Shadows are sharp where they meet their caster and soften the farther they fall, as real sunlight does. Off: crisp edges everywhere (a little faster).
+value.SOFT_SHADOWS.0=Off
+value.SOFT_SHADOWS.1=On
+option.AO=Ambient occlusion
+option.AO.comment=Building bases, wall corners and unit feet sit in the ground: creases see less sky, so they lose part of the sky's light (never the sun's).
+value.AO.0=Off
+value.AO.1=On
+option.AO_STRENGTH=Occlusion strength
+option.AO_STRENGTH.comment=How dark the creases get (1 = the tuned look; the darkest is capped so units in alleys stay readable).
 option.GRADE=Colour grade
 option.GRADE.comment=Enchanted: a little dimmer, richer colour, golden light, a soft glow. Off: the tone curve only.
 value.GRADE.0=Off
@@ -14,3 +36,33 @@ option.EDGE_AA=Edge smoothing
 option.EDGE_AA.comment=Smooths unit and building edges without softening textures.
 value.EDGE_AA.0=Off
 value.EDGE_AA.1=On
+option.MATERIALS=Material maps
+option.MATERIALS.comment=Reads our blocks' and units' surface maps: relief, metal and gem highlights, glowing parts. Off: flat surfaces and slice 1's light, as before.
+value.MATERIALS.0=Off
+value.MATERIALS.1=On
+option.WATER_REALISM=Realistic water
+option.WATER_REALISM.comment=Water clear over a shallow bed and darkening to deep teal-blue with depth. Off: one even tint, as before.
+value.WATER_REALISM.0=Off
+value.WATER_REALISM.1=On
+option.WATER_WAVES=Water ripples
+option.WATER_WAVES.comment=How steep the ripples on water are: they break up the sky's reflection and the sun's glint. 0 = still water.
+option.CAUSTICS=Caustics
+option.CAUSTICS.comment=Sunlight focused by the ripples into moving bright lines on the bed under shallow water.
+value.CAUSTICS.0=Off
+value.CAUSTICS.1=On
+option.SSR=Water reflections
+option.SSR.comment=Mirrors banks, trees and buildings in water seen at a low angle (first person). From the RTS camera water is mostly clear, and this costs almost nothing.
+value.SSR.0=Sky only
+value.SSR.1=On
+option.WIND=Wind
+option.WIND.comment=Grass, flowers and crops sway from the foot up and leaves shimmer, with gusts rolling across the field along the wind the tree limbs move in.
+value.WIND.0=Off
+value.WIND.1=On
+option.WIND_STRENGTH=Wind strength
+option.WIND_STRENGTH.comment=How far plants and leaves move (1 = a grass tuft's top about a twelfth of a block at a full gust).
+option.CLOUD_SHADOWS=Cloud shadows
+option.CLOUD_SHADOWS.comment=Soft cloud shadows drift over the field with the wind. They dim the sun by at most 30%, so units stay easy to read.
+value.CLOUD_SHADOWS.0=Off
+value.CLOUD_SHADOWS.1=On
+option.TEXTURE_SHARPNESS=Texture sharpness (RTS)
+option.TEXTURE_SHARPNESS.comment=Finer block texture detail in the RTS view. Higher is sharper but shimmers more as the camera pans (0 = default filtering).

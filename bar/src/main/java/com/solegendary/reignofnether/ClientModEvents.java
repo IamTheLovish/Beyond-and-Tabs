@@ -212,6 +212,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.SAPPER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SapperRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.DEPLOYED_TURRET_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RifleSquadRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOMBARD_SHELL.get(), (ctx) -> new ThrownItemRenderer<>(ctx, 1.5F, false));
+        evt.registerEntityRenderer(EntityRegistrar.ROCKET_SHELL.get(), com.solegendary.reignofnether.entities.renderers.RocketShellRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);
         // slice 2: the Bearer and the Watcher keep their vanilla bodies (witch with a lantern, grey parrot)
         evt.registerEntityRenderer(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MoonwellBearerRenderer::new);
@@ -312,6 +313,8 @@ public class ClientModEvents {
         evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.BONESETTER_UNIT.get(),
             ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "bonesetter_unit"));
         evt.registerEntityRenderer(EntityRegistrar.WRECKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WreckerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.VoodooShamanRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BLOOD_TOTEM_UNIT.get(), TotemOfCastingRenderer::new);   // placeholder look: the bought casting totem
         evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.ROOTWARDEN_UNIT.get(),
             ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "rootwarden_unit"));
         evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.SALVAGER_UNIT.get(),
@@ -415,6 +418,10 @@ public class ClientModEvents {
         event.registerLayerDefinition(MarauderModel.LAYER_LOCATION, MarauderModel::createBodyLayer);
         event.registerLayerDefinition(ArmouredHoglinUnitModel.LAYER_LOCATION, ArmouredHoglinUnitModel::createBodyLayer);
         event.registerLayerDefinition(MagicProjectileModel.LAYER_LOCATION, MagicProjectileModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.entities.models.RocketShellModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.entities.models.RocketShellModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.RocketRackModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.RocketRackModel::createBodyLayer);
         event.registerLayerDefinition(EnchanterModel.LAYER_LOCATION, EnchanterModel::createBodyLayer);
         event.registerLayerDefinition(WretchedWraithModel.LAYER_LOCATION, WretchedWraithModel::createBodyLayer);
         event.registerLayerDefinition(WildfireModel.LAYER_LOCATION, WildfireModel::createBodyLayer);

@@ -243,5 +243,9 @@ public enum UnitAction {
     // the Verdant essence caster, the Thornweaver
     ENTANGLING_ROOTS,       // 5 essence: enemies within 3 blocks of the aimed spot are rooted for 3 s
     SEED_OF_RENEWAL,        // 10 essence: a 100 HP sapling heals friends within 6 blocks for 3 HP a second for 10 s
-    SPROUT_GUARDIAN         // 20 essence: a sapling treant fights for the owner for 25 s, then withers
+    SPROUT_GUARDIAN,        // 20 essence: a sapling treant fights for the owner for 25 s, then withers
+    // the Horde's Voodoo Shaman, after main's Thornweaver so their ordinals (saved autocast state) stay put
+    HEX,                    // 5 essence: an enemy T1-T2 unit can neither attack nor cast for 4 s
+    BLOOD_TOTEM,            // 10 essence: a 15 s totem, allies within 8 attack 25% faster, enemies move 15% slower
+    SPIRIT_PUPPET           // 20 essence: an enemy T1 unit is the caster's owner's for 15 s
 }

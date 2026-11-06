@@ -50,6 +50,13 @@ public final class SfxClient {
     private static final Sfx[] ALL = Sfx.values();
     private static final Sfx.Category[] CATS = Sfx.Category.values();
 
+    // per construction loop (a NANO_* sound): when its last granule played and the gap drawn for the next (NanoCadence)
+    private static final NanoCadence.Loop[] nanoLoops = new NanoCadence.Loop[ALL.length];
+    static {
+        for (int i = 0; i < nanoLoops.length; i++)
+            nanoLoops[i] = new NanoCadence.Loop();
+    }
+
     /** Most new sounds a category may start in one tick (UNITS, BUILDINGS, ABILITIES, ANNOUNCER, UI). */
     private static final int[] BUDGET = { 3, 2, 3, 4, 4 };
     // the gaps, per-tick budgets and busy rates (SfxBudget), counted in SfxBudget.clock's tick
@@ -107,11 +114,22 @@ public final class SfxClient {
                     // flags = the beam's life: a builder's beam lives NANO_INTERVAL + 3, a reclaim/tree beam a full
                     // second-long step (22); longer standing links (ley lines) have their own chime and stay silent
                     int life = e.flags & 0xFF;
-                    if (life <= BarFx.NANO_INTERVAL + 4)
-                        playAt(Sfx.nano(e.kind), e.x, e.y, e.z, 1f, 1f);
+                    if (life <= BarFx.NANO_INTERVAL + 4) {
+                        // the construction loop: sparse and irregular, one gap per faction however many build
+                        // (NanoCadence - at one granule per 10 ticks it was a metronome, "workers buzzing", Oct 29)
+                        Sfx s = Sfx.nano(e.kind);
+                        // the gap is booked only by a granule that played: a builder out of earshot never uses it up
+                        if (s != null)
+                            nanoLoops[s.ordinal()].offer(rollTick(), () -> playAt(s, e.x, e.y, e.z, 1f, 1f),
+                                () -> NanoCadence.nextGap(RANDOM.nextFloat()));
+                    }
                     else if (life <= 24)
                         playAt(Sfx.RECLAIM_TICK, e.x, e.y, e.z, 1f, 1f);
                 }
+                // a portal or a game ender forms: one charge-and-settle per activation (the server sent it only to those
+                // whose fog shows the site); a game ender's is a little deeper
+                case BarFx.FORMING -> playAt(Sfx.PORTAL_FORMING, e.x, e.y + 1, e.z, Math.min(1f, 0.7f + e.a / 12f),
+                    e.kind == BarFx.FS_ENDER ? 0.85f : 1f);
                 default -> { }
             }
         } catch (Exception ignored) { }
@@ -263,32 +281,32 @@ public final class SfxClient {
         return BUDGETS.crowdScale(s.category.ordinal());
     }
 
-    /** Plays a sound at a world position, if it is in earshot and not hidden by fog. */
-    public static void playAt(Sfx s, float x, float y, float z, float volume, float pitch) {
+    /** Plays a sound at a world position, if it is in earshot and not hidden by fog; true if it played. */
+    public static boolean playAt(Sfx s, float x, float y, float z, float volume, float pitch) {
         if (s == null || MC.level == null || MC.player == null)
-            return;
+            return false;
         float catVol = categoryVolume(s.category);
         if (catVol <= 0)
-            return;
+            return false;
         long now = rollTick();
         BarFxClient.earAt(y, ear);
         float dx = x - ear[0], dz = z - ear[1];
         float dist = (float) Math.sqrt(dx * dx + dz * dz);
         float reach = REACH[s.category.ordinal()] + BarFxClient.earZoom() * 0.5f;
         if (dist >= reach)
-            return;
+            return false;
         if (!admit(s, now, dist))
-            return;
+            return false;
         // fog last: it allocates a BlockPos, and most events never get this far
         if (!FogOfWarClientEvents.isInBrightChunk(BlockPos.containing(x, y, z)))
-            return;
+            return false;
         float falloff = dist <= NEAR ? 1f : 1f - (dist - NEAR) / (reach - NEAR);
         float vol = s.volume * volume * catVol * falloff * crowdScale(s);
         if (vol <= 0.01f)
-            return;
+            return false;
         SoundEvent ev = SoundRegistrar.sfx(s);
         if (ev == null)
-            return;
+            return false;
         // the stand-in point: from the camera, PROXY_DIST blocks towards the true direction of the sound
         Vec3 cam = MC.gameRenderer.getMainCamera().getPosition();
         double px = cam.x, py = cam.y, pz = cam.z;
@@ -298,6 +316,7 @@ public final class SfxClient {
         }
         MC.getSoundManager().play(new SimpleSoundInstance(ev.getLocation(), sourceOf(s), vol, jitter(pitch), RANDOM,
             false, 0, SoundInstance.Attenuation.LINEAR, px, py, pz, false));
+        return true;
     }
 
     /** Plays a sound for this player only, without position (match moments, UI). */
@@ -329,5 +348,7 @@ public final class SfxClient {
         windowStart = 0;
         lastGameTime = Long.MIN_VALUE;
         gameTimeValues = 0;
+        for (NanoCadence.Loop loop : nanoLoops)
+            loop.reset();
     }
 }

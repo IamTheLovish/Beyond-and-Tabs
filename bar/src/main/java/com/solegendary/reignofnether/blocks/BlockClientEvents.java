@@ -64,9 +64,9 @@ public class BlockClientEvents {
     // each range building's circle, as a mesh rebuilt every RangeCircleMesh.REFRESH_TICKS ticks or when its highlight
     // set changes (lovish's Oct 29 game: drawing every face the old way was 1.9-2.1 ms of each late-game frame)
     private static final java.util.Map<BuildingPlacement, RangeCircleMesh> CIRCLE_MESHES = new java.util.HashMap<>();
-    // the meshes' clock: client ticks counted here, not the level's game time - on the client that follows the day
-    // clock (a third of the speed at Slow, standing still with the cycle off or before a match: the #450 review)
-    private static long clientTicks = 0, circlesPrunedAt = 0;
+    // the meshes' clock is time.ClientTicks, not the level's game time - on the client that follows the day clock (a
+    // third of the speed at Slow, standing still with the cycle off or before a match: the #450 review)
+    private static long circlesPrunedAt = 0;
 
     private static RangeCircleMesh circleMesh(BuildingPlacement building, Set<BlockPos> bps, long now) {
         RangeCircleMesh mesh = CIRCLE_MESHES.get(building);
@@ -130,7 +130,7 @@ public class BlockClientEvents {
             }
             // draw range indicators for buildings with abilities and monster night sources: each circle from its
             // cached mesh (RangeCircleMesh), only when it is in view, all through one pose
-            long now = clientTicks;
+            long now = com.solegendary.reignofnether.time.ClientTicks.now();
             com.mojang.blaze3d.vertex.PoseStack ps = null;
             for (BuildingPlacement building : rangeBuildings) {
                 RangeIndicatorAddon ria = building.getBuilding().getActiveAddon(RangeIndicatorAddon.class);
@@ -226,7 +226,6 @@ public class BlockClientEvents {
         if (evt.phase != TickEvent.Phase.END)
             return;
 
-        clientTicks++;
         nightSourcesUpdateTicks -= 1;
 
         NightSourceAddon nsa0 = null;

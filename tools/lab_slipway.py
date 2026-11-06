@@ -453,9 +453,23 @@ def draw_l3(r):
 YMAX = 24
 
 
+# THE PALETTE PASS (Nov 2026): block -> block swaps applied to every level after drawing (the massing is unchanged).
+# Empty = the Oct 2026 colours. The red mangrove frames and strake read as a team colour at RTS zoom (critics 5 / 5,
+# 13 % of the L1 pixels): they become bleached driftwood (birch), pale and unsaturated against the dark oak.
+PALETTE = {"stripped_mangrove_log": "stripped_birch_log", "mangrove_planks": "birch_planks",
+           "mangrove_stairs": "birch_stairs", "mangrove_slab": "birch_slab", "mangrove_fence": "birch_fence"}
+
+
+def recolour(r, palette):
+    for pos, (n, p) in list(r.b.items()):
+        if n in palette:
+            r.b[pos] = (palette[n], p)
+
+
 def build(draw):
     r = Rig(YMAX)
     draw(r)
+    recolour(r, PALETTE)
     r.settle()
     top = max(y for (x, y, z), (n, p) in r.b.items() if n != "air")
     s = gs.Structure(SX, top + 1, SZ)

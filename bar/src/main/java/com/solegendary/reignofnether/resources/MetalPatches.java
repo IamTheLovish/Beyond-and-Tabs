@@ -163,7 +163,7 @@ public final class MetalPatches {
      * Half-width of the pad {@link #stamp} levels round a patch centre (a 7x7): it clears everything above the ground
      * in it, so a pad that reached the arena wall would cut a hole in it (maps.ExtractorClearance keeps patches off it).
      */
-    public static final int PAD_HALF = 3;
+    public static final int PAD_HALF = PadHeight.PAD_HALF;
 
     /**
      * True when the 7x7 pad round (x, z) at ground height {@code padY} holds no water column: the pad leveller leaves
@@ -229,8 +229,21 @@ public final class MetalPatches {
             synchronized (existing) {
                 earlier = new java.util.ArrayList<>(existing);
             }
-        // the recorded centre is the patch block itself (real ground, not the heightmap's idea of it)
+        // the recorded centre is the patch block itself (real ground, not the heightmap's idea of it); a pad that
+        // overlaps an earlier one is levelled to that pad's height, or the shared strip it may not re-level would stand
+        // a step above or below this pad (PadHeight: a player's extractor refused, Oct 29)
         int padY = solidTop(level, x, z);
+        if (!wet) {
+            java.util.List<int[]> earlierPads = new java.util.ArrayList<>(earlier.size());
+            for (BlockPos o : earlier)
+                earlierPads.add(new int[] { o.getX(), o.getY(), o.getZ() });
+            // only to a height where the pad is still dry: drySpot checked the water at the patch's own ground, and the
+            // leveller leaves a cell with water at the pad's height alone - snapped down beside a pond, the pond stayed in
+            // the extractor's footprint (review r1 on PR 408; ExtractorFootprintGameTests ..._keeps_a_pond_out_...)
+            int snapped = PadHeight.of(x, z, padY, earlierPads);
+            if (snapped == padY || padDry(level, x, z, snapped))
+                padY = snapped;
+        }
         if (wet) {
             // no dry ground in reach (open water): the pad becomes an island flush with the water's surface
             BlockPos.MutableBlockPos w = new BlockPos.MutableBlockPos(x, padY + 1, z);
@@ -318,10 +331,24 @@ public final class MetalPatches {
         top = Math.min(top, level.getMaxBuildHeight() - 1);
         int min = level.getMinBuildHeight();
         p.set(x, top, z);
-        while (p.getY() > min && (!level.getBlockState(p).isSolidRender(level, p)
-                || !level.getBlockState(p).getFluidState().isEmpty()))
+        while (p.getY() > min && !isGround(level, p))
             p.move(0, -1, 0);
         return p.getY();
+    }
+
+    /**
+     * Real ground for a patch: solid-render, no fluid, and not part of a tree. A log is solid-render, so a patch stamped
+     * where a tree stood was recorded on the trunk's top log and its pad levelled there, ~7 blocks above the workers'
+     * ground with 4 blocks of fill under it (CI 41930006194: eight builders at y 75 under a site at y 82). Logs and
+     * stems (#minecraft:logs holds the nether stems too) and huge-mushroom blocks are what the pad clears, not what it
+     * stands on.
+     */
+    private static boolean isGround(ServerLevel level, BlockPos p) {
+        BlockState s = level.getBlockState(p);
+        if (!s.isSolidRender(level, p) || !s.getFluidState().isEmpty())
+            return false;
+        return !s.is(net.minecraft.tags.BlockTags.LOGS) && !s.is(Blocks.MUSHROOM_STEM)
+            && !s.is(Blocks.BROWN_MUSHROOM_BLOCK) && !s.is(Blocks.RED_MUSHROOM_BLOCK);
     }
 
     /**

@@ -4,7 +4,8 @@ The pack is loaded by Oculus in the game, which we never run on lovish's PC; thi
 in seconds instead of in a ten-minute eyes run. Each program is expanded the way the loader expands it (``#include
 "/lib/x.glsl"`` from the pack's ``shaders/`` folder, nested), then compiled by Khronos's reference compiler, glslang,
 as the loader's legacy GLSL 1.20 profile. Programs that read a loader macro (MC_RENDER_STAGE_STARS) compile both with
-and without it.
+and without it, and every option a program reads (lib/settings.glsl) is compiled at the other ends of its range too, so
+an option turned off on the pack's screen never hides a compile error.
 
     python3 tools/shader_pack_check.py [--glslang PATH]
 
@@ -25,6 +26,9 @@ CLEAN_ROOM = "Original work, written clean-room"
 INCLUDE = re.compile(r'^\s*#include\s+"([^"]+)"\s*$')
 # a loader macro some programs test for, and a value for it (the loader defines the render stages as small ints)
 LOADER_MACROS = {"MC_RENDER_STAGE_STARS": "5"}
+# option-screen switches (lib/settings.glsl `#define NAME value // [...]`) compiled at a non-default value as well: one
+# variant per entry, each applied to the programs that read it
+OPTION_VARIANTS = [{"MATERIALS": "0"}, {"WATER_REALISM": "0"}, {"CAUSTICS": "0"}, {"SSR": "0"}, {"CAUSTICS": "0", "SSR": "0"}]
 
 
 def expand(path, seen=()):
@@ -56,6 +60,65 @@ def with_macros(source, macros):
     lines = source.split("\n")
     extra = ["#define %s %s" % kv for kv in macros.items()]
     return "\n".join(lines[:1] + extra + lines[1:])
+
+
+def with_options(source, options):
+    """The source with each option's `#define NAME value` line set to the given value (the loader rewrites the same
+    line when a player changes the option)."""
+    for name, value in options.items():
+        source, n = re.subn(r"^(\s*#define\s+%s\s+)\S+" % re.escape(name), r"\g<1>" + value, source, flags=re.M)
+        if n == 0:
+            raise ValueError("option %s is not defined" % name)
+    return source
+
+
+def reads_option(source, name):
+    """Whether the program tests the option anywhere past its definition."""
+    return len(re.findall(r"\b%s\b" % re.escape(name), source)) > 1
+
+
+def _condition(expr, defines):
+    """A #if / #elif condition as the GLSL preprocessor reads it: `defined X` / `defined(X)`, X == n, !, &&, ||."""
+    expr = re.sub(r"defined\s*\(?\s*(\w+)\s*\)?", lambda m: "1" if m.group(1) in defines else "0", expr)
+    expr = re.sub(r"\b[A-Za-z_]\w*\b", lambda m: defines.get(m.group(0)) or "0", expr)
+    expr = expr.replace("&&", " and ").replace("||", " or ")
+    expr = re.sub(r"!(?!=)", " not ", expr)
+    if re.search(r"[^\w\s.()=<>!+\-*/]", expr):
+        raise ValueError("cannot read #if %r" % expr)
+    return bool(eval(expr, {"__builtins__": {}}, {}))
+
+
+def preprocess(source):
+    """An expanded program with its #define / #if / #ifdef / #ifndef / #elif / #else / #endif applied: the lines the
+    GPU compiles. Enough for this pack's own directives (integer options, `defined`, &&, ||, !)."""
+    defines, out, stack = {}, [], []          # stack: (this branch is on, a branch of this #if was taken, outer on)
+    for line in source.split("\n"):
+        d = re.match(r"\s*#\s*(\w+)\s*(.*)", line)
+        word, rest = (d.group(1), d.group(2).split("//")[0].strip()) if d else (None, "")
+        on = all(s[0] for s in stack)
+        if word in ("if", "ifdef", "ifndef"):
+            if word == "if":
+                c = on and _condition(rest, defines)
+            else:
+                c = on and ((rest in defines) == (word == "ifdef"))
+            stack.append((c, c, on))
+        elif word == "elif":
+            _, taken, outer = stack.pop()
+            c = outer and not taken and _condition(rest, defines)
+            stack.append((c, taken or c, outer))
+        elif word == "else":
+            _, taken, outer = stack.pop()
+            stack.append((outer and not taken, True, outer))
+        elif word == "endif":
+            stack.pop()
+        elif not on:
+            continue
+        elif word == "define":
+            name, _, value = rest.partition(" ")
+            defines[name] = value.strip() or "1"
+        else:
+            out.append(line)
+    return "\n".join(out)
 
 
 def compile_errors(glslang, name, source):
@@ -117,36 +180,205 @@ def enchanted_pairs(java, fsh):
     return pairs
 
 
+def vec3_const(source, name):
+    """A `const vec3 NAME = vec3(r, g, b) [* k];` (or `vec3(x)`) from a shader's source, as three floats."""
+    m = re.search(r"const vec3 %s = vec3\(([^)]*)\)\s*(?:\*\s*(-?\d+(?:\.\d+)?))?\s*;" % name, source)
+    if not m:
+        raise ValueError("no const vec3 %s" % name)
+    xs = _numbers(m.group(1))
+    xs = xs * 3 if len(xs) == 1 else xs
+    k = float(m.group(2)) if m.group(2) else 1.0
+    return [x * k for x in xs]
+
+
+def float_const(source, name, default=None):
+    """A `const float NAME = x;` from a shader's source; `default` when the source has none."""
+    m = re.search(r"const float %s = (-?\d+(?:\.\d+)?);" % name, source)
+    if not m:
+        if default is None:
+            raise ValueError("no const float %s" % name)
+        return default
+    return float(m.group(1))
+
+
+LUMA = (0.2126, 0.7152, 0.0722)
+
+
+def code_of(source):
+    """A shader's source without its comments, every run of whitespace one space: the lines the GPU runs, so a test that
+    looks for a statement is not satisfied by a comment quoting it."""
+    source = re.sub(r"/\*.*?\*/", " ", source, flags=re.S)
+    source = re.sub(r"//[^\n]*", " ", source)
+    return re.sub(r"\s+", " ", source)
+
+
+def noon_light(light_source, upness, ndl, sun_through=1.0):
+    """Luma of lib/light.glsl's surfaceLight at the lobby's noon (the high-sun row) for a face in full sky light with
+    no ambient occlusion: `upness` its normal's dot with up, `ndl` with the sun, `sun_through` the shadow (1 = lit).
+    Mirrors sunFacing (Lambert eased SUN_FACING_EASE of the way to its square root), skyFill's (SKY_FILL_SIDE +
+    (1 - SKY_FILL_SIDE) x upness) and MIN_LIGHT, with the constants read from the source (test_noon_light_leaves_open_
+    ground_its_colour pins the two expressions themselves)."""
+    def lum(v):
+        return sum(a * b for a, b in zip(v, LUMA))
+    sun, sky = lum(vec3_const(light_source, "SUN_HIGH")), lum(vec3_const(light_source, "SKY_HIGH"))
+    ease, side = float_const(light_source, "SUN_FACING_EASE"), float_const(light_source, "SKY_FILL_SIDE")
+    ndl = max(ndl, 0.0)
+    facing = ndl + (ndl ** 0.5 - ndl) * ease
+    return (sun * facing * sun_through + sky * (side + (1.0 - side) * upness)
+            + lum(vec3_const(light_source, "MIN_LIGHT")))
+
+
+def ao_depth_tolerance(ao_source, base, view_depth, ortho, zoom=30.0, view_height=1080.0):
+    """lib/ao.glsl's aoDepthTolerance in blocks, evaluated from the GLSL itself: the `return` under its
+    `if (aoOrtho(projection))` (the RTS view) or the one after it (first person), with the file's float constants filled
+    in and the RTS view's projection[1][1] = 2 / zoom (zoom = blocks of view height)."""
+    m = re.search(r"float aoDepthTolerance\([^)]*\) \{\s*if \(aoOrtho\(projection\)\)\s*return ([^;]*);\s*return ([^;]*);"
+                  r"\s*\}", ao_source)
+    if not m:
+        raise ValueError("lib/ao.glsl's aoDepthTolerance is not `if (aoOrtho(projection)) return ...; return ...;`")
+    expr = (m.group(1) if ortho else m.group(2)).replace("projection[1][1]", "p11")
+    consts = dict(re.findall(r"const float (\w+) = (-?\d+(?:\.\d+)?);", ao_source))
+    expr = re.sub(r"\b[A-Z][A-Z0-9_]*\b", lambda c: consts[c.group(0)], expr)
+    if re.search(r"[^\w\s.,()+\-*/]", expr) or set(re.findall(r"[A-Za-z_]\w*", expr)) - {
+            "max", "base", "viewDepth", "viewHeight", "p11"}:
+        raise ValueError("cannot evaluate %r" % expr)
+    return eval(expr, {"__builtins__": {}}, {"max": max, "base": base, "viewDepth": view_depth,
+                                            "viewHeight": view_height, "p11": 2.0 / zoom})
+
+
+def _smoothstep(a, b, x):
+    t = min(max((x - a) / (b - a), 0.0), 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def split_tone_shadows(source, lc):
+    """final.fsh's split-tone shadow weight at luma lc: its own `float shadows = ...;` line, with the file's float
+    constants filled in, evaluated as GLSL would (smoothstep only)."""
+    m = re.search(r"float shadows = ([^;]*);", source)
+    if not m:
+        raise ValueError("final.fsh has no `float shadows = ...;` line")
+    consts = {k: v for k, v in re.findall(r"const float (\w+) = (-?\d+(?:\.\d+)?);", source)}
+    expr = re.sub(r"\b[A-Z][A-Z0-9_]*\b", lambda c: consts[c.group(0)], m.group(1))
+    if re.search(r"[^\w\s.,()+\-*]", expr) or set(re.findall(r"[A-Za-z_]\w*", expr)) - {"smoothstep", "lc"}:
+        raise ValueError("cannot evaluate %r" % expr)
+    return eval(expr, {"__builtins__": {}}, {"smoothstep": _smoothstep, "lc": lc})
+
+
 def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 
 
-def check(glslang):
-    """All problems found, as printable lines."""
+# an option the player sets on the pack's screen: `#define NAME default // [a b c]` (lib/settings.glsl)
+OPTION = re.compile(r"^#define\s+(\w+)\s+(\S+)\s*//\s*\[([^\]]*)\]", re.M)
+
+
+def option_variants(source):
+    """[(label, source)] for each option the program reads past its own #define, set to the other ends of its range
+    (a toggle both on and off, a slider at its lowest and highest), the way the loader rewrites the #define line."""
+    out = []
+    for m in OPTION.finditer(source):
+        name, default, values = m.group(1), m.group(2), m.group(3).split()
+        if len(re.findall(r"\b%s\b" % name, source)) < 2:
+            continue                    # declared but not read by this program
+        for v in sorted({values[0], values[-1]} - {default}):
+            out.append(("%s=%s" % (name, v), source[:m.start(2)] + v + source[m.end(2):]))
+    return out
+
+
+# a program-scope declaration the loader binds or a stage passes on, as GLSL allows it: optional interpolation /
+# invariance qualifiers, the storage qualifier, an optional precision, the type, then one or more names - each maybe
+# an array, maybe with an initialiser (`uniform vec3 a, b;`, `flat varying highp float k[2];`, `uniform float s = 1.0;`)
+DECLARATION = re.compile(
+    r"^[ \t]*(?:(?:invariant|flat|smooth|noperspective|centroid)\s+)*(uniform|varying|attribute)\s+"
+    r"(?:(?:lowp|mediump|highp)\s+)?\w+\s+([^;{}()]*?(?:\([^;{}]*\)[^;{}()]*?)*);", re.M)
+
+
+def declared_names(declarators):
+    """The names in a declaration's list: `a, b[2], c = vec3(1.0, 0.0, 0.0)` -> [a, b, c]. Commas inside an
+    initialiser's brackets do not split it."""
+    names, depth, part = [], 0, ""
+    for ch in declarators + ",":
+        if ch in "([":
+            depth += 1
+        elif ch in ")]":
+            depth -= 1
+        if ch == "," and depth == 0:
+            m = re.match(r"\s*(\w+)", part)
+            if m:
+                names.append(m.group(1))
+            part = ""
+        else:
+            part += ch
+    return names
+
+
+def duplicate_declarations(source):
+    """Names a program declares twice (GLSL 120 rejects a second `uniform vec3 cameraPosition;`), after its #if /
+    #ifdef are applied (preprocess) and with its comments gone: [(name, count)]."""
+    counts = {}
+    for _, declarators in DECLARATION.findall(code_lines(preprocess(source))):
+        for name in declared_names(declarators):
+            counts[name] = counts.get(name, 0) + 1
+    return sorted((n, c) for n, c in counts.items() if c > 1)
+
+
+def code_lines(source):
+    """The source without its comments, its lines kept (so a statement still starts a line)."""
+    source = re.sub(r"/\*.*?\*/", lambda m: "\n" * m.group(0).count("\n"), source, flags=re.S)
+    return re.sub(r"//[^\n]*", "", source)
+
+
+def variants_of(base):
+    """[(label, source)]: the program as the pack ships it, each OPTION_VARIANTS combination it reads, and every other
+    option it reads at the ends of its range (option_variants) - each option-screen state the loader can build."""
+    sources = [("", base)]
+    for opts in OPTION_VARIANTS:
+        if all(reads_option(base, o) for o in opts):
+            sources.append((", ".join("%s=%s" % kv for kv in opts.items()), with_options(base, opts)))
+    labels = {label for label, _ in sources}
+    sources += [(label, src) for label, src in option_variants(base) if label not in labels]
+    return sources
+
+
+def check(glslang, options=None):
+    """All problems found, as printable lines. options: option values every program is compiled at (default: the
+    pack's own), on top of which every option-screen variant is tried (variants_of)."""
     problems = header_problems()
     for name in programs():
-        source = expand(os.path.join(SHADERS, name))
-        variants = [({}, source)]
-        used = {m: v for m, v in LOADER_MACROS.items() if m in source}
-        if used:
-            variants.append((used, with_macros(source, used)))
-        for macros, src in variants:
-            err = compile_errors(glslang, name, src)
-            if err:
-                label = name + (" with " + ", ".join(macros) if macros else "")
-                problems.append("%s:\n%s" % (label, err))
+        base = expand(os.path.join(SHADERS, name))
+        base = with_options(base, {k: v for k, v in (options or {}).items() if reads_option(base, k) or
+                                   re.search(r"#define\s+%s\b" % re.escape(k), base)})
+        for opt_label, source in variants_of(base):
+            variants = [({}, source)]
+            used = {m: v for m, v in LOADER_MACROS.items() if m in source}
+            if used:
+                variants.append((used, with_macros(source, used)))
+            for macros, src in variants:
+                err = compile_errors(glslang, name, src)
+                if err:
+                    label = name + (" with " + ", ".join(macros) if macros else "") + (
+                        " [" + opt_label + "]" if opt_label else "")
+                    problems.append("%s:\n%s" % (label, err))
     return problems
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--glslang", help="path to glslang (default: glslang or glslangValidator on PATH)")
+    ap.add_argument("--option", action="append", default=[], metavar="NAME=VALUE",
+                    help="compile every program with this option value (repeatable)")
     args = ap.parse_args()
+    options = dict(o.split("=", 1) for o in args.option)
+    settings = open(os.path.join(SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+    for o in options:
+        if not re.search(r"^#define\s+%s\s" % re.escape(o), settings, re.M):
+            print("no option %s in lib/settings.glsl" % o, file=sys.stderr)
+            return 2
     glslang = find_glslang(args.glslang)
     if not glslang:
         print("glslang not found (apt-get install glslang-tools)", file=sys.stderr)
         return 2
-    problems = check(glslang)
+    problems = check(glslang, options)
     for p in problems:
         print(p)
     print("%d programs, %d problems" % (len(programs()), len(problems)))
