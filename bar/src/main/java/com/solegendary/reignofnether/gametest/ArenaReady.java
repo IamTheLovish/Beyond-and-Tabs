@@ -202,7 +202,30 @@ public final class ArenaReady {
                         r.run();
             });
         }
+
+        /**
+         * {@link #start(GameTestHelper, List, int, int, Consumer)} for a test that orders its units through
+         * UnitActionItem.action (a click on an ability, a cast, CommandQueues.issue): that path keeps only the units
+         * level.getEntity returns, and a unit added to an arena whose entity section is not loaded yet is not in that
+         * lookup, so an order counted from the spawn reached nobody (PR 561's shard 8 ran angel_caller_sword third in
+         * a fresh server, ~7 s in: "the Sword call made no Sword Seraph"). The steps start on the first tick at which
+         * every unit (casters and targets) has ticked once, i.e. is in the level, and keep their ticks from there; the
+         * test's timeout adds {@link ArenaReady#READY_WAIT}. A setup that never ticks runs {@code cleanUp} and fails,
+         * naming each unit.
+         */
+        public void startForOrders(GameTestHelper helper, List<? extends Entity> units, Runnable cleanUp) {
+            start(helper, units, 1, READY_WAIT, why -> {
+                cleanUp.run();
+                helper.fail(why);
+            });
+        }
     }
+
+    /**
+     * Most test ticks a test that orders its units waits for them to be in the level (Timeline.startForOrders); each
+     * such test's timeout is its old limit plus this, so a slow start ends in the setup message, never a timeout.
+     */
+    public static final int READY_WAIT = 100;
 
     /** One entry per entity: type and id, its own tick count, whether its chunk is entity-ticking, where it is. */
     public static String describe(ServerLevel level, List<? extends Entity> units) {

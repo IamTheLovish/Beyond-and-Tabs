@@ -332,7 +332,7 @@ public class ThornweaverGameTests {
      * speed is 0, its attack untouched - while an enemy 4 blocks away and a friend inside the circle are not. An order
      * during the cooldown spends nothing; the root is gone after 3 s.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 100 + ArenaReady.READY_WAIT, batch = BATCH)
     public static void thornweaver_entangling_roots_roots_enemies_within_3_for_3_seconds(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "roots"), foe = owner(helper, "rootsfoe");
@@ -350,7 +350,8 @@ public class ThornweaverGameTests {
         double attackBefore = near.getAttributeValue(Attributes.ATTACK_DAMAGE);
         List<String> early = new ArrayList<>();
         boolean[] rootedAfter = { false };
-        helper.runAfterDelay(3, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(3, () -> {
             try {
                 if (EntanglingRoots.ESSENCE_COST != 5 || EntanglingRoots.CD_SECONDS != 12 || EntanglingRoots.RADIUS != 3
                         || EntanglingRoots.ROOT_TICKS != 60)
@@ -392,8 +393,8 @@ public class ThornweaverGameTests {
                 early.add("the cast threw " + ex);
             }
         });
-        helper.runAfterDelay(40, () -> rootedAfter[0] = rooted(near));
-        helper.runAfterDelay(70, () -> {
+        line.at(40, () -> rootedAfter[0] = rooted(near));
+        line.at(70, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (problems.isEmpty() && !rootedAfter[0])
@@ -407,6 +408,7 @@ public class ThornweaverGameTests {
             }
             finish(helper, problems);
         });
+        line.startForOrders(helper, all, () -> discardAll(all));
     }
 
     /**

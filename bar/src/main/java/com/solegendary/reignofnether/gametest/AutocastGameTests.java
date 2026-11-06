@@ -232,7 +232,7 @@ public class AutocastGameTests {
      * x, the order a button's right click sends) turns it back on and she casts; the override survives a save round
      * trip of the unit's data; and a MANUAL ability (the Elder Druid's Awaken Thicket) is off and has no switch.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60)
+    @GameTest(template = ARENA, timeoutTicks = 60 + ArenaReady.READY_WAIT)
     public static void autocast_toggle_is_honoured(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -256,7 +256,8 @@ public class AutocastGameTests {
         // off before the first tick's pass can cast
         bloom.setAutocast(false, hu);
         hurt.setHealth(hurt.getMaxHealth() * 0.5f);
-        helper.runAfterDelay(5, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(5, () -> {
             try {
                 UnitGrid.invalidate();
                 if (hu.hasAutocast(bloom) || bloom.isAutocasting(hu))
@@ -294,6 +295,7 @@ public class AutocastGameTests {
                 cleanUp(made);
             }
         });
+        line.startForOrders(helper, List.of(healer, hurt), () -> cleanUp(made));
     }
 
     /**

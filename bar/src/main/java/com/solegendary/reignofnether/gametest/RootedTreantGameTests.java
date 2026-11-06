@@ -62,6 +62,28 @@ public class RootedTreantGameTests {
         }
     }
 
+    /**
+     * {@link #everyTick(GameTestHelper, int, Step)} for a test that orders its Treants through UnitActionItem.action:
+     * tick 1 is the first tick after every unit is in the level (ArenaReady.Timeline.startForOrders), not the spawn, so
+     * an order never goes to a Treant that level.getEntity does not return yet. Booked now, like everyTick.
+     */
+    private static void everyTick(GameTestHelper helper, int ticks, List<Mob> units, Step step) {
+        final boolean[] over = { false };
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        for (int t = 1; t <= ticks; t++) {
+            final int tick = t;
+            line.at(t, () -> {
+                if (!over[0])
+                    over[0] = step.at(tick);
+            });
+        }
+        line.startForOrders(helper, units, () -> {
+            for (Mob m : units)
+                if (m != null)
+                    m.discard();
+        });
+    }
+
     /** Ends the test (succeed when no problems, else fail with them) after discarding the units; true = steps over. */
     private static boolean finish(GameTestHelper helper, List<String> problems, List<Mob> units) {
         for (Mob m : units)
@@ -128,7 +150,7 @@ public class RootedTreantGameTests {
      * time, immobile from the first tick; fully rooted it takes ROOTED_TAKEN_MULT damage, but not while uprooting; the
      * order again uproots it in exactly the tuned uproot time, and only then can it move.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60)
+    @GameTest(template = ARENA, timeoutTicks = 60 + ArenaReady.READY_WAIT)
     public static void rooted_treant_roots_and_uproots_on_the_tuned_times(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "treant_times");
@@ -150,45 +172,48 @@ public class RootedTreantGameTests {
         if (root != 30 || uproot != 20)
             problems.add("the tuned times should start at 1.5 s / 1 s (lovish's Q5 option B), got " + root + " / " + uproot + " ticks");
 
-        new UnitActionItem(owner, UnitAction.TAKE_ROOT, -1, new int[] { treant.getId() }).action(level);
-        if (!treant.isRootWanted())
-            problems.add("the TAKE_ROOT order did not start rooting");
-        for (int t = 0; t < root - 1; t++)
+        // the orders and the checks from the first tick the Treant is in the level (level.getEntity), not the spawn
+        everyTick(helper, 1, units, tick -> {
+            new UnitActionItem(owner, UnitAction.TAKE_ROOT, -1, new int[] { treant.getId() }).action(level);
+            if (!treant.isRootWanted())
+                problems.add("the TAKE_ROOT order did not start rooting");
+            for (int t = 0; t < root - 1; t++)
+                treant.tickRoot(level);
+            if (treant.isRooted())
+                problems.add("rooting finished before the tuned root time");
+            if (!treant.isImmobile() || speed(treant) > 0.0001)
+                problems.add("a rooting Treant must not be able to move (speed " + speed(treant) + ")");
             treant.tickRoot(level);
-        if (treant.isRooted())
-            problems.add("rooting finished before the tuned root time");
-        if (!treant.isImmobile() || speed(treant) > 0.0001)
-            problems.add("a rooting Treant must not be able to move (speed " + speed(treant) + ")");
-        treant.tickRoot(level);
-        if (!treant.isRooted())
-            problems.add("the Treant should be rooted after the tuned root time");
+            if (!treant.isRooted())
+                problems.add("the Treant should be rooted after the tuned root time");
 
-        float h0 = treant.getHealth();
-        treant.hurt(level.damageSources().generic(), 20f);
-        float lost = h0 - treant.getHealth();
-        if (Math.abs(lost - 20f * SentinelTreantUnit.ROOTED_TAKEN_MULT) > 0.5f)
-            problems.add("a rooted Treant should take " + SentinelTreantUnit.ROOTED_TAKEN_MULT + "x damage (lost " + lost + " of 20)");
+            float h0 = treant.getHealth();
+            treant.hurt(level.damageSources().generic(), 20f);
+            float lost = h0 - treant.getHealth();
+            if (Math.abs(lost - 20f * SentinelTreantUnit.ROOTED_TAKEN_MULT) > 0.5f)
+                problems.add("a rooted Treant should take " + SentinelTreantUnit.ROOTED_TAKEN_MULT + "x damage (lost " + lost + " of 20)");
 
-        new UnitActionItem(owner, UnitAction.TAKE_ROOT, -1, new int[] { treant.getId() }).action(level);
-        treant.tickRoot(level);
-        treant.invulnerableTime = 0;
-        float u0 = treant.getHealth();
-        treant.hurt(level.damageSources().generic(), 20f);
-        float uLost = u0 - treant.getHealth();
-        if (Math.abs(uLost - 20f) > 0.5f)
-            problems.add("an uprooting Treant should take full damage (lost " + uLost + " of 20)");
-        for (int t = 1; t < uproot - 1; t++)
+            new UnitActionItem(owner, UnitAction.TAKE_ROOT, -1, new int[] { treant.getId() }).action(level);
             treant.tickRoot(level);
-        if (!treant.isImmobile() || speed(treant) > 0.0001)
-            problems.add("an uprooting Treant must stay put until the tuned uproot time is over");
-        treant.tickRoot(level);
-        if (treant.isImmobile() || treant.isRooted())
-            problems.add("the Treant should be free after the tuned uproot time");
-        if (Math.abs(speed(treant) - walk) > 0.0001)
-            problems.add("an uprooted Treant should walk at its old speed (" + speed(treant) + " vs " + walk + ")");
-        if (Math.abs(walk - SentinelTreantUnit.movementSpeed) > 0.0001)
-            problems.add("the Sentinel Treant's walking speed changed");
-        finish(helper, problems, units);
+            treant.invulnerableTime = 0;
+            float u0 = treant.getHealth();
+            treant.hurt(level.damageSources().generic(), 20f);
+            float uLost = u0 - treant.getHealth();
+            if (Math.abs(uLost - 20f) > 0.5f)
+                problems.add("an uprooting Treant should take full damage (lost " + uLost + " of 20)");
+            for (int t = 1; t < uproot - 1; t++)
+                treant.tickRoot(level);
+            if (!treant.isImmobile() || speed(treant) > 0.0001)
+                problems.add("an uprooting Treant must stay put until the tuned uproot time is over");
+            treant.tickRoot(level);
+            if (treant.isImmobile() || treant.isRooted())
+                problems.add("the Treant should be free after the tuned uproot time");
+            if (Math.abs(speed(treant) - walk) > 0.0001)
+                problems.add("an uprooted Treant should walk at its old speed (" + speed(treant) + " vs " + walk + ")");
+            if (Math.abs(walk - SentinelTreantUnit.movementSpeed) > 0.0001)
+                problems.add("the Sentinel Treant's walking speed changed");
+            return finish(helper, problems, units);
+        });
     }
 
     /**
@@ -256,7 +281,7 @@ public class RootedTreantGameTests {
      * A move order to a rooted Treant uproots it (the tuned uproot time, still immobile meanwhile) and it then walks to
      * the spot with no second order; a move order while still rooting cancels the root and it walks at once.
      */
-    @GameTest(template = ARENA, timeoutTicks = 160)
+    @GameTest(template = ARENA, timeoutTicks = 160 + ArenaReady.READY_WAIT)
     public static void rooted_treant_move_order_uproots_then_walks(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "treant_order");
@@ -272,7 +297,7 @@ public class RootedTreantGameTests {
         int uproot = SentinelTreantUnit.ROOT_TIMES.uprootTicks();
         double[] start = new double[4];
         BlockPos goalA = helper.absolutePos(new BlockPos(12, 2, 10)), goalB = helper.absolutePos(new BlockPos(12, 2, 3));
-        everyTick(helper, 120, tick -> {
+        everyTick(helper, 120, units, tick -> {
             if (tick == 1) {
                 rootNow(rooted, level);
                 rooting.toggleRoot();
@@ -308,7 +333,7 @@ public class RootedTreantGameTests {
     /**
      * A stop order after a move order to a rooted Treant drops the held move: it still uproots, but stays where it is.
      */
-    @GameTest(template = ARENA, timeoutTicks = 160)
+    @GameTest(template = ARENA, timeoutTicks = 160 + ArenaReady.READY_WAIT)
     public static void rooted_treant_stop_order_drops_the_held_move(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "treant_stop");
@@ -322,7 +347,7 @@ public class RootedTreantGameTests {
         int uproot = SentinelTreantUnit.ROOT_TIMES.uprootTicks();
         double[] start = new double[2];
         BlockPos goal = helper.absolutePos(new BlockPos(12, 2, 7));
-        everyTick(helper, 120, tick -> {
+        everyTick(helper, 120, units, tick -> {
             if (tick == 1) {
                 rootNow(treant, level);
                 start[0] = treant.getX();
@@ -349,7 +374,7 @@ public class RootedTreantGameTests {
      * retreat check) firing during the uproot, and a Take Root press during the uproot (ignored there). Both Treants
      * still walk to the ordered spot once free.
      */
-    @GameTest(template = ARENA, timeoutTicks = 160)
+    @GameTest(template = ARENA, timeoutTicks = 160 + ArenaReady.READY_WAIT)
     public static void rooted_treant_held_move_survives_the_walk_back_and_a_take_root_press(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "treant_keep");
@@ -365,7 +390,7 @@ public class RootedTreantGameTests {
         int uproot = SentinelTreantUnit.ROOT_TIMES.uprootTicks();
         double[] startX = new double[2];
         BlockPos goalA = helper.absolutePos(new BlockPos(12, 2, 10)), goalB = helper.absolutePos(new BlockPos(12, 2, 3));
-        everyTick(helper, 120, tick -> {
+        everyTick(helper, 120, units, tick -> {
             if (tick == 1) {
                 rootNow(anchored, level);
                 rootNow(pressed, level);
@@ -398,7 +423,7 @@ public class RootedTreantGameTests {
      * A Take Root press is a new order: rooting drops a group move still waiting in the formation dispatch queue (else
      * it lands later and uproots the Treant), and uprooting drops the attack target it held while rooted.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60)
+    @GameTest(template = ARENA, timeoutTicks = 60 + ArenaReady.READY_WAIT)
     public static void rooted_treant_take_root_press_drops_a_queued_move_and_the_target(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "treant_press"), foeOwner = owner + "_foe";
@@ -412,7 +437,7 @@ public class RootedTreantGameTests {
         if (!allMade(helper, units, 3))
             return;
         List<String> problems = new ArrayList<>();
-        everyTick(helper, 5, tick -> {
+        everyTick(helper, 5, units, tick -> {
             if (tick == 1) {
                 // a 20+ unit move's slot for the walking Treant, still waiting to dispatch, then the root press
                 UnitServerEvents.queueFormationMove(List.of(Pair.<net.minecraft.world.entity.LivingEntity, BlockPos>of(walking, helper.absolutePos(new BlockPos(12, 2, 3)))));

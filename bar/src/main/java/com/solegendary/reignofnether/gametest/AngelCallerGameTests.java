@@ -248,7 +248,7 @@ public class AngelCallerGameTests {
      * caster is short of essence and while its angel still lives; on cooldown a click does nothing; the angel comes
      * under the caster's owner, marked summoned with its lifetime, and a killed angel drops no wisp.
      */
-    @GameTest(template = ARENA, timeoutTicks = 120, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 120 + ArenaReady.READY_WAIT, batch = BATCH)
     public static void angel_caller_spends_essence_refuses_when_short_and_keeps_one_of_each(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "spend");
@@ -261,13 +261,14 @@ public class AngelCallerGameTests {
         List<Vec3> spots = new ArrayList<>();
         CallAngel.Kind M = CallAngel.Kind.MENDER, A = CallAngel.Kind.ARCHER, S = CallAngel.Kind.SWORD;
         AngelUnit[] mender = { null };
-        helper.runAfterDelay(3, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(3, () -> {
             click(level, caster, M);   // 4 essence: short of 5
             if (Essence.get(caster) != 4 || cooldown(caster, M) != 0 || !angels(caster, M).isEmpty())
                 problems.add("a Mender call with 4 essence was not refused cleanly: essence " + Essence.get(caster)
                     + ", cooldown " + cooldown(caster, M) + ", menders " + angels(caster, M).size());
         });
-        helper.runAfterDelay(5, () -> {
+        line.at(5, () -> {
             Essence.add(caster, 5);   // 9
             click(level, caster, M);
             List<AngelUnit> ms = angels(caster, M);
@@ -296,13 +297,13 @@ public class AngelCallerGameTests {
                 problems.add("the Mender Angel appeared " + String.format("%.1f", across) + " blocks across and " + String.format("%.1f", up)
                     + " up from its caster, expected over it at " + MenderAngelUnit.FLIGHT_HEIGHT);
         });
-        helper.runAfterDelay(7, () -> {
+        line.at(7, () -> {
             if (mender[0] != null && mender[0].isAlive()) {
                 spots.add(mender[0].position());
                 mender[0].kill();
             }
         });
-        helper.runAfterDelay(9, () -> {
+        line.at(9, () -> {
             if (mender[0] != null) {
                 if (mender[0].isAlive())
                     problems.add("the killed Mender Angel is still alive");
@@ -344,7 +345,7 @@ public class AngelCallerGameTests {
                 problems.add("an Archer call with 5 essence was not refused cleanly: essence " + Essence.get(caster)
                     + ", cooldown " + cooldown(caster, A) + ", archers " + angels(caster, A).size());
         });
-        helper.runAfterDelay(15, () -> {
+        line.at(15, () -> {
             Essence.add(caster, 25);   // 30
             click(level, caster, A);
             click(level, caster, S);
@@ -363,10 +364,11 @@ public class AngelCallerGameTests {
                     problems.add("after a " + k.title + " call its cooldown is " + cd + ", expected " + k.cooldownSeconds * 20);
             }
         });
-        helper.runAfterDelay(20, () -> {
+        line.at(20, () -> {
             cleanUp(caster, List.of(), spots);
             finish(helper, problems);
         });
+        line.startForOrders(helper, List.of(caster), () -> cleanUp(caster, List.of(), List.of()));
     }
 
     /**
@@ -644,7 +646,7 @@ public class AngelCallerGameTests {
      * The Mender Angel flies, heals a hurt friend (and not a hurt foe beside it), lives its 20 s and fades without a
      * wisp.
      */
-    @GameTest(template = ARENA, timeoutTicks = 480, batch = "angel_caller_mender")
+    @GameTest(template = ARENA, timeoutTicks = 480 + ArenaReady.READY_WAIT, batch = "angel_caller_mender")
     public static void angel_caller_mender_angel_flies_heals_a_friend_and_fades_after_20s(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "mender"), foeOwner = owner(helper, "menderfoe");
@@ -666,14 +668,15 @@ public class AngelCallerGameTests {
         Vec3[] last = { null };
         int[] grounded = { 0 }, seen = { 0 };
         boolean[] aliveLate = { false }, goneAfter = { false };
-        helper.runAfterDelay(cast, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(cast, () -> {
             click(level, caster, CallAngel.Kind.MENDER);
             List<AngelUnit> as = angels(caster, CallAngel.Kind.MENDER);
             angel[0] = as.isEmpty() ? null : as.get(0);
         });
         for (int t = cast + 10; t <= cast + life + 30; t += 10) {
             int tick = t;
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 AngelUnit a = angel[0];
                 if (a == null)
                     return;
@@ -690,7 +693,7 @@ public class AngelCallerGameTests {
                     goneAfter[0] = true;
             });
         }
-        helper.runAfterDelay(cast + life + 40, () -> {
+        line.at(cast + life + 40, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (angel[0] == null)
@@ -715,13 +718,14 @@ public class AngelCallerGameTests {
             }
             finish(helper, problems);
         });
+        line.startForOrders(helper, List.of(caster, friend, foe), () -> cleanUp(caster, units, List.of()));
     }
 
     /**
      * The Seraph Archer flies, shoots an enemy 9 blocks off from range (it is never near it when the enemy is hurt),
      * lives its 25 s and fades without a wisp.
      */
-    @GameTest(template = ARENA, timeoutTicks = 580, batch = "angel_caller_archer")
+    @GameTest(template = ARENA, timeoutTicks = 580 + ArenaReady.READY_WAIT, batch = "angel_caller_archer")
     public static void angel_caller_seraph_archer_flies_shoots_from_range_and_fades_after_25s(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "archer"), foeOwner = owner(helper, "archerfoe");
@@ -743,14 +747,15 @@ public class AngelCallerGameTests {
         String[] highest = { "" };   // where it was at its highest, and what it was doing
         int[] grounded = { 0 }, seen = { 0 }, hits = { 0 };
         boolean[] aliveLate = { false }, goneAfter = { false };
-        helper.runAfterDelay(cast, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(cast, () -> {
             click(level, caster, CallAngel.Kind.ARCHER);
             List<AngelUnit> as = angels(caster, CallAngel.Kind.ARCHER);
             angel[0] = as.isEmpty() ? null : as.get(0);
         });
         for (int t = cast + 5; t <= cast + life + 30; t += 5) {
             int tick = t;
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 AngelUnit a = angel[0];
                 if (a == null)
                     return;
@@ -785,7 +790,7 @@ public class AngelCallerGameTests {
                     goneAfter[0] = true;
             });
         }
-        helper.runAfterDelay(cast + life + 40, () -> {
+        line.at(cast + life + 40, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (angel[0] == null)
@@ -813,6 +818,7 @@ public class AngelCallerGameTests {
             }
             finish(helper, problems);
         });
+        line.startForOrders(helper, List.of(caster, foe), () -> cleanUp(caster, units, List.of()));
     }
 
     /**
@@ -820,7 +826,7 @@ public class AngelCallerGameTests {
      * it". A melee enemy (a Vindicator, AI on) beside a Seraph Archer hovering at its flight height - nothing else of
      * the caster's side near it - takes it on and hurts it.
      */
-    @GameTest(template = ARENA, timeoutTicks = 280, batch = "angel_caller_archer_melee")
+    @GameTest(template = ARENA, timeoutTicks = 280 + ArenaReady.READY_WAIT, batch = "angel_caller_archer_melee")
     public static void angel_caller_seraph_archer_flies_low_enough_for_melee_to_hit_it(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "archermelee"), foeOwner = owner(helper, "archermeleefoe");
@@ -836,7 +842,8 @@ public class AngelCallerGameTests {
         Vec3[] last = { null };
         float[] archerHp = { 0 };
         int[] meleeHits = { 0 };
-        helper.runAfterDelay(cast, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(cast, () -> {
             click(level, caster, CallAngel.Kind.ARCHER);
             List<AngelUnit> as = angels(caster, CallAngel.Kind.ARCHER);
             angel[0] = as.isEmpty() ? null : as.get(0);
@@ -844,7 +851,7 @@ public class AngelCallerGameTests {
                 archerHp[0] = angel[0].getHealth();
         });
         // the caster goes (the archer stays: it is bound to nothing but its time) so the Vindicator has one target
-        helper.runAfterDelay(cast + 2, () -> {
+        line.at(cast + 2, () -> {
             if (angel[0] != null)
                 angel[0].setPos(caster.getX(), caster.getY() + SeraphArcherUnit.FLIGHT_HEIGHT, caster.getZ());
             caster.discard();
@@ -856,7 +863,7 @@ public class AngelCallerGameTests {
             }
         });
         for (int t = cast + 5; t <= 250; t += 5) {
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 AngelUnit a = angel[0];
                 Mob v = melee[0];
                 if (a == null || v == null)
@@ -868,7 +875,7 @@ public class AngelCallerGameTests {
                 archerHp[0] = a.getHealth();
             });
         }
-        helper.runAfterDelay(255, () -> {
+        line.at(255, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (angel[0] == null)
@@ -887,6 +894,7 @@ public class AngelCallerGameTests {
             }
             finish(helper, problems);
         });
+        line.startForOrders(helper, List.of(caster), () -> cleanUp(caster, units, List.of()));
     }
 
     /**
@@ -944,7 +952,7 @@ public class AngelCallerGameTests {
      * The Sword Seraph flies (hovers above the ground while no enemy is near), then dives onto an enemy that appears 7
      * blocks off and hits it in melee, lives its 30 s and fades without a wisp.
      */
-    @GameTest(template = ARENA, timeoutTicks = 680, batch = "angel_caller_sword")
+    @GameTest(template = ARENA, timeoutTicks = 680 + ArenaReady.READY_WAIT, batch = "angel_caller_sword")
     public static void angel_caller_sword_seraph_flies_dives_into_melee_and_fades_after_30s(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "sword"), foeOwner = owner(helper, "swordfoe");
@@ -963,12 +971,13 @@ public class AngelCallerGameTests {
         double[] nearestHit = { Double.MAX_VALUE };
         int[] groundedEarly = { 0 }, seenEarly = { 0 }, hits = { 0 };
         boolean[] aliveLate = { false }, goneAfter = { false };
-        helper.runAfterDelay(cast, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(cast, () -> {
             click(level, caster, CallAngel.Kind.SWORD);
             List<AngelUnit> as = angels(caster, CallAngel.Kind.SWORD);
             angel[0] = as.isEmpty() ? null : as.get(0);
         });
-        helper.runAfterDelay(foeAt, () -> {
+        line.at(foeAt, () -> {
             foe[0] = still(helper, EntityRegistrar.IRON_GOLEM_UNIT.get(), foeOwner, 3, 10);
             if (foe[0] != null) {
                 units.add(foe[0]);
@@ -977,7 +986,7 @@ public class AngelCallerGameTests {
         });
         for (int t = cast + 5; t <= cast + life + 30; t += 5) {
             int tick = t;
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 AngelUnit a = angel[0];
                 if (a == null)
                     return;
@@ -1008,7 +1017,7 @@ public class AngelCallerGameTests {
                     goneAfter[0] = true;
             });
         }
-        helper.runAfterDelay(cast + life + 40, () -> {
+        line.at(cast + life + 40, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (foe[0] != null && !foe[0].isAlive())
@@ -1043,5 +1052,6 @@ public class AngelCallerGameTests {
             }
             finish(helper, problems);
         });
+        line.startForOrders(helper, List.of(caster), () -> cleanUp(caster, units, List.of()));
     }
 }
