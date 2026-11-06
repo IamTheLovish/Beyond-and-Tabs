@@ -97,8 +97,9 @@ void main() {
     vec4 tex = texture2D(texture, texcoord, lodBias);   // one read, one bias
     vec3 albedo = tex.rgb * glcolor.rgb;
 #if WIND == 1
-    // a gust's sheen on the plants it bends (lib/wind.glsl GUST_SHEEN): from above, the waves roll across the field
-    albedo *= 1.0 + GUST_SHEEN * (gust - 0.3) * foliage;
+    // a gust's sheen on the plants it bends (lib/wind.glsl GUST_SHEEN, as strong as the sway: WIND_STRENGTH): from
+    // above, the waves roll across the field
+    albedo *= 1.0 + GUST_SHEEN * WIND_STRENGTH * (gust - 0.3) * foliage;
 #endif
 #if defined LIT_TERRAIN || defined LIT_WATER
     float ao = glcolor.a;              // separateAo: the vertex AO, not an alpha
