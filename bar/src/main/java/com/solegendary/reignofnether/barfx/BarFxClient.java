@@ -297,12 +297,6 @@ public final class BarFxClient {
                 // cloud over the rack
                 flash(mx, my, mz, .55f, .14f, BOLT_GLOW);
                 sparks(mx, my, mz, 4, 3f, BOLT_DEEP, ux, uz);
-                // a launch puff per bolt, blown back off the rod: four puffs, four beats
-                for (int i = 0; i < 2; i++) {
-                    P p = smoke(mx, my, mz, .3f, rnd(.6f, .8f), BOLT_OZONE, .5f);
-                    p.vx = -ux * rnd(.4f, .9f) + rnd(-.3f, .3f); p.vz = -uz * rnd(.4f, .9f) + rnd(-.3f, .3f); p.vy = rnd(.1f, .4f);
-                    p.grow = 1.8f;
-                }
                 lightning(mx, my, mz, mx + ux * 1.4f + rnd(-.3f, .3f), my + uy * 1.4f + rnd(0f, .5f), mz + uz * 1.4f + rnd(-.3f, .3f), 4, .22f, .2f, .045f);
             }
             case BarFx.K_ROCKET, BarFx.K_TNT -> {
@@ -884,31 +878,21 @@ public final class BarFxClient {
         }
     }
 
-    /** The faint blue-grey ozone haze a bolt leaves along its arc (the artillery's smoke trail, in the storm's colours). */
-    static final int BOLT_OZONE = 0x8C9CB4;
-
     /**
-     * The bolt in flight (30 Hz): a bright head on the bolt itself, a short jagged streak behind it that changes every
-     * frame, and behind that a trail that stays: puffs of ozone haze and a few falling sparks hanging on the arc for most
-     * of a second. Storm loop: a long streak (round 2) read as "a spell straight out of the crew's back", a short one
-     * (round 1) as "one thin bolt"; a moving head with a lingering arc is what artillery looks like.
+     * The bolt in flight (30 Hz): a flickering blue-white spark at its tail and a jagged streak behind it that changes
+     * every frame. Each streak lives about a fifth of a second, so the streaks overlap into a ribbon along the arc and
+     * every bolt of a volley still shows as its own streak in a 10 fps capture (at a tenth of a second the four bolts of
+     * the storm loop's round 1 read as "one thin bolt").
      */
     static void boltTrail(float x, float y, float z, float dx, float dy, float dz, boolean busy) {
         float l = Math.max(.01f, (float) Math.sqrt(dx * dx + dy * dy + dz * dz)), ux = dx / l, uy = dy / l, uz = dz / l;
-        float back = busy ? 1.2f : 1.8f;
-        lightning(x - ux * .2f, y - uy * .2f, z - uz * .2f, x - ux * back, y - uy * back, z - uz * back, 3, .16f,
-            busy ? rnd(.06f, .09f) : rnd(.08f, .12f), .042f);
-        flash(x, y, z, .5f, .08f, BOLT_CORE);
-        flash(x - ux * .2f, y - uy * .2f, z - uz * .2f, .7f, .1f, BOLT_GLOW);
-        if (busy)
-            return;
-        if (R.nextInt(2) == 0) {
-            P s = smoke(x - ux * .8f, y - uy * .8f, z - uz * .8f, .16f, rnd(.7f, 1f), BOLT_OZONE, .35f);
-            s.vy = .1f; s.grow = 2f;
-        }
-        if (R.nextInt(3) == 0) {
-            P p = add(SPARK, x - ux * .6f, y - uy * .6f, z - uz * .6f, rnd(.35f, .55f), rnd(.025f, .04f), BOLT_GLOW);
-            p.vx = rnd(-.4f, .4f); p.vy = rnd(-.6f, .2f); p.vz = rnd(-.4f, .4f);
+        float back = busy ? 1.6f : 3.2f;
+        lightning(x - ux * .3f, y - uy * .3f, z - uz * .3f, x - ux * back, y - uy * back, z - uz * back, busy ? 3 : 5, .18f,
+            busy ? rnd(.07f, .11f) : rnd(.14f, .22f), .042f);
+        flash(x - ux * .4f, y - uy * .4f, z - uz * .4f, .3f, .1f, BOLT_GLOW);
+        if (!busy && R.nextInt(3) == 0) {
+            P p = add(SPARK, x - ux * .6f, y - uy * .6f, z - uz * .6f, rnd(.15f, .3f), rnd(.02f, .035f), BOLT_GLOW);
+            p.vx = rnd(-.8f, .8f); p.vy = rnd(-.3f, .8f); p.vz = rnd(-.8f, .8f);
         }
     }
 
