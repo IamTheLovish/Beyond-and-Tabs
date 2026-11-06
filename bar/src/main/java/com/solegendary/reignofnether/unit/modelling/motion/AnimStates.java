@@ -49,6 +49,9 @@ public final class AnimStates {
     private static int tick = 0;
     private static boolean toggle = true;
     private static ClientLevel lastLevel = null;
+    /** The current level's ground ({@link GroundTilt}) and the tilt target a unit's step fills (client thread only). */
+    private static GroundTilt.Ground ground = null;
+    private static final float[] TILT = new float[3];
 
     static {
         SLOT.defaultReturnValue(-1);
@@ -123,6 +126,7 @@ public final class AnimStates {
         if (level != lastLevel) {
             clear();
             lastLevel = level;
+            ground = level == null ? null : GroundTilt.of(level);
         }
         if (level == null || Minecraft.getInstance().isPaused())
             return;
@@ -147,6 +151,15 @@ public final class AnimStates {
         Kinematics.look(s, b, le.yHeadRot, le.getXRot(),
             le instanceof RangedAttackerUnit && le instanceof Mob m2 && m2.isAggressive(), fresh);
         Kinematics.turn(s, b, le.yBodyRot, fresh);
+        // the ground under the body (GroundTilt), along the yaw the body is drawn at; a rider and a flyer stay upright
+        if (le.isPassenger() || (le instanceof Unit u && u.isFlyingUnit())) {
+            TILT[0] = 0f;
+            TILT[1] = 0f;
+            TILT[2] = 0f;
+        } else
+            GroundTilt.target(ground, le.getX(), le.getY(), le.getZ(), s[b + AnimState.SP_TURN], le.getBbWidth(),
+                le.onGround(), TILT);
+        GroundTilt.step(s, b, TILT, le.getY(), fresh);
         if (fresh) {
             // its own tempo and a phase of its own: neighbours never breathe in step (Desync, Life.offset)
             s[b + AnimState.TEMPO] = Desync.tempo(id);
