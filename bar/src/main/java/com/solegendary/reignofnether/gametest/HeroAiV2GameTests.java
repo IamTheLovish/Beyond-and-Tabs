@@ -375,10 +375,10 @@ public class HeroAiV2GameTests {
         double[] deepest = { Double.NEGATIVE_INFINITY };
         double[] later = { 0 };
         List<String> problems = new ArrayList<>();
-        helper.runAfterDelay(2, () -> {
-            hero.setHealth(hero.getMaxHealth() * 0.5f);
-            order(helper, me, hero, UnitAction.MOVE, dest);
-        });
+        // RED ONLY, never ships (#556): the order goes in before the hero's first entity tick, the state the flaky
+        // runs measured at their tick-2 order (tickCount 0, chunk not entity-ticking), now on every run
+        hero.setHealth(hero.getMaxHealth() * 0.5f);
+        order(helper, me, hero, UnitAction.MOVE, dest);
         helper.runAfterDelay(30, () -> {
             z30[0] = hero.getZ();
             if (z30[0] < startZ + 0.5)
@@ -706,7 +706,8 @@ public class HeroAiV2GameTests {
         double front = helper.absolutePos(new BlockPos(0, 2, 11)).getZ();
         double[] deepest = { Double.NEGATIVE_INFINITY };
         List<String> problems = new ArrayList<>();
-        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        // RED ONLY, never ships (#556): the order goes in before the hero's first entity tick (see the retreat test)
+        order(helper, me, hero, UnitAction.MOVE, dest);
         helper.runAfterDelay(25, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
         for (int t = 26; t <= 130; t++)
             helper.runAfterDelay(t, () -> deepest[0] = Math.max(deepest[0], hero.getZ()));
