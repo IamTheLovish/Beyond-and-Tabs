@@ -26,6 +26,16 @@ NBT_ASSETS = [os.path.join(RES, "assets", "reignofnether", "structures", f) for 
 KEEP_Y = 9          # a column whose top is at least this high belongs to the leading mass
 PALE = ("smooth_sandstone", "sandstone", "calcite", "quartz", "diorite")
 
+# The floor blocks' values from ABOVE on today's stills (tools/camera_colour.measure, the median 'up' value of the
+# pixels each block's rays hit): eyes 41792408905 (Nov 4, main: the Fable critics' run) and 41973122578 (Nov 5, this
+# lane's Lotus before / after). design/vehicle_labs/camera_colours.json was measured Oct 30 on the block pack of then
+# and no longer matches the stills (smooth stone 0.33 there, 0.63 on screen; tuff 0.34 there, 0.19 on the Ashborn
+# capitol's terrace): the first court fix, smooth stone, passed on the old table and read LIGHTER than the shipped
+# court on the after still (court crop luma 0.56 -> 0.60). The court test reads this measured model instead.
+COURT_UP = {"polished_andesite": 0.59, "polished_andesite_stairs": 0.55, "smooth_stone": 0.63, "stone": 0.40,
+            "stone_bricks": 0.44, "stone_brick_stairs": 0.41, "chiseled_stone_bricks": 0.42, "dark_oak_planks": 0.31,
+            "tuff": 0.19, "pearlescent_froglight": 0.96}
+
 
 def tops(solid):
     t = {}
@@ -129,6 +139,99 @@ class BarracksTest(unittest.TestCase):
         for i in range(3):
             high = sorted(q for q in self.solid[i] if q[0] <= 3 and q[2] >= 4 and q[1] > 2)
             self.assertFalse(high, "L%d %s" % (i + 1, high[:6]))
+
+    # ---- the Fable critics' fixes (Nov 4, eyes 41792408905: L1 5 / 10, L3 4 / 10; critic-b.md, critic-c.md F6) ----
+    def test_court_in_the_mids_on_camera(self):
+        """The court the RTS camera sees (layer 0) reads in the mids at every level: the median of what each floor
+        cell looks like from above (COURT_UP, measured on today's stills) sits in the Art method's mids, 0.28-0.50,
+        under the white masses (0.7) and near the lawn (grass 0.36), not in the lights. Shipped: a polished andesite
+        court at 0.59 - on the noon still luma 0.56, lighter than the keep's south face (0.51). A floor block the model
+        lacks fails. And at most 35 % of the court's pixels are in the lights (>= 0.50: the pale path and the
+        start-type steps only) - a median alone passed the shipped Lotus court on its stone-brick border."""
+        for i in range(3):
+            floor = [n for (q, n, _f, _b) in self.hits[i] if q[1] == 0]
+            self.assertEqual(sorted({n for n in floor if n not in COURT_UP}), [], "L%d: unmeasured floor" % (i + 1))
+            vals = sorted(COURT_UP[n] for n in floor)
+            self.assertTrue(vals, "L%d: no floor seen" % (i + 1))
+            med = vals[len(vals) // 2]
+            self.assertTrue(0.28 <= med < 0.50, "L%d court median %.2f" % (i + 1, med))
+            light = sum(1 for v in vals if v >= 0.50) / len(vals)
+            self.assertLessEqual(light, 0.35, "L%d court in the lights %.2f" % (i + 1, light))
+
+    def test_keep_faces_have_a_dark_band_and_windows(self):
+        """The keep's two camera faces (west x 6, south z 3) are no 8-high blank planes: in every column of a face,
+        looking in from the camera (the first solid cell at depth 0 or 1), no run of more than 4 pale cells from y 1
+        to the wall top, and at least 4 dark cells above the gate's lintel (y >= 5: a dark string course and
+        recessed windows). Shipped: chiseled quartz at y 5, the same value as the bricks - 8 pale in a row."""
+        for i in range(3):
+            s = self.solid[i]
+            faces = {"west": [((L.KX0, y, z), (L.KX0 + 1, y, z)) for z in range(L.KZ0, L.KZ1 + 1)
+                              for y in range(1, L.KW + 1)],
+                     "south": [((x, y, L.KZ1), (x, y, L.KZ1 - 1)) for x in range(L.KX0, L.KX1 + 1)
+                               for y in range(1, L.KW + 1)]}
+            for face, cells in faces.items():
+                seen = {}
+                for front, back in cells:
+                    seen[front] = s.get(front) or s.get(back) or "air"
+                dark = [q for q, n in seen.items() if q[1] >= 5 and any(d in n for d in G.DARK)]
+                self.assertGreaterEqual(len(dark), 4, "L%d %s face: dark above the lintel %s" % (i + 1, face, dark))
+                for col in {(q[0], q[2]) for q in seen}:
+                    run = best = 0
+                    for y in range(1, L.KW + 1):
+                        n = seen[(col[0], y, col[1])]
+                        run = run + 1 if any(p in n for p in G.PALE) else 0
+                        best = max(best, run)
+                    self.assertLessEqual(best, 4, "L%d %s face column %s: %d pale in a row" % (i + 1, face, col, best))
+
+    def test_crown_has_a_point_not_a_gold_cube(self):
+        """No 2 x 2 x 2 gold cube at any level (the shipped crown: 'a gold box on a white chimney', critic B), and the
+        L1 keep ends in ONE cell (a white spike with a gold finial and its lantern), with a light on the keep for dusk."""
+        for i in range(3):
+            g = {q for q, n in self.solid[i].items() if n == "gold_block"}
+            cubes = [q for q in g if all((q[0] + a, q[1] + b, q[2] + c) in g
+                                         for a in (0, 1) for b in (0, 1) for c in (0, 1))]
+            self.assertFalse(cubes, "L%d gold cube at %s" % (i + 1, cubes))
+        s = self.solid[0]
+        top = max(q[1] for q in s)
+        self.assertEqual(len([q for q in s if q[1] == top]), 1, "L1 top layer %s" % [q for q in s if q[1] == top])
+        lights = [q for q, n in s.items() if n == "lantern" and L.KX0 <= q[0] <= L.KX1 and q[1] > L.KW]
+        self.assertTrue(lights, "L1: no lantern on the keep")
+
+    def test_gold_only_on_the_keep(self):
+        """Gold stays the keep's (critic B L3 fix 4): no gold stud outside the keep's crown (x >= 4, z <= 5) at any
+        level, and no row of three gold cells above the keep's wall (shipped L3: the angel reads as a gold cross,
+        gold at x 6..8 on y 15; the west tower's knop and the east pavilion's boss are studs)."""
+        for i in range(3):
+            g = {q for q, n in self.solid[i].items() if n == "gold_block"}
+            out = sorted(q for q in g if q[0] < 4 or q[2] > 5)
+            self.assertFalse(out, "L%d gold studs %s" % (i + 1, out))
+            rows = [q for q in g if q[1] > L.KW and ({(q[0] - 1, q[1], q[2]), (q[0] + 1, q[1], q[2])} <= g
+                                                      or {(q[0], q[1], q[2] - 1), (q[0], q[1], q[2] + 1)} <= g)]
+            self.assertFalse(rows, "L%d gold crossbar at %s" % (i + 1, rows))
+
+    def test_l3_keep_leads_over_a_battlemented_hall(self):
+        """L3 (critic B L3 fixes 1-2, lovish Nov 4 "Barracks L3: wider keep"): the keep widens into a 6 x 6 crown
+        tier over the court (one layer at y >= 9 covers at least 30 of the 36 cells x 4..9, z 0..5) and the north
+        wing west of it is a battlemented hall at most 11 high with dark slits on its camera face (z 1) at y 8..9.
+        Shipped: the wing rose to y 12 (the crown's height), a blank white slab with no dark."""
+        s = self.solid[2]
+        cover = max(sum(1 for x in range(4, 10) for z in range(0, 6) if (x, y, z) in s) for y in range(9, 14))
+        self.assertGreaterEqual(cover, 30, "L3 keep crown tier covers %d of 36" % cover)
+        wing = [q for q in s if q[0] <= 3 and q[2] <= 1]
+        self.assertLessEqual(max(q[1] for q in wing), 11, "L3 north wing top")
+        slits = [q for q, n in s.items() if q[0] <= 3 and q[2] in (0, 1) and q[1] in (8, 9)
+                 and any(d in n for d in G.DARK)]
+        self.assertGreaterEqual(len(slits), 2, "L3 north wing slits %s" % slits)
+
+    def test_wing_fronts_have_a_dark_hem(self):
+        """The wings' deck course facing the camera and the court (north wing front z 1, east wing front x 8, the west
+        wing's outer wall x 0, at y 4) is dark oak at every level (critic C F6): pale units in the court stand against
+        a dark line, not white; shipped: polished diorite, the wings' white."""
+        for i in range(3):
+            s = self.solid[i]
+            hem = [(x, 4, 1) for x in range(0, 6)] + [(8, 4, z) for z in (5, 6)] + [(0, 4, z) for z in (2, 3)]
+            pale = sorted(q for q in hem if not any(d in s.get(q, "") for d in G.DARK))
+            self.assertFalse(pale, "L%d hem not dark at %s" % (i + 1, pale))
 
     def test_shipped_is_the_generator_and_keeps_the_game_rules(self):
         """barracks*.nbt (data and assets) are what tools/lab_barracks.py draws, and its check_levels passes on them

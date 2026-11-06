@@ -139,13 +139,17 @@ def angel(r, x, y, z, gold=False):
     """The family's angel (the fountain's, the capitol's plaza angels), feet at y, facing south: a quartz robe, a
     calcite head, and wings spread east-west from the shoulders and swept UP past the head (the fountain's wing: an
     upside-down stair for the hanging feathers, a full quill, a stair for the tip curling in) so the figure reads as a
-    V of wings round the lantern it holds up on a gold boss - not a cross. Gilded on the L3 spire."""
-    r.set(x, y, z, "gold_block") if gold else r.pillar(x, y, z)
+    V of wings round the lantern it holds up on a gold boss - not a cross. On the L3 spire only the head is gilded and
+    the wings open to two cells (Fable critic B, Nov 4: gold quills beside the gold boss read as a gold cross)."""
+    r.pillar(x, y, z)
     r.set(x, y + 1, z, "gold_block" if gold else "calcite")
     for dx, out in ((-1, "west"), (1, "east")):
         r.st(x + dx, y + 1, z, out, "top", name="smooth_quartz_stairs")          # the hanging feathers
-        r.set(x + dx, y + 2, z, "gold_block" if gold else "smooth_quartz")       # the quill
+        r.set(x + dx, y + 2, z, "smooth_quartz")                                 # the quill
         r.st(x + dx, y + 3, z, gs._SUN_OPP[out], name="smooth_quartz_stairs")    # the tip, curling in
+        if gold:                                                                 # the outer quill and its tip
+            r.set(x + 2 * dx, y + 2, z, "smooth_quartz")
+            r.st(x + 2 * dx, y + 3, z, out, name="smooth_quartz_stairs")
     r.set(x, y + 2, z, "gold_block")
     r.lantern(x, y + 3, z)
 
@@ -159,32 +163,42 @@ KW = 8                                   # the keep's wall top; the crown's tier
 GATE = (7, 8)                            # the deep gate in the keep's south face (z 2..3, y 1..3)
 
 
+COURT = "stone_bricks"                   # the court's mid grey (0.44 from above on the Nov stills; tuff read 0.19)
+PATH = [(5, z) for z in range(3, 7)] + [(x, 4) for x in (6, 7, 8)]   # 1 wide: gate -> spawn -> south steps
+
+
 def floor_l1(r):
-    """Layer 0: a plain polished andesite court (the mids; round 3's calcite ring read as a square target), dark oak
-    under the gate and the arches (the shadow the RTS camera sees through them), the start type's steps across the
-    south edge."""
+    """Layer 0: a stone-brick court in the mids (Fable critic B, Nov 4: the polished andesite court was the lightest plane of
+    the building, 0.56 on the noon still, over the keep's own south face), a pale polished andesite path from the gate
+    over the spawn cells to the south steps, dark oak under the gate and the arches (the shadow the RTS camera sees
+    through them), the start type's steps across the south edge."""
     for x in range(SX):
         for z in range(SZ):
-            r.set(x, 0, z, "polished_andesite")
+            r.set(x, 0, z, "polished_andesite" if (x, z) in PATH else COURT)
     for x, z in [(x, z) for x in GATE for z in (KZ1 - 1, KZ1)] + [(1, 1), (3, 1), (5, 1), (1, 2), (8, 5)]:
         r.set(x, 0, z, DARK)
-    for x in range(1, 9):
+    for x in range(2, 8):                   # six steps: the start type needs >= 6 in layer 0
         r.st(x, 0, SZ - 1, "north", name=START_TYPE)
 
 
 DARK = "dark_oak_planks"                 # the kit's trim that stays dark (BiomePalette keeps DARK_OAK): the shadows
 
 
+SLITS = [(x, KZ1) for x in (7, 8)] + [(KX0, z) for z in (1, 2)]   # the twin windows on the camera faces
+
+
 def keep_body(r):
-    """The keep's body: quartz brick walls to y 8 between quartz pillar corners, a chiseled string course at y 5, the
-    deep gate (three high, two deep under a chiseled lintel) lined with dark oak at its back and ceiling."""
+    """The keep's body: quartz brick walls to y 8 between quartz pillar corners, a string course at y 5 (dark oak on
+    the two faces the camera sees, chiseled quartz on the others: Fable critic B, the chiseled course had the bricks'
+    value), twin windows recessed one cell over it on those faces (y 6..7, dark oak at the back), the deep gate
+    (three high, two deep under a chiseled lintel) lined with dark oak at its back and ceiling."""
     for x in range(KX0, KX1 + 1):
         for z in range(KZ0, KZ1 + 1):
             corner = x in (KX0, KX1) and z in (KZ0, KZ1)
             edge = x in (KX0, KX1) or z in (KZ0, KZ1)
             for y in range(1, KW + 1):
                 if y == 5 and edge:
-                    r.set(x, y, z, "chiseled_quartz_block")
+                    r.set(x, y, z, DARK if x == KX0 or z == KZ1 else "chiseled_quartz_block")
                 elif corner:
                     r.pillar(x, y, z)
                 else:
@@ -197,6 +211,11 @@ def keep_body(r):
         r.set(x, 4, KZ1 - 1, DARK)
         for y in (1, 2, 3):
             r.set(x, y, KZ1 - 2, DARK)
+    for (x, z) in SLITS:
+        bx, bz = (x + 1, z) if x == KX0 else (x, z - 1)
+        for y in (6, 7):
+            r.b.pop((x, y, z), None)
+            r.set(bx, y, bz, DARK)
 
 
 def crown(r):
@@ -228,7 +247,15 @@ def crown(r):
                 r.set(x, KW + 1, z, "smooth_quartz")
                 r.pillar(x, KW + 2, z)
                 r.set(x, KW + 3, z, "gold_block")
-                r.set(x, KW + 4, z, "gold_block")
+    # Fable critic B (Nov 4): the 2 x 2 x 2 gold cube read as "a gold box on a white chimney". Now a 2 x 2 gold base
+    # with crown points (smooth quartz stairs turned up and out on its east and west), one white spike with a gold
+    # finial, and the keep's lantern on it (the keep had no light at dusk).
+    for z in (KZ0 + 1, KZ1 - 1):
+        r.st(KX0, KW + 3, z, "west", "top", name="smooth_quartz_stairs")
+        r.st(KX1, KW + 3, z, "east", "top", name="smooth_quartz_stairs")
+    r.pillar(7, KW + 4, 1)
+    r.set(7, KW + 5, 1, "gold_block")
+    r.lantern(7, KW + 6, 1)
 
 
 def keep_l1(r):
@@ -268,6 +295,9 @@ def arcade_z(r, z0, z1, x_back, x_front, top, piers):
         r.slab(x_front, top + 1, z, "polished_diorite_slab")
 
 
+HEM = [(x, 4, 1) for x in range(0, 6)] + [(0, 4, z) for z in (0, 2, 3)] + [(8, 4, 5), (8, 4, 6), (9, 4, 6)]
+
+
 def wings_l1(r):
     """North wing x 0..5 (z 0 wall, z 1 arcade, deck y 4), west wing z 2..3 (x 0 wall, x 1 arcade, deck y 4),
     east wing z 5..6 (x 9 wall, x 8 arcade, deck y 4); lantern posts on the wings' ends; a rack of lances."""
@@ -277,6 +307,10 @@ def wings_l1(r):
             r.set(x, y, 0, DARK)
     arcade_z(r, 2, 3, 0, 1, 4, (3,))
     arcade_z(r, 5, 6, KX1, KX1 - 1, 4, (6,))
+    # the dark hem (Fable critic C F6): the deck course facing the court and the camera in dark oak under the white
+    # parapet, so the wings read as built (no 4-high white runs) and pale units in the court stand against a dark line
+    for q in HEM:
+        r.set(*q, DARK)
     r.set(0, 5, 3, "diorite_wall")
     r.lantern(0, 6, 3)
     r.lantern(9, 5, 6)
@@ -312,37 +346,68 @@ def draw_l2(r):
             r.set(8, y, z, "quartz_pillar", axis="y") if y == 5 else r.set(8, y, z, "smooth_quartz")
             r.set(9, y, z, "quartz_bricks")
     ring(r, 8, 9, 5, 6, 7)
-    r.set(9, 8, 6, "gold_block")
+    r.set(9, 8, 6, "smooth_quartz")         # was gold: a stud off the keep (Fable critic B); gold stays the keep's
     r.lantern(9, 9, 6)
     r.set(7, KW + 4, 1, "gold_block")      # the lantern's cell gilded: the angel stands on it
     angel(r, 7, KW + 5, 1)
 
 
 # ======================================================================================================== L3
+TX0, TZ1 = 4, 5                          # the L3 crown tier: x 4..9, z 0..5 (the keep's 4 x 4 grown 2 west, 2 south)
+
+
+def crown_tier(r):
+    """The keep's L3 crown tier (lovish, Nov 4: "Barracks L3: wider keep", 6 x 6 over the court, footprint unchanged):
+    corbels at y 9 under the overhang (smooth quartz stairs turned down, facing out on the tier's west and south edges),
+    a smooth quartz deck at y 10 over all 36 cells, and a battlement ring at y 11 on its edge (merlons: a slab on every
+    other cell) round the keep's gold crown and the angel - the keep is the big shape at L3, the wings small."""
+    y = KW + 1
+    for x in range(TX0, KX1 + 1):
+        for z in range(KZ0, TZ1 + 1):
+            if not (KX0 <= x <= KX1 and z <= KZ1):          # the overhang (the keep's own top stays under the deck)
+                if x == TX0:
+                    r.st(x, y, z, "west", "top", name="smooth_quartz_stairs")
+                elif z == TZ1:
+                    r.st(x, y, z, "south", "top", name="smooth_quartz_stairs")
+                else:
+                    r.set(x, y, z, "smooth_quartz")
+            r.set(x, y + 1, z, "smooth_quartz")
+            if x in (TX0, KX1) or z in (KZ0, TZ1):
+                r.set(x, y + 2, z, "smooth_quartz")
+                if (x + z) % 2 == 1:
+                    r.slab(x, y + 3, z)
+
+
 def draw_l3(r):
-    """THE CATHEDRAL OF ARMS: L2 + the north wing raised into a clerestory (y 8..10, the pillar beat carried up) under
-    a sloped roof with a slab ridge (y 12), the west wing's corner a slim tower to y 9 with a gold knop, the
-    angel gilded and set on a gold needle."""
+    """THE CATHEDRAL OF ARMS: L2 + the keep's 6 x 6 crown tier (crown_tier), the north wing raised one storey into a
+    battlemented hall below it (y 8..9, the pillar beat carried up, dark slits between the pillars on the camera face,
+    merlons at y 10), the angel's head gilded and its wings opened, on a gold needle. Fable critic B (Nov 4, L3
+    4 / 10): the shipped clerestory rose to the crown's own height as a blank white slab and the keep led only by the
+    angel; the angel read as a gold cross and the west tower's knop as a stud (dropped)."""
     draw_l2(r)
-    for x in range(0, 6):
-        for y in (8, 9, 10):
+    for x in range(0, TX0):
+        for y in (8, 9):
             r.set(x, y, 0, "quartz_bricks")
             if x % 2 == 0:
                 r.pillar(x, y, 1)
             else:
-                r.set(x, y, 1, "smooth_quartz")
-        r.st(x, 11, 1, "north", name="quartz_stairs")
-        r.set(x, 11, 0, "smooth_quartz")
-        r.slab(x, 12, 0)
-    for y in range(5, 9):
-        r.pillar(1, y, 2)
-    r.set(1, 9, 2, "gold_block")
+                r.set(x, y, 1, DARK)                # a slit between the pillars
+        r.set(x, 10, 0, "smooth_quartz")
+        if x % 2 == 0:
+            r.set(x, 10, 1, "smooth_quartz")        # a merlon
+            r.slab(x, 11, 1)
+        else:
+            r.slab(x, 10, 1)
+    for x in (TX0, TX0 + 1):                        # the wing's last bay runs into the tier's corbels
+        r.set(x, 8, 0, "quartz_bricks")
+        r.set(x, 8, 1, DARK if x % 2 else "quartz_bricks")
+    crown_tier(r)
     angel(r, 7, KW + 5, 1, gold=True)
     r.set(7, KW + 8, 1, "gold_block")
     r.set(7, KW + 9, 1, "end_rod", facing="up")
 
 
-L1_SY = KW + 5                # the lantern on the crown is the top (y 12)
+L1_SY = KW + 7                # the lantern on the crown's spike is the top (y 14)
 L2_SY = KW + 9                # the angel's lantern (y 16)
 L3_SY = KW + 10               # the needle (y 17)
 

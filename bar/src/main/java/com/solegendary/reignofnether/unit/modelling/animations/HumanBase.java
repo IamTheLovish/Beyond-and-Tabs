@@ -166,6 +166,30 @@ public final class HumanBase {
     }
 
     /**
+     * An action clip (an attack, a cast) layered over the base pose already in rot / mov (the idle crossfaded with the
+     * walk): the action's offset from READY goes on top, and the base's own motion is eased out over the action's
+     * middle by `ease` (1 - {@link #drift}), so the guard holds the blow - except for the `lower` bones of a unit still
+     * walking, which keep `walk` (the stride's weight, 0..1) of their walk and take only the rest of the action's leg
+     * work. Every action clip starts and ends in READY, so at both ends this IS the base pose: walking or standing, an
+     * attack starts from where the body is and hands it back there. Standing (walk 0) it is the old idle-only blend:
+     * act + (base - ready) x (1 - ease).
+     * <p>
+     * Why: the Halberdier dropped its walk the tick a thrust began - the legs jumped from mid-stride to the guard and
+     * back when it ended (lovish, Nov 5: "animations smacking each other").
+     */
+    public static void actOver(float[][] rot, float[][] mov, float[][] actRot, float[][] actMov, float[][] readyRot,
+                               float[][] readyMov, boolean[] lower, float ease, float walk) {
+        for (int i = 0; i < rot.length; i++) {
+            float keep = lower[i] ? walk : 0f;
+            float a = ease * (1f - keep), s = 1f - keep;
+            for (int c = 0; c < 3; c++) {
+                rot[i][c] += (readyRot[i][c] - rot[i][c]) * a + (actRot[i][c] - readyRot[i][c]) * s;
+                mov[i][c] += (readyMov[i][c] - mov[i][c]) * a + (actMov[i][c] - readyMov[i][c]) * s;
+            }
+        }
+    }
+
+    /**
      * The base pose onto the (rest-posed) parts: the idle by age at this unit's own phase (Life.offset), crossfaded with
      * the walk by the stride, the idle's drift off READY kept by `drift` (0..1: {@link #drift} through an attack, and
      * 0 for a pose that must sit exactly on READY, such as an aim).
