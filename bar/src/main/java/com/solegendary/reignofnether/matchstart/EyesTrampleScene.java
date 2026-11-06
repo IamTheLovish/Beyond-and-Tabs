@@ -184,13 +184,14 @@ final class EyesTrampleScene {
         return false;
     }
 
-    /** Standing on the road's south end, a person's eye height, looking north along it. */
+    /**
+     * Standing on the road's south end, a person's eye height, looking north along it and 30 degrees down, so the road
+     * runs from the feet to mid-frame (run 42185251420's first try looked at the horizon: the road was a sliver).
+     */
     private static void stand(Minecraft mc, BlockPos site) {
         double px = site.getX() + 13.5, pz = site.getZ() + 14.5, py = site.getY();
-        double ex = 0, ez = -14, ey = -mc.player.getEyeHeight() + 0.2;
-        float yaw = (float) Math.toDegrees(Math.atan2(-ex, ez));
-        float pitch = (float) Math.toDegrees(Math.atan2(-ey, Math.sqrt(ex * ex + ez * ez))) + 8;
-        mc.player.moveTo(px, py, pz, yaw, pitch);
+        float yaw = (float) Math.toDegrees(Math.atan2(0, -14));
+        mc.player.moveTo(px, py, pz, yaw, 30f);
         mc.player.setDeltaMovement(Vec3.ZERO);
         mc.options.hideGui = true;
     }

@@ -818,6 +818,18 @@ public final class EyesDirector {
             case 0 -> {   // the site: chunks load under the camera, then the pad goes down
                 if (ticks == 1) {
                     scarsSite = scarsSite(mc);
+                    // a photo of the ground, not a match: the pad is 44 blocks out from the capitol, beyond its
+                    // vision. Under fog of war the server never sent the pad's blocks and only 2 of 9 marked chunks
+                    // reached the client, so the stills showed fogged map ground (eyes run 42185251420, Nov 6): fog
+                    // off on both sides and noon, as for scenes 15 and 20
+                    if (com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isEnabled())
+                        com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.setEnabled(false);
+                    var fogServer = mc.getSingleplayerServer();
+                    fogServer.execute(() -> {
+                        if (com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isEnabled())
+                            com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.setEnabled(false);
+                        fogServer.overworld().setDayTime(6000);
+                    });
                     OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(scarsSite));
                     ReignOfNether.LOGGER.info("[Eyes] 16 scars: pad at {} (capitol {}), fog of war on the client: {}",
                         scarsSite.toShortString(), capitolCentre.toShortString(),
