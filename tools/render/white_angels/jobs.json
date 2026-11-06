@@ -4,7 +4,7 @@
          ["python", "tools/gen_angels.py", "--massing", "b4", "--kind", "mender"],
          ["python", "tools/gen_angels.py", "--massing", "b4", "--kind", "archer"],
          ["python", "tools/gen_angels.py", "--massing", "b4", "--kind", "sword"],
-         ["git", "diff", "--stat", "--exit-code", "--", "design/models"],
+         ["git", "--no-pager", "diff", "--stat", "--", "design/models"],
          ["python", "tools/angel_anim.py", "--fixture", "design/fixtures/angel_clips.json"],
          ["git", "diff", "--stat", "--exit-code", "--", "design/fixtures"]],
  "jobs": [
