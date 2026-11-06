@@ -145,12 +145,12 @@ TARGETS = {
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
     # the _s blue CODE: 65-255 = subsurface scattering (light through the leaf under a shader pack)
     # round 18: leaves' tilt 18 -> 12 (every leaf edge drew a dark rim under shaders)
-    "oak_leaves":       dict(luma=0.48, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "birch_leaves":     dict(luma=0.58, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "spruce_leaves":    dict(luma=0.48, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
-    "acacia_leaves":    dict(luma=0.48, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "jungle_leaves":    dict(luma=0.46, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
-    "dark_oak_leaves":  dict(luma=0.44, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
+    "oak_leaves":       dict(luma=0.52, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "birch_leaves":     dict(luma=0.58, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "spruce_leaves":    dict(luma=0.48, std=0.120, sat=0.04, ao=0.35, tilt=9.0, smooth=50, pore=150),
+    "acacia_leaves":    dict(luma=0.52, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "jungle_leaves":    dict(luma=0.49, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=70, pore=170),
+    "dark_oak_leaves":  dict(luma=0.47, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
     "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.26, tilt=24.0, smooth=76, pore=10),   # r31: pink-grey, rust blooms
@@ -1221,6 +1221,11 @@ LEAF_GAP_RIM = 0.60
 LEAF_GAP_DROP = 0.50          # r71: 0.70 -> 0.50 (critic r1: holes into the crown read as black flecks)
 LEAF_GAP_BLUR = 1.0 / 96
 LEAF_GAP_COVER = 0.35         # r71: only the larger gaps stay open
+# r72: the darkest leaf texel at least this share of the leaves' median shade (no near-black flecks), and the
+# tinted leaves' albedo a touch warm, so the biome's blue-green tint lands nearer the olive lawn (critic, trees r2:
+# "crowns a saturated blue-green, lawn olive; they fight")
+LEAF_FLOOR = 0.62
+LEAF_WARM = (1.06, 1.00, 0.88)
 
 
 def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0, gaps=True):
@@ -1315,13 +1320,18 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0, gaps=True):
     # curve are small touches
     soft = F.blur(np.where(leaf, lit, 0.55), n / 40)
     if gaps:
-        # round 70: three soft tones instead of one smooth ramp - shaded rims, mid leaves, lit crowns (a canopy read
-        # close up and at a distance with no shader to model it), and a cluster darker toward a hole (its underside)
-        band = 0.5 * smoothstep(0.50, 0.62, soft) + 0.5 * smoothstep(0.68, 0.80, soft)
-        rim = F.blur(keep_gap.astype(np.float64), n / 128)
-        soft = 0.40 + 0.45 * band - 0.25 * rim
+        # round 70: three tones instead of one smooth ramp - shaded rims, mid leaves, lit crowns (a canopy read close up
+        # and at a distance with no shader to model it). r72 (Fable critic, trees r2: leaves "a flat single tone" in
+        # first person, round black "eye" holes, "black flecks dense enough to read as dirt"): the steps sharper so
+        # the three tones read at a block's distance, and no darkening toward a hole (r70's rim made every hole a
+        # black-ringed eye)
+        band = 0.5 * smoothstep(0.52, 0.58, soft) + 0.5 * smoothstep(0.70, 0.76, soft)
+        soft = 0.45 + 0.50 * band
     shade = np.where(leaf, 0.36 + 0.62 * soft + 0.04 * (tone - 0.5) + 0.04 * dome + 0.02 * rib
                      - 0.03 * (along + 0.5), 0.36 + 0.62 * soft - 0.06)
+    if gaps:
+        # r72: no near-black leaf texel - the darkest shade is at least LEAF_FLOOR of the leaves' median
+        shade = np.maximum(shade, LEAF_FLOOR * np.median(shade[alpha > 0]))
     shade = np.where(alpha > 0, shade, 0.35)
     return H, np.clip(np.stack([shade] * 3, -1), 0, 1), alpha
 
@@ -1720,7 +1730,7 @@ PROC_VARIANT_BLOCKS["mud"] = ("cube_column", {"end": "mud", "side": "mud_side"})
 TARGETS["mangrove_log"] = dict(luma=0.28, std=0.095, sat=0.40, tilt=22.0, smooth=40, pore=36)
 TARGETS["mangrove_log_top"] = dict(luma=0.36, std=0.070, sat=0.50, tilt=12.0, smooth=40, pore=30)
 LEAVES["mangrove_leaves"] = (320, 0.11, 0.055, False)
-TARGETS["mangrove_leaves"] = dict(luma=0.46, std=0.130, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170)
+TARGETS["mangrove_leaves"] = dict(luma=0.49, std=0.130, sat=0.04, ao=0.35, tilt=9.0, smooth=60, pore=170)
 LEAF_VARIANTS["mangrove_leaves_v2"] = "mangrove_leaves"
 LEAVES["mangrove_leaves_v2"] = LEAVES["mangrove_leaves"]
 TARGETS["mangrove_leaves_v2"] = dict(TARGETS["mangrove_leaves"])
@@ -2280,7 +2290,7 @@ def m_birch_log(F, n):
     curl = F.noise(6, 18, 0.5, sx=6.0, sy=1.0)                        # thin horizontal peel lines in the paper
     H = 0.6 + 0.04 * paper - 0.06 * band - 0.05 * lent - 0.05 * patch + 0.015 * curl   # marks: colour, barely relief
     paper_rgb = tint((0.91, 0.89, 0.85), 0.97 + 0.02 * paper + 0.015 * curl)   # ~#e8e4d8
-    patch = smoothstep(0.3, 0.6, patch)                               # the patches small and solid
+    patch = smoothstep(0.55, 0.8, patch)                              # r72: the patches smaller (~1/8 block), solid
     mark = np.clip(0.85 * band + 0.55 * lent + 0.75 * patch, 0, 0.92)[..., None]
     mark_rgb = np.asarray((0.17, 0.15, 0.13))[None, None, :] * (0.9 + 0.2 * norm01(F.noise(4, 12, 0.5)))[..., None]
     return H, np.clip(paper_rgb * (1 - mark) + mark_rgb * mark, 0, 1)
@@ -4457,6 +4467,8 @@ def m_bark_r56(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     return H, alb
 
 
+# r72 (critic, trees r2: r71's fewer cracks read as "smeared stripes" / "corduroy" - the cracks are the structure):
+# r70's crack counts back; the r71 variants and uneven ridge spacing stay.
 # r70 (lovish, Nov 5, playing with NO shader pack, first person: "the tree looked terrible" / "the texture for it" -
 # cherry and mangrove "smeared, swirly, melted photo", oak's plates black-and-tan blotches up close): the r56 plates
 # were soft gradients whose spread fit_albedo measures at the RTS camera's mip, so at full size their contrast was
@@ -4467,13 +4479,13 @@ def m_bark_r56(F, n, base=(0.42, 0.33, 0.21), style="oak"):
 # style: (ridges per block, furrow width (of a ridge), cracks per block, crack half-width (block), fibre, crest,
 # plate tone, lenticels)
 BARK70 = {
-    "oak": (5, 0.32, 2, 0.012, 0.10, 0.16, 0.10, 0.0),        # deep grey-brown furrows, blocky ridges
+    "oak": (5, 0.32, 3, 0.012, 0.10, 0.16, 0.10, 0.0),        # deep grey-brown furrows, blocky ridges
     "spruce": (7, 0.20, 6, 0.010, 0.07, 0.10, 0.16, 0.0),     # thin red-brown scales: many short plates
-    "jungle": (4, 0.18, 1, 0.008, 0.08, 0.10, 0.08, 0.0),     # smooth, long plates, shallow seams
-    "acacia": (6, 0.26, 1, 0.008, 0.13, 0.12, 0.08, 0.0),     # grey, fibrous ridges
-    "dark_oak": (4, 0.38, 1, 0.014, 0.08, 0.12, 0.08, 0.0),   # near-black, wide deep furrows
+    "jungle": (4, 0.18, 2, 0.008, 0.08, 0.10, 0.08, 0.0),     # smooth, long plates, shallow seams
+    "acacia": (6, 0.26, 2, 0.008, 0.13, 0.12, 0.08, 0.0),     # grey, fibrous ridges
+    "dark_oak": (4, 0.38, 2, 0.014, 0.08, 0.12, 0.08, 0.0),   # near-black, wide deep furrows
     "cherry": (8, 0.10, 1, 0.006, 0.07, 0.08, 0.06, 0.35),    # smooth, fine seams, horizontal lenticels
-    "mangrove": (6, 0.22, 2, 0.010, 0.08, 0.12, 0.10, 0.0),   # dark red-brown narrow ridges
+    "mangrove": (6, 0.22, 3, 0.010, 0.08, 0.12, 0.10, 0.0),   # dark red-brown narrow ridges
 }
 
 
@@ -6707,6 +6719,12 @@ def _with_f0(fn):
     return r
 
 
+def _warm_leaves(r):
+    """r72: a tinted leaf's greyscale albedo with LEAF_WARM's slight warm cast (TARGETS sat 0.04 keeps it)."""
+    H, alb, alpha = r
+    return H, np.clip(alb * np.asarray(LEAF_WARM)[None, None, :], 0, 1), alpha
+
+
 def _cutout(fn):
     """Leaves: fitted on the leaf texels only; the holes keep their unfitted colour (invisible, alpha 0)."""
     def r(F, n, t):
@@ -6782,7 +6800,7 @@ def recipes():
         R[wood + "_log"] = _plain(lambda F, n, b=bark, w=wood: m_log(F, n, b, w))
         R[wood + "_log_top"] = _plain(lambda F, n, w=end, b=bark: m_log_top(F, n, w, b))
     for name, (count, length, width, round_tip) in LEAVES.items():
-        R[name] = _cutout(lambda F, n, a=(count, length, width, round_tip): m_leaves(F, n, *a))
+        R[name] = _cutout(lambda F, n, a=(count, length, width, round_tip): _warm_leaves(m_leaves(F, n, *a)))
     plain = {
         # round 11: the other factions' buildings
         "polished_blackstone": lambda F, n: m_polished(F, n, (0.17, 0.155, 0.14), 0.08, 0.06),   # r41: warm black
