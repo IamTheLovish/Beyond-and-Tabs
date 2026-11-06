@@ -313,4 +313,16 @@ public final class CrownMotion {
         }
         return count;
     }
+
+    /** Ticks a crown handed back to the chunk mesh keeps drawing: the re-mesh is asynchronous, so a standing crown is
+     * drawn until its re-mesh has surely landed (it never blinks out). */
+    public static final int HAND_BACK_TICKS = 10;
+
+    /**
+     * How long a crown we stop drawing keeps drawing. {@code placed}: its building is still on the client's list (only
+     * out of range, over the budget, or the view changed); otherwise the building is gone (destroyed, cancelled).
+     */
+    public static int handBackTicks(boolean placed) {
+        return HAND_BACK_TICKS;
+    }
 }

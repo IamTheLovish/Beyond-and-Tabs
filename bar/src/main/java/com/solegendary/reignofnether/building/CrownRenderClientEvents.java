@@ -765,7 +765,7 @@ public class CrownRenderClientEvents {
                 LanternMesh lm = t.lanternMesh;
                 if (lm != null && t.built) {           // the lanterns are hung once the building stands
                     lm.pose((float) (t.anchor[0] - cam.x), (float) (t.anchor[1] - cam.y), (float) (t.anchor[2] - cam.z),
-                        seconds, windMul, heading, t.gust, t.sway, t.lanternOut);
+                        seconds, windMul, heading, t.gust, t.sway, m.pivot, now - t.swellAt, t.lanternOut);
                     for (int b = 0; b < t.lanternTypes.length; b++) {
                         RenderType rt = t.lanternTypes[b];
                         if (!USED.contains(rt))

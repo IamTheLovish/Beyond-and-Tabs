@@ -47,10 +47,12 @@ public final class LanternMesh {
      * The vertices of this frame, camera-relative, into {@code out} (3 floats a vertex): each lantern rotated about
      * the horizontal axis across the wind by its swing (downwind positive), at its hang point pushed with its crown.
      *
-     * @param sway the crowns' sway (CrownMotion.Crown.sway, one per crown); the rest as CrownMesh.pose
+     * @param sway  the crowns' sway (CrownMotion.Crown.sway, one per crown)
+     * @param pivot the crowns' pivots relative to the anchor (CrownMesh.pivot: x, base y, z per crown)
+     * @param swellSince ticks since the building completed or levelled up; the rest as CrownMesh.pose
      */
     public void pose(float offX, float offY, float offZ, double seconds, double windMul, double heading, float[] gust,
-                     float[] sway, float[] out) {
+                     float[] sway, float[] pivot, float swellSince, float[] out) {
         float dirX = (float) Math.cos(heading), dirZ = (float) Math.sin(heading);
         for (int l = 0; l < phase.length; l++) {
             int c = crown[l];
