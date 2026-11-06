@@ -12620,6 +12620,42 @@ public class SkirmishGameTests {
      * then tick it 5 times and add it to the level. Nothing may throw, the copy must be alive, keep all of that, and
      * end up with the same goals as a fresh unit (a vanilla readAdditionalSaveData must not bolt its own AI back on).
      */
+    /**
+     * Why a unit is gone, for the failure message: units_survive_reload_1 failed once with only "wolf_unit: gone 5 ticks
+     * after joining the level" (#488's CI 42003290917 attempt 2, defaultBatch, 69 tests side by side), which cannot tell a
+     * death from a chunk that was not loading entities (removal reason UNLOADED_TO_CHUNK) from a discard.
+     */
+    /** How many unit types shard {@code shard} of {@code total} holds. */
+    static int reloadShardSize(int total, int shard) {
+        return total <= shard ? 0 : (total - 1 - shard) / RELOAD_SHARDS + 1;
+    }
+
+    /**
+     * Where the reload test stands unit {@code slot} of a shard of {@code count}, arena-relative (y 2: on the floor): a
+     * square grid sized to the shard over x and z 2..14 of the test's own arena, so a growing roster tightens the grid
+     * instead of spilling past the arena's edge (four to a row 4 blocks apart did, from the 17th unit on).
+     */
+    static BlockPos reloadSlot(int slot, int count) {
+        int cols = Math.max(1, (int) Math.ceil(Math.sqrt(Math.max(1, count))));
+        int step = cols == 1 ? 0 : Math.max(1, 12 / (cols - 1));   // past 13 a row it spills, and the layout test says so
+        return new BlockPos(2 + (slot % cols) * step, 2, 2 + (slot / cols) * step);
+    }
+
+    static String goneWhy(ServerLevel level, net.minecraft.world.entity.Entity e) {
+        BlockPos at = e.blockPosition();
+        long chunk = net.minecraft.world.level.ChunkPos.asLong(at);
+        String hurt = "";
+        if (e instanceof net.minecraft.world.entity.LivingEntity le) {
+            var src = le.getLastDamageSource();
+            hurt = String.format(java.util.Locale.ROOT, ", health %.1f/%.1f, last damage %s", le.getHealth(), le.getMaxHealth(),
+                src == null ? "none" : src.getMsgId() + (src.getEntity() == null ? "" : " by "
+                    + net.minecraft.world.entity.EntityType.getKey(src.getEntity().getType()).getPath()));
+        }
+        return String.format(java.util.Locale.ROOT, " (removed %s, alive %b%s, at %s in chunk %d,%d: entities loaded %b, entity-ticking %b)",
+            e.getRemovalReason(), e.isAlive(), hurt, at.toShortString(), at.getX() >> 4, at.getZ() >> 4,
+            level.areEntitiesLoaded(chunk), level.isPositionEntityTicking(at));
+    }
+
     static void unitsSurviveReload(GameTestHelper helper, int shard) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_reload_" + shard;
@@ -12632,6 +12668,7 @@ public class SkirmishGameTests {
         List<String> gaps = new ArrayList<>();
         List<net.minecraft.world.entity.Entity> added = new ArrayList<>();
         int slot = 0;
+        int inShard = reloadShardSize(all.size(), shard);
         for (int i = shard; i < all.size(); i += RELOAD_SHARDS) {
             var type = all.get(i);
             String id = String.valueOf(net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(type));
@@ -12642,7 +12679,7 @@ public class SkirmishGameTests {
                     gaps.add(id + ": not a Mob unit");
                     continue;
                 }
-                BlockPos at = helper.absolutePos(new BlockPos(2 + (slot % 4) * 4, 2, 2 + (slot / 4) * 4));
+                BlockPos at = helper.absolutePos(reloadSlot(slot, inShard));
                 slot++;
                 mob.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
                 unit.setOwnerName(owner);
@@ -12702,7 +12739,8 @@ public class SkirmishGameTests {
         helper.runAfterDelay(5, () -> {
             for (var e : added)
                 if (!e.isAlive() || e.isRemoved())
-                    gaps.add(String.valueOf(net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(e.getType())) + ": gone 5 ticks after joining the level");
+                    gaps.add(String.valueOf(net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(e.getType())) + ": gone 5 ticks after joining the level"
+                        + goneWhy(level, e));
             added.forEach(net.minecraft.world.entity.Entity::discard);
             if (!gaps.isEmpty())
                 helper.fail("units that don't survive a reload: " + gaps);
