@@ -105,6 +105,8 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
     base = np.asarray(imgs["base"], dtype=np.float32) / 255.0
     team = np.asarray(imgs["team"], dtype=np.float32) / 255.0
     glow = np.asarray(imgs["glow"], dtype=np.float32) / 255.0
+    # a team light (tools/dsl_to_game.py team_glow): full-bright light in the owner's colour (GeneratedBodies.teamGlow)
+    tglow = np.asarray(imgs["team_glow"], dtype=np.float32) / 255.0 if "team_glow" in imgs else None
     th, tw = base.shape[:2]
     R = np.array(view_matrix(view[0], view[1]))
     flip = np.diag([1.0, -1.0, 1.0])           # model space (y down) -> DSL space (y up)
@@ -180,6 +182,11 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
         col = col * light
         gl = glow[tj, ti]
         col = np.clip(col + gl[..., :3] * gl[..., 3:4] * 0.8, 0, 1)
+        if tglow is not None:
+            tg = tglow[tj, ti]
+            lit_team = tg[..., 3] > 0.1
+            col = np.clip(col + tg[..., :3] * tg[..., 3:4] * owner, 0, 1)
+            has_team = has_team | lit_team
         region = img[y0:y1 + 1, x0:x1 + 1]
         if fa < 1.0:
             region[ok] = region[ok] * (1.0 - fa) + col[ok] * fa
