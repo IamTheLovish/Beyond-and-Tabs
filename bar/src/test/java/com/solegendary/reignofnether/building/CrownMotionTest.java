@@ -218,14 +218,54 @@ class CrownMotionTest {
             new float[] { 0, 8, 0 }, new float[2], new int[1], new int[1], new int[1], new int[] { 0 },
             new int[] { 0 }, new int[] { 1 });
         float[] out = new float[3];
-        m.pose(0, 0, 0, 0.55, 1.7, 0, new float[] { 1f }, new float[] { 0.2f }, out);   // wind toward +x, a full gust
+        m.pose(0, 0, 0, 0.55, 1.7, 0, new float[] { 1f }, new float[] { 0.2f }, new float[3], 1e6f, out);   // wind toward +x, a full gust
         assertTrue(out[0] > 0.1f, "swung downwind: " + out[0]);
         assertEquals(0f, out[2], 1e-6, "only in the wind's plane");
         float len = (float) Math.sqrt(out[0] * out[0] + (out[1] - 10) * (out[1] - 10));
         assertEquals(2f, len, 1e-4, "the chain keeps its length");
-        m.pose(0, 0, 0, 0.55, 0, 0, new float[] { 1f }, new float[] { 0.2f }, out);
+        m.pose(0, 0, 0, 0.55, 0, 0, new float[] { 1f }, new float[] { 0.2f }, new float[3], 1e6f, out);
         assertEquals(0f, out[0], 1e-6, "still with no wind");
         assertEquals(8f, out[1], 1e-6);
+    }
+
+    @Test
+    void aLanternStaysOnItsLeafWhileTheCrownSwells() {
+        // #502 review (Eris.10): the crown swelled 6 % about its pivot on completion but the lanterns did not, so a
+        // chain hung up to ~0.4 block off its leaf. One crown: a row of five cells x 0..4 at y 10 (pivot x 2.5, base
+        // y 10); a lantern hangs from the bottom middle of the outer cell (x 4); no wind, at the swell's peak.
+        int[] cx = { 0, 1, 2, 3, 4 }, cy = { 10, 10, 10, 10, 10 }, cz = new int[5], of = new int[5];
+        List<CrownMotion.Crown> crowns = CrownMotion.crowns(cx, cy, cz, of);
+        float[] born = new float[5];
+        java.util.Arrays.fill(born, Float.NaN);
+        float[] leaf = { 4.5f, 10, 0.5f };                     // the crown's vertex at the hang point (anchor 0, 0, 0)
+        CrownMesh crown = new CrownMesh(new int[3], cx, cy, cz, of, crowns, born, leaf, new float[2], new int[1],
+            new int[1], new int[1], new int[] { 4 }, new int[] { 0 }, new int[] { 1 });
+        float[] chain = { 4.5f, 10, 0.5f, 4.5f, 8, 0.5f };      // the chain's top (the hang point) and 2 below it
+        LanternMesh lantern = new LanternMesh(new float[] { 4.5f, 10, 0.5f }, new int[] { 0 }, new float[] { 0 },
+            new float[] { 0 }, chain, new float[4], new int[2], new int[2], new int[2], new int[] { 0, 0 },
+            new int[] { 0 }, new int[] { 2 });
+        float peak = CrownMotion.SWELL_TICKS / 2f;
+        float[] gust = { 0f }, sway = { crowns.get(0).sway() };
+        float[] leafOut = new float[3], out = new float[6];
+        crown.pose(0, 0, 0, 0, 0, 0, gust, 1e6f, peak, leafOut);
+        lantern.pose(0, 0, 0, 0, 0, 0, gust, sway, crown.pivot, peak, out);
+        assertTrue(leafOut[0] > 4.6f, "the leaf moved out with the swell: " + leafOut[0]);
+        for (int k = 0; k < 3; k++)
+            assertEquals(leafOut[k], out[k], 1e-4, "the chain's top stays on its leaf, axis " + k);
+        assertEquals(2f, out[1] - out[4], 1e-4, "the chain keeps its length");
+        assertEquals(out[0], out[3], 1e-4, "and hangs straight down");
+        // settled: back where it was captured
+        lantern.pose(0, 0, 0, 0, 0, 0, gust, sway, crown.pivot, 1e6f, out);
+        assertEquals(4.5f, out[0], 1e-6);
+    }
+
+    // ---------------------------------------------------------------- hand-over to the chunk mesh
+
+    @Test
+    void aDestroyedBuildingsCrownStopsDrawingAtOnce() {
+        // #502 review (Eris.10): a destroyed hall's crown kept drawing over the rubble for the hand-back delay
+        assertEquals(0, CrownMotion.handBackTicks(false), "its building is gone: no copy drawn over the rubble");
+        assertTrue(CrownMotion.handBackTicks(true) >= 2, "a standing crown draws until its re-mesh lands (no blink)");
     }
 
     // ---------------------------------------------------------------- the pilot and the frame budget
