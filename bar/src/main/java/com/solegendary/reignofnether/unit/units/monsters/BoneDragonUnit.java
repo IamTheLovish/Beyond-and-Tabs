@@ -66,7 +66,7 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
  *   breath of {@link FireBreath#TICKS} ticks that burns every {@link FireBreath#PULSE_TICKS}
  *   ({@link #breathPulse}): every enemy unit and building in its cone takes its attack damage per SECOND of breath
  *   (buildings by BuildingDamage's unit rate) and withers ({@link #WITHER_TICKS}). From the air the cone runs from the
- *   jaws down onto a line of fire it strafes across the target; landed, it is a forward cone along the ground. Its
+ *   jaws down onto a line of fire it strafes from the target on past it; landed, it is a forward cone along the ground. Its
  *   hits land on groups; a spread army takes one unit's worth. No ghast fireball, no ghast sound.</li>
  *   <li><b>Night play</b>: at night (or near a Gravebound night source) the breath does x{@link #NIGHT_DAMAGE_MULT}.
  *   A Gravebound player times the strike.</li>
@@ -624,8 +624,9 @@ public class BoneDragonUnit extends GhastUnit {
     /** The breath's aim at its tick t: the base (the target where it is now) swept by the offset. */
     private Vec3 breathAim(int t) {
         double s = FireBreath.sweep(t);
-        return new Vec3(FireBreath.along(breathBase.x, breathOffset.x, s), FireBreath.along(breathBase.y, breathOffset.y, s),
-            FireBreath.along(breathBase.z, breathOffset.z, s));
+        return new Vec3(FireBreath.aim(breathLanded, breathBase.x, breathOffset.x, s),
+            FireBreath.aim(breathLanded, breathBase.y, breathOffset.y, s),
+            FireBreath.aim(breathLanded, breathBase.z, breathOffset.z, s));
     }
 
     /** One server tick of the breath: follow the target, burn on the pulse ticks, stop at the end or when it is lost. */
