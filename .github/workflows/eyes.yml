@@ -119,6 +119,10 @@ on:
         description: "Structure photos: extra day times, comma-separated (e.g. 5000,11800,18000) - the RTS and 3/4 views again at each (15_<name>_rts_t<T>, _34_t<T>)"
         required: false
         default: ''
+      leaf_ao:
+        description: "Structure photos: the crown lighting sweep - leaf AO shades 0..1, comma-separated (e.g. 0.2,0.5,0.8; 0.2 = vanilla): per shade the RTS and RTS-close stills (15_<name>_rts_leafao<v>, a frame bench), then a magenta leaf mask (15_<name>_rts_leafmask) for tools/crown_measure.py"
+        required: false
+        default: ''
       shader_options:
         description: "Shader lane: extra options for the pack's options file, KEY=VALUE separated by ';' (e.g. BorderFog=false;TOGGLE_VL_FOG=false) - an A/B of the pack's own settings; publishes to <lane>-custom"
         required: false
@@ -163,6 +167,7 @@ jobs:
       SHADER_PACK: ${{ inputs.shader_pack || 'complementary' }}
       SHADER_OPTIONS: ${{ inputs.shader_options || '' }}
       TIMES: ${{ inputs.times || '' }}
+      LEAF_AO: ${{ inputs.leaf_ao || '' }}
       LOOK: ${{ inputs.look || 'default' }}
       # a non-default look publishes to its own branch (eyes-look-full, ...) so the lane's latest stills and its
       # approved baseline stay at the shipped setting
@@ -318,6 +323,13 @@ jobs:
           echo "$TIMES" | grep -qE '^[0-9]+(,[0-9]+)*$' || { echo "::error::times must be day times like 5000,11800,18000"; exit 1; }
           echo "EYES_JVM_EXTRA=${EYES_JVM_EXTRA:-} -Dbat.eyes.times=$TIMES" >> "$GITHUB_ENV"
           echo "::notice::[Eyes] extra day times: $TIMES"
+      - name: Crown lighting sweep for the structure photos (dispatch input `leaf_ao`)
+        if: env.LEAF_AO != '' && env.STRUCTURES != ''
+        run: |
+          set -euo pipefail
+          echo "$LEAF_AO" | grep -qE '^[01](\.[0-9]+)?(,[01](\.[0-9]+)?)*$' || { echo "::error::leaf_ao must be shades like 0.2,0.5,0.8"; exit 1; }
+          echo "EYES_JVM_EXTRA=${EYES_JVM_EXTRA:-} -Dbat.eyes.leafAo=$LEAF_AO" >> "$GITHUB_ENV"
+          echo "::notice::[Eyes] crown lighting sweep: leaf AO shades $LEAF_AO"
       - name: Scars scene only (dispatch input `scars`; EyesDirector scene 16)
         if: env.SCARS == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.scars=true' >> "$GITHUB_ENV"
