@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit.modelling.instancing;
 
 import com.google.common.collect.ImmutableMap;
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.shaders.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -9,6 +10,8 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.mixin.instancing.LightTextureAccessor;
+import com.solegendary.reignofnether.mixin.instancing.OverlayTextureAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
@@ -22,6 +25,8 @@ import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL31;
+import org.lwjgl.opengl.GL33;
+import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
@@ -31,7 +36,8 @@ import java.util.List;
 
 /**
  * The instanced unit bodies' GL side: each rig's vertices in a vertex buffer of their own (uploaded once), each variant's
- * quads as an index buffer, and per frame two texture buffers - the bone matrices and the instances' headers - then one
+ * quads as an index buffer, and per frame a texture buffer of the bone matrices and a vertex buffer of per-instance
+ * attributes (bone block, colour, light-map and overlay texels: nothing per unit is fetched per vertex) - then one
  * {@code glDrawElementsInstanced} per {@link InstanceBatch.Group}. The render type of a group is set up exactly as the
  * old path's draw sets it up ({@link RenderType#setupRenderState}: its texture with its mipmaps, transparency, cull,
  * light map, overlay, depth and write mask); only the shader program is ours - {@code bat_unit_instanced} (the entity
@@ -50,22 +56,31 @@ public final class InstancedBodies {
     /** The shader's attributes, in this order (ShaderInstance binds each name to its index). */
     static final VertexFormatElement BONE = new VertexFormatElement(0, VertexFormatElement.Type.INT,
         VertexFormatElement.Usage.GENERIC, 1);
+    static final VertexFormatElement TEXEL = new VertexFormatElement(0, VertexFormatElement.Type.UBYTE,
+        VertexFormatElement.Usage.GENERIC, 4);
     static final VertexFormat FORMAT = new VertexFormat(ImmutableMap.<String, VertexFormatElement>builder()
         .put("Position", DefaultVertexFormat.ELEMENT_POSITION).put("UV0", DefaultVertexFormat.ELEMENT_UV0)
-        .put("Normal", DefaultVertexFormat.ELEMENT_NORMAL).put("Bone", BONE).build());
+        .put("Normal", DefaultVertexFormat.ELEMENT_NORMAL).put("Bone", BONE).put("BoneBase", BONE)
+        .put("Color", DefaultVertexFormat.ELEMENT_COLOR).put("LightColor", TEXEL).put("OverlayColor", TEXEL).build());
     /** Per vertex: position 3 floats, uv 2, normal 3, bone 1 int. */
     static final int STRIDE = 36;
-    /** The texture units of the two buffers (the entity shaders use 0-2; the game's state tracks 0-11). */
-    static final int BONES_UNIT = 10, HEADS_UNIT = 11;
+    /**
+     * Per instance (attribute divisor 1): its bone block's first texel (int), its colour, its light-map texel and its
+     * overlay texel (4 bytes each, read as normalised bytes like the old path's colour attribute and the RGBA8 textures).
+     */
+    static final int INSTANCE_STRIDE = 16;
+    static final int A_BONE_BASE = 4, A_COLOR = 5, A_LIGHT = 6, A_OVERLAY = 7;
+    /** The texture unit of the bone buffer (the entity shaders use 0-2; the game's state tracks 0-11). */
+    static final int BONES_UNIT = 10;
 
     private static ShaderInstance lit, eyes;
     private static boolean failed = false;
     private static String failure = null;
     private static boolean glReady = false;
     private static int maxTexels = 0;
-    private static int boneBuffer, boneTexture, headBuffer, headTexture;
+    private static int boneBuffer, boneTexture, instanceBuffer;
     private static FloatBuffer boneUpload = null;
-    private static IntBuffer headUpload = null;
+    private static IntBuffer instanceUpload = null;
 
     /** The GPU objects of one rig. */
     static final class RigGpu {
@@ -106,22 +121,14 @@ public final class InstancedBodies {
         maxTexels = GL11.glGetInteger(GL31.GL_MAX_TEXTURE_BUFFER_SIZE);
         boneBuffer = GL15.glGenBuffers();
         boneTexture = GL11.glGenTextures();
-        headBuffer = GL15.glGenBuffers();
-        headTexture = GL11.glGenTextures();
+        instanceBuffer = GL15.glGenBuffers();
         GL15.glBindBuffer(GL31.GL_TEXTURE_BUFFER, boneBuffer);
         GL15.glBufferData(GL31.GL_TEXTURE_BUFFER, 16L * 4096, GL15.GL_STREAM_DRAW);
-        GL15.glBindBuffer(GL31.GL_TEXTURE_BUFFER, headBuffer);
-        GL15.glBufferData(GL31.GL_TEXTURE_BUFFER, 16L * 1024, GL15.GL_STREAM_DRAW);
         GL15.glBindBuffer(GL31.GL_TEXTURE_BUFFER, 0);
         int was = GlStateManager._getActiveTexture();
         GlStateManager._activeTexture(GL13.GL_TEXTURE0 + BONES_UNIT);
         GL11.glBindTexture(GL31.GL_TEXTURE_BUFFER, boneTexture);
         GL31.glTexBuffer(GL31.GL_TEXTURE_BUFFER, GL30.GL_RGBA32F, boneBuffer);
-        GlStateManager._activeTexture(GL13.GL_TEXTURE0 + HEADS_UNIT);
-        GL11.glBindTexture(GL31.GL_TEXTURE_BUFFER, headTexture);
-        GL31.glTexBuffer(GL31.GL_TEXTURE_BUFFER, GL30.GL_RGBA32I, headBuffer);
-        GL11.glBindTexture(GL31.GL_TEXTURE_BUFFER, 0);
-        GlStateManager._activeTexture(GL13.GL_TEXTURE0 + BONES_UNIT);
         GL11.glBindTexture(GL31.GL_TEXTURE_BUFFER, 0);
         GlStateManager._activeTexture(was);
         glReady = true;
@@ -163,6 +170,10 @@ public final class InstancedBodies {
             GL20.glVertexAttribPointer(2, 3, GL11.GL_FLOAT, false, STRIDE, 20L);
             GL20.glEnableVertexAttribArray(3);
             GL30.glVertexAttribIPointer(3, 1, GL11.GL_INT, STRIDE, 32L);
+            for (int a = A_BONE_BASE; a <= A_OVERLAY; a++) {   // per instance; pointed at the group's slice per draw
+                GL20.glEnableVertexAttribArray(a);
+                GL33.glVertexAttribDivisor(a, 1);
+            }
         } finally {
             MemoryUtil.memFree(data);
         }
@@ -226,7 +237,7 @@ public final class InstancedBodies {
             int instances = 0;
             for (InstanceBatch.Group g : groups)
                 instances += g.count;
-            if (boneTexels > maxTexels || instances > maxTexels) {
+            if (boneTexels > maxTexels) {
                 fail("a frame needs " + boneTexels + " bone texels, the driver allows " + maxTexels);
                 return 0;
             }
@@ -240,21 +251,21 @@ public final class InstancedBodies {
             boneUpload.put(batch.bones(), 0, batch.boneFloats()).flip();
             GL15.glBindBuffer(GL31.GL_TEXTURE_BUFFER, boneBuffer);
             GL15.glBufferData(GL31.GL_TEXTURE_BUFFER, boneUpload, GL15.GL_STREAM_DRAW);
-            int headInts = instances * InstanceBatch.HEADER;
-            if (headUpload == null || headUpload.capacity() < headInts) {
-                if (headUpload != null)
-                    MemoryUtil.memFree(headUpload);
-                headUpload = MemoryUtil.memAllocInt(Math.max(headInts, 4096) * 2);
-            }
-            headUpload.clear();
-            headUpload.put(batch.headers(), 0, headInts).flip();
-            GL15.glBindBuffer(GL31.GL_TEXTURE_BUFFER, headBuffer);
-            GL15.glBufferData(GL31.GL_TEXTURE_BUFFER, headUpload, GL15.GL_STREAM_DRAW);
             GL15.glBindBuffer(GL31.GL_TEXTURE_BUFFER, 0);
+            int instInts = instances * (INSTANCE_STRIDE / 4);
+            if (instanceUpload == null || instanceUpload.capacity() < instInts) {
+                if (instanceUpload != null)
+                    MemoryUtil.memFree(instanceUpload);
+                instanceUpload = MemoryUtil.memAllocInt(Math.max(instInts, 4096) * 2);
+            }
+            instanceUpload.clear();
+            fillInstances(batch.headers(), instances, instanceUpload);
+            instanceUpload.flip();
+            GlStateManager._glBindBuffer(GL15.GL_ARRAY_BUFFER, instanceBuffer);
+            GL15.glBufferData(GL15.GL_ARRAY_BUFFER, instanceUpload, GL15.GL_STREAM_DRAW);
 
             for (int k = 0; k < 16 && GL11.glGetError() != GL11.GL_NO_ERROR; k++)
                 ;   // whatever an earlier draw left: the check below is about ours
-            int headerBaseLoc = -1;
             for (InstanceBatch.Group g : groups) {
                 RenderType type = (RenderType) g.type;
                 if (type != current) {
@@ -265,12 +276,12 @@ public final class InstancedBodies {
                     current = type;
                     type.setupRenderState();
                     shader = g.kind == InstanceBatch.KIND_EYES ? eyes : lit;
-                    headerBaseLoc = apply(shader);
+                    apply(shader);
                 }
                 RigGpu rg = gpu(g.rig);
                 GlStateManager._glBindVertexArray(rg.vao);
                 indices(g.variant);
-                Uniform.uploadInteger(headerBaseLoc, g.first);
+                pointInstances(g.first);
                 GL31.glDrawElementsInstanced(GL11.GL_TRIANGLES, g.variant.quads.length * 6, GL11.GL_UNSIGNED_INT, 0L,
                     g.count);
                 drawn += g.count;
@@ -294,14 +305,50 @@ public final class InstancedBodies {
         return drawn;
     }
 
-    /** Sets the shader's uniforms the way the game's own draw does, binds it and the two buffers; the header base's location. */
-    private static int apply(ShaderInstance shader) {
+    /**
+     * The instances' attribute records, from the batch's headers (bone texel, light, overlay, colour): the light and
+     * overlay become the texels the old path's shader would fetch, read from the images the game uploads (the light
+     * map's every frame, the overlay's once) - the same bytes, so the same colours.
+     */
+    private static void fillInstances(int[] headers, int instances, IntBuffer out) {
+        Minecraft mc = Minecraft.getInstance();
+        NativeImage light = ((LightTextureAccessor) mc.gameRenderer.lightTexture()).bat$lightPixels();
+        NativeImage overlay = ((OverlayTextureAccessor) mc.gameRenderer.overlayTexture()).bat$texture().getPixels();
+        for (int k = 0; k < instances; k++) {
+            int h = k * InstanceBatch.HEADER;
+            int l = headers[h + 1], o = headers[h + 2];
+            out.put(headers[h]).put(headers[h + 3])
+                .put(texel(light, (l & 0xFFFF) / 16, ((l >>> 16) & 0xFFFF) / 16))
+                .put(texel(overlay, o & 0xFFFF, (o >>> 16) & 0xFFFF));
+        }
+    }
+
+    /** A texel as texelFetch reads it (RGBA bytes, r lowest), clamped into the image. */
+    private static int texel(NativeImage img, int x, int y) {
+        if (img == null)
+            return -1;
+        return img.getPixelRGBA(Math.max(0, Math.min(img.getWidth() - 1, x)), Math.max(0, Math.min(img.getHeight() - 1, y)));
+    }
+
+    /** Points the bound rig's per-instance attributes at the group's slice of the instance buffer. */
+    private static void pointInstances(int first) {
+        GlStateManager._glBindBuffer(GL15.GL_ARRAY_BUFFER, instanceBuffer);
+        long at = (long) first * INSTANCE_STRIDE;
+        GL30.glVertexAttribIPointer(A_BONE_BASE, 1, GL11.GL_INT, INSTANCE_STRIDE, at);
+        GL20.glVertexAttribPointer(A_COLOR, 4, GL11.GL_UNSIGNED_BYTE, true, INSTANCE_STRIDE, at + 4);
+        GL20.glVertexAttribPointer(A_LIGHT, 4, GL11.GL_UNSIGNED_BYTE, true, INSTANCE_STRIDE, at + 8);
+        GL20.glVertexAttribPointer(A_OVERLAY, 4, GL11.GL_UNSIGNED_BYTE, true, INSTANCE_STRIDE, at + 12);
+    }
+
+    /** Sets the shader's uniforms the way the game's own draw does, binds it and the bone buffer. */
+    private static void apply(ShaderInstance shader) {
         for (int i = 0; i < 12; i++)
             shader.setSampler("Sampler" + i, RenderSystem.getShaderTexture(i));
         if (shader.MODEL_VIEW_MATRIX != null)
             shader.MODEL_VIEW_MATRIX.set(RenderSystem.getModelViewMatrix());
-        if (shader.PROJECTION_MATRIX != null)
-            shader.PROJECTION_MATRIX.set(RenderSystem.getProjectionMatrix());
+        Uniform viewProj = shader.getUniform("BatViewProj");
+        if (viewProj != null)
+            viewProj.set(new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix()));
         if (shader.INVERSE_VIEW_ROTATION_MATRIX != null)
             shader.INVERSE_VIEW_ROTATION_MATRIX.set(RenderSystem.getInverseViewRotationMatrix());
         if (shader.COLOR_MODULATOR != null)
@@ -320,12 +367,8 @@ public final class InstancedBodies {
         int was = GlStateManager._getActiveTexture();
         GlStateManager._activeTexture(GL13.GL_TEXTURE0 + BONES_UNIT);
         GL11.glBindTexture(GL31.GL_TEXTURE_BUFFER, boneTexture);
-        GlStateManager._activeTexture(GL13.GL_TEXTURE0 + HEADS_UNIT);
-        GL11.glBindTexture(GL31.GL_TEXTURE_BUFFER, headTexture);
         GlStateManager._activeTexture(was);
         Uniform.uploadInteger(Uniform.glGetUniformLocation(program, "Bones"), BONES_UNIT);
-        Uniform.uploadInteger(Uniform.glGetUniformLocation(program, "Heads"), HEADS_UNIT);
-        return Uniform.glGetUniformLocation(program, "HeaderBase");
     }
 
     private static void unbindBuffers() {
@@ -333,8 +376,6 @@ public final class InstancedBodies {
             return;
         int was = GlStateManager._getActiveTexture();
         GlStateManager._activeTexture(GL13.GL_TEXTURE0 + BONES_UNIT);
-        GL11.glBindTexture(GL31.GL_TEXTURE_BUFFER, 0);
-        GlStateManager._activeTexture(GL13.GL_TEXTURE0 + HEADS_UNIT);
         GL11.glBindTexture(GL31.GL_TEXTURE_BUFFER, 0);
         GlStateManager._activeTexture(was);
     }

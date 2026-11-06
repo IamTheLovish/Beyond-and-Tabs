@@ -85,6 +85,8 @@
     "instancing.CompositeRenderTypeAccessor",
     "instancing.CompositeStateAccessor",
     "instancing.ShaderStateShardAccessor",
+    "instancing.LightTextureAccessor",
+    "instancing.OverlayTextureAccessor",
     "CameraMixin",
     "ChatComponentMixin",
     "ClientLevelMixin",

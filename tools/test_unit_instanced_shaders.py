@@ -37,11 +37,11 @@ class UnitInstancedShaderFiles(unittest.TestCase):
         def skin(name):
             src = open(os.path.join(CORE, name + '.vsh'), encoding='utf-8').read()
             lines = [ln.strip() for ln in src.splitlines()]
-            keep = [ln for ln in lines if ln.startswith(('ivec4 head', 'int b =', 'vec4 at', 'vec3 pos', 'gl_Position'))]
+            keep = [ln for ln in lines if ln.startswith(('int b =', 'vec4 at', 'vec3 pos', 'gl_Position'))]
             self.assertIn('invariant gl_Position;', lines, name + ' does not declare gl_Position invariant')
             return keep
         self.assertEqual(skin(PROGRAMS[0]), skin(PROGRAMS[1]))
-        self.assertEqual(len(skin(PROGRAMS[0])), 5)
+        self.assertEqual(len(skin(PROGRAMS[0])), 4)
 
 
 if __name__ == '__main__':
