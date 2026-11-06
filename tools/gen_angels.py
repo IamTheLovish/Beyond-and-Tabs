@@ -682,8 +682,8 @@ def body_b2(m, kind):
     if kind == "mender":
         skirt_panels(m, "robe", 16.8, 9.6, 3.2, 2.3, 5.0, "robe", n=8)
         taper_panels(m, "hem", 9.65, 0.0, 5.0, 3.6, 1.2, "robe", n=8)
-        front = [[(0, 25.5, -3.3), (0, 20.7, -3.25), (0, 16.8, -2.75), (0, 9.6, -4.05), (0, 3.6, -2.35)]]
-        back = [[(0, 25.5, 3.3), (0, 20.7, 3.25), (0, 16.8, 2.45), (0, 9.6, 3.75), (0, 3.6, 2.05)]]
+        front = [[(0, 25.5, -3.2), (0, 20.7, -3.1), (0, 16.8, -2.6), (0, 9.6, -3.9), (0, 3.6, -2.2)]]
+        back = [[(0, 25.5, 3.2), (0, 20.7, 3.1), (0, 16.8, 2.3), (0, 9.6, 3.6), (0, 3.6, 1.9)]]
         stole(m, front, back, w=3.0)
     else:
         rounded(b, 0, 0, 14.6, 16.8, 6.4, 4.4, "plate_dark", k=2)           # hips
@@ -828,7 +828,9 @@ def build_b2(kind):
     if kind == "mender":
         halo_disc_b2(m, (0.0, chin + 0.62 * H, back + 2.4), 9.0, 35.0)
     else:
-        halo_ring(m, (0.0, chin + H - 0.6, back + 2.0), 9.0, 2.1, 1.2, 25.0, n=8)
+        # 4: the tube 2.1 px, the ring widened to 10.5 and raised 1 px so its hole stays open over the crown (the
+        # first r2 render: a 9 px ring with the thick tube closed into a blob with the head at far)
+        halo_ring(m, (0.0, chin + H + 0.4, back + 2.0), 10.5, 2.1, 1.2, 25.0, n=8)
     sx, sy, sz = body["shoulder"]
     la = arm_b2(m, 1, (sx, sy, sz), body["up"], body["fore"], body["arm_w"], body["sleeve"], body["fore_c"],
                 body["cuff"])
@@ -837,10 +839,12 @@ def build_b2(kind):
     fz, wy = body["front_z"], body["waist"]
     errs = []
     if kind == "mender":
-        g = (-7.4, wy + 0.2, fz - 2.4)                                   # 5: 0.4 body-widths further out than r1
-        errs.append(grip_hold(m, ra, None, g, (1.0, 0.0, 0.0), 0.35, -1, (0.3, 0.75, 0.6),
-                              elbow_at=(-6.4, wy + 2.6, -0.8), fingers=3, on_fore=True))
-        lantern_b2(m, g, ra[1], 6.5)
+        # 5: the lamp held up and out beside the shoulder on a short chain, ~0.45 body-widths further out than r1: hung
+        # low at the hip it still crossed the robe's hem from the RTS camera's 35 degree yaw (first r2 render)
+        g = (-9.0, wy + 3.0, fz - 0.6)
+        errs.append(grip_hold(m, ra, None, g, (1.0, 0.0, 0.0), 0.35, -1, (0.5, 0.6, 0.45),
+                              elbow_at=(-7.6, wy + 4.4, 0.2), fingers=3, on_fore=True))
+        lantern_b2(m, g, ra[1], 3.6)
         errs.append(solve(m, la, (1.6, wy - 0.4, fz - 3.6)))
         open_hand(m, la, 1)
         m.contact_ok += [("right_fore", "chain")]
