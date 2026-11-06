@@ -25,6 +25,9 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  *
  * Far LOD (tools/gen_tithe_binder.py far_lod): when the camera is far, every weapon draws its tactical stand-in
  * (weapon_k_far) instead of its own cubes, and the flail's ball is hidden.
+ *
+ * The body's own passes ({@link #renderToBuffer}: the paint, the team mask, the glow) leave the weapons out; the
+ * renderer draws them alone ({@link #renderDocked}) in the value ladder's flat colours (in-game critic r3).
  */
 @OnlyIn(Dist.CLIENT)
 public class TitheBinderUnitModel extends TitheBinderModel<TitheBinderUnit> implements OwnMotion {
@@ -37,8 +40,8 @@ public class TitheBinderUnitModel extends TitheBinderModel<TitheBinderUnit> impl
     private final TitheBinderRig.Bones rig;
     /** Per weapon: its bones from the root's child down to weapon_k itself (TitheBinderModel.path). */
     private final ModelPart[][] weaponPaths = new ModelPart[TitheLedger.MAX_WEAPONS + 1][];
-    // the glow pass's scratch: which weapons were visible before it hid them
-    private final boolean[] glowShown = new boolean[TitheLedger.MAX_WEAPONS + 1];
+    // the body passes' scratch: which weapons were visible before renderToBuffer hid them
+    private final boolean[] bodyShown = new boolean[TitheLedger.MAX_WEAPONS + 1];
 
     // this draw (set by the renderer just before it, taken by setupAnim)
     private TitheBinderDrive drive;
@@ -133,53 +136,90 @@ public class TitheBinderUnitModel extends TitheBinderModel<TitheBinderUnit> impl
     static final float[] BLADE_X = {1f, 3.27f, 2.03f, 1.69f, 1.96f, 4.85f, 2.4f, 1.32f, 1f, 1.86f, 2.04f};
     static final float[] BLADE_Y = {1f, 3.27f, 3.38f, 2.36f, 4f, 4f, 1.6f, 1.54f, 3.5f, 4f, 4f};
     static final float FAR_BLADE_X = 1.5f, FAR_BLADE_Y = 1.67f;
-    /** The glow pass: a docked weapon's own glow at this share, then its edge shell (EDGE_SHELL larger) at full. */
-    public static final float WEAPON_GLOW = 0.55f, EDGE_SHELL = 1.12f;
+    /**
+     * The value ladder's edge (in-game critic r3: the weapons read as opaque mint diamond tools): every weapon's soul
+     * shell stands EDGE_PX proud of it. A thickened blade is BLADE_W x BLADE_T px (far: the stand-in, FAR_W x FAR_T
+     * before its thickening), so its shell is 1 + 2 EDGE_PX / (that size x the weapon's own scale) larger across;
+     * along its length, EDGE_Z (about 0.3 px on a 12-16 px weapon). Never more than EDGE_MAX.
+     */
+    public static final float EDGE_PX = 0.3f, EDGE_Z = 1.04f, EDGE_MAX = 2f;
+    static final float BLADE_W = 3f, BLADE_T = 2f, FAR_W = 2f, FAR_T = 1.2f;
+
+    /** The shell's factor across weapon k's width for its x scale now (1 for no weapon). */
+    public static float edgeX(int k, boolean far, float xScale) {
+        if (k < 1 || k > TitheLedger.MAX_WEAPONS)
+            return 1f;
+        float w = (far ? FAR_W : BLADE_W / BLADE_X[k]) * Math.abs(xScale);
+        return w < 1e-4f ? 1f : Math.min(EDGE_MAX, 1f + 2f * EDGE_PX / w);
+    }
+
+    /** The shell's factor across weapon k's thickness for its y scale now (1 for no weapon). */
+    public static float edgeY(int k, boolean far, float yScale) {
+        if (k < 1 || k > TitheLedger.MAX_WEAPONS)
+            return 1f;
+        float t = (far ? FAR_T : BLADE_T / BLADE_Y[k]) * Math.abs(yScale);
+        return t < 1e-4f ? 1f : Math.min(EDGE_MAX, 1f + 2f * EDGE_PX / t);
+    }
 
     /**
-     * The glow pass (TitheBinderRenderer.GlowLayer, between SplitPasses.beginPass / endPass of the glow parts): the
-     * body's light at full (the lantern core, the one strong body glow), every weapon's at {@link #WEAPON_GLOW}, and,
-     * near, each docked weapon once more {@link #EDGE_SHELL} larger at full brightness, mirrored in its thickness (y):
-     * every weapon cube is symmetric in y and its sub-parts sit at y 0 turning about y, so the mirror is the same shape,
-     * but its faces wind the other way and the glow type's back-face cull keeps only the shell's far side - hidden
-     * behind the weapon's own opaque body except along its silhouette: a thin rim of full glow (no new shader).
+     * The body's own passes (the paint, the team mask, the glow) draw no weapon: the renderer's WeaponLayer draws them
+     * in flat colours on Forge's white texture (the value ladder), so the body texture's opaque mint is never under them.
      */
-    public void renderGlow(PoseStack pose, VertexConsumer vc, boolean edges) {
+    @Override
+    public void renderToBuffer(PoseStack pose, VertexConsumer vc, int light, int overlay, float r, float g, float b,
+                               float a) {
         for (int k = 1; k <= TitheLedger.MAX_WEAPONS; k++) {
             ModelPart w = weapons[k];
-            glowShown[k] = w != null && w.visible;
+            bodyShown[k] = w != null && w.visible;
             if (w != null)
                 w.visible = false;
         }
         try {
-            renderToBuffer(pose, vc, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+            super.renderToBuffer(pose, vc, light, overlay, r, g, b, a);
         } finally {
             for (int k = 1; k <= TitheLedger.MAX_WEAPONS; k++)
                 if (weapons[k] != null)
-                    weapons[k].visible = glowShown[k];
+                    weapons[k].visible = bodyShown[k];
         }
-        for (int k = 1; k <= TitheLedger.MAX_WEAPONS; k++) {
-            ModelPart w = weapons[k];
-            if (w == null || !glowShown[k] || !shown(weaponPaths[k]))
-                continue;
-            pose.pushPose();
+    }
+
+    /**
+     * The glow pass (TitheBinderRenderer.GlowLayer, between SplitPasses.beginPass / endPass of the glow parts): the
+     * body's light at full - the lantern core, the one strong body glow. The weapons' light is their soul shell
+     * (TitheBinderRenderer.WeaponLayer), not their glow texels.
+     */
+    public void renderGlow(PoseStack pose, VertexConsumer vc) {
+        renderToBuffer(pose, vc, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+    }
+
+    /**
+     * Docked weapon k alone, through its posed bones, in {@code vc} and colour (r, g, b, a), its scale times (sx, sy,
+     * sz) for this draw only (a negative sy mirrors it: the shell). False when it is not on the wheel (no weapon, a
+     * slot off, a weapon in the air).
+     */
+    public boolean renderDocked(int k, PoseStack pose, VertexConsumer vc, int light, float r, float g, float b, float a,
+                                float sx, float sy, float sz) {
+        ModelPart w = weapon(k);
+        if (w == null || !w.visible || !shown(weaponPaths[k]))
+            return false;
+        pose.pushPose();
+        float x = w.xScale, y = w.yScale, z = w.zScale;
+        try {
             root().translateAndRotate(pose);
             ModelPart[] path = weaponPaths[k];
             for (int i = 0; i < path.length - 1; i++)
                 path[i].translateAndRotate(pose);
-            w.render(pose, vc, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, WEAPON_GLOW, WEAPON_GLOW, WEAPON_GLOW, 1f);
-            if (edges) {
-                float sx = w.xScale, sy = w.yScale, sz = w.zScale;
-                w.xScale = sx * EDGE_SHELL;
-                w.yScale = -sy * EDGE_SHELL;
-                w.zScale = sz * EDGE_SHELL;
-                w.render(pose, vc, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
-                w.xScale = sx;
-                w.yScale = sy;
-                w.zScale = sz;
-            }
+            w.xScale = x * sx;
+            w.yScale = y * sy;
+            w.zScale = z * sz;
+            w.render(pose, vc, light, OverlayTexture.NO_OVERLAY, r, g, b, a);
+        } finally {
+            w.xScale = x;
+            w.yScale = y;
+            w.zScale = z;
             pose.popPose();
         }
+        return true;
     }
 
     /** Every part of the path (root excluded) is visible: a slot off (a weapon in the air) hides its weapon. */
