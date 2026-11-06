@@ -509,6 +509,8 @@ public class RocketShellGameTests {
     /**
      * Each volley starts the launch animation (its ticks left start at the full length), it runs down as the ticks pass,
      * it is gone when the length has gone by, and a volley the battery refuses (inside its dead zone) starts nothing.
+     * Two volleys, the second fired once the first's animation has ended, so the start is checked for each, not only the
+     * first. Explicit end: 5 + 2 * (TOTAL_TICKS + 3) = 49 ticks after the units tick.
      */
     @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_battery_runs_its_launch_animation_for_each_volley(GameTestHelper helper) {
@@ -524,6 +526,7 @@ public class RocketShellGameTests {
         List<String> problems = new ArrayList<>();
         int[] tick = { 0 };
         int[] launchedAt = { -1 };
+        int[] volley = { 0 };
         helper.onEachTick(() -> {
             if (notTicking(helper, b))
                 return;
@@ -535,24 +538,32 @@ public class RocketShellGameTests {
                 if (b.getLaunchTicks() != 0)
                     problems.add("a refused volley started the launch animation (" + b.getLaunchTicks() + " ticks left)");
             }
-            if (tick[0] == 5) {
+            // two volleys, the second fired once the first's animation has ended: each must start it afresh
+            boolean fire = tick[0] == 5
+                || (volley[0] == 1 && launchedAt[0] > 0 && tick[0] == launchedAt[0] + total + 3);
+            if (launchedAt[0] > 0 && tick[0] == launchedAt[0] + total + 3) {
+                if (b.getLaunchTicks() != 0)
+                    problems.add("the launch animation was still running " + (total + 3) + " ticks after volley " + volley[0]
+                        + ": " + b.getLaunchTicks());
+                if (!fire) {
+                    discardAll(new ArrayList<>(shellsOf(b)));
+                    b.discard();
+                    finish(helper, problems);
+                    return;
+                }
+            }
+            if (fire) {
+                volley[0]++;
                 if (!b.fireVolley(o.getX() + 14.5, ty, o.getZ() + 8.5))
-                    problems.add("the battery refused a volley 13 blocks away");
+                    problems.add("the battery refused volley " + volley[0] + " 13 blocks away");
                 launchedAt[0] = tick[0];
                 if (b.getLaunchTicks() != total)
-                    problems.add("a volley left " + b.getLaunchTicks() + " animation ticks, expected the full " + total);
+                    problems.add("volley " + volley[0] + " left " + b.getLaunchTicks() + " animation ticks, expected the full " + total);
             }
             if (launchedAt[0] > 0 && tick[0] == launchedAt[0] + 6) {
                 int left = b.getLaunchTicks();
                 if (Math.abs(left - (total - 6)) > 1)
-                    problems.add("6 ticks into a volley the animation had " + left + " ticks left, expected " + (total - 6));
-            }
-            if (launchedAt[0] > 0 && tick[0] == launchedAt[0] + total + 3) {
-                if (b.getLaunchTicks() != 0)
-                    problems.add("the launch animation was still running " + (total + 3) + " ticks after the volley: " + b.getLaunchTicks());
-                discardAll(new ArrayList<>(shellsOf(b)));
-                b.discard();
-                finish(helper, problems);
+                    problems.add("6 ticks into volley " + volley[0] + " the animation had " + left + " ticks left, expected " + (total - 6));
             }
         });
     }
