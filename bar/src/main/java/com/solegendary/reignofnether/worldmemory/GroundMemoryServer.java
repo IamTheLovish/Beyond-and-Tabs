@@ -250,6 +250,22 @@ public final class GroundMemoryServer {
         return allowed;
     }
 
+    // ------------------------------------------------------------------ trample (slice 2): red-first stubs
+
+    /** Red-first stub: the trample stamp lands in the next commit. */
+    public static int trampleSegment(ServerLevel level, double ax, double az, double bx, double bz, double footY, double bodyWidth) {
+        return 0;
+    }
+
+    /** Red-first stub. */
+    public static void trampleNow(ServerLevel level) {
+    }
+
+    /** Red-first stub: sample passes, walks stamped, nanoseconds, cells changed. */
+    public static long[] trampleTotals(ServerLevel level) {
+        return new long[] { 0, 0, 0, 0 };
+    }
+
     // ------------------------------------------------------------------ the sync pass
 
     @SubscribeEvent

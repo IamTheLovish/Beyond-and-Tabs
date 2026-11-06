@@ -13,7 +13,7 @@ import java.util.Arrays;
  * Channels (one byte each, {@link #CHANNELS} per cell, cell index = (localX << 4) | localZ):
  * <ul>
  *   <li>{@link #SCORCH}: 0-255 burnt ground (slice 1);</li>
- *   <li>{@link #TRAMPLE}: 0-255 worn ground (slice 2 writes it; the format and decay are here so it plugs in);</li>
+ *   <li>{@link #TRAMPLE}: 0-255 worn ground (slice 2: units walking, GroundMemoryServer.trampleSegment, TrampleRules);</li>
  *   <li>{@link #CRATER_STAIN}: high nibble crater depth 0-15 (slice 1), low nibble stain kind 0-15 (slice 6);</li>
  *   <li>{@link #STAIN}: 0-255 stain strength (slice 6).</li>
  * </ul>
@@ -184,6 +184,20 @@ public final class GroundMemory {
     /** Stamps a crater dish (depth 1-15 at the centre, a flat core then a smooth fall) the same way. */
     public long[] addCraterDisc(int chunkX, int chunkZ, double cx, double cz, double radius, int depth, long[] allowed) {
         return stampDisc(chunkX, chunkZ, cx, cz, radius, 0.3, depth, allowed, CRATER_STAIN);
+    }
+
+    /**
+     * Stamps one unit's walk since its last sample into THIS chunk's trample cells (slice 2, TrampleRules): every cell
+     * centre within {@code radius} across the segment (ax, az)-(bx, bz) - flat ends, so consecutive samples tile the
+     * path - gains {@code peak} times its weight (TrampleRules.capsuleWeight), with saturation: once per pass, however
+     * fast the unit walked. {@code peaks} (256 entries, or null = {@code peak}
+     * everywhere) is the caller's per-cell peak (the surface's wear); {@code allowed} the column filter as for the discs.
+     * Returns the 256-bit mask of the cells that changed.
+     */
+    /** Slice 2 (trampled ground): red-first stub, the stamp lands in the next commit. */
+    public long[] addTrampleCapsule(int chunkX, int chunkZ, double ax, double az, double bx, double bz, double radius,
+                                    int peak, int[] peaks, long[] allowed) {
+        return new long[4];
     }
 
     private long[] stampDisc(int chunkX, int chunkZ, double cx, double cz, double radius, double core, int peak,
