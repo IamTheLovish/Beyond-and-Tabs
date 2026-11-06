@@ -124,18 +124,21 @@ public final class GrassTint {
      * Round 9, grass only (Nov 6, lawn round 70). lovish: "I want natural contrast that makes the grass look good like
      * the realistic minecraft art I sent you". The r69 blind critic: the gap is "macro contrast" - his references set
      * shade beside sunlit turf several blocks across, while round 8's drifts held block luma to about +-10% (7% of a
-     * meadow 10%+ below its median). lovish (03:12Z): "Allow big masses (Recommended)". So the grass gets masses of
-     * light and shade on their own field: shaped octaves at 18 and 10 blocks, biased toward shade. The shade side
-     * darkens by up to GRASS_MASS_VALUE and turns a little cooler; the sunlit side lightens by GRASS_MASS_LIGHT of
-     * that and turns a little warmer. GRASS_WEIGHTS and GRASS_VALUE step back so the 2-6 block blotch scale stays
-     * calm. Inside the soft limit, the readability floor and the colour step. tools/test_lawn_r70.py.
+     * meadow 10%+ below its median). lovish (03:12Z): "Allow big masses (Recommended)"; (03:30Z) "B: big soft masses
+     * (Recommended)". So the grass gets masses of light and shade on their own field: shaped octaves at 18 and 10
+     * blocks. The shade side darkens by up to GRASS_MASS_VALUE and turns a little cooler; the sunlit side lightens by
+     * GRASS_MASS_LIGHT of that and turns a little warmer. Symmetric (no bias, light = dark): the masses move light
+     * around and leave the meadow's average where it was, so the canopy stays a darker mass than the lawn under it
+     * (a shade-biased first try dimmed the whole lawn below the crowns). GRASS_WEIGHTS and GRASS_VALUE step back so
+     * the 2-6 block blotch scale stays calm. Inside the soft limit, the readability floor and the colour step.
+     * tools/test_lawn_r70.py.
      */
     static final double[] GRASS_MASS_CELLS = {18.0, 10.0};
     static final double[] GRASS_MASS_WEIGHTS = {1.0, 0.2};
     static final double GRASS_MASS_CONTRAST = 1.3;
-    static final double GRASS_MASS_BIAS = -0.2;
-    static final double GRASS_MASS_VALUE = 0.25;
-    static final double GRASS_MASS_LIGHT = 0.4;
+    static final double GRASS_MASS_BIAS = 0.0;
+    static final double GRASS_MASS_VALUE = 0.20;
+    static final double GRASS_MASS_LIGHT = 1.0;
     static final double GRASS_MASS_HUE = 0.04;
 
     private GrassTint() {
