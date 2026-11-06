@@ -87,6 +87,36 @@ public class ArcherBuildingGameTests {
     }
 
     /**
+     * The same high flyer onto a LOW building in a pit: an enemy wall segment (three blocks high) whose surroundings,
+     * where the Corsair parks to bomb it, are raised four blocks ({@link #raiseAround}). The flyer cruises 10 over the
+     * ground under its stand-off spot, so 14 over the pad, and every block of the wall sits 10 to 13 below it. The tall
+     * tower above can pass on a stand-off measured flat: the goal aims at a random block of the building and a tower has
+     * blocks up near the flyer. Here none is: parked short of its range measured flat, the Corsair is 14 or more from
+     * every block of the wall in 3D, out of its reach of 13, never fires, and never picks another block (review r1 B1
+     * of #538; Eris.17's re-judge, Nov 6). The tower test stays as the tall-building guard.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 2400)
+    public static void a_sky_corsair_bombs_an_enemy_wall_below_the_ground_around_it(GameTestHelper helper) {
+        hurts(helper, 23, EntityRegistrar.SKY_CORSAIR_UNIT.get(), "Sky Corsair", m -> { }, false, true);
+    }
+
+    /** The raised ground round the pit: glass PAD_Y+1..PAD_Y+RAISE over pad columns 6-16 (the Corsair's stand-off band). */
+    static final int RAISE = 4;
+
+    /**
+     * Raises the pad four blocks over columns 6 to 16 (the wall stands at 19-20, the shooter spawns at 4, the rim is
+     * kept), so the wall sits in a pit below the ground the flyer parks over. Pad blocks the next buildPad clears.
+     */
+    static void raiseAround(ServerLevel level, RaidGameTests.Cell c) {
+        net.minecraft.world.level.block.state.BlockState glass = net.minecraft.world.level.block.Blocks.GLASS.defaultBlockState();
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int dx = 6; dx <= 16; dx++)
+            for (int dz = 1; dz <= 14; dz++)
+                for (int dy = 1; dy <= RAISE; dy++)
+                    level.setBlock(p.set(c.x0() + dx, RaidGameTests.PAD_Y + dy, c.z0() + dz), glass, 2);
+    }
+
+    /**
      * One shooter of {@code type} 15 blocks from an enemy raid tower on its own far pad, ordered to attack it: the tower
      * must lose health within {@link #FIRST_HIT_TICKS}, and over the next {@link #WINDOW_TICKS} no more than the archer
      * rate allows.
@@ -97,6 +127,13 @@ public class ArcherBuildingGameTests {
 
     /** {@link #chips}, with the archer-rate cap only when {@code archerRate} (a bomber's splash has its own rate). */
     static void hurts(GameTestHelper helper, int slot, EntityType<? extends Mob> type, String name, Consumer<Mob> arm, boolean archerRate) {
+        hurts(helper, slot, type, name, arm, archerRate, false);
+    }
+
+    /** {@link #hurts}; {@code lowWallInPit}: the target is an enemy wall segment with the ground round it raised ({@link #raiseAround}). */
+    static void hurts(GameTestHelper helper, int slot, EntityType<? extends Mob> type, String name, Consumer<Mob> arm, boolean archerRate,
+                      boolean lowWallInPit) {
+        String what = lowWallInPit ? "wall" : "tower";
         ServerLevel level = helper.getLevel();
         RaidGameTests.Pads pads = new RaidGameTests.Pads(level, slot, 1);
         // registered here, once, idling until the pad is ready: registering from inside whenEntitiesReady's callback
@@ -108,7 +145,9 @@ public class ArcherBuildingGameTests {
         });
         GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 400, 1300, "archer building pad", () -> {
             RaidGameTests.Cell c = pads.cells.get(0);
-            Building tower = Defences.sets().get(0).raidTower();
+            Building tower = lowWallInPit ? Defences.sets().get(0).wall() : Defences.sets().get(0).raidTower();
+            if (lowWallInPit)
+                raiseAround(level, c);
             BlockPos origin = new BlockPos(c.x0() + 19, RaidGameTests.PAD_Y + 1, c.z0() + 5);
             BuildingPlacement bp = RaidGameTests.build(level, tower, origin, "gametest_ab_foe", false);
             Mob shooter = RaidGameTests.spawn(level, type, "gametest_ab_archer", c.x0() + 4, c.z0() + 6);
@@ -165,7 +204,7 @@ public class ArcherBuildingGameTests {
                 for (var e : shooter.getActiveEffects())
                     effects.add(e.getEffect().getDescriptionId().replace("effect.", ""));
                 String state = String.format(Locale.ROOT, "trail: building target %d ticks, let go %d times, %d to %d above the pad, %.1f to %.1f"
-                    + " from the tower's centre, %d ranged hits landed, effects %s", trail[0], trail[1], trail[2], trail[3], reach[0], reach[1],
+                    + " from the " + what + "'s centre, %d ranged hits landed, effects %s", trail[0], trail[1], trail[2], trail[3], reach[0], reach[1],
                     com.solegendary.reignofnether.building.RangedBuildingHit.hits(type) - hitsBefore, effects.isEmpty() ? "none" : String.join(" ", effects));
                 int health = bp.getHealth();
                 String verdict = null;
@@ -174,7 +213,7 @@ public class ArcherBuildingGameTests {
                         firstHit[0] = now;
                         firstHit[1] = health;
                     } else if (now - start > FIRST_HIT_TICKS) {
-                        verdict = "the " + name + " never hurt the enemy tower in " + FIRST_HIT_TICKS / 20 + " s (health " + health + " of "
+                        verdict = "the " + name + " never hurt the enemy " + what + " in " + FIRST_HIT_TICKS / 20 + " s (health " + health + " of "
                             + before + "; canAttackBuildings " + au.canAttackBuildings() + ", building goal "
                             + (au.getAttackBuildingGoal() == null ? "none" : au.getAttackBuildingGoal().getClass().getSimpleName())
                             + ", " + String.format(Locale.ROOT, "%.1f", Math.sqrt(shooter.distanceToSqr(bp.centrePos.getX() + 0.5,
