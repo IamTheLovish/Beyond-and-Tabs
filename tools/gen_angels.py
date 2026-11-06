@@ -7,7 +7,8 @@ shape / rest pose, head and neck, halo, body mass, the kind's signature prop, th
 kind's light). Flat colours; the values follow the sheet (cream plate and feathers, gold halo, team panels).
 
     python3 tools/gen_angels.py --massing b --kind archer    # design/models/sunforged_angel_b_archer.json
-    python3 tools/gen_angels.py --all                        # all nine
+    python3 tools/gen_angels.py --massing b2 --kind sword   # round 2: B raised to a body (sunforged_angel_b2_sword.json)
+    python3 tools/gen_angels.py --all                        # all twelve (round 1's a, b, c unchanged + b2)
     python3 tools/render_concept.py --check design/models/sunforged_angel_*.json
 
 Space is the DSL's (design/models/README.md): px, y up, the unit faces -Z, +x is its left. Hover pose: the model is
@@ -27,7 +28,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gen_models import (Model, OUT, ring, rays, rounded, dome, ngon_prism, octagon_pole, rot_mat, apply,  # noqa: E402
-                        _add, _mul, _dot, _cross, _unit)
+                        _add, _mul, _dot, _cross, _unit, grip_hand)
 from gen_angel_statue import slab  # noqa: E402  (gen_models.slab, nudged off gimbal lock)
 from human_kit import skirt_panels, attach, owner_of  # noqa: E402
 from gen_medic import cone_plates, put_plate  # noqa: E402
@@ -47,7 +48,7 @@ KIND_PALETTE = {
 EMISSIVE = ["sun", "glow"]
 NAMES = {"mender": "Mender Angel", "archer": "Seraph Archer", "sword": "Sword Seraph"}
 ROLES = {"mender": "healer (summon)", "archer": "ranged (summon)", "sword": "melee engager (summon)"}
-MASSING = {"a": "Choir Seraph", "b": "Ordo Seraph", "c": "Herald"}
+MASSING = {"a": "Choir Seraph", "b": "Ordo Seraph", "c": "Herald", "b2": "Ordo Seraph r2"}
 KIND_SCALE = {"mender": 0.92, "archer": 1.00, "sword": 1.15}      # the game's render scale (not baked in here)
 RTS_EYE = (0.0, 0.79, -0.62)                                      # toward the RTS camera (52 deg down, in front)
 
@@ -339,7 +340,7 @@ def lantern(m, hand_pt, fore, chain_len, cage=(3.5, 4.5)):
     attach(m, ln, "chain", (hx, top, hz))
 
 
-def bow(m, grip, length, lean_out, fore, depth=2.6):
+def bow(m, grip, length, lean_out, fore, depth=2.6, fix=True):
     """A recurve bow held at its grip: the long axis leaning `lean_out` degrees outward (+x), the limbs bowed toward
     the target (-z), horn-gold tips flicked forward, a string between the tips."""
     b = m.bone("bow", list(grip))
@@ -360,7 +361,9 @@ def bow(m, grip, length, lean_out, fore, depth=2.6):
         b.box_at(P(t), (1.1, 1.1, 1.1), "gold")
     s0, s1 = _add(P(-1.0), (0, 0, 0.5)), _add(P(1.0), (0, 0, 0.5))
     slab(b, lerp(s0, s1, 0.5), sub(s1, s0), (1.0, 0.0, 0.0), (0.4, 0.4, math.dist(s0, s1)), "string")
-    attach(m, b, fore, grip)
+    if fix:
+        attach(m, b, fore, grip)
+    return b, Lx
 
 
 def quiver(m, base, top):
@@ -372,7 +375,7 @@ def quiver(m, base, top):
         slab(q, p, d, (1.0, 0.0, 0.0), (0.5, 0.5, 1.8), "sun_gold")
 
 
-def sword(m, grip, direction, blade_len, fore, width=1.9, name="sword"):
+def sword(m, grip, direction, blade_len, fore, width=1.9, name="sword", fix=True):
     """An arming sword built along `direction` from the grip: pommel, grip, a gold cross-guard, a steel blade with a
     glowing fuller (0.5 px, the kind's light) and a diamond point."""
     s = m.bone(name, list(grip))
@@ -388,18 +391,19 @@ def sword(m, grip, direction, blade_len, fore, width=1.9, name="sword"):
     tip = _add(b0, _mul(d, blade_len))
     q = width * 0.7
     slab(s, tip, _unit(_add(d, across)), _unit(sub(across, d)), (q, 0.5, q), "steel_bright")
-    attach(m, s, fore, grip)
+    if fix:
+        attach(m, s, fore, grip)
     return s
 
 
-def shield(m, centre, diameter, fore, side=1, yaw=-22.0):
+def shield(m, centre, diameter, fore, side=1, yaw=-22.0, n=8):
     """A round shield on the forearm: a gold rim, a plate face, the team field (5 px) and a sun_gold boss. Built lying
     flat (ngon_prism is upright) and turned to face front-outward by attach's turn."""
     sh = m.bone("shield", list(centre))
     cx, cy, cz = centre
-    ngon_prism(sh, cx, cz, cy - 0.5, cy + 0.1, diameter, "gold", n=8)
-    ngon_prism(sh, cx, cz, cy + 0.05, cy + 0.55, diameter - 1.1, "plate", n=8)
-    ngon_prism(sh, cx, cz, cy + 0.5, cy + 0.8, 5.0, "tabard", n=8)
+    ngon_prism(sh, cx, cz, cy - 0.5, cy + 0.1, diameter, "gold", n=n)
+    ngon_prism(sh, cx, cz, cy + 0.05, cy + 0.55, diameter - 1.1, "plate", n=n)
+    ngon_prism(sh, cx, cz, cy + 0.5, cy + 0.8, 5.0, "tabard", n=n)
     sh.box_at((cx, cy + 0.95, cz), (1.6, 0.5, 1.6), "sun_gold")
     attach(m, sh, fore, centre, turn=(-90.0, side * yaw, 0.0))
 
@@ -531,6 +535,344 @@ def body_c(m, kind):
                 chin=22.4, H=4.6, front_z=-2.25, waist=14.4, back_z=2.25)
 
 
+# ------------------------------------------------------------------ round 2: option B2 (B raised to a body) -------
+# The blind critic picked B (39/60) with three flaws; round 2 changes ONE thing per element so each can be credited:
+#  1 wing plan  - a wrist: the leading edge breaks 22 deg FORWARD at 55% of the half-span, chord root 1 : wrist 1.2 :
+#                 tip ~0.4, dihedral 9-12, the tip split into 3-4 primary fingers (slots between them); per kind:
+#                 Mender broad rounded dove tip, Archer pointed falcon tip, Sword the broadest, most swept wing
+#  2 wing root  - a humerus block 0.35 body-widths wide rising 30 deg up-and-back off the top of the breastplate,
+#                 the leading edge thickest at the root (1.6 px) thinning to 0.9 on the hand, fingers 0.55
+#  3 team       - a solid team band along the leading edge (~30% chord, the humerus block in tabard_dark) + the
+#                 tabard (Mender: a front/back panel down the robe); round 1's covert zigzag is gone
+#  4 halo       - the ring's tube 2.1 px (2-3 px at the 36 px far view); the Mender wears a flat gold disc (from C)
+#  5 grafts     - C's two covert rows on the upper surface (a light row over a darker row: they read as layered
+#                 feathers); A's legless column robe for the MENDER only; the lantern 0.4 body-widths further out
+#  6 underside  - the flight feathers in a warm cream (feather_warm) a step under the top coverts, not the grey
+#                 feather_mid of round 1's front view
+#  7 hands      - gen_models.grip_hand closed on each grip, the arm solved onto the hand's wrist (human_kit.hold's
+#                 loop); the head stays round 1's (human_kit.bare_head alone is 138 cubes: over the 120-170 budget)
+B2_WING = {
+    # S half-span (world px from the midline), c root chord, sweep of the hand's leading edge (deg back), dihedral,
+    # fingers: width, slot, how far each inner finger's tip stands back from the outer one (the tip's shape),
+    # feather counts on the inner wing (secondaries, covert row 1, covert row 2)
+    "mender": dict(S=22.0, c=8.6, sweep=8.0, delta=9.0, fw=2.5, gap=0.9, recede=(0.0, 0.5, 1.3, 2.4),
+                   n_sec=3, n_cov1=2, n_cov2=3),
+    "archer": dict(S=23.5, c=7.0, sweep=28.0, delta=10.0, fw=2.0, gap=0.75, recede=(0.0, 1.9, 4.0),
+                   n_sec=4, n_cov1=3, n_cov2=3),
+    "sword": dict(S=26.0, c=9.4, sweep=34.0, delta=12.0, fw=2.5, gap=0.9, recede=(0.0, 0.9, 2.0, 3.4),
+                  n_sec=3, n_cov1=2, n_cov2=3),
+}
+HUM_BASE = (2.4, 24.6, 2.4)          # the wing's shoulder joint on the top-back of the breastplate (left wing)
+HUM_DIR = (0.7, 0.55, 0.65)          # out, 30 deg up and back
+HUM_LEN, HUM_W, HUM_T = 4.0, 3.3, 2.2
+WRIST_FWD = 22.0                     # the leading edge's forward break at the wrist
+RHO_B2 = 70.0                        # the plane tipped 70 forward (as round 1): the chord trails back 20 below level
+
+
+def wings_b2(m, kind):
+    P = B2_WING[kind]
+    d_h = _unit(HUM_DIR)
+    R = _add(HUM_BASE, _mul(d_h, HUM_LEN))
+    M = rot_mat(-RHO_B2, 0, P["delta"])
+    cd = math.cos(math.radians(P["delta"]))
+    u_tip = (P["S"] - R[0]) / cd
+    u_w = (0.55 * P["S"] - R[0]) / cd
+    Wr = (u_w, u_w * math.tan(math.radians(WRIST_FWD)))
+    E = (0.5 * Wr[0], 0.5 * Wr[1] + 0.25)
+    T = (u_tip, Wr[1] - (u_tip - u_w) * math.tan(math.radians(P["sweep"])))
+    c = P["c"]
+    hand_len = math.dist(Wr, T)
+    a_h = ((T[0] - Wr[0]) / hand_len, (T[1] - Wr[1]) / hand_len)
+    b_h = (a_h[1], -a_h[0])                                       # square to the hand, toward the trailing edge
+    LE = [(0.0, 0.0), E, Wr]
+
+    def le(t):
+        return polyline(LE, t)
+
+    def chord(t):                                                 # t 0..2 along root-elbow-wrist: 1.0 -> 1.2
+        return c * (1.0 + 0.1 * t)
+
+    def P2(p, q, k):                                              # p + k q (planform)
+        return (p[0] + q[0] * k, p[1] + q[1] * k)
+    fw, gap, rec = P["fw"], P["gap"], P["recede"]
+    nfing = len(rec)
+    tips_f, roots_f = [], []
+    for k in range(nfing):
+        tips_f.append(P2(P2(T, b_h, fw / 2 + k * (fw + gap)), a_h, -rec[k]))
+        roots_f.append(P2(P2(Wr, a_h, hand_len * (0.5 - 0.12 * k)), b_h, fw / 2 + 0.35 * k))
+    te_w = (Wr[0], Wr[1] - chord(2.0))
+    span_px = math.dist(LE[0], E) + math.dist(E, Wr)
+    for side in (1, -1):
+        lr = "l" if side > 0 else "r"
+
+        def Wp(uv, w=0.0):
+            p = apply(M, (uv[0], uv[1], w))
+            return mirror((R[0] + p[0], R[1] + p[1], R[2] + p[2]), side)
+        n0 = mirror(apply(M, (0.0, 0.0, 1.0)), side)
+        nf = n0 if _dot(n0, RTS_EYE) > 0 else _mul(n0, -1.0)
+        names = ["wing_%s_arm" % lr, "wing_%s_fore" % lr, "wing_%s_hand" % lr, "wing_%s_tips" % lr]
+        pivots = [mirror(HUM_BASE, side), Wp(E), Wp(Wr), Wp(P2(Wr, a_h, 0.3 * hand_len))]
+        bones = [m.bone(n, list(pv), parent="body" if i == 0 else names[i - 1]) for i, (n, pv) in
+                 enumerate(zip(names, pivots))]
+        arm_b, fore_b, hand_b, tips_b = bones
+        # 2: the humerus block, out of the breastplate up-and-back to the wing's root (team dark: the band's start)
+        hc = _add(HUM_BASE, _mul(d_h, HUM_LEN / 2 + 0.25))
+        across = _unit(_cross(d_h, (0.0, 1.0, 0.0)))
+        slab(arm_b, mirror(hc, side), mirror(d_h, side), mirror(across, side), (HUM_W, HUM_T, HUM_LEN + 0.5),
+             "tabard_dark")
+        # 6: flights in warm cream - secondaries off the arm and forearm, straight back to the trailing edge
+        ns = P["n_sec"]
+        for k in range(ns):
+            t = -0.25 + 2.2 * k / (ns - 1)
+            b = P2(le(t), (0.0, -1.0), 0.15 * c)
+            dd = _unit((0.1 * t, -1.0, 0.0))
+            tip = P2(le(t), dd, chord(t))
+            w = 1.3 * (2.2 / (ns - 1)) * span_px / 2 + 0.3
+            feather(arm_b if t < 1.0 else fore_b, Wp(b), Wp(tip), w, 0.5, "feather_warm", nf,
+                    offset=-0.05 * (k % 2), pointed=True)
+        # 1: the hand - two inner primaries filling wrist to fingers, then the split tip
+        for i in range(2):
+            b = P2(P2(Wr, a_h, hand_len * (0.08 + 0.14 * i)), b_h, 0.25 * c)
+            tip = P2(lerp(te_w, tips_f[-1], (i + 1) / 3.0), b_h, 0.7)
+            feather(hand_b, Wp(b), Wp(tip), fw + 0.7, 0.5, "feather_warm", nf, offset=-0.12 + 0.04 * i, pointed=True)
+        for k in range(nfing):
+            feather(tips_b, Wp(roots_f[k]), Wp(tips_f[k]), fw, 0.55, "feather_warm", nf, offset=-0.04 - 0.05 * k,
+                    pointed=True)
+        # 5: C's layered coverts - a light row tucked under the band, a darker row over the flights' roots
+        n1 = P["n_cov1"]
+        for k in range(n1):
+            t = 0.15 + 1.65 * k / max(1, n1 - 1)
+            b, tip = P2(le(t), (0.0, -1.0), 0.2 * chord(t)), P2(le(t), (0.0, -1.0), 0.52 * chord(t))
+            w = 1.25 * (1.65 / max(1, n1 - 1)) * span_px / 2 + 0.4
+            feather(arm_b if t < 1.0 else fore_b, Wp(b), Wp(tip), w, 0.6, "feather", nf, offset=0.5)
+        n2 = P["n_cov2"]
+        for k in range(n2):
+            t = -0.1 + 1.95 * k / (n2 - 1)
+            b, tip = P2(le(t), (0.0, -1.0), 0.36 * chord(t)), P2(le(t), (0.0, -1.0), 0.8 * chord(t))
+            w = min(1.25 * (1.95 / (n2 - 1)) * span_px / 2 + 0.4, 1.2 * 0.44 * chord(t))   # a point, not a diamond
+            feather(arm_b if t < 1.0 else fore_b, Wp(b), Wp(tip), w, 0.6, "feather_mid", nf, offset=0.3,
+                    pointed=True)
+        hb = P2(P2(Wr, a_h, 0.3 * hand_len), b_h, 0.28 * c)        # the primary coverts over the hand's root
+        feather(hand_b, Wp(hb), Wp(P2(hb, b_h, 0.42 * c)), 0.42 * hand_len, 0.6, "feather_mid", nf, offset=0.3)
+        # 3: the team band - the leading edge itself, ~30% chord, thickest at the root
+        for bone, p0, p1, wb, th in ((arm_b, LE[0], E, 0.32 * chord(0.5), 1.6),
+                                     (fore_b, E, Wr, 0.32 * chord(1.5), 1.25),
+                                     (hand_b, Wr, P2(Wr, a_h, 0.55 * hand_len), 0.3 * c, 0.9)):
+            s_ = _unit((p1[0] - p0[0], p1[1] - p0[1], 0.0))
+            bk = (s_[1], -s_[0])
+            q0 = P2(P2(p0, s_, -0.3), bk, wb / 2)
+            q1 = P2(P2(p1, s_, 0.3), bk, wb / 2)
+            feather(bone, Wp(q0), Wp(q1), wb, th, "tabard", nf, offset=0.45)
+    return dict(R=R, wrist=Wr, tip=T, u_tip=u_tip)
+
+
+def body_b2(m, kind):
+    """B's cuirass; the Mender in A's legless column robe (a flared skirt then a taper to a point, no feet) with a
+    team panel down its front and back; the Archer and the Sword in a wider split tabard over trailing legs."""
+    b = m.bone("body", [0, 21.0, 0])
+    rounded(b, 0, 0, 20.6, 25.4, 9.4, 6.0, "plate", k=2)                    # cuirass
+    rounded(b, 0, 0.2, 25.0, 26.0, 6.2, 4.6, "gold", k=2)                   # gorget rim
+    rounded(b, 0, 0, 17.0, 20.8, 5.8, 4.5, "plate", k=2)                    # waist
+    rounded(b, 0, 0, 16.6, 17.5, 6.4, 4.9, "gold", k=2)                     # belt
+    b.box_at((0, 23.2, -3.05), (2.2, 2.2, 0.4), "sun_gold", rotation=[0, 0, 45], pivot=[0, 23.2, -3.05])
+    if kind == "sword":
+        for s, n in ((1, "pauldron_l"), (-1, "pauldron_r")):
+            p = m.bone(n, [s * 4.6, 25.2, 0], parent="body")
+            dome(p, s * 4.9, 0.0, 22.8, 3.2, 4.0, 4.6, "plate", layers=1, top=0.75, k=2)
+    if kind == "mender":
+        skirt_panels(m, "robe", 16.8, 9.6, 3.2, 2.3, 5.0, "robe", n=8)
+        taper_panels(m, "hem", 9.65, 0.0, 5.0, 3.6, 1.2, "robe", n=8)
+        front = [[(0, 25.5, -3.3), (0, 20.7, -3.25), (0, 16.8, -2.75), (0, 9.6, -4.05), (0, 3.6, -2.35)]]
+        back = [[(0, 25.5, 3.3), (0, 20.7, 3.25), (0, 16.8, 2.45), (0, 9.6, 3.75), (0, 3.6, 2.05)]]
+        stole(m, front, back, w=3.0)
+    else:
+        rounded(b, 0, 0, 14.6, 16.8, 6.4, 4.4, "plate_dark", k=2)           # hips
+        hem = 13.6 if kind == "archer" else 12.2
+        for name, piv, size, col, rot in (
+                ("tabard_front", (0, 17.2, -2.6), (5.4, 17.2 - hem, 0.5), "tabard", 6),
+                ("tabard_back", (0, 17.2, 2.6), (5.4, 17.2 - hem, 0.5), "tabard", -6),
+                ("tabard_left", (3.3, 17.2, 0), (0.5, 17.2 - hem - 0.8, 3.4), "tabard_dark", 0),
+                ("tabard_right", (-3.3, 17.2, 0), (0.5, 17.2 - hem - 0.8, 3.4), "tabard_dark", 0)):
+            t = m.bone(name, list(piv), parent="body", rotation=[rot, 0, 0] if rot else (0, 0, 0))
+            t.box_at((piv[0], piv[1] - size[1] / 2, piv[2]), size, col)
+        for s in (1, -1):
+            leg_b2(m, s, (s * 1.65, 15.0), 7.4, 6.6, 2.5, -14.0, -12.0, "robe_shade", "plate", "plate")
+    return dict(shoulder=(4.5, 25.0, 0.0), up=5.6, fore=4.6, arm_w=1.9, sleeve="plate", fore_c="plate",
+                cuff="gold", chin=27.2, H=4.8, front_z=-3.0, waist=18.0, back_z=3.0)
+
+
+def leg_b2(m, side, hip, thigh_len, shin_len, w, rot_thigh, rot_shin, c_thigh, c_shin, c_toe):
+    """Round 1's trailing leg with the pointed foot in one tapered box (the cube budget)."""
+    pre = "left" if side > 0 else "right"
+    hx, hy = hip
+    ky, ay = hy - thigh_len, hy - thigh_len - shin_len
+    th = m.bone(pre + "_thigh", [hx, hy, 0.0], parent="body", rotation=[rot_thigh, 0, 0])
+    rounded(th, hx, 0.0, ky - 0.2, hy + 0.4, w, w * 1.08, c_thigh, k=2)
+    sh = m.bone(pre + "_shin", [hx, ky, 0.0], parent=pre + "_thigh", rotation=[rot_shin, 0, 0])
+    rounded(sh, hx, 0.0, ay, ky + 0.2, w * 0.86, w * 0.92, c_shin, k=2)
+    sh.box_at((hx, ay - 1.6, -0.5), (w * 0.6, 3.4, w * 0.75), c_toe, rotation=[-14, 0, 0], pivot=[hx, ay, -0.2])
+
+
+def head_b2(m, chin, H):
+    """Round 1's serene bare head at 13 cubes: a turned neck, skull, jaw, a one-slice hair cap and its fall, the
+    eyes, the gilt circlet (no lip: below the texture's reach at 4.8 px)."""
+    h = m.bone("head", [0, chin - 0.6, 0.0], parent="body")
+    rounded(h, 0, 0.25, chin - 1.6, chin + 0.7, 0.42 * H, 0.42 * H, "skin", k=2)               # the neck
+    w, d = 0.76 * H, 0.86 * H
+    rounded(h, 0, 0.1, chin + 0.15 * H, chin + 0.72 * H, w, d, "skin", k=2)                     # skull + face
+    rounded(h, 0, -0.1, chin, chin + 0.2 * H, w * 0.72, d * 0.78, "skin", k=2)                  # the jaw
+    dome(h, 0, 0.25, chin + 0.62 * H, 0.36 * H, w + 0.3, d + 0.35, "hair", layers=1, top=0.7, k=2)  # hair cap
+    h.box_at((0, chin + 0.45 * H, 0.1 + d / 2 + 0.05), (w * 0.9, 0.62 * H, 0.6), "hair")        # the fall
+    fz = 0.1 - d / 2
+    for s in (1, -1):
+        h.box_at((s * 0.2 * H, chin + 0.5 * H, fz - 0.05), (0.16 * H, 0.08 * H, 0.15), "eye")
+    rounded(h, 0, 0.15, chin + 0.68 * H, chin + 0.68 * H + 0.55, w + 0.45, d + 0.45, "gold", k=2)
+    return h
+
+
+def arm_b2(m, side, shoulder, up_len, fore_len, w, sleeve, fore, cuff):
+    """Round 1's arm without the block fist: the hand is grip_hand's. Returns (upper, fore, the wrist in rest)."""
+    pre = "left" if side > 0 else "right"
+    sx, sy, sz = shoulder
+    ey, wy = sy - up_len, sy - up_len - fore_len
+    up = m.bone(pre + "_arm", [sx, sy, sz], parent="body")
+    rounded(up, sx, sz, ey - 0.2, sy + 0.6, w, w, sleeve, k=2)
+    fo = m.bone(pre + "_fore", [sx, ey, sz], parent=pre + "_arm")
+    rounded(fo, sx, sz, wy + 0.3, ey + 0.2, w * 0.88, w * 0.88, fore, k=2)
+    fo.box_at((sx, wy + 0.55, sz), (w * 0.98, 0.6, w * 0.98), cuff)
+    return pre + "_arm", pre + "_fore", (sx, wy + 0.1, sz)
+
+
+def hand_kw(fingers):
+    from human_kit import glove
+    g = glove("skin", "skin_shade", "skin")
+    g["fingers"] = fingers
+    return g
+
+
+def grip_hold(m, arm_bones, prop_bone, centre, axis, r, side, back, elbow_at=None, fingers=4, iters=2, on_fore=False):
+    """human_kit.hold's loop with a finger count: the hand closed round (centre, axis, r), the arm solved onto its
+    wrist with the forearm pointing into the grip; the hand built on the prop's bone (it rides the prop, which is then
+    handed to the forearm) or on the forearm (on_fore). Returns the wrist's miss (px)."""
+    from gen_models import Bone, transpose
+    upper, fore, wrist_rest = arm_bones
+    g_kw = hand_kw(fingers)
+    used, e = _unit(back), 0.0
+    for _ in range(iters):
+        used = back
+        g = grip_hand(Bone(m, "_scratch", [0, 0, 0]), centre, axis, r, side, "skin", back=used, **g_kw)
+        e = m.solve_arm(upper, fore, wrist_rest, g["wrist"], elbow_out=1, elbow_down=1, point_at=g["aim"],
+                        avoid=("body",), avoid_margin=0.8, avoid_elbow=True, elbow_at=elbow_at)
+        el, wr = m.fk(fore, m.bones[fore].pivot), m.fk(fore, wrist_rest)
+        back = _unit(tuple(0.5 * used[k] + 0.5 * (el[k] - wr[k]) / math.dist(el, wr) for k in range(3)))
+    if on_fore:
+        Rm = m.frame(fore)
+        t0 = m.fk(fore, (0.0, 0.0, 0.0))
+        c_loc = apply(transpose(Rm), tuple(centre[k] - t0[k] for k in range(3)))
+        grip_hand(m.bones[fore], c_loc, apply(transpose(Rm), axis), r, side, "skin",
+                  back=apply(transpose(Rm), used), **g_kw)
+    else:
+        grip_hand(m.bones[prop_bone], centre, axis, r, side, "skin", back=used, **g_kw)
+    return e
+
+
+def open_hand(m, arm_bones, side, fingers=3):
+    """A hand hanging easy from the forearm (human_kit.free_hand with fewer fingers), built in rest space."""
+    upper, fore, wrist_rest = arm_bones
+    grip_hand(m.bones[fore], None, (0, 0, -1), 0.5, side, "skin", back=(0, 1, 0), curl=0.42, wrist=wrist_rest,
+              **hand_kw(fingers))
+
+
+def lantern_b2(m, grip, fore, chain_len, cage=(3.5, 4.5)):
+    """The sun-lantern hung from a bar the right fist closes on: chain -> lantern (a pendulum)."""
+    hx, hy, hz = grip
+    ch = m.bone("chain", [hx, hy, hz])
+    ch.box_at((hx, hy, hz), (2.0, 0.6, 0.6), "brass")                                          # the bar in the fist
+    ch.box_at((hx, hy - 0.4 - chain_len / 2, hz), (0.45, chain_len, 0.45), "gold_dark")
+    top = hy - 0.4 - chain_len
+    w, h = cage
+    ln = m.bone("lantern", [hx, top, hz])
+    ngon_prism(ln, hx, hz, top - 0.7, top - 0.1, w, "brass", n=6)                            # cap
+    ln.box_at((hx, top + 0.05, hz), (1.2, 0.6, 1.2), "brass")                                # finial
+    ln.box_at((hx, top - h + 0.3, hz), (w * 0.9, 0.6, w * 0.9), "brass")                     # base
+    ln.box_at((hx, top - h / 2 - 0.05, hz), (w * 0.58, h - 1.4, w * 0.58), "glow")           # the core
+    for a in (0, 60, 120):
+        c0 = (hx, top - h / 2, hz)
+        ln.box_at(c0, (w * 0.95, h - 1.0, 0.35), "brass", rotation=[0, a, 0], pivot=list(c0))
+    attach(m, ch, fore, (hx, hy, hz))
+    attach(m, ln, "chain", (hx, top, hz))
+
+
+def halo_disc_b2(m, centre, diameter, tilt):
+    """The Mender's flat gold disc (C's, without the rays): a gold face, the glowing rim."""
+    hb = m.bone("halo", list(centre), parent="body", rotation=[tilt, 0, 0])
+    cx, cy, cz = centre
+    r = diameter / 2
+    for w, h in ((r * 2 - 2.4, r * 2 - 0.9), (r * 2 - 0.9, r * 2 - 2.4)):
+        hb.box_at((cx, cy, cz + 0.15), (w, h, 0.5), "gold")
+    ring(hb, (cx, cy, cz), r - 0.55, 8, 1.1, 0.9, "sun")
+    return hb
+
+
+def build_b2(kind):
+    pal = dict(PALETTE)
+    pal.update(KIND_PALETTE[kind])
+    pal["feather_warm"] = "#eadab4"            # 6: the flights' warm cream (the underside), a step under "feather"
+    m = Model("%s - %s (massing B2)" % (NAMES[kind], MASSING["b2"]), "sunforged", ROLES[kind] + ", round 2 body",
+              pal, EMISSIVE)
+    body = body_b2(m, kind)
+    wings_b2(m, kind)
+    chin, H = body["chin"], body["H"]
+    head_b2(m, chin, H)
+    back = 0.1 + 0.86 * H / 2 + 0.35
+    if kind == "mender":
+        halo_disc_b2(m, (0.0, chin + 0.62 * H, back + 2.4), 9.0, 35.0)
+    else:
+        halo_ring(m, (0.0, chin + H - 0.6, back + 2.0), 9.0, 2.1, 1.2, 25.0, n=8)
+    sx, sy, sz = body["shoulder"]
+    la = arm_b2(m, 1, (sx, sy, sz), body["up"], body["fore"], body["arm_w"], body["sleeve"], body["fore_c"],
+                body["cuff"])
+    ra = arm_b2(m, -1, (-sx, sy, sz), body["up"], body["fore"], body["arm_w"], body["sleeve"], body["fore_c"],
+                body["cuff"])
+    fz, wy = body["front_z"], body["waist"]
+    errs = []
+    if kind == "mender":
+        g = (-7.4, wy + 0.2, fz - 2.4)                                   # 5: 0.4 body-widths further out than r1
+        errs.append(grip_hold(m, ra, None, g, (1.0, 0.0, 0.0), 0.35, -1, (0.3, 0.75, 0.6),
+                              elbow_at=(-6.4, wy + 2.6, -0.8), fingers=3, on_fore=True))
+        lantern_b2(m, g, ra[1], 6.5)
+        errs.append(solve(m, la, (1.6, wy - 0.4, fz - 3.6)))
+        open_hand(m, la, 1)
+        m.contact_ok += [("right_fore", "chain")]
+    elif kind == "archer":
+        grip = (6.4, 19.0, -7.2)
+        bw, Lx = bow(m, grip, 34.0, 20.0, la[1], fix=False)
+        errs.append(grip_hold(m, la, "bow", grip, Lx, 0.62, 1, (-0.1, 0.4, 0.9), elbow_at=(6.4, 20.8, -2.6)))
+        attach(m, bw, la[1], grip)
+        errs.append(solve(m, ra, (-sx - 0.4, wy - 1.0, fz - 1.2)))
+        open_hand(m, ra, -1)
+        bz = body["back_z"] + 0.6
+        quiver(m, (-0.6, 12.8, bz), (-1.4, 20.2, bz))
+    else:
+        grip = (-5.6, 21.2, -4.0)
+        d = (-0.16, math.cos(math.radians(40)), math.sin(math.radians(40)))
+        sw = sword(m, grip, d, 17.0, ra[1], width=1.9, fix=False)
+        du = _unit(d)
+        errs.append(grip_hold(m, ra, "sword", _add(grip, _mul(du, -0.6)), du, 0.4, -1, (-0.2, -0.5, 0.85),
+                              elbow_at=(-6.2, 20.4, 0.2), fingers=3))
+        attach(m, sw, ra[1], grip)
+        hc = (4.6, wy + 0.5, fz - 3.6)
+        errs.append(grip_hold(m, la, None, hc, (0.0, 1.0, 0.0), 0.35, 1, (0.0, 0.3, 1.0),
+                              elbow_at=(5.8, wy + 2.6, -0.6), fingers=2, on_fore=True))   # behind the shield
+        shield(m, (hc[0] + 0.9, hc[1], hc[2] - 1.1), 9.0, la[1], n=6)
+        m.contact_ok += [("left_fore", "shield")]
+    m.contact_ok += [("body", "head"), ("body", "left_arm"), ("body", "right_arm"), ("body", "wing_l_arm"),
+                     ("body", "wing_r_arm")]
+    m.pose = {}
+    lo = settle(m)
+    return m, errs, lo
+
+
 # ------------------------------------------------------------------ assembly ------------------------------------
 def settle(m):
     """Moves the whole model so its lowest posed point is at y = 0 (the hover pose's reference)."""
@@ -551,6 +893,8 @@ def extent(m, names=None):
 
 
 def build(massing, kind):
+    if massing == "b2":
+        return build_b2(kind)
     pal = dict(PALETTE)
     pal.update(KIND_PALETTE[kind])
     m = Model("%s - %s (massing %s)" % (NAMES[kind], MASSING[massing], massing.upper()), "sunforged",
@@ -644,12 +988,13 @@ def write(massing, kind):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--massing", choices=("a", "b", "c"))
+    ap.add_argument("--massing", choices=("a", "b", "c", "b2"),
+                    help="a / b / c: round 1's greyboxes (kept as the A/B record); b2: round 2's B")
     ap.add_argument("--kind", choices=("mender", "archer", "sword"))
     ap.add_argument("--all", action="store_true")
     a = ap.parse_args()
     if a.all:
-        for ms in "abc":
+        for ms in ("a", "b", "c", "b2"):
             for k in ("mender", "archer", "sword"):
                 write(ms, k)
     elif a.massing and a.kind:

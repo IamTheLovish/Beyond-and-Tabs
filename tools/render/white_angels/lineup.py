@@ -6,7 +6,8 @@ scaled so its body is FAR_PX tall (the far read at the usual RTS zoom), then blo
 
     far_lineup_<letter>.png          the colour renders on the grass
     silhouette_lineup_<letter>.png   the same as flat black shapes
-    far_lineup_all.png / silhouette_lineup_all.png   the three rows stacked (a, b, c from the top)
+    far_lineup_all.png / silhouette_lineup_all.png   the rows stacked (a, b, b2, c ... from the top)
+    far_lineup_b_vs_b2.png / silhouette_lineup_b_vs_b2.png   a later round (key b2) under the option it grew from (b)
 
 The option letter is kept in the file names only (no captions in the images: the blind critic's copies are
 relabelled by hand). Sheet geometry is game_preview.main's: cells SIZE px square, 8 px apart, rows SIZE + 22 apart,
@@ -87,16 +88,28 @@ def main():
         j = jobs[name]
         return cut(os.path.join(a.out, name + "_blue.png"), j.get("views", "front,quarter,side,rts").split(","))
     control = get("control_radiant_winged")
-    letters = sorted({m.group(1) for n in jobs for m in [re.match(r"angel_([a-z])_", n)] if m})
-    fars, sils = [], []
+    # an option key is a letter with an optional round number (b, b2): jobs named angel_<key>_<kind>
+    letters = sorted({m.group(1) for n in jobs for m in [re.match(r"angel_([a-z][0-9]*)_(%s)$" % "|".join(KINDS), n)]
+                      if m})
+    fars, sils, rows = [], [], {}
     for L in letters:
         cuts = [get("angel_%s_%s" % (L, k)) for k in KINDS if "angel_%s_%s" % (L, k) in jobs] + [control]
         far, sil = row_images(cuts)
         fars.append(far)
         sils.append(sil)
+        rows[L] = (far, sil)
         blow(far).save(os.path.join(a.out, "far_lineup_%s.png" % L))
         blow(sil).save(os.path.join(a.out, "silhouette_lineup_%s.png" % L))
         print("lineup %s: %d models" % (L, len(cuts)))
+    # a round against the option it grew from (b on top, b2 under): far_lineup_b_vs_b2.png, silhouette_lineup_b_vs_b2.png
+    for L in letters:
+        m2 = re.match(r"([a-z])([0-9]+)$", L)
+        if m2 and m2.group(1) in rows:
+            P = m2.group(1)
+            blow(stack([rows[P][0], rows[L][0]], GRASS)).save(os.path.join(a.out, "far_lineup_%s_vs_%s.png" % (P, L)))
+            blow(stack([rows[P][1], rows[L][1]], (236, 236, 236))).save(
+                os.path.join(a.out, "silhouette_lineup_%s_vs_%s.png" % (P, L)))
+            print("lineup %s vs %s" % (P, L))
     if fars:
         blow(stack(fars, GRASS)).save(os.path.join(a.out, "far_lineup_all.png"))
         blow(stack(sils, (236, 236, 236))).save(os.path.join(a.out, "silhouette_lineup_all.png"))
