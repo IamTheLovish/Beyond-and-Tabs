@@ -1,0 +1,55 @@
+(2545 first-launch config/mod-loading notices filtered out)
+[04:19:40] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[04:19:50] [Render thread/ERROR]: Failed to verify authentication
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+[04:20:03] [Worker-ResourceReload-0/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_pattern.png
+[04:20:03] [Worker-ResourceReload-0/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_nopattern.png
+[04:20:10] [Worker-ResourceReload-1/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[04:20:10] [Worker-ResourceReload-1/WARN]: Unable to load model: 'supplementaries:block/hanging_flower_pot_rope' referenced from: supplementaries:block/hanging_flower_pot_rope: java.io.FileNotFoundException: supplementaries:models/block/hanging_flower_pot_rope.json
+[04:20:15] [Worker-ResourceReload-1/WARN]: Missing textures in model supplementaries:confetti_popper#inventory:
+[04:20:17] [Render thread/WARN]: Missing sound for event: minecraft:item.goat_horn.play
+[04:20:17] [Render thread/WARN]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[04:20:17] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+[04:20:19] [Render thread/WARN]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find sampler named Sampler2 in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named IViewRotMat in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named FogShape in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader supplementaries:static_noise could not find sampler named Sampler1 in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader supplementaries:spherify could not find sampler named Sampler1 in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseSpeed in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseScale in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named Intensity in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named CameraPos in the specified shader program.
+[04:20:19] [Render thread/WARN]: Shader reignofnether:bat_mist could not find uniform named Height in the specified shader program.
+[04:20:21] [Render thread/WARN]: Game took 48.969 seconds to start
+[04:21:55] [Render thread/WARN]: Initial datapack load took 2.454 s
+[04:22:00] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-0 absolute]
+[04:22:00] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-15 absolute]
+[04:22:10] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[04:22:17] [Render thread/WARN]: Time from main menu to in-game was 21.74306 seconds
+[04:22:17] [Render thread/WARN]: Total time to load game and open world was 70.71206 seconds
+[04:22:19] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2104ms or 42 ticks behind
+[04:25:41] [Render thread/WARN]: [Eyes] 07t_bone_dragon_close: no BoneDragonUnit left in the army (the battle took them); summoned a stand-in at -228 70 20
+[04:25:54] [Render thread/WARN]: [Eyes] 07w_mossback_bison_close: no MossbackBisonUnit left in the army (the battle took them); summoned a stand-in at -228 70 20
+[04:26:06] [Render thread/WARN]: [Eyes] 07zm_rocket_battery_close: no RocketBatteryUnit left in the army (the battle took them); summoned a stand-in at -228 70 20
+[04:26:18] [Render thread/WARN]: [Eyes] 07za_tithe_binder_close: no TitheBinderUnit left in the army (the battle took them); summoned a stand-in at -228 70 20
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 101.018135 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 135.324459 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 135.373984 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 136.289153 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 147.624081 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root' took aprox 147.912215 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 106.179241 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 125.782508 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 125.887716 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 126.272245 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 127.494867 ms
+[04:27:06] [Server thread/WARN]: Something's taking too long! 'root' took aprox 127.570382 ms
+[04:27:08] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 167.319481 ms
+[04:27:08] [Server thread/WARN]: Something's taking too long! 'root' took aprox 167.493353 ms
+[04:27:10] [Server thread/WARN]: Something's taking too long! 'root' took aprox 119.659887 ms
+[04:27:16] [Server thread/WARN]: Something's taking too long! 'root.tick.save' took aprox 356.445274 ms
+[04:27:16] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 383.795005 ms
+[04:27:16] [Server thread/WARN]: Something's taking too long! 'root' took aprox 385.865856 ms
+[04:27:20] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 3439ms or 68 ticks behind
+[04:29:30] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
