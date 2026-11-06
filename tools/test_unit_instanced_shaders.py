@@ -14,8 +14,12 @@ CORE = os.path.join(HERE, '..', 'bar', 'src', 'main', 'resources', 'assets', 're
 PROGRAMS = ('bat_unit_instanced', 'bat_unit_instanced_eyes')
 
 
-@unittest.skipUnless(shutil.which('glslangValidator'), 'glslangValidator is not installed')
+# CI (build.yml's tools job installs glslang-tools) must compile them: there a missing tool FAILS, never skips
+@unittest.skipUnless(shutil.which('glslangValidator') or os.environ.get('CI'), 'glslangValidator is not installed')
 class UnitInstancedShadersCompile(unittest.TestCase):
+    def setUp(self):
+        self.assertTrue(shutil.which('glslangValidator'), 'CI run without glslangValidator: the shaders were not compiled')
+
     def compile(self, path, stage):
         run = subprocess.run(['glslangValidator', '-S', stage, path], capture_output=True, text=True)
         self.assertEqual(run.returncode, 0, f'{os.path.basename(path)} ({stage}) did not compile:\n{run.stdout}{run.stderr}')
