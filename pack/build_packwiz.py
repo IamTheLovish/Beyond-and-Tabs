@@ -7,8 +7,9 @@ Testers import a small Prism instance ONCE; its pre-launch command runs packwiz-
 The third-party mods are the same set as the .mrpack tester pack (build_pack.py: lovish's instance_mods.json resolved
 on Modrinth by sha1, plus e4mc and its dependencies) and download from cdn.modrinth.com. Our own jar and our
 realistic resource pack download from the download repo's release assets. Every file carries a sha512.
-No shader pack and no shader loader ship (Oct 29: Complementary Reimagined's author refused us permission; our own
-shader pack will add them back). tools/test_pack_no_complementary.py fails if a Complementary file ever gets in.
+Our own shader pack ships ON by default (lovish, Nov 5): Oculus (LGPL v3, from Modrinth) loads the plain files of
+shaderpacks/BeyondAndTabs, and Oculus' config switches it on once (K turns it off). No other shader pack ever ships:
+tools/test_pack_no_complementary.py fails if a Complementary file gets in; tools/test_pack_shader_default.py.
 
 Two variants: windows/ (everything) and mac/ (without build_pack.MAC_SKIP: Embeddium, ImmediatelyFast, Embeddium Extra - like macpack.yml).
 
@@ -46,7 +47,8 @@ def sha512_of(path):
 
 
 def sha256_text(text):
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    """The sha256 of a pack file as shipped: text as UTF-8, or the bytes as they are (our shader pack's files)."""
+    return hashlib.sha256(text if isinstance(text, bytes) else text.encode("utf-8")).hexdigest()
 
 
 def slug(filename):
@@ -62,6 +64,10 @@ def metafile(name, filename, side, url, sha512):
 def write(root, rel, text):
     path = os.path.join(root, rel)
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    if isinstance(text, bytes):                     # a file shipped byte for byte (our shader pack)
+        with open(path, "wb") as f:
+            f.write(text)
+        return text
     with open(path, "w", newline="\n") as f:
         f.write(text)
     return text
@@ -82,6 +88,14 @@ def build_variant(root, entries, our, rp, version, skip):
     options = (f"version:{MC_DATA_VERSION}\n"
                f"resourcePacks:[\"vanilla\",\"file/{rp[0]}\"]\n")
     files.append(("options.txt", options, False, True))
+    # our shader pack, ON by default (lovish, Nov 5: "Yes, shader on, MEDIUM default (Recommended)"): its plain files,
+    # updated with every release, and Oculus' config switched on with it, written once (preserve: K stays off for a
+    # player who turned it off). Oculus needs Embeddium, which the Mac pack drops, so the Mac pack ships neither
+    if not any("oculus" in k for k in skip):
+        for rel, data in build_pack.our_shader_pack():
+            files.append((rel, data, False, False))
+        for rel in build_pack.SHADER_CONFIG_FILES:
+            files.append((rel, build_pack.SHADER_CONFIG, False, True))
 
     if len({f[0] for f in files}) != len(files):
         sys.exit("::error::two pack files map to the same path - rename one")
