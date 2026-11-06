@@ -670,6 +670,43 @@ class UnitPlaybackTest {
         assertTrue(bad.length() == 0, "a corner snap is drawn as a flick:" + bad);
     }
 
+    /**
+     * r1 B1 of #545 (Eris.14): the turn cap must not slow a jump's facing. A standing unit is teleported 30 blocks and
+     * turned 150 degrees in the same packet (Phenomena's moveTo(..., 0, 0), a command's moveTo with a yaw, an ability
+     * teleport), its head packet on the same tick: the position snaps, and so must the facing. With the cap alone the
+     * body was drawn 132 degrees off on the first tick at the new place and spun there for 9 client ticks. On the first
+     * client tick drawn at the new place, the body and the head face the server's way within 1 degree, on a steady
+     * clock and every 700-unit clock.
+     */
+    @Test
+    void a_teleport_that_turns_the_unit_faces_its_new_way_at_once() {
+        final int at = 150;
+        final double after = -90 + 150;
+        IntFunction<double[]> truth = k -> k < at ? new double[] { 0, 0, 0, -90, 0 } : new double[] { 30, 0, 0, after, 0 };
+        List<double[]> clocks = new ArrayList<>();
+        clocks.add(steady(260));
+        for (long seed : SEEDS)
+            clocks.add(at700(260, seed));
+        double server = qa(after), worstBody = 0, worstHead = 0;
+        int never = 0;
+        for (double[] clock : clocks) {
+            Drawn d = replay(clock, truth, Set.of());
+            int first = -1;
+            for (int c = 0; c < d.x().length && first < 0; c++)
+                if (Math.abs(d.x()[c] - 30) < 1)
+                    first = c;
+            if (first < 0) {
+                never++;
+                continue;
+            }
+            worstBody = Math.max(worstBody, Math.abs(Mth.wrapDegrees(d.yaw()[first] - server)));
+            worstHead = Math.max(worstHead, Math.abs(Mth.wrapDegrees(d.headYaw()[first] - server)));
+        }
+        assertTrue(never == 0 && worstBody <= 1.0 && worstHead <= 1.0, String.format(Locale.ROOT, "a 30-block teleport"
+            + " that turns the unit 150 degrees is drawn at its new place facing %.0f degrees off the server (head %.0f);"
+            + " %d clocks never drew it there", worstBody, worstHead, never));
+    }
+
     /** A turn across south (179 to -179 degrees) is drawn the short way: 2 degrees, never a spin through north. */
     @Test
     void a_turn_across_south_is_drawn_the_short_way() {
