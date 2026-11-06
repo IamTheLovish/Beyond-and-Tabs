@@ -54,6 +54,8 @@ public final class TitheBinderDrive {
      */
     public static final double SWING_GAIN = 0.45, SWING_MAX = 12.0, SWAY_DEG = 2.0;
     static final int SWAY_TICKS = 48;
+    /** px: a ribbon thinner than this is a docked chain (the rig's 1.2; thrown ones are 1.6 and up). */
+    static final double DOCKED_RIBBON_MAX = 1.3;
 
     /** What the unit shows this tick, in plain numbers (the renderer fills it from the entity). */
     public static final class Signals {
@@ -203,8 +205,33 @@ public final class TitheBinderDrive {
         in.speed = clip == Clip.MOVE ? speed : 0.0;
         TitheBinderRig.step(st, in, cur);
         swingLantern();
+        flattenWheel();
         hook();
         t++;
+    }
+
+    /**
+     * The wheel as a sawblade (in-game critic r2: from the RTS camera the wheel read as a tangle): at rest and on the
+     * move the docked blades lie flat (no pitch bob: the tips level with the ring) and their soul chains run taut from
+     * the ribs (no sag inside the ring), so from ~52 deg down it reads as a ring of blades. The clips that throw, bind,
+     * flinch, fidget or fall keep the rig's own pitch and sag; the Grave Hook (laid on after this) keeps its chain.
+     */
+    private void flattenWheel() {
+        if (clip != Clip.IDLE && clip != Clip.MOVE)
+            return;
+        Pose o = cur;
+        for (int k = 1; k <= TitheBinderRig.MAX_WEAPONS; k++)
+            if (o.slotOn[k])
+                o.slotPitch[k] = 0.0;
+        for (int i = 0; i < o.ribbons; i++)
+            if (o.ribbonWidth[i] < DOCKED_RIBBON_MAX)
+                for (int c = 0; c < 3; c++)
+                    o.ribbonCtrl[i][c] = 0.5 * (o.ribbonHub[i][c] + o.ribbonEnd[i][c]);
+    }
+
+    /** The hover's lift in the pose last blended (DSL px, + up: the rig's 2 px bob, the move's dip): the shadow's size. */
+    public double hoverPx() {
+        return out.off[TitheBinderRig.HOVER][1];
     }
 
     /** Adds the lantern's sideways swing onto {@code cur} (DSL degrees: + rolls the lantern to the unit's left). */

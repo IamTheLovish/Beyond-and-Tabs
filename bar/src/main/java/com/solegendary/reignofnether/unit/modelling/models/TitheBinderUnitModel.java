@@ -7,7 +7,11 @@ import com.solegendary.reignofnether.unit.modelling.models.gen.TitheBinderModel;
 import com.solegendary.reignofnether.unit.modelling.motion.OwnMotion;
 import com.solegendary.reignofnether.unit.units.monsters.TitheBinderUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TitheLedger;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -31,6 +35,10 @@ public class TitheBinderUnitModel extends TitheBinderModel<TitheBinderUnit> impl
     private final ModelPart[][] weaponsNear = new ModelPart[TitheLedger.MAX_WEAPONS + 1][];
     private final ModelPart flailBall;
     private final TitheBinderRig.Bones rig;
+    /** Per weapon: its bones from the root's child down to weapon_k itself (TitheBinderModel.path). */
+    private final ModelPart[][] weaponPaths = new ModelPart[TitheLedger.MAX_WEAPONS + 1][];
+    // the glow pass's scratch: which weapons were visible before it hid them
+    private final boolean[] glowShown = new boolean[TitheLedger.MAX_WEAPONS + 1];
 
     // this draw (set by the renderer just before it, taken by setupAnim)
     private TitheBinderDrive drive;
@@ -46,6 +54,7 @@ public class TitheBinderUnitModel extends TitheBinderModel<TitheBinderUnit> impl
             weaponsFar[k] = f;
             weaponsNear[k] = w == null ? new ModelPart[0]
                 : w.getAllParts().filter(p -> p != f).toArray(ModelPart[]::new);
+            weaponPaths[k] = path("weapon_" + k);
         }
         flailBall = bone("weapon_6_ball");
         rig = TitheBinderParts.bones(this::bone);
@@ -84,13 +93,100 @@ public class TitheBinderUnitModel extends TitheBinderModel<TitheBinderUnit> impl
         restPose();
         TitheBinderDrive d = this.drive;
         this.drive = null;
-        if (d != null && d.ready())
-            TitheBinderRig.apply(d.blend(partialTick), rig);
-        else
+        if (d != null && d.ready()) {
+            TitheBinderRig.Pose p = d.blend(partialTick);
+            TitheBinderRig.apply(p, rig);
+            thickenDocked(p);
+        } else {
             showWeapons(entity.getWeapons());
+        }
         for (int k = 1; k <= TitheLedger.MAX_WEAPONS; k++)
             weaponLod(k, far);
         if (flailBall != null)
             flailBall.visible = !far;
+    }
+
+    /**
+     * The wheel as a sawblade (in-game critic r2): a docked weapon's cross-section (its part's x = width, y =
+     * thickness; z is its length, kept) is drawn thicker, so its blade is about 3 px wide and 2 px thick, its widest
+     * feature (a hammer head, a hook, a cross-guard) held to about 6 x 4 px. Near: per weapon, from its blade cube in
+     * TitheBinderModel; far: the stand-in (2 x 1.2 px) to 3 x 2 px. A flying weapon is the renderer's (FxLayer sets
+     * its scale itself).
+     */
+    private void thickenDocked(TitheBinderRig.Pose p) {
+        for (int k = 1; k <= TitheLedger.MAX_WEAPONS; k++) {
+            ModelPart w = weapons[k];
+            if (w == null || !p.slotOn[k])
+                continue;
+            w.xScale *= far ? FAR_BLADE_X : BLADE_X[k];
+            w.yScale *= far ? FAR_BLADE_Y : BLADE_Y[k];
+        }
+    }
+
+    /**
+     * Per weapon 1-10: width factor min(3 / blade width, 6 / widest x), thickness factor min(2 / blade thickness,
+     * 4 / thickest y), from TitheBinderModel's cubes (1 sword 0.61 x 0.61, hook 1.84; 2 twin blades 1.48 x 0.59;
+     * 3 halberd shaft 0.85, head 3.55; 4 blade 1.23 x 0.49, guard 3.07; 5 spear 0.41, head 1.24 x 0.25; 6 flail
+     * 0.75, ball 2.5; 7 hammer shaft 0.78, head 4.55 x 2.6; 8 scythe 0.57, its blade already 7 px across; 9 blade
+     * 1.21 x 0.40, guard 3.22; 10 axe haft 0.47, head 2.74 x 0.39).
+     */
+    static final float[] BLADE_X = {1f, 3.27f, 2.03f, 1.69f, 1.96f, 4.85f, 2.4f, 1.32f, 1f, 1.86f, 2.04f};
+    static final float[] BLADE_Y = {1f, 3.27f, 3.38f, 2.36f, 4f, 4f, 1.6f, 1.54f, 3.5f, 4f, 4f};
+    static final float FAR_BLADE_X = 1.5f, FAR_BLADE_Y = 1.67f;
+    /** The glow pass: a docked weapon's own glow at this share, then its edge shell (EDGE_SHELL larger) at full. */
+    public static final float WEAPON_GLOW = 0.55f, EDGE_SHELL = 1.12f;
+
+    /**
+     * The glow pass (TitheBinderRenderer.GlowLayer, between SplitPasses.beginPass / endPass of the glow parts): the
+     * body's light at full (the lantern core, the one strong body glow), every weapon's at {@link #WEAPON_GLOW}, and,
+     * near, each docked weapon once more {@link #EDGE_SHELL} larger at full brightness, mirrored in its thickness (y):
+     * every weapon cube is symmetric in y and its sub-parts sit at y 0 turning about y, so the mirror is the same shape,
+     * but its faces wind the other way and the glow type's back-face cull keeps only the shell's far side - hidden
+     * behind the weapon's own opaque body except along its silhouette: a thin rim of full glow (no new shader).
+     */
+    public void renderGlow(PoseStack pose, VertexConsumer vc, boolean edges) {
+        for (int k = 1; k <= TitheLedger.MAX_WEAPONS; k++) {
+            ModelPart w = weapons[k];
+            glowShown[k] = w != null && w.visible;
+            if (w != null)
+                w.visible = false;
+        }
+        try {
+            renderToBuffer(pose, vc, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+        } finally {
+            for (int k = 1; k <= TitheLedger.MAX_WEAPONS; k++)
+                if (weapons[k] != null)
+                    weapons[k].visible = glowShown[k];
+        }
+        for (int k = 1; k <= TitheLedger.MAX_WEAPONS; k++) {
+            ModelPart w = weapons[k];
+            if (w == null || !glowShown[k] || !shown(weaponPaths[k]))
+                continue;
+            pose.pushPose();
+            root().translateAndRotate(pose);
+            ModelPart[] path = weaponPaths[k];
+            for (int i = 0; i < path.length - 1; i++)
+                path[i].translateAndRotate(pose);
+            w.render(pose, vc, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, WEAPON_GLOW, WEAPON_GLOW, WEAPON_GLOW, 1f);
+            if (edges) {
+                float sx = w.xScale, sy = w.yScale, sz = w.zScale;
+                w.xScale = sx * EDGE_SHELL;
+                w.yScale = -sy * EDGE_SHELL;
+                w.zScale = sz * EDGE_SHELL;
+                w.render(pose, vc, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+                w.xScale = sx;
+                w.yScale = sy;
+                w.zScale = sz;
+            }
+            pose.popPose();
+        }
+    }
+
+    /** Every part of the path (root excluded) is visible: a slot off (a weapon in the air) hides its weapon. */
+    private static boolean shown(ModelPart[] path) {
+        for (ModelPart p : path)
+            if (!p.visible)
+                return false;
+        return path.length > 0;
     }
 }
