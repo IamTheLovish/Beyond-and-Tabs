@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.HumanBase;
 import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierAnim;
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel;
@@ -89,6 +90,13 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
     private static final String[] BONES = {"body", "chest", "head", "plume", "halberd", "tassel", "tabard_front",
         "tabard_back", "right_arm", "right_fore", "left_arm", "left_fore", "left_thigh", "left_shin", "left_foot",
         "right_thigh", "right_shin", "right_foot"};
+    /** The bones that keep walking under a thrust made on the move: the pelvis, the legs and the cloth that hangs on them. */
+    private static final boolean[] LOWER = new boolean[BONES.length];
+    static {
+        for (int i = 0; i < BONES.length; i++)
+            LOWER[i] = BONES[i].equals("body") || BONES[i].startsWith("tabard") || BONES[i].contains("thigh")
+                || BONES[i].contains("shin") || BONES[i].contains("foot");
+    }
 
     private static float[][][] rots(float[][]... t) {
         return t;
@@ -199,6 +207,40 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         return x * x * (3f - 2f * x);
     }
 
+    /**
+     * The keyed clips (design/anims/halberdier.json) onto the parts: the idle guard by age crossfaded with the walk by
+     * the stride (amt), and the thrust over the swing (attack 0..1, 0 = none) layered on that base by
+     * {@link HumanBase#actOver} - so a thrust made on the move keeps the legs walking, and every clip starts and ends in
+     * READY, so the three blend without a pop. Public for the blend tests (no entity needed).
+     */
+    public void poseKeys(float limbSwing, float amt, float ageInTicks, int id, float attack) {
+        float t = ageInTicks + Life.offset(id);
+        // the idle cycle by age (each unit at its own phase)
+        IDLE.sample((t / HalberdierAnim.IDLE_TICKS) % 1f, rotA, movA);
+        // the walk by the stride's phase: WALK_PHASE cycles per vanilla cycle so the planted foot does not slide for
+        // the stride the keys were built on
+        float wk = 0f;
+        if (amt > 0f) {
+            float q = (limbSwing * 0.6662f / Mth.TWO_PI * WALK_PHASE) % 1f;
+            WALK.sample(q < 0f ? q + 1f : q, rotB, movB);
+            wk = smooth(amt);
+            for (int i = 0; i < BONES.length; i++)
+                for (int a = 0; a < 3; a++) {
+                    rotA[i][a] += (rotB[i][a] - rotA[i][a]) * wk;
+                    movA[i][a] += (movB[i][a] - movA[i][a]) * wk;
+                }
+        }
+        if (attack > 0f) {
+            THRUST.sample(attack, rotB, movB);
+            HumanBase.actOver(rotA, movA, rotB, movB, READY_ROT, READY_MOVE, LOWER,
+                smooth(Math.min(1f, Math.min(attack / IDLE_FADE, (1f - attack) / IDLE_FADE))), wk);   // 1 - drift
+        }
+        for (int i = 0; i < BONES.length; i++) {
+            dsl(parts[i], rotA[i][0], rotA[i][1], rotA[i][2], 1f);
+            move(parts[i], movA[i][0], movA[i][1], movA[i][2], 1f);
+        }
+    }
+
     @Override
     public void setupAnim(VindicatorUnit entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
                           float headPitch) {
@@ -208,38 +250,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         float amt = Math.min(1f, limbSwingAmount);
         float t = ageInTicks + Life.offset(entity.getId());   // the shared life layer: no two units stir in step
         float breathe = Life.breath(ageInTicks, entity.getId(), 64f);   // a quick in-breath, a long out-breath
-
-        // ---- the keyed clips (design/anims/halberdier.json): the thrust over the swing, else the walk crossfaded with
-        // the idle guard by the stride (amt) - every clip starts and ends in READY, so the three blend without a pop
-        // the idle cycle by age (each unit at its own phase)
-        IDLE.sample((t / HalberdierAnim.IDLE_TICKS) % 1f, rotA, movA);
-        if (this.attackTime > 0f) {
-            float q = this.attackTime;
-            THRUST.sample(q, rotB, movB);
-            float k = 1f - smooth(Math.min(1f, Math.min(q / IDLE_FADE, (1f - q) / IDLE_FADE)));
-            for (int i = 0; i < BONES.length; i++)
-                for (int a = 0; a < 3; a++) {
-                    rotA[i][a] = rotB[i][a] + (rotA[i][a] - READY_ROT[i][a]) * k;
-                    movA[i][a] = movB[i][a] + (movA[i][a] - READY_MOVE[i][a]) * k;
-                }
-        } else {
-            // the walk by the stride's phase: WALK_PHASE cycles per vanilla cycle so the planted foot does not slide
-            // for the stride the keys were built on
-            if (amt > 0f) {
-                float q = (limbSwing * 0.6662f / Mth.TWO_PI * WALK_PHASE) % 1f;
-                WALK.sample(q < 0f ? q + 1f : q, rotB, movB);
-                float wk = smooth(amt);
-                for (int i = 0; i < BONES.length; i++)
-                    for (int a = 0; a < 3; a++) {
-                        rotA[i][a] += (rotB[i][a] - rotA[i][a]) * wk;
-                        movA[i][a] += (movB[i][a] - movA[i][a]) * wk;
-                    }
-            }
-        }
-        for (int i = 0; i < BONES.length; i++) {
-            dsl(parts[i], rotA[i][0], rotA[i][1], rotA[i][2], 1f);
-            move(parts[i], movA[i][0], movA[i][1], movA[i][2], 1f);
-        }
+        poseKeys(limbSwing, amt, ageInTicks, entity.getId(), this.attackTime);
 
         // ---- the life layer over the keys: breath in the chest and the haft (the hands ride with it), the look, the
         // tassel and the plume a link behind
