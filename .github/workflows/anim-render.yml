@@ -25,8 +25,24 @@ env:
   R3_COMMIT: fead253b4ca0add00df4c1d347cb7259340b7ce8      # Quarry Saint r3, the A/B's other side (full SHA)
   PY: tools/render/quarry_saint
 jobs:
-  keys:
+  # the key solve only when its inputs (generator, pose solver, gen_models, contact_check) changed since the key file
+  # committed on the branch (design/fixtures/quarry_saint_keys.json "_inputs"); the bakes and renders run every time
+  plan:
     if: github.ref_name == 'claude/quarry-saint'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      solve: ${{ steps.need.outputs.solve }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - id: need
+        run: python $PY/pipeline.py --out out/plan need-keys
+
+  keys:
+    needs: plan
+    if: needs.plan.outputs.solve == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -53,7 +69,8 @@ jobs:
         with: { name: 'qs-keys-${{ matrix.part }}', path: 'out/keys${{ matrix.part }}', retention-days: 1 }
 
   bake:
-    needs: keys
+    needs: [plan, keys]
+    if: always() && needs.plan.result == 'success' && (needs.keys.result == 'success' || needs.keys.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -66,17 +83,20 @@ jobs:
         with: { python-version: '3.12' }
       - run: pip install -q numpy pillow
       - uses: actions/download-artifact@v4
+        if: needs.plan.outputs.solve == 'true'
         with: { pattern: 'qs-keys-*', path: parts }
       - name: Bake both arms per tick (${{ matrix.clip }})
         run: |
           set -euo pipefail
+          mkdir -p parts
           python $PY/pipeline.py --out out/bake_${{ matrix.clip }} gen keyfile --parts parts
           python $PY/pipeline.py --out out/bake_${{ matrix.clip }} bake --clip ${{ matrix.clip }}
       - uses: actions/upload-artifact@v4
         with: { name: 'qs-bake-${{ matrix.clip }}', path: 'out/bake_${{ matrix.clip }}', retention-days: 1 }
 
   render:
-    needs: bake
+    needs: [plan, keys, bake]
+    if: always() && needs.bake.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
