@@ -832,10 +832,6 @@ def build_b2(kind, rnd=2):
               ROLES[kind] + (", round 2 body" if rnd == 2 else ", round 3 part pass"), pal, EMISSIVE)
     body = body_b2(m, kind, flat_hem=(rnd == 3))
     (wings_b2 if rnd == 2 else wings_b3)(m, kind)
-    if rnd == 3:
-        # round 3, 1: the feather coat painted without its own baked occlusion (a coat of tiles: the stacked 0.5 px
-        # layers darkened each other to ~35% in the front view of the first r3 render)
-        m.flat_light = ["wing_"]
     chin, H = body["chin"], body["H"]
     head_b2(m, chin, H)
     back = 0.1 + 0.86 * H / 2 + 0.35
@@ -901,7 +897,7 @@ def build_b2(kind, rnd=2):
 # The blind critic picked B2 over B (6.8 vs 5.2). Round 3 changes ONE thing per element:
 #  1 underside  - game_preview / Minecraft light a face 0.4 + 0.6 (n.L0 + n.L1): a face turned DOWN gets 0.4 whatever
 #                 its paint (white reads 40%), so the palette alone cannot lift it. The flights go near-white
-#                 (feather_warm #fbf4e4) AND the plane is reclined so the chord RISES 10 deg to the trailing edge
+#                 (feather_warm #fbf4e4) AND the plane is reclined so the chord RISES 20 deg to the trailing edge
 #                 (B2: falls 20): the front and quarter cameras then see the lit top faces, never a down face
 #  2 wing bone  - the leading edge 60% of the unit's arm (1.15 px, B2 1.6-0.9), ONE continuous team stripe root to
 #                 tip at ~25% chord, a cream covert row between it and the flights, six secondaries wrist to root
@@ -915,7 +911,8 @@ B3_WING = {
     "archer": dict(B2_WING["archer"], n_sec=6, n_cov=4, root_f=0.24, n_ip=2),
     "sword": dict(B2_WING["sword"], n_sec=6, n_cov=4, root_f=0.24, n_ip=2),
 }
-RHO_B3 = 100.0                       # 1: the chord rises 10 deg toward the trailing edge (B2: 70, falling 20)
+RHO_B3 = 110.0                       # 1: the chord rises 20 deg toward the trailing edge (B2: 70, falling 20; 10 in the
+#                                      first r3 render left the lit tops too grazing from the front: 45-59% value)
 BONE_T = 0.6 * 1.9                   # 2: the leading edge 60% of the arm's 1.9 px
 STRIPE = 0.25                        # 2: the team stripe's share of the chord
 
@@ -979,15 +976,16 @@ def wings_b3(m, kind):
             dd = _unit((0.1 * t, -1.0, 0.0))
             tip = P2(le(t), dd, chord(t))
             w = 1.3 * (2.2 / (ns - 1)) * span_px / 2 + 0.3
+            # 1: overlapping flights 0.12 apart (B2 0.05: at a grazing view their down faces checkered the lit tops)
             feather(arm_b if t < 1.0 else fore_b, Wp(b), Wp(tip), w, 0.5, "feather_warm", nf,
-                    offset=-0.05 * (k % 2), pointed=True)
+                    offset=-0.12 * (k % 2), pointed=True)
         nip = P["n_ip"]
         for i in range(nip):
             b = P2(P2(Wr, a_h, hand_len * (0.05 + 0.1 * i)), b_h, 0.25 * c)
             tip = P2(lerp(te_w, tips_f[-1], (i + 1) / (nip + 1.0)), b_h, 0.7)
-            feather(hand_b, Wp(b), Wp(tip), fw + 0.7, 0.5, "feather_warm", nf, offset=-0.12 + 0.04 * i, pointed=True)
+            feather(hand_b, Wp(b), Wp(tip), fw + 0.7, 0.5, "feather_warm", nf, offset=-0.5 + 0.12 * i, pointed=True)
         for k in range(nfing):
-            feather(tips_b, Wp(roots_f[k]), Wp(tips_f[k]), fw, 0.55, "feather_warm", nf, offset=-0.04 - 0.05 * k,
+            feather(tips_b, Wp(roots_f[k]), Wp(tips_f[k]), fw, 0.55, "feather_warm", nf, offset=0.0 - 0.12 * k,
                     pointed=True)
         # 2: the cream covert row between the stripe and the flights (square ends, alternate lengths)
         nc = P["n_cov"]
