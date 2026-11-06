@@ -47,6 +47,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: true
+      max-parallel: 2   # 20-job pool shared by every lane: a render run takes at most 2 at once
       matrix:
         include:
           - { part: 1, only: 'rest,ready,sweep_windup,slam_contact,carry' }
@@ -75,6 +76,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: true
+      max-parallel: 2   # 20-job pool shared by every lane: a render run takes at most 2 at once
       matrix:
         clip: [sweep, slam, gatefall]
     steps:
