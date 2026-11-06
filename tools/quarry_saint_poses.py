@@ -83,23 +83,26 @@ KEYS = {
                          dir_tol=(10, 10)),
     "sweep_contact": dict(grip=(-2.0, 24.0, -15.0), yaw=-50.0, pitch=4.0, move=(0.5, -3.0, 0.0), pelvis=(0, 12, 0),
                           torso=(0, -2, 0), head=(0, -10, 0), feet={}, left="haft"),
-    "sweep_follow": dict(grip=(-10.0, 22.0, -16.0), yaw=50.0, pitch=-4.0, move=(-1.0, -3.0, 0.0), pelvis=(0, 12, 0),
-                         torso=(-6, 28, 0), head=(0, -12, 0), feet={"r": (0, 0, 0, 10)}, left="haft"),
+    # r3b: the follow-through's fists out in front (z -24, r3 -16), the head front-right (yaw 40, r3 50), twist 20 (r3 28)
+    "sweep_follow": dict(grip=(-6.0, 24.0, -24.0), yaw=40.0, pitch=0.0, move=(-1.0, -3.0, 0.0), pelvis=(0, 12, 0),
+                         torso=(-4, 20, 0), head=(0, -8, 0), feet={"r": (0, 0, 0, 10)}, left="haft", elbow_out=6.0),
     # 3.5 the slam (vs buildings)
-    "slam_windup": dict(grip=(-4.0, 52.0, -2.0), yaw=180.0, pitch=70.0, move=(0.0, -3.5, 0.0), torso=(18, 0, 0),
-                        head_x_max=-6.0,
+    "slam_windup": dict(grip=(-10.0, 46.0, 0.0), yaw=145.0, pitch=50.0, move=(0.0, -3.5, 0.0), torso=(18, 0, 0),
+                        head_x_max=-6.0, halo_clear=24.0, dir_tol=(20, 15),
                         head=(-15, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft"),
-    "slam_contact": dict(grip=(-6.0, 22.0, -24.0), yaw=0.0, pitch=-35.0, buried=-3.0, move=(0.0, -5.0, -1.0),
-                         torso=(-30, 0, 0), head=(10, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft"),
-    "slam_wrench": dict(grip=(-6.0, 26.0, -21.0), yaw=0.0, pitch=-30.0, buried=-3.0, move=(0.0, -5.0, -1.0),
-                        torso=(-18, 0, 0), head=(4, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft"),
+    # r3b: the slam / Gatefall contacts and the wrench bend 8-10 deg less (the arms reached down across the chest)
+    # with the fists further out in front and the elbows out
+    "slam_contact": dict(grip=(-6.0, 20.0, -30.0), yaw=0.0, pitch=-35.0, buried=-3.0, move=(0.0, -5.0, -1.0),
+                         torso=(-22, 0, 0), head=(8, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft", elbow_out=8.0),
+    "slam_wrench": dict(grip=(-6.0, 24.0, -28.0), yaw=0.0, pitch=-30.0, buried=-3.0, move=(0.0, -5.0, -1.0),
+                        torso=(-10, 0, 0), head=(4, 0, 0), feet={"l": (0, 0, -3, 0)}, left="haft", elbow_out=8.0),
     # 3.8 Gatefall
     "gatefall_windup": dict(grip=(-4.0, 54.0, 0.0), yaw=180.0, pitch=85.0, move=(0.0, -4.0, 0.0), torso=(24, 0, 0),
                             head_x_max=-6.0,
                             head=(-20, 0, 0), feet={"r": (-3, 0, 0, 0), "l": (3, 0, 0, 0)}, left="haft"),
-    "gatefall_contact": dict(grip=(-6.0, 20.0, -24.0), yaw=0.0, pitch=-40.0, buried=-4.0, move=(0.0, -6.0, -1.0),
-                             torso=(-38, 0, 0), head=(14, 0, 0), feet={"r": (-3, 0, 0, 0), "l": (3, 0, 0, 0)},
-                             left="haft"),
+    "gatefall_contact": dict(grip=(-6.0, 20.0, -30.0), yaw=0.0, pitch=-40.0, buried=-4.0, move=(0.0, -6.0, -1.0),
+                             torso=(-28, 0, 0), head=(10, 0, 0), feet={"r": (-3, 0, 0, 0), "l": (3, 0, 0, 0)},
+                             left="haft", elbow_out=8.0),
     # 3.6 hit reactions (from the rest stance): a projectile glances (1.5 deg away, a hit from the front-left), the
     # stagger's peak (t4: the hit-side right plinth lifted 2 px and 4 px back, the torso rocked 8 deg back)
     "glance": dict(torso=(1.5, 0, -1.0), keep_rest_maul=True, feet={}),
@@ -149,7 +152,7 @@ def body_box_arrays(m, T, extra=()):
 
 
 def fit_grip(m, G0, yaw0, pitch0, T, two_hands=True, ground=None, dir_tol=(20, 15), head_out_left=None,
-             carry=False, k=1, head_x_max=None):
+             carry=False, k=1, head_x_max=None, halo_clear=None):
     """The reachable grip and haft direction nearest the key's: both shoulders within reach of their fists (11 to 23
     px from the shoulder pivot), the fists, the haft and the head out of the body (torso, pelvis, head, thighs), the
     head's centre not under the ground. Returns (G, yaw, pitch, shift px)."""
@@ -195,6 +198,14 @@ def fit_grip(m, G0, yaw0, pitch0, T, two_hands=True, ground=None, dir_tol=(20, 1
             hc = G + 34.0 * d
             if ground is not None:
                 c = c + 2.0 * np.maximum(0, ground - (hc[:, 1] - 6.0)) ** 2
+            if halo_clear is not None and "halo" in m.bones:
+                # r3b: from the RTS camera the maul head's centre this far (screen px at 1 px/model px) from the
+                # halo's centre, so the halo shows (sheet: the saint read at the slam's hold)
+                from preview_model import view_matrix
+                Rv = np.array(view_matrix(-35, 52))
+                hz = np.array(m.fk("halo", m.bones["halo"].pivot)) + np.array(T)
+                sh = (hc - hz) @ Rv.T
+                c = c + 2.0 * np.maximum(0, halo_clear - np.hypot(sh[:, 0], sh[:, 1])) ** 2
             if head_x_max is not None:                    # r3: the maul head this far right of the head (x <=)
                 c = c + 0.8 * np.maximum(0, hc[:, 0] - head_x_max) ** 2
                 # and away from the halo from above: its centre >= 9 px off the head's vertical line
@@ -276,16 +287,30 @@ def cap_knees(m, bind, spec, T):
     return T
 
 
+CLEAR_GROW = 0.5
+
+
+def clear_dsl(dsl):
+    """The model with the forearms and fists grown by CLEAR_GROW px: a hit means less than that much clearance."""
+    d = copy.deepcopy(dsl)
+    for b in d["bones"]:
+        if b["name"] in ("forearm_r", "forearm_l", "hand_r", "hand_l"):
+            for c in b["cubes"]:
+                c["inflate"] = c.get("inflate", 0.0) + CLEAR_GROW
+    return d
+
+
 def arm_hits(dsl, bind, m, T):
     """Arm parts (upper arm, forearm, fist) into the body (torso, head, pelvis, halo): [(depth, arm bone, body bone)]."""
     extra = {k: v for k, v in deltas(bind, m, T).items() if not k.startswith("_")}
-    hits = contact_check.check(dsl, extra, (), {"pelvis": list(T)}, threshold=0.6, joint=3.5)
+    hits = contact_check.check(dsl, extra, (), {"pelvis": list(T)}, threshold=0.05, joint=3.5)
     out = []
     for h in hits:
         a, b = h[1], h[4]
-        if a in ARM_BONES and b in BODY_BONES and frozenset((a, b)) not in JOINT_PAIRS:
+        # (the upper arm counts against the torso too: contact_check already spares the shoulder seat, 3.5 px)
+        if a in ARM_BONES and b in BODY_BONES:
             out.append((round(h[0], 2), a, b))
-        elif b in ARM_BONES and a in BODY_BONES and frozenset((a, b)) not in JOINT_PAIRS:
+        elif b in ARM_BONES and a in BODY_BONES:
             out.append((round(h[0], 2), b, a))
     return sorted(out, reverse=True)
 
@@ -344,33 +369,41 @@ def solve_key(bind, name, spec, log, dsl=None):
             ground = 0.5
         cands = fit_grip(m, spec["grip"], spec["yaw"], spec["pitch"], T, two_hands=two, ground=ground,
                          dir_tol=spec.get("dir_tol", (20, 15)), head_out_left=spec.get("head_out_left"),
-                         carry=spec.get("carry", False), k=8, head_x_max=spec.get("head_x_max"))
+                         carry=spec.get("carry", False), k=5, head_x_max=spec.get("head_x_max"),
+                         halo_clear=spec.get("halo_clear"))
         best = None
         base = copy.deepcopy(m)
+        dsl_clear = clear_dsl(dsl) if dsl is not None else None
         for ci, (G, yaw, pitch, shift) in enumerate(cands):
             mm = copy.deepcopy(base)
+            ea_r = ea_l = None
+            if spec.get("elbow_out"):
+                eo = spec["elbow_out"]
+                sr, sl = q.shoulder_world(mm, -1, T), q.shoulder_world(mm, 1, T)
+                ea_r = (sr[0] - eo, sr[1] - 7.0, sr[2] - 3.0)
+                ea_l = (sl[0] + eo, sl[1] - 7.0, sl[2] - 3.0)
             if spec.get("buried") is not None:
                 # put the head's lowest point where the key asks (buried / on the ground): walk the pitch
-                for _ in range(8):
-                    q.place_right(mm, G, q.maul_dir(yaw, pitch), T)
+                for _ in range(4):
+                    q.place_right(mm, G, q.maul_dir(yaw, pitch), T, elbow_at=ea_r)
                     low = q.maul_head_low(mm, T)
                     if abs(low - spec["buried"]) < 0.15:
                         break
                     pitch -= math.degrees((low - spec["buried"]) / 34.0) * 0.9
             else:
-                q.place_right(mm, G, q.maul_dir(yaw, pitch), T)
+                q.place_right(mm, G, q.maul_dir(yaw, pitch), T, elbow_at=ea_r)
             if spec.get("left") == "haft":
-                q.place_left(mm, T)
+                q.place_left(mm, T, elbow_at=ea_l)
             if dsl is None:
                 best = (0.0, ci, mm, G, yaw, pitch, shift, [])
                 break
-            hits = arm_hits(dsl, bind, mm, T)
+            hits = arm_hits(dsl_clear, bind, mm, T)
             worst = hits[0][0] if hits else 0.0
             off = q.hand_to_haft(mm, "l", T)[0] if spec.get("left") == "haft" else 0.0
             score = worst + 3.0 * off + 0.02 * shift
             if best is None or score < best[0]:
                 best = (score, ci, mm, G, yaw, pitch, shift, hits)
-            if worst <= 1.0 and off <= 0.5:
+            if worst <= 0.05 and off <= 0.5:
                 break                                    # clean enough: keep the nearest candidate that is
         _, ci, m, G, yaw, pitch, shift, _h = best
         G_used = (G, yaw, pitch, shift)
@@ -436,6 +469,7 @@ def measure(name, bind, m, T, dsl):
                      if frozenset((h[1], h[4])) not in JOINT_PAIRS]
     r["joint_overlaps"] = sum(1 for h in hits if frozenset((h[1], h[4])) in JOINT_PAIRS)
     r["arm_body"] = arm_hits(dsl, bind, m, T)
+    r["arm_body_clear"] = arm_hits(clear_dsl(dsl), bind, m, T)        # forearm / fist grown 0.5 px
     # every cube's lowest point (nothing under the ground but a buried maul head)
     lows = []
     for n, b in m.bones.items():
@@ -449,11 +483,11 @@ def measure(name, bind, m, T, dsl):
     return r
 
 
-def solve_all(only=None, massing=q.DEFAULT_MASSING):
-    bind, _ = q.build(massing)
+def solve_all(only=None):
+    bind, _ = q.build()
     dsl = json.loads(json.dumps(bind.to_json()))
     import render_concept
-    tmp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".scratch", "_qs_bind_%s_%d.json" % (massing, os.getpid()))
+    tmp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".scratch", "_qs_bind_%d.json" % os.getpid())
     os.makedirs(os.path.dirname(tmp), exist_ok=True)
     with open(tmp, "w") as f:
         json.dump(dsl, f)
@@ -477,10 +511,8 @@ def main():
     ap.add_argument("--out", default="-")
     ap.add_argument("--report", default=None)
     ap.add_argument("--only", default="")
-    ap.add_argument("--massing", default=q.DEFAULT_MASSING, choices=q.MASSINGS,
-                    help="control = the round-1 body; a | b | c = the round-2 massing greyboxes (gen_quarry_saint)")
     a = ap.parse_args()
-    poses, report = solve_all([x for x in a.only.split(",") if x], a.massing)
+    poses, report = solve_all([x for x in a.only.split(",") if x])
     text = json.dumps(poses, indent=1)
     if a.out == "-":
         print(text)

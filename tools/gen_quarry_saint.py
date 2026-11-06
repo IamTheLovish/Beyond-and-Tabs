@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 """The Quarry Saint: the Sunforged T2 siege statue (replaces the Siege Ox's Ravager body). Design sheet: Animation
-Studio unit 2 (Nov 5). A foundation statue of the White Angel's temple, cracked open by sunlight, walking off its
-plinth with the sanctuary's maul: a low, wide, hunched block of carved stone (yoke + two round pauldron discs), a sunk
-eyeless head under the shoulder line, chunks of its plinth on its feet, a rough quarry-cut back, light in its cracks,
-and a 46 px maul whose light head is the brightest thing on it.
+Studio unit 2 (Nov 5); massing "b, the stepped altar" (lovish's pick after the round-2 options, Nov 5). A foundation
+statue of the White Angel's temple, cracked open by sunlight, walking off its pedestal with the sanctuary's maul: a
+22 px torso on a broken altar step, a head on a short neck in a carved cowl with a solid octagon halo behind it, a
+plinth chunk under the left foot, light in its cracks, and a 46 px maul whose light head is the brightest thing on it.
 
     python3 tools/gen_quarry_saint.py      # writes design/models/sunforged_quarry_saint.json
     python3 tools/render_concept.py --check design/models/sunforged_quarry_saint.json
-    python3 tools/dsl_to_game.py design/models/sunforged_quarry_saint.json --class QuarrySaintModel \\
+    python3 tools/dsl_to_game.py design/models/sunforged_quarry_saint.json --class QuarrySaintModel \
         --texture quarry_saint_unit --team tabard,tabard_dark
-    python3 tools/quarry_saint_poses.py > poses.json   # the key poses (tools/quarry_saint_poses.py)
+    python3 tools/quarry_saint_poses.py --out poses.json    # the solved key poses
+    python3 tools/quarry_saint_anim.py --keys poses.json    # their key file; the clips: tools/quarry_saint_anim.py
 
-Space is the DSL's (design/models/README.md): px, y up from the soles, the unit facing -Z, +x its LEFT. Bone names
-follow the sheet (pelvis, torso, head, thigh_r/shin_r, shoulder_r/forearm_r/hand_r, maul, ...), plus three the
-sheet did not have (see the round log): foot_r/foot_l (an ankle, so a lowered pelvis keeps the plinths flat on
-y = 0), pauldron_r/pauldron_l (the round shoulder discs on their own bone: an arm raised overhead does not whirl its
-disc with it) and the light-crack damage sets cracks_hp66 / cracks_hp33 (two bones of emissive cubes only, so the
-game shows each set with ModelPart.visible below 66% / 33% hp).
+The round-1 body (twin shoulder discs, sunk head) and the round-2 massing options live in git history only
+(dac3d820, ad7bd0ac, fead253b).
+
+Space is the DSL's (design/models/README.md): px, y up from the soles, the unit facing -Z, +x its LEFT. Bones: pelvis,
+torso, head, halo, thigh/shin/foot, shoulder/forearm/hand, maul + chain, stole, belt tabard (no loose shards); foot_r/foot_l
+are ankles (a lowered pelvis keeps the plinths flat on y = 0) and cracks_hp66 / cracks_hp33 hold only emissive
+cubes (the game shows each set with ModelPart.visible below 66% / 33% hp).
 
 Palette: the sheet's stone values under the angel statue's names (marble_light / marble / marble_shade /
 marble_deep): tools/materials.py paints any colour named "marble*" with the angel's carved-stone surface (soft
@@ -92,18 +94,6 @@ def zoct(bone, c, length, w, color, **kw):
         bone.box_at(list(c), [w, side, length], color, rotation=[0, 0, a], pivot=list(c), **kw)
 
 
-def oct_band(bone, cx, cz, y0, y1, w, t, color, n=8, **kw):
-    """A band of n slabs round the flats of an n-gon prism of width w (a rim round ngon_prism's disc)."""
-    side = w * math.tan(math.pi / n) + 0.3
-    r = w / 2 + t / 2
-    yc = (y0 + y1) / 2
-    for k in range(n):
-        a = math.radians(360.0 / n * k)
-        c = (cx + r * math.sin(a), yc, cz + r * math.cos(a))
-        slab(bone, c, (math.cos(a), 0.0, -math.sin(a)), (math.sin(a), 0.0, math.cos(a)), (t, y1 - y0, side), color,
-             **kw)
-
-
 def flat_seg(bone, a, b, y, w, h, color, **kw):
     """A strip lying on a horizontal face from (x, z) a to b: width w across, height h, its top at y."""
     p0, p1 = (a[0], y - h / 2, a[1]), (b[0], y - h / 2, b[1])
@@ -128,30 +118,7 @@ def face_seg(bone, a, b, plane, w, t, color, **kw):
     return slab(bone, c, along, normal, (t, w, math.dist(p0, p1)), color, **kw)
 
 
-def face_staple(bone, a, b, t_at, plane, size, color, **kw):
-    """A gold staple across a crack strip on a vertical face at fraction t_at (size = (length across, width, proud))."""
-    ax, v = plane
-    pa = (a[0] + (b[0] - a[0]) * t_at, a[1] + (b[1] - a[1]) * t_at)
-    d = (b[0] - a[0], b[1] - a[1])
-    perp = (-d[1], d[0])
-    if ax == "z":
-        c, along, normal = (pa[0], pa[1], v - size[2] / 2 + 0.2), (perp[0], perp[1], 0.0), (0.0, 0.0, 1.0)
-    else:
-        c, along, normal = (v - size[2] / 2 + 0.2, pa[1], pa[0]), (0.0, perp[1], perp[0]), (1.0, 0.0, 0.0)
-    return slab(bone, c, along, normal, (size[2], size[1], size[0]), color, **kw)
-
-
 # ------------------------------------------------------------------ the body -------------------------------------------
-# yoke-top light cracks (x, z) on y 45, kept out of the pauldron discs (r ~7 round (+-17, 2)) and the stole (|x| < 5)
-CRACKS_YOKE = [((13.8, 12.4), (9.6, 8.6)), ((9.6, 8.6), (5.4, 5.6)), ((-5.4, 0.6), (-9.4, -3.2)),
-               ((9.4, 8.4), (10.6, 3.4)), ((-7.4, -1.3), (-10.6, 2.4)), ((6.2, 9.0), (7.6, 12.9))]
-STAPLES_YOKE = [(0, 0.2), (0, 0.65), (1, 0.45), (2, 0.35), (2, 0.8), (3, 0.5), (4, 0.5), (5, 0.5)]
-# down the pectoral from the yoke crack's front end ((x, y) on the face z = -8; the last on the chest face z = -7)
-# (outside the stole's right tail, x -9..-5.6)
-CRACKS_CHEST = [((-9.6, 36.2), (-10.6, 32.6), -8.0), ((-10.6, 32.6), (-9.7, 29.3), -8.0),
-                ((-9.8, 29.0), (-11.4, 25.4), -7.0)]
-
-
 def pelvis(m):
     p = m.bone("pelvis", [0, 22, 2])
     p.cube([-10, 17, -5], [20, 9, 14], "marble")                                   # hips
@@ -191,98 +158,6 @@ def leg(m, s):
     ft.cube([fx(-15.2, 2.5, s), 0, 4.6], [2.5, 1.6, 2.5], "marble_deep")
 
 
-def torso(m):
-    t = m.bone("torso", [0, 25, 2], parent="pelvis", rotation=[TORSO_REST, 0, 0])
-    t.cube([-13, 25, -7], [26, 13, 17], "marble")                                  # chest
-    t.cube([-15, 36, -4], [30, 9, 17], "marble")                                   # yoke (top at y 45)
-    t.cube([-14, 37, -5.6], [28, 6, 1.6], "marble_shade")                          # its front bevel
-    t.cube([-11, 29, -8], [22, 7, 1.5], "marble_shade")                            # pectoral
-    for i in range(3):
-        t.cube([-11, 25.4 + 2.4 * i, -7.6], [22, 1.4, 0.8], "marble_deep")         # carved ribs
-    t.cube([-12, 28, 10], [24, 15, 3], "marble_deep")                              # the rough quarry back
-    for (x, y, w) in ((-9, 41, 5), (-2, 39.5, 6), (4, 41.5, 4), (-7, 35, 7), (1, 33, 5), (5, 30.5, 6)):
-        t.cube([x, y, 13.0], [w, 0.35, 0.35], "marble_shade")                      # chisel steps (lod by size)
-    for a, b in CRACKS_YOKE:                                                       # the light-cracks on the yoke
-        flat_seg(t, a, b, 45.1, 1.5, 0.5, "sun")
-    for a, b, z in CRACKS_CHEST:                                                   # ... and down the chest
-        face_seg(t, a, b, ("z", z - 0.05), 1.2, 0.5, "sun")
-    # the team stole over the hump, edged darker: a band down the back of the hump, parting round the sunk head into
-    # two front tails (a priest's stole; one central front drop ran through the head and beard)
-    t.cube([-4.5, 45, -1.5], [9, 1, 15.5], "tabard")
-    for x in (-5.0, 4.5):
-        t.cube([x, 45, -1.5], [0.5, 1.1, 15.5], "tabard_dark")
-    for x in (-9.0, 5.6):
-        t.cube([x, 45, -6.0], [3.4, 1, 3.0], "tabard")                            # over the yoke to the front tails
-        t.cube([-9.0 if x < 0 else 4.5, 45, -3.2], [4.5, 1, 2.0], "tabard")         # ... joined to the band
-    # upgrade gilded_seams: gold staples across the yoke cracks and the chest cracks
-    for i, f in STAPLES_YOKE:
-        (ax, az), (bx, bz) = CRACKS_YOKE[i]
-        c = (ax + (bx - ax) * f, 45.5, az + (bz - az) * f)
-        slab(t, c, (-(bz - az), 0.0, bx - ax), (bx - ax, 0.0, bz - az), (2, 1, 4), "gold", upgrade=UPGRADE)
-    for (a, b, z) in CRACKS_CHEST[:2]:
-        face_staple(t, a, b, 0.5, ("z", z), (4, 2, 1), "gold", upgrade=UPGRADE)
-    # the damage-state cracks: their own bones (emissive cubes only) - the game shows each set below 66% / 33% hp
-    h66 = m.bone("cracks_hp66", [0, 25, 2], parent="torso")
-    flat_seg(h66, (9.8, 0.2), (12.0, -3.6), 45.1, 1.5, 0.5, "sun")
-    face_seg(h66, (9.4, 35.8), (10.4, 31.8), ("z", -8.05), 1.2, 0.5, "sun")
-    face_seg(h66, (-2.0, 35.0), (1.0, 31.0), ("x", 13.05), 1.2, 0.5, "sun")
-    h33 = m.bone("cracks_hp33", [0, 25, 2], parent="torso")
-    flat_seg(h33, (-5.8, 9.6), (-8.6, 12.9), 45.1, 1.5, 0.5, "sun")
-    face_seg(h33, (-10.5, 42.5), (-12.0, 38.2), ("z", -5.65), 1.2, 0.5, "sun")
-    face_seg(h33, (0.0, 36.0), (3.0, 31.5), ("x", -13.05), 1.2, 0.5, "sun")
-    # the stole's front and back drops (front hung plumb against the hunch: +14 cancels the torso's -14)
-    for s, k in ((1, "l"), (-1, "r")):
-        x0 = 5.6 if s > 0 else -9.0
-        sf0 = m.bone("stole_front_%s_0" % k, [s * 7.3, 44, -6], parent="torso", rotation=[14, 0, 0])
-        sf0.cube([x0, 34, -7], [3.4, 11.8, 1], "tabard")
-        sf1 = m.bone("stole_front_%s_1" % k, [s * 7.3, 34, -7], parent="stole_front_%s_0" % k)
-        sf1.cube([x0, 27, -7.2], [3.4, 7, 1], "tabard")
-        sf1.cube([x0 + 1.1, 25.3, -7.0], [1.2, 1.8, 0.26], "tabard_dark")
-    sb0 = m.bone("stole_back_0", [0, 44, 13.6], parent="torso")
-    sb0.cube([-4, 32, 13.1], [8, 13.8, 1], "tabard")
-    sb1 = m.bone("stole_back_1", [0, 32, 13.6], parent="stole_back_0")
-    sb1.cube([-4, 24, 13.3], [8, 8, 1], "tabard")
-    for i in range(3):
-        sb1.cube([-3.3 + 2.6 * i, 22.3, 13.4], [1.2, 1.8, 0.26], "tabard_dark")
-    # loose shards on the yoke (hop on impacts)
-    for name, frm, size in (("shard_0", [-13.0, 45, 8.5], [3, 2, 3]), ("shard_1", [-7.5, 45, 4.5], [2.5, 1.5, 2.5]),
-                            ("shard_2", [1.5, 45, -3.9], [2, 2, 2])):
-        b = m.bone(name, [frm[0] + size[0] / 2, 45, frm[2] + size[2] / 2], parent="torso")
-        b.cube(frm, size, "marble_deep")
-    return t
-
-
-def head(m):
-    h = m.bone("head", [0, 37, -6], parent="torso", rotation=[HEAD_REST, 0, 0])
-    h.cube([-5, 33, -15], [10, 10, 10], "marble")                                  # skull
-    h.cube([-5.5, 40, -15.8], [11, 2.5, 4], "marble_shade")                        # brow
-    h.cube([-4, 34, -15.6], [8, 6, 1], "marble_light")                             # the smooth eyeless face
-    for x in (-3.4, 0.9):
-        h.cube([x, 38.0, -15.75], [2.5, 0.3, 0.3], "marble_deep")                 # eye cuts (lod)
-    h.cube([-4.5, 31, -14.5], [9, 3, 7], "marble_shade")                           # the square carved beard
-    for i in range(3):
-        h.cube([-2.65 + 2.5 * i, 31.2, -14.65], [0.3, 2.5, 0.3], "marble_deep")    # its cuts (lod)
-
-
-def arm(m, s):
-    k = sn(s)
-    piv = [mx(SHOULDER_PIV[0], s), SHOULDER_PIV[1], SHOULDER_PIV[2]]
-    pd = m.bone("pauldron_" + k, piv, parent="torso")
-    ngon_prism(pd, mx(-17, s), 2.0, 41.0, 45.5, 13.0, "marble", n=8)               # the round disc (from above)
-    oct_band(pd, mx(-17, s), 2.0, 44.5, 45.5, 13.0, 0.5, "gold")                   # its gold rim
-    pd.cube([fx(-19, 4, s), 45.5, 0], [4, 1, 4], "marble_shade")                   # boss
-    up = m.bone("shoulder_" + k, piv, parent="torso")
-    up.cube([fx(-21.5, 8.5, s), 26, -2.5], [8.5, 15.5, 9], "marble")               # upper arm (tucked under the disc)
-    fo = m.bone("forearm_" + k, [mx(ELBOW_PIV[0], s), ELBOW_PIV[1], ELBOW_PIV[2]], parent="shoulder_" + k)
-    octagon_axle(fo, (mx(-17.25, s), 27.0, 2.0), 8.5, 9.4, "marble")              # the elbow, round at every angle
-    fo.cube([fx(-22, 9.5, s), 16, -3], [9.5, 11, 10], "marble")                    # forearm
-    fo.cube([fx(-22.5, 10.5, s), 22, -3.5], [10.5, 3, 11], "marble_shade")         # bracer
-    hd = m.bone("hand_" + k, [mx(HAND_PIV[0], s), HAND_PIV[1], HAND_PIV[2]], parent="forearm_" + k)
-    hd.cube([fx(-22, 9.5, s), 9, -3.5], [9.5, 7, 11], "marble")                    # fist
-    for z in (-2.5, 0.2, 2.9, 5.6):
-        hd.cube([fx(-22.45, 0.5, s), 10.0, z], [0.5, 1.0, 1.1], "marble_shade")    # knuckle ridge (lod)
-
-
 def maul(m):
     g = list(GRIP_R)
     mb = m.bone("maul", g, parent="hand_r")
@@ -311,48 +186,25 @@ def maul(m):
     c2.cube([g[0] - 1.25, 3.0, 8.6], [2.5, 3.5, 0.8], "marble_deep")               # the votive tablet
 
 
-# ------------------------------------------------------------------ round 2: massing options (greybox) ------------------
-# The round-1 body is the CONTROL (body("control"), byte-identical output). The three options change the MASSING only:
-# torso, head + neck + cowl, a halo, shoulders, arm cross-sections, a skirt (b); legs, plinths, maul, fists' grip and
-# the stole/crack idea are shared. Detail is not polished (greybox). Each option sets the arm geometry (configure()):
-# the pose solver reads the same module constants, so tools/quarry_saint_poses.py --massing X solves the same keys.
-MASSINGS = ("b", "control", "a", "b2", "c")
-MASSING = "b"
-DEFAULT_MASSING = "b"          # r3: the stepped altar is the committed body; control / a / c stay selectable
+# ------------------------------------------------------------------ the body: the stepped altar (massing b) ---------
+# lovish picked massing b (Nov 5); the round-1 body (control) and the round-2 options a / c are in git history only
+# (commits dac3d820 r1, ad7bd0ac r2, fead253b r3). The legs and the maul are built at the round-1 coordinates above
+# and moved to b's (wider feet, the grip at b's arm); B sets the arm / torso constants the solver and the poses read.
+# r3b: the shoulder pivot on the arm's own centre line (r3: 3.5 px inboard, so any inward turn drove the arm's inner
+# face into the chest) and the arm 1 px off the torso's side
+B = dict(name="Quarry Saint", torso_rest=-4.0, head_rest=4.0, sh_x=-16.0, cx=-16.0,
+         up=(8.0, 7.0), fore=(8.0, 6.0), bracer=(8.8, 6.8), fist=(8.0, 7.0), elbow_w=7.0,
+         halo_disc=(14.0, 40.0), feet_dx=1.0, haft=4.5)
 FEET_DX = 0.0
-OPT = {
-    # a) single halo: no shoulder discs, one ~21 px octagon halo upright behind the head (15 deg back), the head raised
-    #    on a 3 px neck in a carved cowl ~11 px wide, shoulders ~2/3 of the round-1 span: an upright rectangle
-    "a": dict(name="Quarry Saint (massing a: single halo)", torso_rest=-6.0, head_rest=6.0, sh_x=-10.5, cx=-13.5,
-              up=(7.0, 7.5), fore=(7.5, 8.0), bracer=(8.3, 8.8), fist=(7.5, 9.0), elbow_w=7.6, halo=(10.0, 15.0)),
-    # b) stepped altar: a wide stepped plinth-skirt (~30 px) round the hips, a 22 px torso on it, the head and halo on
-    #    top; forearms cut to ~60% depth: from above three steps in, a monument
-    #    r3 (the body; the critic ranked b first): a bigger head (skull 10, cowl 12), a SOLID octagon halo 14 px
-    #    across with a gold rim (tipped 40 back: it faces the 52-deg camera), the skirt narrowed to 20 px x 3.5 and
-    #    broken at one corner, the plinth chunk under the LEFT foot only (a 1.2 px chip under the right), the feet 2 px
-    #    wider, a 4.5 px haft
-    "b": dict(name="Quarry Saint", torso_rest=-4.0, head_rest=4.0, sh_x=-11.5, cx=-15.0,
-              up=(8.0, 7.0), fore=(8.0, 6.0), bracer=(8.8, 6.8), fist=(8.0, 7.0), elbow_w=7.0, halo=(10.0, 15.0),
-              big_head=True, halo_disc=(14.0, 40.0), feet_dx=1.0, haft=4.5, one_plinth=True, skirt="narrow"),
-    # c) caryatid: the torso a fluted column under a capital, arms as hinged slabs with 6 px roundels (<= 6), the
-    #    head on a neck and the halo above it, tipped back 45 deg
-    # b2: the round-2 b greybox as the r2 critic saw it (kept for the A/B)
-    "b2": dict(name="Quarry Saint (massing b, round 2)", torso_rest=-4.0, head_rest=4.0, sh_x=-11.5, cx=-15.0,
-               up=(8.0, 7.0), fore=(8.0, 6.0), bracer=(8.8, 6.8), fist=(8.0, 7.0), elbow_w=7.0, halo=(10.0, 15.0)),
-    "c": dict(name="Quarry Saint (massing c: caryatid)", torso_rest=-2.0, head_rest=2.0, sh_x=-10.0, cx=-12.0,
-              up=(4.0, 8.0), fore=(4.5, 8.0), bracer=(5.3, 8.8), fist=(6.0, 8.0), elbow_w=6.0, halo=(9.0, 45.0),
-              roundel=6.0),
-}
 
 
-def configure(massing):
-    """Set the module's arm / torso constants for a massing (the solver and the poses read them)."""
-    global MASSING, GRIP_R, HAND_PIV, ELBOW_PIV, SHOULDER_PIV, TORSO_REST, HEAD_REST, REST_GRIP, UPPER_LEN, FEET_DX
-    MASSING = massing
-    if massing == "control":
-        return
-    o = OPT[massing]
-    FEET_DX = o.get("feet_dx", 0.0)
+def configure():
+    """b's arm / torso constants (the solver, the rest stance and tools/quarry_saint_poses.py read them)."""
+    global GRIP_R, HAND_PIV, ELBOW_PIV, SHOULDER_PIV, TORSO_REST, HEAD_REST, REST_GRIP, UPPER_LEN, FEET_DX
+    global CORNER_AVOID
+    o = B
+    FEET_DX = o["feet_dx"]
+    CORNER_AVOID = True
     cx = o["cx"]
     GRIP_R = (cx, 12.5, 2.0)
     HAND_PIV = (cx, 16.0, 2.0)
@@ -363,17 +215,17 @@ def configure(massing):
     UPPER_LEN = math.dist(SHOULDER_PIV, ELBOW_PIV)
 
 
-def arm_v(m, s, o):
-    """A massing option's arm: the round-1 joints at the option's x, its own cross-sections; no shoulder disc (c: a
-    6 px roundel on the hinge)."""
+def arm_b(m, s, o):
+    """An arm: the upper arm ends at its pivot under a round shoulder (an octagon axle outside the torso's side - a
+    block reaching above the pivot swung back into the chest whenever the arm rose), a round elbow, a 6 px deep
+    forearm with its bracer, the fist."""
     k = sn(s)
     cx = o["cx"]
     piv = [mx(o["sh_x"], s), SHOULDER_PIV[1], SHOULDER_PIV[2]]
     up = m.bone("shoulder_" + k, piv, parent="torso")
     w, d = o["up"]
-    up.cube([fx(cx - w / 2, w, s), 26, 2 - d / 2], [w, 15.5, d], "marble")
-    if o.get("roundel"):
-        octagon_axle(up, (mx(cx - w / 2 - 0.4, s), 38.0, 2.0), 0.8, o["roundel"], "marble_shade")
+    up.cube([fx(cx - w / 2, w, s), 26, 2 - d / 2], [w, 12.0, d], "marble")
+    octagon_axle(up, (mx(cx, s), 37.5, 2.0), w - 0.2, 8.0, "marble")
     fo = m.bone("forearm_" + k, [mx(cx, s), ELBOW_PIV[1], ELBOW_PIV[2]], parent="shoulder_" + k)
     octagon_axle(fo, (mx(cx, s), 27.0, 2.0), max(w, o["fore"][0]), o["elbow_w"], "marble")
     w, d = o["fore"]
@@ -394,32 +246,13 @@ def shift_bone_x(m, name, dx):
             c["pivot"][0] = round(c["pivot"][0] + dx, 3)
 
 
-def head_v(m, o, top):
-    """The raised head: a 3 px neck from the torso's top, a skull with a smooth face, a carved cowl ~11 px wide round
-    it (top, sides, back), the square beard; and the halo (o["halo"] = radius, tilt back in the world)."""
+def head_b(m, o, top):
+    """The raised head: a 3 px neck from the torso's top, the skull 10 x 10 x 9.5 in a 12 px cowl, a light face, the
+    square beard, and a SOLID octagon halo (o["halo_disc"] = across the flats, tilt back in the world) with a gold rim,
+    standing behind and above the crown."""
     h = m.bone("head", [0, top, -1.0], parent="torso", rotation=[o["head_rest"], 0, 0])
     h.cube([-2.5, top - 1.0, -3.5], [5, 4.0, 5], "marble_shade")                   # neck (3 px above the torso)
     y0 = top + 2.5
-    if o.get("big_head"):
-        return head_big(m, o, h, y0)
-    h.cube([-4.5, y0, -6.0], [9, 9, 8.5], "marble")                                # skull
-    h.cube([-3.5, y0 + 1.5, -6.6], [7, 5.5, 0.8], "marble_light")                  # the face
-    h.cube([-3.6, y0 - 0.5, -6.4], [7.2, 2.5, 4], "marble_shade")                  # the square beard
-    h.cube([-5.5, y0 + 8.0, -6.8], [11, 2.0, 10.0], "marble_shade")                # cowl: crown
-    for x in (-5.5, 4.3):
-        h.cube([x, y0, -6.8], [1.2, 8.0, 10.0], "marble_shade")                    # cowl: sides
-    h.cube([-5.5, y0, 2.0], [11, 8.0, 1.2], "marble_shade")                        # cowl: back
-    r, tilt = o["halo"]
-    hc = (0.0, y0 + 8.0, 5.2) if tilt < 30 else (0.0, y0 + 13.5, 0.0)   # its lowest edge clears the shoulders
-    halo = m.bone("halo", list(hc), parent="head", rotation=[tilt - o["torso_rest"] - o["head_rest"], 0, 0])
-    from gen_models import ring
-    ring(halo, hc, r, 8, 2.2, 1.6, "marble_light")
-    ring(halo, (hc[0], hc[1], hc[2] - 0.3), r - 1.6, 8, 0.6, 1.4, "gold")
-
-
-def head_big(m, o, h, y0):
-    """r3: the head 10 px (skull 10 x 10 x 9.5) in a 12 px cowl, a light face, and a SOLID octagon halo (o["halo_disc"]
-    = across the flats, tilt back in the world) with a gold rim, standing behind and above the crown."""
     h.cube([-5.0, y0, -6.5], [10, 10, 9.5], "marble")                              # skull
     h.cube([-4.0, y0 + 1.5, -7.1], [8, 6.5, 0.8], "marble_light")                  # the face
     h.cube([-4.0, y0 - 0.5, -7.0], [8, 2.5, 4.5], "marble_shade")                  # the square beard
@@ -432,12 +265,12 @@ def head_big(m, o, h, y0):
     halo = m.bone("halo", list(hc), parent="head", rotation=[tilt - o["torso_rest"] - o["head_rest"], 0, 0])
     zoct(halo, hc, 1.2, w, "marble_light")                                         # the disc
     from gen_models import ring
-    ring(halo, (hc[0], hc[1], hc[2] - 0.1), w / 2 + 0.4, 8, 0.8, 1.5, "gold")     # its gold rim (on the flats)
+    ring(halo, (hc[0], hc[1], hc[2] - 0.1), w / 2 + 0.25, 8, 0.5, 1.5, "gold")    # its gold rim (r3b: 0.5, was 0.8)
 
 
-def stole_v(m, top, zf, zb, half):
+def stole_b(m, top, zf, zb, half):
     """The team stole over the shoulders: two straps over the torso's top either side of the neck, hanging as two
-    front tails (plumb) and joined in one drop down the back (round-1 bone names)."""
+    front tails (plumb) and joined in one drop down the back."""
     t = m.bones["torso"]
     for x in (-half - 3.4, half):
         t.cube([x, top, zf - 0.5], [3.4, 1.0, zb - zf + 1.0], "tabard")
@@ -445,7 +278,7 @@ def stole_v(m, top, zf, zb, half):
     for s, k in ((1, "l"), (-1, "r")):
         x0 = half if s > 0 else -half - 3.4
         sf0 = m.bone("stole_front_%s_0" % k, [x0 + 1.7, top, zf - 0.5], parent="torso",
-                     rotation=[-OPT[MASSING]["torso_rest"], 0, 0])
+                     rotation=[-B["torso_rest"], 0, 0])
         sf0.cube([x0, top - 10.0, zf - 1.5], [3.4, 10.0, 1.0], "tabard")
         sf1 = m.bone("stole_front_%s_1" % k, [x0 + 1.7, top - 10.0, zf - 1.5], parent="stole_front_%s_0" % k)
         sf1.cube([x0, top - 18.0, zf - 1.7], [3.4, 8.0, 1.0], "tabard")
@@ -456,8 +289,8 @@ def stole_v(m, top, zf, zb, half):
     sb1.cube([-half - 3.4, top - 20.0, zb + 0.2], [2 * half + 6.8, 8.0, 1.0], "tabard")
 
 
-def cracks_v(m, top, zf, half):
-    """The light-cracks, greybox: down the chest front and across the top; the damage sets as their own bones."""
+def cracks_b(m, top, zf, half):
+    """The light-cracks: down the chest front and across the top; the damage sets as their own bones."""
     t = m.bones["torso"]
     face_seg(t, (-half + 1.5, top - 1.0), (-half + 3.0, top - 5.0), ("z", zf - 0.05), 1.2, 0.5, "sun")
     face_seg(t, (-half + 3.0, top - 5.0), (-half + 1.8, top - 9.0), ("z", zf - 0.05), 1.2, 0.5, "sun")
@@ -469,29 +302,11 @@ def cracks_v(m, top, zf, half):
     face_seg(h33, (-1.0, top - 12.0), (1.0, top - 16.0), ("z", zf - 0.05), 1.2, 0.5, "sun")
 
 
-def torso_a(m):
-    t = m.bone("torso", [0, 25, 2], parent="pelvis", rotation=[OPT["a"]["torso_rest"], 0, 0])
-    t.cube([-10, 24, -6], [20, 9, 15], "marble")                                   # chest
-    t.cube([-10.5, 32, -6.5], [21, 9, 16], "marble")                               # upper chest / shoulders (top 41)
-    t.cube([-8, 29, -7.2], [16, 6, 1.0], "marble_shade")                           # pectoral plate
-    t.cube([-8, 27, 9.4], [16, 13, 1.6], "marble_deep")                            # quarry back
-    for s in (-1, 1):
-        t.cube([fx(-12.0, 2.5, s), 36, -5.5], [2.5, 5, 14], "marble")              # the shoulder's rounded end
-    return 41.0, -7.2, 9.4, 4.0
-
-
-def torso_b(m, o=None):
-    o = o or OPT["b"]
+def torso_b(m, o):
+    """The altar's step round the hips (20 x 3.5 px, broken at the front-right corner) and the 22 px torso."""
     p = m.bones["pelvis"]
-    if o.get("skirt") == "narrow":
-        # r3: one step, 20 px (the torso's width less 2) x 3.5 tall, broken off at the front-right corner
-        p.cube([-10, 13, -9], [14.5, 3.5, 20], "marble_shade")                     # the step (left and middle)
-        p.cube([4.5, 13, -6.5], [5.5, 3.5, 15.5], "marble_shade")                  # its broken right end, set back
-        p.cube([-10.2, 16.3, -9.2], [14.9, 0.5, 20.4], "gold")                     # a gilt fillet on the whole part
-    else:
-        p.cube([-15, 7, -11], [30, 6, 24], "marble_deep")                          # r2: the altar's lowest step
-        p.cube([-13, 13, -9], [26, 5, 20], "marble_shade")                         # second step
-        p.cube([-14.6, 12.6, -10.6], [29.2, 0.6, 23.2], "gold")                    # a gilt fillet between them
+    p.cube([-10, 13, -9], [14.5, 3.5, 20], "marble_shade")                         # the step (left and middle)
+    p.cube([4.5, 13, -6.5], [5.5, 3.5, 15.5], "marble_shade")                      # its broken right end, set back
     t = m.bone("torso", [0, 25, 2], parent="pelvis", rotation=[o["torso_rest"], 0, 0])
     t.cube([-11, 24, -6], [22, 10, 15], "marble")                                  # chest
     t.cube([-11, 33, -6.5], [22, 8, 16], "marble")                                 # upper chest (top 41)
@@ -500,35 +315,18 @@ def torso_b(m, o=None):
     return 41.0, -7.2, 9.4, 4.0
 
 
-def torso_c(m):
-    t = m.bone("torso", [0, 25, 2], parent="pelvis", rotation=[OPT["c"]["torso_rest"], 0, 0])
-    ngon_prism(t, 0, 1.5, 23.0, 38.5, 17.0, "marble", n=12)                        # the column shaft
-    for k in range(12):                                                            # its flutes
-        a = math.radians(360.0 / 12 * k + 15.0)
-        c = (8.55 * math.sin(a), 30.75, 1.5 - 8.55 * math.cos(a))
-        slab(t, c, (0, 1, 0), (math.cos(a), 0.0, math.sin(a)), (1.1, 0.3, 14.5), "marble_deep")
-    ngon_prism(t, 0, 1.5, 38.5, 40.0, 19.5, "marble_shade", n=12)                  # the capital's echinus
-    t.cube([-10.5, 40.0, -9.0], [21, 1.5, 21], "marble")                           # its abacus (top 41.5)
-    ngon_prism(t, 0, 1.5, 22.0, 23.5, 19.0, "marble_shade", n=12)                  # the base moulding
-    return 41.5, -6.2, 9.2, 3.2
-
-
-def body_v(massing):
-    o = OPT[massing]
-    m = Model(o["name"], "sunforged", "T2 siege statue (replaces the Siege Ox) - massing option " + massing, PALETTE,
-              EMISSIVE)
+def body():
+    o = B
+    m = Model(o["name"], "sunforged", "T2 siege statue (replaces the Siege Ox)", PALETTE, EMISSIVE)
     pelvis(m)
     for s in (-1, 1):
         leg(m, s)
-    if massing in ("b", "b2"):
-        top, zf, zb, half = torso_b(m, o)
-    else:
-        top, zf, zb, half = {"a": torso_a, "c": torso_c}[massing](m)
-    head_v(m, o, top)
-    stole_v(m, top, zf, zb, half)
-    cracks_v(m, top, zf, half + 2.0)
+    top, zf, zb, half = torso_b(m, o)
+    head_b(m, o, top)
+    stole_b(m, top, zf, zb, half)
+    cracks_b(m, top, zf, half + 2.0)
     for s in (-1, 1):
-        arm_v(m, s, o)
+        arm_b(m, s, o)
     global GRIP_R
     keep, GRIP_R = GRIP_R, (-17.25, 12.5, 2.0)
     maul(m)                                                                        # built at the round-1 grip ...
@@ -536,42 +334,25 @@ def body_v(massing):
     dx = o["cx"] + 17.25
     for name in ("maul", "chain_0", "chain_1", "chain_2"):                         # ... and moved to this grip
         shift_bone_x(m, name, dx)
-    if o.get("feet_dx"):                                                           # the feet set wider
-        for s_ in (-1, 1):
-            for b_ in ("thigh_", "shin_", "foot_"):
-                shift_bone_x(m, b_ + sn(s_), s_ * o["feet_dx"])
-    if o.get("one_plinth"):                                                        # the plinth under the left only
-        ft = m.bones["foot_r"]
-        x0 = ft.cubes[0]["from"][0]
-        ft.cubes = [{"from": [x0, 1.2, -7.5], "size": [11, 5.3, 13], "color": "marble_shade"},
-                    {"from": [round(x0 - 0.4, 3), 0, -8], "size": [11.8, 1.2, 14], "color": "marble_deep"}]
-    if o.get("haft"):                                                              # a thicker haft (and its fittings)
-        h = o["haft"]
-        for c in m.bones["maul"].cubes:
-            sx, sy, sz = c["size"]
-            if (sx, sy) == (3.5, 3.5) or (sx, sy) == (4.1, 4.1) or (sx, sy) == (5, 5):
-                g = h - 3.5
-                c["from"] = [round(c["from"][0] - g / 2, 3), round(c["from"][1] - g / 2, 3), c["from"][2]]
-                c["size"] = [round(sx + g, 3), round(sy + g, 3), sz]
+    for s_ in (-1, 1):                                                             # the feet set wider
+        for b_ in ("thigh_", "shin_", "foot_"):
+            shift_bone_x(m, b_ + sn(s_), s_ * o["feet_dx"])
+    ft = m.bones["foot_r"]                                                         # the plinth under the left only
+    x0 = ft.cubes[0]["from"][0]
+    ft.cubes = [{"from": [x0, 1.2, -7.5], "size": [11, 5.3, 13], "color": "marble_shade"},
+                {"from": [round(x0 - 0.4, 3), 0, -8], "size": [11.8, 1.2, 14], "color": "marble_deep"}]
+    for c in m.bones["maul"].cubes:                                                # the maul's bands 1 px (gold trim)
+        if c["color"] == "gold" and c["size"] == [13, 1.5, 13]:
+            c["from"] = [c["from"][0], round(c["from"][1] + 0.25, 3), c["from"][2]]
+            c["size"] = [13, 1.0, 13]
+    h = o["haft"]                                                                  # a thicker haft (and its fittings)
+    for c in m.bones["maul"].cubes:
+        sx, sy, sz = c["size"]
+        if (sx, sy) == (3.5, 3.5) or (sx, sy) == (4.1, 4.1) or (sx, sy) == (5, 5):
+            g = h - 3.5
+            c["from"] = [round(c["from"][0] - g / 2, 3), round(c["from"][1] - g / 2, 3), c["from"][2]]
+            c["size"] = [round(sx + g, 3), round(sy + g, 3), sz]
     m.contact_ok = [("hand_r", "maul"), ("hand_l", "maul"), ("torso", "head"), ("head", "halo")]
-    return m
-
-
-def body(massing=None):
-    if massing not in (None, "control"):
-        return body_v(massing)
-    m = Model("Quarry Saint", "sunforged", "T2 siege statue (replaces the Siege Ox)", PALETTE, EMISSIVE)
-    pelvis(m)
-    for s in (-1, 1):
-        leg(m, s)
-    torso(m)
-    head(m)
-    for s in (-1, 1):
-        arm(m, s)
-    maul(m)
-    # intended contacts: the fists round the haft, the sunk head in the chest, the arms under their discs
-    m.contact_ok = [("hand_r", "maul"), ("hand_l", "maul"), ("torso", "head"), ("pauldron_r", "shoulder_r"),
-                    ("pauldron_l", "shoulder_l")]
     return m
 
 
@@ -646,14 +427,59 @@ def _chain(m, upper, fore, rest_pt):
     upiv, fpiv = np.array(U.pivot, float), np.array(F.pivot, float)
     rp = np.array(rest_pt, float)
 
-    def f(ux, uy, uz, fxv):
+    def f(ux, uy, uz, fxv, up_pts=None, fo_pts=None):
         Ru = rot_np(ux, uy, uz)
         Rf = rot_np(fxv, np.zeros_like(fxv), np.zeros_like(fxv))
         loc_f = np.einsum("...ij,j->...i", Rf, rp - fpiv) + fpiv
         p = (np.einsum("...ij,...j->...i", Ru, loc_f - upiv) + upiv) @ Mp.T + tp
         e = (np.einsum("...ij,j->...i", Ru, fpiv - upiv) + upiv) @ Mp.T + tp
-        return p, e, Mp @ upiv + tp
+        if up_pts is None:
+            return p, e, Mp @ upiv + tp
+        a = (np.einsum("...ij,pj->...pi", Ru, up_pts - upiv) + upiv) @ Mp.T + tp
+        lf = np.einsum("...ij,pj->...pi", Rf, fo_pts - fpiv) + fpiv
+        b = (np.einsum("...ij,...pj->...pi", Ru, lf - upiv) + upiv) @ Mp.T + tp
+        return p, e, Mp @ upiv + tp, np.concatenate([a, b], axis=-2)
     return f
+
+
+def body_obbs(m, names, grow):
+    """The posed cubes of `names` (volume > 3) as oriented boxes grown by `grow` px: (centre, inverse half-axes, half
+    lengths) arrays for a point-in-box test."""
+    C, Ai, H = [], [], []
+    for n in names:
+        if n not in m.bones:
+            continue
+        for c in m.bones[n].cubes:
+            if c["size"][0] * c["size"][1] * c["size"][2] < 40.0 or not c["color"].startswith("marble"):
+                continue                                  # the big stone blocks only (speed; cloth and cracks yield)
+            q = np.array(m.cube_corners(n, c), float)
+            ax = np.stack([(q[4] - q[0]) / 2, (q[2] - q[0]) / 2, (q[1] - q[0]) / 2], axis=1)   # columns
+            ln = np.linalg.norm(ax, axis=0)
+            ax = ax * ((ln + grow) / np.maximum(ln, 1e-9))
+            C.append(q.mean(0))
+            Ai.append(np.linalg.inv(ax))
+            H.append(ln + grow)
+    return np.array(C), np.array(Ai), np.array(H)
+
+
+OBB_W = [10.0]                # the body-avoidance weight (arm_on_haft lowers it when the grip suffers)
+
+
+def obb_cost(obbs, pts, w=10.0):
+    """Points (..., P, 3) inside the grown boxes: w x (depth + 0.1)^2 summed (depth = the shallowest way out)."""
+    C, Ai, H = obbs
+    if len(C) == 0:
+        return 0.0
+    lead = pts.shape[:-2]
+    flat = pts.reshape(-1, pts.shape[-2], 3)
+    out = np.empty(flat.shape[0])
+    for i in range(0, flat.shape[0], 3000):                                   # in chunks (memory)
+        q = flat[i:i + 3000]
+        loc = np.einsum("bij,npbj->npbi", Ai, q[:, :, None, :] - C)           # (n, P, B, 3)
+        inside = np.all(np.abs(loc) < 1.0, axis=-1)
+        depth = np.min((1.0 - np.abs(loc)) * H, axis=-1)
+        out[i:i + 3000] = (w * np.where(inside, (depth + 0.1) ** 2, 0.0)).sum((-1, -2))
+    return out.reshape(lead)
 
 
 def _avoid_cost(boxes, p, e, sh):
@@ -735,6 +561,8 @@ UPPER_LEN = math.dist(SHOULDER_PIV, ELBOW_PIV)
 FORE_LEN = ELBOW_PIV[1] - HAND_PIV[1]
 GRIP_LEN = HAND_PIV[1] - GRIP_R[1]
 WRIST_FREE = 15.0
+CORNER_AVOID = False          # r3b (the body b): the arm's cube corners kept out of the body's oriented boxes
+CLEAR = 0.5                   # ... by this much (the critic's clearance)
 AVOID_MARGIN = 3.5          # about half a forearm: the solver samples the forearm's axis, the stone is 10 px thick
 
 
@@ -755,9 +583,31 @@ def arm_on_haft(m, s, G, d, T=(0, 0, 0), t_pref=0.0, t_w=1.0, t_min=None, elbow_
     ea = np.array(elbow_at, float) - np.array(T, float) if elbow_at is not None else \
         S + np.array([s * 4.0, -8.0, -2.0])
     boxes = posed_boxes(m, ("torso", "pelvis", "head"), AVOID_MARGIN)
+    # r3b: the arm's own cube corners kept out of the body's oriented boxes (+ CLEAR px): the upper arm below its
+    # shoulder seat (y <= 31) and the forearm, both at three heights
+    corner = CORNER_AVOID
+    if corner:
+        obbs = body_obbs(m, ("torso", "pelvis", "head", "halo"), CLEAR)
+        up_c = [c for c in m.bones[upper].cubes if c["size"][1] > 10][0]
+        fo_c = [c for c in m.bones[fore].cubes if c["size"][1] > 10][0]
+
+        def ring_pts(c, ys):
+            x0, z0 = c["from"][0], c["from"][2]
+            x1, z1 = x0 + c["size"][0], z0 + c["size"][2]
+            return np.array([(x, y, z) for y in ys for x in (x0, x1) for z in (z0, z1)], float)
+        up_pts = ring_pts(up_c, (up_c["from"][1], up_c["from"][1] + 4.0, up_c["from"][1] + 8.0,
+                                 up_c["from"][1] + up_c["size"][1] - 0.5))
+        fo_c0 = fo_c["from"][1]
+        fo_pts = ring_pts(fo_c, (fo_c0, fo_c0 + 3.7, fo_c0 + 7.3, fo_c0 + 10.5))
+        few = (np.array([0, 3, 12, 15]), np.array([0, 3, 12, 15]))
 
     def cost(ux, uy, uz, fxv, pull=True):
-        p, e, sh = chain(ux, uy, uz, fxv)
+        if corner:
+            big = np.size(ux) > 60000                       # the coarse grid: a few corners only
+            p, e, sh, pts = chain(ux, uy, uz, fxv, up_pts[few[0]] if big else up_pts,
+                                  fo_pts[few[1]] if big else fo_pts)
+        else:
+            p, e, sh = chain(ux, uy, uz, fxv)
         f = p - e
         f = f / (np.linalg.norm(f, axis=-1, keepdims=True) + 1e-9)
         fd = (f * dv).sum(-1)
@@ -774,9 +624,30 @@ def arm_on_haft(m, s, G, d, T=(0, 0, 0), t_pref=0.0, t_w=1.0, t_min=None, elbow_
         c = c + 0.01 * np.maximum(0.0, bendd - WRIST_FREE) ** 2
         if pull:
             c = c + elbow_w * ((e - ea) ** 2).sum(-1)
+        if corner:
+            fist = np.stack([grip, grip + 3.5 * dv, grip - 3.5 * dv, p], axis=-2)
+            c = c + obb_cost(obbs, np.concatenate([pts, fist], axis=-2), OBB_W[0])
         return c + _avoid_cost(boxes, p, e, sh)
 
     best = _stages((-100, 191), (-80, 81), (-70, 71), 1, cost)
+    if corner:
+        # the haft first (the hard rule): a solve that left the fist off the haft (or under t_min) is redone with the
+        # body avoidance at a quarter, then off - the clearance is measured and reported, never bought with the grip
+        for wk in (0.25, 0.0):
+            p, e, sh = chain(*[np.array([v]) for v in best])
+            f_ = (p - e) / np.linalg.norm(p - e)
+            fd_ = float((f_ * dv).sum())
+            ee_ = -(f_ - fd_ * dv)
+            ee_ = ee_ / np.linalg.norm(ee_)
+            w_ = (p - GRIP_LEN * ee_) - Gm
+            t_ = float((w_ * dv).sum())
+            r_ = float(np.sqrt(max(0.0, (w_ ** 2).sum() - t_ * t_)))
+            if r_ <= 0.5 and (t_min is None or t_ >= t_min - 0.3):
+                break
+            obbs = (obbs[0], obbs[1], obbs[2]) if wk else (np.zeros((0, 3)), np.zeros((0, 3, 3)), np.zeros((0, 3)))
+            OBB_W[0] = 10.0 * wk
+            best = _stages((-100, 191), (-80, 81), (-70, 71), 1, cost)
+        OBB_W[0] = 10.0
     m.bones[upper].rotation = [round(best[0], 3), round(best[1], 3), round(best[2], 3)]
     m.bones[fore].rotation = [round(best[3], 3), 0, 0]
     el = m.fk(fore, m.bones[fore].pivot)
@@ -926,31 +797,20 @@ def extent(m):
     return [min(p[a] for p in pts) for a in range(3)], [max(p[a] for p in pts) for a in range(3)]
 
 
-def build(massing=DEFAULT_MASSING):
-    configure(massing)
-    m = body(massing)
+def build():
+    configure()
+    m = body()
     pitch = rest_stance(m)
     return m, pitch
-
-
-def model_path(massing):
-    """Where a massing's DSL file goes: b (r3) is the committed body; the others go to scratch."""
-    if massing == DEFAULT_MASSING:
-        return os.path.normpath(os.path.join(OUT, NAME + ".json"))
-    return os.path.normpath(os.path.join(OUT, "..", "..", ".scratch", "unit2", "models",
-                                         "quarry_saint_%s.json" % massing))
 
 
 def main():
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--massing", default=DEFAULT_MASSING, choices=MASSINGS,
-                    help="b = the body (r3, design/models); control = the round-1 body; a | c = the round-2 "
-                         "greyboxes; b2 = the round-2 b greybox (before the r3 changes)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
-    m, pitch = build(a.massing)
-    path = a.out or model_path(a.massing)
+    m, pitch = build()
+    path = a.out or os.path.normpath(os.path.join(OUT, NAME + ".json"))
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         json.dump(m.to_json(), f, indent=1)

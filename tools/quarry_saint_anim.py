@@ -329,7 +329,7 @@ def step(state, inp):
     # ---------------- the base: key tables, or the idle / walk / glance machines
     if clip in TABLES:
         rot, move, ank, sag, _ab = blend_keys(TABLES[clip], t)
-        bake = KEYS.get("_bake", {}).get(clip, {}).get(str(t))
+        bake = baked_arms(clip, t)
         if bake:
             for n, r in bake.items():
                 rot[n] = list(r)
@@ -399,6 +399,8 @@ def step(state, inp):
     off_t[1] += S["mass_y"][0] - move[1]
     # ---------------- the grind: a joint turning faster than 40 deg/s steps (a 0.6 deg square wave every 2 ticks)
     for n in GRIND_BONES:
+        if n in ("thigh_r", "thigh_l") and n[-1] in planted:
+            continue                                         # r3b: a planted leg never steps (it would slide)
         cur = rot.get(n, [0.0, 0.0, 0.0])
         prev = st["prev_base"].get(n, cur)
         dv = [cur[i] - prev[i] for i in range(3)]
@@ -476,6 +478,28 @@ def step(state, inp):
     pose = {"bones": bones, "glow": round(glow, 4), "glow_disc": round(glow_disc, 4), "planted": planted,
             "root": [round(v, 4) for v in st["root"]], "fx": fx}
     return st, pose
+
+
+def baked_arms(clip, t):
+    """The arms baked offline for this tick of a two-hand clip; the bake holds every 2nd tick between two keys, an odd
+    tick takes the mean of its neighbours (each baked, or at a key: the key's own solved arms)."""
+    bk = KEYS.get("_bake", {}).get(clip, {})
+    if str(t) in bk:
+        return bk[str(t)]
+    if t % 2 == 0 or not bk:
+        return None
+
+    def at(tt):
+        if str(tt) in bk:
+            return bk[str(tt)]
+        rot, _m, _a, _s, (ka, kb, u) = blend_keys(TABLES[clip], tt)
+        if u in (0.0, 1.0) or ka == kb:
+            return {n: rot.get(n, [0.0, 0.0, 0.0]) for n in next(iter(bk.values()))}
+        return None
+    a_, b_ = at(t - 1), at(t + 1)
+    if a_ is None or b_ is None:
+        return None
+    return {n: [a_[n][i] + wrap(b_[n][i] - a_[n][i]) * 0.5 for i in range(3)] for n in a_}
 
 
 def add(rot, n, d):
@@ -573,6 +597,7 @@ def walk(st, inp, t, fx):
     st["v"] = v
     if t == 0:
         st["carry"] = 0.0
+        st["plant"] = {}
         st["phase"] = 0.25           # the right foot at mid-stance (under the hip) and the left at mid-swing: both
         #                              at their rest place, so the first stride starts without a jump
         st["moving"] = 0
@@ -619,7 +644,17 @@ def walk(st, inp, t, fx):
             ank[k] = [base[0], base[1] + lift, base[2] + z]
             if advance <= 0.0:
                 planted.append(k)
-        # a contact: the plinth lands (ground_hit, shards hop, the maul's bob kicked)
+    # r3b: a planted plinth is pinned in the WORLD: at touch-down its world place is stored and every later stance
+    # tick asks the IK for exactly that place (model = world - root), so the formula's rounding cannot slide it
+    plant = st.setdefault("plant", {})
+    for k in ("r", "l"):
+        if k in planted:
+            if k not in plant:
+                plant[k] = [ank[k][i] + st["root"][i] for i in range(3)]
+            ank[k] = [plant[k][i] - st["root"][i] for i in range(3)]
+        else:
+            plant.pop(k, None)
+    # a contact: the plinth lands (ground_hit, shards hop, the maul's bob kicked)
     for k, ph0, ph1 in (("r", prev, p), ("l", (prev + 0.5) % 1.0, (p + 0.5) % 1.0)):
         if advance > 0.0 and ph1 < ph0:
             ground_hit(st, 0.5, fx, "foot_" + k)
@@ -756,6 +791,8 @@ def bake_clip(clip):
         move = [move[0], move[1] - sag, move[2]]
         if u in (0.0, 1.0) or ka == kb:
             continue                                          # at a key: its own solved arms
+        if t % 2:
+            continue                                          # every 2nd tick (the driver averages the odd one)
         m = copy.deepcopy(bind)
         for n in ("pelvis", "torso", "head"):
             r = rot.get(n, [0.0, 0.0, 0.0])
