@@ -37,6 +37,10 @@ import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
+import net.minecraft.world.level.ChunkPos;
 import java.util.Arrays;
 import java.util.List;
 
@@ -71,6 +75,27 @@ public class HeroAiV2GameTests {
     }
 
     /** A plain player order, exactly as the server takes one from the player's client (UnitActionServerboundPacket). */
+    // RED ONLY, never ships (#556): recreate the measured race on old code. The hero's chunk drops from FORCED to a
+    // FULL-only ticket (level 33: loaded, never entity-ticking) at spawn, so the tick-2 order lands on a hero with
+    // tickCount 0 in a chunk that is not entity-ticking - the state the flaky runs read - and FORCED returns at tick 3
+    static final TicketType<ChunkPos> RED556_FULL_ONLY = TicketType.create("red556_full_only", Comparator.comparingLong(ChunkPos::toLong));
+
+    static String[] red556Hold(GameTestHelper helper, Mob hero, int releaseTick) {
+        ServerLevel level = helper.getLevel();
+        ChunkPos c = new ChunkPos(hero.blockPosition());
+        level.getChunkSource().addRegionTicket(RED556_FULL_ONLY, c, 0, c);
+        level.setChunkForced(c.x, c.z, false);
+        helper.runAfterDelay(releaseTick, () -> {
+            level.setChunkForced(c.x, c.z, true);
+            level.getChunkSource().removeRegionTicket(RED556_FULL_ONLY, c, 0, c);
+        });
+        return new String[] { "not read" };
+    }
+
+    static String red556State(GameTestHelper helper, Mob hero) {
+        return "tickCount " + hero.tickCount + ", entity-ticking " + helper.getLevel().isPositionEntityTicking(hero.blockPosition());
+    }
+
     static void order(GameTestHelper helper, String owner, Mob unit, UnitAction action, BlockPos at) {
         CommandQueues.issue(helper.getLevel(), owner, action, -1, new int[] { unit.getId() }, at, BlockPos.ZERO,
             QueueMode.REPLACE);
@@ -375,7 +400,9 @@ public class HeroAiV2GameTests {
         double[] deepest = { Double.NEGATIVE_INFINITY };
         double[] later = { 0 };
         List<String> problems = new ArrayList<>();
+        String[] red556 = red556Hold(helper, hero, 3);
         helper.runAfterDelay(2, () -> {
+            red556[0] = red556State(helper, hero);
             hero.setHealth(hero.getMaxHealth() * 0.5f);
             order(helper, me, hero, UnitAction.MOVE, dest);
         });
@@ -405,6 +432,8 @@ public class HeroAiV2GameTests {
             if (hero.isAlive() && closest[0] > 1.5)
                 problems.add(String.format("after the player ordered it on again the hero still did not obey (%.1f blocks short of the spot at best, from z %.1f)",
                     closest[0], later[0] - helper.absolutePos(BlockPos.ZERO).getZ()));
+            if (!problems.isEmpty())
+                problems.add("red stub: at the tick-2 order " + red556[0]);
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
     }
@@ -706,7 +735,11 @@ public class HeroAiV2GameTests {
         double front = helper.absolutePos(new BlockPos(0, 2, 11)).getZ();
         double[] deepest = { Double.NEGATIVE_INFINITY };
         List<String> problems = new ArrayList<>();
-        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        String[] red556 = red556Hold(helper, hero, 3);
+        helper.runAfterDelay(2, () -> {
+            red556[0] = red556State(helper, hero);
+            order(helper, me, hero, UnitAction.MOVE, dest);
+        });
         helper.runAfterDelay(25, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
         for (int t = 26; t <= 130; t++)
             helper.runAfterDelay(t, () -> deepest[0] = Math.max(deepest[0], hero.getZ()));
@@ -723,6 +756,8 @@ public class HeroAiV2GameTests {
             if (hero.isAlive() && closest[0] > 1.5)
                 problems.add(String.format("selected, the hero did not go back to its move order (%.1f blocks short at best)",
                     closest[0]));
+            if (!problems.isEmpty())
+                problems.add("red stub: at the tick-2 order " + red556[0]);
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
     }
