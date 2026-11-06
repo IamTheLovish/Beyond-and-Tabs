@@ -128,7 +128,9 @@ public class BoneDragonBreathGameTests {
 
     /**
      * Watches one burnt foe: finds the tick of its first burn (from tick {@code from} on), then the health it loses in
-     * each of the next {@link #WINDOWS} 20-tick windows. {@link #done} once all are read.
+     * each of the next {@link #WINDOWS} 20-tick windows. {@link #done} once all are read. The ticks are the DRAGON's
+     * own (callers pass its tickCount), the clock its breath burns on: a dragon whose chunk skipped entity ticks ran
+     * fewer ticks than the test (green 42220711834: 16 in 40), and a test-tick window then held fewer burns.
      */
     static final class Burns {
         final Mob mob;
@@ -210,7 +212,7 @@ public class BoneDragonBreathGameTests {
             if (tick == 2 && !dragon.startDive(dragon.position()))
                 problems.add("the dive onto its own spot was refused");
             if (landedAt[0] < 0 && dragon.isLanded()) {
-                landedAt[0] = tick;
+                landedAt[0] = dragon.tickCount;   // the dragon's own clock (the breath's)
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             }
             if (!problems.isEmpty())
@@ -220,13 +222,13 @@ public class BoneDragonBreathGameTests {
                     return done(helper, List.of("the dragon never landed"), clean, all);
                 return false;
             }
-            if ((tick - landedAt[0]) % 20 == 10 && dragon.getTarget() != target)
+            if ((dragon.tickCount - landedAt[0]) % 20 == 10 && dragon.getTarget() != target)
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(target);   // a neighbouring test's unit must not pull it away
             for (Burns b : burns)
-                b.tick(tick, landedAt[0] + 1);
+                b.tick(dragon.tickCount, landedAt[0] + 1);
             if (burns[0].first >= 0 && !dragon.isLanded())
                 problems.add("the dragon took off during the breath (it should stay down " + BoneDragonUnit.LAND_TICKS + " ticks)");
-            if (burns[0].done(tick) && burns[1].done(tick) || tick >= 245) {
+            if (burns[0].done(dragon.tickCount) && burns[1].done(dragon.tickCount) || tick >= 245) {
                 for (Burns b : burns)
                     b.judge(problems);
                 return done(helper, problems, clean, all);
@@ -274,7 +276,7 @@ public class BoneDragonBreathGameTests {
             if (tick == 2 && !dragon.startDive(dragon.position()))
                 return done(helper, List.of("the dive onto its own spot was refused"), clean, all);
             if (landedAt[0] < 0 && dragon.isLanded()) {
-                landedAt[0] = tick;
+                landedAt[0] = dragon.tickCount;   // the dragon's own clock (the breath's)
                 for (int i = 0; i < spared.length; i++)
                     before[i] = spared[i].getHealth();
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
@@ -284,11 +286,11 @@ public class BoneDragonBreathGameTests {
                     return done(helper, List.of("the dragon never landed"), clean, all);
                 return false;
             }
-            if ((tick - landedAt[0]) % 20 == 10 && dragon.getTarget() != target)
+            if ((dragon.tickCount - landedAt[0]) % 20 == 10 && dragon.getTarget() != target)
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
-            burn.tick(tick, landedAt[0] + 1);
+            burn.tick(dragon.tickCount, landedAt[0] + 1);
             spared(problems, spared, before, why);
-            if (!problems.isEmpty() || burn.done(tick) || tick >= 245) {
+            if (!problems.isEmpty() || burn.done(dragon.tickCount) || tick >= 245) {
                 if (problems.isEmpty())   // a spared foe burnt already fails it; its unread seconds are not "lost 0.0"
                     burn.judge(problems);
                 return done(helper, problems, clean, all);
@@ -333,11 +335,11 @@ public class BoneDragonBreathGameTests {
             if (tick % 20 == 12 && dragon.getTarget() != target)
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             for (Burns b : burns)
-                b.tick(tick, 3);
-            if (burns[0].first == tick && (!dragon.isFlyingUnit() || dragon.getY() - floorY < AIR_UP - 2))
+                b.tick(dragon.tickCount, 0);
+            if (burns[0].first == dragon.tickCount && (!dragon.isFlyingUnit() || dragon.getY() - floorY < AIR_UP - 2))
                 problems.add(String.format(Locale.ROOT, "the dragon breathed from %.1f over the ground (flyer: %s), not"
                     + " from the air", dragon.getY() - floorY, dragon.isFlyingUnit()));
-            if (burns[0].done(tick) && burns[1].done(tick) || tick >= 205) {
+            if (burns[0].done(dragon.tickCount) && burns[1].done(dragon.tickCount) || tick >= 205) {
                 for (Burns b : burns)
                     b.judge(problems);
                 return done(helper, problems, clean, all);
@@ -386,8 +388,8 @@ public class BoneDragonBreathGameTests {
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
             if (tick == 30 && dragon.hasEffect(MobEffectRegistrar.DISARM.get()))
                 problems.add("the dragon was disarmed over a floor (\"out of bounds\"), the ground one block under its aim");
-            burns.tick(tick, 3);
-            if (burns.done(tick) || tick >= 205) {
+            burns.tick(dragon.tickCount, 0);
+            if (burns.done(dragon.tickCount) || tick >= 205) {
                 if (problems.isEmpty())
                     burns.judge(problems);
                 return done(helper, problems, clean, all);
@@ -441,9 +443,9 @@ public class BoneDragonBreathGameTests {
                 return false;
             if (tick % 20 == 12 && dragon.getTarget() != target)
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(target);
-            burn.tick(tick, 3);
+            burn.tick(dragon.tickCount, 0);
             spared(problems, spared, before, why);
-            if (!problems.isEmpty() || burn.done(tick) || tick >= 205) {
+            if (!problems.isEmpty() || burn.done(dragon.tickCount) || tick >= 205) {
                 if (problems.isEmpty())   // a spared foe burnt already fails it; its unread seconds are not "lost 0.0"
                     burn.judge(problems);
                 return done(helper, problems, clean, all);
@@ -484,7 +486,7 @@ public class BoneDragonBreathGameTests {
         String[] name = { "the foe beside the target on the far side (1.4 past, 1.1 off)", "the foe 2.8 behind the target" };
         float[] last = new float[far.length];
         float[] targetLast = { Float.NaN };
-        int[] first = { -1 };
+        int[] first = { -1 }, checked = { 0 };   // on the dragon's own clock (its tickCount), the breath's
         int burns = FireBreath.TICKS / FireBreath.PULSE_TICKS;
         List<String> missed = new ArrayList<>();
         DragonDiveGameTests.everyTick(helper, 210, tick -> {
@@ -500,11 +502,14 @@ public class BoneDragonBreathGameTests {
             float hp = target.getHealth();
             // the breath's first burn: the tick its target first loses a burn's worth
             if (first[0] < 0 && tick >= 3 && !Float.isNaN(targetLast[0]) && hp < targetLast[0] - BURN_MIN)
-                first[0] = tick;
+                first[0] = dragon.tickCount;
             targetLast[0] = hp;
-            int since = first[0] < 0 ? -1 : tick - first[0];
-            if (since >= 0 && since % FireBreath.PULSE_TICKS == 0 && since / FireBreath.PULSE_TICKS < burns) {
+            int since = first[0] < 0 ? -1 : dragon.tickCount - first[0];
+            // each burn read once, on the dragon tick it lands (a test tick the dragon did not tick repeats its clock)
+            if (since >= 0 && since % FireBreath.PULSE_TICKS == 0 && since / FireBreath.PULSE_TICKS < burns
+                    && since / FireBreath.PULSE_TICKS + 1 > checked[0]) {
                 int n = since / FireBreath.PULSE_TICKS + 1;
+                checked[0] = n;
                 for (int i = 0; i < far.length; i++)
                     if (far[i].getHealth() > last[i] - BURN_MIN)
                         missed.add(String.format(Locale.ROOT, "%s was not burnt by burn %d of %d (lost %.1f)", name[i], n,
@@ -555,7 +560,8 @@ public class BoneDragonBreathGameTests {
         // and burnt neither foe ("t0 start", "breathing true tick 0"). The clock below is the breath's, not the test's
         final int[] start = { -1 };
         final int orderAfter = 6;   // between the breath's first burn (its tick 0) and its second (tick 10)
-        float[] before = new float[1];
+        float[] before = { Float.NaN };
+        int[] orderedAt = { -1 };
         DragonDiveGameTests.everyTick(helper, 110, tick -> {
             if (start[0] < 0) {
                 if (dragon.tickCount < ArenaReady.TICKS) {
@@ -564,22 +570,23 @@ public class BoneDragonBreathGameTests {
                             + ArenaReady.describe(helper.getLevel(), all)), clean, all);
                     return false;
                 }
-                start[0] = tick;
+                start[0] = dragon.tickCount;   // the dragon's own clock from here on, the one its breath runs on
                 dragon.setHoldPosition(true);
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(first);
                 if (!dragon.isBreathing() && !dragon.startBreath(first, first.position()))
                     return done(helper, List.of("the breath at the first foe did not start"), clean, all);
             }
-            int order = start[0] + orderAfter;
-            if (tick == order) {
+            int order = start[0] + orderAfter, now = dragon.tickCount;
+            if (now >= order && Float.isNaN(before[0])) {
                 if (!dragon.isBreathing())
                     return done(helper, List.of("the breath at the first foe ended before the order"), clean, all);
                 before[0] = second.getHealth();
+                orderedAt[0] = now;
                 ((AttackerUnit) dragon).setUnitAttackTargetForced(second);
             }
-            if (tick > order && second.getHealth() < before[0] - 0.01f)
+            if (!Float.isNaN(before[0]) && now > orderedAt[0] && second.getHealth() < before[0] - 0.01f)
                 return done(helper, List.of(), clean, all);
-            if (tick >= order + TURN_TICKS)
+            if (!Float.isNaN(before[0]) && now >= orderedAt[0] + TURN_TICKS)
                 return done(helper, List.of(String.format(Locale.ROOT, "ordered onto a second foe"
                     + " mid-breath, the dragon had not burnt it %d ticks later (breathing: %s): the fire stayed on the"
                     + " first foe", TURN_TICKS, dragon.isBreathing())), clean, all);
@@ -633,22 +640,29 @@ public class BoneDragonBreathGameTests {
                 return false;
             if (!level.getEntitiesOfClass(GhastUnitFireball.class, arena, f -> f.getOwner() == dragon).isEmpty())
                 problems.add("the dragon threw a ghast fireball at the building (lovish: no ghast projectiles)");
+            // the 2 s are the DRAGON's own (its tickCount), the clock its breath runs on: green 42220711834 had a run
+            // whose dragon ran only 16 ticks in the 40 test ticks after its first hit ("breathing true tick 16"), so
+            // the window held two of its burns - the not-ticking family (ArenaReady), not a breath that burnt less
+            int now = dragon.tickCount;
             float hp = mill.getHealth();
             if (hp < last[0] - 0.01f) {
                 if (firstHit[0] < 0)
-                    firstHit[0] = tick;
-                if (tick <= firstHit[0] + 40)
+                    firstHit[0] = now;
+                if (now <= firstHit[0] + 40)
                     drops[0]++;
             }
             last[0] = hp;
             if (!problems.isEmpty())
                 return done(helper, problems, clean, all);
-            if (firstHit[0] >= 0 && tick >= firstHit[0] + 40 || tick >= 400) {
+            if (firstHit[0] >= 0 && now >= firstHit[0] + 40 || tick >= 400) {
                 if (firstHit[0] < 0)
                     problems.add("the windmill was never burnt (" + mill.getHealth() + " health)");
+                else if (now < firstHit[0] + 40)
+                    problems.add("the dragon ran only " + (now - firstHit[0]) + " ticks of its own after its first hit by"
+                        + " test tick 400: " + ArenaReady.describe(level, all));
                 else if (drops[0] < 3)
-                    problems.add("the windmill lost health on " + drops[0] + " ticks in the 2 s from the first hit (want"
-                        + " >= 3: a breath burns all along, not one blast)");
+                    problems.add("the windmill lost health on " + drops[0] + " ticks in the dragon's 2 s (40 of its own"
+                        + " ticks) from the first hit (want >= 3: a breath burns all along, not one blast)");
                 return done(helper, problems, clean, all);
             }
             return false;
