@@ -36,7 +36,6 @@ public class PumpkinFarm extends AbstractFarm {
 
         this.startingBlockTypes.add(Blocks.DARK_OAK_LOG);
 
-        this.explodeChance = 0;
     }
 
 

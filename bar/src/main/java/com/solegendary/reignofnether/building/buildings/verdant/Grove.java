@@ -44,7 +44,6 @@ public class Grove extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.MOSSY_STONE_BRICKS);
         this.buildTimeBlocks = 287;   // the shipped grove's build time; the Stag Glade (tools/lab_grove.py) has 307 blocks
 
-        this.explodeChance = 0.2f;
         this.maxHealth = 150d;
 
         this.productions.add(ProductionItems.LEAFBLADE, Keybindings.abilitySlot1);

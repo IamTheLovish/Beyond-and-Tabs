@@ -49,7 +49,6 @@ public class Graveyard extends ProductionBuilding {
 
         this.startingBlockTypes.add(Blocks.DEEPSLATE_BRICKS);
 
-        this.explodeChance = 0.2f;
         this.maxHealth = 120d;
         this.buildTimeBlocks = 99;   // RoN's 99-block graveyard's build time; the Ossuary Yard's art (tools/lab_graveyard.py) is 217 blocks
 

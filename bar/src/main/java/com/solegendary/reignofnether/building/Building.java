@@ -34,11 +34,6 @@ public abstract class Building {
     public boolean canAcceptResources = false; // can workers drop off resources here?
     private Faction faction;
 
-    // chance for a mini explosion to destroy extra blocks if a player is breaking it
-    // should be higher for large fragile buildings so players don't take ages to destroy it
-    protected float explodeChance = 0.3f;
-    protected float explodeRadius = 2.0f;
-    protected float fireThreshold = 0.75f; // if building has less %hp than this, explosions caused can make fires
     protected float buildTimeModifier = 1.0f; // only affects non-built buildings, not repair times
     public float getBuildTimeModifier() { return buildTimeModifier; }
     // > 0: construction takes as long as a structure of this many blocks would, whatever the real block count. The

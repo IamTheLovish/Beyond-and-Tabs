@@ -47,7 +47,6 @@ public class LotusAcademy extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.STONE_BRICKS);
         this.buildTimeBlocks = 181;   // the old 181-block courtyard's build time; the Lotus Court's art (tools/lab_lotus_academy.py) has 320
 
-        this.explodeChance = 0.2f;
         this.maxHealth = 150d;
 
         this.productions.add(ProductionItems.BLADE_DANCER, Keybindings.abilitySlot1);

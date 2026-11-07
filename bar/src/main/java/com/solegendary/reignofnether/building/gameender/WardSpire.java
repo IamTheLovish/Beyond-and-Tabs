@@ -51,7 +51,6 @@ public class WardSpire extends Building implements RangeIndicatorAddon {
         this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/amethyst_cluster.png");
         this.buildTimeBlocks = 160;
         this.maxHealth = 600d;
-        this.explodeChance = 0.2f;
         setActiveAddon(RangeIndicatorAddon.class, this, true);
     }
 

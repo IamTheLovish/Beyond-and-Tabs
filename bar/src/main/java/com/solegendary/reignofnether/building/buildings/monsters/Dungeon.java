@@ -44,7 +44,6 @@ public class Dungeon extends ProductionBuilding {
 
         this.buildTimeBlocks = com.solegendary.reignofnether.resources.TierGate.T2_LAB_BUILD_BLOCKS;   // one build time for every faction's T2 lab (resources/TierGate)
 
-        this.explodeChance = 0.2f;
         this.productions.add(ProductionItems.CREEPER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.WRAITH, Keybindings.abilitySlot2);
         // Gravebound T2 lab

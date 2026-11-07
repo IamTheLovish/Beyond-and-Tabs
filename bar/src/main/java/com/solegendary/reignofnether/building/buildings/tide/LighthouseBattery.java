@@ -57,7 +57,6 @@ public class LighthouseBattery extends Building implements RangeIndicatorAddon {
         this.startingBlockTypes.add(Blocks.PRISMARINE_BRICKS);
 
         this.buildTimeModifier = 0.8f;
-        this.explodeChance = 0.2f;
         this.maxHealth = 300d;
 
         setActiveAddon(RangeIndicatorAddon.class, this, true);

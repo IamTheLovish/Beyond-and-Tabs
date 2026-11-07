@@ -41,7 +41,6 @@ public class EndPortal extends ProductionBuilding {
 
         this.startingBlockTypes.add(Blocks.DARK_PRISMARINE_STAIRS);
 
-        this.explodeChance = 0.2f;
 
         this.productions.add(ProductionItems.ENDERMAN, Keybindings.abilitySlot1);
     }

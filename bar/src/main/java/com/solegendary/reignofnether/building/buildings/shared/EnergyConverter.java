@@ -53,7 +53,6 @@ public class EnergyConverter extends Building {
 
         this.energyConversion = CONVERSION;
 
-        this.explodeChance = 0.5f;
         this.maxHealth = com.solegendary.reignofnether.raid.RaidTuning.CONVERTER_HEALTH;   // the one fragile eco building (RaidTuning)
         this.buildTimeBlocks = 28;   // the original 28-block crucible's build time, for every faction's take
     }

@@ -51,7 +51,6 @@ public class GeothermalPlant extends Building {
         // BAR's T2 geothermal is worth a field of wind: ~9 Wind Generators (14/s each) from one lava vent
         this.energyIncome = 120.0f;
         this.maxHealth = 400d;
-        this.explodeChance = 0.6f;   // like BAR's, it goes up when it dies: don't wall your factories with it
         this.buildTimeBlocks = 110;
     }
 

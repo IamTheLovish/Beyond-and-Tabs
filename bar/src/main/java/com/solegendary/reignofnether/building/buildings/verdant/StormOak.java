@@ -57,7 +57,6 @@ public class StormOak extends Building implements RangeIndicatorAddon {
         this.startingBlockTypes.add(Blocks.MOSSY_STONE_BRICKS);
 
         this.buildTimeModifier = 0.8f;
-        this.explodeChance = 0.2f;
         this.maxHealth = 360d;
 
         setActiveAddon(RangeIndicatorAddon.class, this, true);

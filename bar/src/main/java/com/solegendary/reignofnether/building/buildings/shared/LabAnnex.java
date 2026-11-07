@@ -60,7 +60,6 @@ public class LabAnnex extends Building {
         this.buttonIcon = ResourceLocation.fromNamespaceAndPath("minecraft", vanillaIconPath);
         this.icon = this.buttonIcon;
         this.maxHealth = 80d;
-        this.explodeChance = 0.2f;
         this.buildTimeBlocks = 30;   // every faction's annex takes the same time, whatever its art's block count
     }
 

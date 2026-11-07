@@ -33,7 +33,6 @@ public class NetherwartFarm extends AbstractFarm {
 
         this.startingBlockTypes.add(Blocks.WARPED_STEM);
 
-        this.explodeChance = 0;
     }
 
 

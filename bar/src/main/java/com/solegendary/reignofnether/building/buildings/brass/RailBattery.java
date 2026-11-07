@@ -57,7 +57,6 @@ public class RailBattery extends Building implements RangeIndicatorAddon {
         this.startingBlockTypes.add(Blocks.DEEPSLATE_BRICKS);
 
         this.buildTimeModifier = 0.8f;
-        this.explodeChance = 0.2f;
         this.maxHealth = 320d;
 
         setActiveAddon(RangeIndicatorAddon.class, this, true);

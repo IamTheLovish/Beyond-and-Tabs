@@ -50,7 +50,6 @@ public class CircleOfElders extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.MOSSY_STONE_BRICKS);
 
         this.buildTimeBlocks = com.solegendary.reignofnether.resources.TierGate.T2_LAB_BUILD_BLOCKS;   // one build time for every faction's T2 lab (resources/TierGate)
-        this.explodeChance = 0.2f;
         this.maxHealth = 340d;
 
         this.productions.add(ProductionItems.STAG_LANCER, Keybindings.abilitySlot1);

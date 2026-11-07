@@ -45,7 +45,6 @@ public class CapturableBeacon extends Beacon {
 
         this.startingBlockTypes.add(Blocks.NETHERITE_BLOCK);
 
-        this.explodeChance = 0.2f;
     }
 
     @Override
