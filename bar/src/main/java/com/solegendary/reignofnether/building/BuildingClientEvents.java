@@ -20,6 +20,7 @@ import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.gamerules.GameruleClient;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.TextInputClientEvents;
+import com.solegendary.reignofnether.hud.InspectView;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
@@ -29,6 +30,7 @@ import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.resources.ResourceSources;
 import com.solegendary.reignofnether.sandbox.SandboxClientEvents;
 import com.solegendary.reignofnether.tutorial.TutorialClientEvents;
+import com.solegendary.reignofnether.unit.InspectRules;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
@@ -561,7 +563,9 @@ public class BuildingClientEvents {
         var vertexConsumerNoDepthLine = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_NO_DEPTH_TEST);
         var vertexConsumerLine = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINES);
         for (BuildingPlacement selBuilding : selectedBuildings) {
-            if (selBuilding instanceof ProductionPlacement selProdBuilding) {
+            // an inspected enemy building's rally is its plan: not drawn (InspectRules)
+            if (selBuilding instanceof ProductionPlacement selProdBuilding && InspectView
+                    .shows(InspectRules.Info.RALLY, selBuilding)) {
                 float a = MiscUtil.getOscillatingFloat(0.25f, 0.75f);
 
                 if (!selProdBuilding.getRallyPoints().isEmpty() && MC.level != null) {
