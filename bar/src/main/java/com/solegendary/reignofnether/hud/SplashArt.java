@@ -286,15 +286,15 @@ public class SplashArt {
     // ---------------------------------------------------------------- title screen buttons
 
     /**
-     * Repaints the title screen's text buttons as dark stone with a gold border and a gothic, blood-dripping label
-     * (GothicText; lovish Oct 21: "gothic and bold, standing out", "blood dripping down"). Drawn after the buttons have
+     * Repaints the title screen's text buttons in the one button theme: dark stone, a gold frame and a fitted, centred
+     * label, no drips (GothicText; tester Oct 26: one theme for every button). Drawn after the buttons have
      * rendered, so clicks, narration and tooltips stay vanilla. Square icon buttons (language, accessibility, our maps
      * button) are left alone.
      */
     public static void restyleButtons(GuiGraphics g, Font font, List<? extends GuiEventListener> children, float alpha) {
         if (state <= 0 && !LobbyBackdrop.available())
             return;
-        GothicText.restyleButtons(g, font, children, null, null, true, alpha);
+        GothicText.restyleButtons(g, font, children, alpha);
     }
 
     /**

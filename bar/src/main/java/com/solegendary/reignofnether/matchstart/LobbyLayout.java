@@ -46,4 +46,21 @@ public final class LobbyLayout {
             return fit(name + suffix, maxW, width);
         return fit(name, room, width) + suffix;
     }
+
+    /**
+     * The skirmish settings column (tester, Oct 26: at a large GUI scale Start Battle covered the "Starts" row): the map
+     * preview's height and the row step for {@code rows} setting rows in {@code avail} px between the column top and
+     * Start Battle. Rows keep their 22 px step while the preview can stay 36 px or more; past that the rows tighten
+     * (down to 16) before the preview shrinks further, so preview + rows * step never exceeds {@code avail} while
+     * {@code avail >= rows * 16}. Returns {previewH, rowStep}.
+     */
+    public static int[] settingsColumn(int avail, int rows) {
+        int step = 22;
+        int preview = Math.min(92, avail - rows * step);
+        if (preview < 36) {
+            step = Math.max(16, Math.min(22, (avail - 36) / rows));
+            preview = Math.max(0, Math.min(92, avail - rows * step));
+        }
+        return new int[]{ preview, step };
+    }
 }

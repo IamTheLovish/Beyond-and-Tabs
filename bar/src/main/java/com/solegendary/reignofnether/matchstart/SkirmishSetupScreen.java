@@ -119,7 +119,7 @@ public class SkirmishSetupScreen extends Screen {
     final Screen parent;
     // layout computed in init()
     int navX, navW, midX, midW, rightX, rightW, top, bottom;
-    int totalW, previewH = 92;
+    int totalW, previewH = 92, rowStep = 22;
     int team1Y, team2Y;
     /** Rows whose colour swatch can be clicked: x, y of the swatch and the bot (or PLAYER). */
     final List<Object[]> swatches = new ArrayList<>();
@@ -187,7 +187,11 @@ public class SkirmishSetupScreen extends Screen {
         // (lovish's Oct 12 clip 01-28-34). The map preview gives up height first.
         int footerLines = Math.max(1, font.split(Component.literal(footerText()), totalW).size());
         bottom = Math.min(height - 11 - 9 * footerLines, top + 300);
-        previewH = Math.max(36, Math.min(92, bottom - top - 4 - 7 * 22 - 26 - 4));   // 7 setting rows (Time added)
+        // 7 setting rows (Time added) between the preview and Start Battle (bottom - 24, 2 px gap); when even a 36 px
+        // preview leaves no room the rows tighten, so Start Battle never covers "Starts" (tester, Oct 26)
+        int[] column = LobbyLayout.settingsColumn((bottom - 26) - (top + 8), 7);
+        previewH = column[0];
+        rowStep = column[1];
 
         // --- left navigation (BAR's side menu) ---
         int y = top + 4;
@@ -228,46 +232,47 @@ public class SkirmishSetupScreen extends Screen {
         // --- right column: map preview (drawn in render) then the settings ---
         int ry = top + 4 + previewH + 4;
         int rw = rightW - 8;
+        int rowH = rowStep - 2;
         // the battlefield: the world's own terrain or a pre-made map (design/maps.md)
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i))))
             .withValues(range(com.solegendary.reignofnether.maps.MapPreset.count())).withInitialValue(Math.min(settings.map, com.solegendary.reignofnether.maps.MapPreset.count() - 1))
             .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreview.blurbOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)))))
-            .create(rightX + 4, ry, rw, 20, Component.literal("Map"), (b, v) -> settings.map = v));
-        ry += 22;
+            .create(rightX + 4, ry, rw, rowH, Component.literal("Map"), (b, v) -> settings.map = v));
+        ry += rowStep;
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(ARENAS.get(i)))
             .withValues(range(5)).withInitialValue(settings.arena)
             .withTooltip(i -> Tooltip.create(Component.literal("Arena size on random terrain (a pre-made map has its own size)")))
-            .create(rightX + 4, ry, rw, 20, Component.literal("Size"), (b, v) -> settings.arena = v));
-        ry += 22;
+            .create(rightX + 4, ry, rw, rowH, Component.literal("Size"), (b, v) -> settings.arena = v));
+        ry += rowStep;
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(METALS.get(i)))
             .withValues(range(4)).withInitialValue(settings.metal)
-            .create(rightX + 4, ry, rw, 20, Component.literal("Metal"), (b, v) -> settings.metal = v));
-        ry += 22;
+            .create(rightX + 4, ry, rw, rowH, Component.literal("Metal"), (b, v) -> settings.metal = v));
+        ry += rowStep;
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(DISTANCES.get(i)))
             .withValues(range(3)).withInitialValue(settings.spawnDistance)
-            .create(rightX + 4, ry, rw, 20, Component.literal("Spawns"), (b, v) -> settings.spawnDistance = v));
-        ry += 22;
+            .create(rightX + 4, ry, rw, rowH, Component.literal("Spawns"), (b, v) -> settings.spawnDistance = v));
+        ry += rowStep;
         // lovish: slower players get more time to build and spread their APM, experienced ones a faster game
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(PACES.get(i)))
             .withValues(range(3)).withInitialValue(settings.pace)
             .withTooltip(i -> Tooltip.create(Component.literal(
                 com.solegendary.reignofnether.resources.EconomyPace.describe(i))))
-            .create(rightX + 4, ry, rw, 20, Component.literal("Pace"), (b, v) -> settings.pace = v));
-        ry += 22;
+            .create(rightX + 4, ry, rw, rowH, Component.literal("Pace"), (b, v) -> settings.pace = v));
+        ry += rowStep;
         // the battlefield light (inbox spec-2 PR 1): late morning by default - a dawn start washed the map orange.
         // Beside it whether the sun then moves (lovish, Oct 18: "Day/night cycle: on/off" with a start time, slow by
         // default) - one row of two, so the column still fits above Start Battle
         int half = (rw - 2) / 2;
-        addRenderableWidget(timeButton(settings.timeOfDay, rightX + 4, ry, half, 20, v -> settings.timeOfDay = v));
-        addRenderableWidget(cycleButton(settings.dayCycle, rightX + 4 + half + 2, ry, rw - half - 2, 20, v -> settings.dayCycle = v));
-        ry += 22;
+        addRenderableWidget(timeButton(settings.timeOfDay, rightX + 4, ry, half, rowH, v -> settings.timeOfDay = v));
+        addRenderableWidget(cycleButton(settings.dayCycle, rightX + 4 + half + 2, ry, rw - half - 2, rowH, v -> settings.dayCycle = v));
+        ry += rowStep;
         // BAR's start-position mode: place your commander inside your team's box before the match begins
         addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Choose" : "Auto"))
             .withValues(true, false).withInitialValue(settings.choosePositions)
             .withTooltip(v -> Tooltip.create(Component.literal(v
                 ? "A 45 s phase before the match: click inside your team's start box to place your commander"
                 : "Everyone starts at their slot straight away")))
-            .create(rightX + 4, ry, rw, 20, Component.literal("Starts"), (b, v) -> settings.choosePositions = v));
+            .create(rightX + 4, ry, rw, rowH, Component.literal("Starts"), (b, v) -> settings.choosePositions = v));
 
         Button start = addRenderableWidget(Button.builder(Component.literal(settings.spectating() ? "Watch Battle" : "Start Battle"),
                 b -> QuickBattle.launch(this, settings))
@@ -404,10 +409,11 @@ public class SkirmishSetupScreen extends Screen {
 
         renderTeam(gg, 0, team1Y);
         renderTeam(gg, 1, team2Y);
-        renderMapPreview(gg, rightX + 4, top + 4, rightW - 8, previewH);
+        if (previewH >= 16)
+            renderMapPreview(gg, rightX + 4, top + 4, rightW - 8, previewH);
 
         super.render(gg, mx, my, pt);
-        GothicText.restyleButtons(gg, font, children(), GothicText.LOBBY_MAIN, GothicText.LOBBY_PRIMARY, false, 1f);
+        GothicText.restyleButtons(gg, font, children(), 1f);
 
         // each faction button's icon, just left of it (vanilla buttons centre their label, so outside keeps it clear)
         for (Object[] fi : factionIcons)
@@ -444,14 +450,24 @@ public class SkirmishSetupScreen extends Screen {
         gg.fill(x, y + 17, x + w, y + 18, EDGE);
         y += 20;
         if (settings.team == team) {
-            renderRow(gg, x, y, w, settings.colour, Minecraft.getInstance().getUser().getName() + "  (you)", true);
+            // the name is cut before the faction icon (tester, Oct 26: the faction button covered "(you)")
+            String name = LobbyLayout.fitName(Minecraft.getInstance().getUser().getName(), "  (you)", nameRoom(x, y), font::width);
+            renderRow(gg, x, y, w, settings.colour, name, true);
             y += ROW_H;
         }
         for (Bot bot : settings.bots)
             if (bot.team == team) {
-                renderRow(gg, x, y, w, bot.colour, "AI", false);
+                renderRow(gg, x, y, w, bot.colour, LobbyLayout.fit("AI", nameRoom(x, y), font::width), false);
                 y += ROW_H;
             }
+    }
+
+    /** The room for a row's name: from x + 22 to 4 px before the faction icon (drawn at the button's x - 14). */
+    int nameRoom(int x, int y) {
+        for (Object[] fi : factionIcons)
+            if ((Integer) fi[1] == y)
+                return Math.max(0, (Integer) fi[0] - 14 - 4 - (x + 22));
+        return Integer.MAX_VALUE;
     }
 
     void renderRow(GuiGraphics gg, int x, int y, int w, int colour, String name, boolean me) {
@@ -546,6 +562,8 @@ public class SkirmishSetupScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         if (picker.mouseClicked(mx, my, button))
             return true;
+        if (paletteFor == null && CycleClicks.rightClick(children(), mx, my, button))
+            return true;   // right click steps a cycling button back (left click goes forward)
         if (paletteFor != null) {
             if (button == 1) {   // right-click anywhere in the popup: back to random/auto
                 if (paletteFor == PLAYER) settings.colour = -1; else ((Bot) paletteFor).colour = -1;
