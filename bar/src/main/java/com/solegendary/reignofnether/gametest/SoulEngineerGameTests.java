@@ -397,13 +397,14 @@ public class SoulEngineerGameTests {
      * Patch Kit on a hurt friendly building 3 blocks away: 120 health back at once (within one block's share), 5 essence
      * spent, a 12 s cooldown; the same order again during the cooldown spends nothing and mends nothing.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 40 + ArenaReady.READY_WAIT, batch = BATCH)
     public static void soul_engineer_patch_kit_mends_a_building_by_120(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "patchb");
         Mob caster = engineer(helper, me, 1, 1, 30);
         BuildingPlacement bp = site(helper, Buildings.MACHINE_SHOP, me, 4, 4, true);
-        helper.runAfterDelay(3, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (caster == null || bp == null) {
@@ -445,6 +446,10 @@ public class SoulEngineerGameTests {
                 discardAll(live(caster));
                 finish(helper, problems);
             }
+        });
+        line.startForOrders(helper, live(caster), () -> {
+            unsite(level, bp);
+            discardAll(live(caster));
         });
     }
 
@@ -623,7 +628,7 @@ public class SoulEngineerGameTests {
      * not a machine; once a second it scalds the enemy 3 blocks off for 4 while an enemy 7 blocks off and a friend 2
      * blocks off are untouched. An order during the cooldown spends nothing. Killed, it drops no essence.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 100 + ArenaReady.READY_WAIT, batch = BATCH)
     public static void soul_engineer_ghost_furnace_scalds_enemies_within_5_and_is_a_summon(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "furnace"), foe = owner(helper, "furnacefoe");
@@ -637,7 +642,8 @@ public class SoulEngineerGameTests {
         List<String> early = new ArrayList<>();
         GhostFurnaceUnit[] made = { null };
         float[] hp = { 0, 0, 0 };
-        helper.runAfterDelay(3, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(3, () -> {
             try {
                 if (all.size() != 4) {
                     early.add("could not spawn the Soul Engineer and the three vindicators");
@@ -676,7 +682,7 @@ public class SoulEngineerGameTests {
                 early.add("the cast threw " + ex);
             }
         });
-        helper.runAfterDelay(50, () -> {
+        line.at(50, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 GhostFurnaceUnit f = made[0];
@@ -711,6 +717,7 @@ public class SoulEngineerGameTests {
                 finish(helper, problems);
             }
         });
+        line.startForOrders(helper, all, () -> discardAll(all));
     }
 
     /** The furnace cools after 20 s: a furnace 5 ticks short of its lifetime is gone 10 ticks later. */
@@ -847,7 +854,7 @@ public class SoulEngineerGameTests {
      * Soul Boiler: 20 essence, 60 s. A friendly Machine Shop with a unit queued produces 1.5x as fast for 20 s; a
      * friendly site still going up builds 1.5x as fast (a second caster). An order during the cooldown spends nothing.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 40 + ArenaReady.READY_WAIT, batch = BATCH)
     public static void soul_engineer_soul_boiler_speeds_a_building_by_half_for_20_seconds(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "boil");
@@ -857,7 +864,8 @@ public class SoulEngineerGameTests {
         BuildingPlacement rising = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, false);
         if (rising != null)
             BuildingServerEvents.getBuildings().remove(rising);   // judged on its own below, never ticked
-        helper.runAfterDelay(3, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (caster == null || second == null || !(shop instanceof ProductionPlacement pp) || rising == null) {
@@ -909,6 +917,11 @@ public class SoulEngineerGameTests {
                 discardAll(live(caster, second));
                 finish(helper, problems);
             }
+        });
+        line.startForOrders(helper, live(caster, second), () -> {
+            BuildingServerEvents.getBuildings().remove(rising);
+            unsite(level, shop);
+            discardAll(live(caster, second));
         });
     }
 

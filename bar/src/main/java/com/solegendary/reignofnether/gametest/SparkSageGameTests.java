@@ -336,7 +336,7 @@ public class SparkSageGameTests {
      * along the line and no further; an order during the cooldown, through the click's own path, spends nothing and
      * moves it nowhere.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 40 + ArenaReady.READY_WAIT, batch = BATCH)
     public static void spark_sage_static_step_blinks_up_to_8_blocks_for_5_essence(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -347,7 +347,8 @@ public class SparkSageGameTests {
             helper.fail("could not spawn a Spark Sage");
             return;
         }
-        helper.runAfterDelay(3, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (StaticStep.ESSENCE_COST != 5 || StaticStep.CD_SECONDS != 12 || StaticStep.RANGE != 8)
@@ -386,6 +387,7 @@ public class SparkSageGameTests {
             }
             finish(helper, problems);
         });
+        line.startForOrders(helper, all, () -> discardAll(all));
     }
 
     /**
@@ -468,7 +470,7 @@ public class SparkSageGameTests {
      * fifth, 4 blocks from the fourth, is untouched, and so is a friend 2 blocks from the first. An order during the
      * cooldown, through the click's own path, strikes nobody and spends nothing.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 40 + ArenaReady.READY_WAIT, batch = BATCH)
     public static void spark_sage_captured_spark_chains_30_damage_over_4_enemies(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -486,7 +488,8 @@ public class SparkSageGameTests {
             helper.fail("could not spawn the Spark Sage, the five enemies and the friend");
             return;
         }
-        helper.runAfterDelay(3, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (CapturedSpark.ESSENCE_COST != 10 || CapturedSpark.CD_SECONDS != 25 || CapturedSpark.DAMAGE != 30f
@@ -529,6 +532,7 @@ public class SparkSageGameTests {
             }
             finish(helper, problems);
         });
+        line.startForOrders(helper, all, () -> discardAll(all));
     }
 
     /**

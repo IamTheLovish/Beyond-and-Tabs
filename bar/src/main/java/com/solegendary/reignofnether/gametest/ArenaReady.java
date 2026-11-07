@@ -176,6 +176,21 @@ public final class ArenaReady {
          */
         public void start(GameTestHelper helper, List<? extends Entity> units, int minTicks, int maxWait,
                           Consumer<String> stalled) {
+            start(helper, units, minTicks, maxWait, 0, stalled);
+        }
+
+        /**
+         * {@link #start(GameTestHelper, List, int, int, Consumer)}, giving up only once BOTH {@code maxWait} test ticks
+         * and {@code minWallMs} milliseconds of real time have passed: chunk loading is wall-clock work, but the
+         * GameTest server runs its ticks back to back, several hundred a second when little else runs (GameTestChunks,
+         * run 40447858037), so a tick count alone can end the wait in well under a second (#566's green 42355478483:
+         * "the units were not ticking after 100 test ticks", angel_caller_unit "entity-ticking false"). A wait that
+         * outlasts the test's own timeout ends in the timeout, still a failure. The steps start as soon as the units
+         * tick, whatever the bound.
+         */
+        void start(GameTestHelper helper, List<? extends Entity> units, int minTicks, int maxWait, long minWallMs,
+                   Consumer<String> stalled) {
+            final long since = System.nanoTime();
             final long[] start = { -1 };
             final boolean[] over = { false };
             helper.onEachTick(() -> {
@@ -184,11 +199,12 @@ public final class ArenaReady {
                 long now = helper.getTick();
                 if (start[0] < 0) {
                     if (!ticked(units, minTicks)) {
-                        if (now < maxWait)
+                        long wallMs = (System.nanoTime() - since) / 1_000_000L;
+                        if (now < maxWait || wallMs < minWallMs)
                             return;
                         over[0] = true;
-                        String why = "setup: the units were not ticking after " + maxWait + " test ticks: "
-                            + describe(helper.getLevel(), units);
+                        String why = "setup: the units were not ticking after " + now + " test ticks ("
+                            + wallMs + " ms): " + describe(helper.getLevel(), units);
                         if (stalled == null)
                             throw new GameTestAssertException(why);
                         stalled.accept(why);
@@ -202,7 +218,32 @@ public final class ArenaReady {
                         r.run();
             });
         }
+
+        /**
+         * {@link #start(GameTestHelper, List, int, int, Consumer)} for a test that orders its units through
+         * UnitActionItem.action (a click on an ability, a cast, CommandQueues.issue): that path keeps only the units
+         * level.getEntity returns, and a unit added to an arena whose entity section is not loaded yet is not in that
+         * lookup, so an order counted from the spawn reached nobody (PR 561's shard 8 ran angel_caller_sword third in
+         * a fresh server, ~7 s in: "the Sword call made no Sword Seraph"). The steps start on the first tick at which
+         * every unit (casters and targets) has ticked once, i.e. is in the level, and keep their ticks from there; the
+         * test's timeout adds {@link ArenaReady#READY_WAIT}. A setup that never ticks (after READY_WAIT test ticks AND
+         * READY_WAIT x 50 ms of real time, the ticks it would take at 20 per second) runs {@code cleanUp} and fails,
+         * naming each unit.
+         */
+        public void startForOrders(GameTestHelper helper, List<? extends Entity> units, Runnable cleanUp) {
+            start(helper, units, 1, READY_WAIT, READY_WAIT * 50L, why -> {
+                cleanUp.run();
+                helper.fail(why);
+            });
+        }
     }
+
+    /**
+     * Least test ticks (and, times 50 ms, least real time) a test that orders its units waits for them to be in the
+     * level before it gives up (Timeline.startForOrders); each such test's timeout is its old limit plus this. 100 was
+     * under a second on a fast-ticking server (#566's green 42355478483); 1200 is a minute at 20 ticks a second.
+     */
+    public static final int READY_WAIT = 1200;
 
     /** One entry per entity: type and id, its own tick count, whether its chunk is entity-ticking, where it is. */
     public static String describe(ServerLevel level, List<? extends Entity> units) {
