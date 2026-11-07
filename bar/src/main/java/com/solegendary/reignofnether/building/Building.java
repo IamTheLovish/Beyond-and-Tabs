@@ -154,6 +154,14 @@ public abstract class Building {
         return BuildingBlockData.getBuildingBlocksFromNbt(this.structureName, level);
     }
 
+    /**
+     * The blueprint as parsed, shared and read-only: for code that draws or measures it every frame (the start
+     * phase's capitol ghost) and never moves, turns or edits a block - that takes {@link #getRelativeBlockData}.
+     */
+    public List<BuildingBlock> sharedBlockData(LevelAccessor level) {
+        return BuildingBlockData.sharedBlocksFromNbt(this.structureName, level);
+    }
+
     public BuildingPlacement createBuildingPlacement(Level level, BlockPos pos, Rotation rotation, String ownerName) {
         return new BuildingPlacement(this, level, pos, rotation, ownerName, BuildingUtils.getAbsoluteBlockData(this.getRelativeBlockData(level), level, pos, rotation), this.isCapitol);
     }

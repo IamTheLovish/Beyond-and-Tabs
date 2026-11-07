@@ -467,12 +467,15 @@ public class ClientModEvents {
     }
 
     // a resource reload (F3+T, a pack switched on or off) may add or remove a unit's _team.png: forget the cached
-    // answers, or the team colour stays missing (or points at a texture that is gone) until a restart
+    // answers, or the team colour stays missing (or points at a texture that is gone) until a restart. The client's
+    // parsed building blueprints (BuildingBlockData) are forgotten the same way: a pack may carry a changed .nbt
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void registerReloadListeners(net.minecraftforge.client.event.RegisterClientReloadListenersEvent evt) {
-        evt.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) rm ->
-                com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer.clearCache());
+        evt.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) rm -> {
+            com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer.clearCache();
+            com.solegendary.reignofnether.building.BuildingBlockData.onClientReload();
+        });
     }
 
     // the world look pass's shader (postfx/WorldLookPass): loaded with vanilla's core shaders, so F3+T reloads it too

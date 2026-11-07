@@ -512,7 +512,8 @@ public final class MapClient {
                 Building capitol = f.getBuilding(f.capitolBuilding);
                 if (capitol == null)
                     continue;
-                ArrayList<BuildingBlock> blocks = capitol.getRelativeBlockData(MC.level);
+                // drawn every frame: the parsed blueprint, shared - never a fresh read of the .nbt
+                List<BuildingBlock> blocks = capitol.sharedBlockData(MC.level);
                 Vec3i dims = BuildingUtils.getBuildingSize(blocks);
                 // the start is the ground block (MapMatch.seat), one under the heightmap's first free block
                 int y = MC.level.getHeight(Heightmap.Types.MOTION_BLOCKING, p.x(), p.z()) - 1;

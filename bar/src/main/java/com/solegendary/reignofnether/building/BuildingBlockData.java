@@ -18,34 +18,68 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 // a class for static functions related to reading building NBT data (as created by Structure Blocks)
 
 public class BuildingBlockData {
 
+    /**
+     * The blocks of a shipped blueprint, parsed once per side and handed out as copies (the caller may move, turn or
+     * edit its blocks: BuildingPlacement does). The server parses each structure once per resource manager (a /reload
+     * brings a new one); every placement check used to read and unzip the .nbt again, and a bot's site search makes
+     * hundreds of them. The client parses once per resource reload (F3+T, a pack switched - {@link #onClientReload}):
+     * the capitol ghost of the start phase used to read and unzip the blueprint on every frame.
+     */
     public static ArrayList<BuildingBlock> getBuildingBlocksFromNbt(String structureName, LevelAccessor level) {
-        if (level.isClientSide())
-            return readBuildingBlocks(structureName, level, Minecraft.getInstance().getResourceManager());
-        // the server parses each structure once per resource manager (a /reload brings a new one) and hands out copies:
-        // every placement check read and unzipped the .nbt again, and a bot's site search makes hundreds of them
-        ResourceManager resourceManager = level.getServer().getResourceManager();
-        ArrayList<BuildingBlock> parsed;
-        synchronized (SERVER_BLOCKS) {
-            if (serverBlocksFor != resourceManager) {
-                SERVER_BLOCKS.clear();
-                serverBlocksFor = resourceManager;
-            }
-            parsed = SERVER_BLOCKS.computeIfAbsent(structureName, n -> readBuildingBlocks(n, level, resourceManager));
-        }
+        ArrayList<BuildingBlock> parsed = parsedBlocks(structureName, level);
         ArrayList<BuildingBlock> copy = new ArrayList<>(parsed.size());
         for (BuildingBlock b : parsed)
             copy.add(new BuildingBlock(b.getBlockPos(), b.getBlockState(), b.getBlockNbt() == null ? null : b.getBlockNbt().copy()));
         return copy;
     }
 
+    /**
+     * The parsed blueprint itself, shared and never to be changed: for readers that only draw or measure it every
+     * frame (the ghosts). Anything that moves, turns or edits blocks takes {@link #getBuildingBlocksFromNbt} instead.
+     */
+    public static List<BuildingBlock> sharedBlocksFromNbt(String structureName, LevelAccessor level) {
+        return Collections.unmodifiableList(parsedBlocks(structureName, level));
+    }
+
+    private static ArrayList<BuildingBlock> parsedBlocks(String structureName, LevelAccessor level) {
+        if (level.isClientSide()) {
+            // the client's ReloadableResourceManager is one object for the whole session: a reload clears the map
+            ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
+            synchronized (CLIENT_BLOCKS) {
+                return CLIENT_BLOCKS.computeIfAbsent(structureName, n -> readBuildingBlocks(n, level, resourceManager));
+            }
+        }
+        ResourceManager resourceManager = level.getServer().getResourceManager();
+        synchronized (SERVER_BLOCKS) {
+            if (serverBlocksFor != resourceManager) {
+                SERVER_BLOCKS.clear();
+                serverBlocksFor = resourceManager;
+            }
+            return SERVER_BLOCKS.computeIfAbsent(structureName, n -> readBuildingBlocks(n, level, resourceManager));
+        }
+    }
+
+    /** A client resource reload (ClientModEvents' reload listener): a pack may have changed a blueprint. */
+    public static void onClientReload() {
+        synchronized (CLIENT_BLOCKS) {
+            CLIENT_BLOCKS.clear();
+        }
+        MISSING_WARNED.clear();   // a blueprint a pack now ships, or no longer ships, is worth one new warning
+    }
+
+    // two maps on purpose: in singleplayer the client and the integrated server share this JVM with different
+    // resource managers, and one map keyed by manager would be cleared by every switch of thread
     private static final java.util.Map<String, ArrayList<BuildingBlock>> SERVER_BLOCKS = new java.util.HashMap<>();
     private static ResourceManager serverBlocksFor = null;
+    private static final java.util.Map<String, ArrayList<BuildingBlock>> CLIENT_BLOCKS = new java.util.HashMap<>();
 
     private static ArrayList<BuildingBlock> readBuildingBlocks(String structureName, LevelAccessor level, ResourceManager resourceManager) {
         CompoundTag nbt = getBuildingNbt(structureName, resourceManager);
