@@ -118,6 +118,7 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
     private AbstractMeleeAttackUnitGoal attackGoal;
     private UnitBowAttackGoal<? extends LivingEntity> rangedAttackGoal;
     private MeleeAttackBuildingGoal attackBuildingGoal;
+    private RangedAttackBuildingGoal<?> rangedAttackBuildingGoal;   // with the bow it shoots buildings (lovish Nov 5)
 
     public LivingEntity getFollowTarget() { return followTarget; }
     public boolean getHoldPosition() { return holdPosition; }
@@ -163,9 +164,9 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
         }
     }
     public BlockPos getAttackMoveTarget() { return attackMoveTarget; }
-    public boolean canAttackBuildings() {return getAttackBuildingGoal() != null && !isUsingBow();}
+    public boolean canAttackBuildings() {return getAttackBuildingGoal() != null;}
     public Goal getAttackGoal() { return isUsingBow() ? rangedAttackGoal : attackGoal; }
-    public Goal getAttackBuildingGoal() { return attackBuildingGoal; }
+    public Goal getAttackBuildingGoal() { return isUsingBow() ? rangedAttackBuildingGoal : attackBuildingGoal; }
     public void setAttackMoveTarget(@Nullable BlockPos bp) { this.attackMoveTarget = bp; }
     public void setFollowTarget(@Nullable LivingEntity target) { this.followTarget = target; }
 
@@ -227,6 +228,13 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
     }
 
     public void swapWeapons(boolean useBow) {
+        // a building attack in hand ends with the weapon that made it: the other weapon's goal takes the next order
+        if (useBow != isUsingBow()) {
+            if (attackBuildingGoal != null && attackBuildingGoal.getBuildingTarget() != null)
+                attackBuildingGoal.stopAttacking();
+            if (rangedAttackBuildingGoal != null && rangedAttackBuildingGoal.getBuildingTarget() != null)
+                rangedAttackBuildingGoal.stop();
+        }
         Item weapon = useBow ? Items.BOW : Items.STONE_SWORD;
         int damageMod = 0;
         ItemStack weaponStack = new ItemStack(weapon);
@@ -388,6 +396,7 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
         this.attackGoal = new MeleeAttackUnitGoal(this, true);
         this.rangedAttackGoal = new UnitBowAttackGoal<>(this);
         this.attackBuildingGoal = new MeleeAttackBuildingGoal(this);
+        this.rangedAttackBuildingGoal = new RangedAttackBuildingGoal<>(this, this.rangedAttackGoal);
         this.returnResourcesGoal = new ReturnResourcesGoal(this);
     }
 
@@ -417,6 +426,25 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
 
     protected AbstractArrow getArrow(ItemStack pArrowStack, float pVelocity) {
         return ProjectileUtil.getMobArrow(this, pArrowStack, pVelocity);
+    }
+
+    // a building's block (RangedAttackBuildingGoal): the same arrow as at a unit, aimed at a point; it chips the
+    // building it lands on (AbstractArrowMixin -> RangedBuildingHit)
+    @Override
+    public void performUnitRangedAttack(double x, double y, double z, float velocity) {
+        ItemStack itemstack = this.getProjectile(this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this,
+                (item) -> item instanceof BowItem
+        )));
+        AbstractArrow abstractarrow = this.getArrow(itemstack, velocity);
+        if (this.getMainHandItem().getItem() instanceof BowItem)
+            abstractarrow = ((BowItem) this.getMainHandItem().getItem()).customArrow(abstractarrow);
+        double d0 = x - this.getX();
+        double d1 = y - abstractarrow.getY();
+        double d2 = z - this.getZ();
+        double d3 = Math.sqrt(d0 * d0 + d2 * d2);
+        abstractarrow.shoot(d0, d1 + d3 * 0.2, d2, 1.6F, 0);
+        this.playSound(SoundEvents.SKELETON_SHOOT, 3.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
+        this.level().addFreshEntity(abstractarrow);
     }
 
     @Override

@@ -227,11 +227,11 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.WITCH_UNIT.get(), FieldMedicRenderer::new);
         // the Dome Cleric: the human body since Oct 21 (tools/gen_cleric.py -> tools/dsl_to_game.py)
         evt.registerEntityRenderer(EntityRegistrar.EVOKER_UNIT.get(), DomeClericRenderer::new);
-        // the Angel Caller on the Dome Cleric's body and its angels on the vex's, tinted per kind (placeholders)
+        // the Angel Caller on the Dome Cleric's body; its angels on their own generated bodies (tools/gen_angels.py b4)
         evt.registerEntityRenderer(EntityRegistrar.ANGEL_CALLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelCallerRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.MENDER_ANGEL_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.SERAPH_ARCHER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.SWORD_SERAPH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.MENDER_ANGEL_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::mender);
+        evt.registerEntityRenderer(EntityRegistrar.SERAPH_ARCHER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::archer);
+        evt.registerEntityRenderer(EntityRegistrar.SWORD_SERAPH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::sword);
         evt.registerEntityRenderer(EntityRegistrar.ENDERMAN_UNIT.get(), EndermanRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WARDEN_UNIT.get(), WardenRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.RAVAGER_UNIT.get(), RavagerRenderer::new);
@@ -452,6 +452,12 @@ public class ClientModEvents {
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel::createBodyLayer);
         // the four Sunforged men off the villager body (Oct 21, tools/human_kit.py)
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.MenderAngelModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.MenderAngelModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.SeraphArcherModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.SeraphArcherModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.SwordSeraphModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.SwordSeraphModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.DomeClericModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.DomeClericModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.RoyalArchitectModel.LAYER_LOCATION,

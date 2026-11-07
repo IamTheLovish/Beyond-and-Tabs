@@ -2719,6 +2719,18 @@ public final class EyesDirector {
         // (optional 6th / 7th entries: the close zoom's factor, and how far the dummies stand), and the zoom is wider so the
         // rack, the crew's lean and the four rockets leaving it share one frame
         { "RocketBatteryUnit", "07zm_rocket_battery_close", "07zn_rocket_battery_walk", "07zo_rocket_battery_volley", "rocket_battery_unit", "1.7", "9" },
+        // the rest of the Sunforged roster (Nov 6, White Angels art lane): the Angel Caller and its three angels, the
+        // casters and the T3 Sun Colossus had no close-up, so no blind sweep could rank them against the line infantry
+        // above. All are stand-ins (none of them is in the tour's army); the angels hover at their flight height
+        { "AngelCallerUnit", "07sf_angel_caller_close", "07sf_angel_caller_walk", "07sf_angel_caller_fight", "angel_caller_unit" },
+        { "SwordSeraphUnit", "07sf_sword_seraph_close", "07sf_sword_seraph_fly", "07sf_sword_seraph_attack", "sword_seraph_unit" },
+        { "SeraphArcherUnit", "07sf_seraph_archer_close", "07sf_seraph_archer_fly", "07sf_seraph_archer_shoot", "seraph_archer_unit" },
+        { "MenderAngelUnit", "07sf_mender_angel_close", "07sf_mender_angel_fly", "07sf_mender_angel_fight", "mender_angel_unit" },
+        { "EvokerUnit", "07sf_dome_cleric_close", "07sf_dome_cleric_walk", "07sf_dome_cleric_fight", "evoker_unit" },
+        { "WindcallerUnit", "07sf_windcaller_close", "07sf_windcaller_walk", "07sf_windcaller_fight", "windcaller_unit" },
+        { "RoyalGuardUnit", "07sf_royal_guard_close", "07sf_royal_guard_walk", "07sf_royal_guard_attack", "royal_guard_unit" },
+        { "EnchanterUnit", "07sf_enchanter_close", "07sf_enchanter_walk", "07sf_enchanter_fight", "enchanter_unit" },
+        { "SunColossusUnit", "07sf_sun_colossus_close", "07sf_sun_colossus_walk", "07sf_sun_colossus_attack", "sun_colossus_unit" },
         // the Tithe Binder rig (PR #549): hover bob, the orbiting weapon wheel, soul chains and the volley need to be
         // seen moving in the game, not judged from offline sheets; its stand-in starts with 6 bound weapons (the trailing
         // nbt entry), so the wheel and the count halo are on screen

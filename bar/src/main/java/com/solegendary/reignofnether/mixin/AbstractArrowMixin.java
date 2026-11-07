@@ -332,30 +332,19 @@ public abstract class AbstractArrowMixin extends Projectile {
         }
     }
 
-    /** An archer's arrow (or a Headhunter's trident) chips an enemy building it lands on (lovish Oct 20: archers walked
-     *  into point defences instead of shooting them). Pierce is weak against stone: ARROW_BUILDING_MULT of the
-     *  shooter's damage, through the same multipliers a melee blow uses. The projectile is spent on the hit. */
-    @Unique
-    private static final float reignofnether$ARROW_BUILDING_MULT = 0.5f;
-
+    /** A unit's arrow (or a Headhunter's trident) chips an enemy building it lands on (lovish Oct 20: archers walked
+     *  into point defences instead of shooting them; Nov 5: every archer, not four kinds), through the one shared rule
+     *  for ranged shots on buildings, RangedBuildingHit. The projectile is spent on the hit. A mounted Pillager's bolt
+     *  has already exploded on the block above (onExplosion takes the building damage), so it is not counted twice. */
     @Unique
     private boolean reignofnether$hitsEnemyBuilding(BlockHitResult pResult) {
         Entity owner = this.getOwner();
-        if (!(owner instanceof AttackerUnit aUnit) || owner.level().isClientSide())
+        if (owner == null || owner.level().isClientSide())
             return false;
-        if (!(owner instanceof com.solegendary.reignofnether.unit.units.verdant.ThornbowUnit
-                || owner instanceof com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit
-                || owner instanceof com.solegendary.reignofnether.unit.units.monsters.StrayUnit
-                || owner instanceof com.solegendary.reignofnether.unit.units.piglins.HeadhunterUnit))
+        if (owner instanceof PillagerUnit pUnit && pUnit.isPassenger())
             return false;
-        BuildingPlacement building = com.solegendary.reignofnether.building.BuildingUtils.findBuilding(false, pResult.getBlockPos());
-        if (building == null || !building.isAttackable() || building.ownerName == null)
+        if (!com.solegendary.reignofnether.building.RangedBuildingHit.hit(owner, pResult.getBlockPos()))
             return false;
-        String shooter = ((Unit) aUnit).getOwnerName();
-        if (building.ownerName.equals(shooter) || AlliancesServerEvents.isAllied(shooter, building.ownerName))
-            return false;
-        building.destroyRandomBlocks(aUnit.getUnitAttackDamage() * building.getMeleeDamageMult()
-                * aUnit.getBuildingDamageMultiplier() * reignofnether$ARROW_BUILDING_MULT, owner);
         ((AbstractArrow) (Object) this).discard();
         return true;
     }
