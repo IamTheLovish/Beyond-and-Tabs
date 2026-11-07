@@ -104,10 +104,13 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
             SplitPasses split = model instanceof SplitPasses sp ? sp : null;
             if (split != null)
                 split.beginPass(split.teamParts());
+            // the team cloth's pass, announced to the instanced unit bodies (unit/modelling/instancing/Instancer)
+            com.solegendary.reignofnether.unit.modelling.instancing.Instancer.tag(MipRenderTypes.body(team));
             try {
                 model.renderToBuffer(pose, buffers.getBuffer(MipRenderTypes.body(team)), light,
                         LivingEntityRenderer.getOverlayCoords(entity, 0f), dr, dg, db, 1f);
             } finally {
+                com.solegendary.reignofnether.unit.modelling.instancing.Instancer.untag();
                 if (split != null)
                     split.endPass(split.teamParts());
             }

@@ -44,6 +44,9 @@ public final class AnimProfile {
     private static final long[] animNs = new long[RING], renderNs = new long[RING];
     private static int head = 0, filled = 0;
     private static int ticks = 0;
+    /** Unit renders in the view (not a shader pack's shadow map) since the game started: the eyes army scene's count. */
+    private static long viewUnitsLifetime = 0;
+    private static long typeLineFrames0 = 0;   // FrameParts' frame count at the last [AnimTypes] line
 
     /** The renderer starts drawing a unit (nested renders - a passenger drawn by its mount - count in the outer one). */
     public static void beginRender(LivingEntity entity) {
@@ -77,7 +80,12 @@ public final class AnimProfile {
             frameRenderNs += took;
             frameUnits++;
             // the [FrameParts] line counts the unit bodies too: the view and the shader pack's shadow map apart
-            FrameParts.add(UnitLod.inShadowPass() ? FrameParts.UNIT_SHADOW : FrameParts.UNIT_BODIES, took);
+            boolean shadow = UnitLod.inShadowPass();
+            FrameParts.add(shadow ? FrameParts.UNIT_SHADOW : FrameParts.UNIT_BODIES, took);
+            if (!shadow) {   // and by type ([AnimTypes]): which bodies the view's frame is spent on
+                UnitTypeCost.add(entity.getType(), took);
+                viewUnitsLifetime++;
+            }
         }
         if (depth < 0)
             depth = 0;
@@ -116,6 +124,25 @@ public final class AnimProfile {
         String line = summary();
         if (line != null)
             ReignOfNether.LOGGER.info(line);
+        long frames = FrameParts.framesLifetime();
+        String types = UnitTypeCost.windowLine(frames - typeLineFrames0, AnimProfile::typeName);
+        typeLineFrames0 = frames;
+        if (types != null)
+            ReignOfNether.LOGGER.info(types);
+    }
+
+    /** Unit renders in the view since the game started (client thread). */
+    public static long viewUnitsLifetime() {
+        return viewUnitsLifetime;
+    }
+
+    /** An entity type's registry path ("vindicator_unit"), the [AnimTypes] line's name for it. */
+    public static String typeName(Object type) {
+        if (type instanceof net.minecraft.world.entity.EntityType<?> t) {
+            net.minecraft.resources.ResourceLocation key = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(t);
+            return key == null ? String.valueOf(t) : key.getPath();
+        }
+        return String.valueOf(type);
     }
 
     /** The profile of the kept frames, or null when no unit was drawn since the last summary. */

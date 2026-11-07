@@ -87,6 +87,14 @@ on:
         description: "Overlay cost instead of the tour: 500 units + 1,700 buildings, stills at mid / strategic zoom, frame and per-handler ms at zoom 30 and 200 (EyesDirector scene 18). Runs side by side; each adds folder <build sha>-<run id>/ to branch eyes-overlays"
         type: boolean
         default: false
+      army:
+        description: "Big-army cost instead of the tour: 100 / 300 / 600 units of seven types under the camera, frame and unit-body ms by type at zoom 30 and 60, the instanced bodies on / off in one run, and the paused-frame parity check (EyesDirector scene 21). Runs side by side; each adds folder <build sha>-<run id>/ to branch eyes-army"
+        type: boolean
+        default: false
+      army_embeddium:
+        description: "With army: keep Embeddium (and Oculus, no shader pack) in the plain lane - the renderer lovish and the testers run - instead of vanilla's"
+        type: boolean
+        default: false
       overlay_mix:
         description: "With overlays: type:count - the first count of the 500 units are this unit instead, 12 blocks up (e.g. bone_dragon_unit:12), to weigh one model's frame cost before / after"
         default: ""
@@ -140,7 +148,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.keep_only && format('keep-{0}-', github.run_id) || '' }}${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.heroes && 'heroes-' || '' }}${{ inputs.forming && 'forming-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.mist && 'mist-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.keep_only && format('keep-{0}-', github.run_id) || '' }}${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.army && format('army-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.heroes && 'heroes-' || '' }}${{ inputs.forming && 'forming-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.mist && 'mist-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -150,10 +158,12 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.heroes && 5 || inputs.forming && 8 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.army && 2 || inputs.heroes && 5 || inputs.forming && 8 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
       SCARS: ${{ inputs.scars && '1' || '0' }}
       FOG: ${{ inputs.fog && '1' || '0' }}
       OVERLAYS: ${{ inputs.overlays && '1' || '0' }}
+      ARMY: ${{ inputs.army && '1' || '0' }}
+      ARMY_EMBEDDIUM: ${{ (inputs.army && inputs.army_embeddium) && '1' || '0' }}
       HEROES: ${{ inputs.heroes && '1' || '0' }}
       FORMING: ${{ inputs.forming && '1' || '0' }}
       OVERLAY_MIX: ${{ inputs.overlay_mix || '' }}
@@ -170,7 +180,7 @@ jobs:
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
       # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders; a valley mist pilot run -mist)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}{4}', inputs.overlays && 'eyes-overlays' || inputs.heroes && 'eyes-heroes' || inputs.forming && 'eyes-forming' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), format('{0}{1}', (inputs.shaders && inputs.shader_pack == 'ours') && '-ours' || '', inputs.pack == 'none' && '-nopack' || ''), (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '', inputs.mist && '-mist' || '') }}
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}{4}', inputs.overlays && 'eyes-overlays' || inputs.army && 'eyes-army' || inputs.heroes && 'eyes-heroes' || inputs.forming && 'eyes-forming' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), format('{0}{1}', (inputs.shaders && inputs.shader_pack == 'ours') && '-ours' || '', inputs.pack == 'none' && '-nopack' || ''), (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '', inputs.mist && '-mist' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -247,7 +257,8 @@ jobs:
               # meant for the testers' renderer
               # a structure-photo run keeps it too (Oct 22: the plain lane crashed at RenderSystem init - Oculus's
               # BufferBuilder mixin without Embeddium, runs 39838786995 / 39840043629 - and testers run Embeddium)
-              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1' or bool(os.environ.get('STRUCTURES'))
+              # an army run with army_embeddium keeps it too: the instanced bodies are measured on lovish's renderer
+              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1' or bool(os.environ.get('STRUCTURES')) or os.environ.get('ARMY_EMBEDDIUM') == '1'
               # ... and Oculus goes with Embeddium: since the tester pack ships it (#132) the plain lane loaded Oculus
               # without Embeddium and every tour died at RenderSystem init (MixinTransformerError, run 39722557903)
               skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'oculus', 'immediatelyfast', 'e4mc')
@@ -337,6 +348,9 @@ jobs:
             echo "::error::overlay_mix must be type:count (e.g. bone_dragon_unit:12), not '$OVERLAY_MIX'"; exit 1
           fi
           echo "EYES_JVM_EXTRA=-Dbat.eyes.overlays=true${OVERLAY_MIX:+ -Dbat.eyes.overlays.mix=$OVERLAY_MIX}" >> "$GITHUB_ENV"
+      - name: Army scene only (dispatch input `army`; EyesDirector scene 21)
+        if: env.ARMY == '1'
+        run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.army=true' >> "$GITHUB_ENV"
       - name: Heroes scene only (dispatch input `heroes`; EyesDirector scene 19)
         if: env.HEROES == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.heroes=true' >> "$GITHUB_ENV"
@@ -589,30 +603,32 @@ jobs:
             EYES_BRANCH="eyes-keep-${GITHUB_RUN_ID}"
             echo "::notice::[Eyes] keep_only: $n stills on branch $EYES_BRANCH"
           fi
-          if [ "${OVERLAYS:-0}" = "1" ]; then
-            # overlays runs go side by side (a before / after is several at once), so each ADDS its own folder
+          if [ "${OVERLAYS:-0}" = "1" ] || [ "${ARMY:-0}" = "1" ]; then
+            # overlays (and army) runs go side by side (a before / after is several at once), so each ADDS its own folder
             # <build sha>-<run id>/ to eyes-overlays instead of replacing the branch: fetch, commit, push, and on a race
             # (another run pushed first) fetch again - a force push of a snapshot lost one of six runs (39703134278)
             dest="${BUILD_SHA::7}-${GITHUB_RUN_ID}"
+            pub="eyes-overlays"
+            if [ "${ARMY:-0}" = "1" ]; then pub="eyes-army"; fi
             url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
             pushed=0
             for attempt in 1 2 3 4 5 6; do
               rm -rf "$RUNNER_TEMP/pub" && mkdir -p "$RUNNER_TEMP/pub"
               ( cd "$RUNNER_TEMP/pub"
-                git init -q -b eyes-overlays
+                git init -q -b "$pub"
                 git config user.name "eyes-bot"
                 git config user.email "eyes-bot@users.noreply.github.com"
-                if git fetch -q --depth=1 "$url" eyes-overlays 2>/dev/null; then git checkout -q -B eyes-overlays FETCH_HEAD; fi
+                if git fetch -q --depth=1 "$url" "$pub" 2>/dev/null; then git checkout -q -B "$pub" FETCH_HEAD; fi
                 mkdir -p "$dest"
                 cp "$GITHUB_WORKSPACE"/out/*.png "$GITHUB_WORKSPACE"/out/eyes-lines.txt "$GITHUB_WORKSPACE"/out/mem.log "$dest"/ 2>/dev/null || true
                 echo "- $dest: build ${BUILD_SHA::7} (build run ${BUILD_RUN:-bar-dev}), eyes run $GITHUB_RUN_ID, $(date -u +%FT%TZ)" >> README.md
                 git add -A
-                git commit -q -m "Eyes overlays: $dest"
-                git push -q "$url" eyes-overlays ) && { pushed=1; break; }
+                git commit -q -m "Eyes $pub: $dest"
+                git push -q "$url" "$pub" ) && { pushed=1; break; }
               sleep $((attempt * 5))
             done
-            [ "$pushed" = 1 ] && echo "::notice::[Eyes] 18_overlays published to eyes-overlays/$dest" \
-              || echo "::warning::[Eyes] eyes-overlays/$dest not pushed after 6 tries; the stills are in this run's artifact"
+            [ "$pushed" = 1 ] && echo "::notice::[Eyes] published to $pub/$dest" \
+              || echo "::warning::[Eyes] $pub/$dest not pushed after 6 tries; the stills are in this run's artifact"
           else
             cd out
             git init -q -b "$EYES_BRANCH"
@@ -623,11 +639,11 @@ jobs:
             git commit -q -m "Eyes: screenshots for ${BUILD_SHA::7}"
             git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$EYES_BRANCH"
           fi
-      - name: Keep an overlays run's stills and full log as an artifact too
-        if: always() && env.OVERLAYS == '1'
+      - name: Keep an overlays (or army) run's stills and full log as an artifact too
+        if: always() && (env.OVERLAYS == '1' || env.ARMY == '1')
         uses: actions/upload-artifact@v4
         with:
-          name: eyes-overlays-${{ github.run_id }}
+          name: ${{ env.ARMY == '1' && 'eyes-army' || 'eyes-overlays' }}-${{ github.run_id }}
           path: |
             out/*.png
             out/eyes-lines.txt
@@ -655,6 +671,14 @@ jobs:
             # the two summary lines (a step shows at most 10 notices; the slices are in eyes-lines.txt in the artifact)
             grep -h "18_overlays zoom" out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -2 | sed 's/^/::notice::/' || true
             [ "$got" -ge 3 ] || { echo "::error::only $got overlays stills (expected 3)"; exit 1; }
+          fi
+          if [ "${ARMY:-0}" = "1" ]; then   # an army run: its stills, its summary lines and the parity verdicts
+            got=$(find out -name 'bat_eyes_21_army*.png' | wc -l)
+            ls out | grep '^bat_eyes_21_' | sed 's/^/::notice::[Eyes] still /' || true
+            echo "::notice::[Eyes] 21_army tested the jar of build ${BUILD_SHA::7} (run ${BUILD_RUN:-bar-dev}), Embeddium kept: ${ARMY_EMBEDDIUM}"
+            grep -hE "21_army (ratio|parity|vertex parity)" out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -8 | sed 's/^/::notice::/' || true
+            [ "$got" -ge 2 ] || { echo "::error::only $got army stills (expected >= 2)"; exit 1; }
+            if grep -qE "21_army (vertex )?parity: FAIL" out/latest.log 2>/dev/null; then echo "::error::21_army parity FAIL (see eyes-lines.txt)"; exit 1; fi
           fi
           if [ "${HEROES:-0}" = "1" ]; then   # a heroes run: the five stills of scene 19 (each hero's state is in the log)
             got=$(find out -name 'bat_eyes_19_heroes_*.png' | wc -l)

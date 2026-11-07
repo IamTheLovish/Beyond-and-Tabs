@@ -481,6 +481,7 @@ public class ClientModEvents {
     public static void registerShaders(RegisterShadersEvent evt) {
         com.solegendary.reignofnether.postfx.WorldLookPass.registerShader(evt);
         com.solegendary.reignofnether.ambient.mist.MistPass.registerShader(evt);   // the valley mist's volume (r6)
+        com.solegendary.reignofnether.unit.modelling.instancing.InstancedBodies.registerShaders(evt);   // instanced bodies
     }
 
     @SubscribeEvent

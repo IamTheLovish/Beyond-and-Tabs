@@ -211,6 +211,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (EyesArmyScene.ONLY) {   // an army run (eyes.yml input `army`): only scene 21, then the end
+                        step = STEP_ARMY;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -301,6 +306,19 @@ public final class EyesDirector {
                     done = EyesFormingScene.tick(mc);
                 } catch (Exception e) {
                     ReignOfNether.LOGGER.error("[Eyes] 20_forming failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
+            case STEP_ARMY -> {
+                boolean done;
+                try {
+                    done = EyesArmyScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 21_army failed at tick {}, ending the tour", ticks, e);
                     done = true;
                 }
                 if (done) {
@@ -617,6 +635,7 @@ public final class EyesDirector {
     static final int STEP_HEROES = 24;            // 19_heroes, EyesHeroesScene: its own run only (input `heroes`)
     static final boolean HEROES_ONLY = Boolean.getBoolean("bat.eyes.heroes");
     static final int STEP_FORMING = 25;           // 20_forming, EyesFormingScene: its own run only (input `forming`)
+    static final int STEP_ARMY = 26;              // 21_army, EyesArmyScene: its own run only (input `army`)
     static final boolean FORMING_ONLY = Boolean.getBoolean("bat.eyes.forming");
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
     private static int scarsPhase = 0;
