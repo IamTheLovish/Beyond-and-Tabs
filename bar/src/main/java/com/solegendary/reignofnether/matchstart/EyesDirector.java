@@ -2478,6 +2478,11 @@ public final class EyesDirector {
         // (optional 6th / 7th entries: the close zoom's factor, and how far the dummies stand), and the zoom is wider so the
         // rack, the crew's lean and the four rockets leaving it share one frame
         { "RocketBatteryUnit", "07zm_rocket_battery_close", "07zn_rocket_battery_walk", "07zo_rocket_battery_volley", "rocket_battery_unit", "1.7", "9" },
+        // the Light Grid's Builder Drone (Nov 6, design/ai_faction.md): the hover rig's bob, lean and bank, the arms'
+        // strike and the team light lines; then the Sunforged Field Mason, the best generated constructor body, in the
+        // same run as its yardstick (a critic compares the two inside one tour, never across runs)
+        { "ShipwrightUnit", "07zp_builder_drone_close", "07zq_builder_drone_walk", "07zr_builder_drone_attack", "shipwright_unit" },
+        { "FieldMasonUnit", "07zs_field_mason_close", "07zt_field_mason_walk", "07zu_field_mason_attack", "field_mason_unit" },
     };
     private static int closeUpSubject = 0;
     private static int lookOffAt = -1;               // 02b: tick of the look-off still (the world-look A/B)
