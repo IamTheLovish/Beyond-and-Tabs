@@ -571,6 +571,11 @@ public class DuelGameTests {
 
     static void runDuels(GameTestHelper helper, List<Spec> specs, int offsetX, String resultFile) {
         ServerLevel level = helper.getLevel();
+        // The pads are open sky: undead burn by day, so an unpinned clock decided the Gravebound rows (the same
+        // Zombie went 22-6 and 3-25 between runs). Night by default; BAT_DUEL_TIME=day measures the sunlit case.
+        level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DAYLIGHT).set(false, level.getServer());
+        level.setDayTime("day".equals(System.getenv("BAT_DUEL_TIME")) ? 6000L : 18000L);
+        ReignOfNether.LOGGER.info("[DuelClock] day time " + level.getDayTime());
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
         int baseChunkX = (origin.getX() + offsetX) >> 4, baseChunkZ = (origin.getZ() + 3000) >> 4;
         List<Duel> duels = new ArrayList<>();

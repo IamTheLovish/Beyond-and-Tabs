@@ -288,7 +288,9 @@ jobs:
       - name: Duel simulator results (measurement only)
         if: always()
         run: |   # only in the shard that ran the duel simulator (no false "no duel results" warning elsewhere)
-          [ ! -f bar/run-gametest/duel_results.json ] || python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
+          # duel_matrix and duel_counters run in separate shards, so each shard has only its own result file
+          f=bar/run-gametest/duel_results.json; [ -f "$f" ] || f=bar/run-gametest/duel_results_counters.json
+          [ ! -f "$f" ] || python3 tools/duel_summary.py "$f" || true
       - name: Keep this shard's test list (bar-audit proves every test ran once; per-test wall times for re-balancing)
         if: always()
         run: |
@@ -341,7 +343,9 @@ jobs:
       - name: Duel simulator results (measurement only)
         if: always()
         run: |   # only in the shard that ran the duel simulator (no false "no duel results" warning elsewhere)
-          [ ! -f bar/run-gametest/duel_results.json ] || python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
+          # duel_matrix and duel_counters run in separate shards, so each shard has only its own result file
+          f=bar/run-gametest/duel_results.json; [ -f "$f" ] || f=bar/run-gametest/duel_results_counters.json
+          [ ! -f "$f" ] || python3 tools/duel_summary.py "$f" || true
       - name: Keep this shard's test list (bar-audit proves every test ran once; per-test wall times for re-balancing)
         if: always()
         run: |
