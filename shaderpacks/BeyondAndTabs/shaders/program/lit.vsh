@@ -25,6 +25,7 @@ varying vec3 viewPos;
 varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
+varying float leaf;                    // 1 on leaves (block.properties ID_LEAVES): lit as foliage (lit.fsh, LEAF_LIGHT)
 varying float gust;                    // the wind's gust on a plant (lib/wind.glsl: 0.3 = calm, no sheen)
 varying float asDrawn;
 varying float waterBody;              // 1 on water itself (block.properties), 0 on glass, ice and the rest of
@@ -91,8 +92,10 @@ void main() {
 #endif
 #ifdef LIT_TERRAIN
     foliage = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 || abs(mc_Entity.x - ID_FOLIAGE_UPPER) < 0.5 ? 1.0 : 0.0;
+    leaf = abs(mc_Entity.x - ID_LEAVES) < 0.5 ? 1.0 : 0.0;
 #else
     foliage = 0.0;
+    leaf = 0.0;
 #endif
 #ifdef LIT_WATER
     waterBody = abs(mc_Entity.x - ID_WATER) < 0.5 ? 1.0 : 0.0;

@@ -12,6 +12,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -91,6 +92,11 @@ public class BuildingBlockData {
             if (bs.getBlock() != Blocks.WATER || bs.getFluidState().isSource())
                 blocks.add(new BuildingBlock(bp, bs, bNbt));
         }
+        // lay order (LayOrder): layer by layer, full cubes first - the file's own order laid a vine before the pier it
+        // hangs on, and the stair set beside it next knocked it off (GameTest
+        // a_vine_listed_before_its_support_still_stands_once_laid)
+        LayOrder.sort(blocks, b -> b.getBlockPos().getY(),
+            b -> b.getBlockState().isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO));
         return blocks;
     }
 

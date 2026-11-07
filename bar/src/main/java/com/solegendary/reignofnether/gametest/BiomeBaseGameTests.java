@@ -76,7 +76,7 @@ public class BiomeBaseGameTests {
     // ---------------------------------------------------------------------------------------------- the tables
 
     /** Every structure a building can wear: its own, its levels' (labs) and its upgrade's (extractor T2, graveyard). */
-    private static Set<String> structuresOf(Building b) {
+    static Set<String> structuresOf(Building b) {
         Set<String> out = new HashSet<>();
         if (b.structureName == null)
             return out;
