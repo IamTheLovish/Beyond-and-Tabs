@@ -24,10 +24,10 @@ THE STORY: the wreck-salvagers build their warships on a sideways-launching slip
 bow to the west (the camera's left), its stern and the striped tower at the north-east (the far corner: the tallest
 thing hides nothing), the launching basin along the south face, and the yard - where units are trained - between them.
   L1 THE SLIP - the hull on the stocks, half built: stone keel blocks lift it so daylight shows under the keel; a dark
-     prismarine bilge strake and one strake of mangrove planking, and above it the bare red FRAMES (stripped mangrove
-     ribs with thin fence beams across their heads) - a ship's skeleton; the stem curling forward; timber shores
-     under the camera side. At the stern a striped crane house (the lighthouse motif's first stage) whose jib lowers
-     a timber on a chain into the hull. The basin: five still sources walled by a dark-prismarine rim and a
+     prismarine bilge strake and a dark-oak WALE, and above it the bare bleached FRAMES (birch driftwood ribs with thin
+     fence beams across their heads, the bow and stern frames a block taller than midships: a sheer) - a ship's
+     skeleton; the stem curling forward; timber shores under the camera side. At the stern a striped crane house (the
+     lighthouse motif's first stage) whose bleached-driftwood jib lowers a timber on a chain into the hull. The basin: five still sources walled by a dark-prismarine rim and a
      cut-sandstone quay with sea-lantern corners; the ground ways (flush driftwood in the floor) run from under the
      hull to the water and dip into it as stairs; a rope boom between two lantern bollards. The yard: barrels, a kelp
      bale, driftwood baulks, dead coral and a spare iron anchor standing on its crown.
@@ -82,6 +82,7 @@ DP, PR, PB = "dark_prismarine", "prismarine", "prismarine_bricks"
 SS, CS, CHS = "smooth_sandstone", "cut_sandstone", "chiseled_sandstone"
 DOP, MAP = "dark_oak_planks", "mangrove_planks"
 SDL, SML = "stripped_dark_oak_log", "stripped_mangrove_log"
+SBL = "stripped_birch_log"                 # sun-bleached driftwood (the crane; the frames get it through PALETTE)
 ROPE = "dark_oak_fence"
 LAMP = "sea_lantern"
 BAND = {1: DP, 2: CS, 3: CS, 4: PB, 5: PB, 6: CS, 7: CS, 8: PB, 9: PB, 10: CS, 11: CS, 12: PB, 13: PB, 14: CS}
@@ -163,19 +164,23 @@ def hull_l1(r):
     for x in range(2, 7):
         r.st(x, 2, 0, "south", "top", "dark_prismarine_stairs")
         r.st(x, 2, 3, "north", "top", "dark_prismarine_stairs")
-    # the first strake of mangrove planking (y3) and the hold's floor inside it - the rest is still bare frames
+    # the WALE (y3): one dark strake of dark oak the length of the hull, and the hold's floor inside it - the rest is
+    # still bare frames. Nov 4 review (the palette pass's critics: "pale frames merge with the sandstone yard - a dark
+    # strake between the frames would edge them"): the strake was pale planking (birch 0.52 on the camera under birch
+    # ribs 0.60, a 0.07 step - one pale slab); dark oak (0.20) puts a 0.40 step under every rib, as the capitol's hull
+    # bands do (bilge, planking, a dark wale), and keeps the weathering order - dark and wet low, bleached high.
     for x in range(2, 7):
-        r.set(x, 3, 0, MAP)
-        r.set(x, 3, 3, MAP)
+        r.set(x, 3, 0, DOP)
+        r.set(x, 3, 3, DOP)
         for z in (1, 2):
             r.set(x, 3, z, DOP)
     # the bow: two wide, its cheeks stepping in, the stem rising and curling forward
     for z in (1, 2):
-        r.set(1, 3, z, MAP)
+        r.set(1, 3, z, DOP)
         r.st(0, 2, z, "east")                    # the forefoot
-        r.set(0, 3, z, MAP)
+        r.set(0, 3, z, DOP)
     for z, f in ((0, "south"), (3, "north")):
-        r.st(1, 3, z, f, "top", "mangrove_stairs")
+        r.st(1, 3, z, f, "top", "dark_oak_stairs")
     for y in (4, 5, 6):
         r.log(0, y, 2, SDL, "y")
     r.log(0, 4, 1, SDL, "y")
@@ -184,19 +189,23 @@ def hull_l1(r):
     for z in (1, 2):
         r.set(1, 4, z, ROPE)
         r.set(1, 5, z, ROPE)
-    # the frames: ribs of stripped mangrove (the red driftwood) rising from the strake at every other x, thin fence
-    # beams across their heads; the bays between them open, so the hull reads as a skeleton on the stocks
+    # the frames: ribs of bleached driftwood (stripped mangrove, recoloured birch by PALETTE) rising from the wale at
+    # every other x, thin fence beams across their heads; the bays between them open, so the hull reads as a skeleton
+    # on the stocks. THE SHEER (Nov 4 review - critics: "the hull reads as a row of posts, not a ship"): the bow and
+    # stern frames stand a block taller than the midship frame (heads 7 / 6 / 7), so the rail line dips amidships and
+    # rises at both ends - the one line every ship has, and the one a 7-block hull can draw at 28 px per block.
     for x in (2, 4, 6):
+        head = 6 if x == 4 else 7
         for z in (0, 3):
-            for y in (4, 5):
+            for y in range(4, head):
                 r.log(x, y, z, SML, "y")
-            r.set(x, 6, z, ROPE)
+            r.set(x, head, z, ROPE)
         for z in (1, 2):
-            r.set(x, 6, z, ROPE)
-    r.lantern(2, 7, 3)                          # a work lamp on the foremost frame head (it stays at every level)
-    # the sternpost
+            r.set(x, head, z, ROPE)
+    r.lantern(4, 7, 3)                          # a work lamp on the midship frame head (it stays at every level)
+    # the sternpost, topping the stern frame
     for z in (1, 2):
-        for y in (4, 5, 6):
+        for y in (4, 5, 6, 7):
             r.log(6, y, z, SDL, "y")
     # a ribband: one batten of dark oak tying the frames along the camera side at mid height
     for x in (3, 5):
@@ -218,11 +227,14 @@ def tower_l1(r):
     for x in (7, 8):
         for z in (0, 1):
             r.slab(x, 7, z, "dark_prismarine_slab")
-    # the crane: a mast on the tower, the jib reaching west over the stern, a chain lowering a timber
+    # the crane: a mast on the tower, the jib reaching west over the stern, a chain lowering a timber. Its timbers are
+    # bleached driftwood (Nov 4 review - critics: "the crane reads as a gallows and its dark-oak beam tops the
+    # silhouette (value inverted)"): the tallest timber of the lab was its darkest (stripped dark oak, 0.22 on the
+    # camera); sun-bleached birch (0.72) puts the pale where the weather is and lets the dark sit low in the hull.
     for y in range(7, 11):
-        r.log(8, y, 1, SDL, "y")
+        r.log(8, y, 1, SBL, "y")
     for x in range(5, 8):
-        r.log(x, 10, 1, SDL, "x")
+        r.log(x, 10, 1, SBL, "x")
     for y in (7, 8, 9):
         r.chain(5, y, 1)
     r.log(5, 6, 1, SML, "x")
@@ -267,7 +279,9 @@ def draw_l1(r):
 # ============================================================================================================== L2
 def hull_l2(r):
     """The hull planked up and decked: the wale over the first strake, exposed ribs between glowing portholes (the
-    capitol's hull bands), a bulwark and a rope rail, the deck over the frames."""
+    capitol's hull bands), a bulwark the ribs rise through as timberheads (Nov 4 review: two portholes under one
+    continuous dark bulwark read as a face on the camera - eyes under a brow; broken into bays it is a rhythm), a rope
+    rail, the deck over the frames."""
     for x in range(1, 7):
         for z in (0, 3):
             if x == 1:
@@ -276,7 +290,9 @@ def hull_l2(r):
             r.log(x, 4, z, SDL, "x")                         # the wale
             if x % 2:
                 r.set(x, 5, z, LAMP if z == 3 else MAP)      # portholes between the ribs on the camera side
-            r.set(x, 6, z, DOP)                              # the bulwark
+                r.set(x, 6, z, DOP)                          # the bulwark, a bay between the timberheads
+            else:
+                r.log(x, 6, z, SML, "y")                     # the rib rises through the bulwark as a timberhead
             if x < 5 and r.get(x, 7, z)[0] == "air":
                 r.set(x, 7, z, ROPE)                         # the rope rail
         for z in (1, 2):
@@ -288,9 +304,12 @@ def hull_l2(r):
         r.set(1, 6, z, DOP)
         r.set(1, 7, z, ROPE)
     r.set(0, 7, 1, ROPE)                                     # the bow's rail closes round the stem head
-    # the gunwale cap overhangs the camera side (never over the spawn column x 4)
-    for x in (1, 2, 3, 5, 6):
+    # the gunwale cap overhangs the camera side (never over the spawn column x 4); the bow and stern timberheads
+    # stand proud of it (the cap is what the camera sees of the y 6 row - it hid the bulwark's bays)
+    for x in (1, 3, 5):
         r.st(x, 6, 4, "north", "top", "dark_oak_stairs")
+    for x in (2, 6):
+        r.log(x, 6, 4, SML, "y")
 
 
 def mainmast_l2(r):
