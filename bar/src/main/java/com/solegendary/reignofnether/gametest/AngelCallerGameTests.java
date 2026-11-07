@@ -1062,7 +1062,7 @@ public class AngelCallerGameTests {
      * wind-up cue when it draws and its contact cue on the release, aimed at that enemy - so the client winds the draw
      * up before the release. Its own setup is asserted: the enemy really was hurt.
      */
-    @GameTest(template = ARENA, timeoutTicks = 240, batch = "angel_caller_archer_cue")
+    @GameTest(template = ARENA, timeoutTicks = 240 + ArenaReady.READY_WAIT, batch = "angel_caller_archer_cue")
     public static void angel_caller_seraph_archer_steps_its_cues_when_it_draws_and_fires(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "archercue"), foeOwner = owner(helper, "archercuefoe");
@@ -1079,13 +1079,14 @@ public class AngelCallerGameTests {
         float foeStart = foe.getHealth();
         int[] windup = { 0 }, contact = { 0 }, target = { -1 };
         boolean[] hurt = { false };
-        helper.runAfterDelay(cast, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(cast, () -> {
             click(level, caster, CallAngel.Kind.ARCHER);
             List<AngelUnit> as = angels(caster, CallAngel.Kind.ARCHER);
             angel[0] = as.isEmpty() ? null : as.get(0);
         });
         for (int t = cast + 5; t < end; t += 5)
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 AngelUnit a = angel[0];
                 if (a == null || hurt[0])
                     return;
@@ -1096,7 +1097,7 @@ public class AngelCallerGameTests {
                     target[0] = a.getCueTargetId();
                 }
             });
-        helper.runAfterDelay(end, () -> {
+        line.at(end, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (angel[0] == null)
@@ -1117,13 +1118,14 @@ public class AngelCallerGameTests {
             }
             finish(helper, problems);
         });
+        line.startForOrders(helper, List.of(caster, foe), () -> cleanUp(caster, units, List.of()));
     }
 
     /**
      * A Mender Angel that heals a hurt friend steps its contact cue, aimed at that friend. Its own setup is asserted:
      * the friend's health really went up.
      */
-    @GameTest(template = ARENA, timeoutTicks = 200, batch = "angel_caller_mender_cue")
+    @GameTest(template = ARENA, timeoutTicks = 200 + ArenaReady.READY_WAIT, batch = "angel_caller_mender_cue")
     public static void angel_caller_mender_angel_steps_its_cue_when_it_heals(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "mendercue");
@@ -1141,13 +1143,14 @@ public class AngelCallerGameTests {
         AngelUnit[] angel = { null };
         int[] contact = { 0 }, target = { -1 };
         boolean[] healed = { false };
-        helper.runAfterDelay(cast, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(cast, () -> {
             click(level, caster, CallAngel.Kind.MENDER);
             List<AngelUnit> as = angels(caster, CallAngel.Kind.MENDER);
             angel[0] = as.isEmpty() ? null : as.get(0);
         });
         for (int t = cast + 5; t < end; t += 5)
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 AngelUnit a = angel[0];
                 if (a == null || healed[0])
                     return;
@@ -1157,7 +1160,7 @@ public class AngelCallerGameTests {
                     target[0] = a.getCueTargetId();
                 }
             });
-        helper.runAfterDelay(end, () -> {
+        line.at(end, () -> {
             List<String> problems = new ArrayList<>();
             try {
                 if (angel[0] == null)
@@ -1176,5 +1179,6 @@ public class AngelCallerGameTests {
             }
             finish(helper, problems);
         });
+        line.startForOrders(helper, List.of(caster, friend), () -> cleanUp(caster, units, List.of()));
     }
 }
