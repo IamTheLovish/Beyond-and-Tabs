@@ -957,7 +957,7 @@ public class AngelCallerGameTests {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "sword"), foeOwner = owner(helper, "swordfoe");
         // STUB ONLY, never ships (#566 paired stub): the caster is set up exactly as caller() does, but it joins the level
-        // only after 6000 ms of real time - for those 6 s it is not in the level and cannot tick, what an arena whose
+        // only at test tick 300 - for those 300 ticks it is not in the level and cannot tick, what an arena whose
         // entity section is not entity-ticking yet does to it
         Mob caster = EntityRegistrar.ANGEL_CALLER_UNIT.get().create(level);
         List<Mob> units = new ArrayList<>();
@@ -974,7 +974,7 @@ public class AngelCallerGameTests {
         final long stubSince = System.nanoTime();
         final boolean[] stubAdded = { false };
         helper.onEachTick(() -> {
-            if (!stubAdded[0] && System.nanoTime() - stubSince >= 6_000_000_000L) {
+            if (!stubAdded[0] && helper.getTick() >= 300) {
                 stubAdded[0] = true;
                 level.addFreshEntity(caster);
             }
