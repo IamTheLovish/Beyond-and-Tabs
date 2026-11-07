@@ -5,7 +5,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -98,4 +100,18 @@ func ensureHighGPU(p gamePaths) string {
 	msg := "Game set to use the high-performance GPU"
 	fmt.Println(msg+":", exe)
 	return msg
+}
+
+// gameIsRunning: Prism starts the game as Java running org.prismlauncher.EntryPoint with this instance's natives folder
+// (instances/<name>/natives) on its command line. The packwiz update runs a plain -jar, so it never counts.
+func gameIsRunning(p gamePaths) bool {
+	q := `Get-CimInstance Win32_Process -Filter "Name='javaw.exe' or Name='java.exe'" | Where-Object { $_.CommandLine -like '*org.prismlauncher.EntryPoint*' -and $_.CommandLine -like ('*' + $env:BAT_INST + '*') } | Measure-Object | ForEach-Object Count`
+	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", q)
+	cmd.Env = append(os.Environ(), "BAT_INST=instances/"+instanceName+"/")
+	hideWindow(cmd)
+	out, err := cmd.Output()
+	if err != nil {
+		return false // the check is a convenience: if PowerShell fails, the update runs and reports its own error
+	}
+	return strings.TrimSpace(string(out)) != "0" && strings.TrimSpace(string(out)) != ""
 }

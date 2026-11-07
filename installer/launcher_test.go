@@ -320,6 +320,7 @@ func TestPlayUpdatesVerifiesAndLaunches(t *testing.T) {
 		close(l.ready)
 		l.packwiz = fake
 		l.launchPrism = func() error { launched++; return nil }
+		l.gameRunning = func() bool { return false }
 		return l
 	}
 
@@ -542,5 +543,45 @@ func TestWindowSizeIsLogical(t *testing.T) {
 		if w, h := windowSize(c.dpi); w != c.w || h != c.h {
 			t.Errorf("dpi %d: got %dx%d want %dx%d", c.dpi, w, h, c.w, c.h)
 		}
+	}
+}
+
+// Oct 26: PLAY hung for 10+ min - the open game held a resource pack, packwiz opened a dialog the launcher had hidden.
+func TestHeadlessArgsAddsNoGuiBeforeTheURL(t *testing.T) {
+	in := []string{"-jar", "packwiz-installer-bootstrap.jar", packTomlURL}
+	got := strings.Join(headlessArgs(in), "|")
+	if got != "-jar|packwiz-installer-bootstrap.jar|-g|"+packTomlURL {
+		t.Fatalf("headless args: %q", got)
+	}
+	if strings.Join(in, "|") != "-jar|packwiz-installer-bootstrap.jar|"+packTomlURL {
+		t.Fatalf("the instance's own args must not change: %q", in)
+	}
+	again := []string{"-jar", "packwiz-installer-bootstrap.jar", "-g", packTomlURL}
+	if strings.Join(headlessArgs(again), "|") != strings.Join(again, "|") {
+		t.Fatalf("-g must not be added twice: %q", headlessArgs(again))
+	}
+}
+
+func TestPlayRefusesWhileTheGameIsOpen(t *testing.T) {
+	p := newGamePaths(t.TempDir())
+	if err := os.MkdirAll(filepath.Dir(p.prismExe), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p.prismExe, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	l := newLauncher(p, &ghClient{base: "http://127.0.0.1:1", client: &http.Client{}})
+	l.once.Do(func() {})
+	l.state = pageState{PackSha: "f5775f8"}
+	close(l.ready)
+	fake := &fakePackwiz{}
+	l.packwiz = fake
+	launched := 0
+	l.launchPrism = func() error { launched++; return nil }
+	l.gameRunning = func() bool { return true }
+	res, err := l.play()
+	if err != nil || res.Launched || launched != 0 || fake.calls != 0 || res.Level != "warn" ||
+		!strings.Contains(res.Text, "close it, then press PLAY") {
+		t.Fatalf("an open game must stop PLAY before the update: res=%+v err=%v calls=%d launched=%d", res, err, fake.calls, launched)
 	}
 }
