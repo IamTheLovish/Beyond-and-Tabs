@@ -43,6 +43,8 @@ public class BlowTimingGameTests {
     static final int CHOP_HIT = 4;
     /** The Mossback Bison's horn toss: the drive key at P 0.55 of its 16-tick clip (animations/Quadruped). */
     static final int BISON_HIT = 9;
+    /** The Sword Seraph's cut (tools/angel_anim.py, the client AngelRig): the blade's contact is tick 10 of its clip. */
+    static final int SERAPH_CUT_HIT = 10;
 
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void zombie_blow_lands_on_its_arm_swing(GameTestHelper helper) {
@@ -74,6 +76,12 @@ public class BlowTimingGameTests {
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void mossback_bison_blow_lands_on_its_horn_drive(GameTestHelper helper) {
         blowTest(helper, "bison", EntityRegistrar.MOSSBACK_BISON_UNIT.get(), BISON_HIT, Upset.NONE);
+    }
+
+    /** The Sword Seraph's blade reaches the target at the cut's contact tick, not on the swing that starts the wind-up. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void sword_seraph_blow_lands_on_its_cut(GameTestHelper helper) {
+        blowTest(helper, "seraph", EntityRegistrar.SWORD_SERAPH_UNIT.get(), SERAPH_CUT_HIT, Upset.NONE);
     }
 
     /** The iron golem's swing starts on the damage event (entity event 4): its blow must not be held as well. */
