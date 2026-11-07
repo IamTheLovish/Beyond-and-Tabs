@@ -66,7 +66,7 @@ class WaterR1(unittest.TestCase):
 
     def test_the_bed_shows_through(self):
         # critic r0: alpha 0.7-0.8 so the bed shows; test_water_palette keeps the bed under a quarter (>= 0.75)
-        a = float(np.mean(self.alpha))
+        a = round(float(np.mean(self.alpha)), 3)   # 0.80 is stored as 204/255
         self.assertTrue(0.75 <= a <= 0.80, "alpha %.2f" % a)
 
     def test_frames_hold_one_value(self):

@@ -6255,7 +6255,12 @@ def rts_view(alb, ppb=RTS_PPB, blocks=8, tint=None, seed=1, rotate=True):
 # loop): ripple layers drift a whole number of tiles per loop, so the strip loops without a seam.
 # alpha 0.71 -> 0.85 (environment palette, Oct 29): at 0.71 the sand bed was 29% of every water pixel and lifted the
 # river to the lawn's value (eyes r54: water 0.42 vs lawn 0.32) - it read as a painted strip, not water lying low
-WATER = dict(luma=0.68, std=0.064, alpha=0.85, frames=32, frametime=2, tilt=10.0, smooth=230, f0=5)
+# r1 (Nov 7, texture pack lane; tools/test_water_r1.py): blind critic r0 scored the river 3/10, "denim". The tile is
+# drawn unturned on every block, so its pattern repeats each block: std 0.064 -> 0.019 quiets that repeat to ~4% at the
+# camera (the ripple stays in the normal map for the shader); alpha 0.85 -> 0.80 lets the bed's own variation show
+# through; luma 0.68 -> 0.47 puts open water at camera ~0.25 (no shader: 0.96x the model, eyes 81f2c5c), a clear step
+# under the lawn's 0.41 instead of 0.31
+WATER = dict(luma=0.47, std=0.019, alpha=0.80, frames=32, frametime=2, tilt=10.0, smooth=230, f0=5)
 # (lo, hi cycles per tile, slope, weight, tiles moved per loop along u, along v)
 STILL_LAYERS = ((2, 5, 1.0, 1.0, 1, 0), (4, 10, 0.8, 0.6, 0, 1), (5, 12, 0.8, 0.5, -1, 1), (12, 28, 0.5, 0.25, 2, -1))
 # Flowing water (round 9): vanilla's flow texture is drawn at half scale (2 blocks per tile) and turned so v points
