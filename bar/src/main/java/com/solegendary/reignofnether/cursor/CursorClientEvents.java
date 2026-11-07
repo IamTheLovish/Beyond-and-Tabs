@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
+import com.solegendary.reignofnether.building.FogPlacement;
 import com.solegendary.reignofnether.blocks.RangeIndicator;
 import com.solegendary.reignofnether.building.addon.RangeIndicatorAddon;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
@@ -77,6 +78,8 @@ public class CursorClientEvents {
     // pos of cursor exactly on: first non-air block, last frame, near to screen, far from screen
     private static Vector3d cursorWorldPos = new Vector3d(0, 0, 0);
     private static Vector3d cursorWorldPosLast = new Vector3d(0, 0, 0);
+    // the height of the last block the cursor ray hit: a miss lands on this plane (FogPlacement); NaN = none yet
+    private static double lastGroundY = Double.NaN;
     // pos of cursor on screen for box selections
     private static Vec2 cursorLeftClickDownPos = new Vec2(-1, -1);
     private static Vec2 cursorLeftClickDragPos = new Vec2(-1, -1);
@@ -387,7 +390,20 @@ public class CursorClientEvents {
         // only spend time doing refining calcs for if we actually moved the cursor (or if this is the first time)
         if (cursorWorldPos.x != cursorWorldPosLast.x || cursorWorldPos.y != cursorWorldPosLast.y || cursorWorldPos.z != cursorWorldPosLast.z) {
 
-            Vec3 hitPos = getRefinedCursorWorldPos(cursorWorldPosNear, cursorWorldPosFar);
+            // a miss (ground the client was never sent reads as air) used to return the ray's far end, 200 blocks
+            // underground, and the building ghost vanished there: land on the plane of the last real hit instead
+            // (FogPlacement). Nothing of the hidden chunk is read, so nothing leaks.
+            Vec3 hitPos = cursorRayHit(cursorWorldPosNear, cursorWorldPosFar);
+            if (hitPos != null) {
+                lastGroundY = hitPos.y;
+            } else {
+                if (Double.isNaN(lastGroundY) && MC.level != null)
+                    lastGroundY = MC.level.getSeaLevel();
+                double[] p = FogPlacement.rayToPlaneY(cursorWorldPosNear.x, cursorWorldPosNear.y, cursorWorldPosNear.z,
+                        lookVector.x, lookVector.y, lookVector.z, lastGroundY);
+                hitPos = p != null ? new Vec3(p[0], p[1], p[2])
+                        : new Vec3(cursorWorldPosLast.x, cursorWorldPosLast.y, cursorWorldPosLast.z);
+            }
             cursorWorldPos = new Vector3d(hitPos.x, hitPos.y, hitPos.z);
             preselectedBlockPos = new BlockPos((int) Math.floor(hitPos.x), (int) Math.floor(hitPos.y), (int) Math.floor(hitPos.z));
 
@@ -721,18 +737,27 @@ public class CursorClientEvents {
 
     // returns the exact spot that the cursorWorldPos ray meets a solid block
     public static Vec3 getRefinedCursorWorldPos(Vector3d cursorWorldPosNear, Vector3d cursorWorldPosFar) {
-        Vec3 vectorNear = new Vec3(cursorWorldPosNear.x, cursorWorldPosNear.y, cursorWorldPosNear.z);
-        Vec3 vectorFar = new Vec3(cursorWorldPosFar.x, cursorWorldPosFar.y, cursorWorldPosFar.z);
-
-        // clip() returns the point of clip, not the clipped block giving off-by-one errors so move slightly to compensate
-        HitResult hitResult = null;
-        if (MC.level != null) {
-            hitResult = clip(MC.level, new ClipContext(vectorNear, vectorFar, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, null));
-        }
-
+        BlockHitResult hitResult = clipCursorRay(cursorWorldPosNear, cursorWorldPosFar);
         if (hitResult != null)
             return hitResult.getLocation().add(new Vec3(-0.001, -0.001, -0.001));
         return new Vec3(0, 0, 0);
+    }
+
+    /** As getRefinedCursorWorldPos, but null when the ray hits no block (a miss, not the ray's far end). */
+    public static Vec3 cursorRayHit(Vector3d cursorWorldPosNear, Vector3d cursorWorldPosFar) {
+        BlockHitResult hitResult = clipCursorRay(cursorWorldPosNear, cursorWorldPosFar);
+        if (hitResult == null || hitResult.getType() == HitResult.Type.MISS)
+            return null;
+        return hitResult.getLocation().add(new Vec3(-0.001, -0.001, -0.001));
+    }
+
+    // clip() returns the point of clip, not the clipped block giving off-by-one errors, so callers move slightly to compensate
+    private static BlockHitResult clipCursorRay(Vector3d cursorWorldPosNear, Vector3d cursorWorldPosFar) {
+        if (MC.level == null)
+            return null;
+        Vec3 vectorNear = new Vec3(cursorWorldPosNear.x, cursorWorldPosNear.y, cursorWorldPosNear.z);
+        Vec3 vectorFar = new Vec3(cursorWorldPosFar.x, cursorWorldPosFar.y, cursorWorldPosFar.z);
+        return clip(MC.level, new ClipContext(vectorNear, vectorFar, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, null));
     }
 
     // from ClientLevel.clip() but added exception for leaf blocks

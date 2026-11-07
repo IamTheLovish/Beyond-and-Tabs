@@ -292,10 +292,13 @@ public class BuildingClientEvents {
         if (buildingToPlace == null || MC.player == null)
             return;
 
-        boolean valid = BuildingValidators.isPlacementValid(
+        String error = BuildingValidators.getPlacementValidityError(
                 MC.level, buildingToPlace, originPos, MC.player.getName().getString(), buildingRotation,
                 isBridgeDiagonal(), SandboxClientEvents.isSandboxPlayer(), true
         );
+        // ground the client was never sent (fog): it cannot judge it, the server will (FogPlacement)
+        boolean valid = error == null || FogPlacement.clientDefers(error,
+                !BuildingValidators.isInBrightChunk(MC.level, ghostCursor(), MC.player.getName().getString()));
         lastGhostValid = valid;
         boolean yellowUnderline = buildingToPlace instanceof PortalBasic && !BuildingValidators.isOnNetherBlocks(MC.level, blocksToDraw, originPos, false);
         drawBuilding(blocksToDraw, matrix, originPos, forceColour, valid, yellowUnderline);
@@ -677,8 +680,9 @@ public class BuildingClientEvents {
             String errorMsgKey = BuildingValidators.getPlacementValidityError(
                     MC.level, buildingToPlace, originPos, MC.player.getName().getString(), buildingRotation, isBridgeDiagonal(), SandboxClientEvents.isSandboxPlayer(), true
             );
-            boolean valid = errorMsgKey == null;
             boolean inFog = !BuildingValidators.isInBrightChunk(MC.level, preSelPos, MC.player.getName().getString());
+            // fogged ground the client has no blocks for: send the order, the server checks the real terrain
+            boolean valid = errorMsgKey == null || FogPlacement.clientDefers(errorMsgKey, inFog);
 
             if (errorMsgKey != null && errorMsgKey.equals("building.reignofnether.build_centre_here")) {
                 OrthoviewClientEvents.forceMoveCam(TutorialClientEvents.BUILD_CAM_POS, 50);
