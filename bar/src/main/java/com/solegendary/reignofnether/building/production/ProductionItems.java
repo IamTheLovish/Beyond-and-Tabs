@@ -252,6 +252,7 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.hero.HeroReviveProd ARCH_ENGINEER_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "arch_engineer_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.ARCH_ENGINEER, EntityRegistrar.ARCH_ENGINEER_UNIT));
     // big-units (design/big_units.md): the T2 beasts
     public static final com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd ORIFLAMME_ELEPHANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "oriflamme_elephant"), new com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd());
+    public static final com.solegendary.reignofnether.unit.units.villagers.SunlanceTrebuchetProd SUNLANCE_TREBUCHET = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sunlance_trebuchet"), new com.solegendary.reignofnether.unit.units.villagers.SunlanceTrebuchetProd());
     public static final com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd GOREHORN_RHINO = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gorehorn_rhino"), new com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd());
     public static final com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd OSSUARY_BEHEMOTH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ossuary_behemoth"), new com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd());
     public static final com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd MOSSBACK_BISON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mossback_bison"), new com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd());
@@ -435,6 +436,7 @@ public class ProductionItems {
         ARCH_ENGINEER_REVIVE,
         IRON_LEVIATHAN_ENGINE,
         ORIFLAMME_ELEPHANT,
+        SUNLANCE_TREBUCHET,
         GOREHORN_RHINO,
         OSSUARY_BEHEMOTH,
         MOSSBACK_BISON,

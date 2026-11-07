@@ -302,6 +302,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_DRONE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkDroneRenderer::new);
         // big-units: the T2 beasts
         evt.registerEntityRenderer(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.OriflammeElephantRenderer::new);
+        // the Sunlance Trebuchet: the lobber's illager body and its own skin until the art lane draws the engine
+        evt.registerEntityRenderer(EntityRegistrar.SUNLANCE_TREBUCHET_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SiegeLobberRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GOREHORN_RHINO_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GorehornRhinoRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.OssuaryBehemothRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MOSSBACK_BISON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MossbackBisonRenderer::new);

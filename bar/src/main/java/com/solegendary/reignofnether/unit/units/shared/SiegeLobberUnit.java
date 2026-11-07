@@ -350,18 +350,33 @@ public class SiegeLobberUnit extends Pillager implements Unit, AttackerUnit, Ran
         if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(this))
             return false;   // still setting up after moving (FieldArtillery)
         double dx = x - getX(), dz = z - getZ();
-        if (dx * dx + dz * dz < SiegeTuning.MIN_RANGE * SiegeTuning.MIN_RANGE)
+        if (dx * dx + dz * dz < getMinRange() * getMinRange())
             return false;
-        BombardShell shell = new BombardShell(level(), this, getUnitAttackDamage()).asLobberShell(SiegeTuning.SPLASH_RADIUS,
-            SiegeTuning.FLIGHT_TICKS, BombardShell.BUILDING_DAMAGE_MULT * getBuildingDamageMultiplier());
+        BombardShell shell = new BombardShell(level(), this, getUnitAttackDamage()).asLobberShell(shellSplash(),
+            shellFlightTicks(), BombardShell.BUILDING_DAMAGE_MULT * getBuildingDamageMultiplier());
         shell.setPos(getX(), getEyeY() + 0.3, getZ());
         shell.aimAt(x, y, z);
         level().addFreshEntity(shell);
-        this.playSound(SoundEvents.GENERIC_EXPLODE, 0.8F, 1.9F + getRandom().nextFloat() * 0.2F);
         if (level() instanceof ServerLevel sl)
-            sl.sendParticles(net.minecraft.core.particles.ParticleTypes.POOF, getX(), getEyeY() + 0.4, getZ(), 4, 0.15, 0.15, 0.15, 0.02);
+            launchFx(sl);
         getMainHandItem().setDamageValue(0);
         return true;
+    }
+
+    /** The shell's splash against units. A siege unit built on this frame (the Soul Pyre) sets its own. */
+    protected float shellSplash() {
+        return SiegeTuning.SPLASH_RADIUS;
+    }
+
+    /** The shell's time in the air, whatever the range. */
+    protected int shellFlightTicks() {
+        return SiegeTuning.FLIGHT_TICKS;
+    }
+
+    /** The launch's sound and puff. */
+    protected void launchFx(ServerLevel sl) {
+        this.playSound(SoundEvents.GENERIC_EXPLODE, 0.8F, 1.9F + getRandom().nextFloat() * 0.2F);
+        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.POOF, getX(), getEyeY() + 0.4, getZ(), 4, 0.15, 0.15, 0.15, 0.02);
     }
 
     /**

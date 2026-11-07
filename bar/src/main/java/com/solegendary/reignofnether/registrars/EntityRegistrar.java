@@ -1127,6 +1127,12 @@ public class EntityRegistrar {
                     .sized(2.6f, 3.6f)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "oriflamme_elephant_unit").toString()));
+    // the Sunlance Trebuchet (design/defences_tiers.md): Sunforged's T2 siege unit, on the siege lobber's frame (placeholder body)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.villagers.SunlanceTrebuchetUnit>> SUNLANCE_TREBUCHET_UNIT = ENTITIES.register("sunlance_trebuchet_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.villagers.SunlanceTrebuchetUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sunlance_trebuchet_unit").toString()));
     // Alex's Mobs' rhinoceros (RenderRhinoceros) drawn x1.35
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoUnit>> GOREHORN_RHINO_UNIT = ENTITIES.register("gorehorn_rhino_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoUnit::new, MobCategory.CREATURE)
@@ -1364,6 +1370,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd.itemName -> EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineProd.itemName -> EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get();
             case com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd.itemName -> EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.villagers.SunlanceTrebuchetProd.itemName -> EntityRegistrar.SUNLANCE_TREBUCHET_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd.itemName -> EntityRegistrar.GOREHORN_RHINO_UNIT.get();
             case com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd.itemName -> EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd.itemName -> EntityRegistrar.MOSSBACK_BISON_UNIT.get();
