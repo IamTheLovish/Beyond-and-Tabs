@@ -56,8 +56,8 @@ import java.util.Optional;
 
 /**
  * Stormcallers artillery - the <b>Rocket Battery</b> (design/stormcallers_plan.md, slice 2): a crew on the pillager body
- * (its own skin, RocketBatteryRenderer) with a rack of copper lightning rods that fires charged bolts (the storm reskin: the
- * rack reloads and charges before each volley, RocketCharge; each bolt leaves the tip of its own rod, RocketRackGeometry). Every {@link #attacksPerSecond}-paced attack is
+ * (its own skin, RocketBatteryRenderer) with a rack of compact copper tubes that fires charged bolts (the storm reskin: the
+ * rack reloads and charges before each volley, RocketCharge; each bolt leaves the muzzle of its own tube, RocketRackGeometry). Every {@link #attacksPerSecond}-paced attack is
  * a <b>volley</b>: {@link #VOLLEY_ROCKETS} small rockets, a few ticks apart, each aimed at a random spot within
  * {@link #VOLLEY_SPREAD} blocks of the target and each a {@link RocketShell} (a {@link BombardShell} with its own quick,
  * flat flight, look and burst: Nov 5) on a solved arc that bursts for {@link #attackDamage} splash (never terrain). Range {@link #attackRange}, blind inside {@link #MIN_RANGE}; Attack
@@ -305,16 +305,16 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
     static final net.minecraft.core.particles.DustParticleOptions CHARGE_MOTE =
         new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.42f, 0.72f, 1.0f), 0.7f);
 
-    /** Client: while the rack charges for the next volley the loaded rods crackle with blue motes, more the nearer it is. */
+    /** Client: while the rack charges for the next volley the loaded tubes crackle with blue motes, more the nearer it is. */
     private void crackle() {
         float charge = RocketCharge.charge(getReloadTicks(), isEngaged());
         if (charge <= 0.05f || getLaunchTicks() > 0)
             return;
         float tilt = RocketRackGeometry.REST_TILT + RocketRackGeometry.LIFT_TILT * charge;
-        for (int rod = 0; rod < RocketRackGeometry.RODS; rod++) {
+        for (int tube = 0; tube < RocketRackGeometry.TUBES; tube++) {
             if (getRandom().nextFloat() > 0.1f + 0.35f * charge)
                 continue;
-            double[] tip = RocketRackGeometry.tipWorld(getX(), getY(), getZ(), yBodyRot, rod, tilt);
+            double[] tip = RocketRackGeometry.muzzleWorld(getX(), getY(), getZ(), yBodyRot, tube, tilt);
             level().addParticle(CHARGE_MOTE, tip[0], tip[1], tip[2],
                 (getRandom().nextDouble() - 0.5) * 0.1, 0.03 + getRandom().nextDouble() * 0.06, (getRandom().nextDouble() - 0.5) * 0.1);
         }
@@ -419,7 +419,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         double dx = x - getX(), dz = z - getZ();
         if (dx * dx + dz * dz < MIN_RANGE * MIN_RANGE)
             return false;
-        nextRod = 0;
+        nextTube = 0;
         for (int i = 0; i < VOLLEY_ROCKETS; i++) {
             if (i == 0)
                 fireRocket(x, y, z, true);
@@ -445,8 +445,8 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         }
         // the bolt is the projectile: BarFx follows it (it classes a RocketShell K_BOLT) with the muzzle arc on launch,
         // a jagged electric trail in flight and a thunderclap on impact, so nothing else is drawn beside it
-        // each bolt leaves the tip of its own rod, the rod the model draws it on (RocketRackGeometry), not the crew's hat
-        double[] tip = RocketRackGeometry.tipWorld(getX(), getY(), getZ(), yBodyRot, nextRod++ % RocketRackGeometry.RODS, RocketRackGeometry.FIRE_TILT);
+        // each bolt leaves the muzzle of its own tube, the tube the model draws it in (RocketRackGeometry), not the crew's hat
+        double[] tip = RocketRackGeometry.muzzleWorld(getX(), getY(), getZ(), yBodyRot, nextTube++ % RocketRackGeometry.TUBES, RocketRackGeometry.FIRE_TILT);
         RocketShell shell = new RocketShell(sl, this, getUnitAttackDamage());
         shell.setPos(tip[0], tip[1], tip[2]);
         shell.aimAt(tx, y, tz);
@@ -456,8 +456,8 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
             sl.playSound(null, blockPosition(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.NEUTRAL, 0.5F, 1.7F + getRandom().nextFloat() * 0.4F);
     }
 
-    /** The rod the next rocket of this volley leaves from (reset by each volley). */
-    private int nextRod = 0;
+    /** The tube the next rocket of this volley leaves from (reset by each volley). */
+    private int nextTube = 0;
 
     // a gunner, not an illager: healing heals and raid/bad-omen logic leaves it alone
     @Override

@@ -298,7 +298,7 @@ public final class BarFxClient {
             }
             case BarFx.K_MAGIC -> flash(mx, my, mz, .55f, .14f, tint(0xC8A0FF, faction));
             case BarFx.K_BOLT -> {
-                // a short blue arc off the rod tip; kept short and blue so four launches read as four beats, not a
+                // a short blue arc off the muzzle; kept short and blue so four launches read as four beats, not a
                 // cloud over the rack
                 flash(mx, my, mz, .55f, .14f, BOLT_GLOW);
                 sparks(mx, my, mz, 4, 3f, BOLT_DEEP, ux, uz);

@@ -9,7 +9,7 @@
                            on the rod tips (electric blue, no white-hot middle)
 
 The Stormcallers keep red lacquer, gold and jade on their units and buildings; the artillery reads as lightning on top of
-that (lovish, Nov 5: "a frame of copper lightning rods ... charged bolts with a jagged electric-blue trail"). The UV
+that (lovish, Nov 5: "charged bolts with a jagged electric-blue trail"; Nov 7: "B: copper tubes"). The UV
 regions are those of the models' CubeListBuilder boxes: a box of (w, h, d) at (u, v) covers 2d+2w by d+h texels, laid out
 top | bottom | (left, front, right, back) as Minecraft does.
 
@@ -105,41 +105,57 @@ def rocket(rng):
 
 def rack(rng):
     img = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
-    # back frame bar 11x3x2 at (0, 0): copper, a lit top edge, rivets in the front face
-    for name, (x0, y0, x1, y1) in box_faces(0, 0, 11, 3, 2).items():
-        k = {"top": 1.2, "bottom": 0.65}.get(name, 1.0)
-        noisy(img, x0, y0, x1, y1, shade(COPPER, k), rng)
-        if name in ("front", "back"):
-            fill(img, x0, y0, x1, y0 + 1, shade(COPPER_L, k))
-            for x in range(x0 + 1, x1, 3):
-                img.putpixel((x, y0 + 1), shade(SOOT_D, 1.2) + (255,))
-    # back plate 9x6x1 at (0, 6): darker copper with a verdigris bloom
-    for name, (x0, y0, x1, y1) in box_faces(0, 6, 9, 6, 1).items():
+    # back plate 9x10x1 at (0, 0): darker copper with a verdigris bloom and a rivet row under the top edge
+    for name, (x0, y0, x1, y1) in box_faces(0, 0, 9, 10, 1).items():
         k = {"top": 1.1, "bottom": 0.6}.get(name, 0.9)
         noisy(img, x0, y0, x1, y1, shade(COPPER_D, k), rng, 0.1)
         if name in ("front", "back"):
             for _ in range(10):
-                px, py = rng.randrange(x0, x1), rng.randrange(y0 + 1, y1)
+                px, py = rng.randrange(x0, x1), rng.randrange(y0 + 2, y1)
                 img.putpixel((px, py), shade(VERDI_D, k) + (255,))
-    # rods 2x20x2 at (28, 0): copper with a lit side, verdigris creeping up from the foot, the tip rows bright
-    for name, (x0, y0, x1, y1) in box_faces(28, 0, 2, 20, 2).items():
-        k = {"top": 1.3, "bottom": 0.6, "left": 0.8, "right": 1.15}.get(name, 1.0)
+            for x in range(x0 + 1, x1, 3):
+                img.putpixel((x, y0 + 1), shade(SOOT_D, 1.2) + (255,))
+    # yoke 15x2x3 at (0, 17): copper with a lit top edge
+    for name, (x0, y0, x1, y1) in box_faces(0, 17, 15, 2, 3).items():
+        k = {"top": 1.2, "bottom": 0.65}.get(name, 1.0)
+        noisy(img, x0, y0, x1, y1, shade(COPPER, k), rng)
+        if name in ("front", "back", "left", "right"):
+            fill(img, x0, y0, x1, y0 + 1, shade(COPPER_L, k))
+    # tubes 3x12x3 at (22, 0): polished copper with a lit side and a glint, verdigris creeping up from the foot; the top
+    # face (inside the ring) is the dark bore
+    for name, (x0, y0, x1, y1) in box_faces(22, 0, 3, 12, 3).items():
+        k = {"top": 1.0, "bottom": 0.6, "left": 0.8, "right": 1.15}.get(name, 1.0)
+        if name == "top":
+            fill(img, x0, y0, x1, y1, SOOT_D)
+            continue
         noisy(img, x0, y0, x1, y1, shade(COPPER, k), rng, 0.07)
         if name in ("left", "front", "right", "back"):
-            for y in range(y1 - 5, y1):
-                fill(img, x0, y, x1, y + 1, shade(VERDI, k * (0.9 + 0.05 * (y - (y1 - 5)))))
-            fill(img, x0, y0, x1, y0 + 2, shade(COPPER_L, k))
-    # collars 3x2x3 at (38, 0): bright copper bands
-    for name, (x0, y0, x1, y1) in box_faces(38, 0, 3, 2, 3).items():
-        k = {"top": 1.2, "bottom": 0.7}.get(name, 1.0)
+            for y in range(y1 - 3, y1):
+                fill(img, x0, y, x1, y + 1, shade(VERDI, k * (0.9 + 0.05 * (y - (y1 - 3)))))
+            for y in range(y0, y1 - 3):
+                img.putpixel((x0 + 1, y), (COPPER_GLINT if name in ("front", "right") else shade(COPPER_L, k)) + (255,))
+    # muzzle rings 4x2x4 at (36, 0): bright copper bands; the top face a ring round a dark bore
+    for name, (x0, y0, x1, y1) in box_faces(36, 0, 4, 2, 4).items():
+        k = {"top": 1.25, "bottom": 0.7}.get(name, 1.05)
         noisy(img, x0, y0, x1, y1, shade(COPPER_L, k), rng, 0.05)
-    # a bright metal glint down the middle of each rod's lit faces, so the rods read as polished copper, not wood
-    for name, (x0, y0, x1, y1) in box_faces(28, 0, 2, 20, 2).items():
-        if name in ("front", "right"):
-            for y in range(y0 + 2, y1 - 5):
-                img.putpixel((x0 + (1 if name == "right" else 0), y), COPPER_GLINT + (255,))
-    # lit part, drawn full bright: the orb on each rod tip (4x4x4 at (0, 14)), electric blue with no white-hot middle
-    glow_box(img, 0, 14, 4, 4, 4, rng, core=ORB_CORE, rim=ORB_RIM, edge=ORB_EDGE)
+        if name == "top":
+            fill(img, x0 + 1, y0 + 1, x1 - 1, y1 - 1, SOOT_D)
+        else:
+            fill(img, x0, y1 - 1, x1, y1, shade(COPPER, 0.8))
+    # straps 4x2x7 at (36, 7): dark copper bands with a rivet each side
+    for name, (x0, y0, x1, y1) in box_faces(36, 7, 4, 2, 7).items():
+        k = {"top": 1.1, "bottom": 0.6}.get(name, 0.95)
+        noisy(img, x0, y0, x1, y1, shade(COPPER_D, k * 1.15), rng, 0.06)
+        if name in ("left", "right"):
+            img.putpixel(((x0 + x1) // 2, y0), shade(COPPER_GLINT, 0.9) + (255,))
+    # lit part, drawn full bright: the charge seated in each mouth (2x3x2 at (56, 0)), electric blue with a pale crown
+    for name, (x0, y0, x1, y1) in box_faces(56, 0, 2, 3, 2).items():
+        if name in ("top", "bottom"):
+            fill(img, x0, y0, x1, y1, ORB_CORE)
+            continue
+        fill(img, x0, y0, x1, y1, ORB_RIM)
+        fill(img, x0, y0, x1, y0 + 1, ORB_CORE)
+        fill(img, x0, y1 - 1, x1, y1, ORB_EDGE)
     return img
 
 

@@ -14,7 +14,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * The Stormcallers Rocket Battery: the illager body in a red-lacquer crew coat with a gold belt (tools/gen_storm_skins.py),
- * a rack of copper lightning rods on its back as geometry (RocketRackLayer), and a launch animation - the rack charges and
+ * a rack of compact copper tubes on its back as geometry (RocketRackLayer), and a launch animation - the rack charges and
  * the arms brace on it before a volley, the crew leans back with each bolt (RocketBatteryModel). The old renderer's layers: the held bow (ItemInHandLayer) is dropped on
  * purpose - the crew carries the rack, the bow is only what UnitBowAttackGoal needs; the team colour, head, armour and
  * trim layers are the shared ones.

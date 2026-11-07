@@ -571,13 +571,13 @@ public class RocketShellGameTests {
     // ------------------------------------------------------------------------------------------ 6. where the bolts leave
 
     /**
-     * Lovish: "the rockets leave from the rack, not the hat". Each of a volley's four bolts is created at the tip of its
-     * own rod (RocketRackGeometry), the rod the model draws it on, and no two share a spot - the old launch point was one
+     * Lovish: "the rockets leave from the rack, not the hat". Each of a volley's four bolts is created at the muzzle of its
+     * own tube (RocketRackGeometry), the tube the model draws it in, and no two share a spot - the old launch point was one
      * spot above the head for all four.
      */
     @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
-    public static void rocket_shell_bolts_leave_from_the_tips_of_the_rods_not_the_hat(GameTestHelper helper) {
-        String owner = owner(helper, "rods");
+    public static void rocket_shell_bolts_leave_from_the_muzzles_of_the_tubes_not_the_hat(GameTestHelper helper) {
+        String owner = owner(helper, "tubes");
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         RocketBatteryUnit b = spawn(helper, EntityRegistrar.ROCKET_BATTERY_UNIT.get(), owner, 1.5, 8.5);
@@ -601,21 +601,22 @@ public class RocketShellGameTests {
                 for (BombardShell s : shellsOf(b))
                     if (seen.putIfAbsent(s.getUUID(), s) == null)
                         at.add(s.position());
-                for (int i = 1; i < RocketRackGeometry.RODS; i++) {
+                for (int i = 1; i < RocketRackGeometry.TUBES; i++) {
                     b.fireRocket(tx, ty, tz, false);   // the volley's later rockets, now, so each is read where it was made
                     for (BombardShell s : shellsOf(b))
                         if (seen.putIfAbsent(s.getUUID(), s) == null)
                             at.add(s.position());
                 }
-                if (at.size() != RocketRackGeometry.RODS)
-                    problems.add("expected " + RocketRackGeometry.RODS + " rockets, found " + at.size());
-                for (int i = 0; i < at.size() && i < RocketRackGeometry.RODS; i++) {
-                    double[] tip = RocketRackGeometry.tipWorld(b.getX(), b.getY(), b.getZ(), b.yBodyRot, i, RocketRackGeometry.FIRE_TILT);
+                if (at.size() != RocketRackGeometry.TUBES)
+                    problems.add("expected " + RocketRackGeometry.TUBES + " rockets, found " + at.size());
+                for (int i = 0; i < at.size() && i < RocketRackGeometry.TUBES; i++) {
+                    double[] tip = RocketRackGeometry.muzzleWorld(b.getX(), b.getY(), b.getZ(), b.yBodyRot, i, RocketRackGeometry.FIRE_TILT);
                     double miss = at.get(i).distanceTo(new Vec3(tip[0], tip[1], tip[2]));
                     if (miss > 0.1)
-                        problems.add("rocket " + i + " was made " + fmt(miss) + " blocks from the tip of rod " + i + " (at " + fmt(at.get(i).x) + "/" + fmt(at.get(i).y) + "/" + fmt(at.get(i).z) + ")");
+                        problems.add("rocket " + i + " was made " + fmt(miss) + " blocks from the muzzle of tube " + i + " (at " + fmt(at.get(i).x) + "/" + fmt(at.get(i).y) + "/" + fmt(at.get(i).z) + ")");
+                    // a pod's two tubes stand 3 px (0.19 blocks) apart; the old launch point was one spot for all four
                     for (int j = 0; j < i; j++)
-                        if (at.get(i).distanceTo(at.get(j)) < 0.3)
+                        if (at.get(i).distanceTo(at.get(j)) < 0.15)
                             problems.add("rockets " + j + " and " + i + " were made on the same spot");
                 }
             } finally {
