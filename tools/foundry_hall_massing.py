@@ -303,20 +303,80 @@ def round2(pale_walls):
 # hood: the one warm focal glow), a coal heap and rail spur in the east yard; the symmetric glows go dark (tower
 # smokers, golem faces); the orange rod "pins/ladders" stay only on the two east towers; no dark-oak rib stripes; the
 # teal corner "toy lumps" become pale andesite towers with a verdigris band; the crane ("gallows") goes ----
-def round3():
-    """The Works as shipped (Nov 2026): tools/capitol_foundry_hall.build() returns this. The generator's copper
-    constants are recoloured for the draw and restored after it."""
+def round3(deep=False):
+    """The Works (Nov 2026; deep=True: round 4's roof - tools/capitol_foundry_hall.build() returns that). The
+    generator's copper constants are recoloured for the draw and restored after it."""
     global RIBS
     saved = (F.CU, F.CU_E)
     RIBS = False
     try:
-        return _round3()
+        return _round3(deep)
     finally:
         F.CU, F.CU_E = saved
         RIBS = True
 
 
-def _round3():
+# ---- round 4 (Fable review of PR #485, Nov 4: at the RTS camera 55 % of the Works' pixels are up-faces and the roof
+# zone 38 % of them, yet the roof was two stair courses flush with the pier faces - G1 20 / 84, no eave shadow band -
+# under a pale monitor box that read as a second storey; design/architecture_rules.md 9 "the roof is the fifth
+# facade", 2 "measured: eave overhang 1 block everywhere"): a 45-degree verdigris slope FOUR courses deep from an EAVE
+# that oversails the piers (ring 6), its eave course in wet, darker weathered copper (the gutter line),
+# the courses above clean oxidized - the monitor sunk into the slope (two courses of glass
+# over its top course, the pale cap kept), a VERGE one proud on both gables. Nothing else moves (one change per
+# element per round) ----
+WET = "waxed_weathered_cut_copper"          # pack luma 0.46 against oxidized 0.55: the wet eave tone
+COURSES = {6: 9, 5: 10, 4: 11, 3: 12}       # ring -> the course's y, eave to monitor
+
+
+def deep_roof(c):
+    for x in range(-5, 6):                   # clear round 3's roof between the towers and both gable ends (the
+        for z in range(-6, 7):               # cells go, not explicit air: the nbt stays as lean as round 3's)
+            if abs(x) <= 3 or abs(z) <= 3:
+                for y in range(9, F.H):
+                    c.rig.b.pop((c.R + x, y, c.R + z), None)
+    for s in (-1, 1):
+        f = "north" if s > 0 else "south"    # the tall side inward: the slope climbs to the ridge
+        for r, y in COURSES.items():
+            for i, x in enumerate(range(-3, 4)):
+                # the eave course is the wet line - the pack's weathered copper carries rust blooms, which read as
+                # a rusty gutter in one continuous course and as brown speckle when scattered in runs (tried first)
+                c.stair(x, y, s * r, f, name=(WET if r == 6 else OX) + "_stairs")
+                for yy in range(9, y):       # sarking under the course (unseen, the roof's own colour)
+                    c.set(x, yy, s * r, OX)
+        for x in range(-3, 4):               # the monitor wall sunk into the slope: dark oak under it, a sill, glass, cap
+            for y in (9, 10, 11):
+                c.set(x, y, 2 * s, F.DO)
+            c.set(x, 12, 2 * s, PA)
+            for y in (13, 14):
+                c.set(x, y, 2 * s, "gray_stained_glass")
+            c.stair(x, 15, 2 * s, f, name=PA + "_stairs")
+            c.set(x, 15, s, F.DO)
+            c.slab(x, 16, s, PA + "_slab")
+    for x in range(-3, 4):
+        c.set(x, 16, 0, OX)                  # the ridge
+    for sx in (-1, 1):
+        x4, x5 = 4 * sx, 5 * sx
+        for z in range(-3, 4):               # round 3's string course under the gable, then the gable wall
+            c.stair(x5, 9, z, "east" if sx < 0 else "west", "top", OX + "_stairs")
+            for y in range(9, {3: 11, 2: 14, 1: 15, 0: 16}[abs(z)] + 1):
+                c.set(x4, y, z, PA)
+        for z in (-3, 3):                    # the slope's top course over the gable wall, and the verge one proud
+            f = "north" if z > 0 else "south"
+            c.stair(x4, COURSES[3], z, f, name=OX + "_stairs")
+            c.stair(x5, COURSES[3], z, f, name=OX + "_stairs")
+        for (z, y) in ((2, 15), (-2, 15), (1, 16), (-1, 16)):   # the monitor gable's rake and its verge
+            f = "north" if z > 0 else "south"
+            c.stair(x4, y, z, f, name=F.SBS)
+            c.stair(x5, y, z, f, name=PA + "_stairs")
+        c.set(x5, 16, 0, PA)
+        c.set(x4, 17, 0, "lightning_rod", facing="up", **F.ROD)
+        for z in (-1, 0, 1):                 # the vent louvre (round 2's grille) in the gable, dark oak behind it
+            for y in (12, 13):
+                c.set(x4, y, z, "iron_bars")
+                c.set(3 * sx, y, z, F.DO)
+
+
+def _round3(deep=False):
     recolour()
     c = tc.Cap(F.R, F.H)
     base(c)
@@ -363,6 +423,8 @@ def _round3():
     for x in range(-3, 4):
         for z in (-2, 2):
             c.set(x, 11, z, PA)
+    if deep:
+        deep_roof(c)
     # the works side: the east portal's head becomes a furnace hood - three lit blast furnaces at y5-6 under a soot
     # hood (the steam spot, BuildingAmbienceClientEvents), a coal heap and a rail spur running out of the portal
     for z in (-1, 0, 1):
@@ -382,13 +444,15 @@ def _round3():
             if c.get(x, 1, z)[0] in ("barrel", "dark_oak_fence", "lantern") and z != 0:
                 c.set(x, 1, z, "air")
     c.rig.settle()
-    c.rig.check_support("foundry_hall_r3")
+    c.rig.check_support("foundry_hall_r4" if deep else "foundry_hall_r3")
     return c.rig.structure()
 
 
 if __name__ == "__main__":
     out = sys.argv[1]
     for nm in sys.argv[2:] or ("works", "kiln", "recolour"):
-        s = round1("stone", OX) if nm == "r1a" else round1(OX, "stone") if nm == "r1b"             else round2(nm == "r2a") if nm in ("r2a", "r2b") else round3() if nm == "r3" else option(nm)
+        s = round1("stone", OX) if nm == "r1a" else round1(OX, "stone") if nm == "r1b" \
+            else round2(nm == "r2a") if nm in ("r2a", "r2b") else round3() if nm == "r3" \
+            else round3(deep=True) if nm == "r4" else option(nm)
         s.write(os.path.join(out, nm + ".nbt"))
         print(nm, sum(1 for i in s.blocks.values() if s.palette[i][0] != "air"))
