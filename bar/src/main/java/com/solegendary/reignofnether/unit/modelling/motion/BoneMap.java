@@ -84,6 +84,20 @@ public final class BoneMap {
         return this;
     }
 
+    /**
+     * A hovering body's death (HoverBody): only the whole body drops and tips (DeathFall#poseHover), on the same
+     * parts as the living army; {@code hoverPx} its hull's bottom at rest, {@code halfPx} its half width.
+     */
+    BoneMap fallsHovering(float hoverPx, float halfPx) {
+        fallsAsIs();
+        this.hoverPx = hoverPx;
+        this.hoverHalfPx = halfPx;
+        return this;
+    }
+
+    /** A hovering body's hull height and half width, px ({@link #fallsHovering}); 0 = a body on its feet. */
+    float hoverPx = 0f, hoverHalfPx = 0f;
+
     /** The death falls on a jointed rig's own parts (its chest as the torso, its forearms and shins). */
     BoneMap fallsJointed(ModelPart[] parts) {
         death = parts;
