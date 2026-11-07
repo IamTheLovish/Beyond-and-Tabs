@@ -70,15 +70,18 @@ public class BuildingBlockModGameTests {
         // shingle roofs, half-timber (fachwerk) panels and pillars for the Brassworks (skin: block entity "textureData")
         KNOWN_BLOCKS.put("domum_ornamentum",
             List.of("domum_ornamentum:shingle", "domum_ornamentum:plain", "domum_ornamentum:blockpillar"));
+        // Macaw's Trapdoors (MIT): barn / glass / beach ... trapdoors in every wood, for shutters and hatches
+        KNOWN_BLOCKS.put("mcwtrpdoors", List.of("mcwtrpdoors:oak_barn_trapdoor"));
         MIN_BLOCKS.put("mcwroofs", 100);
         MIN_BLOCKS.put("mcwwindows", 100);
         MIN_BLOCKS.put("mcwfences", 40);
         MIN_BLOCKS.put("chipped", 500);
         MIN_BLOCKS.put("framedblocks", 150);
         MIN_BLOCKS.put("domum_ornamentum", 60);
+        MIN_BLOCKS.put("mcwtrpdoors", 100);
     }
     static final List<String> REQUIRED_MODS = List.of("mcwroofs", "mcwwindows", "mcwfences", "chipped", "athena",
-        "resourcefullib", "framedblocks", "domum_ornamentum");
+        "resourcefullib", "framedblocks", "domum_ornamentum", "mcwtrpdoors");
 
     /**
      * Every block of these mods (namespace, or prefix "mcw" = all of Macaw's) goes to run-gametest/mod_block_ids.json:

@@ -84,7 +84,7 @@ def our_shader_pack():
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
 REQUIRED_FILES = ("alexsmobs-", "citadel-", "mcw-roofs-", "mcw-mcwwindows-", "mcw-mcwfences-", "chipped-forge-",
                   "athena-forge-", "resourcefullib-forge-", "FramedBlocks-",
-                  "domum_ornamentum-")
+                  "domum_ornamentum-", "mcw-trapdoors-")
 
 
 def get_json(url):
