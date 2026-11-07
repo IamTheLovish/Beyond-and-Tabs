@@ -92,7 +92,8 @@ DOS = "dark_oak_stairs"
 LEAF, FLEAF, CHERRY = "azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"
 GLOW, FRUIT, SHROOM = "verdant_froglight", "ochre_froglight", "shroomlight"
 SOIL = ("moss_block", "grass_block", "rooted_dirt", "podzol")
-FLOWERS = ("fern", "azure_bluet", "oxeye_daisy", "lily_of_the_valley", "cornflower", "allium", "fern")
+FLOWERS = ("fern", "azure_bluet", "grass", "oxeye_daisy", "lily_of_the_valley", "grass", "cornflower", "allium",
+           "fern", "grass")                  # ground cover a unit walks through (grass = 1.20.1's short grass)
 
 
 def hsh(x, z):
@@ -152,39 +153,69 @@ BARK, BARK_W, BARK_S = "stripped_dark_oak_log", "stripped_dark_oak_wood", "dark_
 HEM = "dark_oak_leaves"                  # the crown's underside
 TRUNK = ((1, 0), (2, 0), (1, 1), (2, 1), (1, 2), (2, 2), (3, 0), (3, 1))   # the tree stands on the north-west
 ROOT_BED = ((0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (0, 4), (1, 4), (2, 3))  # podzol / moss under the west roots
-LOBES_L1 = ((2.4, 1.3, 10.6, 3.6, 2.7, 2.9),   # the main crown over the trunk, the high point
-            (6.7, 2.0, 9.3, 2.3, 2.4, 1.8),    # a lower lobe out east over the shrine
+LOBES_L1 = ((2.4, 1.3, 10.6, 3.9, 3.0, 3.0),   # the main crown over the trunk, the high point
+            (6.7, 2.0, 9.3, 2.6, 2.7, 1.9),    # a lower lobe out east over the shrine
             (1.0, 4.0, 8.6, 1.5, 1.4, 1.2))    # a small lobe leaning to the camera (south-west) over the mask
+
+
+# Review round (Nov 4, on PR #481's head): from the RTS camera 29 % of L1's rays hit the bare flagstone pad - 69 % of
+# the court one block, not a plant on it ("the shrine half reads thin from above: a grey pad and one pier") - so the
+# court is overgrown: moss islands in 2 x 2 patches of three stones, ferns, grass and flowers on the moss (lovish's
+# "dense ground cover and wildflowers around things"), the kerb still stone so the plot's edge keeps its value step.
+MOSS_ISLES = ((1, 5), (2, 5), (2, 6), (3, 6),          # under the west roots' toe, where units walk out
+              (5, 5), (6, 5), (6, 6), (7, 6),          # the south-east corner, round the fallen block
+              (5, 2), (6, 2), (7, 2), (7, 1))          # at the ruin wall's foot, under the east bough
+FLAGS = (MSB, MSB, CSB, MC, MSB, "stone_bricks", CSB, MSB)   # flagstone patches: mossy brick leads, cracked, mossy
+#                                                             cobble and plain brick break it in 2 x 2 patches
 
 
 def ground_l1(r):
     """y0: a stone kerb on the plot's edge (chiseled corners, mossy and cracked bricks between: the plot owns its edge
-    against the lawn), quiet mossy flagstones inside with verdant froglight on the two spawn cells (where the trained
-    units step out), and the root bed of podzol, rooted dirt and moss under the west roots. The foundation types (moss,
-    mossy bricks) are in this layer."""
+    against the lawn), the overgrown court inside (flagstones in 2 x 2 patches of three stones, moss islands) with
+    chiseled stones on the two spawn cells (where the trained units step out), and the root bed of podzol, rooted dirt
+    and moss under the west roots. The foundation types (moss, mossy bricks) are in this layer."""
     for x in range(SX):
         for z in range(SZ):
             h = hsh(x, z)
             edge = x in (0, SX - 1) or z in (0, SZ - 1)
             if (x, z) in CENTRE:
-                r.set(x, 0, z, CHB)                          # the spawn stones (a lit tile read as a skylight)
+                r.set(x, 0, z, CHB)                          # the spawn stones
             elif (x, z) in ROOT_BED:
                 name = ("podzol", "rooted_dirt", "podzol", "moss_block")[h % (2 if edge else 4)]
                 r.set(x, 0, z, name, **({"snowy": "false"} if name == "podzol" else {}))
             elif edge:
                 r.set(x, 0, z, CHB if x in (0, SX - 1) and z in (0, SZ - 1) else (CSB if h % 3 == 0 else MSB))
+            elif (x, z) in MOSS_ISLES:
+                r.set(x, 0, z, "moss_block")
             else:
-                r.set(x, 0, z, CSB if h % 5 == 0 else MSB)
+                r.set(x, 0, z, FLAGS[hsh(x // 2, z // 2) % len(FLAGS)])   # patches, not a per-cell speckle
     r.set(1, 0, 3, "moss_block")              # the foundation types stay in layer 0 whatever the scatter does
 
 
 def plants_l1(r):
-    """Ferns and flowers on the root bed's soil (a unit walks through them), never on the flagstones."""
-    for (x, z) in ROOT_BED:
+    """Ferns, grass and flowers on the soil (a unit walks through them), never on the flagstones: every free cell of
+    the moss islands grows something, the root bed's soil three cells in four."""
+    for (x, z) in ROOT_BED + MOSS_ISLES:
         if r.get(x, 0, z)[0] in SOIL and r.free(x, 1, z):
-            k = hsh(x * 3 + 1, z + 5) % 9
+            k = hsh(x * 3 + 1, z + 5) % (len(FLOWERS) if (x, z) in MOSS_ISLES else 13)
             if k < len(FLOWERS):
                 r.set(x, 1, z, FLOWERS[k])
+
+
+def ruin_wall_l1(r):
+    """The shrine court's back: a broken wall along the north edge (x 6..8, z 0) turning down the east edge (x 8,
+    z 1..2) into the pier, 2-3 courses with mossy wall copings (thin blocks that throw their own shadow lines), a
+    chiseled foot at the corner post, and a wall-post merlon on the pier's jagged top; broken post stumps on the kerb's
+    two south corners (one cell each - the west and south edges stay open). The pier was this wall's gate post."""
+    for (x, z, h) in ((6, 0, 2), (7, 0, 3), (8, 0, 3), (8, 1, 2), (8, 2, 1)):
+        for y in range(1, h + 1):
+            r.set(x, y, z, CHB if (x, z, y) == (8, 0, 1) else (MSB if hsh(x * 7 + y, z - y) % 3 else CSB))
+        r.set(x, h + 1, z, MSW)
+    r.set(8, 5, 0, MSW)                                  # the corner post stands a course taller
+    r.set(8, 9, 4, MSW)                                  # broken posts on the pier's jagged top
+    r.set(8, 8, 3, MSW)
+    r.set(0, 1, SZ - 1, MSW)                             # the post stumps
+    r.set(SX - 1, 1, SZ - 1, MSW)
 
 
 def trunk(r, top):
@@ -207,13 +238,22 @@ def roots_l1(r):
         r.st(x, y, z, f, name=BARK_S)
 
 
-def boughs(r, y0):
-    """A bough climbing out east from the trunk into the shrine's lobe."""
-    for k in range(3):
-        for dx in (0, 1):
-            x = 3 + 2 * k + dx
-            if x < SX:
-                r.log(x, y0 + k, 1, axis="x", name=BARK)
+BOUGHS_L1 = (   # (axis, cells): each run leaves the trunk and surfaces through the crown as a dark line
+    ("x", ((3, 7, 1), (4, 7, 1), (5, 8, 1), (6, 8, 1), (7, 9, 1), (8, 9, 1))),   # east, up into the shrine lobe
+    ("x", ((3, 6, 2), (4, 6, 2), (5, 7, 2), (6, 7, 2), (7, 7, 2))),              # a lower east bough under it
+    ("z", ((2, 9, 3), (2, 9, 4), (2, 9, 5))),                                    # south, over the mask to the glade
+    ("z", ((0, 10, 1), (0, 10, 2), (0, 10, 3))),                                 # along the crown's west shoulder
+)
+
+
+def boughs(r):
+    """Boughs out of the trunk (bark logs along their run, laid before the leaves so the crown grows round them):
+    review round, Nov 4 - the shipped crown had one bough and five exposed cells, "big flat pink planes"; a tree
+    reads as a tree by its lines (ART-FAULTS: "articulated branches, layered leaf masses")."""
+    for axis, cells in BOUGHS_L1:
+        for (x, y, z) in cells:
+            if (x, z) not in CENTRE:
+                r.log(x, y, z, axis=axis, name=BARK)
 
 
 def mask_l1(r, y0=4):
@@ -239,7 +279,10 @@ def antlers_up(r, y0, y1):
                 r.set(x, y, 3, BIRCH_F)
 
 
-def lobes(r, specs, y_lo, y_hi):
+def lobes(r, specs, y_lo, y_hi, tufts=False):
+    """Ellipsoid lobes; with tufts, one leaf on top of every third or so sky-facing leaf (below y_hi), so the lobe
+    tops are bumpy, not flat planes (review round, Nov 4: "big flat pink planes", a toy). Tufts only on the wide L1
+    crown: on the small upper tiers they stacked into pink pillars."""
     for (cx, cz, cy, rx, rz, ry) in specs:
         for x in range(SX):
             for z in range(SZ):
@@ -248,13 +291,21 @@ def lobes(r, specs, y_lo, y_hi):
                 for y in range(y_lo, y_hi + 1):
                     if ((x - cx) / rx) ** 2 + ((z - cz) / rz) ** 2 + ((y - cy) / ry) ** 2 <= 1.0:
                         r.leaf(x, y, z)
+    tops = [(x, y, z) for (x, y, z), (n, _) in r.b.items()
+            if tufts and n.endswith("_leaves") and y_lo <= y < y_hi and r.free(x, y + 1, z)]
+    for (x, y, z) in tops:
+        if hsh(x * 5 + y, z * 11 + y) % 3 == 0:
+            r.leaf(x, y + 1, z)
 
 
 def shell(r):
     """The crown's colours by exposure: a leaf open to the sky or to a side is CHERRY (the capitol's crown, the lab's
-    read against the lawn); one open only below is the dark HEM (the underside in shadow, a dark line under the pink
-    in 3/4); the inside stays azalea. No fruit: a lit row under the lobe read as "teeth" / "windows" (round 3)."""
+    read against the lawn) broken about one in four by FLOWERING AZALEA (the capitol's own crown rule: a blossoming canopy
+    with dark gaps, not one flat pink plane - review round, Nov 4: every sky-facing leaf was cherry, 40 % of the RTS
+    rays one block); one open only below is the dark HEM (the underside in shadow, a dark line under the pink in 3/4);
+    the inside stays azalea. No fruit: a lit row under the lobe read as "teeth" / "windows" (round 3)."""
     leaves = [p for p, (n, _) in r.b.items() if n.endswith("_leaves")]
+    leafy = set(leaves)
 
     def air(q):
         return not (0 <= q[0] < SX and 0 <= q[2] < SZ) or q not in r.b
@@ -262,8 +313,10 @@ def shell(r):
     for (x, y, z) in leaves:
         up = air((x, y + 1, z))
         side = any(air(q) for q in ((x + 1, y, z), (x - 1, y, z), (x, y, z + 1), (x, y, z - 1)))
-        down = air((x, y - 1, z))
-        if up or (side and not down):
+        down = (x, y - 1, z) not in leafy      # the underside: air, or a bough / the trunk / the pier under the leaf
+        if up:
+            name = FLEAF if hsh(x * 2 + y, z * 9 - y) % 4 == 0 else CHERRY   # blossom broken by flowering azalea
+        elif side and not down:
             name = CHERRY
         elif down:
             name = HEM
@@ -291,16 +344,24 @@ def shrine_l1(r):
     r.set(7, 1, 6, MC)                                   # a fallen block at the wall's foot
 
 
+def clear_room(r):
+    """The spawn room stays clear whatever a step above drew - except the ground cover, which a unit walks through
+    (check_levels' busy check exempts it) and which the chain L1 -> L2 -> L3 must keep."""
+    for p in CLEAR:
+        if p in r.b and r.b[p][0] not in FLOWERS:
+            del r.b[p]
+
+
 def draw_l1(r):
     ground_l1(r)
     trunk(r, 9)
     roots_l1(r)
-    boughs(r, 7)
+    boughs(r)
     mask_l1(r)
     shrine_l1(r)
-    lobes(r, LOBES_L1, 6, TOP_L1)
-    for p in CLEAR:                           # the spawn room stays clear whatever a step above drew
-        r.b.pop(p, None)
+    ruin_wall_l1(r)
+    lobes(r, LOBES_L1, 6, TOP_L1, tufts=True)
+    clear_room(r)
     plants_l1(r)
 
 
@@ -328,9 +389,8 @@ def draw_l2(r):
     trunk(r, 13)
     tower_l2(r)
     antlers_up(r, 10, 11)
-    lobes(r, ((2.0, 1.2, 14.4, 2.7, 2.1, 2.3),), 12, TOP_L2)
-    for p in CLEAR:
-        r.b.pop(p, None)
+    lobes(r, ((2.0, 1.2, 14.4, 3.0, 2.4, 2.4),), 12, TOP_L2)
+    clear_room(r)
 
 
 # ======================================================================================================== L3
@@ -339,7 +399,7 @@ def draw_l3(r):
     glows and a second lantern stands on its wall post, the antlers climb to y 16 with tines leaning out."""
     draw_l2(r)
     trunk(r, 19)
-    lobes(r, ((2.2, 1.4, 19.6, 2.4, 1.9, 2.4),), 17, TOP_L3)
+    lobes(r, ((2.2, 1.4, 19.6, 2.8, 2.2, 2.3),), 17, TOP_L3)
     for y in (4, 5, 6):
         r.set(7, y, 5, GLOW, axis="y")                   # the lancet wakes
     r.set(8, 11, 4, MSW)
@@ -348,8 +408,7 @@ def draw_l3(r):
     antlers_up(r, 12, 15)
     r.set(0, 16, 3, BIRCH_F)                             # the tines
     r.set(3, 16, 3, BIRCH_F)
-    for p in CLEAR:
-        r.b.pop(p, None)
+    clear_room(r)
 
 
 
