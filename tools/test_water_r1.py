@@ -75,5 +75,13 @@ class WaterR1(unittest.TestCase):
         self.assertLessEqual(max(m) - min(m), 0.01 * float(np.mean(m)), m)
 
 
+    def test_slate_not_bright_blue(self):
+        # critic r1 (critic-water-r1.md): r1 reads "too blue" at camera S 0.385 vs Complementary's 0.11. Within
+        # test_water_palette's floor (S >= 0.25, the Oct 29 palette) the modelled pixel goes to S <= 0.30 (r1: 0.41)
+        import colorsys
+        import test_water_palette as wp
+        s = colorsys.rgb_to_hsv(*wp.modelled_pixel())[1]
+        self.assertLessEqual(s, 0.30, "saturation %.3f" % s)
+
 if __name__ == "__main__":
     unittest.main()
