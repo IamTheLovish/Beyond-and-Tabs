@@ -670,6 +670,11 @@ jobs:
           if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
             got=$(find out -name 'bat_eyes_16_scars_*.png' | wc -l)
             ls out | grep '^bat_eyes_16_' | sed 's/^/::notice::[Eyes] still /' || true
+            # the battle must leave marks: on the battlefield world (min_y 48) a y-0 load check refused every stamp and
+            # the run still published clean stills (42217669387, Nov 6) - a scars run with nothing marked is a failure
+            if grep -q "16 scars: 0 chunks marked on the server" out/eyes-lines.txt 2>/dev/null; then
+              echo "::error::[Eyes] 16 scars: the scripted battle marked 0 chunks on the server (no scorch, no crater)"; exit 1
+            fi
             [ "$got" -ge 6 ] || { echo "::error::only $got scars stills (expected 6)"; exit 1; }
           fi
           if [ -n "${STRUCTURE_STILLS:-}" ]; then   # a structure-photo run: five stills per structure
