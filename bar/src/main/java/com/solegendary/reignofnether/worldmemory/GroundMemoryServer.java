@@ -292,6 +292,10 @@ public final class GroundMemoryServer {
                                       double footY, double bodyWidth) {
         if (!Double.isFinite(ax) || !Double.isFinite(az) || !Double.isFinite(bx) || !Double.isFinite(bz) || !Double.isFinite(footY))
             return 0;
+        // STUB (never merged): ~5 us of real work a walk, so the cost test's median must fail every runner
+        long stubEnd = System.nanoTime() + 5_000;
+        while (System.nanoTime() < stubEnd)
+            Thread.onSpinWait();
         double radius = TrampleRules.radiusFor(bodyWidth);
         long now = level.getGameTime();
         int minCx = (int) Math.floor(Math.min(ax, bx) - radius) >> 4, maxCx = (int) Math.floor(Math.max(ax, bx) + radius) >> 4;
