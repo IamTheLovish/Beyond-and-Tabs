@@ -470,6 +470,16 @@ public class BuildingServerEvents {
                 FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                 return null;
             }
+            // the Advanced Fusion Reactor is Tier 3 tech: the build button checks the research, this stops a crafted packet
+            if (!fromCommand && !isSandbox && !fogRequeue
+                    && newBuilding.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.FusionReactor fr
+                    && fr.kind.needsTier3
+                    && !ResearchServerEvents.playerHasCheat(ownerName, "modifythephasevariance")
+                    && !ResearchServerEvents.playerHasResearch(ownerName, com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3)) {
+                HudClientboundPacket.showTempMessageI18n(ownerName, "building.reignofnether.needs_tier3");
+                FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
+                return null;
+            }
             // a T2 lab needs the Tier 2 research and its faction's finished T1 lab (resources/TierGate): the build button
             // greys it out, but a stale client, a crafted packet or an old fog-queued site must not skip that. A command
             // placement (scenarios, spawners), the sandbox and the "modifythephasevariance" cheat are exempt as before

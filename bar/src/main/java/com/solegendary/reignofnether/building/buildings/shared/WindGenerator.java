@@ -120,6 +120,12 @@ public class WindGenerator extends Building {
         return !"_tide".equals(variant) && !"_brass".equals(variant);
     }
 
+    /** Energy per second right now (the synced wind on the client): the base figure for a steady variant. */
+    public float currentEnergy() {
+        return isWindDriven() ? com.solegendary.reignofnether.resources.Wind.energyAt(energyIncome,
+            com.solegendary.reignofnether.resources.Wind.strength()) : energyIncome;
+    }
+
     /** This mill's sail hub, or null for a variant without sails (NO_SAILS). */
     public SailHub getSailHub() {
         return SAIL_HUBS.get(variant);
@@ -145,7 +151,13 @@ public class WindGenerator extends Building {
                         ResourceCosts.getFormattedCost(cost),
                         FormattedCharSequence.forward("", Style.EMPTY),
                         Component.translatable("buildings.reignofnether.wind_generator.tooltip1").getVisualOrderText(),
-                        Component.translatable("buildings.reignofnether.wind_generator.tooltip2").getVisualOrderText()
+                        Component.translatable("buildings.reignofnether.wind_generator.tooltip2").getVisualOrderText(),
+                        isWindDriven()
+                            ? Component.translatable("buildings.reignofnether.wind_generator.tooltip_now",
+                                Math.round(currentEnergy()),
+                                Math.round(com.solegendary.reignofnether.resources.Wind.energyAt(energyIncome, com.solegendary.reignofnether.resources.Wind.MIN)),
+                                Math.round(com.solegendary.reignofnether.resources.Wind.energyAt(energyIncome, com.solegendary.reignofnether.resources.Wind.MAX))).getVisualOrderText()
+                            : Component.translatable("buildings.reignofnether.wind_generator.tooltip_steady", Math.round(energyIncome)).getVisualOrderText()
                 ),
                 this
         );

@@ -54,6 +54,13 @@ public final class Wind {
     /** Income multiplier for a wind-driven building: 1.0 at the average wind. */
     public static float multiplier() { return live.strength / MEAN; }
 
+    /**
+     * A wind-driven building's energy per second at a given wind strength: its base (the average-wind figure) times
+     * strength / MEAN. Pure, so the build tooltip, the hover card and the GameTest all use the one formula
+     * (lovish: "show wind generators production per second").
+     */
+    public static float energyAt(float baseEnergy, float strength) { return baseEnergy * strength / MEAN; }
+
     /** Called once per server tick. */
     public static void tick(long gameTime) { live.tick(gameTime); }
 

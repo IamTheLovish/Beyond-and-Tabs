@@ -369,6 +369,8 @@ public class Factions {
 		
 		registerBuildings(MONSTERS, Buildings.MONSTER_MARKET, BuildGroup.ECONOMY);
 		registerBuildings(MONSTERS, Buildings.SPRUCE_BRIDGE, BuildGroup.ECONOMY);
+		registerBuildings(MONSTERS, Buildings.FUSION_REACTOR_MONSTERS, BuildGroup.ECONOMY);   // endgame energy, T2 constructors
+		registerBuildings(MONSTERS, Buildings.ADVANCED_FUSION_REACTOR_MONSTERS, BuildGroup.ECONOMY);   // endgame energy, T3
 		registerBuildings(MONSTERS, Buildings.GRAVEYARD, BuildGroup.MILITARY);
 		registerBuildings(MONSTERS, Buildings.DUNGEON, BuildGroup.MILITARY);
 		registerBuildings(MONSTERS, Buildings.SPIDER_LAIR, BuildGroup.MILITARY);
@@ -393,6 +395,8 @@ public class Factions {
 		registerBuildings(PIGLINS, Buildings.GEOTHERMAL_PLANT_PIGLINS, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
 		registerBuildings(PIGLINS, Buildings.PIGLIN_MARKET, BuildGroup.ECONOMY);
 		registerBuildings(PIGLINS, Buildings.BLACKSTONE_BRIDGE, BuildGroup.ECONOMY);
+		registerBuildings(PIGLINS, Buildings.FUSION_REACTOR_PIGLINS, BuildGroup.ECONOMY);   // endgame energy, T2 constructors
+		registerBuildings(PIGLINS, Buildings.ADVANCED_FUSION_REACTOR_PIGLINS, BuildGroup.ECONOMY);   // endgame energy, T3
 		registerBuildings(PIGLINS, Buildings.PORTAL_BASIC, BuildGroup.MILITARY);
 		// no Netherwart Farm (the old food economy - see the Gravebound above)
 		registerBuildings(PIGLINS, Buildings.BASTION, BuildGroup.MILITARY);
@@ -420,6 +424,8 @@ public class Factions {
 		registerBuildings(VILLAGERS, Buildings.GEOTHERMAL_PLANT_VILLAGERS, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
 		registerBuildings(VILLAGERS, Buildings.VILLAGER_MARKET, BuildGroup.ECONOMY);
 		registerBuildings(VILLAGERS, Buildings.OAK_BRIDGE, BuildGroup.ECONOMY);
+		registerBuildings(VILLAGERS, Buildings.FUSION_REACTOR_VILLAGERS, BuildGroup.ECONOMY);   // endgame energy, T2 constructors
+		registerBuildings(VILLAGERS, Buildings.ADVANCED_FUSION_REACTOR_VILLAGERS, BuildGroup.ECONOMY);   // endgame energy, T3
 		registerBuildings(VILLAGERS, Buildings.BARRACKS, BuildGroup.MILITARY);
 		registerBuildings(VILLAGERS, Buildings.CASTLE, BuildGroup.MILITARY);
 		registerBuildings(VILLAGERS, Buildings.SHRINE_OF_PROSPERITY, BuildGroup.MILITARY);
@@ -442,6 +448,8 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.SOLAR_COLLECTOR_VERDANT, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
 		registerBuildings(VERDANT_COURT, Buildings.ADVANCED_SOLAR_VERDANT, BuildGroup.ECONOMY);   // steady energy, T2 constructors
 		registerBuildings(VERDANT_COURT, Buildings.GEOTHERMAL_PLANT_VERDANT, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(VERDANT_COURT, Buildings.FUSION_REACTOR_VERDANT, BuildGroup.ECONOMY);   // endgame energy, T2 constructors
+		registerBuildings(VERDANT_COURT, Buildings.ADVANCED_FUSION_REACTOR_VERDANT, BuildGroup.ECONOMY);   // endgame energy, T3
 		registerBuildings(VERDANT_COURT, Buildings.GROVE, BuildGroup.MILITARY);
 		registerBuildings(VERDANT_COURT, Buildings.CIRCLE_OF_ELDERS, BuildGroup.MILITARY);   // T2 lab
 		registerBuildings(VERDANT_COURT, Buildings.HEART_OF_THE_WILD, BuildGroup.MILITARY);   // T3 lab
@@ -458,6 +466,8 @@ public class Factions {
 		registerBuildings(TIDEWROUGHT, Buildings.SOLAR_COLLECTOR_TIDE, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
 		registerBuildings(TIDEWROUGHT, Buildings.ADVANCED_SOLAR_TIDE, BuildGroup.ECONOMY);   // steady energy, T2 constructors
 		registerBuildings(TIDEWROUGHT, Buildings.GEOTHERMAL_PLANT_TIDE, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(TIDEWROUGHT, Buildings.FUSION_REACTOR_TIDE, BuildGroup.ECONOMY);   // endgame energy, T2 constructors
+		registerBuildings(TIDEWROUGHT, Buildings.ADVANCED_FUSION_REACTOR_TIDE, BuildGroup.ECONOMY);   // endgame energy, T3
 		registerBuildings(TIDEWROUGHT, Buildings.SLIPWAY, BuildGroup.MILITARY);
 		registerBuildings(TIDEWROUGHT, Buildings.DRYDOCK, BuildGroup.MILITARY);   // T2 lab
 		registerBuildings(TIDEWROUGHT, Buildings.ABYSSAL_SHIPYARD, BuildGroup.MILITARY);   // T3 lab
@@ -474,6 +484,8 @@ public class Factions {
 		registerBuildings(STORMCALLERS, Buildings.SOLAR_COLLECTOR_STORM, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
 		registerBuildings(STORMCALLERS, Buildings.ADVANCED_SOLAR_STORM, BuildGroup.ECONOMY);   // steady energy, T2 constructors
 		registerBuildings(STORMCALLERS, Buildings.GEOTHERMAL_PLANT_STORM, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(STORMCALLERS, Buildings.FUSION_REACTOR_STORM, BuildGroup.ECONOMY);   // endgame energy, T2 constructors
+		registerBuildings(STORMCALLERS, Buildings.ADVANCED_FUSION_REACTOR_STORM, BuildGroup.ECONOMY);   // endgame energy, T3
 		registerBuildings(STORMCALLERS, Buildings.LOTUS_ACADEMY, BuildGroup.MILITARY);
 		registerBuildings(STORMCALLERS, Buildings.CELESTIAL_OBSERVATORY, BuildGroup.MILITARY);   // T2 lab
 		registerBuildings(STORMCALLERS, Buildings.HEAVENS_GATE, BuildGroup.MILITARY);   // T3 lab
@@ -489,6 +501,8 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.SOLAR_COLLECTOR_BRASS, BuildGroup.ECONOMY);   // steady energy, T1 (claude/solar-spec.md)
 		registerBuildings(BRASSWORKS, Buildings.ADVANCED_SOLAR_BRASS, BuildGroup.ECONOMY);   // steady energy, T2 constructors
 		registerBuildings(BRASSWORKS, Buildings.GEOTHERMAL_PLANT_BRASS, BuildGroup.ECONOMY);   // T2 constructors, over lava (design/lively_buildings.md)
+		registerBuildings(BRASSWORKS, Buildings.FUSION_REACTOR_BRASS, BuildGroup.ECONOMY);   // endgame energy, T2 constructors
+		registerBuildings(BRASSWORKS, Buildings.ADVANCED_FUSION_REACTOR_BRASS, BuildGroup.ECONOMY);   // endgame energy, T3
 		registerBuildings(BRASSWORKS, Buildings.MACHINE_SHOP, BuildGroup.MILITARY);
 		registerBuildings(BRASSWORKS, Buildings.ASSEMBLY_WORKS, BuildGroup.MILITARY);   // T2 lab
 		registerBuildings(BRASSWORKS, Buildings.GREAT_FORGE, BuildGroup.MILITARY);   // T3 lab

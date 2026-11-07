@@ -4,7 +4,7 @@ Source: faction/Factions.java registerBuildings (origin/main) plus Defences.regi
 Mock-up A proposed key = slot position in that tab (same position, same key in every tab). Mock-up B keeps today's keys.
 Tab keys (proposed): Alt+1 Economy, Alt+2 Military, Alt+3 Defence, Alt+4 Tech. Every bare letter is already a build, command or pan key, and bare digits are control groups.
 
-## Economy (11)
+## Economy (13)
 
 | Building | Group | Current key | Proposed key (A) | Mock-up B key |
 |---|---|---|---|---|
@@ -19,6 +19,8 @@ Tab keys (proposed): Alt+1 Economy, Alt+2 Military, Alt+3 Defence, Alt+4 Tech. E
 | Geothermal Plant | Economy | none | O | none |
 | Town Market | Economy | H | L | H |
 | Oak Bridge | Economy | C | F | C |
+| Fusion Reactor | Economy | none | V | none |
+| Advanced Fusion Reactor | Economy | none | none (13th, click only) | none |
 
 ## Military (5)
 
