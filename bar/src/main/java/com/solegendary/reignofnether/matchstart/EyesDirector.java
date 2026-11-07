@@ -116,6 +116,19 @@ public final class EyesDirector {
     private static final int ZOOM_STRATEGIC = 85; // past StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER (70), below
                                                   // the big-unit switch (70 * 1.35): icons, but a golem keeps its model
 
+    /**
+     * No chat in the eyes rig's frames: "Disabled fog of war for all players" sat over the RTS stills (r35b, r36) -
+     * shot() cleared the chat, but only after the frame it grabs was already drawn. A player's screen at those moments
+     * has no such line.
+     */
+    @SubscribeEvent
+    public static void onChat(net.minecraftforge.client.event.ClientChatReceivedEvent evt) {
+        if (ENABLED) {
+            ReignOfNether.LOGGER.info("[Eyes] chat kept off the frames: {}", evt.getMessage().getString());
+            evt.setCanceled(true);
+        }
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
         if (!ENABLED || evt.phase != TickEvent.Phase.END)
@@ -2133,6 +2146,18 @@ public final class EyesDirector {
                 template.placeInWorld(level, origin, origin,
                     new net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings(),
                     level.getRandom(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+                // no loose items in a structure photo (critic r38: dropped seeds, banners, lanterns and bones lay on
+                // the sampler lawns as dark pips and debris); counted, so a log says where they come from
+                var box = new net.minecraft.world.phys.AABB(x0 - 8, y - 4, z0 - 8, x1 + 9, top + 4, z1 + 9);
+                var items = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, box);
+                if (!items.isEmpty()) {
+                    java.util.Map<String, Integer> kinds = new java.util.TreeMap<>();
+                    for (var it : items) {
+                        kinds.merge(it.getItem().getItem().toString(), it.getItem().getCount(), Integer::sum);
+                        it.discard();
+                    }
+                    ReignOfNether.LOGGER.info("[Eyes] structure site: removed {} loose items {}", items.size(), kinds);
+                }
                 structureSize = size;
                 structureOrigin = origin;
                 structurePlaced = true;
