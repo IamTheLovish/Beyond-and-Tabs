@@ -64,6 +64,8 @@ public class BombardShell extends ThrowableItemProjectile {
     private int fixedFlightTicks = 0;
     private float buildingMult = BUILDING_DAMAGE_MULT;
     private boolean halfOffDefences = false;
+    /** > 0: a molten shell (Magma Hurler): units it hits burn this long. */
+    private int burnTicks = 0;
 
     private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results (server thread)
 
@@ -96,6 +98,47 @@ public class BombardShell extends ThrowableItemProjectile {
         this.buildingMult = buildingMult;
         this.halfOffDefences = true;
         return this;
+    }
+
+    /**
+     * Makes this a molten shell (the Magma Hurler's Molten Hurl): a wider burst ({@link #splash}) that sets every enemy
+     * it hits alight for {@code burn} ticks. Returns itself.
+     */
+    public BombardShell molten(double radius, int burn) {
+        this.splash = (float) radius;
+        this.burnTicks = burn;
+        return this;
+    }
+
+    /**
+     * Makes this a bomb that spares flyers (the Brass Zeppelin's carpet): the same path as a shell from a unit that
+     * cannot hit air ({@link #hitsAir}). Returns itself.
+     */
+    public BombardShell groundOnly() {
+        this.hitsAir = false;
+        return this;
+    }
+
+    public boolean isGroundOnly() { return !hitsAir; }
+
+    public double getSplashRadius() { return splash; }
+    public int getBurnTicks() { return burnTicks; }
+
+    /** Burning ground: every 10 ticks for {@code ticks} ticks the pool shows flames and re-ignites the enemies in it. */
+    static void scorchGround(ServerLevel sl, BombardShell shell, double x, double y, double z, double radius, int ticks) {
+        for (int t = 10; t <= ticks; t += 10) {
+            com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(t, () -> {
+                sl.sendParticles(ParticleTypes.FLAME, x, y + 0.2, z, 6, radius * 0.4, 0.1, radius * 0.4, 0.02);
+                sl.sendParticles(ParticleTypes.LAVA, x, y + 0.2, z, 1, radius * 0.4, 0.1, radius * 0.4, 0);
+                for (LivingEntity le : UnitGrid.near(sl, x, z, radius + 1, new ArrayList<>())) {
+                    if (!le.isAlive() || !(le instanceof Unit u) || !shell.isEnemy(u.getOwnerName()))
+                        continue;
+                    double dx = le.getX() - x, dz = le.getZ() - z;
+                    if (dx * dx + dz * dz <= radius * radius && Math.abs(le.getY() - y) < 2.5)
+                        le.setRemainingFireTicks(Math.max(le.getRemainingFireTicks(), 40));
+                }
+            });
+        }
     }
 
     public float getDamage() { return damage; }
@@ -201,6 +244,8 @@ public class BombardShell extends ThrowableItemProjectile {
             double d = Math.sqrt((le.getX() - x) * (le.getX() - x) + (le.getZ() - z) * (le.getZ() - z));
             float falloff = (float) (1.0 - 0.5 * Math.min(1.0, d / splash));
             le.hurt(src, damage * falloff);
+            if (burnTicks > 0 && le.isAlive())
+                le.setRemainingFireTicks(Math.max(le.getRemainingFireTicks(), burnTicks));
         }
         // enemy buildings in reach take an explosion's dent (no terrain is touched)
         List<BuildingPlacement> dented = new ArrayList<>();
@@ -242,6 +287,7 @@ public class BombardShell extends ThrowableItemProjectile {
         tag.putInt("BombardFlight", fixedFlightTicks);
         tag.putFloat("BombardBuildingMult", buildingMult);
         tag.putBoolean("BombardHalfOffDefences", halfOffDefences);
+        tag.putInt("BombardBurn", burnTicks);
     }
 
     @Override
@@ -255,5 +301,6 @@ public class BombardShell extends ThrowableItemProjectile {
         fixedFlightTicks = tag.getInt("BombardFlight");
         buildingMult = tag.contains("BombardBuildingMult") ? tag.getFloat("BombardBuildingMult") : BUILDING_DAMAGE_MULT;
         halfOffDefences = tag.getBoolean("BombardHalfOffDefences");
+        burnTicks = tag.getInt("BombardBurn");
     }
 }

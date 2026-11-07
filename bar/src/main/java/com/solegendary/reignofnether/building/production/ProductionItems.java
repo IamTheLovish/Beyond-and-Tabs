@@ -271,6 +271,14 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd SOUL_ENGINEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_engineer"), new com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd());
     // the Horde essence caster (design/essence_casters.md): appended last too, so no existing item's id moves
     public static final com.solegendary.reignofnether.unit.units.piglins.VoodooShamanProd VOODOO_SHAMAN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "voodoo_shaman"), new com.solegendary.reignofnether.unit.units.piglins.VoodooShamanProd());
+    // second T3 per faction, slot 5 of the T3 lab (second-t3-design.md, slice T3b-1): PLACEHOLDERS that train the first T3's body
+    public static final com.solegendary.reignofnether.building.production.SecondT3Prod SUN_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.villagers.CathedralWardenUnit.ITEM_NAME, "sun_colossus", com.solegendary.reignofnether.resources.ResourceCosts.SUN_T3B, SUN_COLOSSUS, () -> EntityRegistrar.CATHEDRAL_WARDEN_UNIT.get(), "entity.reignofnether.cathedral_warden_unit"));
+    public static final com.solegendary.reignofnether.building.production.SecondT3Prod GRAVE_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "grave_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.ITEM_NAME, "zoglin", com.solegendary.reignofnether.resources.ResourceCosts.GRAVE_T3B, BONE_DRAGON, () -> EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get(), "entity.reignofnether.plague_abomination_unit"));
+    public static final com.solegendary.reignofnether.building.production.SecondT3Prod HORDE_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "horde_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.ITEM_NAME, "magma_cube", com.solegendary.reignofnether.resources.ResourceCosts.HORDE_T3B, WAR_MAMMOTH, () -> EntityRegistrar.MAGMA_HURLER_UNIT.get(), "entity.reignofnether.magma_hurler_unit"));
+    public static final com.solegendary.reignofnether.building.production.SecondT3Prod VERDANT_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "verdant_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.verdant.ThornwingRocUnit.ITEM_NAME, "world_tree_walker", com.solegendary.reignofnether.resources.ResourceCosts.VERDANT_T3B, WORLD_TREE_WALKER, () -> EntityRegistrar.THORNWING_ROC_UNIT.get(), "entity.reignofnether.thornwing_roc_unit"));
+    public static final com.solegendary.reignofnether.building.production.SecondT3Prod TIDE_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tide_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit.ITEM_NAME, "leviathan", com.solegendary.reignofnether.resources.ResourceCosts.TIDE_T3B, LEVIATHAN, () -> EntityRegistrar.ABYSSAL_HYDRA_UNIT.get(), "entity.reignofnether.abyssal_hydra_unit"));
+    public static final com.solegendary.reignofnether.building.production.SecondT3Prod STORM_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storm_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit.ITEM_NAME, "earthshaker", com.solegendary.reignofnether.resources.ResourceCosts.STORM_T3B, CELESTIAL_DRAGON, () -> EntityRegistrar.JADE_SENTINEL_UNIT.get(), "entity.reignofnether.jade_sentinel_unit"));
+    public static final com.solegendary.reignofnether.building.production.SecondT3Prod BRASS_T3B = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "brass_t3b"), new com.solegendary.reignofnether.building.production.SecondT3Prod(com.solegendary.reignofnether.unit.units.brass.BrassZeppelinUnit.ITEM_NAME, "iron_leviathan_engine", com.solegendary.reignofnether.resources.ResourceCosts.BRASS_T3B, IRON_LEVIATHAN_ENGINE, () -> EntityRegistrar.BRASS_ZEPPELIN_UNIT.get(), "entity.reignofnether.brass_zeppelin_unit"));
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -446,7 +454,15 @@ public class ProductionItems {
         SALVAGER,
         JADE_MENDER,
         PIONEER,
-        VOODOO_SHAMAN
+        VOODOO_SHAMAN,
+        // the second T3 per faction (unit/T3Cap): trainable, so getProductionItem finds them
+        SUN_T3B,
+        GRAVE_T3B,
+        HORDE_T3B,
+        VERDANT_T3B,
+        TIDE_T3B,
+        STORM_T3B,
+        BRASS_T3B
     );
 
     @Nullable

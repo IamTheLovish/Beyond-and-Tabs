@@ -60,6 +60,7 @@ public class GreatForge extends ProductionBuilding {
         this.spawnRadiusOffset = 3f;
 
         this.productions.add(ProductionItems.IRON_LEVIATHAN_ENGINE, Keybindings.abilitySlot4);   // Brassworks T3 experimental
+        this.productions.add(ProductionItems.BRASS_T3B, Keybindings.abilitySlot5);   // second T3 (placeholder body), capped one alive each (T3Cap)
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key, as the Assembly Works
         this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);

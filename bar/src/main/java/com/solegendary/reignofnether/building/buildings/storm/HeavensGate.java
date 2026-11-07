@@ -59,6 +59,7 @@ public class HeavensGate extends ProductionBuilding {
         this.spawnRadiusOffset = 3f;
 
         this.productions.add(ProductionItems.CELESTIAL_DRAGON, Keybindings.abilitySlot4);   // Stormcallers T3 experimental
+        this.productions.add(ProductionItems.STORM_T3B, Keybindings.abilitySlot5);   // second T3 (placeholder body), capped one alive each (T3Cap)
     }
 
     /** Server and client: null if this lab's owner has Tier 3, else the message to show (the experimental's gate). */
