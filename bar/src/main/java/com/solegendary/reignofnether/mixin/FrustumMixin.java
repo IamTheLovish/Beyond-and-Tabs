@@ -32,27 +32,40 @@ public class FrustumMixin {
         }
     }
 
-    // see IForgeBlockEntity.getRenderBoundingBox()
+    // Block entities with an infinite render box (beacon, end portal, structure block - see
+    // IForgeBlockEntity.getRenderBoundingBox) are never frustum-visible from the RTS camera's far-off position, so a
+    // beacon's beam or a portal's pane vanished while its building stood in plain view. Count one visible when its
+    // building is within two view-heights of the camera's ground point.
+    //
+    // isVisible(AABB) is the culling test every entity, block entity and (without Embeddium) chunk section pays per
+    // frame, so this stays on the cheap side of it: the RTS-view test first, then an identity check against Forge's
+    // one shared infinite box, and the building walk only for that box - with no BlockPos built per building.
     @Inject(
             method = "isVisible(Lnet/minecraft/world/phys/AABB;)Z",
             at = @At("HEAD"),
             cancellable = true
     )
     public void isVisible(AABB aabb, CallbackInfoReturnable<Boolean> cir) {
-        // aabb is infinite only for some block entities: structure, beacon, end portal
-        boolean infAABB = aabb.equals(IForgeBlockEntity.INFINITE_EXTENT_AABB);
-
+        if (!OrthoviewClientEvents.isEnabled())
+            return;
+        // the constant is what every vanilla getRenderBoundingBox returns; equals() covers a mod that built its own copy
+        if (aabb != IForgeBlockEntity.INFINITE_EXTENT_AABB && !aabb.equals(IForgeBlockEntity.INFINITE_EXTENT_AABB))
+            return;
         Player player = Minecraft.getInstance().player;
-        float zoom = Math.max(30, OrthoviewClientEvents.getZoom()) * 2;
-
-        if (player != null && OrthoviewClientEvents.isEnabled() && infAABB) {
-            for (BuildingPlacement building : BuildingClientEvents.getBuildings()) {
-                if (building instanceof BeaconPlacement ||
-                    building.getBuilding() instanceof EndPortal) {
-                    BlockPos equalYBp = new BlockPos(player.getOnPos().getX(), building.centrePos.getY(), player.getOnPos().getZ());
-                    if (building.centrePos.distSqr(equalYBp) < (zoom * zoom))
-                        cir.setReturnValue(true);
-                }
+        if (player == null)
+            return;
+        float reach = Math.max(30, OrthoviewClientEvents.getZoom()) * 2;
+        double reachSqr = (double) reach * reach;
+        BlockPos onPos = player.getOnPos();
+        for (BuildingPlacement building : BuildingClientEvents.getBuildings()) {
+            if (!(building instanceof BeaconPlacement) && !(building.getBuilding() instanceof EndPortal))
+                continue;
+            // horizontal distance only (the old code compared against a point at the building's own height)
+            double dx = building.centrePos.getX() - onPos.getX();
+            double dz = building.centrePos.getZ() - onPos.getZ();
+            if (dx * dx + dz * dz < reachSqr) {
+                cir.setReturnValue(true);
+                return;
             }
         }
     }
