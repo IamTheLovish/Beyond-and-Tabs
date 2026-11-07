@@ -183,7 +183,7 @@ public final class GroundMemoryServer {
         if (!Double.isFinite(cx) || !Double.isFinite(y) || !Double.isFinite(cz))
             return 0;
         int bx = (int) Math.floor(cx), bz = (int) Math.floor(cz);
-        if (!level.isLoaded(new BlockPos(bx, 0, bz)))
+        if (!StampGate.columnLoaded(level, level.getChunkSource()::hasChunk, bx, bz))
             return 0;
         int groundAtCentre = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
         if (y - groundAtCentre > AIRBURST || groundAtCentre - y > MAX_DROP)

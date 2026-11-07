@@ -318,6 +318,7 @@ public class ClientModEvents {
             ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "bonesetter_unit"));
         evt.registerEntityRenderer(EntityRegistrar.WRECKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WreckerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.VoodooShamanRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.TITHE_BINDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.TitheBinderRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BLOOD_TOTEM_UNIT.get(), TotemOfCastingRenderer::new);   // placeholder look: the bought casting totem
         evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.ROOTWARDEN_UNIT.get(),
             ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "rootwarden_unit"));
@@ -461,6 +462,8 @@ public class ClientModEvents {
             com.solegendary.reignofnether.unit.modelling.models.gen.DawnPaladinModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.TitheBinderModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.TitheBinderModel::createBodyLayer);
         // the White Angel capitol's marble statue (building/StatueRenderClientEvents; tools/gen_angel_statue.py)
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.WhiteAngelStatueModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.WhiteAngelStatueModel::createBodyLayer);

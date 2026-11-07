@@ -41,6 +41,7 @@ ROSTER = [
     ('Gravebound', 't1', 'monsters/HuskUnit', 'line'),
     ('Gravebound', 't1', 'monsters/DrownedUnit', 'line'),
     ('Gravebound', 't1', 'monsters/SkeletonUnit', 'skirmisher'),
+    ('Gravebound', 't1', 'monsters/TitheBinderUnit', 'caster'),
     ('Gravebound', 't1', 'monsters/StrayUnit', 'skirmisher'),
     ('Gravebound', 't1', 'monsters/BoggedUnit', 'debuffer'),
     ('Gravebound', 't1', 'monsters/SpiderUnit', 'raider'),

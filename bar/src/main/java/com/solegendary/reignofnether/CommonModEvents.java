@@ -211,6 +211,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.SALVAGER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.SalvagerUnit.createAttributes().build());
         evt.put(EntityRegistrar.JADE_MENDER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.JadeMenderUnit.createAttributes().build());
         evt.put(EntityRegistrar.PIONEER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.PioneerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.TITHE_BINDER_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.TitheBinderUnit.createAttributes().build());
     }
 
     @SubscribeEvent

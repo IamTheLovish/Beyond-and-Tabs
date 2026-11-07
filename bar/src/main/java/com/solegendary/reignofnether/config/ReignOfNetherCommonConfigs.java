@@ -34,6 +34,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.POISON_SPIDER.define(BUILDER);
         UnitCosts.WRAITH.define(BUILDER);
         UnitCosts.TOMBCALLER.define(BUILDER);
+        UnitCosts.TITHE_BINDER.define(BUILDER);
         UnitCosts.SLIME.define(BUILDER);
         UnitCosts.WARDEN.define(BUILDER);
         UnitCosts.ZOMBIE_PIGLIN.define(BUILDER);
@@ -371,6 +372,10 @@ public class ReignOfNetherCommonConfigs {
         // Gravebound essence caster (design/essence_casters.md): a Wraith-and-a-bit, as the Witch is to the Evoker - its
         // essence spells on a fragile body, paid for in the Wraith's own food and ore (placeholder numbers for lovish)
         public static final ResourceCostConfigEntry TOMBCALLER = ResourceCostConfigEntry.Unit(90,0,90,35,2, ResourceCosts.TOMBCALLER, "Tombcaller Config");
+        // the Tithe Binder (design sheet 7.1): 60 food / 20 wood / 45 ore, 26 s - between the Grave Archer and the Wraith,
+        // ore ties it to the Wraith's economy; bakes to 85 metal / 80 energy. The last number is the size weight, not a
+        // cost (no population in this game): 1, a light T1 body like the Grave Archer
+        public static final ResourceCostConfigEntry TITHE_BINDER = ResourceCostConfigEntry.Unit(60,20,45,26,1, ResourceCosts.TITHE_BINDER, "Tithe Binder Config");
         public static final ResourceCostConfigEntry SLIME = ResourceCostConfigEntry.Unit(40,40,40,25,2, ResourceCosts.SLIME, "Slime Config");
         public static final ResourceCostConfigEntry WARDEN = ResourceCostConfigEntry.Unit(275,0,125,50,5, ResourceCosts.WARDEN, "Warden Config");
         public static final ResourceCostConfigEntry NECROMANCER = ResourceCostConfigEntry.Unit(0,0,0,30, 5, ResourceCosts.NECROMANCER, "Necromancer Config");

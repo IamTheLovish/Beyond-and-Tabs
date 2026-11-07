@@ -121,6 +121,10 @@ on:
         description: "Structure photos: extra day times, comma-separated (e.g. 5000,11800,18000) - the RTS and 3/4 views again at each (15_<name>_rts_t<T>, _34_t<T>)"
         required: false
         default: ''
+      leaf_ao:
+        description: "Structure photos: the crown lighting sweep - leaf AO shades 0..1, comma-separated, each optionally :face lift 0..1 without a shader pack (e.g. 0.2,0.5:1; 0.2 = vanilla): per entry the RTS and RTS-close stills (15_<name>_rts_leafao<v>, a frame bench), then a magenta leaf mask (15_<name>_rts_leafmask) for tools/crown_measure.py"
+        required: false
+        default: ''
       shader_options:
         description: "Shader lane: extra options for the pack's options file, KEY=VALUE separated by ';' (e.g. BorderFog=false;TOGGLE_VL_FOG=false) - an A/B of the pack's own settings; publishes to <lane>-custom"
         required: false
@@ -165,6 +169,7 @@ jobs:
       SHADER_PACK: ${{ inputs.shader_pack || 'complementary' }}
       SHADER_OPTIONS: ${{ inputs.shader_options || '' }}
       TIMES: ${{ inputs.times || '' }}
+      LEAF_AO: ${{ inputs.leaf_ao || '' }}
       LOOK: ${{ inputs.look || 'default' }}
       # a non-default look publishes to its own branch (eyes-look-full, ...) so the lane's latest stills and its
       # approved baseline stay at the shipped setting
@@ -323,6 +328,13 @@ jobs:
           echo "$TIMES" | grep -qE '^[0-9]+(,[0-9]+)*$' || { echo "::error::times must be day times like 5000,11800,18000"; exit 1; }
           echo "EYES_JVM_EXTRA=${EYES_JVM_EXTRA:-} -Dbat.eyes.times=$TIMES" >> "$GITHUB_ENV"
           echo "::notice::[Eyes] extra day times: $TIMES"
+      - name: Crown lighting sweep for the structure photos (dispatch input `leaf_ao`)
+        if: env.LEAF_AO != '' && env.STRUCTURES != ''
+        run: |
+          set -euo pipefail
+          echo "$LEAF_AO" | grep -qE '^[01](\.[0-9]+)?(:[01](\.[0-9]+)?)?(,[01](\.[0-9]+)?(:[01](\.[0-9]+)?)?)*$' || { echo "::error::leaf_ao must be shades like 0.2,0.5,0.8 or ao:face pairs like 0.2:0,0.5:1"; exit 1; }
+          echo "EYES_JVM_EXTRA=${EYES_JVM_EXTRA:-} -Dbat.eyes.leafAo=$LEAF_AO" >> "$GITHUB_ENV"
+          echo "::notice::[Eyes] crown lighting sweep: leaf AO shades $LEAF_AO"
       - name: Scars scene only (dispatch input `scars`; EyesDirector scene 16)
         if: env.SCARS == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.scars=true' >> "$GITHUB_ENV"
@@ -391,6 +403,13 @@ jobs:
                   open('run/config/' + name, 'w').write(
                       'enableShaders=true' + chr(10) + 'shaderPack=BeyondAndTabs' + chr(10) + 'disableUpdateMessage=true' + chr(10)
                       + 'maxShadowRenderDistance=12' + chr(10))
+              # an A/B of the pack's own settings (input shader_options): Iris / Oculus read a folder pack's options
+              # from shaderpacks/<folder>.txt - without it the pack runs its defaults (run 42207775041's LEAF_LIGHT=1
+              # never reached the pack)
+              ours = [kv.strip() for kv in os.environ.get('SHADER_OPTIONS', '').split(';') if kv.strip()]
+              if ours:
+                  open('run/shaderpacks/BeyondAndTabs.txt', 'w').write(chr(10).join(ours) + chr(10))
+                  print('::notice::[Eyes] our pack options: ' + '; '.join(ours))
               n = sum(len(fs) for _, _, fs in os.walk('run/shaderpacks/BeyondAndTabs'))
               got.append('BeyondAndTabs (ours, %d files from %s)' % (n, os.environ.get('GITHUB_SHA', '?')[:9]))
               print('::notice::[Eyes] shader lane files: ' + '; '.join(got))
@@ -670,6 +689,11 @@ jobs:
           if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
             got=$(find out -name 'bat_eyes_16_scars_*.png' | wc -l)
             ls out | grep '^bat_eyes_16_' | sed 's/^/::notice::[Eyes] still /' || true
+            # the battle must leave marks: on the battlefield world (min_y 48) a y-0 load check refused every stamp and
+            # the run still published clean stills (42217669387, Nov 6) - a scars run with nothing marked is a failure
+            if grep -q "16 scars: 0 chunks marked on the server" out/eyes-lines.txt 2>/dev/null; then
+              echo "::error::[Eyes] 16 scars: the scripted battle marked 0 chunks on the server (no scorch, no crater)"; exit 1
+            fi
             [ "$got" -ge 6 ] || { echo "::error::only $got scars stills (expected 6)"; exit 1; }
           fi
           if [ -n "${STRUCTURE_STILLS:-}" ]; then   # a structure-photo run: five stills per structure

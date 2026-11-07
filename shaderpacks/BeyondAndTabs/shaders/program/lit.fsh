@@ -55,6 +55,7 @@ varying vec3 viewPos;
 varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
+varying float leaf;
 varying float gust;                    // lit.vsh: the wind's gust on a plant (0.3 = calm)
 varying float asDrawn;
 varying float waterBody;
@@ -155,10 +156,20 @@ void main() {
             face = -face;
         n = normalize(mix(geomN, face, PLANT_SIDE));
     }
+    // leaves (lib/settings.glsl LEAF_LIGHT): the face's normal leans LEAF_SOFT toward up - a face of leaves turned every
+    // way, never a wall - for its sun and its sky fill alike; geomN stays the block face for the shadow lookup's offset
+    vec3 termN = geomN;
+#if LEAF_LIGHT == 1
+    if (leaf > 0.5) {
+        vec3 up = normalize(upPosition);
+        n = normalize(mix(n, up, LEAF_SOFT));
+        termN = normalize(mix(geomN, up, LEAF_SOFT));
+    }
+#endif
     float facing = sunFacing(n, l);
 #ifdef LIT_PBR
     // past the face's own terminator no bump is lit (a soft step, for the smooth normals of round entity parts)
-    float terminator = clamp(dot(geomN, l) * 20.0, 0.0, 1.0);
+    float terminator = clamp(dot(termN, l) * 20.0, 0.0, 1.0);
     facing *= terminator;
 #endif
     float shadow = 0.0;
@@ -171,6 +182,12 @@ void main() {
         shadow *= cloudShade(playerPos + cameraPosition, normalize(mat3(gbufferModelViewInverse) * l));
 #endif
     }
+#if LEAF_LIGHT == 1
+    // a crown is mostly air between its leaves: a leaf face in its own crown's shadow still gets LEAF_THROUGH of the
+    // sun, filtered through the canopy (the receiver only - the shadow the tree casts on the lawn is unchanged)
+    if (leaf > 0.5)
+        shadow = max(shadow, LEAF_THROUGH * (facing > 0.0 ? 1.0 : 0.0));
+#endif
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
     vec3 light = surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);

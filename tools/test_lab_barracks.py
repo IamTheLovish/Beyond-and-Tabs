@@ -284,6 +284,35 @@ class BarracksTest(unittest.TestCase):
                 if c != L.FINIAL}
         self.assertGreaterEqual(max(roof.values()) - min(roof.values()), 3, "L1 keep roof eaves -> peak %s" % roof)
 
+    # ---- round 4 (blind three-way r3 on eyes 42173016052, #564: 5 / 10): "the candle rack reads as an altar, no
+    # barracks cues"; "the L3 tower roof is blunter than the L1 spire" - the bar's "layered massing stepping up to one
+    # dominant spire". ----
+    def test_court_is_a_drill_yard_not_an_altar(self):
+        """No end rods at any level (the lance rack's white rods read as candles on an altar) and at least two straw
+        targets in the court at L1: a hay block on a dark oak post, clear of the spawn columns and the exit corner."""
+        for i in range(3):
+            rods = sorted(q for q, n in self.solid[i].items() if n == "end_rod" and q[1] <= L.KW)
+            self.assertFalse(rods, "L%d end rods in the court %s" % (i + 1, rods))
+        s = self.solid[0]
+        targets = [q for q, n in s.items() if n == "hay_block" and "dark_oak" in s.get((q[0], q[1] - 1, q[2]), "")
+                   and (q[0], q[2]) not in L.CENTRE and not (q[0] <= 3 and q[2] >= 4)]
+        self.assertGreaterEqual(len(targets), 2, "L1 straw targets %s" % targets)
+
+    def test_l3_tower_rises_into_the_dominant_spire(self):
+        """L3 stands at least 6 higher than L1, and its high part is slim: the columns within 9 of its top (the angel
+        and its needle stand 7 over the tower's eaves) are at most 9 cells (one 3 x 3 tower, not the 6 x 6 tier), and
+        at least 5 of them are dark 3-10 below the top (the tower's roof under the angel). #564's L3: 4 over L1, the
+        spire 2 cells over a flat skirt."""
+        s1, s3 = self.solid[0], self.solid[2]
+        top1, top3 = max(q[1] for q in s1), max(q[1] for q in s3)
+        self.assertGreaterEqual(top3 - top1, 6, "L3 top %d, L1 top %d" % (top3, top1))
+        t = tops(s3)
+        high = {c for c, y in t.items() if y >= top3 - 9}
+        self.assertLessEqual(len(high), 9, "L3 high columns %s" % sorted(high))
+        roofs = [c for c in high if any(d in s3.get((c[0], y, c[1]), "") for y in range(top3 - 10, top3 - 2)
+                                        for d in G.DARK)]
+        self.assertGreaterEqual(len(roofs), 5, "L3 tower roof dark in %s" % sorted(roofs))
+
     def test_shipped_is_the_generator_and_keeps_the_game_rules(self):
         """barracks*.nbt (data and assets) are what tools/lab_barracks.py draws, and its check_levels passes on them
         (footprint, the upgrade chain, the start type, the spawn columns, no pockets, every spawn walks out)."""
