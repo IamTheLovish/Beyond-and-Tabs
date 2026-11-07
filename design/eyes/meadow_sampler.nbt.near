@@ -1,0 +1,7 @@
+# close-up points for EyesDirector (name x y z, structure-local) - tools/gen_meadow_sampler.py
+path_through_patch 8.50 1.00 24.50
+path_into_patch 42.50 1.00 36.50
+soil_in_patch 41.50 1.00 17.50
+soil_patch_edge 12.50 1.00 37.50
+open_clover 25.50 1.00 17.50
+patch_core 22.50 1.00 4.50
