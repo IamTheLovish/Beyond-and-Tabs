@@ -90,6 +90,10 @@ public final class GroundMemoryServer {
         // the chunk's unload, so a held chunk is always the loaded one
         final Long2ObjectOpenHashMap<LevelChunk> trampleChunks = new Long2ObjectOpenHashMap<>();
         final Long2ObjectOpenHashMap<GroundMemory> trampleFields = new Long2ObjectOpenHashMap<>();
+        // each held chunk's columns as this pass read them (TrampleColumnMemo); the epoch moves on every pass and every
+        // walk outside a pass, so a column is never answered from an earlier pass's world
+        final Long2ObjectOpenHashMap<TrampleColumnMemo> trampleMemos = new Long2ObjectOpenHashMap<>();
+        long trampleEpoch = 0;
     }
 
     // a ConcurrentHashMap: chunk load events may arrive off the server thread and only queue a key
@@ -277,7 +281,9 @@ public final class GroundMemoryServer {
     public static int trampleSegment(ServerLevel level, double ax, double az, double bx, double bz, double footY, double bodyWidth) {
         if (!enabled || level == null || level.isClientSide())
             return 0;
-        return trampleSegment(level, state(level), ax, az, bx, bz, footY, bodyWidth);
+        LevelState st = state(level);
+        st.trampleEpoch++;   // a walk outside a pass: read the world afresh
+        return trampleSegment(level, st, ax, az, bx, bz, footY, bodyWidth);
     }
 
     private static int trampleSegment(ServerLevel level, LevelState st, double ax, double az, double bx, double bz,
@@ -291,23 +297,29 @@ public final class GroundMemoryServer {
         Columns columns = COLUMNS;
         columns.footY = footY;
         columns.peak = TrampleRules.peakFor(bodyWidth);
+        columns.epoch = st.trampleEpoch;
         int changedCells = 0;
         for (int chunkX = minCx; chunkX <= maxCx; chunkX++)
             for (int chunkZ = minCz; chunkZ <= maxCz; chunkZ++) {
                 long key = ChunkPos.asLong(chunkX, chunkZ);
                 LevelChunk chunk = st.trampleChunks.get(key);
                 GroundMemory mem;
-                if (chunk != null)
+                TrampleColumnMemo memo;
+                if (chunk != null) {
                     mem = st.trampleFields.get(key);
-                else {
+                    memo = st.trampleMemos.get(key);
+                } else {
                     chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
                     mem = GroundMemoryCapability.of(chunk);
                     if (mem == null)
                         continue;   // not loaded (or no field): asked again next walk
+                    memo = new TrampleColumnMemo();   // once a chunk load, never a walk
                     st.trampleChunks.put(key, chunk);
                     st.trampleFields.put(key, mem);
+                    st.trampleMemos.put(key, memo);
                 }
                 columns.chunk = chunk;
+                columns.memo = memo;
                 mem.decayTo(now, params);
                 long[] changed = mem.addTrample(chunkX, chunkZ, ax, az, bx, bz, radius, columns, columns.changed);
                 // the scratch mask is reused by the next walk: a chunk not dirty yet keeps its own copy (once a sync window)
@@ -316,6 +328,7 @@ public final class GroundMemoryServer {
                 changedCells += markChanged(st, chunk, chunkX, chunkZ, changed);
             }
         columns.chunk = null;
+        columns.memo = null;
         st.trampleCells += changedCells;
         return changedCells;
     }
@@ -323,10 +336,13 @@ public final class GroundMemoryServer {
     /**
      * Which columns a walk wears, asked only for the cells inside its strip: the top block (the same finder the decal mesh
      * uses) must be within {@link #TRAMPLE_REACH_Y} of the feet and soft ground; the peak is scaled by the surface's
-     * wear. One reused instance (server thread only), so a walk allocates nothing for it.
+     * wear. The world is read once a column a pass (TrampleColumnMemo: a marching block shares its columns). One reused
+     * instance (server thread only), so a walk allocates nothing for it.
      */
-    private static final class Columns implements GroundMemory.TramplePeaks {
+    private static final class Columns implements GroundMemory.TramplePeaks, TrampleColumnMemo.Ground {
         LevelChunk chunk;
+        TrampleColumnMemo memo;
+        long epoch;
         double footY;
         int peak;
         final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
@@ -334,13 +350,14 @@ public final class GroundMemoryServer {
 
         @Override
         public int peakAt(int x, int z) {
+            return memo.peakAt(x, z, epoch, footY, TRAMPLE_REACH_Y, peak, this);
+        }
+
+        @Override
+        public long topAndWear(int x, int z) {
             int topBlock = GroundSurface.topBlockY(chunk, x & 15, z & 15, pos);
-            if (Math.abs(topBlock + 1 - footY) > TRAMPLE_REACH_Y)
-                return 0;
             TrampleRules.Surface surface = TrampleSurfaces.of(chunk.getBlockState(pos.set(x, topBlock, z)));
-            if (surface == TrampleRules.Surface.NONE)
-                return 0;
-            return Math.max(1, Math.round(peak * surface.wear));
+            return TrampleColumnMemo.pack(topBlock, surface.wear);
         }
     }
 
@@ -370,6 +387,7 @@ public final class GroundMemoryServer {
      */
     static void tramplePass(ServerLevel level, LevelState st) {
         long t0 = System.nanoTime();
+        st.trampleEpoch++;   // a new pass: every column is read again, once
         Int2ObjectOpenHashMap<double[]> last = st.trampleLast, next = st.trampleNext;
         next.clear();
         int walks = 0;
@@ -636,6 +654,7 @@ public final class GroundMemoryServer {
             st.dirty.remove(key);
             st.trampleChunks.remove(key);
             st.trampleFields.remove(key);
+            st.trampleMemos.remove(key);
         }
     }
 

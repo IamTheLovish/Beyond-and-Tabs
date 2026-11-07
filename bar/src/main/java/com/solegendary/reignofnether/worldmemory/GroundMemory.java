@@ -244,10 +244,12 @@ public final class GroundMemory {
                 float w = discWeight(Math.sqrt(dx * dx + dz * dz), radius, TrampleRules.CORE);
                 if (w <= 0)
                     continue;
+                int cell = index(x - ox, z - oz);
+                if (get(cell, TRAMPLE) == 255)
+                    continue;   // saturated: no walk can change it (add would return false), so the world is not asked
                 int p = peaks.peakAt(x, z);
                 if (p <= 0)
                     continue;
-                int cell = index(x - ox, z - oz);
                 if (add(cell, TRAMPLE, Math.round(p * w)))
                     setBit(changed, cell);
             }
