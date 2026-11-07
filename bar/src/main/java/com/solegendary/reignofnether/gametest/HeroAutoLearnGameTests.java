@@ -295,39 +295,10 @@ public class HeroAutoLearnGameTests {
      * had run (#488's green 42010140175). Fails the test if the hero is not ticking by test tick 200. Steps run from
      * the one per-tick step, never booked from inside a callback (see below).
      */
-    static void whenHeroTicks(GameTestHelper helper, Mob hero, java.util.function.Consumer<Timeline> build) {
-        Timeline line = new Timeline();
+    static void whenHeroTicks(GameTestHelper helper, Mob hero, java.util.function.Consumer<ArenaReady.Timeline> build) {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
         build.accept(line);   // at setup: every step is known before the first tick runs
-        long[] start = { -1 };
-        // one per-tick step that runs the timeline's steps itself: a helper.runAfterDelay booked from inside a running
-        // test callback adds to GameTestInfo's tick map while it is being walked, and crashed the server ("this.wrapped
-        // is null" in GameTestInfo.tickInternal, green 42039043638, 7 of 8 runners)
-        helper.onEachTick(() -> {
-            long now = helper.getTick();
-            if (start[0] < 0) {
-                if (!hero.isRemoved() && hero.tickCount >= ArenaReady.TICKS) {
-                    start[0] = now;
-                } else {
-                    if (now >= 200)
-                        throw new net.minecraft.gametest.framework.GameTestAssertException(
-                            "the hero was not ticking after 200 test ticks: " + ArenaReady.describe(helper.getLevel(), List.of(hero)));
-                    return;
-                }
-            }
-            List<Runnable> due = line.steps.get((int) (now - start[0]));
-            if (due != null)
-                for (Runnable r : due)
-                    r.run();
-        });
-    }
-
-    /** A test's steps, by ticks after the hero started ticking (whenHeroTicks). */
-    static final class Timeline {
-        final java.util.Map<Integer, List<Runnable>> steps = new java.util.HashMap<>();
-
-        void at(int ticks, Runnable step) {
-            steps.computeIfAbsent(ticks, k -> new ArrayList<>()).add(step);
-        }
+        line.start(helper, List.of(hero), ArenaReady.TICKS, 200, null);
     }
 
     /** Only the owner's menu holds auto-learn back: another player's RANK_MENU_OPEN on this hero changes nothing. */

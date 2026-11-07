@@ -14,9 +14,12 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
 /**
@@ -125,12 +128,7 @@ public final class ArenaReady {
         helper.onEachTick(() -> {
             if (done[0])
                 return;
-            boolean ready = true;
-            for (Entity e : units)
-                if (e.isRemoved() || e.tickCount < TICKS) {
-                    ready = false;
-                    break;
-                }
+            boolean ready = ticked(units, TICKS);
             if (!ready && helper.getTick() < maxWait)
                 return;
             done[0] = true;
@@ -139,6 +137,71 @@ public final class ArenaReady {
                     + describe(helper.getLevel(), units));
             body.accept((int) helper.getTick());
         });
+    }
+
+    /** Has every unit run at least {@code ticks} ticks of its own (and is still in the level)? */
+    static boolean ticked(List<? extends Entity> units, int ticks) {
+        for (Entity e : units)
+            if (e == null || e.isRemoved() || e.tickCount < ticks)
+                return false;
+        return true;
+    }
+
+    /**
+     * A test's steps by ticks after its units started ticking, for a test that gives orders and reads positions at
+     * fixed ticks: counted from the spawn, a hero added to an arena whose entity section was not loaded yet was not in
+     * level.getEntity when its order came at tick 2, CommandQueues.issue passed it over, and the test judged a hero with
+     * no order (flake-stress 42145152071: hero_ai_v2_flees_below_the_retreat_threshold "95.5 -> 95.5",
+     * hero_ai_v2_selecting_a_fleeing_hero "did not go back to its move order"). HeroAutoLearnGameTests found the same
+     * for its 20 s clock (#488's green 42010140175).
+     * <p>
+     * Book every step with {@link #at} at setup, then {@link #start}: the steps run from one per-tick step of the test,
+     * never booked from inside a running callback - a helper.runAfterDelay booked while the test's delayed runnables
+     * are being walked adds to GameTestInfo's tick map mid-walk and crashed the server ("this.wrapped is null" in
+     * GameTestInfo.tickInternal, green 42039043638, 7 of 8 runners).
+     */
+    public static final class Timeline {
+        private final Map<Integer, List<Runnable>> steps = new HashMap<>();
+
+        /** Runs {@code step} {@code ticks} test ticks after the units started ticking (0 = on that tick). */
+        public void at(int ticks, Runnable step) {
+            steps.computeIfAbsent(ticks, k -> new ArrayList<>()).add(step);
+        }
+
+        /**
+         * Starts counting on the first test tick at which every unit has run {@code minTicks} ticks of its own (it is
+         * in the level and its chunk is entity-ticking). If that has not happened by test tick {@code maxWait},
+         * {@code stalled} gets a reason naming each unit ({@link #describe}) and the steps never run; a null
+         * {@code stalled} fails the test with it.
+         */
+        public void start(GameTestHelper helper, List<? extends Entity> units, int minTicks, int maxWait,
+                          Consumer<String> stalled) {
+            final long[] start = { -1 };
+            final boolean[] over = { false };
+            helper.onEachTick(() -> {
+                if (over[0])
+                    return;
+                long now = helper.getTick();
+                if (start[0] < 0) {
+                    if (!ticked(units, minTicks)) {
+                        if (now < maxWait)
+                            return;
+                        over[0] = true;
+                        String why = "setup: the units were not ticking after " + maxWait + " test ticks: "
+                            + describe(helper.getLevel(), units);
+                        if (stalled == null)
+                            throw new GameTestAssertException(why);
+                        stalled.accept(why);
+                        return;
+                    }
+                    start[0] = now;
+                }
+                List<Runnable> due = steps.get((int) (now - start[0]));
+                if (due != null)
+                    for (Runnable r : due)
+                        r.run();
+            });
+        }
     }
 
     /** One entry per entity: type and id, its own tick count, whether its chunk is entity-ticking, where it is. */

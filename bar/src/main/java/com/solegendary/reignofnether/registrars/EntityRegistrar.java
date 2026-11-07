@@ -1215,6 +1215,13 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .updateInterval(10)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "blood_totem").toString()));
+    // the Gravebound Tithe Binder (T1 caster, the weapon-chain snowball), appended last so no existing id moves;
+    // 0.8 x 2.4: the design sheet's hitbox, the hover gap under the robe included
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.TitheBinderUnit>> TITHE_BINDER_UNIT = ENTITIES.register("tithe_binder_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.TitheBinderUnit::new, MobCategory.CREATURE)
+                    .sized(0.8f, 2.4f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tithe_binder_unit").toString()));
 
     public static void init(FMLJavaModLoadingContext context) {
         ENTITIES.register(context.getModEventBus());
@@ -1372,6 +1379,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.engineers.SalvagerProd.itemName -> EntityRegistrar.SALVAGER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.engineers.JadeMenderProd.itemName -> EntityRegistrar.JADE_MENDER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.engineers.PioneerProd.itemName -> EntityRegistrar.PIONEER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.monsters.TitheBinderProd.itemName -> EntityRegistrar.TITHE_BINDER_UNIT.get();
             // the faction heroes resolve through their kits (hero/HeroKits): one place for the seven names
             default -> com.solegendary.reignofnether.hero.HeroTypes.byItemName(unitName);
         };

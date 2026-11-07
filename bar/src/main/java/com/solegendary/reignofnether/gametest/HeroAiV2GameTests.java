@@ -76,6 +76,52 @@ public class HeroAiV2GameTests {
             QueueMode.REPLACE);
     }
 
+    /**
+     * A player's order as {@link #order(GameTestHelper, String, Mob, UnitAction, BlockPos)} gives it, with a setup
+     * problem booked in {@code setup} when the order cannot reach the unit (see {@link #unreachable}).
+     */
+    static void order(GameTestHelper helper, List<String> setup, String owner, Mob unit, UnitAction action, BlockPos at) {
+        String why = unreachable(helper, unit, action);
+        if (why != null)
+            setup.add(why);
+        order(helper, owner, unit, action, at);
+    }
+
+    /**
+     * Why an order given now would not be carried out as the test counts on, or null when it would: the unit is not in
+     * level.getEntity (CommandQueues.issue passes over such a unit without a word), or its chunk is not entity-ticking
+     * yet, so the unit has not run a tick and the test's clock runs ahead of it. A unit added at the test's start can
+     * be either until its arena's entities load (ArenaReady, GameTestChunks.whenEntitiesReady). Diagnosis 42191145776
+     * (shard 8, 4 runners): the retreat test failed "did not follow its move order (95.5 -> 95.5)" on the two runners
+     * where its hero was in the level but "tickCount 0, entity-ticking false" at the tick-2 order, and passed on the two
+     * where it read "tickCount 2, entity-ticking true". The problem says where the unit was and how far it had got.
+     */
+    static String unreachable(GameTestHelper helper, Mob unit, UnitAction action) {
+        var level = helper.getLevel();
+        boolean inLevel = level.getEntity(unit.getId()) == unit;
+        boolean ticking = level.isPositionEntityTicking(unit.blockPosition());
+        if (inLevel && ticking)
+            return null;
+        return "setup: the " + action + " order at test tick " + helper.getTick() + " went to a unit "
+            + (inLevel ? "whose chunk is not entity-ticking yet, so it has not started to act" : "the level does not hold yet, so it was dropped")
+            + " (" + ArenaReady.describe(level, List.of(unit)) + ")";
+    }
+
+    /**
+     * How long a test waits for its units to tick before it fails "setup: the units were not ticking" (ArenaReady
+     * .Timeline). Each test's timeout is its last step plus this wait, so the verdict is that message, never a timeout.
+     */
+    static final int READY_WAIT = 100;
+
+    /**
+     * Starts a test's timeline on the first tick at which every one of its units has ticked once (it is in the level,
+     * its chunk is entity-ticking): the steps keep the ticks they had when the test counted from the spawn, now counted
+     * from the units' own first tick. A setup that never ticks ends through HeroAiGameTests.finish (units discarded).
+     */
+    static void start(GameTestHelper helper, ArenaReady.Timeline line, List<Mob> units) {
+        line.start(helper, units, 1, READY_WAIT, why -> HeroAiGameTests.finish(helper, List.of(why), units, null));
+    }
+
     /** The test's units, nulls allowed (a failed spawn): HeroAiGameTests.finish discards the rest. */
     static List<Mob> mobs(Mob... ms) {
         return new ArrayList<>(Arrays.asList(ms));
@@ -102,7 +148,7 @@ public class HeroAiV2GameTests {
      * in reach), but never leaves the lane to chase. Main: the brain fires Shield Charge (a gap closer) at the enemy six
      * blocks off the lane, so the hero lands beside it, off the route the player gave.
      */
-    @GameTest(template = ARENA, batch = "hero_ai_v2_move", timeoutTicks = 300)
+    @GameTest(template = ARENA, batch = "hero_ai_v2_move", timeoutTicks = 300 + READY_WAIT)
     public static void hero_ai_v2_a_move_order_is_not_overridden(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2_move"), them = me + "_foe";
@@ -120,10 +166,12 @@ public class HeroAiV2GameTests {
         double[] closest = { Double.MAX_VALUE };
         boolean[] cast = { false };
         int[] arrived = { -1 };
-        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        List<String> setup = new ArrayList<>();
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(2, () -> order(helper, setup, me, hero, UnitAction.MOVE, dest));
         for (int t = 3; t <= 260; t++) {
             final int tick = t;
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 // the order is judged while it runs: once the hero is there it is done, and the hero may fight
                 if (arrived[0] < 0) {
                     worst[0] = Math.max(worst[0], Math.abs(hero.getX() - lane));
@@ -134,7 +182,7 @@ public class HeroAiV2GameTests {
                 }
                 if (tick < 260)
                     return;
-                List<String> problems = new ArrayList<>();
+                List<String> problems = new ArrayList<>(setup);
                 if (worst[0] > 2.5)
                     problems.add(String.format("the hero left its lane by %.1f blocks during a move order (the enemy was 6 off it)", worst[0]));
                 if (arrived[0] < 0)
@@ -144,13 +192,14 @@ public class HeroAiV2GameTests {
                 HeroAiGameTests.finish(helper, problems, mobs(hero, foe), null);
             });
         }
+        start(helper, line, mobs(hero, foe));
     }
 
     /**
      * Hold position: the hero fights only from where it stands - Judgement at the enemy in reach, yes; Shield Charge
      * onto it, no. Main: the brain charges the enemy six blocks away and the hero leaves its spot.
      */
-    @GameTest(template = ARENA, batch = "hero_ai_v2_hold", timeoutTicks = 200)
+    @GameTest(template = ARENA, batch = "hero_ai_v2_hold", timeoutTicks = 200 + READY_WAIT)
     public static void hero_ai_v2_hold_position_is_respected(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2_hold"), them = me + "_foe";
@@ -165,19 +214,21 @@ public class HeroAiV2GameTests {
         double[] spot = new double[2];
         double[] worst = { 0 };
         boolean[] cast = { false };
-        helper.runAfterDelay(2, () -> {
+        List<String> setup = new ArrayList<>();
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(2, () -> {
             spot[0] = hero.getX();
             spot[1] = hero.getZ();
-            order(helper, me, hero, UnitAction.HOLD, BlockPos.ZERO);
+            order(helper, setup, me, hero, UnitAction.HOLD, BlockPos.ZERO);
         });
         for (int t = 3; t <= 150; t++) {
             final int tick = t;
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 worst[0] = Math.max(worst[0], flat(hero, spot[0], spot[1]));
                 cast[0] |= !judgement.isOffCooldown(p);
                 if (tick < 150)
                     return;
-                List<String> problems = new ArrayList<>();
+                List<String> problems = new ArrayList<>(setup);
                 if (worst[0] > 1.0)
                     problems.add(String.format("the hero left its hold spot by %.1f blocks", worst[0]));
                 if (!cast[0])
@@ -185,6 +236,15 @@ public class HeroAiV2GameTests {
                 HeroAiGameTests.finish(helper, problems, mobs(hero, foe), null);
             });
         }
+        start(helper, line, mobs(hero, foe));
+    }
+
+    /** {@link #attack(GameTestHelper, String, Mob, Mob)}, with a setup problem booked as {@link #order} books one. */
+    static void attack(GameTestHelper helper, List<String> setup, String owner, Mob unit, Mob target) {
+        String why = unreachable(helper, unit, UnitAction.ATTACK);
+        if (why != null)
+            setup.add(why);
+        attack(helper, owner, unit, target);
     }
 
     /** A player's attack order on {@code target}, as the server takes one from the player's client. */
@@ -199,7 +259,7 @@ public class HeroAiV2GameTests {
      * can bring it there. Main (Mode A, Oct 28, item 3): ATTACK lets the brain move nothing, so a melee hero ordered onto
      * an enemy walks the whole way and never uses its charge on the target it was given.
      */
-    @GameTest(template = ARENA, batch = "hero_ai_v2_attack", timeoutTicks = 200)
+    @GameTest(template = ARENA, batch = "hero_ai_v2_attack", timeoutTicks = 200 + READY_WAIT)
     public static void hero_ai_v2_an_attack_order_opens_with_the_charge_on_its_target(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2_attack"), them = me + "_foe";
@@ -222,10 +282,12 @@ public class HeroAiV2GameTests {
         // where the two stood as the charge set off: on landing it shoves the target blocks away, so the landing is
         // judged against the spots it aimed at, not against where the target was thrown
         double[] spots = new double[4];
-        helper.runAfterDelay(2, () -> attack(helper, me, hero, target));
+        List<String> setup = new ArrayList<>();
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(2, () -> attack(helper, setup, me, hero, target));
         for (int t = 3; t <= 160; t++) {
             final int tick = t;
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 if (chargedAt[0] < 0 && !charge.isOffCooldown(p)) {
                     chargedAt[0] = tick;
                     spots[0] = target.getX(); spots[1] = target.getZ();
@@ -237,7 +299,7 @@ public class HeroAiV2GameTests {
                 }
                 if (tick < 160)
                     return;
-                List<String> problems = new ArrayList<>();
+                List<String> problems = new ArrayList<>(setup);
                 if (chargedAt[0] < 0)
                     problems.add(String.format("under an attack order the hero never used Shield Charge on its target (still %.1f blocks off)",
                         hero.distanceTo(target)));
@@ -247,6 +309,7 @@ public class HeroAiV2GameTests {
                 HeroAiGameTests.finish(helper, problems, mobs, null);
             });
         }
+        start(helper, line, mobs);
     }
 
     /**
@@ -255,7 +318,7 @@ public class HeroAiV2GameTests {
      * here an enemy stands five blocks past the spot, on Hold fire, and the hero must have it by the end. Before the
      * spot the hero keeps to its lane (no chase while the order runs).
      */
-    @GameTest(template = ARENA, batch = "hero_ai_v2_after_move", timeoutTicks = 360)
+    @GameTest(template = ARENA, batch = "hero_ai_v2_after_move", timeoutTicks = 360 + READY_WAIT)
     public static void hero_ai_v2_a_hero_fights_right_after_its_move_order(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2_after_move"), them = me + "_foe";
@@ -271,10 +334,12 @@ public class HeroAiV2GameTests {
         double[] worst = { 0 };
         double[] closest = { Double.MAX_VALUE };
         int[] arrived = { -1 }, reachedFoe = { -1 };
-        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        List<String> setup = new ArrayList<>();
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(2, () -> order(helper, setup, me, hero, UnitAction.MOVE, dest));
         for (int t = 3; t <= 320; t++) {
             final int tick = t;
-            helper.runAfterDelay(t, () -> {
+            line.at(t, () -> {
                 if (arrived[0] < 0) {
                     worst[0] = Math.max(worst[0], Math.abs(hero.getX() - lane));
                     closest[0] = Math.min(closest[0], flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5));
@@ -285,7 +350,7 @@ public class HeroAiV2GameTests {
                 }
                 if (tick < 320)
                     return;
-                List<String> problems = new ArrayList<>();
+                List<String> problems = new ArrayList<>(setup);
                 if (worst[0] > 2.5)
                     problems.add(String.format("the hero left its lane by %.1f blocks during the move order", worst[0]));
                 if (arrived[0] < 0)
@@ -296,6 +361,7 @@ public class HeroAiV2GameTests {
                 HeroAiGameTests.finish(helper, problems, mobs, null);
             });
         }
+        start(helper, line, mobs);
     }
 
     /**
@@ -354,7 +420,7 @@ public class HeroAiV2GameTests {
      * health (a fresh command clears the flight until the next new danger). Main: the hero never breaks off a move order
      * - it walks into the enemies at a quarter of its health.
      */
-    @GameTest(template = ARENA, batch = "hero_ai_v2_retreat", timeoutTicks = 400)
+    @GameTest(template = ARENA, batch = "hero_ai_v2_retreat", timeoutTicks = 400 + READY_WAIT)
     public static void hero_ai_v2_flees_below_the_retreat_threshold_until_the_player_orders_again(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2_flee"), them = me + "_foe";
@@ -375,19 +441,20 @@ public class HeroAiV2GameTests {
         double[] deepest = { Double.NEGATIVE_INFINITY };
         double[] later = { 0 };
         List<String> problems = new ArrayList<>();
-        helper.runAfterDelay(2, () -> {
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(2, () -> {
             hero.setHealth(hero.getMaxHealth() * 0.5f);
-            order(helper, me, hero, UnitAction.MOVE, dest);
+            order(helper, problems, me, hero, UnitAction.MOVE, dest);
         });
-        helper.runAfterDelay(30, () -> {
+        line.at(30, () -> {
             z30[0] = hero.getZ();
             if (z30[0] < startZ + 0.5)
                 problems.add(String.format("at half health the hero did not follow its move order (%.1f -> %.1f)", startZ, z30[0]));
             hero.setHealth(hero.getMaxHealth() * 0.25f);   // below the retreat threshold: near death
         });
         for (int t = 31; t <= 150; t++)
-            helper.runAfterDelay(t, () -> deepest[0] = Math.max(deepest[0], hero.getZ()));
-        helper.runAfterDelay(150, () -> {
+            line.at(t, () -> deepest[0] = Math.max(deepest[0], hero.getZ()));
+        line.at(150, () -> {
             if (deepest[0] >= front)
                 problems.add(String.format("at a quarter health the hero walked on into the enemies (reached z %.1f, their row at %.1f) instead of fleeing",
                     deepest[0] - helper.absolutePos(BlockPos.ZERO).getZ(), front - helper.absolutePos(BlockPos.ZERO).getZ()));
@@ -395,18 +462,19 @@ public class HeroAiV2GameTests {
                 problems.add("at a quarter health the hero stopped short of the enemies but never ran from them");
             later[0] = hero.getZ();
             // the player takes it back: the same order again, at the same low health
-            order(helper, me, hero, UnitAction.MOVE, dest);
+            order(helper, problems, me, hero, UnitAction.MOVE, dest);
         });
         // obeyed = it got there; once there the order is done and the hero may turn on the enemies beside the spot
         double[] closest = { Double.MAX_VALUE };
         for (int t = 151; t <= 360; t++)
-            helper.runAfterDelay(t, () -> closest[0] = Math.min(closest[0], flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5)));
-        helper.runAfterDelay(360, () -> {
+            line.at(t, () -> closest[0] = Math.min(closest[0], flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5)));
+        line.at(360, () -> {
             if (hero.isAlive() && closest[0] > 1.5)
                 problems.add(String.format("after the player ordered it on again the hero still did not obey (%.1f blocks short of the spot at best, from z %.1f)",
                     closest[0], later[0] - helper.absolutePos(BlockPos.ZERO).getZ()));
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
+        start(helper, line, mobs);
     }
 
     // ------------------------------------------------------------------------------------------ what it knows
@@ -689,7 +757,7 @@ public class HeroAiV2GameTests {
      * HERO_SELECTED) and the hero goes back to the order it had - past the enemies, at the same low health. Written
      * before the select code; it calls the server's entry point for a select, which main does not have.
      */
-    @GameTest(template = ARENA, batch = "hero_ai_v2_select", timeoutTicks = 400)
+    @GameTest(template = ARENA, batch = "hero_ai_v2_select", timeoutTicks = 400 + READY_WAIT)
     public static void hero_ai_v2_selecting_a_fleeing_hero_hands_it_back_to_its_order(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2_select"), them = me + "_foe";
@@ -706,11 +774,12 @@ public class HeroAiV2GameTests {
         double front = helper.absolutePos(new BlockPos(0, 2, 11)).getZ();
         double[] deepest = { Double.NEGATIVE_INFINITY };
         List<String> problems = new ArrayList<>();
-        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
-        helper.runAfterDelay(25, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
+        ArenaReady.Timeline line = new ArenaReady.Timeline();
+        line.at(2, () -> order(helper, problems, me, hero, UnitAction.MOVE, dest));
+        line.at(25, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
         for (int t = 26; t <= 130; t++)
-            helper.runAfterDelay(t, () -> deepest[0] = Math.max(deepest[0], hero.getZ()));
-        helper.runAfterDelay(130, () -> {
+            line.at(t, () -> deepest[0] = Math.max(deepest[0], hero.getZ()));
+        line.at(130, () -> {
             if (deepest[0] >= front || hero.getZ() > deepest[0] - 1.5)
                 problems.add("setup: the hero did not break off its order to flee at a quarter health");
             HeroBot.onPlayerSelect(hero);   // the player clicks it
@@ -718,13 +787,14 @@ public class HeroAiV2GameTests {
         // back to its order = it got there; once there the order is done and it may turn on the enemies beside the spot
         double[] closest = { Double.MAX_VALUE };
         for (int t = 131; t <= 360; t++)
-            helper.runAfterDelay(t, () -> closest[0] = Math.min(closest[0], flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5)));
-        helper.runAfterDelay(360, () -> {
+            line.at(t, () -> closest[0] = Math.min(closest[0], flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5)));
+        line.at(360, () -> {
             if (hero.isAlive() && closest[0] > 1.5)
                 problems.add(String.format("selected, the hero did not go back to its move order (%.1f blocks short at best)",
                     closest[0]));
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
+        start(helper, line, mobs);
     }
 
     // ------------------------------------------------------------------------------------------ a bot's hero

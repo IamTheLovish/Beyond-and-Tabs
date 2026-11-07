@@ -136,19 +136,20 @@ def ring(r, x1, x2, z1, z2, y, name="quartz_stairs", half="bottom"):
         r.st(x2, y, z, "west", half, name)
 
 
-def angel(r, x, y, z, gold=False):
+def angel(r, x, y, z, gold=False, wide=None):
     """The family's angel (the fountain's, the capitol's plaza angels), feet at y, facing south: a quartz robe, a
     calcite head, and wings spread east-west from the shoulders and swept UP past the head (the fountain's wing: an
     upside-down stair for the hanging feathers, a full quill, a stair for the tip curling in) so the figure reads as a
-    V of wings round the lantern it holds up on a gold boss - not a cross. On the L3 spire only the head is gilded and
-    the wings open to two cells (Fable critic B, Nov 4: gold quills beside the gold boss read as a gold cross)."""
+    V of wings round the lantern it holds up on a gold boss - not a cross. On the L3 spire only the head is gilded
+    (Fable critic B, Nov 4: gold quills beside the gold boss read as a gold cross); `wide` opens the wings to two cells
+    (default: when gilded); round 4's slim L3 tower keeps them one cell wide."""
     r.pillar(x, y, z)
     r.set(x, y + 1, z, "gold_block" if gold else "calcite")
     for dx, out in ((-1, "west"), (1, "east")):
         r.st(x + dx, y + 1, z, out, "top", name="smooth_quartz_stairs")          # the hanging feathers
         r.set(x + dx, y + 2, z, "smooth_quartz")                                 # the quill
         r.st(x + dx, y + 3, z, gs._SUN_OPP[out], name="smooth_quartz_stairs")    # the tip, curling in
-        if gold:                                                                 # the outer quill and its tip
+        if (gold if wide is None else wide):                                    # the outer quill and its tip
             r.set(x + 2 * dx, y + 2, z, "smooth_quartz")
             r.st(x + 2 * dx, y + 3, z, out, name="smooth_quartz_stairs")
     r.set(x, y + 2, z, "gold_block")
@@ -292,6 +293,7 @@ def lean_to(r, back, front, y, up):
     r.st(fx, y, fz, up, name=ROOF)
 
 
+TARGETS = ((6, 6), (7, 5))              # the drill court's straw targets, clear of the spawn columns and the exit
 HEM = [(x, 4, 1) for x in range(0, 6)] + [(0, 4, z) for z in (0, 2, 3)] + [(8, 4, 5), (8, 4, 6), (9, 4, 6)]
 
 
@@ -317,9 +319,9 @@ def wings_l1(r):
     for x, z in ((0, 3), (9, 6)):            # the gable ends on the court's mouth: a dark post and a lantern on it
         r.set(x, 6, z, DARK)
         r.lantern(x, 7, z)
-    for x in (5, 6, 7):                     # a lance rack: a dark oak rail, the lances standing in it
-        r.set(x, 1, 6, "dark_oak_fence")
-        r.set(x, 2, 6, "end_rod", facing="up")
+    for x, z in TARGETS:                    # straw targets on dark oak posts (round 4: the lance rack's white rods
+        r.set(x, 1, z, "dark_oak_fence")    # "read as candles on an altar")
+        r.set(x, 2, z, "hay_block", axis="y")
 
 
 def draw_l1(r):
@@ -367,6 +369,8 @@ def crown_tier(r):
     y = KW + 1
     for x in range(TX0, KX1 + 1):
         for z in range(KZ0, TZ1 + 1):
+            if (x, z) in CENTRE:      # round 4: open over the spawn columns - a spawn from the L3 box's own centre (a
+                continue              # reload measures centrePos off the upgraded box) falls through to the court
             if not (KX0 <= x <= KX1 and z <= KZ1):          # the overhang (the keep's own top stays under the skirt)
                 if x == TX0:
                     r.st(x, y, z, "west", "top", name="smooth_quartz_stairs")
@@ -400,14 +404,46 @@ def draw_l3(r):
         r.set(x, 8, 0, "quartz_bricks")
         r.set(x, 8, 1, DARK if x % 2 else "quartz_bricks")
     crown_tier(r)
-    angel(r, FINIAL[0], SPIRE + 2, FINIAL[1], gold=True)
-    r.set(FINIAL[0], SPIRE + 5, FINIAL[1], "gold_block")
-    r.set(FINIAL[0], SPIRE + 6, FINIAL[1], "end_rod", facing="up")
+    l3_tower(r)
+    angel(r, FINIAL[0], T3_EAVES + 3, FINIAL[1], gold=True, wide=False)   # one-cell wings on the slim tower
+    r.set(FINIAL[0], T3_EAVES + 6, FINIAL[1], "gold_block")
+    r.set(FINIAL[0], T3_EAVES + 7, FINIAL[1], "end_rod", facing="up")
+
+
+T3 = (6, 8, 0, 2)                        # the L3 tower over the finial: x 6..8, z 0..2 (the angel's cells inside it)
+T3_EAVES = SPIRE + 5                     # its dark eaves (y 17), a gold-cornered band under them
+
+
+def l3_tower(r):
+    """Round 4 (blind r3: "the L3 tower roof is blunter than the L1 spire"; the bar's one dominant spire): the keep's
+    spire rises out of the crown tier's skirt as a slim 3 x 3 quartz tower - pillar corners, brick faces, dark slits
+    on its west and south faces at y 13..14 - to a band at y 16 (gold on the corners only: a row of three gold reads as
+    a cross), dark oak eaves at y 17 climbing in, the core dark to y 18, and a gold finial for the gilded angel. It
+    covers every cell of L2's spire and angel (the upgrade chain)."""
+    x0, x1, z0, z1 = T3
+    cx, cz = FINIAL
+    for x in range(x0, x1 + 1):
+        for z in range(z0, z1 + 1):
+            corner = x in (x0, x1) and z in (z0, z1)
+            for y in range(KW + 3, T3_EAVES + 2):
+                if (x, z) == (cx, cz):
+                    r.set(x, y, z, DARK)
+                elif y < T3_EAVES - 1:
+                    r.pillar(x, y, z) if corner else r.set(x, y, z, "quartz_bricks")
+                elif y == T3_EAVES - 1:
+                    r.set(x, y, z, "gold_block" if corner else "chiseled_quartz_block")
+                elif y == T3_EAVES:
+                    r.st(x, y, z, "east" if x == x0 else "west" if x == x1 else "south" if z == z0 else "north",
+                         name=ROOF)
+    for (fx, fz) in ((x0, cz), (cx, z1)):
+        for y in (KW + 5, KW + 6):
+            r.b.pop((fx, y, fz), None)
+    r.set(cx, T3_EAVES + 2, cz, "gold_block")
 
 
 L1_SY = SPIRE + 3             # the lantern on the spire's finial is the top (y 14)
 L2_SY = SPIRE + 6             # the angel's lantern (y 17)
-L3_SY = SPIRE + 7             # the needle (y 18)
+L3_SY = T3_EAVES + 8          # the needle on the L3 tower's angel (y 24)
 
 
 def build(draw, sy, tier):
