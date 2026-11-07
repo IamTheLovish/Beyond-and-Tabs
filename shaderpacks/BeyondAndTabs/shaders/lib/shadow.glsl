@@ -1,7 +1,8 @@
 // Beyond and Tabs shader pack - GPL v2 or later (see LICENSE). Original work, written clean-room; not derived from
 // any other shader pack.
 //
-// Sun (or moon) shadow lookup: 1 = lit, 0 = in shadow; under a plant 1 - PLANT_SHADOW (a faint shadow, Nov 5).
+// Sun (or moon) shadow lookup: 1 = lit, 0 = in shadow; under a plant 1 - PLANT_SHADOW (a faint shadow, Nov 5, fading
+// out as the sun sinks: shadow.vsh), and a plant takes no plant's shadow.
 // Slice 1 drew crisp shadows: four depth comparisons blended by the sample's position between texels, so an edge is
 // smooth rather than stair-stepped. Slice 3 (SOFT_SHADOWS) softens them as real sunlight does: the sun is a disc, not
 // a point, so a shadow's edge blurs in proportion to how far the shadow falls from its caster. A wall's shadow is sharp
@@ -39,25 +40,33 @@ const float PENUMBRA_MIN_TEXELS = 0.75;
 // edge-on to the sun and gets little sun anyway; capping it keeps a far tap from passing behind the caster
 const float SHADOW_MAX_SLOPE = 3.0;
 
-// the sun let through at one texel: all of it in front of the nearest caster, behind it what that caster lets pass
-float casterThrough(vec2 uv) {
-    return 1.0 - texture2D(shadowcolor0, uv).r;
+// a solid caster writes 1 into shadowcolor0 (shadow.fsh); a plant less (PLANT_SHADOW, fading as the sun sinks)
+const float SOLID_CASTER = 0.99;
+
+// the sun let through at one texel: all of it in front of the nearest caster, behind it what that caster lets pass.
+// A plant does not shade a plant (plantReceiver 1): a tuft's crossed planes stand in the shadow map at their own
+// depth, and lit with the ground's up normal each tuft shadowed itself and its neighbours - tufts read ~0.5 of the
+// lawn at noon on main (eyes 42063595099, Nov 5) where the lit-side model gives 0.81-1.05. Only a solid caster
+// shades a plant; the ground keeps the plants' faint shadow
+float casterThrough(vec2 uv, float plantReceiver) {
+    float o = texture2D(shadowcolor0, uv).r;
+    return plantReceiver > 0.5 && o < SOLID_CASTER ? 1.0 : 1.0 - o;
 }
 
-float shadowTap(vec2 uv, float depth) {
-    return depth <= texture2D(shadowtex0, uv).r ? 1.0 : casterThrough(uv);
+float shadowTap(vec2 uv, float depth, float plantReceiver) {
+    return depth <= texture2D(shadowtex0, uv).r ? 1.0 : casterThrough(uv, plantReceiver);
 }
 
 // slice 1's lookup: four comparisons blended by position between the texels
-float shadowBilinear(vec2 uv, float depth, float res) {
+float shadowBilinear(vec2 uv, float depth, float res, float plantReceiver) {
     vec2 st = uv * res - 0.5;
     vec2 f = fract(st);
     vec2 base = (floor(st) + 0.5) / res;
     float px = 1.0 / res;
-    float a = shadowTap(base, depth);
-    float b = shadowTap(base + vec2(px, 0.0), depth);
-    float c = shadowTap(base + vec2(0.0, px), depth);
-    float d = shadowTap(base + vec2(px, px), depth);
+    float a = shadowTap(base, depth, plantReceiver);
+    float b = shadowTap(base + vec2(px, 0.0), depth, plantReceiver);
+    float c = shadowTap(base + vec2(0.0, px), depth, plantReceiver);
+    float d = shadowTap(base + vec2(px, px), depth, plantReceiver);
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
@@ -70,7 +79,7 @@ vec2 shadowSpiral(int i, int n, float turn) {
 
 // s: the point in shadow-map space (uv, depth, bias applied); blocksPerUv: blocks across one unit of shadow uv;
 // depthPerBlock: shadow depth per block along the light; slope: the receiver's depth change per block of uv offset
-float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, float res) {
+float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, float res, float plantReceiver) {
     // a per-pixel turn of the tap pattern: neighbouring pixels sample different points, so a wide penumbra is smooth
     // to the eye rather than banded in 12 steps
     float turn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
@@ -86,7 +95,7 @@ float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, flo
         if (d < receiver) {
             blockers += 1.0;
             blockerDepth += d;
-            through += casterThrough(s.xy + o);
+            through += casterThrough(s.xy + o, plantReceiver);
         }
     }
     if (blockers < 0.5)
@@ -100,13 +109,14 @@ float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, flo
     float lit = 0.0;
     for (int i = 0; i < 12; i++) {
         vec2 o = shadowSpiral(i, 12, turn) * radiusUv;
-        lit += shadowBilinear(s.xy + o, s.z + dot(slope, o) * blocksPerUv * depthPerBlock, res);
+        lit += shadowBilinear(s.xy + o, s.z + dot(slope, o) * blocksPerUv * depthPerBlock, res, plantReceiver);
     }
     return lit / 12.0;
 }
 #endif
 
-float sunShadow(vec3 playerPos, vec3 worldNormal, vec3 fit) {
+// plantReceiver: 1 when the receiving pixel is a plant (lit.fsh's foliage): plant casters do not shade it
+float sunShadow(vec3 playerPos, vec3 worldNormal, vec3 fit, float plantReceiver) {
     // one shadow texel in blocks: the clip span of a texel over the clip units per block of the light's projection
     float texelBlocks = (2.0 / float(shadowMapResolution)) / (abs(shadowProjection[0][0]) * fit.z);
     vec3 p = playerPos + worldNormal * (texelBlocks * SHADOW_NORMAL_OFFSET);
@@ -129,9 +139,9 @@ float sunShadow(vec3 playerPos, vec3 worldNormal, vec3 fit) {
     float steep = length(slope);
     if (steep > SHADOW_MAX_SLOPE)
         slope *= SHADOW_MAX_SLOPE / steep;
-    float lit = softShadow(vec3(s.xy, depth), texelBlocks * res, depthPerBlock, slope, res);
+    float lit = softShadow(vec3(s.xy, depth), texelBlocks * res, depthPerBlock, slope, res, plantReceiver);
 #else
-    float lit = shadowBilinear(s.xy, depth, res);
+    float lit = shadowBilinear(s.xy, depth, res, plantReceiver);
 #endif
     // fade out at the map's edge rather than end in a line
     return mix(lit, 1.0, smoothstep(0.94, 1.0, edge));

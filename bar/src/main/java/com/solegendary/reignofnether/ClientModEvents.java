@@ -157,7 +157,9 @@ public class ClientModEvents {
         // Verdant Court: vanilla bodies with the Court's own skins (the fox keeps its vanilla look)
         evt.registerEntityRenderer(EntityRegistrar.SEEDSHAPER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SeedshaperRenderer::new);
         // Tidewrought: vanilla illager / witch bodies in their own skins (tools/gen_tide_skins.py), AM's seagull as is
-        evt.registerEntityRenderer(EntityRegistrar.SHIPWRIGHT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ShipwrightRenderer::new);
+        // the Light Grid's Builder Drone (design/ai_faction.md: the Shipwright converted in place; ShipwrightRenderer drew the
+        // corsair carpenter, kept for the cleanup slice)
+        evt.registerEntityRenderer(EntityRegistrar.SHIPWRIGHT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BuilderDroneRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GULL_SPOTTER_UNIT.get(), com.github.alexthe666.alexsmobs.client.render.RenderSeagull::new);
         evt.registerEntityRenderer(EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.CutlassRaiderRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.REEF_GUARD_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ReefGuardRenderer::new);
@@ -434,6 +436,8 @@ public class ClientModEvents {
         event.registerLayerDefinition(SkyCorsairModel.LAYER_LOCATION, SkyCorsairModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.RadiantPaladinModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.RadiantPaladinModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.BuilderDroneModel.LAYER_LOCATION,
+                com.solegendary.reignofnether.unit.modelling.models.gen.BuilderDroneModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.FieldMedicModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.FieldMedicModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel.LAYER_LOCATION,
