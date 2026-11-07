@@ -11,8 +11,11 @@ import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.shared.SiegeTuning;
+import com.solegendary.reignofnether.unit.goals.UnitBowAttackGoal;
 import com.solegendary.reignofnether.unit.units.storm.RocketBatteryUnit;
+import com.solegendary.reignofnether.unit.units.storm.RocketCharge;
 import com.solegendary.reignofnether.unit.units.storm.RocketLaunchPose;
+import com.solegendary.reignofnether.unit.units.storm.RocketRackGeometry;
 import com.solegendary.reignofnether.unit.units.storm.RocketShell;
 import com.solegendary.reignofnether.unit.units.tide.BombardShell;
 import com.solegendary.reignofnether.unit.units.villagers.VillagerUnit;
@@ -123,8 +126,12 @@ public class RocketShellGameTests {
         return true;
     }
 
-    /** Most test ticks a test waits for its units to start ticking (every test here has at least 60). */
-    static final int READY_WAIT = 30;
+    /**
+     * Most test ticks a test waits for its units to start ticking: 150, as the other tests that wait on ArenaReady (a loaded
+     * shard of the full suite left the guard test's units not ticking after 30: PR build 42134022593, shard 8, "tickCount 0,
+     * entity-ticking false"). Every test here times out at 300, so a wait of 150 leaves the test its own time.
+     */
+    static final int READY_WAIT = 150;
 
     static String fmt(double d) {
         return String.format(Locale.ROOT, "%.2f", d);
@@ -136,7 +143,7 @@ public class RocketShellGameTests {
      * A volley from a Rocket Battery is four rockets, three ticks apart, and every one is a RocketShell of the rocket
      * entity type - none a BombardShell.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_battery_fires_rocket_shells_not_bombard_shells(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "type");
@@ -188,7 +195,7 @@ public class RocketShellGameTests {
      * leaves with, and a plain shell's burst still takes 0.8 of its damage off a unit a block from the centre. A guard
      * that passes before and after the rocket's split by design: the split must not move these.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_other_artillery_still_fires_plain_bombard_shells(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "others"), foeOwner = owner + "_foe";
@@ -279,7 +286,7 @@ public class RocketShellGameTests {
      * identical building next to it. The shared artillery rules (falloff, building multiple, the global building
      * multiplier) stay at one entry, so the balance does not fork.
      */
-    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_hits_a_unit_and_a_building_for_the_stated_damage(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "dmg"), foeOwner = owner + "_foe";
@@ -412,7 +419,7 @@ public class RocketShellGameTests {
      * than two thirds as long, peaks lower than 0.7 of the mortar's arc yet still arcs (a boost, not a laser), and lands
      * within two blocks of the aim. The mortar's flight (20 + 13 = 33 ticks) is the control in the same run.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_flies_faster_and_flatter_than_a_bombard_shell_to_the_same_spot(GameTestHelper helper) {
         String owner = owner(helper, "flight");
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -502,8 +509,10 @@ public class RocketShellGameTests {
     /**
      * Each volley starts the launch animation (its ticks left start at the full length), it runs down as the ticks pass,
      * it is gone when the length has gone by, and a volley the battery refuses (inside its dead zone) starts nothing.
+     * Two volleys, the second fired once the first's animation has ended, so the start is checked for each, not only the
+     * first. Explicit end: 5 + 2 * (TOTAL_TICKS + 3) = 49 ticks after the units tick.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
     public static void rocket_shell_battery_runs_its_launch_animation_for_each_volley(GameTestHelper helper) {
         String owner = owner(helper, "anim");
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -517,6 +526,7 @@ public class RocketShellGameTests {
         List<String> problems = new ArrayList<>();
         int[] tick = { 0 };
         int[] launchedAt = { -1 };
+        int[] volley = { 0 };
         helper.onEachTick(() -> {
             if (notTicking(helper, b))
                 return;
@@ -528,22 +538,141 @@ public class RocketShellGameTests {
                 if (b.getLaunchTicks() != 0)
                     problems.add("a refused volley started the launch animation (" + b.getLaunchTicks() + " ticks left)");
             }
-            if (tick[0] == 5) {
+            // two volleys, the second fired once the first's animation has ended: each must start it afresh
+            boolean fire = tick[0] == 5
+                || (volley[0] == 1 && launchedAt[0] > 0 && tick[0] == launchedAt[0] + total + 3);
+            if (launchedAt[0] > 0 && tick[0] == launchedAt[0] + total + 3) {
+                if (b.getLaunchTicks() != 0)
+                    problems.add("the launch animation was still running " + (total + 3) + " ticks after volley " + volley[0]
+                        + ": " + b.getLaunchTicks());
+                if (!fire) {
+                    discardAll(new ArrayList<>(shellsOf(b)));
+                    b.discard();
+                    finish(helper, problems);
+                    return;
+                }
+            }
+            if (fire) {
+                volley[0]++;
                 if (!b.fireVolley(o.getX() + 14.5, ty, o.getZ() + 8.5))
-                    problems.add("the battery refused a volley 13 blocks away");
+                    problems.add("the battery refused volley " + volley[0] + " 13 blocks away");
                 launchedAt[0] = tick[0];
                 if (b.getLaunchTicks() != total)
-                    problems.add("a volley left " + b.getLaunchTicks() + " animation ticks, expected the full " + total);
+                    problems.add("volley " + volley[0] + " left " + b.getLaunchTicks() + " animation ticks, expected the full " + total);
             }
             if (launchedAt[0] > 0 && tick[0] == launchedAt[0] + 6) {
                 int left = b.getLaunchTicks();
                 if (Math.abs(left - (total - 6)) > 1)
-                    problems.add("6 ticks into a volley the animation had " + left + " ticks left, expected " + (total - 6));
+                    problems.add("6 ticks into volley " + volley[0] + " the animation had " + left + " ticks left, expected " + (total - 6));
             }
-            if (launchedAt[0] > 0 && tick[0] == launchedAt[0] + total + 3) {
-                if (b.getLaunchTicks() != 0)
-                    problems.add("the launch animation was still running " + (total + 3) + " ticks after the volley: " + b.getLaunchTicks());
-                discardAll(new ArrayList<>(shellsOf(b)));
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------ 6. where the bolts leave
+
+    /**
+     * Lovish: "the rockets leave from the rack, not the hat". Each of a volley's four bolts is created at the muzzle of its
+     * own tube (RocketRackGeometry), the tube the model draws it in, and no two share a spot - the old launch point was one
+     * spot above the head for all four.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
+    public static void rocket_shell_bolts_leave_from_the_muzzles_of_the_tubes_not_the_hat(GameTestHelper helper) {
+        String owner = owner(helper, "tubes");
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        RocketBatteryUnit b = spawn(helper, EntityRegistrar.ROCKET_BATTERY_UNIT.get(), owner, 1.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the Rocket Battery");
+            return;
+        }
+        int[] tick = { 0 };
+        helper.onEachTick(() -> {
+            if (notTicking(helper, b))
+                return;
+            if (++tick[0] < 3)
+                return;
+            double tx = o.getX() + 14.5, ty = o.getY(), tz = o.getZ() + 8.5;
+            List<String> problems = new ArrayList<>();
+            List<Vec3> at = new ArrayList<>();
+            Map<UUID, BombardShell> seen = new LinkedHashMap<>();
+            try {
+                if (!b.fireVolley(tx, ty, tz))
+                    problems.add("the battery refused a volley 13 blocks away");
+                for (BombardShell s : shellsOf(b))
+                    if (seen.putIfAbsent(s.getUUID(), s) == null)
+                        at.add(s.position());
+                for (int i = 1; i < RocketRackGeometry.TUBES; i++) {
+                    b.fireRocket(tx, ty, tz, false);   // the volley's later rockets, now, so each is read where it was made
+                    for (BombardShell s : shellsOf(b))
+                        if (seen.putIfAbsent(s.getUUID(), s) == null)
+                            at.add(s.position());
+                }
+                if (at.size() != RocketRackGeometry.TUBES)
+                    problems.add("expected " + RocketRackGeometry.TUBES + " rockets, found " + at.size());
+                for (int i = 0; i < at.size() && i < RocketRackGeometry.TUBES; i++) {
+                    double[] tip = RocketRackGeometry.muzzleWorld(b.getX(), b.getY(), b.getZ(), b.yBodyRot, i, RocketRackGeometry.FIRE_TILT);
+                    double miss = at.get(i).distanceTo(new Vec3(tip[0], tip[1], tip[2]));
+                    if (miss > 0.1)
+                        problems.add("rocket " + i + " was made " + fmt(miss) + " blocks from the muzzle of tube " + i + " (at " + fmt(at.get(i).x) + "/" + fmt(at.get(i).y) + "/" + fmt(at.get(i).z) + ")");
+                    // a pod's two tubes stand 3 px (0.19 blocks) apart; the old launch point was one spot for all four
+                    for (int j = 0; j < i; j++)
+                        if (at.get(i).distanceTo(at.get(j)) < 0.15)
+                            problems.add("rockets " + j + " and " + i + " were made on the same spot");
+                }
+            } finally {
+                discardAll(new ArrayList<>(seen.values()));
+                b.discard();
+            }
+            finish(helper, problems);
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------ 7. reload and charge on the rack
+
+    /**
+     * The rack shows the attack cooldown the unit already has: the ticks until the next volley can go (clamped to the
+     * reload window) and whether the crew has a target are synced for the client, nothing changes about when it fires.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
+    public static void rocket_shell_rack_shows_the_reload_and_the_charge_of_the_cooldown(GameTestHelper helper) {
+        String owner = owner(helper, "reload");
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        RocketBatteryUnit b = spawn(helper, EntityRegistrar.ROCKET_BATTERY_UNIT.get(), owner, 1.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the Rocket Battery");
+            return;
+        }
+        UnitBowAttackGoal<?> goal = (UnitBowAttackGoal<?>) b.getAttackGoal();
+        BlockPos far = o.offset(14, 0, 8);
+        int[] tick = { 0 };
+        List<String> problems = new ArrayList<>();
+        helper.onEachTick(() -> {
+            if (notTicking(helper, b))
+                return;
+            int t = ++tick[0];
+            if (t == 1)
+                goal.setToMaxAttackCooldown();
+            if (t == 4) {   // a full cooldown: the rack is at the start of its reload, and nobody is engaged
+                if (b.getReloadTicks() != RocketCharge.RELOAD_WINDOW)
+                    problems.add("at a full cooldown (" + goal.getAttackCooldown() + ") the rack showed " + b.getReloadTicks() + " ticks to go, expected the window " + RocketCharge.RELOAD_WINDOW);
+                if (b.isEngaged())
+                    problems.add("the crew was engaged with no target");
+                b.getRangedAttackGroundGoal().setGroundTarget(far);
+            }
+            if (t == 8) {   // an Attack Ground order engages the crew
+                if (!b.isEngaged())
+                    problems.add("the crew did not show as engaged with an Attack Ground order");
+                b.getRangedAttackGroundGoal().stop();
+            }
+            if (t == 12) {
+                if (b.isEngaged())
+                    problems.add("the crew still showed as engaged after the order was cancelled");
+                goal.resetCooldown();
+            }
+            if (t == 16) {   // ready: the rack is full and has nothing left to wait for
+                if (b.getReloadTicks() != 0)
+                    problems.add("a crew ready to fire showed " + b.getReloadTicks() + " ticks to go");
                 b.discard();
                 finish(helper, problems);
             }

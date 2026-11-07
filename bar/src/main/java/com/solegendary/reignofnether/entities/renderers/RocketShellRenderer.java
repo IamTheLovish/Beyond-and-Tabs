@@ -16,9 +16,9 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
- * Draws a {@link RocketShell}: the finned rocket pointing along its flight (yaw and pitch as vanilla's arrow), lit by
- * the world, and its exhaust flame at full brightness (the eyes render type, like the Bone Dragon's glow) flickering in
- * length. The smoke trail behind it is BarFx's.
+ * Draws a {@link RocketShell}: the charged bolt pointing along its flight (yaw and pitch as vanilla's arrow), all at full
+ * brightness (the eyes render type, like the Bone Dragon's glow): the halo spinning round the flight line and the jagged
+ * tail whipping about and flickering in length. The jagged trail it leaves behind is BarFx's.
  */
 @OnlyIn(Dist.CLIENT)
 public class RocketShellRenderer extends EntityRenderer<RocketShell> {
@@ -40,9 +40,12 @@ public class RocketShellRenderer extends EntityRenderer<RocketShell> {
         pose.mulPose(Axis.YP.rotationDegrees(Mth.lerp(partialTick, shell.yRotO, shell.getYRot()) - 90.0F));
         pose.mulPose(Axis.ZP.rotationDegrees(Mth.lerp(partialTick, shell.xRotO, shell.getXRot())));
         pose.scale(SCALE, SCALE, SCALE);
-        model.body.render(pose, buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
         float age = shell.tickCount + partialTick;
-        model.flame.xScale = 0.8F + 0.45F * Math.abs(Mth.sin(age * 2.3F));
+        model.body.xRot = age * 1.4F;   // the halo spins round the flight line
+        model.body.render(pose, buffer.getBuffer(RenderType.eyes(TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
+        model.flame.xScale = 0.75F + 0.55F * Math.abs(Mth.sin(age * 2.9F + shell.getId()));
+        model.flame.yRot = 0.4F * Mth.sin(age * 3.7F + shell.getId());
+        model.flame.zRot = 0.35F * Mth.cos(age * 3.1F);
         model.flame.render(pose, buffer.getBuffer(RenderType.eyes(TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
         pose.popPose();
         super.render(shell, entityYaw, partialTick, pose, buffer, packedLight);

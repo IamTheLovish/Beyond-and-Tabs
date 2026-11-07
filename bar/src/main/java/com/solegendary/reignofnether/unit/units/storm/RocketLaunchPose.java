@@ -51,6 +51,19 @@ public final class RocketLaunchPose {
         return smoothstep(age / 2f) * (1f - smoothstep((age - (TOTAL_TICKS - 6)) / 6f));
     }
 
+    /**
+     * The rack's lift in a volley that starts from a charged rack (RocketCharge): already lifted into firing position at the
+     * first rocket, held through the volley and settling at its end - {@link #rackLift} without its two-tick rise.
+     */
+    public static float chargedLift(float age) {
+        return age <= 2f ? 1f : rackLift(age);
+    }
+
+    /** How loaded tube {@code tube} is {@code age} ticks into a volley: 1 until its bolt leaves (tube i at i x GAP), 0 a tick later. */
+    public static float loaded(int tube, float age) {
+        return 1f - smoothstep(age - tube * GAP);   // gone within a tick of its own bolt
+    }
+
     private static float smoothstep(float x) {
         float t = clamp(x, 0f, 1f);
         return t * t * (3f - 2f * t);

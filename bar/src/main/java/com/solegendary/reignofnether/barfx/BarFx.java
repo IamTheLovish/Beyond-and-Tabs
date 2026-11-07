@@ -64,7 +64,8 @@ public final class BarFx {
 
     // ---- weapon / projectile kinds (shots and impacts)
     public static final byte K_ARROW = 0, K_FIREBALL = 1, K_BIG_FIREBALL = 2, K_MAGIC = 3, K_THROWN = 4, K_TNT = 5,
-            K_ROCKET = 6, K_SONIC = 7, K_MELEE = 8, K_POTION = 9, K_HEAVY_MELEE = 10, K_OTHER = 11;
+            K_ROCKET = 6, K_SONIC = 7, K_MELEE = 8, K_POTION = 9, K_HEAVY_MELEE = 10, K_OTHER = 11,
+            K_BOLT = 12;   // a charged bolt (the Rocket Battery's RocketShell): jagged electric trail, thunderclap
 
     // ---- impact "where" flags (low 4 bits; bits 4-6 = the shooter's faction, see shotFlags)
     public static final byte AT_GROUND = 0, AT_UNIT = 1, AT_BUILDING = 2;
@@ -474,7 +475,7 @@ public final class BarFx {
         if (e == null) return K_OTHER;
         try {
             if (e instanceof net.minecraft.world.entity.projectile.FireworkRocketEntity) return K_ROCKET;
-            if (e instanceof com.solegendary.reignofnether.unit.units.storm.RocketShell) return K_ROCKET;   // the Rocket Battery's own rocket: smoke trail, muzzle flash, impact flash
+            if (e instanceof com.solegendary.reignofnether.unit.units.storm.RocketShell) return K_BOLT;   // the Rocket Battery's own charged bolt: jagged blue trail, muzzle flash, thunderclap
             if (e instanceof com.solegendary.reignofnether.entities.ThrowableTntProjectile) return K_TNT;
             if (e instanceof com.solegendary.reignofnether.entities.MoltenBombProjectile) return K_BIG_FIREBALL;
             if (e instanceof net.minecraft.world.entity.projectile.LargeFireball) return K_BIG_FIREBALL;

@@ -13,16 +13,16 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
- * The Stormcallers Rocket Battery: the illager body in a red-lacquer crew coat with a gold powder belt (tools/gen_storm_skins.py),
- * a rocket rack on its back as geometry (RocketRackLayer), and a launch animation - the crew leans back with each rocket,
- * the arms brace on the rack (RocketBatteryModel). The old renderer's layers: the held bow (ItemInHandLayer) is dropped on
+ * The Stormcallers Rocket Battery: the illager body in a red-lacquer crew coat with a gold belt (tools/gen_storm_skins.py),
+ * a rack of compact copper tubes on its back as geometry (RocketRackLayer), and a launch animation - the rack charges and
+ * the arms brace on it before a volley, the crew leans back with each bolt (RocketBatteryModel). The old renderer's layers: the held bow (ItemInHandLayer) is dropped on
  * purpose - the crew carries the rack, the bow is only what UnitBowAttackGoal needs; the team colour, head, armour and
  * trim layers are the shared ones.
  */
 @OnlyIn(Dist.CLIENT)
 public class RocketBatteryRenderer extends AbstractVillagerUnitRenderer<RocketBatteryUnit> {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/rocket_battery_unit.png");
-    /** How far a full recoil leans the whole crew back, degrees. */
+    /** How far a full recoil leans the whole crew back, degrees (a negative turn about x: a positive one leans a mob forward). */
     private static final float LEAN_BACK_DEG = 5.0F;
 
     public RocketBatteryRenderer(EntityRendererProvider.Context context) {
@@ -35,7 +35,7 @@ public class RocketBatteryRenderer extends AbstractVillagerUnitRenderer<RocketBa
         super.setupRotations(unit, pose, ageInTicks, rotationYaw, partialTicks);
         int left = unit.getLaunchTicks();
         if (left > 0)
-            pose.mulPose(Axis.XP.rotationDegrees(LEAN_BACK_DEG * RocketLaunchPose.recoil(RocketLaunchPose.age(left, partialTicks))));
+            pose.mulPose(Axis.XP.rotationDegrees(-LEAN_BACK_DEG * RocketLaunchPose.recoil(RocketLaunchPose.age(left, partialTicks))));
     }
 
     public ResourceLocation getTextureLocation(RocketBatteryUnit unit) {

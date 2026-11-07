@@ -56,7 +56,8 @@ import java.util.Optional;
 
 /**
  * Stormcallers artillery - the <b>Rocket Battery</b> (design/stormcallers_plan.md, slice 2): a crew on the pillager body
- * (its own skin, RocketBatteryRenderer) with a rack of gunpowder rockets. Every {@link #attacksPerSecond}-paced attack is
+ * (its own skin, RocketBatteryRenderer) with a rack of compact copper tubes that fires charged bolts (the storm reskin: the
+ * rack reloads and charges before each volley, RocketCharge; each bolt leaves the muzzle of its own tube, RocketRackGeometry). Every {@link #attacksPerSecond}-paced attack is
  * a <b>volley</b>: {@link #VOLLEY_ROCKETS} small rockets, a few ticks apart, each aimed at a random spot within
  * {@link #VOLLEY_SPREAD} blocks of the target and each a {@link RocketShell} (a {@link BombardShell} with its own quick,
  * flat flight, look and burst: Nov 5) on a solved arc that bursts for {@link #attackDamage} splash (never terrain). Range {@link #attackRange}, blind inside {@link #MIN_RANGE}; Attack
@@ -166,9 +167,20 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
 
     public int getLaunchTicks() { return this.entityData.get(launchDataAccessor); }
 
+    /** Ticks until the next volley can go, clamped to {@link RocketCharge#RELOAD_WINDOW} (what the rack shows); and whether the crew has a target. */
+    public static final EntityDataAccessor<Integer> reloadDataAccessor =
+        SynchedEntityData.defineId(RocketBatteryUnit.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> engagedDataAccessor =
+        SynchedEntityData.defineId(RocketBatteryUnit.class, EntityDataSerializers.BOOLEAN);
+
+    public int getReloadTicks() { return this.entityData.get(reloadDataAccessor); }
+    public boolean isEngaged() { return this.entityData.get(engagedDataAccessor); }
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(reloadDataAccessor, 0);
+        this.entityData.define(engagedDataAccessor, false);
         this.entityData.define(launchDataAccessor, 0);
         this.entityData.define(ownerDataAccessor, "");
         this.entityData.define(scenarioRoleDataAccessor, -1);
@@ -268,6 +280,44 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
             attackGroundGoal.tick();
         if (!level().isClientSide() && getLaunchTicks() > 0)
             this.entityData.set(launchDataAccessor, getLaunchTicks() - 1);
+        if (!level().isClientSide())
+            syncRack();
+        else
+            crackle();
+    }
+
+    /**
+     * Server: what the rack shows of the attack cooldown the unit already has - the ticks until the next volley (clamped to
+     * the reload window, so it only changes in the last {@link RocketCharge#RELOAD_WINDOW}) and whether it has a target (a
+     * unit order or an Attack Ground order). A look only: nothing here decides when it fires.
+     */
+    private void syncRack() {
+        int until = attackGoal == null ? 0 : (int) Math.min(RocketCharge.RELOAD_WINDOW, Math.max(0f, attackGoal.getAttackCooldown()));
+        boolean engaged = getTarget() != null || (attackGroundGoal != null && attackGroundGoal.getGroundTarget() != null);
+        this.entityData.set(reloadDataAccessor, until);
+        this.entityData.set(engagedDataAccessor, engaged);
+    }
+
+    /**
+     * The charge's motes: small electric-blue specks, not vanilla's white electric sparks (a cloud of white sparkles over
+     * the rack read as a fireworks stand to the blind critic, round 1 of the storm loop).
+     */
+    static final net.minecraft.core.particles.DustParticleOptions CHARGE_MOTE =
+        new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.42f, 0.72f, 1.0f), 0.7f);
+
+    /** Client: while the rack charges for the next volley the loaded tubes crackle with blue motes, more the nearer it is. */
+    private void crackle() {
+        float charge = RocketCharge.charge(getReloadTicks(), isEngaged());
+        if (charge <= 0.05f || getLaunchTicks() > 0)
+            return;
+        float tilt = RocketRackGeometry.REST_TILT + RocketRackGeometry.LIFT_TILT * charge;
+        for (int tube = 0; tube < RocketRackGeometry.TUBES; tube++) {
+            if (getRandom().nextFloat() > 0.1f + 0.35f * charge)
+                continue;
+            double[] tip = RocketRackGeometry.muzzleWorld(getX(), getY(), getZ(), yBodyRot, tube, tilt);
+            level().addParticle(CHARGE_MOTE, tip[0], tip[1], tip[2],
+                (getRandom().nextDouble() - 0.5) * 0.1, 0.03 + getRandom().nextDouble() * 0.06, (getRandom().nextDouble() - 0.5) * 0.1);
+        }
     }
 
     @Override
@@ -369,6 +419,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         double dx = x - getX(), dz = z - getZ();
         if (dx * dx + dz * dz < MIN_RANGE * MIN_RANGE)
             return false;
+        nextTube = 0;
         for (int i = 0; i < VOLLEY_ROCKETS; i++) {
             if (i == 0)
                 fireRocket(x, y, z, true);
@@ -376,7 +427,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
                 com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(i * VOLLEY_GAP_TICKS,
                     () -> fireRocket(x, y, z, false));
         }
-        this.playSound(SoundEvents.FIREWORK_ROCKET_LAUNCH, 1.4F, 0.8F + getRandom().nextFloat() * 0.2F);
+        this.playSound(SoundEvents.LIGHTNING_BOLT_IMPACT, 0.6F, 1.7F + getRandom().nextFloat() * 0.3F);
         this.entityData.set(launchDataAccessor, RocketLaunchPose.TOTAL_TICKS);
         getMainHandItem().setDamageValue(0);
         return true;
@@ -392,16 +443,21 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
             tx += Math.cos(a) * r;
             tz += Math.sin(a) * r;
         }
-        // the rocket is the projectile: BarFx follows it (it classes a RocketShell K_ROCKET) with the muzzle flash on
-        // launch, a smoke trail in flight and a flash on impact, so nothing is drawn beside it
+        // the bolt is the projectile: BarFx follows it (it classes a RocketShell K_BOLT) with the muzzle arc on launch,
+        // a jagged electric trail in flight and a thunderclap on impact, so nothing else is drawn beside it
+        // each bolt leaves the muzzle of its own tube, the tube the model draws it in (RocketRackGeometry), not the crew's hat
+        double[] tip = RocketRackGeometry.muzzleWorld(getX(), getY(), getZ(), yBodyRot, nextTube++ % RocketRackGeometry.TUBES, RocketRackGeometry.FIRE_TILT);
         RocketShell shell = new RocketShell(sl, this, getUnitAttackDamage());
-        shell.setPos(getX(), getEyeY() + 0.5, getZ());
+        shell.setPos(tip[0], tip[1], tip[2]);
         shell.aimAt(tx, y, tz);
         sl.addFreshEntity(shell);
-        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.FIREWORK, getX(), getEyeY() + 0.6, getZ(), 5, 0.15, 0.15, 0.15, 0.03);
+        sl.sendParticles(CHARGE_MOTE, tip[0], tip[1], tip[2], 4, 0.1, 0.1, 0.1, 0.05);
         if (!first)
-            sl.playSound(null, blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.NEUTRAL, 1.0F, 0.9F + getRandom().nextFloat() * 0.3F);
+            sl.playSound(null, blockPosition(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.NEUTRAL, 0.5F, 1.7F + getRandom().nextFloat() * 0.4F);
     }
+
+    /** The tube the next rocket of this volley leaves from (reset by each volley). */
+    private int nextTube = 0;
 
     // a gunner, not an illager: healing heals and raid/bad-omen logic leaves it alone
     @Override

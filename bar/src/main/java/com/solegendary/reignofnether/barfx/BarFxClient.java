@@ -297,6 +297,13 @@ public final class BarFxClient {
                 }
             }
             case BarFx.K_MAGIC -> flash(mx, my, mz, .55f, .14f, tint(0xC8A0FF, faction));
+            case BarFx.K_BOLT -> {
+                // a short blue arc off the muzzle; kept short and blue so four launches read as four beats, not a
+                // cloud over the rack
+                flash(mx, my, mz, .55f, .14f, BOLT_GLOW);
+                sparks(mx, my, mz, 4, 3f, BOLT_DEEP, ux, uz);
+                lightning(mx, my, mz, mx + ux * 1.4f + rnd(-.3f, .3f), my + uy * 1.4f + rnd(0f, .5f), mz + uz * 1.4f + rnd(-.3f, .3f), 4, .22f, .2f, .045f);
+            }
             case BarFx.K_ROCKET, BarFx.K_TNT -> {
                 flash(mx, my, mz, .45f, .1f, tint(0xFFC070, faction));
                 for (int i = 0; i < 4; i++) {
@@ -324,6 +331,7 @@ public final class BarFxClient {
                 for (int i = 0; i < 2; i++) { P p = smoke(x, y + .2f, z, .25f, 2.2f, 0x3A3632, .55f); p.vy = .5f; p.grow = 1.8f; }
                 if (where == BarFx.AT_GROUND) scorch(x, y, z, .55f, 30, 0x16120E);
             }
+            case BarFx.K_BOLT -> thunderclap(x, y, z, where, size);
             case BarFx.K_BIG_FIREBALL, BarFx.K_TNT, BarFx.K_ROCKET -> {
                 flash(x, y, z, .9f, .1f, tint(0xFFD080, faction));
                 // heavy shells landing on open ground leave a short-lived scorched ring (the blast itself, if any,
@@ -854,6 +862,88 @@ public final class BarFxClient {
         if (!busy) sparks(x2, y2, z2, 2, 1.1f, lighter(c, .3f), 0, 0);
     }
 
+    // ------------------------------------------------------------------ the Rocket Battery's charged bolt
+
+    /** Blue-white colours of the bolt: the hot core, the glow round it and the deep edge. */
+    static final int BOLT_CORE = 0xFFFFFF, BOLT_GLOW = 0x9AD8FF, BOLT_DEEP = 0x4F8CFF;
+
+    /**
+     * A jagged line of short beams from (x,y,z) to (x2,y2,z2): {@code segs} segments, each corner thrown off the straight
+     * line by up to {@code jitter} blocks, drawn as a glow and a thin white core. It lives {@code life} s (a flicker).
+     */
+    static void lightning(float x, float y, float z, float x2, float y2, float z2, int segs, float jitter, float life, float width) {
+        float px = x, py = y, pz = z;
+        for (int i = 1; i <= segs; i++) {
+            float t = i / (float) segs;
+            float nx = x + (x2 - x) * t, ny = y + (y2 - y) * t, nz = z + (z2 - z) * t;
+            if (i < segs) { nx += rnd(-jitter, jitter); ny += rnd(-jitter, jitter) * .6f; nz += rnd(-jitter, jitter); }
+            beam(px, py, pz, nx, ny, nz, life, width * 2.2f, BOLT_GLOW);
+            beam(px, py, pz, nx, ny, nz, life * .8f, width, BOLT_CORE);
+            px = nx; py = ny; pz = nz;
+        }
+    }
+
+    /**
+     * The bolt in flight (30 Hz): a flickering blue-white spark at its tail and a jagged streak behind it that changes
+     * every frame. Each streak lives about a fifth of a second, so the streaks overlap into a ribbon along the arc and
+     * every bolt of a volley still shows as its own streak in a 10 fps capture (at a tenth of a second the four bolts of
+     * the storm loop's round 1 read as "one thin bolt").
+     */
+    static void boltTrail(float x, float y, float z, float dx, float dy, float dz, boolean busy) {
+        float l = Math.max(.01f, (float) Math.sqrt(dx * dx + dy * dy + dz * dz)), ux = dx / l, uy = dy / l, uz = dz / l;
+        float back = busy ? 1.6f : 3.2f;
+        lightning(x - ux * .3f, y - uy * .3f, z - uz * .3f, x - ux * back, y - uy * back, z - uz * back, busy ? 3 : 5, .18f,
+            busy ? rnd(.07f, .11f) : rnd(.14f, .22f), .042f);
+        flash(x - ux * .4f, y - uy * .4f, z - uz * .4f, .3f, .1f, BOLT_GLOW);
+        if (!busy && R.nextInt(3) == 0) {
+            P p = add(SPARK, x - ux * .6f, y - uy * .6f, z - uz * .6f, rnd(.15f, .3f), rnd(.02f, .035f), BOLT_GLOW);
+            p.vx = rnd(-.8f, .8f); p.vy = rnd(-.3f, .8f); p.vz = rnd(-.8f, .8f);
+        }
+    }
+
+    /**
+     * Where a bolt lands: a small thunderclap. A short strike down from the sky onto the spot (the storm's signature: it
+     * reads top-down as a bright jagged line ending in the flash), a blue-white flash, sparks, a ring, a scorch that
+     * stays a few seconds, and (on open ground) a branching crack lying across the ground, a few forking arms drawn as
+     * thin ground-flat beams that fade in about a second. Lives are set so each part shows in two or more frames of a
+     * 10 fps capture (round 1 of the storm loop: "no impact is ever shown" with 0.09 s flashes).
+     */
+    static void thunderclap(float x, float y, float z, int where, float size) {
+        float g = groundOr(x, y, z);
+        lightning(x + rnd(-.8f, .8f), g + 5.5f, z + rnd(-.8f, .8f), x, g + .1f, z, 6, .45f, .24f, .06f);
+        flash(x, y + .1f, z, 1.2f, .2f, 0xF2FAFF);
+        flash(x, y + .1f, z, .8f, .32f, BOLT_GLOW);
+        sparks(x, y + .1f, z, 10, 4f, BOLT_GLOW, 0, 0);
+        ring(x, g + .1f, z, 1.3f * size, .4f, BOLT_DEEP);
+        if (where == BarFx.AT_GROUND)
+            scorch(x, g, z, .6f * size, 8, 0x1A1E28);
+        if (where == BarFx.AT_UNIT)   // a hit on a body: a quick arc up it rather than a crack in the ground
+            lightning(x, y - .3f, z, x + rnd(-.3f, .3f), y + 1.1f, z + rnd(-.3f, .3f), 4, .2f, .22f, .035f);
+        int arms = 5 + (int) (size * 2);
+        float base = rnd(0, 6.28f);
+        for (int a = 0; a < arms; a++) {
+            float ang = base + a * (6.2832f / arms) + rnd(-.3f, .3f);
+            crackArm(x, g + .08f, z, ang, rnd(1.2f, 2.2f) * size, 0);
+        }
+    }
+
+    /** One arm of the ground crack: steps along {@code ang} with a wobble, and splits once or twice into a shorter fork. */
+    private static void crackArm(float x, float y, float z, float ang, float len, int depth) {
+        int steps = 4;
+        float px = x, pz = z;
+        for (int i = 1; i <= steps; i++) {
+            ang += rnd(-.55f, .55f);
+            float step = len / steps;
+            float nx = px + (float) Math.cos(ang) * step, nz = pz + (float) Math.sin(ang) * step;
+            float w = .045f * (1f - i / (float) (steps + 1)) + .012f;
+            beam(px, y, pz, nx, y, nz, rnd(.9f, 1.3f), w * 2.4f, BOLT_DEEP);
+            beam(px, y, pz, nx, y, nz, rnd(.5f, .8f), w, BOLT_CORE);
+            px = nx; pz = nz;
+            if (depth < 2 && i >= 2 && R.nextInt(3) == 0)
+                crackArm(px, y, pz, ang + (R.nextBoolean() ? 1f : -1f) * rnd(.5f, .9f), len * .45f, depth + 1);
+        }
+    }
+
     // ------------------------------------------------------------------ building blocks
 
     static P flash(float x, float y, float z, float size, float life, int c) { return add(FLASH, x, y, z, life, size, c); }
@@ -1054,6 +1144,7 @@ public final class BarFxClient {
             int faction = BarFx.factionOf(e);
             switch (BarFx.kindOf(e)) {
                 case BarFx.K_ARROW -> beam(x - dx * .9f, y - dy * .9f, z - dz * .9f, x, y, z, .09f, .03f, tint(0xFFE6B0, faction));
+                case BarFx.K_BOLT -> boltTrail(x, y, z, dx, dy, dz, busy);
                 case BarFx.K_ROCKET, BarFx.K_TNT -> {
                     if (busy && R.nextBoolean()) break;
                     P p = smoke(x - dx * .5f, y - dy * .5f, z - dz * .5f, .14f, rnd(1.2f, 1.8f), 0xEDEDED, .55f); p.vy = .15f; p.grow = 2.2f;

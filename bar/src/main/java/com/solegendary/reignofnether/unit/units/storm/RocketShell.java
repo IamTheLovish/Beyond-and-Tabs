@@ -24,9 +24,11 @@ import org.jetbrains.annotations.NotNull;
  * <ul>
  * <li>flight - {@link RocketFlight}: about half the mortar's time on a flatter arc, through the same solve
  * ({@link #flightTicksAt}, {@link #getGravity});</li>
- * <li>look - RocketShellRenderer draws a finned rocket with a flame, along its path; the smoke trail, the muzzle flash
- * and the impact flash come from BarFx, which classes it {@code K_ROCKET} (BarFx.kindOf);</li>
- * <li>burst - sparks, flame and a firework crack instead of the mortar's smoke and thud ({@link #burstEffects}).</li>
+ * <li>look - a charged bolt (lovish, Nov 5: the Stormcallers' rocket should read as lightning, not gunpowder):
+ * RocketShellRenderer draws a glowing blue-white bolt along its path; the jagged flickering trail, the muzzle flash and the
+ * impact (a blue-white flash and a branching crack across the ground) come from BarFx, which classes it {@code K_BOLT}
+ * (BarFx.kindOf);</li>
+ * <li>burst - a small thunderclap instead of the mortar's smoke and thud ({@link #burstEffects}).</li>
  * </ul>
  */
 public class RocketShell extends BombardShell {
@@ -57,11 +59,12 @@ public class RocketShell extends BombardShell {
 
     @Override
     protected void burstEffects(ServerLevel sl, double x, double y, double z, float splash) {
-        sl.sendParticles(ParticleTypes.EXPLOSION, x, y + 0.3, z, 1, 0, 0, 0, 0);
-        sl.sendParticles(ParticleTypes.FLAME, x, y + 0.2, z, 10, splash * 0.3, 0.15, splash * 0.3, 0.07);
-        sl.sendParticles(ParticleTypes.FIREWORK, x, y + 0.3, z, 12, splash * 0.35, 0.3, splash * 0.35, 0.1);
-        sl.sendParticles(ParticleTypes.SMOKE, x, y + 0.4, z, 6, splash * 0.3, 0.25, splash * 0.3, 0.04);
-        sl.playSound(null, x, y, z, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.HOSTILE, 1.5f, 0.85f);
-        sl.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 0.9f, 1.7f);
+        // a small thunderclap: electric sparks and a few white motes flung out (the blue-white flash and the branching crack
+        // along the ground are BarFx's, K_BOLT), a sharp crack and a low rumble
+        sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, x, y + 0.25, z, 18, splash * 0.35, 0.2, splash * 0.35, 0.35);
+        sl.sendParticles(ParticleTypes.END_ROD, x, y + 0.4, z, 5, splash * 0.3, 0.25, splash * 0.3, 0.06);
+        sl.sendParticles(ParticleTypes.CLOUD, x, y + 0.3, z, 3, splash * 0.2, 0.1, splash * 0.2, 0.02);
+        sl.playSound(null, x, y, z, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.HOSTILE, 0.9f, 1.55f);
+        sl.playSound(null, x, y, z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 0.5f, 1.1f);
     }
 }
