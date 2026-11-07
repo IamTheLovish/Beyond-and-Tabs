@@ -24,6 +24,7 @@ public class ResourceCosts {
     public static final ResourceCost POISON_SPIDER = new ResourceCost(ID, "POISON_SPIDER");
     public static final ResourceCost WRAITH = new ResourceCost(ID, "WRAITH");
     public static final ResourceCost TOMBCALLER = new ResourceCost(ID, "TOMBCALLER");   // Gravebound essence caster (T1)
+    public static final ResourceCost TITHE_BINDER = new ResourceCost(ID, "TITHE_BINDER");   // Gravebound T1 caster
     public static final ResourceCost SLIME = new ResourceCost(ID, "SLIME");
     public static final ResourceCost WARDEN = new ResourceCost(ID, "WARDEN");
     public static final ResourceCost ZOMBIE_PIGLIN = new ResourceCost(ID, "ZOMBIE_PIGLIN");
@@ -379,6 +380,7 @@ public class ResourceCosts {
         POISON_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.POISON_SPIDER);
         WRAITH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WRAITH);
         TOMBCALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TOMBCALLER);
+        TITHE_BINDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TITHE_BINDER);
         SLIME.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SLIME);
         WARDEN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WARDEN);
         NECROMANCER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.NECROMANCER);

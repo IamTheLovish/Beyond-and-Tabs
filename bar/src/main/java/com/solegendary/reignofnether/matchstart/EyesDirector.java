@@ -2672,7 +2672,7 @@ public final class EyesDirector {
                 // hit particles covered the body in about half of the 10 fps frames of every attack clip (run
                 // 39295387553 for 5169d6d) - and the body is what these clips exist to show. The dummies still die
                 // under the blows, so the clip keeps its kill. rtsapi-summon loads the entity from the nbt it is given
-                int dummyAt = names.length > 6 ? Integer.parseInt(names[6]) : 2;
+                int dummyAt = plainLen(names) > 6 ? Integer.parseInt(names[6]) : 2;
                 // artillery (names[6] set): the dummies stand on the real ground dummyAt blocks off (the walk ended on a
                 // ledge, and a ghoul spawned at the unit's y inside the next rise suffocated), and the battery is ORDERED
                 // to shell that spot: the run of Nov 5 (42045632661) showed it never picking the NoAI dummies by itself,
@@ -2680,7 +2680,7 @@ public final class EyesDirector {
                 // comes 4.75 s after the order: the battery turns and aims for ~2.3 s, the four rockets leave over a second and land ~1 s
                 // later (run 42056297739: at +50 ticks the clip ended on the first rocket, the tour moves on after the still), so the
                 // window [still - 4 s, still] holds the whole volley and its impacts
-                boolean artillery = names.length > 6;
+                boolean artillery = plainLen(names) > 6;
                 int dummyX = (int) Math.floor(unit.getX()) + dummyAt, dummyZ = (int) Math.floor(unit.getZ());
                 int dummyY = artillery ? mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, dummyX, dummyZ) : (int) Math.floor(unit.getY());
                 if (enemyName != null)
@@ -2719,12 +2719,26 @@ public final class EyesDirector {
         // (optional 6th / 7th entries: the close zoom's factor, and how far the dummies stand), and the zoom is wider so the
         // rack, the crew's lean and the four rockets leaving it share one frame
         { "RocketBatteryUnit", "07zm_rocket_battery_close", "07zn_rocket_battery_walk", "07zo_rocket_battery_volley", "rocket_battery_unit", "1.7", "9" },
+        // the Tithe Binder rig (PR #549): hover bob, the orbiting weapon wheel, soul chains and the volley need to be
+        // seen moving in the game, not judged from offline sheets; its stand-in starts with 6 bound weapons (the trailing
+        // nbt entry), so the wheel and the count halo are on screen
+        { "TitheBinderUnit", "07za_tithe_binder_close", "07zb_tithe_binder_walk", "07zc_tithe_binder_volley", "tithe_binder_unit",
+            "{BoundWeapons:6}" },
         // the Light Grid's Builder Drone (Nov 6, design/ai_faction.md): the hover rig's bob, lean and bank, the arms'
         // strike and the team light lines; then the Sunforged Field Mason, the best generated constructor body, in the
         // same run as its yardstick (a critic compares the two inside one tour, never across runs)
         { "ShipwrightUnit", "07zp_builder_drone_close", "07zq_builder_drone_walk", "07zr_builder_drone_attack", "shipwright_unit" },
         { "FieldMasonUnit", "07zs_field_mason_close", "07zt_field_mason_walk", "07zu_field_mason_attack", "field_mason_unit" },
     };
+    /** A CLOSE_UPS row may end in an nbt entry ("{...}") its stand-in is summoned with; it is not a numeric entry. */
+    private static String nbtOf(String[] names) {
+        return names.length > 5 && names[names.length - 1].startsWith("{") ? names[names.length - 1] : "";
+    }
+
+    /** The row's length without its trailing nbt entry (the optional 6th / 7th numeric entries count from this). */
+    private static int plainLen(String[] names) {
+        return nbtOf(names).isEmpty() ? names.length : names.length - 1;
+    }
     private static int closeUpSubject = 0;
     private static int lookOffAt = -1;               // 02b: tick of the look-off still (the world-look A/B)
     private static int framingWaits = 0;             // close-up stills deferred so far for a badly framed subject
@@ -2767,8 +2781,9 @@ public final class EyesDirector {
         int x = (int) Math.floor(armyCentre.x + back.x * 3), z = (int) Math.floor(armyCentre.z + back.z * 3);
         Vec3 at = ground(mc, x, z, (int) armyCentre.y);
         String me = mc.player.getName().getString().replace("\"", "");
-        boolean sent = runCommand(mc, String.format("rtsapi-summon \"%s\" %s:%s %d %d %d", me, ReignOfNether.MOD_ID,
-                names[4], x, (int) at.y, z));
+        String nbt = nbtOf(names);
+        boolean sent = runCommand(mc, String.format("rtsapi-summon \"%s\" %s:%s %d %d %d%s", me, ReignOfNether.MOD_ID,
+                names[4], x, (int) at.y, z, nbt.isEmpty() ? "" : " " + nbt));
         ReignOfNether.LOGGER.warn("[Eyes] {}: no {} left in the army (the battle took them); {} a stand-in at {} {} {}",
                 names[1], names[0], sent ? "summoned" : "could NOT summon", x, (int) at.y, z);
         return sent;
@@ -2803,7 +2818,7 @@ public final class EyesDirector {
         // past the player's floor of 10 blocks of view height (a unit was ~11% of the screen there): ~5 for a 2-block
         // body, ~7 for the golem-sized paladin - at the close tilt (55 degrees) the body fills about a third of the
         // screen height
-        float closeZoom = Math.max(5f, subject.getBbHeight() * 2.6f) * (names.length > 5 ? Float.parseFloat(names[5]) : 1f);
+        float closeZoom = Math.max(5f, subject.getBbHeight() * 2.6f) * (plainLen(names) > 5 ? Float.parseFloat(names[5]) : 1f);
         setZoom(closeZoom);
         placeOnScreen(mc, closeUpMiddle(subject), CLOSE_NDC_X, CLOSE_NDC_Y);
         ReignOfNether.LOGGER.info("[Eyes] {}: zooming in to {} on {} at {}", names[1], closeZoom,
