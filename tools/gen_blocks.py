@@ -6292,7 +6292,8 @@ def water_frames(res, seed=4242, layers_spec=STILL_LAYERS, aniso=(1.0, 1.0)):
     return F, [h for h in allH]
 
 
-def write_water(res, preview_dir=None, name="water_still"):
+def water_maps(res, name="water_still"):
+    """(albedo strip, alpha, normal strip, specular strip, normal strength) of the animated water texture `name`."""
     flow = name == "water_flow"
     F, Hs = water_frames(res, 4243, FLOW_LAYERS, FLOW["aniso"]) if flow else water_frames(res)
     alb_frames, n_frames, s_frames = [], [], []
@@ -6315,6 +6316,17 @@ def write_water(res, preview_dir=None, name="water_still"):
     strip = np.clip(WATER["luma"] + (strip - L.mean()) * (WATER["std"] / max(mip(L, CAL_MIP).std(), 1e-6)), 0, 1)
     alpha = np.full(strip.shape[:2], WATER["alpha"])
     nstrip, sstrip = np.concatenate(n_frames, 0), np.concatenate(s_frames, 0)
+    return strip, alpha, nstrip, sstrip, k
+
+
+def water_albedo(res, name="water_still"):
+    """(albedo strip, alpha) of the water texture, nothing written (the water tests read it)."""
+    return water_maps(res, name)[:2]
+
+
+def write_water(res, preview_dir=None, name="water_still"):
+    flow = name == "water_flow"
+    strip, alpha, nstrip, sstrip, k = water_maps(res, name)
     probs = materials.check_labpbr(nstrip, sstrip)
     if probs:
         raise SystemExit("LabPBR check failed (water): " + "; ".join(probs))
