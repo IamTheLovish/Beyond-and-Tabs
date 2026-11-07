@@ -555,11 +555,17 @@ public class HudClientEvents {
             // an own, finished production building keeps its Repeat / Steward toggles in the frame beside the icon
             boolean buildingToggles = hudSelBuildingOwned && hudSelectedPlacement instanceof ProductionPlacement toggled
                 && toggled.isBuilt && selBuildings.size() < 2;
+            // the production queue frame below starts right of the portrait block and is drawn over the title line:
+            // keep the title to the portrait block then (it scrolls if longer), else the whole panel width
+            int nameWidth = panelRight - (blitX + 4) - 4;
+            if (selBuildings.size() < 2 && (hudSelBuildingOwned || !PlayerClientEvents.isRTSPlayer())
+                    && hudSelectedPlacement instanceof ProductionPlacement queued && !queued.productionQueue.isEmpty())
+                nameWidth = Math.min(nameWidth, portraitRendererBuilding.blockWidth() - 1);
             buildingPortraitZone = portraitRendererBuilding.render(evt.getGuiGraphics(),
                 blitX,
                 screenHeight - portraitRendererBuilding.frameHeight,
                 hudSelectedPlacement,
-                panelRight - (blitX + 4) - 4,
+                nameWidth,
                 buildingToggles
             );
             hudZones.add(buildingPortraitZone);
