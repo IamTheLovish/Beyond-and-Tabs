@@ -816,9 +816,27 @@ public class FogOfWarServerEvents {
             com.solegendary.reignofnether.unit.packets.UnitSyncClientboundPacket.sendLeavePacketTo(player, entity.getId());
     }
 
-    /** Server-broadcast sounds (ServerLevelSoundMixin): a player under fog hears nothing from a fogged column. */
+    /** Server-broadcast world effects (PlayerListFogMixin): a player under fog hears nothing from a fogged column. */
     public static boolean canHearAt(ServerPlayer player, double x, double z) {
         return isBlockVisibleFor(player, (int) Math.floor(x), (int) Math.floor(z));
+    }
+
+    /**
+     * {@code PlayerList.broadcast} with the fog rule (PlayerListFogMixin sends every positional broadcast through here
+     * while fog is on): the same range, dimension and "except" tests, and a player under fog only gets the packet when
+     * (x, z) is inside their vision - for anyone the fog does not apply to, vanilla's answer.
+     */
+    public static void broadcastSeen(List<ServerPlayer> players, @javax.annotation.Nullable
+            net.minecraft.world.entity.player.Player except, double x, double y, double z, double radius,
+            net.minecraft.resources.ResourceKey<Level> dimension, Packet<?> packet) {
+        double r2 = radius * radius;
+        for (ServerPlayer sp : players) {
+            if (sp == except || sp.level().dimension() != dimension)
+                continue;
+            double dx = x - sp.getX(), dy = y - sp.getY(), dz = z - sp.getZ();
+            if (dx * dx + dy * dy + dz * dz < r2 && canHearAt(sp, x, z))
+                sp.connection.send(packet);
+        }
     }
 
     private static long blockLong(int x, int z) {
