@@ -48,13 +48,18 @@ public class Keybindings {
     // BAR's Tab overview: zoom out to the whole map; Tab again, a left click or releasing a held Tab flies back in at
     // the cursor. Own conflict context: Ctrl+Tab still cycles the selection (tab, below) on the same key.
     public static final Keybinding overview  = new Keybinding("key.reignofnether.overview",    GLFW.GLFW_KEY_TAB,         CATEGORY_CAMERA, RtsConflictContext.OVERVIEW, "Tab");
-    // BAR camera anchors: press to fly back, Ctrl+press to store. BAR's widget puts them on F1-F4, which here are
-    // hide-HUD / player panel / debug and missing on a 60% board, so they start unbound (Controls to set).
+    // BAR camera anchors: press to fly back (position, zoom, rotation, tilt), Ctrl+press to store; kept per world for
+    // the session (OrthoviewClientEvents). BAR's widget puts them on F1-F4, which here stay hide HUD (F1, vanilla's
+    // hideGui too), screenshot (F2), debug / block info (F3) and the stats-table alias (F4), so they ship on F5-F8
+    // (tester request, Oct 26): F5 is vanilla's perspective key, idle in the RTS view; F6 / F7 answer an open resign
+    // vote and F8 cycles a spectator's view - while those are live the anchor on the key stays quiet
+    // (KeybindsClientEvents.fKeyOwner). Own conflict context, so Controls does not flag fn_5..fn_8 on the same keys.
+    // Layout 3 (KeybindMigration) moves a saved "unbound" from the older builds onto F5-F8.
     public static final Keybinding[] cameraAnchors = {
-        new Keybinding("key.reignofnether.camera_anchor_1", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, ""),
-        new Keybinding("key.reignofnether.camera_anchor_2", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, ""),
-        new Keybinding("key.reignofnether.camera_anchor_3", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, ""),
-        new Keybinding("key.reignofnether.camera_anchor_4", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, "")
+        new Keybinding("key.reignofnether.camera_anchor_1", GLFW.GLFW_KEY_F5, CATEGORY_CAMERA, RtsConflictContext.CAMERA_ANCHOR, "F5"),
+        new Keybinding("key.reignofnether.camera_anchor_2", GLFW.GLFW_KEY_F6, CATEGORY_CAMERA, RtsConflictContext.CAMERA_ANCHOR, "F6"),
+        new Keybinding("key.reignofnether.camera_anchor_3", GLFW.GLFW_KEY_F7, CATEGORY_CAMERA, RtsConflictContext.CAMERA_ANCHOR, "F7"),
+        new Keybinding("key.reignofnether.camera_anchor_4", GLFW.GLFW_KEY_F8, CATEGORY_CAMERA, RtsConflictContext.CAMERA_ANCHOR, "F8")
     };
     // BAR rotates a building ghost with [ and ] (the wheel now always zooms). "[" is also hotkey11's build slot:
     // while a ghost is out the rotation wins (HudClientEvents.onKeyRelease), so its own context avoids a red
