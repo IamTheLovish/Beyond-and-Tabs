@@ -101,6 +101,21 @@ public class RocketShellGameTests {
     }
 
     /**
+     * RED/GREEN STUB for #553 (throwaway branch, never merged): holds every listed unit's own tick count at 0 until test
+     * tick STUB_HOLD, as a unit whose chunk is not yet entity-ticking ("tickCount 0, entity-ticking false"). Booked at
+     * setup, outside the test's own steps; 30 < STUB_HOLD < 150.
+     */
+    static final int STUB_HOLD = 60;
+
+    static void stubUnticked(GameTestHelper helper, List<? extends Entity> units) {
+        helper.onEachTick(() -> {
+            if (helper.getTick() < STUB_HOLD)
+                for (Entity e : units)
+                    e.tickCount = 0;
+        });
+    }
+
+    /**
      * A unit added to the level only ticks once its chunk is entity-ticking, and a shell added in a chunk that is not yet
      * visible is not found by an entity query (the last arena of a batch on a cold CI server: the guard test found "no
      * shell" from all four of its guns in 3 of 8 stress jobs, run 42114941995, after the suite's arenas moved further
@@ -150,6 +165,7 @@ public class RocketShellGameTests {
         double tx = o.getX() + 14.5, ty = o.getY(), tz = o.getZ() + 8.5;
         Map<UUID, BombardShell> seen = new LinkedHashMap<>();
         int[] tick = { 0 };
+        stubUnticked(helper, List.of(b));
         helper.onEachTick(() -> {
             if (notTicking(helper, b))
                 return;
@@ -210,6 +226,7 @@ public class RocketShellGameTests {
             helper.fail("could not create the four shell units and the target");
             return;
         }
+        stubUnticked(helper, made);
         ArenaReady.whenTicking(helper, made, READY_WAIT, tickNow -> {
             List<String> problems = new ArrayList<>();
             try {
@@ -306,6 +323,7 @@ public class RocketShellGameTests {
             helper.fail("could not create the battery, the target and the two buildings");
             return;
         }
+        stubUnticked(helper, made);
         ArenaReady.whenTicking(helper, made, READY_WAIT, tickNow -> {
             List<String> problems = new ArrayList<>();
             try {
@@ -437,6 +455,7 @@ public class RocketShellGameTests {
         int[] ended = { -1, -1 };
         double[] aimZ = { b.getZ(), crew.getZ() };
         int[] tick = { 0 };
+        stubUnticked(helper, List.of(b, crew));
         helper.onEachTick(() -> {
             if (notTicking(helper, b, crew))
                 return;
@@ -517,6 +536,7 @@ public class RocketShellGameTests {
         List<String> problems = new ArrayList<>();
         int[] tick = { 0 };
         int[] launchedAt = { -1 };
+        stubUnticked(helper, List.of(b));
         helper.onEachTick(() -> {
             if (notTicking(helper, b))
                 return;
