@@ -60,6 +60,25 @@ public class HeroAiV2GameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
 
+    // RED/GREEN STUB, never ships (#556): the hero joins the level late - set up at the test's start as spawnHero sets
+    // it up, added at test tick 3 by a step booked at setup, apart from the test's own steps - as a hero whose arena's
+    // entity section loads after the test began. The same stub runs on old code (red) and on #556's head (green).
+    static Mob red556Unadded(GameTestHelper helper, String owner, int x, int z) {
+        HeroBot.setAiEnabled(owner, true);
+        var type = com.solegendary.reignofnether.hero.HeroTypes.typeOf(HeroKits.DAWN_PALADIN);
+        Mob m = type == null ? null : type.create(helper.getLevel());
+        if (m == null)
+            return null;
+        BlockPos at = helper.absolutePos(new BlockPos(x, 2, z));
+        m.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        ((Unit) m).setOwnerName(owner);
+        return m;
+    }
+
+    static String red556State(GameTestHelper helper, Mob hero) {
+        return "in level.getEntity " + (helper.getLevel().getEntity(hero.getId()) != null) + ", tickCount " + hero.tickCount;
+    }
+
     /** An enemy that stands where it is put and never fights back: a Vindicator on Hold fire, invulnerable. */
     static Mob dummy(GameTestHelper helper, String owner, int x, int z) {
         Mob m = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, x, z);
@@ -424,7 +443,7 @@ public class HeroAiV2GameTests {
     public static void hero_ai_v2_flees_below_the_retreat_threshold_until_the_player_orders_again(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2_flee"), them = me + "_foe";
-        Mob hero = paladin(helper, me, 8, 1);
+        Mob hero = red556Unadded(helper, me, 8, 1);
         List<Mob> mobs = new ArrayList<>();
         mobs.add(hero);
         for (int[] xz : new int[][] { { 5, 11 }, { 11, 11 }, { 5, 13 }, { 11, 13 } })
@@ -434,6 +453,9 @@ public class HeroAiV2GameTests {
             return;
         }
         HeroAiGameTests.learn(p, 1);   // Judgement: something to fight with
+        String[] red556 = { "not read" };
+        helper.runAfterDelay(2, () -> red556[0] = red556State(helper, hero));
+        helper.runAfterDelay(3, () -> helper.getLevel().addFreshEntity(hero));
         BlockPos dest = at(helper, 8, 15);
         double front = helper.absolutePos(new BlockPos(0, 2, 11)).getZ();   // the enemies' near row (block corner)
         double startZ = hero.getZ();
@@ -472,6 +494,8 @@ public class HeroAiV2GameTests {
             if (hero.isAlive() && closest[0] > 1.5)
                 problems.add(String.format("after the player ordered it on again the hero still did not obey (%.1f blocks short of the spot at best, from z %.1f)",
                     closest[0], later[0] - helper.absolutePos(BlockPos.ZERO).getZ()));
+            if (!problems.isEmpty())
+                problems.add("red stub: at test tick 2 " + red556[0]);
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
         start(helper, line, mobs);
@@ -761,7 +785,7 @@ public class HeroAiV2GameTests {
     public static void hero_ai_v2_selecting_a_fleeing_hero_hands_it_back_to_its_order(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2_select"), them = me + "_foe";
-        Mob hero = paladin(helper, me, 8, 1);
+        Mob hero = red556Unadded(helper, me, 8, 1);
         List<Mob> mobs = mobs(hero);
         for (int[] xz : new int[][] { { 5, 11 }, { 11, 11 }, { 5, 13 }, { 11, 13 } })
             mobs.add(dummy(helper, them, xz[0], xz[1]));
@@ -770,6 +794,9 @@ public class HeroAiV2GameTests {
             return;
         }
         HeroAiGameTests.learn(p, 1);
+        String[] red556 = { "not read" };
+        helper.runAfterDelay(2, () -> red556[0] = red556State(helper, hero));
+        helper.runAfterDelay(3, () -> helper.getLevel().addFreshEntity(hero));
         BlockPos dest = at(helper, 8, 15);
         double front = helper.absolutePos(new BlockPos(0, 2, 11)).getZ();
         double[] deepest = { Double.NEGATIVE_INFINITY };
@@ -792,6 +819,8 @@ public class HeroAiV2GameTests {
             if (hero.isAlive() && closest[0] > 1.5)
                 problems.add(String.format("selected, the hero did not go back to its move order (%.1f blocks short at best)",
                     closest[0]));
+            if (!problems.isEmpty())
+                problems.add("red stub: at test tick 2 " + red556[0]);
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
         start(helper, line, mobs);
