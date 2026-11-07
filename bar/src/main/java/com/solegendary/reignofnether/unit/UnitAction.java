@@ -247,5 +247,7 @@ public enum UnitAction {
     // the Horde's Voodoo Shaman, after main's Thornweaver so their ordinals (saved autocast state) stay put
     HEX,                    // 5 essence: an enemy T1-T2 unit can neither attack nor cast for 4 s
     BLOOD_TOTEM,            // 10 essence: a 15 s totem, allies within 8 attack 25% faster, enemies move 15% slower
-    SPIRIT_PUPPET           // 20 essence: an enemy T1 unit is the caster's owner's for 15 s
+    SPIRIT_PUPPET,          // 20 essence: an enemy T1 unit is the caster's owner's for 15 s
+    // the Gravebound Tithe Binder, after the Voodoo Shaman's so every ordinal (saved autocast state) stays put
+    GRAVE_HOOK              // hook an enemy within 12: drag it 4 blocks and stun it, or root a heavy one (25 s)
 }

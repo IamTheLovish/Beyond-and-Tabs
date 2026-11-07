@@ -110,6 +110,7 @@ public class MenderAngelUnit extends AngelUnit implements SupportUnit {
             return false;
         target.heal(HEAL);
         healCooldown = HEAL_INTERVAL_TICKS;
+        cueContact(target);                                   // the heal: the client rig's contact
         BarFx.shot(level, getEyePosition(), target.getEyePosition(), BarFx.K_MAGIC, this);
         level.sendParticles(ParticleTypes.HEART, target.getX(), target.getY() + target.getBbHeight() + 0.3, target.getZ(),
             2, 0.25, 0.15, 0.25, 0.0);

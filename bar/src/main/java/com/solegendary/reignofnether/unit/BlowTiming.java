@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.unit.interfaces.KeyframeAnimated;
 import com.solegendary.reignofnether.unit.units.engineers.FieldMasonUnit;
 import com.solegendary.reignofnether.unit.units.heroes.DawnPaladinUnit;
 import com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit;
+import com.solegendary.reignofnether.unit.units.villagers.SwordSeraphUnit;
 import com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.AbstractIllager;
@@ -26,6 +27,9 @@ import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
  *   <li>the generated chop (HumanActs.chop: the Dawn Paladin, the Field Mason, the Royal Architect): the weapon
  *   passes the downstroke near t 0.6, tick 4;</li>
  *   <li>the Mossback Bison's horn toss (animations/Quadruped): the drive key at P 0.55 of its 16-tick clip, tick 9;</li>
+ *   <li>the Sword Seraph's cut (AngelRig, tools/angel_anim.py): the wind-up starts on the swing and the blade's
+ *   impact is the clip's event, tick 10 of 25 (Nov 6: before, the blow landed on the swing and the client rig could
+ *   only jump to the impact pose);</li>
  *   <li>0 for everything else: bodies whose attack clip starts on the damage event itself (the iron golem, ravager,
  *   hoglin, zoglin and warden play entity event 4 from doHurtTarget, so holding the damage would hold the clip too),
  *   keyframe rigs (their wind-up goal already times the blow) and creatures with no attack clip of ours.</li>
@@ -36,6 +40,7 @@ public final class BlowTiming {
     public static final int SWING = 3;
     public static final int CHOP = 4;
     public static final int BISON = 9;
+    public static final int SWORD_SERAPH = 10;
 
     private BlowTiming() { }
 
@@ -45,6 +50,8 @@ public final class BlowTiming {
             return 0;
         if (attacker instanceof MossbackBisonUnit)
             return BISON;
+        if (attacker instanceof SwordSeraphUnit)
+            return SWORD_SERAPH;
         if (attacker instanceof DawnPaladinUnit || attacker instanceof FieldMasonUnit
             || attacker instanceof RoyalArchitectUnit)
             return CHOP;

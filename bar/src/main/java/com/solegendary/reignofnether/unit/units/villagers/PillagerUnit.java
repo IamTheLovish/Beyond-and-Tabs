@@ -175,7 +175,8 @@ public class PillagerUnit extends Pillager implements Unit, AttackerUnit, Ranged
     @Nullable
     public ResourceCost getCost() {return ResourceCosts.PILLAGER;}
 
-    public boolean canAttackBuildings() { return getAttackBuildingGoal() != null && isPassenger(); }
+    // on foot too (lovish Nov 5: archers damage defences): a rider's bolt explodes, a walker's chips (RangedBuildingHit)
+    public boolean canAttackBuildings() { return getAttackBuildingGoal() != null; }
     public void setAttackMoveTarget(@Nullable BlockPos bp) { this.attackMoveTarget = bp; }
     public void setFollowTarget(@Nullable LivingEntity target) { this.followTarget = target; }
 
@@ -396,6 +397,20 @@ public class PillagerUnit extends Pillager implements Unit, AttackerUnit, Ranged
     }
 
     private void shootCrossbowProjectileAtBuilding(LivingEntity pUser, RangedAttackBuildingGoal<?> rabg, Projectile pProjectile, float pProjectileAngle, float pVelocity) {
+        BlockPos block = rabg.getBlockTarget();
+        if (!isPassenger() && block != null) {
+            // on foot: a flat bolt at the goal's block (the rider's high lob below is aimed to burst on the roof)
+            double dx = block.getX() + 0.5 - pUser.getX();
+            double dz = block.getZ() + 0.5 - pUser.getZ();
+            double dy = block.getY() + 1.0 - pProjectile.getY();
+            Vector3f flat = this.getProjectileShotVector(pUser, new Vec3(dx, dy + Math.sqrt(dx * dx + dz * dz) * 0.2, dz), pProjectileAngle);
+            pProjectile.shoot(flat.x(), flat.y(), flat.z(), pVelocity, 0);
+            pUser.playSound(SoundEvents.CROSSBOW_SHOOT, 1.0F, 1.0F / (pUser.getRandom().nextFloat() * 0.4F + 0.8F));
+            if (!level().isClientSide())
+                FogOfWarClientboundPacket.revealRangedUnit(rabg.getBuildingTarget().ownerName, this.getId());
+            rabg.setNextBlockTarget();   // the next bolt at another standing block, as a bow's (RangedAttackBuildingGoal.tick)
+            return;
+        }
         double d0 = rabg.getBuildingTarget().centrePos.getX() - pUser.getX() + 0.5f;
         double d1 = rabg.getBuildingTarget().centrePos.getZ() - pUser.getZ() + 0.5f;
 

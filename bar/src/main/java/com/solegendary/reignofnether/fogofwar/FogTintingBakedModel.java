@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.fogofwar;
 
+import com.solegendary.reignofnether.environment.light.LeafFaces;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
@@ -23,13 +24,14 @@ public class FogTintingBakedModel extends BakedModelWrapper<BakedModel> {
 
     @Override
     public @NotNull List<BakedQuad> getQuads(BlockState state, Direction side, @NotNull RandomSource rand) {
-        return inject(super.getQuads(state, side, rand));
+        return inject(LeafFaces.apply(state, super.getQuads(state, side, rand)));
     }
 
     @Override
     public @NotNull List<BakedQuad> getQuads(BlockState state, Direction side, @NotNull RandomSource rand,
                                              @NotNull ModelData data, RenderType renderType) {
-        return inject(super.getQuads(state, side, rand, data, renderType));
+        // leaf blocks without a shader pack: their own softer face shade first (environment/light/LeafFaces)
+        return inject(LeafFaces.apply(state, super.getQuads(state, side, rand, data, renderType)));
     }
 
     private static List<BakedQuad> inject(List<BakedQuad> input) {

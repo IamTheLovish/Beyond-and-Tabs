@@ -442,7 +442,7 @@ LABS = {
     "slipway": lambda: __import__("lab_slipway").levels(),   # The Slip / The Fitting-Out / The Launch (Oct 19)
     "lotus_academy": lambda: __import__("lab_lotus_academy").levels(),   # Lotus Court / Hall of Winds / Thousand-Lotus Pagoda (Oct 19)
     "machine_shop": lambda: __import__("lab_machine_shop").levels(),   # Machine Shop / Engine Works / Clockwork Foundry (Oct 19)
-    "assembly_works": lambda: brass_lab("assembly_works"),   # the Brassworks T2 lab takes the same levels (slice 2)
+    "assembly_works": lambda: __import__("lab_assembly_works").levels(),   # The Works / Engine Works / Clockwork Works (Nov 2026)
     "great_forge": lambda: brass_lab("great_forge"),         # and the Brassworks T3 lab (slice 4)
 }
 
@@ -507,6 +507,9 @@ if __name__ == "__main__":
         if "barracks" in built:    # the Training Hall redraws the L1
             import lab_barracks
             lab_barracks.base().write(f"{out}/barracks.nbt")
+        if "assembly_works" in built:   # the Assembly Works redraws the L1
+            import lab_assembly_works
+            lab_assembly_works.l1().write(f"{out}/assembly_works.nbt")
         if "machine_shop" in built:   # the Machine Shop redraws the L1
             import lab_machine_shop
             lab_machine_shop.base().write(f"{out}/machine_shop.nbt")
