@@ -20,6 +20,7 @@ import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * The angels' rig against its spec: tools/angel_anim.py (the clip driver, THE motion spec) samples every 2nd tick of
@@ -421,6 +422,85 @@ class AngelRigTest {
         for (int i = 0; i < 3; i++)
             assertEquals(1.0, f[i], EPS, "hovering: group " + i + " draws in full");
         assertTrue(!AngelRig.translucent(hover), "hovering: the passes stay opaque");
+    }
+
+    // ------------------------------------------------------------------ no allocation per tick
+
+    /**
+     * One kind's tour of its clips on {@code st} (hover, fly, the attack with its cue, a hit, the death; the arrival on
+     * {@code arrive}): about 200 steps, the inputs set the way the driver's run() sets them.
+     */
+    private static int tour(int kind, AngelRig.State st, AngelRig.State arrive, AngelRig.Inputs in, AngelRig.Pose pose) {
+        int steps = 0, e = AngelRig.EVENT[kind];
+        in.speed = 0.0;
+        for (int t = 0; t < 40; t++, steps++)
+            AngelRig.step(st, in, pose);
+        in.speed = AngelRig.CRUISE;
+        in.yawRate = 6.0;
+        for (int t = 0; t < 40; t++, steps++)
+            AngelRig.step(st, in, pose);
+        in.speed = 0.0;
+        in.yawRate = 0.0;
+        for (int t = 0; t < AngelRig.ATTACK_LEN[kind] + 4; t++, steps++) {
+            in.attackIn = t <= e ? e - t : -1;
+            if (t == e)
+                in.attackSeq++;
+            AngelRig.step(st, in, pose);
+        }
+        for (int t = 0; t < 14; t++, steps++) {
+            in.hurtTime = Math.max(0, 10 - t);
+            AngelRig.step(st, in, pose);
+        }
+        for (int t = 0; t < AngelRig.ARRIVE_LEN + 4; t++, steps++)
+            AngelRig.step(arrive, in, pose);
+        in.dying = true;
+        for (int t = 0; t < AngelRig.DEATH_LEN + 4; t++, steps++)
+            AngelRig.step(st, in, pose);
+        in.dying = false;
+        return steps;
+    }
+
+    /**
+     * The rig steps once per client tick for every angel on screen: once warm (classes loaded, the JIT done, every
+     * path taken once on other states), stepping allocates nothing. Measured with the thread's allocation counter over
+     * about 200 steps per kind; the bound is the counter's own noise, read over two back-to-back calls just before
+     * (0 bytes on HotSpot), never a number picked to pass. Skipped where the JVM has no such
+     * counter.
+     */
+    @Test
+    void step_allocates_nothing_once_warm() {
+        java.lang.management.ThreadMXBean mx = java.lang.management.ManagementFactory.getThreadMXBean();
+        assumeTrue(mx instanceof com.sun.management.ThreadMXBean, "the thread allocation counter is available");
+        com.sun.management.ThreadMXBean bean = (com.sun.management.ThreadMXBean) mx;
+        assumeTrue(bean.isThreadAllocatedMemorySupported(), "the thread allocation counter is supported");
+        bean.setThreadAllocatedMemoryEnabled(true);
+        long tid = Thread.currentThread().getId();
+        AngelRig.Kind[] kindsOf = AngelRig.Kind.values();
+        for (int round = 0; round < 3; round++)          // warm: every path, several times (the JIT)
+            for (int kind = 0; kind < 3; kind++)
+                tour(kind, new AngelRig.State(kindsOf[kind], SEED, false), new AngelRig.State(kindsOf[kind], SEED, true),
+                    new AngelRig.Inputs(), new AngelRig.Pose());
+        // fresh states and their inputs / poses, made before the counter is read
+        AngelRig.State[] st = new AngelRig.State[3], arrive = new AngelRig.State[3];
+        AngelRig.Inputs[] in = new AngelRig.Inputs[3];
+        AngelRig.Pose[] pose = new AngelRig.Pose[3];
+        for (int kind = 0; kind < 3; kind++) {
+            st[kind] = new AngelRig.State(kindsOf[kind], SEED, false);
+            arrive[kind] = new AngelRig.State(kindsOf[kind], SEED, true);
+            in[kind] = new AngelRig.Inputs();
+            pose[kind] = new AngelRig.Pose();
+        }
+        long n0 = bean.getThreadAllocatedBytes(tid);   // the counter's own noise: two reads around nothing
+        long noise = bean.getThreadAllocatedBytes(tid) - n0;
+        long before = bean.getThreadAllocatedBytes(tid);
+        int steps = 0;
+        for (int kind = 0; kind < 3; kind++)
+            steps += tour(kind, st[kind], arrive[kind], in[kind], pose[kind]);
+        long bytes = bean.getThreadAllocatedBytes(tid) - before;
+        System.out.println("AngelRigTest allocation: " + bytes + " bytes over " + steps + " steps (counter noise "
+            + noise + " bytes)");
+        assertTrue(bytes <= noise, bytes + " bytes allocated over " + steps + " warm steps (the counter's noise is "
+            + noise + "): the rig must not allocate per tick");
     }
 
     // ------------------------------------------------------------------ DSL -> ModelPart signs
