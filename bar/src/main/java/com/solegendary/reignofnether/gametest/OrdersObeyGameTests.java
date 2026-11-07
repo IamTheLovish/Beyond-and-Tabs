@@ -279,6 +279,21 @@ public class OrdersObeyGameTests {
     }
 
     /**
+     * " LEAVES THE PEN ..." when a path's nodes go outside the closed stone pen (template x 0..14, z 0..15, on its floor),
+     * with the first such node: #529's CI 42015032840 saw a 36-node path end at x 18, two blocks under the pen's floor,
+     * which no way out of a closed pen can give. Empty otherwise.
+     */
+    static String penLeft(net.minecraft.world.level.pathfinder.Path p, BlockPos pad) {
+        for (int i = 0; i < p.getNodeCount(); i++) {
+            BlockPos n = p.getNodePos(i);
+            int x = n.getX() - pad.getX(), z = n.getZ() - pad.getZ(), y = n.getY() - pad.getY();
+            if (x < 0 || x > 14 || z < 0 || z > 15 || y < 0)
+                return " LEAVES THE PEN at node " + i + " (" + x + "," + y + "," + z + ")";
+        }
+        return "";
+    }
+
+    /**
      * The same move into unloaded land, but each time the unit has come to rest at the pen's east wall it is shifted one
      * block north or south (alternately), as separation and pushing shifted it by chance in CI. The path into unloaded
      * land aims at the last loaded ground straight ahead of the unit, so each shift moved the path's end one block, and
@@ -358,6 +373,7 @@ public class OrdersObeyGameTests {
                         .append(" wall ").append(eastWall(helper))
                         .append(" end ").append(fin == null ? "none" : (fin.getX() - pad.getX()) + "," + fin.getY() + "," + fin.getZ())
                         .append(p == null ? "" : " n" + p.getNextNodeIndex() + "/" + p.getNodeCount())
+                        .append(p == null ? "" : penLeft(p, pad))
                         .append(" stuck ").append(stuckRepaths(goal)).append(goal.isInBackoff() ? " backoff" : "")
                         .append(" req@").append(goal.getLastRequestTime() - level.getGameTime());
                     if (nudge >= 0 && level.getGameTime() - nudge < 2)

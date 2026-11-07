@@ -4904,7 +4904,16 @@ public class SkirmishGameTests {
         return chunks;
     }
 
-    /** Clears a box of the arena to open ground: stone at y=1 (template coords), air above up to y=4. */
+    /**
+     * Clears a box of the arena to open ground: stone at y=1 (template coords), air above up to y=4, kept dry: the arena is
+     * cut into generated ground, and water from an aquifer or cave beside the box, or over the template's top, flowed into
+     * the cleared air (#529's CI 42015032840: an immobile Vindicator floating in "water[level=8]" in a test with no water;
+     * plan 015 B's run 40401681056). So a fluid beside the box (x0 - 1 / x1 + 1, z0 - 1 / z1 + 1, y 1..64, the lid search's
+     * height) becomes stone, and over each column the lowest block above the pocket becomes stone when it is a fluid, as it
+     * already did for falling gravel and sand. Only fluids change: no ceiling, no wall, so flyers, arcs and tall units see
+     * the same arena. Those stones are not put back: later batches find drier ground, never wetter
+     * (ArenaGroundGameTests). ArenaReady.sealed still seals harder for the tests that ask for it.
+     */
     static void openGround(GameTestHelper helper, int x0, int z0, int x1, int z1) {
         ServerLevel level = helper.getLevel();
         for (int x = x0; x <= x1; x++)
@@ -4928,11 +4937,22 @@ public class SkirmishGameTests {
                     var state = level.getBlockState(above);
                     if (state.isAir())
                         continue;
-                    if (state.getBlock() instanceof net.minecraft.world.level.block.FallingBlock)
+                    if (state.getBlock() instanceof net.minecraft.world.level.block.FallingBlock || !state.getFluidState().isEmpty())
                         level.setBlock(above, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
                     break;
                 }
             }
+        // and the fluids beside it: an aquifer or cave water cell next to the cleared air flows straight in - up to the
+        // lid search's height, since water beside the column above the template flows into it and falls to the pocket
+        for (int y = 1; y <= 64; y++)
+            for (int x = x0 - 1; x <= x1 + 1; x++)
+                for (int z = z0 - 1; z <= z1 + 1; z++) {
+                    if (x >= x0 && x <= x1 && z >= z0 && z <= z1)
+                        continue;
+                    BlockPos rim = helper.absolutePos(new BlockPos(x, y, z));
+                    if (!level.getFluidState(rim).isEmpty())
+                        level.setBlock(rim, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                }
         // and the gravel already falling (it would land in the cleared pocket)
         BlockPos lo = helper.absolutePos(new BlockPos(x0, 2, z0)), hi = helper.absolutePos(new BlockPos(x1, 64, z1));
         for (var falling : level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,
