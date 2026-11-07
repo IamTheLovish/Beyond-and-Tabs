@@ -14,6 +14,7 @@ import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit;
 import com.solegendary.reignofnether.unit.units.villagers.MilitiaUnit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -1139,6 +1140,10 @@ public final class EyesDirector {
             sceneWork(mc, entry.substring(WORK_PREFIX.length()));
             return;
         }
+        if (entry.startsWith(BREATH_PREFIX)) {
+            sceneBreath(mc, entry.substring(BREATH_PREFIX.length()));
+            return;
+        }
         String label = "15_" + structureLabel(entry);
         if (ticks == 1 && structurePhase == 0) {
             // no birds or butterflies in the stills: round r34 had four birds in meadow_sampler_rts_close's measured
@@ -1581,6 +1586,203 @@ public final class EyesDirector {
             }
             default -> nextStructure(mc);
         }
+    }
+
+    // ---- 15, breath entries: a dragon's fire breath (eyes.yml `structure` entry "breath:bone_dragon") ----
+    // lovish, Nov 5: "the bone dragon should get a blue fire breath attack from the air not the current ghast sound
+    // effects and projectiles", "bone dragon can use this fire breath on the ground as well". A pad 40 blocks west per
+    // entry, noon, fog off; our dragon and a squad of six enemy dummies (zombie units, AI off, 2000 health, so the fire
+    // is drawn on them for every still). Each still is taken 15-35 client ticks into a breath (BreathFx's clock), one
+    // breath per still:
+    //   15_breath_<id>_air_rts, _air_far, _air_close   the dragon 10 up and 5 short of the squad, holding its position
+    //   15_breath_<id>_ground_rts, _ground_close       the dragon landed 8 short of the squad (a Dive onto its spot)
+    static final String BREATH_PREFIX = "breath:";
+    private static volatile int breathDragonId = -1, breathTargetId = -1;
+    private static final List<Integer> breathMade = new ArrayList<>();
+    private static int breathCount = 0;
+    private static BlockPos breathSite = null;
+    private static int breathSeen = 0;   // the breath number the last still was taken in
+
+    private static void sceneBreath(Minecraft mc, String id) {
+        String label = "15_breath_" + id;
+        if (ticks == 1 && structurePhase == 0) {
+            if (!"bone_dragon".equals(id)) {
+                ReignOfNether.LOGGER.error("[Eyes] {}: only bone_dragon breathes - skipped", label);
+                nextStructure(mc);
+                return;
+            }
+            if (siteCentre == null) {
+                siteCentre = structureSite(mc);
+                lightTheSite(mc);
+            }
+            breathCount++;
+            breathSeen = 0;
+            structureError = null;
+            breathDragonId = -1;
+            mc.options.chatVisibility().set(net.minecraft.world.entity.player.ChatVisiblity.HIDDEN);
+            breathSite = BlockPos.containing(ground(mc, siteCentre.getX() - 40 * breathCount, siteCentre.getZ(), siteCentre.getY()));
+            OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(breathSite));   // loads its chunks
+            placeBreath(mc, breathSite);
+            nextPhase(30);
+            return;
+        }
+        BoneDragonUnit dragon = mc.level.getEntity(breathDragonId) instanceof BoneDragonUnit d ? d : null;
+        switch (structurePhase) {
+            case 30 -> {   // the dragon and the squad reach the client; then the attack order
+                if (structureError != null || (dragon == null && phaseSeconds() > 30)) {
+                    ReignOfNether.LOGGER.error("[Eyes] {}: {} - skipped", label,
+                        structureError != null ? structureError : "no dragon on the client after 30 s");
+                    endBreath(mc);
+                    return;
+                }
+                if (dragon == null)
+                    return;
+                if (!OrthoviewClientEvents.isEnabled())
+                    OrthoviewClientEvents.toggleEnable();
+                mc.options.hideGui = true;
+                setZoom(ZOOM_NORMAL);
+                OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(breathSite).add(-2, 0, 0));
+                orderBreath(mc, false);
+                nextPhase(31);
+            }
+            case 31 -> breathStill(mc, dragon, label + "_air_rts", 3, 32, () -> setZoom(60));
+            case 32 -> breathStill(mc, dragon, label + "_air_far", 3, 33, () -> {
+                setZoom(14);
+                OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(breathSite).add(-2, 4, 0));
+            });
+            case 33 -> breathStill(mc, dragon, label + "_air_close", 3, 34, () -> {
+                orderBreath(mc, true);
+                setZoom(ZOOM_NORMAL);
+                OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(breathSite).add(-4, 0, 0));
+            });
+            case 34 -> {   // landed: its ground stills count only once it is down
+                if (dragon != null && dragon.isLanded()) {
+                    nextPhase(35);
+                    return;
+                }
+                if (phaseSeconds() > 20) {
+                    ReignOfNether.LOGGER.error("[Eyes] {}: the dragon never landed - the ground stills are skipped", label);
+                    endBreath(mc);
+                }
+            }
+            case 35 -> breathStill(mc, dragon, label + "_ground_rts", 3, 36, () -> {
+                setZoom(14);
+                OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(breathSite).add(-4, 1, 0));
+            });
+            case 36 -> breathStill(mc, dragon, label + "_ground_close", 3, 37, () -> { });
+            default -> endBreath(mc);
+        }
+    }
+
+    /**
+     * Takes {@code name} once the camera has had {@code settle} seconds and the dragon is 15-35 client ticks into a
+     * breath not photographed yet (each still of an entry catches its own breath), then runs {@code after} and moves to
+     * phase {@code next}. Gives up on the still after 40 s, saying so.
+     */
+    private static void breathStill(Minecraft mc, BoneDragonUnit dragon, String name, double settle, int next, Runnable after) {
+        int seq = dragon == null ? 0 : dragon.getEntityData().get(BoneDragonUnit.breathSeqAccessor);
+        boolean ready = dragon != null && phaseSeconds() >= settle && seq != 0 && seq != breathSeen
+            && dragon.clientBreathTick >= 15 && dragon.clientBreathTick <= 35;
+        if (!ready && phaseSeconds() < 40)
+            return;
+        if (ready) {
+            ReignOfNether.LOGGER.info("[Eyes] {}: breath {} at its tick {}, landed {}, zoom {}", name, seq,
+                dragon.clientBreathTick, dragon.isLanded(), OrthoviewClientEvents.getZoom());
+            breathSeen = seq;
+            shot(mc, name);
+        } else {
+            ReignOfNether.LOGGER.error("[Eyes] {}: no breath to photograph in 40 s ({}) - skipped", name,
+                dragon == null ? "no dragon" : "breath " + seq + " tick " + dragon.clientBreathTick);
+        }
+        after.run();
+        nextPhase(next);
+    }
+
+    /**
+     * On the server thread: a stone-and-grass pad round the site, the squad of dummies (owned by a name no player has:
+     * the enemy) and our dragon 10 up and 5 west of them, facing them. Sets breathDragonId, or structureError.
+     */
+    private static void placeBreath(Minecraft mc, BlockPos site) {
+        var server = mc.getSingleplayerServer();
+        String me = mc.player.getName().getString();
+        server.execute(() -> {
+            try {
+                var level = server.overworld();
+                var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+                int m = 14, x0 = site.getX() - m, z0 = site.getZ() - m, x1 = site.getX() + m, z1 = site.getZ() + m;
+                fillBox(level, x0, site.getY() - 2, z0, x1, site.getY() - 2, z1, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+                fillBox(level, x0, site.getY() - 1, z0, x1, site.getY() - 1, z1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+                fillBox(level, x0, site.getY(), z0, x1, site.getY() + 20, z1, air);
+                breathMade.clear();
+                double[][] squad = { { 0, 0 }, { 1.4, 1.1 }, { 1.4, -1.1 }, { -1.2, 1.6 }, { -1.2, -1.6 }, { 2.8, 0 } };
+                for (int i = 0; i < squad.length; i++) {
+                    var z = com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_UNIT.get().create(level);
+                    if (z == null)
+                        continue;
+                    z.moveTo(site.getX() + 0.5 + squad[i][0], site.getY(), site.getZ() + 0.5 + squad[i][1], 90f, 0);
+                    ((com.solegendary.reignofnether.unit.interfaces.Unit) z).setOwnerName("eyes_breath_foe");
+                    z.setNoAi(true);
+                    level.addFreshEntity(z);
+                    var hp = z.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+                    if (hp != null)
+                        hp.setBaseValue(2000);
+                    z.setHealth(2000);
+                    breathMade.add(z.getId());
+                    if (i == 0)
+                        breathTargetId = z.getId();
+                }
+                var d = com.solegendary.reignofnether.registrars.EntityRegistrar.BONE_DRAGON_UNIT.get().create(level);
+                if (d == null) {
+                    structureError = "could not create the dragon";
+                    return;
+                }
+                d.moveTo(site.getX() + 0.5 - 5, site.getY() + 10, site.getZ() + 0.5, -90f, 0);
+                d.setYBodyRot(-90f);
+                d.setOwnerName(me);
+                level.addFreshEntity(d);
+                breathMade.add(d.getId());
+                breathDragonId = d.getId();
+            } catch (Exception e) {
+                structureError = e.toString();
+            }
+        });
+    }
+
+    /** On the server: the dragon told to burn the squad's first dummy, holding its place; landed: first set down 8 short. */
+    private static void orderBreath(Minecraft mc, boolean landed) {
+        var server = mc.getSingleplayerServer();
+        int id = breathDragonId, target = breathTargetId;
+        BlockPos site = breathSite;
+        server.execute(() -> {
+            var level = server.overworld();
+            if (!(level.getEntity(id) instanceof BoneDragonUnit d) || !(level.getEntity(target) instanceof LivingEntity t))
+                return;
+            if (landed) {
+                d.stopBreath();
+                d.moveTo(site.getX() + 0.5 - 8, site.getY(), site.getZ() + 0.5, -90f, 0);
+                d.setYBodyRot(-90f);
+                d.setDeltaMovement(Vec3.ZERO);
+                if (!d.startDive(d.position()))
+                    ReignOfNether.LOGGER.warn("[Eyes] 15_breath: the dive onto its own spot was refused");
+            }
+            d.setHoldPosition(true);
+            d.setUnitAttackTarget(t);
+        });
+    }
+
+    /** Clears the entry's dragon and dummies (the next entry's pad is its own) and moves on. */
+    private static void endBreath(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        List<Integer> made = new ArrayList<>(breathMade);
+        breathMade.clear();
+        server.execute(() -> {
+            for (int id : made) {
+                var e = server.overworld().getEntity(id);
+                if (e != null)
+                    e.discard();
+            }
+        });
+        nextStructure(mc);
     }
 
     /**
@@ -2257,6 +2459,11 @@ public final class EyesDirector {
         // (optional 6th / 7th entries: the close zoom's factor, and how far the dummies stand), and the zoom is wider so the
         // rack, the crew's lean and the four rockets leaving it share one frame
         { "RocketBatteryUnit", "07zm_rocket_battery_close", "07zn_rocket_battery_walk", "07zo_rocket_battery_volley", "rocket_battery_unit", "1.7", "9" },
+        // the Light Grid's Builder Drone (Nov 6, design/ai_faction.md): the hover rig's bob, lean and bank, the arms'
+        // strike and the team light lines; then the Sunforged Field Mason, the best generated constructor body, in the
+        // same run as its yardstick (a critic compares the two inside one tour, never across runs)
+        { "ShipwrightUnit", "07zp_builder_drone_close", "07zq_builder_drone_walk", "07zr_builder_drone_attack", "shipwright_unit" },
+        { "FieldMasonUnit", "07zs_field_mason_close", "07zt_field_mason_walk", "07zu_field_mason_attack", "field_mason_unit" },
     };
     private static int closeUpSubject = 0;
     private static int lookOffAt = -1;               // 02b: tick of the look-off still (the world-look A/B)

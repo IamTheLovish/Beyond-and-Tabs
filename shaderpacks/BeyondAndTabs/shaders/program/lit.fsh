@@ -97,8 +97,9 @@ void main() {
     vec4 tex = texture2D(texture, texcoord, lodBias);   // one read, one bias
     vec3 albedo = tex.rgb * glcolor.rgb;
 #if WIND == 1
-    // a gust's sheen on the plants it bends (lib/wind.glsl GUST_SHEEN): from above, the waves roll across the field
-    albedo *= 1.0 + GUST_SHEEN * (gust - 0.3) * foliage;
+    // a gust's sheen on the plants it bends (lib/wind.glsl GUST_SHEEN, as strong as the sway: WIND_STRENGTH): from
+    // above, the waves roll across the field
+    albedo *= 1.0 + GUST_SHEEN * WIND_STRENGTH * (gust - 0.3) * foliage;
 #endif
 #if defined LIT_TERRAIN || defined LIT_WATER
     float ao = glcolor.a;              // separateAo: the vertex AO, not an alpha
@@ -164,7 +165,7 @@ void main() {
     if (facing > 0.0) {
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
         vec3 worldNormal = mat3(gbufferModelViewInverse) * geomN;
-        shadow = sunShadow(playerPos, worldNormal, fit);
+        shadow = sunShadow(playerPos, worldNormal, fit, foliage);   // a plant takes no plant's shadow
 #if CLOUD_SHADOWS == 1
         // a passing cloud takes some of the sun (and its glints, which read the same term), never the sky's fill
         shadow *= cloudShade(playerPos + cameraPosition, normalize(mat3(gbufferModelViewInverse) * l));
@@ -260,7 +261,7 @@ void main() {
         if (bed && lw.y > 0.05 && below > 0.02) {
             vec2 atSurface = bedPlayer.xz + cameraPosition.xz + lw.xz * (below / lw.y);
             // the bed's own sun shadow (a bank's shadow puts the caustics out on the bed under it too)
-            float bedShadow = sunShadow(bedPlayer, vec3(0.0, 1.0, 0.0), fit);
+            float bedShadow = sunShadow(bedPlayer, vec3(0.0, 1.0, 0.0), fit, 0.0);
             float bedSun = dot(sunArriving(bedShadow, levels, sunColour), LUMA) * sunFacing(normalize(upPosition), l);
             float bedLight = bedSun + dot(skyColour, LUMA) + 1e-3;
             // a share of the bed's light, seen through what is left of the water's opacity; none right at the shore

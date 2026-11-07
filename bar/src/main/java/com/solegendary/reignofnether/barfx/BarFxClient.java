@@ -42,7 +42,8 @@ public final class BarFxClient {
 
     // particle kinds
     static final int FLASH = 0, SMOKE = 1, SPARK = 2, DEBRIS = 3, FIRE = 4, RING = 5, BEAM = 6, DECAL = 7, EMITTER = 8,
-            DELAY = 9;   // invisible timer: a building collapse's secondary pop, fired when it expires
+            DELAY = 9,   // invisible timer: a building collapse's secondary pop, fired when it expires
+            BREATH = 10; // a flame of a dragon's breath (BreathFx): color -> color2 over its life, lands on `ground`
 
     /**
      * Per-packet (= per server tick) budget of full unit-death effects. A big 8v8 trade can kill dozens of units in
@@ -71,6 +72,10 @@ public final class BarFxClient {
         float rate, acc;               // emitters
         boolean crater;
         boolean steady;                // beams: hold full brightness, fade only at the very end (nano beams)
+        boolean blend;                 // BREATH: drawn alpha-blended with the smoke (a body of colour), not added as light
+        float drag;                    // BREATH: slows in flight (per second), so a flame leaves the jaws fast, lands slow
+        float stretch;                 // BREATH: drawn up to this many times longer along its motion (a tongue, not a ball)
+        int tex = -1;                  // BREATH: a frame of the flame atlas (BarFxRenderTypes.FLAME_*), -1 = untextured
     }
 
     static final List<P> live = new ArrayList<>(), decals = new ArrayList<>();
@@ -115,7 +120,7 @@ public final class BarFxClient {
     private static void init(P p, int kind, float x, float y, float z, float life, float size, int color) {
         p.kind = kind; p.x = x; p.y = y; p.z = z; p.born = clock; p.life = Math.max(.01f, life); p.size = size; p.color = color;
         p.vx = p.vy = p.vz = 0; p.grow = 1; p.spin = 0; p.alpha = 1; p.ground = Float.NaN; p.groundKey = Integer.MIN_VALUE;
-        p.steady = false; p.crater = false; p.x2 = p.y2 = p.z2 = 0;
+        p.steady = false; p.crater = false; p.blend = false; p.drag = 0; p.stretch = 1; p.tex = -1; p.x2 = p.y2 = p.z2 = 0;
     }
 
     /**
@@ -1236,16 +1241,31 @@ public final class BarFxClient {
         buffers.endBatch(BarFxRenderTypes.SOLID);
         // 3. smoke
         begin(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
-        for (P p : live) if (p.kind == SMOKE && near(p.x, p.y, p.z, 4)) drawSmoke(p, (clock - p.born) / p.life);
+        for (P p : live) {
+            if (p.kind == SMOKE && near(p.x, p.y, p.z, 4)) drawSmoke(p, (clock - p.born) / p.life);
+            else if (p.kind == BREATH && p.blend && p.tex < 0 && near(p.x, p.y, p.z, p.size * p.grow + 2)) drawLight(p, (clock - p.born) / p.life);
+        }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
+        // 3b. textured breath flames, alpha blended (the body of a dragon's breath)
+        begin(buffers, BarFxRenderTypes.FLAME_BLEND, mat);
+        for (P p : live)
+            if (p.kind == BREATH && p.blend && p.tex >= 0 && near(p.x, p.y, p.z, p.size * p.grow * p.stretch + 2))
+                drawFlame(p, (clock - p.born) / p.life);
+        buffers.endBatch(BarFxRenderTypes.FLAME_BLEND);
         // 4. light: flashes, fire, sparks, beams, rings
         begin(buffers, BarFxRenderTypes.ADDITIVE, mat);
         for (P p : live) {
-            if (p.kind == SMOKE || p.kind == DEBRIS || p.kind == EMITTER || p.kind == DELAY) continue;
+            if (p.kind == SMOKE || p.kind == DEBRIS || p.kind == EMITTER || p.kind == DELAY || (p.kind == BREATH && (p.blend || p.tex >= 0))) continue;
             if (p.kind != BEAM && !near(p.x, p.y, p.z, p.size + 2)) continue;
             drawLight(p, (clock - p.born) / p.life);
         }
         buffers.endBatch(BarFxRenderTypes.ADDITIVE);
+        // 4b. textured breath flames added as light (the hot core of a dragon's breath)
+        begin(buffers, BarFxRenderTypes.FLAME_ADD, mat);
+        for (P p : live)
+            if (p.kind == BREATH && !p.blend && p.tex >= 0 && near(p.x, p.y, p.z, p.size * p.grow * p.stretch + 2))
+                drawFlame(p, (clock - p.born) / p.life);
+        buffers.endBatch(BarFxRenderTypes.FLAME_ADD);
         vc = null;
     }
 
@@ -1266,6 +1286,21 @@ public final class BarFxClient {
             }
             case SMOKE -> { p.vx *= 1 - .6f * dt; p.vz *= 1 - .6f * dt; p.vy *= 1 - .3f * dt; p.vx += .25f * dt; }
             case FIRE -> { p.vx *= 1 - 3 * dt; p.vz *= 1 - 3 * dt; p.vy *= 1 - 1.5f * dt; }
+            case BREATH -> {
+                // flies straight from the jaws to the ground it was aimed at (FireBreath.flame), then spills over it -
+                // slower, rising, a little wider - as fire does on what it hits; a flame with no ground just drifts up
+                if (!Float.isNaN(p.ground) && p.vy < 0 && p.y + p.vy * dt <= p.ground + .15f) {
+                    p.y = p.ground + .15f;
+                    p.vx *= .45f; p.vz *= .45f; p.vy = rnd(.3f, .9f);
+                    p.grow *= 1.3f;
+                    p.ground = Float.NaN;
+                } else if (p.vy >= 0) {
+                    p.vx *= 1 - 2.5f * dt; p.vz *= 1 - 2.5f * dt;
+                } else if (p.drag > 0) {
+                    float f = Math.max(0, 1 - p.drag * dt);
+                    p.vx *= f; p.vy *= f; p.vz *= f;
+                }
+            }
             case EMITTER -> {
                 p.acc += dt;
                 if (p.acc >= p.rate && live.size() < MAX * 3 / 4) {
@@ -1316,6 +1351,76 @@ public final class BarFxClient {
         }
     }
 
+    /**
+     * A flame tongue: a soft camera-facing ellipse, {@code len} times longer along the particle's motion as the camera
+     * sees it (its velocity on the screen plane), its trailing half a little longer than its head.
+     */
+    static void tongue(P p, float r, float len, float sp, int c, float a) {
+        float ux = (p.vx * leftX + p.vy * leftY + p.vz * leftZ) / sp, uy = (p.vx * upX + p.vy * upY + p.vz * upZ) / sp;
+        float ul = (float) Math.sqrt(ux * ux + uy * uy);
+        if (ul < .2f) {
+            softDisc(p.x, p.y, p.z, r, c, a, c, 0, 8, p.spin, .3f);
+            return;
+        }
+        ux /= ul; uy /= ul;
+        // the long axis on screen (along the motion), and the short one square to it
+        float mx = leftX * ux + upX * uy, my = leftY * ux + upY * uy, mz = leftZ * ux + upZ * uy;
+        float nx = -leftX * uy + upX * ux, ny = -leftY * uy + upY * ux, nz = -leftZ * uy + upZ * ux;
+        int seg = 10;
+        float px = 0, py = 0, pz = 0;
+        for (int i = 0; i <= seg; i++) {
+            double ang = i * Math.PI * 2 / seg;
+            float cs = (float) Math.cos(ang), sn = (float) Math.sin(ang);
+            float along = cs * r * (cs < 0 ? len * 1.2f : len * .8f), side = sn * r * (1 - .25f * (float) Math.abs(Math.sin(p.spin * 5 + i * 2.3)));
+            float qx = p.x + mx * along + nx * side, qy = p.y + my * along + ny * side, qz = p.z + mz * along + nz * side;
+            if (i > 0) {
+                v(p.x, p.y, p.z, c, a);
+                v(px, py, pz, c, 0);
+                v(qx, qy, qz, c, 0);
+                v(p.x, p.y, p.z, c, a);
+            }
+            px = qx; py = qy; pz = qz;
+        }
+    }
+
+    static void vt(float x, float y, float z, int rgb, float a, float u, float v) {
+        vc.vertex(mat, x - camX, y - camY, z - camZ)
+                .color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, Math.max(0, Math.min(1, a)))
+                .uv(u, v).endVertex();
+    }
+
+    /**
+     * A breath flame with a frame of the flame atlas: one camera-facing quad, laid along the particle's motion on the
+     * screen (the tongue frames' head is +u) and up to p.stretch times longer than wide; a puff frame (6-7), or a
+     * flame that has stopped, turns by its spin instead. Colour, size and fade as drawLight's BREATH.
+     */
+    static void drawFlame(P p, float k) {
+        float r = p.size * (1 + (p.grow - 1) * Math.min(1, k * 1.5f)) * 1.3f;   // the frame's flame fills ~3/4 of it
+        int c = mix(p.color, p.color2, k);
+        float a = p.alpha * (k < .06f ? k / .06f : 1) * (1 - k) * (1 - k * .35f);
+        if (a < .004f) return;
+        float sp = (float) Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+        float ux = 0, uy = 0, len = 1;
+        if (p.tex < 6 && sp > .5f) {
+            ux = (p.vx * leftX + p.vy * leftY + p.vz * leftZ) / sp;
+            uy = (p.vx * upX + p.vy * upY + p.vz * upZ) / sp;
+            float ul = (float) Math.sqrt(ux * ux + uy * uy);
+            if (ul > .2f) { ux /= ul; uy /= ul; len = Math.max(1, Math.min(p.stretch, 1 + sp / 8)); } else { ux = 0; uy = 0; }
+        }
+        if (ux == 0 && uy == 0) {
+            float an = p.spin + k * .8f + (clock - p.born) * p.rate;   // rate: BREATH puffs' roll speed (rad/s)
+            ux = (float) Math.cos(an); uy = (float) Math.sin(an);
+        }
+        // the long axis on the screen (+u of the frame), and the short one square to it
+        float mx = (leftX * ux + upX * uy) * r * len, my = (leftY * ux + upY * uy) * r * len, mz = (leftZ * ux + upZ * uy) * r * len;
+        float nx = (-leftX * uy + upX * ux) * r, ny = (-leftY * uy + upY * ux) * r, nz = (-leftZ * uy + upZ * ux) * r;
+        float u0 = (p.tex % 4) * .25f, v0 = (p.tex / 4) * .5f, u1 = u0 + .25f, v1 = v0 + .5f;
+        vt(p.x - mx - nx, p.y - my - ny, p.z - mz - nz, c, a, u0, v1);
+        vt(p.x + mx - nx, p.y + my - ny, p.z + mz - nz, c, a, u1, v1);
+        vt(p.x + mx + nx, p.y + my + ny, p.z + mz + nz, c, a, u1, v0);
+        vt(p.x - mx + nx, p.y - my + ny, p.z - mz + nz, c, a, u0, v0);
+    }
+
     /** Soft camera-facing ribbon from p1 to p2: bright along its middle, fading to nothing at the sides. */
     static void streak(float x1, float y1, float z1, float x2, float y2, float z2, float w, int c, float a1, float a2) {
         float dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
@@ -1358,6 +1463,16 @@ public final class BarFxClient {
                 float r = p.size * (1 + (p.grow - 1) * k);
                 int c = mix(p.color, 0x802010, k * .7f);
                 softDisc(p.x, p.y, p.z, r, c, (1 - k) * .9f, c, 0, 8, p.born * 7, .25f);
+            }
+            case BREATH -> {
+                float r = p.size * (1 + (p.grow - 1) * Math.min(1, k * 1.5f));
+                int c = mix(p.color, p.color2, k);
+                float a = p.alpha * (k < .06f ? k / .06f : 1) * (1 - k) * (1 - k * .35f);
+                float sp = (float) Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+                if (p.stretch > 1 && sp > .5f)
+                    tongue(p, r, Math.min(p.stretch, 1 + sp / 8), sp, c, a);
+                else
+                    softDisc(p.x, p.y, p.z, r, c, a, c, 0, 8, p.spin + p.born * 7 + k * 1.5f, .3f);
             }
             case SPARK -> {
                 float sp = (float) Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);

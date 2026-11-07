@@ -34,9 +34,9 @@ rule set: odd tiers, each roof a ring narrower, red posts under deep eaves):
     and round them, floating free, the STORM-CRYSTAL HALO - a ring of violet glass with an amethyst shard (block +
     cluster) on each corner: the faction's accent, crystal the storm froze out of the air;
   - the GARDEN (no roads, the same on every side): a TORII on each side, kept low so sky shows between it and the
-    first eave; STONE LANTERNS (tooro: a wall post, a lantern, a slab hood) and BLOSSOM TREES (dark oak, cherry
-    leaves) either side of each torii; a JADE GUARDIAN (a crouching jade beast with a dragon's head and jade
-    forepaws on a chiseled plinth) on each corner looking out; and raked stone, moss, petals, azalea and grass that
+    first eave; STONE LANTERNS (tooro: a wall post, a lantern, a slab hood) and BLOSSOM TREES (dark oak, azalea
+    leaves) either side of each torii; a JADE GUARDIAN (a crouching jade beast with a jade head and jade
+    forepaws on a chiseled plinth) on each corner looking out; and raked stone, moss, azalea and grass that
     fade into whatever ground the capitol stands on.
 
 WHAT THE SIZE TOUCHES IN THE GAME (the coordinator applies these; this file edits nothing):
@@ -113,7 +113,7 @@ def garden(c):
             name = ("moss_block", "grass_block", "andesite", "grass_block", "moss_block", "stone_bricks",
                     "grass_block", "mossy_cobblestone")[h % 8]
         c.set(dx, 0, dz, name, **({"snowy": "false"} if name == "grass_block" else {}))
-    # the dressing (y1): petals, moss, azalea bushes on the soft cells of ring 6 between the stairs and the
+    # the dressing (y1): moss carpet, azalea bushes on the soft cells of ring 6 between the stairs and the
     # guardians - single cells with ground round them (no pockets). Ring 7 belongs to the torii (t <= 3), the
     # blossom trees (t = 4), the stone lanterns (t = 5) and the guardians (t >= 6)
     for dx, dz in c.cells(6, 6):
@@ -126,7 +126,7 @@ def garden(c):
         if under not in ("grass_block", "moss_block"):
             continue
         if k in (0, 1):
-            c.set(dx, 1, dz, "pink_petals", facing="north", flower_amount=str(2 + h % 3))
+            c.set(dx, 1, dz, "moss_carpet")
         elif k == 2:
             c.set(dx, 1, dz, "flowering_azalea")
         elif k == 3:
@@ -157,13 +157,14 @@ def stone_lantern(c, dx, dz):
 
 
 def blossom_tree(c, x, z):
-    """A small blossom tree in the garden: a dark oak trunk, a two-cell cherry canopy over it (persistent leaves, so
-    they never decay), petals at its foot. One cell wide with open ground round it: never a pocket."""
+    """A small blossom tree in the garden: a dark oak trunk, a two-cell azalea canopy over it (persistent leaves, so
+    they never decay; azalea, not cherry: lovish, Nov 4, "Azalea instead" - pink is the Verdant crown's). One cell
+    wide with open ground round it: never a pocket."""
     leaf = dict(distance="1", persistent="true", waterlogged="false")
     c.set(x, 1, z, OAK_LOG, axis="y")
     c.set(x, 2, z, OAK_LOG, axis="y")
-    c.set(x, 3, z, "cherry_leaves", **leaf)
-    c.set(x, 4, z, "cherry_leaves", **dict(leaf, distance="2"))   # its true distance (on a leaf, not the log)
+    c.set(x, 3, z, "flowering_azalea_leaves", **leaf)
+    c.set(x, 4, z, "azalea_leaves", **dict(leaf, distance="2"))   # its true distance (on a leaf, not the log)
 
 
 # ===================================================================================================== terrace
@@ -185,12 +186,12 @@ def terrace(c):
 
 def guardian(c, sx, sz):
     """A jade guardian on each garden corner, looking out of it (out from under the eaves, so the RTS camera sees it):
-    a chiseled plinth, a crouching jade body (a stair: haunches high at the back), a dragon's head, jade forepaws
+    a chiseled plinth, a crouching jade body (a stair: haunches high at the back), a jade head, jade forepaws
     (low stairs) on the cells either side."""
     x, z = sx * R, sz * R
     c.set(x, 1, z, "chiseled_stone_bricks")
     c.stair(x, 2, z, "east" if sx < 0 else "west", name=JADE_ST)
-    c.set(x, 3, z, "dragon_head", rotation=SKULL_CORNER[(sx, sz)])
+    c.set(x, 3, z, JADE)   # jade, not a black dragon head: blind round r3 read the heads as unit-sized blobs
     c.stair(x - sx, 1, z, "east" if sx < 0 else "west", name=JADE_ST)     # the forepaws, either side
     c.stair(x, 1, z - sz, "south" if sz < 0 else "north", name=JADE_ST)
 

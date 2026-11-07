@@ -20,6 +20,7 @@ import math
 # name fragment -> material (first match wins; checked in this order)
 _BY_NAME = (
     ("thread", "emissive_dim"),                                              # the Bone Dragon's spine thread (r10)
+    ("carbon", "carbon"),       # the Light Grid's glossy black composite (design/ai_faction.md, PR 379)
     ("glow", "emissive"), ("sun_gold", "gold"), ("sun", "emissive"),
     ("potion", "glass"),
     ("gold", "gold"), ("brass", "gold"),
@@ -68,6 +69,9 @@ MATERIALS = {
     #                                         shader's bloom 220 blew r9's spine thread into a neon tube (the r9 review);
     #                                         r11: 60 - and the thread is in the BASE pass only (gen_dragon.py EMISSIVE)
     "plain":    dict(smooth=0.30, f0=10,  pore=10,  alb=0.6, relief=0.6),
+    # the Light Grid's hulls: a clear-coated black composite - glossy (a dielectric's F0, not a metal's), no grain,
+    # crisp lit bevels; the light lines carry the ornament ("glossy black and dark-grey bodies, clean hard geometry")
+    "carbon":   dict(smooth=0.84, f0=12,  pore=0,   alb=0.5, relief=0.5),
 }
 
 
@@ -360,6 +364,8 @@ class Face:
             self._feather(g)
         elif m == "stone":
             self._stone(g)
+        elif m == "carbon":
+            self._carbon(g)
         else:
             g.A *= 1.0 + 0.04 * _value_v(np, self.seed, x, y, 0.5 * g.D)
         H = 0.5 + (g.H - 0.5) * self.p["relief"]
@@ -401,6 +407,16 @@ class Face:
             g.S -= np.where(ring, 0.06, 0.0)
             g.A = np.where((e >= bw + 1.0) & (e < bw + 2.0), g.A * (1.0 - (1.0 - inner) * 0.5), g.A)
         return near
+
+    def _carbon(self, g):
+        """A clear-coated composite: almost no albedo detail (a gloss has none to show), a broad, faint drift of the
+        coat's thickness, and crisp lit bevels on every edge - the hard-surface read that keeps a black hull from
+        reading as a hole from the RTS camera."""
+        np, D, s = g.np, g.D, self.seed
+        broad = _value_v(np, s + 1, g.x, g.y, 4.0 * D)
+        g.A *= 1.0 + 0.025 * broad
+        g.S += 0.04 * broad
+        self._edges(g, top=1.45, side=1.2, bottom=0.8, inner=0.9, up=1.3)
 
     def _metal(self, g):
         np, m, D, s = g.np, self.m, g.D, self.seed
