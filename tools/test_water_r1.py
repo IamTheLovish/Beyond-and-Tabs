@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_blocks as g  # noqa: E402
 
 LUMA = np.array([0.2126, 0.7152, 0.0722])
-TINT = (0x41 / 255, 0x76 / 255, 0x9C / 255)     # battlefield.json water_color #41769C
+TINT = __import__("test_water_palette").water_colour()     # battlefield.json water_color
 RES = 128
 
 
