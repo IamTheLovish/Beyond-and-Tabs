@@ -923,6 +923,8 @@ public final class EyesDirector {
     // (EyesPhotoBooth.chooseAxis), and photographed five ways:
     //   15_<name>_rts       the RTS camera at the default zoom (what a player sees all match)
     //   15_<name>_rts_close the RTS camera zoomed in to the building's size
+    //   15_<name>_rts_edge  the RTS camera at zoom 60, the footprint's middle at the bottom of the frame (NDC y -0.8):
+    //                       the faces a tall building there turns to the viewer, all drawn (lovish, Nov 3; #453)
     //   15_<name>_34        a first-person 3/4 view from the south-west (the side the RTS camera sees), ~30 degrees
     //                       down, from ~1.5x the building's largest size
     //   15_<name>_front     first person due south of it, looking north square at its south face, 8 degrees down,
@@ -944,8 +946,8 @@ public final class EyesDirector {
     //   15_<name>_mist_rts  last, only with -Dbat.eyes.mist=true (eyes.yml input `mist`): the RTS still's framing at
     //                       dawn (MistMath.EYES_DAWN_TIME), once the valley mist has gathered and drifted ~8 s - the
     //                       mist pilot (lovish Oct 28: "can we make the fog more animated and alive or rich")
-    // In order: rts, (bench), rts_close, 34, close, dusk, golden_rts, the extra times, rts_army, mist_rts; then the
-    // server's time before the dusk still is restored.
+    // In order: rts, (bench), rts_close, rts_edge, 34, close, dusk, golden_rts, the extra times, rts_army, mist_rts;
+    // then the server's time before the dusk still is restored.
     // After the noon RTS still the camera holds while ShaderBench times BENCH_FRAMES drawn frames: one
     // "[ShaderBench] 15_<name>_rts" line per structure, the frame-cost ratio between eyes lanes.
     // Ambient life (birds, butterflies) is off for the whole run (EyesPhotoBooth.ambientLifeOff): it flew through the
@@ -1246,6 +1248,17 @@ public final class EyesDirector {
                     return;
                 logAim(mc, label + "_rts_close");
                 shot(mc, label + "_rts_close");
+                setZoom(EDGE_ZOOM);
+                placeOnScreen(mc, structureMiddle(0), 0, EDGE_NDC_Y);
+                nextPhase(14);
+            }
+            case 14 -> {   // 15_<name>_rts_edge: zoomed out, the footprint's middle near the bottom of the frame
+                if (phaseSeconds() < 3.5)   // the view's tilt follows the zoom over the first frames: aim again
+                    placeOnScreen(mc, structureMiddle(0), 0, EDGE_NDC_Y);
+                if (phaseSeconds() < 5 || phaseFrames() < STRUCTURE_FRAMES)
+                    return;
+                logEdge(mc, label + "_rts_edge");
+                shot(mc, label + "_rts_edge");
                 if (OrthoviewClientEvents.isEnabled())
                     OrthoviewClientEvents.toggleEnable();
                 standThreeQuarter(mc);
@@ -1468,6 +1481,29 @@ public final class EyesDirector {
     private static float closeZoom() {
         int big = Math.max(structureSize.getX(), structureSize.getZ());
         return Math.min(ZOOM_NORMAL - 4, Math.max(12, 1.25f * (big + 0.6f * structureSize.getY())));
+    }
+
+    // 15_<name>_rts_edge (lovish, Nov 3: tall buildings at the bottom of the screen looked sliced, the Sunforged
+    // capitol's walls and roofs gone): the renderer's face culling once judged faces from the camera point, which at
+    // zoom 60+ sits below and in front of a tall building near the bottom edge (#453). Zoom 60 at NDC y -0.8 lost half
+    // the viewer-facing faces of a 21-tall hall under the old rule, none at the default zoom.
+    private static final float EDGE_ZOOM = 60;
+    private static final double EDGE_NDC_Y = -0.8;
+
+    /** Where the edge still put the building, and the camera point against its roof: the evidence line for _rts_edge. */
+    private static void logEdge(Minecraft mc, String name) {
+        var cam = mc.gameRenderer.getMainCamera();
+        double viewH = OrthoviewClientEvents.getZoom();
+        double viewW = viewH * mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
+        double[] foot = ndc(cam, structureMiddle(0), viewW, viewH);
+        double[] roof = ndc(cam, structureMiddle(1), viewW, viewH);
+        Vec3 c = cam.getPosition();
+        ReignOfNether.LOGGER.info("[Eyes] {}: zoom {}, pitch {}; footprint middle at NDC {}, {}, roof middle at NDC {}, {};"
+                + " the camera point {} blocks above the roof, {} blocks from the footprint middle", name,
+            String.format("%.0f", viewH), String.format("%.1f", OrthoviewClientEvents.getCamRotY()),
+            String.format("%.2f", foot[0]), String.format("%.2f", foot[1]), String.format("%.2f", roof[0]),
+            String.format("%.2f", roof[1]), String.format("%.1f", c.y - (structureOrigin.getY() + structureSize.getY())),
+            String.format("%.1f", Math.hypot(c.x - structureMiddle(0).x, c.z - structureMiddle(0).z)));
     }
 
     // ---- 15, work entries: a lab at work (building animations; eyes.yml `structure` entry "work:<building id>") ----
