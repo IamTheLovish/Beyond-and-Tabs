@@ -94,6 +94,8 @@ public final class GroundMemoryServer {
         // walk outside a pass, so a column is never answered from an earlier pass's world
         final Long2ObjectOpenHashMap<TrampleColumnMemo> trampleMemos = new Long2ObjectOpenHashMap<>();
         long trampleEpoch = 0;
+        // the cost GameTest's per-pass record (null, the normal case: a pass records nothing)
+        TramplePassLog passLog;
     }
 
     // a ConcurrentHashMap: chunk load events may arrive off the server thread and only queue a key
@@ -386,6 +388,8 @@ public final class GroundMemoryServer {
      * rider). Units gone since the last pass drop out of the position map.
      */
     static void tramplePass(ServerLevel level, LevelState st) {
+        TramplePassLog log = st.passLog;
+        long c0 = log == null ? 0 : threadCpuNanos();
         long t0 = System.nanoTime();
         st.trampleEpoch++;   // a new pass: every column is read again, once
         Int2ObjectOpenHashMap<double[]> last = st.trampleLast, next = st.trampleNext;
@@ -412,7 +416,38 @@ public final class GroundMemoryServer {
         st.trampleNext = last;
         st.tramplePasses++;
         st.trampleWalks += walks;
-        st.trampleNanos += System.nanoTime() - t0;
+        long wall = System.nanoTime() - t0;
+        st.trampleNanos += wall;
+        if (log != null) {
+            long c1 = threadCpuNanos();
+            log.add(walks, wall, c0 < 0 || c1 < 0 ? -1 : c1 - c0);
+        }
+    }
+
+    private static final java.lang.management.ThreadMXBean THREADS = java.lang.management.ManagementFactory.getThreadMXBean();
+
+    /** This thread's CPU time in nanoseconds, or -1 where the JVM does not measure it. */
+    private static long threadCpuNanos() {
+        try {
+            return THREADS.isCurrentThreadCpuTimeSupported() && THREADS.isThreadCpuTimeEnabled() ? THREADS.getCurrentThreadCpuTime() : -1;
+        } catch (UnsupportedOperationException e) {
+            return -1;
+        }
+    }
+
+    /** Starts recording each trample pass of the level (the cost GameTest); replaces a running log. */
+    public static void startPassLog(ServerLevel level, int capacity) {
+        state(level).passLog = new TramplePassLog(capacity);
+    }
+
+    /** Stops recording and returns what was recorded (null if nothing was). */
+    public static TramplePassLog stopPassLog(ServerLevel level) {
+        LevelState st = STATES.get(level.dimension());
+        if (st == null)
+            return null;
+        TramplePassLog log = st.passLog;
+        st.passLog = null;
+        return log;
     }
 
     /** Runs one trample sample of the level now (the GameTests' cost measurement). */

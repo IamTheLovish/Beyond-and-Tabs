@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.worldmemory.DecayParams;
 import com.solegendary.reignofnether.worldmemory.GroundMemory;
 import com.solegendary.reignofnether.worldmemory.GroundMemoryCapability;
 import com.solegendary.reignofnether.worldmemory.GroundMemoryServer;
+import com.solegendary.reignofnether.worldmemory.TramplePassLog;
 import com.solegendary.reignofnether.worldmemory.TrampleRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -395,12 +396,16 @@ public class TrampleGameTests {
     static final double BUDGET_US_PER_WALK = 3.0;
     /** ...and a 100-unit march costs <= 6 KB/s per client in deltas (the scars brawl budget). */
     static final double BUDGET_BYTES_PER_S_100 = 6 * 1024;
+    /** The cost march is valid only when most of its 52 units walk (good samples: 44-45 a pass; two stalled at ~12). */
+    static final int MIN_UNITS_WALKING = 40;
 
     /**
      * Fifty-two units of three kinds (40 militia, 8 brutes, 4 ravagers) march across a pad and back through real MOVE
      * orders; the live sampler's own totals (GroundMemoryServer.trampleTotals) over the march give its cost per walking
      * unit and the cells it changed, priced at the delta wire's bytes per cell (5, GroundMemoryClientboundPacket) and
-     * scaled to 100 units. Both against the design's budgets, set before this was first run. The stamp path is warmed
+     * scaled to 100 units. Both against the design's budgets, set before this was first run; the cost is the median
+     * pass's cost per walk (GroundMemoryServer.startPassLog, TramplePassLog), and a march where fewer than
+     * {@link #MIN_UNITS_WALKING} units walk measures nothing and fails as invalid. The stamp path is warmed
      * up first ({@link #warmUp}): the budget is the steady cost of a match, not of the first calls after a server start.
      */
     @GameTest(template = ARENA, batch = "trample_cost", timeoutTicks = 420)
@@ -431,6 +436,7 @@ public class TrampleGameTests {
                 coldUs[0] = warmUp(pad);
                 long[] s = GroundMemoryServer.trampleTotals(pad.level);
                 System.arraycopy(s, 0, start, 0, 4);
+                GroundMemoryServer.startPassLog(pad.level, 128);
                 pad.move(units, pad.at(12, 0));
             }
             if (t[0] == 5 + window / 2)
@@ -438,21 +444,34 @@ public class TrampleGameTests {
             if (t[0] < 5 + window)
                 return;
             done[0] = true;
+            TramplePassLog log = GroundMemoryServer.stopPassLog(pad.level);
             long[] end = GroundMemoryServer.trampleTotals(pad.level);
-            long passes = end[0] - start[0], walks = end[1] - start[1], nanos = end[2] - start[2], cells = end[3] - start[3];
+            long passes = end[0] - start[0], walks = end[1] - start[1], cells = end[3] - start[3];
             double seconds = window / 20.0;
-            double usPerWalk = walks == 0 ? Double.NaN : nanos / 1e3 / walks;
+            // the budget is the steady cost: the median pass's cost per walk (thread CPU time where the JVM gives it).
+            // The whole window's wall time over its walks (the measure until Nov 7) is reported beside it: one GC
+            // pause in ~6 ms of measured work decided that number (2.54-17.51 us on 8 runners, stress 42359261272)
+            double median = log == null ? Double.NaN : log.percentileUsPerWalk(0.5);
+            double p90 = log == null ? Double.NaN : log.percentileUsPerWalk(0.9);
+            double wholeWall = log == null ? Double.NaN : log.wholeWindowWallUsPerWalk();
+            String clock = log != null && log.cpuTime() ? "thread CPU" : "wall";
             double unitsWalking = passes == 0 ? 0 : walks / (double) passes;
             double bytesPerS = cells * 5 / seconds;
             double bytesPerS100 = unitsWalking == 0 ? Double.NaN : bytesPerS * 100 / unitsWalking;
+            String costs = String.format(Locale.ROOT, "median %.2f us per walk (%s time; budget %.1f), p90 %.2f, whole-window wall %.2f",
+                median, clock, BUDGET_US_PER_WALK, p90, wholeWall);
             ReignOfNether.LOGGER.info(String.format(Locale.ROOT,
-                "[Stress] [Trample] cost: %d passes, %d walks (%.1f units walking a pass), %.2f us per walk (budget %.1f; cold, before the warm-up: %.2f us), %d cells changed = %.0f B/s, %.0f B/s per 100 walkers (budget %.0f)",
-                passes, walks, unitsWalking, usPerWalk, BUDGET_US_PER_WALK, coldUs[0], cells, bytesPerS, bytesPerS100, BUDGET_BYTES_PER_S_100));
+                "[Stress] [Trample] cost: %d passes, %d walks (%.1f units walking a pass), %s (cold, before the warm-up: %.2f us), %d cells changed = %.0f B/s, %.0f B/s per 100 walkers (budget %.0f)",
+                passes, walks, unitsWalking, costs, coldUs[0], cells, bytesPerS, bytesPerS100, BUDGET_BYTES_PER_S_100));
             if (walks < units.size() * 3L)
                 pad.problems.add("the sampler counted only " + walks + " walks in " + passes + " passes for " + units.size() + " marching units");
+            else if (unitsWalking < MIN_UNITS_WALKING)
+                pad.problems.add(String.format(Locale.ROOT,
+                    "(invalid sample) only %.1f of %d units walking a pass (at least %d): the march did not happen, so its cost was not measured",
+                    unitsWalking, units.size(), MIN_UNITS_WALKING));
             else {
-                if (!(usPerWalk <= BUDGET_US_PER_WALK))
-                    pad.problems.add(String.format(Locale.ROOT, "%.2f us per walking unit per pass (budget %.1f)", usPerWalk, BUDGET_US_PER_WALK));
+                if (!(median <= BUDGET_US_PER_WALK))
+                    pad.problems.add(String.format(Locale.ROOT, "%s per walking unit per pass", costs));
                 if (!(bytesPerS100 <= BUDGET_BYTES_PER_S_100))
                     pad.problems.add(String.format(Locale.ROOT, "%.0f B/s per client per 100 walkers (budget %.0f)", bytesPerS100, BUDGET_BYTES_PER_S_100));
             }
