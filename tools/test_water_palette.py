@@ -51,8 +51,12 @@ class WaterPalette(unittest.TestCase):
         # the pixel) gives 0.15 x 0.17 = 0.026 less in the model (0.323 -> 0.298, camera 0.250 -> 0.231, under the band).
         # The ratio is a multiplicative grade and still holds, so the water colour was raised (#3A6A8C -> #41769C, same
         # hue 205) to put the camera back at 0.250.
+        # Nov 7 re-calibration (water r1): main's eyes still 81f2c5c (bat_eyes_12_river_crossing.png, no shader - how
+        # lovish plays, Embeddium without Oculus) reads open water below the mist at camera luma 0.309 (x880-1000
+        # y560-620) to 0.343 (x760-880 y420-520) for a model of 0.323: 0.96x, not 0.775x. The old ratio passed a river
+        # the camera shows at 0.31, only ~0.10 under the lawn's 0.41. Band unchanged; ratio 0.775 -> 0.96.
         px = modelled_pixel()
-        cam = 0.775 * sum(LUMA[i] * px[i] for i in range(3))
+        cam = 0.96 * sum(LUMA[i] * px[i] for i in range(3))
         self.assertGreaterEqual(cam, 0.235, "water too dark - reads as a hole: camera %.3f" % cam)
         self.assertLessEqual(cam, 0.27, "water too close to the lawn: camera %.3f" % cam)
 
