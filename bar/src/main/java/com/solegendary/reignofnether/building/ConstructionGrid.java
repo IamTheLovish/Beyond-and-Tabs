@@ -1,0 +1,580 @@
+package com.solegendary.reignofnether.building;
+
+import java.util.List;
+
+/**
+ * What stands and what is still missing on a rising site, cell by cell (claude/faction-construction-oct29.md). Pure -
+ * no Minecraft types - so ConstructionGridTest covers it; ConstructionFx fills it from the placement's blocks every
+ * recount and draws from it every frame.
+ *
+ * <p>Round 9 critic (eyes 41084414751): the gold ghost caged finished walls and the tools hung over the lawn, because
+ * everything keyed off ONE build front - the lowest layer under half placed - while the walls above it stood (the
+ * builders do not lay strictly layer by layer: a few blocks lag, and one lagging layer held the front at the foot).
+ * The grid answers per block instead:
+ * <ul>
+ *   <li>the MISSING blocks - the ghost is drawn over those and nothing else;</li>
+ *   <li>the RIM - the top edge of a standing block with a missing block on it, on each side open to air or the
+ *   outside: the build front of that column, wherever it is;</li>
+ *   <li>the FACES the tools may strike - those same blocks' open sides: standing stone, never air.</li>
+ * </ul>
+ * Built once per site; {@link #clear} / {@link #mark} / {@link #finish} reuse its arrays, so a recount allocates
+ * nothing.
+ */
+public final class ConstructionGrid {
+
+    private static final byte EMPTY = 0, STANDING = 1, MISSING = 2;
+    /** At most this many rim edges and faces are kept (a large site's are a few hundred). */
+    public static final int MAX_EDGES = 1024;
+
+    private final int x0, y0, z0, w, h, d;
+    private final byte[] cells;
+    private final int[] missing;
+    private int missingN;
+    private final boolean[] volume;
+    private final int[] volumeList;
+    private int volumeN;
+    // per row (y, z) the first / last x of a site block; per (y, x) the first / last z; per column the top missing y
+    private final int[] rowLo, rowHi, colLo, colHi, topMissing;
+    // the rim: {x0, z0, x1, z1, y} per edge, and the face it tops: {x, y, z, side}
+    private final float[] rim = new float[MAX_EDGES * 5];
+    private final int[] face = new int[MAX_EDGES * 4];
+    private int rimN;
+    private float rimSum;
+    private final float[] front = new float[MAX_EDGES * 3];
+    private final int[] frontSide = new int[MAX_EDGES];
+    private int frontN;
+    private float frontRow = Float.NaN;
+    private int nextRow = Integer.MIN_VALUE;
+    private final int[] perRow;                        // rim edges per height, scratch for frontRow
+    // the front course of the whole building: its layer (or MIN_VALUE), its edges {x0, z0, x1, z1, y} and their sides
+    private int courseL = Integer.MIN_VALUE;
+    private final float[] course = new float[MAX_EDGES * 5];
+    private final int[] courseSide = new int[MAX_EDGES];
+    private int courseN;
+    // the front as drawn (round 17 critic): segments {x0, y0, z0, x1, y1, z1} along the laid/ghost boundary of the
+    // front course's outer faces, and their sides
+    private final float[] seg = new float[MAX_EDGES * 2 * 6];
+    private final int[] segSide = new int[MAX_EDGES * 2];
+    private int segN;
+
+    private ConstructionGrid(int x0, int y0, int z0, int w, int h, int d) {
+        this.x0 = x0; this.y0 = y0; this.z0 = z0; this.w = w; this.h = h; this.d = d;
+        cells = new byte[w * h * d];
+        missing = new int[w * h * d];
+        perRow = new int[h + 1];
+        volume = new boolean[w * h * d];
+        volumeList = new int[w * h * d];
+        rowLo = new int[h * d]; rowHi = new int[h * d]; colLo = new int[h * w]; colHi = new int[h * w];
+        topMissing = new int[w * d];
+    }
+
+    /** @param blocks the site's (non-air) block positions as {x, y, z} */
+    public static ConstructionGrid of(List<int[]> blocks) {
+        if (blocks.isEmpty())
+            return new ConstructionGrid(0, 0, 0, 0, 0, 0);
+        int ax = Integer.MAX_VALUE, ay = Integer.MAX_VALUE, az = Integer.MAX_VALUE;
+        int bx = Integer.MIN_VALUE, by = Integer.MIN_VALUE, bz = Integer.MIN_VALUE;
+        for (int[] b : blocks) {
+            ax = Math.min(ax, b[0]); ay = Math.min(ay, b[1]); az = Math.min(az, b[2]);
+            bx = Math.max(bx, b[0]); by = Math.max(by, b[1]); bz = Math.max(bz, b[2]);
+        }
+        return new ConstructionGrid(ax, ay, az, bx - ax + 1, by - ay + 1, bz - az + 1);
+    }
+
+    /** Before a recount: every cell back to empty. */
+    public void clear() {
+        java.util.Arrays.fill(cells, EMPTY);
+    }
+
+    /** One of the site's blocks: standing or still missing. Positions outside the site are ignored. */
+    public void mark(int x, int y, int z, boolean placed) {
+        int i = index(x, y, z);
+        if (i >= 0)
+            cells[i] = placed ? STANDING : MISSING;
+    }
+
+    /** After a recount's marks: the missing list, the rim and the faces. */
+    public void finish() {
+        missingN = 0;
+        for (int i = 0; i < cells.length; i++)
+            if (cells[i] == MISSING)
+                missing[missingN++] = i;
+        rimN = 0;
+        rimSum = 0;
+        for (int y = y0; y < y0 + h; y++)
+            for (int z = z0; z < z0 + d; z++)
+                for (int x = x0; x < x0 + w; x++) {
+                    if (cell(x, y, z) != STANDING || cell(x, y + 1, z) != MISSING)
+                        continue;
+                    for (int side = 0; side < 4 && rimN < MAX_EDGES; side++) {
+                        int nx = x + (side == 1 ? 1 : side == 3 ? -1 : 0), nz = z + (side == 2 ? 1 : side == 0 ? -1 : 0);
+                        if (cell(nx, y, nz) != EMPTY)
+                            continue;
+                        int r = rimN * 5;
+                        float top = y + 1;
+                        switch (side) {
+                            case 0 -> set(r, x, z, x + 1, z, top);
+                            case 1 -> set(r, x + 1, z, x + 1, z + 1, top);
+                            case 2 -> set(r, x + 1, z + 1, x, z + 1, top);
+                            default -> set(r, x, z + 1, x, z, top);
+                        }
+                        int f = rimN * 4;
+                        face[f] = x; face[f + 1] = y; face[f + 2] = z; face[f + 3] = side;
+                        rimSum += top;
+                        rimN++;
+                    }
+                }
+        fronts();
+        volume();
+        findFrontRow();
+        courses();
+    }
+
+    /** Cell (i, j, k) (local; part of the site) is on the OUTER face of its course on {@code side}: no site block
+     *  beyond it that way in its row or column (never a wall's inner face onto a court or a room). */
+    private boolean outer(int i, int j, int k, int side) {
+        return switch (side) {
+            case 0 -> k == colLo[j * w + i];
+            case 1 -> i == rowHi[j * d + k];
+            case 2 -> k == colHi[j * w + i];
+            default -> i == rowLo[j * d + k];
+        };
+    }
+
+    /**
+     * The front course of the whole building and its edges (needs {@link #volume}'s row / column extents): the lowest
+     * layer with a block still missing - the missing list is in index order, layer first, so its first entry's - and
+     * every outer cell of that layer on each side.
+     */
+    private void courses() {
+        courseN = 0;
+        courseL = missingN > 0 ? missing[0] / (w * d) : Integer.MIN_VALUE;
+        if (courseL == Integer.MIN_VALUE)
+            return;
+        int l = courseL;
+        float y = y0 + l;
+        for (int side = 0; side < 4; side++)
+            for (int k = 0; k < d; k++)
+                for (int i = 0; i < w && courseN < MAX_EDGES; i++) {
+                    if (cells[(l * d + k) * w + i] == EMPTY || !outer(i, l, k, side))
+                        continue;
+                    int x = x0 + i, z = z0 + k, r = courseN * 5;
+                    switch (side) {
+                        case 0 -> setCourse(r, x, z, x + 1, z, y);
+                        case 1 -> setCourse(r, x + 1, z, x + 1, z + 1, y);
+                        case 2 -> setCourse(r, x + 1, z + 1, x, z + 1, y);
+                        default -> setCourse(r, x, z + 1, x, z, y);
+                    }
+                    courseSide[courseN++] = side;
+                }
+        boundary();
+    }
+
+    /**
+     * The front as drawn (round 17 critic: "no line of any colour at the laid/ghost boundary" - the band along the BED
+     * of the lowest course with a block missing ran, on a course nearly laid, a whole laid course under the ghost: a
+     * gold seam in the white wall). On each outer edge of the front course: over the top of the laid stack there when
+     * the plan goes on above it (the ghost starts there), at the bed when the block is missing, nothing when the column
+     * is finished (no ghost over it); and up each step where two neighbouring edges meet at different heights - one
+     * continuous stepped line where the laid stone meets the ghost.
+     */
+    private void boundary() {
+        segN = 0;
+        if (courseL == Integer.MIN_VALUE)
+            return;
+        int l = courseL;
+        for (int i = 0; i < courseN && segN < seg.length / 6; i++) {
+            int side = courseSide[i], r = i * 5;
+            // the course cell this edge belongs to: just inside the edge, away from its outward side
+            float mx = (course[r] + course[r + 2]) * 0.5f, mz = (course[r + 1] + course[r + 3]) * 0.5f;
+            int ci = (int) Math.floor(mx - (side == 1 ? 0.5f : side == 3 ? -0.5f : 0)) - x0;
+            int ck = (int) Math.floor(mz - (side == 2 ? 0.5f : side == 0 ? -0.5f : 0)) - z0;
+            int j = l;
+            while (j < h && cells[(j * d + ck) * w + ci] == STANDING)
+                j++;
+            if (j > l && (j >= h || cells[(j * d + ck) * w + ci] != MISSING))
+                continue;   // finished up to the top of the plan there: no ghost over it
+            if (!isWall(x0 + ci, y0 + l, z0 + ck))
+                continue;   // round 18 critic: a lone prop (a lamp post, a pedestal) - its front read as an amber decal
+            float y = y0 + j;
+            setSeg(course[r], y, course[r + 1], course[r + 2], y, course[r + 3], side);
+        }
+        // the steps: where one edge ends at another's start on the same side, at a different height
+        int horizontal = segN;
+        for (int a = 0; a < horizontal; a++)
+            for (int b = 0; b < horizontal && segN < seg.length / 6; b++) {
+                int pa = a * 6, pb = b * 6;
+                if (a == b || segSide[a] != segSide[b] || seg[pa + 3] != seg[pb] || seg[pa + 5] != seg[pb + 2]
+                        || seg[pa + 4] == seg[pb + 1])
+                    continue;
+                float lo = Math.min(seg[pa + 4], seg[pb + 1]), hi = Math.max(seg[pa + 4], seg[pb + 1]);
+                setSeg(seg[pa + 3], lo, seg[pa + 5], seg[pa + 3], hi, seg[pa + 5], segSide[a]);
+            }
+    }
+
+    private void setSeg(float ax, float ay, float az, float bx, float by, float bz, int side) {
+        int r = segN * 6;
+        seg[r] = ax; seg[r + 1] = ay; seg[r + 2] = az; seg[r + 3] = bx; seg[r + 4] = by; seg[r + 5] = bz;
+        segSide[segN++] = side;
+    }
+
+    private void setCourse(int r, float ax, float az, float bx, float bz, float y) {
+        course[r] = ax; course[r + 1] = az; course[r + 2] = bx; course[r + 3] = bz; course[r + 4] = y;
+    }
+
+    /** The front row (the rim height with the most edges, ties to the higher) and the next course on it. */
+    private void findFrontRow() {
+        java.util.Arrays.fill(perRow, 0);
+        for (int i = 0; i < rimN; i++)
+            perRow[(int) rimY(i) - y0]++;
+        int best = -1;
+        for (int j = 0; j < perRow.length; j++)
+            if (perRow[j] > 0 && (best < 0 || perRow[j] >= perRow[best]))
+                best = j;
+        frontRow = best < 0 ? Float.NaN : y0 + best;
+        nextRow = best >= 0 ? y0 + best : missingN > 0 ? missingY(0) : Integer.MIN_VALUE;
+    }
+
+    private void volume() {
+        java.util.Arrays.fill(rowLo, Integer.MAX_VALUE); java.util.Arrays.fill(rowHi, Integer.MIN_VALUE);
+        java.util.Arrays.fill(colLo, Integer.MAX_VALUE); java.util.Arrays.fill(colHi, Integer.MIN_VALUE);
+        java.util.Arrays.fill(topMissing, Integer.MIN_VALUE);
+        for (int j = 0; j < h; j++)
+            for (int k = 0; k < d; k++)
+                for (int i = 0; i < w; i++) {
+                    byte c = cells[(j * d + k) * w + i];
+                    if (c == EMPTY)
+                        continue;
+                    int r = j * d + k, q = j * w + i;
+                    rowLo[r] = Math.min(rowLo[r], i); rowHi[r] = Math.max(rowHi[r], i);
+                    colLo[q] = Math.min(colLo[q], k); colHi[q] = Math.max(colHi[q], k);
+                    if (c == MISSING)
+                        topMissing[k * w + i] = Math.max(topMissing[k * w + i], j);
+                }
+        volumeN = 0;
+        for (int j = 0; j < h; j++)
+            for (int k = 0; k < d; k++)
+                for (int i = 0; i < w; i++) {
+                    int idx = (j * d + k) * w + i;
+                    byte c = cells[idx];
+                    boolean v = c == MISSING;
+                    if (c == EMPTY) {
+                        int r = j * d + k, q = j * w + i;
+                        v = rowLo[r] < i && i < rowHi[r] && colLo[q] < k && k < colHi[q] && topMissing[k * w + i] > j;
+                    }
+                    volume[idx] = v;
+                    if (v)
+                        volumeList[volumeN++] = idx;
+                }
+    }
+
+    /** The vertical fronts: each standing block's open faces, against a missing neighbour along the face. */
+    private void fronts() {
+        frontN = 0;
+        for (int y = y0; y < y0 + h; y++)
+            for (int z = z0; z < z0 + d; z++)
+                for (int x = x0; x < x0 + w; x++) {
+                    if (cell(x, y, z) != STANDING)
+                        continue;
+                    for (int side = 0; side < 4; side++) {
+                        int nx = side == 1 ? 1 : side == 3 ? -1 : 0, nz = side == 2 ? 1 : side == 0 ? -1 : 0;
+                        if (cell(x + nx, y, z + nz) != EMPTY)
+                            continue;
+                        for (int t = -1; t <= 1 && frontN < MAX_EDGES; t += 2) {
+                            int tx = nz != 0 ? t : 0, tz = nx != 0 ? t : 0;     // along the face
+                            int lx = x + tx, lz = z + tz;
+                            if (cell(lx, y, lz) != MISSING || cell(lx + nx, y, lz + nz) != EMPTY)
+                                continue;
+                            // the corner on the face's plane, on the side toward the missing block
+                            float cx = nx > 0 ? x + 1 : nx < 0 ? x : (tx > 0 ? x + 1 : x);
+                            float cz = nz > 0 ? z + 1 : nz < 0 ? z : (tz > 0 ? z + 1 : z);
+                            front[frontN * 3] = cx; front[frontN * 3 + 1] = cz; front[frontN * 3 + 2] = y;
+                            frontSide[frontN++] = side;
+                        }
+                    }
+                }
+    }
+
+    private void set(int r, float ax, float az, float bx, float bz, float y) {
+        rim[r] = ax; rim[r + 1] = az; rim[r + 2] = bx; rim[r + 3] = bz; rim[r + 4] = y;
+    }
+
+    private int index(int x, int y, int z) {
+        int i = x - x0, j = y - y0, k = z - z0;
+        if (i < 0 || j < 0 || k < 0 || i >= w || j >= h || k >= d)
+            return -1;
+        return (j * d + k) * w + i;
+    }
+
+    private byte cell(int x, int y, int z) {
+        int i = index(x, y, z);
+        return i < 0 ? EMPTY : cells[i];
+    }
+
+    public boolean isMissing(int x, int y, int z) { return cell(x, y, z) == MISSING; }
+    /**
+     * The ghost's VOLUME (round 13 critic: a hollow building's missing walls showed their inner faces and edges through
+     * the outer ones as a lattice): a missing block, or air it will enclose - walled in on all four sides in its layer
+     * (a block of the site somewhere along its row each way, and along its column each way) with a missing block above
+     * it in its column. Not air under nothing (an open court), not air under a standing roof (a finished room).
+     */
+    public boolean isVolume(int x, int y, int z) {
+        int i = index(x, y, z);
+        return i >= 0 && volume[i];
+    }
+
+    /** The volume's cells (missing blocks and the air they will enclose), for the ghost to walk. */
+    public int volumeCount() { return volumeN; }
+    public int volumeX(int i) { return volumeList[i] % w + x0; }
+    public int volumeY(int i) { return volumeList[i] / (w * d) + y0; }
+    public int volumeZ(int i) { return (volumeList[i] / w) % d + z0; }
+    public boolean isStanding(int x, int y, int z) { return cell(x, y, z) == STANDING; }
+    /** A block of the site, standing or missing (not air, not outside). */
+    public boolean isStructure(int x, int y, int z) { return cell(x, y, z) != EMPTY; }
+
+    public int missingCount() { return missingN; }
+    /** The i-th missing block's x / y / z. */
+    public int missingX(int i) { return missing[i] % w + x0; }
+    public int missingY(int i) { return missing[i] / (w * d) + y0; }
+    public int missingZ(int i) { return (missing[i] / w) % d + z0; }
+
+    public int rimCount() { return rimN; }
+    /** The i-th rim edge, from (x0, z0) to (x1, z1) at height y (block edges; the face's side is on its right). */
+    public float rimX0(int i) { return rim[i * 5]; }
+    public float rimZ0(int i) { return rim[i * 5 + 1]; }
+    public float rimX1(int i) { return rim[i * 5 + 2]; }
+    public float rimZ1(int i) { return rim[i * 5 + 3]; }
+    public float rimY(int i) { return rim[i * 5 + 4]; }
+    /** The rim's mean height (NaN with no rim): where the halo floats. */
+    public float meanRimY() { return rimN == 0 ? Float.NaN : rimSum / rimN; }
+
+    /** The faces under the rim edges, one per edge: a standing block's open side (0: -z, 1: +x, 2: +z, 3: -x). */
+    public int faceCount() { return rimN; }
+    public int faceX(int i) { return face[i * 4]; }
+    public int faceY(int i) { return face[i * 4 + 1]; }
+    public int faceZ(int i) { return face[i * 4 + 2]; }
+    public int faceSide(int i) { return face[i * 4 + 3]; }
+
+    /**
+     * The vertical build fronts (round 11 critic: run the rim up them too): where a standing block's open face meets
+     * the coplanar open face of a missing block beside it, the vertical edge between them, a block high from its foot
+     * {@link #frontY}, at (x, z) on the face's plane, with the face's side.
+     */
+    public int frontCount() { return frontN; }
+    public float frontX(int i) { return front[i * 3]; }
+    public float frontZ(int i) { return front[i * 3 + 1]; }
+    public int frontY(int i) { return (int) front[i * 3 + 2]; }
+    public int frontSide(int i) { return frontSide[i]; }
+
+    /**
+     * The build front's course (round 13 critic: drawn on the HIGHEST rim row it was a short orange tick - the few
+     * blocks begun on the next course): the rim height with the most edges, ties to the higher; NaN with no rim. Worked
+     * out in {@link #finish}.
+     */
+    public float frontRow() { return frontRow; }
+
+    /** Rim edge i is on the build front: on the front row or standing above it - one band along the whole top. */
+    public boolean isFront(int i) { return rimY(i) >= frontRow; }
+
+    /**
+     * Missing block (x, y, z) is in the NEXT course (round 13 critic: make the next row read as next): it lies on the
+     * front row - with no rim yet, the lowest course still missing.
+     */
+    public boolean isNextRow(int x, int y, int z) { return isMissing(x, y, z) && y == nextRow; }
+
+    /**
+     * A volume cell's face toward {@code dir} (0 -z, 1 +x, 2 +z, 3 -x, 4 +y, 5 -y) belongs to the ghost's hull: the
+     * cell beyond it is not volume. Never between two cells of the volume (round 13 critic: a lattice of cubes, alpha
+     * doubled at every seam; a hollow hall's walls are one hull with the room they enclose - {@link #isVolume}). Kept
+     * against standing blocks (round 15 critic: grass showed through a hole in the ghost where a skipped face lay behind
+     * a block that is not a full cube - a lantern, a slab); behind a full block the depth test hides it, and it lies
+     * {@link #ghostQuad}'s inset inside its own cell, never on the standing block's face.
+     */
+    public boolean ghostFace(int x, int y, int z, int dir) {
+        if (!isVolume(x, y, z))
+            return false;
+        int nx = x + (dir == 1 ? 1 : dir == 3 ? -1 : 0), ny = y + (dir == 4 ? 1 : dir == 5 ? -1 : 0);
+        int nz = z + (dir == 2 ? 1 : dir == 0 ? -1 : 0);
+        return !isVolume(nx, ny, nz);
+    }
+
+    /**
+     * The quad of cell (x, y, z)'s face toward {@code dir} into {@code out} (4 corners {x, y, z}, wound in order): its
+     * plane {@code e} inside the cell, so it never shares a plane with a standing block's face (no z-fighting), but
+     * spanning the whole cell in that plane, so neighbouring faces meet edge to edge (round 13 critic: the old inset on
+     * every side left a seam between every two cells).
+     */
+    public static void ghostQuad(int x, int y, int z, int dir, float e, float[] out) {
+        float x0 = x, x1 = x + 1, y0 = y, y1 = y + 1, z0 = z, z1 = z + 1;
+        switch (dir) {
+            case 0 -> quad(out, x0, y0, z0 + e, x1, y0, z0 + e, x1, y1, z0 + e, x0, y1, z0 + e);
+            case 1 -> quad(out, x1 - e, y0, z0, x1 - e, y0, z1, x1 - e, y1, z1, x1 - e, y1, z0);
+            case 2 -> quad(out, x0, y0, z1 - e, x1, y0, z1 - e, x1, y1, z1 - e, x0, y1, z1 - e);
+            case 3 -> quad(out, x0 + e, y0, z0, x0 + e, y0, z1, x0 + e, y1, z1, x0 + e, y1, z0);
+            case 4 -> quad(out, x0, y1 - e, z0, x1, y1 - e, z0, x1, y1 - e, z1, x0, y1 - e, z1);
+            default -> quad(out, x0, y0 + e, z0, x1, y0 + e, z0, x1, y0 + e, z1, x0, y0 + e, z1);
+        }
+    }
+
+    private static void quad(float[] o, float ax, float ay, float az, float bx, float by, float bz, float cx, float cy,
+                             float cz, float dx, float dy, float dz) {
+        o[0] = ax; o[1] = ay; o[2] = az; o[3] = bx; o[4] = by; o[5] = bz;
+        o[6] = cx; o[7] = cy; o[8] = cz; o[9] = dx; o[10] = dy; o[11] = dz;
+    }
+
+    /** The top of the highest standing block in column (x, z) (NaN for none, or outside). */
+    public float columnTop(int x, int z) {
+        if (index(x, y0, z) < 0)
+            return Float.NaN;
+        for (int y = y0 + h - 1; y >= y0; y--)
+            if (cell(x, y, z) == STANDING)
+                return y + 1;
+        return Float.NaN;
+    }
+
+    /**
+     * The build front of the whole building: the bed of the LOWEST layer with a block still missing, as a height (block
+     * edges); NaN when every block stands. Round 14 critic: an orange edge on scattered block tops at many heights
+     * ("orange-trimmed blocks"). Round 15 critic: one course a FACE still gave 5 orange pieces over 270 px of screen
+     * height (a face laid a course further than its neighbour carried its band a course up). Now one course, one
+     * height, for the whole building.
+     */
+    public float courseFront() { return courseL == Integer.MIN_VALUE ? Float.NaN : y0 + courseL; }
+    /** The front's edges: every outer cell of the front course on each side (laid or missing - the whole course, not
+     *  only where it is laid), the edge at its bed, wound like the rim (the face on its right). */
+    public int courseEdgeCount() { return courseN; }
+    public float courseX0(int i) { return course[i * 5]; }
+    public float courseZ0(int i) { return course[i * 5 + 1]; }
+    public float courseX1(int i) { return course[i * 5 + 2]; }
+    public float courseZ1(int i) { return course[i * 5 + 3]; }
+    public float courseY(int i) { return course[i * 5 + 4]; }
+    public int courseSide(int i) { return courseSide[i]; }
+
+    /** The front as drawn ({@link #boundary}): its segments, from (x0, y0, z0) to (x1, y1, z1), each on a side of the
+     *  course (0: -z, 1: +x, 2: +z, 3: -x) - the horizontal runs and the steps between them. */
+    public int frontSegCount() { return segN; }
+    public float frontSegX0(int i) { return seg[i * 6]; }
+    public float frontSegY0(int i) { return seg[i * 6 + 1]; }
+    public float frontSegZ0(int i) { return seg[i * 6 + 2]; }
+    public float frontSegX1(int i) { return seg[i * 6 + 3]; }
+    public float frontSegY1(int i) { return seg[i * 6 + 4]; }
+    public float frontSegZ1(int i) { return seg[i * 6 + 5]; }
+    public int frontSegSide(int i) { return segSide[i]; }
+
+    /** The front course's layer as a height (its bed), or MIN_VALUE when nothing is missing. */
+    public int courseLayerY() { return courseL == Integer.MIN_VALUE ? Integer.MIN_VALUE : y0 + courseL; }
+
+    /** The shortest run of site cells along x or z (in one course) that counts as a wall ({@link #isWall}). */
+    public static final int WALL_RUN = 3;
+
+    /**
+     * Cell (x, y, z) is part of a WALL: a block of the site in a run of at least {@link #WALL_RUN} site blocks along x or
+     * along z in its course (a 1-thick wall's end counts - its run goes along the wall). Round 18 critic: the front and
+     * the flash went on lone props in the yard as readily as on the wall ("amber pads under the target block and the
+     * lamp at floor level that read as decals"); a lamp post or a pedestal is no wall. Allocation-free.
+     */
+    public boolean isWall(int x, int y, int z) {
+        if (cell(x, y, z) == EMPTY)
+            return false;
+        int run = 1;
+        for (int t = x - 1; cell(t, y, z) != EMPTY && run < WALL_RUN; t--) run++;
+        for (int t = x + 1; cell(t, y, z) != EMPTY && run < WALL_RUN; t++) run++;
+        if (run >= WALL_RUN)
+            return true;
+        run = 1;
+        for (int t = z - 1; cell(x, y, t) != EMPTY && run < WALL_RUN; t--) run++;
+        for (int t = z + 1; cell(x, y, t) != EMPTY && run < WALL_RUN; t++) run++;
+        return run >= WALL_RUN;
+    }
+
+    /** Ray-march step (blocks) of {@link #inView}. */
+    private static final float VIEW_STEP = 0.2f;
+
+    /**
+     * Block (x, y, z) can be seen from a camera looking along (lx, ly, lz) (round 17 critic: the next block's flash never
+     * showed - it sat on a block buried under or behind laid stone): a ray toward the camera from the centre of one of
+     * its faces turned to the camera meets no standing block of the site. Allocation-free.
+     */
+    public boolean inView(int x, int y, int z, float lx, float ly, float lz) {
+        float max = w + h + d + 2;
+        for (int f = 0; f < 3; f++) {
+            float n = f == 0 ? lx : f == 1 ? ly : lz;
+            if (Math.abs(n) < 1e-3f)
+                continue;
+            // the face turned to the camera: its normal against the look
+            float sx = x + 0.5f, sy = y + 0.5f, sz = z + 0.5f, out = n < 0 ? 0.51f : -0.51f;
+            if (f == 0) sx += out; else if (f == 1) sy += out; else sz += out;
+            boolean clear = true;
+            for (float t = 0; t <= max; t += VIEW_STEP) {
+                int cx = (int) Math.floor(sx - lx * t), cy = (int) Math.floor(sy - ly * t), cz = (int) Math.floor(sz - lz * t);
+                if (cell(cx, cy, cz) == STANDING) {
+                    clear = false;
+                    break;
+                }
+            }
+            if (clear)
+                return true;
+        }
+        return false;
+    }
+
+    private final float[] tgt = new float[3], hands = new float[3];
+
+    /**
+     * The next block to be placed, into {@code cell} {x, y, z, valid} (round 16 critic: "being built now" read only as a
+     * faint dashed footprint outline; the next block flashes): kept while it is still missing and in view - the
+     * builders' reports aim at a random queued block every beat, and the flash must not hop with them; else the block
+     * the builder at work nearest the camera aims at (looking along {@code lx, ly, lz}: the smallest hands . look), if
+     * that block is missing, in the front course (the server lays the lowest course first) and in view
+     * ({@link #inView}); else the front course's block in view nearest the camera; else its nearest. Round 17 critic:
+     * the flash never showed in a still - it sat on a block buried under or behind laid stone. False (and
+     * {@code cell[3]} 0) when nothing is missing. Allocation-free.
+     */
+    public boolean nextBlock(ConstructionCrew crew, float now, float lx, float ly, float lz, int[] cell) {
+        if (missingN == 0) {
+            cell[3] = 0;
+            return false;
+        }
+        if (cell[3] != 0 && isMissing(cell[0], cell[1], cell[2]) && inView(cell[0], cell[1], cell[2], lx, ly, lz))
+            return true;
+        int courseY = courseLayerY();
+        float best = Float.MAX_VALUE;
+        boolean found = false;
+        for (int i = 0; i < ConstructionCrew.SLOTS; i++) {
+            if (!crew.target(i, now, tgt, hands))
+                continue;
+            int x = (int) Math.floor(tgt[0]), y = (int) Math.floor(tgt[1]), z = (int) Math.floor(tgt[2]);
+            if (!isMissing(x, y, z) || y != courseY || !isWall(x, y, z) || !inView(x, y, z, lx, ly, lz))
+                continue;
+            float dd = hands[0] * lx + hands[1] * ly + hands[2] * lz;
+            if (dd < best) {
+                best = dd;
+                cell[0] = x; cell[1] = y; cell[2] = z;
+                found = true;
+            }
+        }
+        // the front course is the lowest layer with a block missing: the missing list is layer first, so its first
+        // entries are that course's - the WALL block in view nearest the camera (round 18 critic: not a lone prop in
+        // the yard), else any in view, else the nearest
+        for (int pass = 0; pass < 3 && !found; pass++) {
+            int l = missing[0] / (w * d);
+            for (int i = 0; i < missingN && missing[i] / (w * d) == l; i++) {
+                int x = missingX(i), y = missingY(i), z = missingZ(i);
+                float dd = (x + 0.5f) * lx + (y + 0.5f) * ly + (z + 0.5f) * lz;
+                if (dd < best && (pass == 2 || ((pass == 1 || isWall(x, y, z)) && inView(x, y, z, lx, ly, lz)))) {
+                    best = dd;
+                    cell[0] = x; cell[1] = y; cell[2] = z;
+                    found = true;
+                }
+            }
+        }
+        cell[3] = 1;
+        return true;
+    }
+
+    /** The site's bounds (block coordinates, inclusive minimum, exclusive maximum). */
+    public int minX() { return x0; }
+    public int minZ() { return z0; }
+    public int maxX() { return x0 + w; }
+    public int maxZ() { return z0 + d; }
+}

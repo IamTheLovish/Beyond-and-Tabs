@@ -132,7 +132,12 @@ public final class HoverCards {
                 }
             }
         }
-        if (producing != null) {
+        if (!b.isBuilt) {
+            // the bar above is the site's construction progress: say so (construction round 16 critic: an unlabelled
+            // blue bar over "Not producing" did not read as "being built")
+            String s = I18n.get("hud.reignofnether.hover.construction", Math.round(frac * 100));
+            gg.drawString(font, font.plainSubstrByWidth(s, barW), x + PAD, ty, 0xFF9CC4FF);
+        } else if (producing != null) {
             String s = I18n.get("hud.reignofnether.hover.producing", producing, Math.round(Math.max(0, Math.min(1, progress)) * 100));
             gg.drawString(font, font.plainSubstrByWidth(s, barW), x + PAD, ty, 0xFFE0E4EA);
         } else if (b instanceof ProductionPlacement) {
