@@ -209,6 +209,7 @@ public class HarpoonerUnit extends Pillager implements Unit, AttackerUnit, Range
     }
 
     private UnitBowAttackGoal<? extends LivingEntity> attackGoal;
+    private RangedAttackBuildingGoal<?> attackBuildingGoal;   // harpoons chip buildings too (RangedBuildingHit, lovish Nov 5)
 
     private Abilities abilities = ABILITIES.clone();
     private final List<ItemStack> items = new ArrayList<>();
@@ -221,8 +222,8 @@ public class HarpoonerUnit extends Pillager implements Unit, AttackerUnit, Range
         updateAbilityButtons();
     }
 
-    public boolean canAttackBuildings() { return false; }
-    public Goal getAttackBuildingGoal() { return null; }
+    public boolean canAttackBuildings() { return getAttackBuildingGoal() != null; }
+    public Goal getAttackBuildingGoal() { return attackBuildingGoal; }
 
     @Override
     public boolean removeWhenFarAway(double d) {
@@ -288,6 +289,7 @@ public class HarpoonerUnit extends Pillager implements Unit, AttackerUnit, Range
         this.garrisonGoal = new GarrisonGoal(this);
         this.itemGoal = new UnitItemGoal(this);
         this.attackGoal = new UnitBowAttackGoal<>(this);
+        this.attackBuildingGoal = new RangedAttackBuildingGoal<>(this, this.attackGoal);
         this.returnResourcesGoal = new ReturnResourcesGoal(this);
     }
 
@@ -337,16 +339,30 @@ public class HarpoonerUnit extends Pillager implements Unit, AttackerUnit, Range
         // a projectile hit with the Harpooner as both projectile and owner: the mixin takes the damage from
         // getUnitAttackDamage and applies ranged armour (as the Wisp Choir's bolt)
         boolean hurt = target.hurt(damageSources().mobProjectile(this, this), getUnitAttackDamage());
+        throwFx(sl, new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ()));
+        if (pull && target.isAlive())
+            pull(target);
+        return hurt;
+    }
+
+    // a building's block (RangedAttackBuildingGoal): the same throw at a point, the block under it takes the hit; a
+    // building is never pulled
+    @Override
+    public void performUnitRangedAttack(double x, double y, double z, float velocity) {
+        if (!(level() instanceof ServerLevel sl) || this.hasEffect(MobEffectRegistrar.DISARM.get()))
+            return;
+        throwFx(sl, new Vec3(x, y, z));
+        com.solegendary.reignofnether.building.RangedBuildingHit.hit(this, BlockPos.containing(x, y - 0.5, z));
+    }
+
+    /** The harpoon's line of particles and its throw, from the Harpooner to {@code to}. */
+    private void throwFx(ServerLevel sl, Vec3 to) {
         Vec3 from = new Vec3(getX(), getEyeY() - 0.2, getZ());
-        Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
         for (int i = 1; i <= 3; i++) {
             Vec3 p = from.lerp(to, i / 4.0);
             sl.sendParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0.0);
         }
         sl.playSound(null, blockPosition(), SoundEvents.TRIDENT_THROW, SoundSource.NEUTRAL, 1.0f, 1.1f);
-        if (pull && target.isAlive())
-            pull(target);
-        return hurt;
     }
 
     /** Can this be hauled in at all: alive, not a friend (own or allied), not too big. */
