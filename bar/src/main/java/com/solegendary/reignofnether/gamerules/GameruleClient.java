@@ -35,6 +35,8 @@ public class GameruleClient {
     public static boolean slantedBuilding = true;
     public static int allowedHeroes = 2;
     public static boolean lockAlliances = true;   // the rule's default (GameRuleRegistrar); the server syncs the real value
+    /** Lobby option "Player list" (match.PlayerListRule): the stats strip is drawn from the start. */
+    public static boolean showPlayerList = com.solegendary.reignofnether.match.PlayerListRule.DEFAULT;
     public static boolean scenarioMode = false;
     public static boolean coopMode = false;
     public static boolean buildingsOutsideBorder = false;

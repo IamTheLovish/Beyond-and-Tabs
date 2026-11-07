@@ -100,6 +100,7 @@ public class MultiplayerLobby {
     // Written to the saved lockAlliances rule at Start; a new lobby starts from the world's rule (on by default), so a
     // world that set it keeps its choice
     static boolean lockAlliances = true;
+    static boolean playerList = com.solegendary.reignofnether.match.PlayerListRule.DEFAULT;   // lobby "Player list": drawn from the start
     static UUID hostUuid = null;
     static String hostName = "";
     static boolean dirty = false;
@@ -158,7 +159,8 @@ public class MultiplayerLobby {
         SET_ROLE,   // hero mode: value 1 = Hero role (no base), 0 = Commander
         SET_TIME, SET_CYCLE,  // the match sun: match.TimeOfDay id, match.DayCycle id
         BACK_TO_LOBBY,        // host, match decided: reset the battlefield and reopen the lobby with the last lineup
-        SET_ALLIANCES         // host: 1 = alliances locked in the match (default), 0 = open (lockAlliances rule)
+        SET_ALLIANCES,        // host: 1 = alliances locked in the match (default), 0 = open (lockAlliances rule)
+        SET_PLAYER_LIST       // appended: 1 = the player list is drawn for everyone from the start (match.PlayerListRule)
     }
 
     static Seat seat(int id) {
@@ -363,6 +365,11 @@ public class MultiplayerLobby {
                     return false;
                 dayCycle = value;
             }
+            case SET_PLAYER_LIST -> {
+                if (!host || value < 0 || value > 1)
+                    return false;
+                playerList = value == 1;
+            }
             case SET_ROLE -> {
                 // only a human may play the hero, and only from a team seat (a spectator has no team to serve)
                 Seat s = editable(sp, seatId);
@@ -440,8 +447,11 @@ public class MultiplayerLobby {
             hostUuid = sp.getUUID();
             hostName = sp.getName().getString();
             MinecraftServer server = sp.getServer();
-            if (server != null)
+            if (server != null) {
                 lockAlliances = server.getGameRules().getRule(com.solegendary.reignofnether.registrars.GameRuleRegistrar.LOCK_ALLIANCES).get();
+                // the "Player list" option likewise starts from the world's saved showPlayerList rule (off by default)
+                playerList = server.getGameRules().getRule(com.solegendary.reignofnether.registrars.GameRuleRegistrar.SHOW_PLAYER_LIST).get();
+            }
             // the host first, then everyone else online, alternating teams so a 1v1 needs no clicks
             addHuman(sp);
             if (server != null)
@@ -681,6 +691,7 @@ public class MultiplayerLobby {
             com.solegendary.reignofnether.match.DayCycle.byId(dayCycle));
         // the host's "Alliances" choice, before anyone is seated: the teams the start forms are then fixed (or not)
         com.solegendary.reignofnether.alliance.AllyCommand.setLocked(server, lockAlliances);
+        com.solegendary.reignofnether.gamerules.GameruleServerEvents.applyShowPlayerList(server, playerList);
         com.solegendary.reignofnether.maps.MapPreset preset = com.solegendary.reignofnether.maps.MapPreset.byId(map);
         if (preset.premade() || choosePositions) {
             // a pre-made map rises first and/or everyone places their start (design/maps.md); the match is seated
