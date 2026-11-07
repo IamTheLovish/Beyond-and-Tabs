@@ -28,8 +28,8 @@ import java.util.List;
  * <ul>
  *   <li>the STREAM: textured flame tongues (the atlas of tools/breath_sprites.py, BarFxClient.drawFlame) laid along
  *   their motion from the real jaw bone (BoneDragonRenderer) toward FireBreath.flame's point on the aim's ground
- *   inside the cone - a white-hot core that races ahead (added light), a light-blue body that wobbles side to side
- *   (ALPHA-BLENDED, BarFxClient P.blend, so blue stays blue over grass), dark wisps rising off it - and the jaws lit;</li>
+ *   inside the cone - an electric-cyan core that races ahead (added light), a light-blue body that wobbles side to side
+ *   (ALPHA-BLENDED, BarFxClient P.blend, so blue stays blue over grass), a thin soot-grey haze rising off it - and the jaws lit;</li>
  *   <li>the IMPACT: tongues racing out along the ground, faint at the centre so a unit inside still shows; a pulsing
  *   glow on the ground; a ragged burning ring; sparks flung up and out; embers left on the burnt ground; a dark scorch;
  *   the units standing in it lit blue with flames licking up them.</li>
@@ -44,7 +44,9 @@ public final class BreathFx {
     private static final Minecraft MC = Minecraft.getInstance();
     /** Per tick: white mouth cores, hot tongues, body tongues, body puffs, fringe smoke, splash tongues, pool flames,
      *  ember motes; licks on at most LICKS_MAX units. */
-    static final int CORES = 3, HOTS = 0, BODY = 4, PUFFS = 4, SMOKES = 2, SPLASH = 20, POOL = 1, EMBERS = 8,
+    // the look lovish left to the lane (Nov 6, "Lane picks, I judge stills"): a SOLID stream that reads at the RTS zoom -
+    // more body tongues, fewer loose puffs, one wisp of haze instead of two
+    static final int CORES = 3, HOTS = 0, BODY = 6, PUFFS = 2, SMOKES = 1, SPLASH = 20, POOL = 1, EMBERS = 8,
         LICKS_MAX = 8;
     /** The jaws the renderer found are trusted this many client ticks (an undrawn dragon's are guessed instead). */
     static final long JAWS_FRESH = 3;
@@ -52,13 +54,15 @@ public final class BreathFx {
     static final double JAWS_JUMP = 3.0;
     /** Airborne: the radius (blocks) of the burning ground round the aim. */
     static final double POOL_R = 2.8;
-    // soul-fire, cyan to cobalt: the white-hot core racing the whole jet (in-game blind A/B i3 picked it over a
-    // core kept at the mouth in every air pair: "a readable white column to the ground"); each flame fades from its
-    // first colour to its second over its life
-    static final int CORE = 0xF4FFFF, CORE_END = 0xBFEFFF, HOT_C = 0x9FE0FF, HOT_END = 0x4FB4FF, BODY_C = 0x3F8DFF,
-        BODY_END = 0x1A3FD6, SMOKE = 0x2A2F52, SMOKE_END = 0x1A1E36, MUZZLE = 0xFFFFFF, SPLASH_C = 0xC9F2FF,
+    // a hot gas flame, cyan to cobalt to indigo: the core racing the whole jet (in-game blind A/B i3 picked it over a
+    // core kept at the mouth in every air pair: "a readable column to the ground") is an electric cyan, not white (i4's
+    // critics: the white core read as water or ice); the mantle deepens to indigo at its tips like a burner's flame; the
+    // haze over it and the burnt ground are soot grey, not navy (lovish: hyper-real, a touch less dark fantasy). Each
+    // flame fades from its first colour to its second over its life
+    static final int CORE = 0xA8F4FF, CORE_END = 0x5CC8FF, HOT_C = 0x9FE0FF, HOT_END = 0x4FB4FF, BODY_C = 0x2E7BFF,
+        BODY_END = 0x3A2FC8, SMOKE = 0x5E6675, SMOKE_END = 0x3C4250, MUZZLE = 0xD8FBFF, SPLASH_C = 0x8FE6FF,
         SPLASH_END = 0x3B8CFF, POOL_C = 0x6FB8FF, POOL_END = 0x1E4BD8, HOT = 0x7FD6FF, GLOW = 0x1E4BFF,
-        EMBER = 0xC8F0FF, EMBER_END = 0x7FD0FF, SCORCH = 0x101C40, LICK = 0x8FE0FF, LICK_END = 0x2A6DFF, LIT = 0x66B8FF,
+        EMBER = 0xC8F0FF, EMBER_END = 0x7FD0FF, SCORCH = 0x231F1C, LICK = 0x8FE0FF, LICK_END = 0x2A6DFF, LIT = 0x66B8FF,
         SHEATH = 0x3F8CFF, HIT = 0xEAF6FF, CLING = 0x3D8BFF, CLING_END = 0x1E5BFF;
 
     private static final double[] V = new double[3];
@@ -174,7 +178,7 @@ public final class BreathFx {
         // the stream (in-game round 1: "white for the whole length, droplets - a water jet or frost beam"): white only
         // in a short core at the mouth, a hot pale-blue tongue a few blocks on, then a body of cobalt tongues that
         // wobble side to side and ragged puffs rolling as they go (ALPHA-BLENDED, BarFxClient P.blend, so blue stays
-        // blue over grass), a deep-blue fringe drifting up off it - and a flash in the jaws
+        // blue over grass), a soot-grey haze drifting up off it - and a flash in the jaws
         float px = -sz, pz = sx, pl = (float) Math.sqrt(px * px + pz * pz);   // square to the stream, on the ground
         if (pl > 1.0e-3) { px /= pl; pz /= pl; }
         float wobble = 1.5f * (float) Math.sin(now() * 0.6);
@@ -222,13 +226,13 @@ public final class BreathFx {
                 p.rate = rnd(1f, 3f) * (BarFxClient.R.nextBoolean() ? 1 : -1);   // 60-180 degrees a second
             } else {
                 p.tex = BarFxClient.R.nextInt(6);
-                p.stretch = 2.5f;
+                p.stretch = 3.2f;   // long tongues that overlap into one stream
             }
         }
         for (int i = 0; i < SMOKES; i++) {
             float f = rnd(.3f, landed ? 1f : .7f) * (landed ? cone : dist);
             BarFxClient.P p = flame(jx + cx * f, jy + cy * f + .3f, jz + cz * f, rnd(.9f, 1.4f), .75f * zs, SMOKE, SMOKE_END,
-                cx * 2f, 1f, cz * 2f, 2.3f, Float.NaN, swell * .35f, true);
+                cx * 2f, 1f, cz * 2f, 2.3f, Float.NaN, swell * .25f, true);
             p.tex = 6 + BarFxClient.R.nextInt(2);
             p.spin = rnd(0, 6.28f);
             p.rate = rnd(-1f, 1f);
