@@ -31,6 +31,18 @@ public class LobbyClientEvents {
     static int enterRtsIn = -1;
     static boolean enterAsSpectator = false;
 
+    /** For the [Screen] log line: {humans seated or bots, seats total}, or null when no lobby snapshot has arrived. */
+    public static int[] seatCounts() {
+        LobbyClientboundPacket l = latest;
+        if (l == null || l.seats == null)
+            return null;
+        int filled = 0;
+        for (MultiplayerLobby.Seat s : l.seats)
+            if (s.bot || (s.name != null && !s.name.isEmpty()))
+                filled++;
+        return new int[] { filled, l.seats.size() };
+    }
+
     static void onPacket(LobbyClientboundPacket p) {
         Minecraft mc = Minecraft.getInstance();
         switch (p.kind) {

@@ -25,6 +25,18 @@ public final class GcLog {
     private static final AtomicBoolean INSTALLED = new AtomicBoolean();
     private static long windowStart = 0, windowGcMs = 0;
     private static int windowCount = 0;
+    private static volatile long lastPauseAtMs = 0, lastPauseMs = 0;
+
+    /** Wall-clock time (System.currentTimeMillis) the last pause of {@link #PAUSE_MS}+ was reported, 0 = none yet. */
+    public static long lastPauseAtMs() {
+        return lastPauseAtMs;
+    }
+
+    /** How long that pause took. */
+    public static long lastPauseMs() {
+        return lastPauseMs;
+    }
+
     /** Pause milliseconds since the last [Sys] line (Sys takes and clears it with each line). */
     private static long sysWindowMs = 0;
 
@@ -77,6 +89,10 @@ public final class GcLog {
             windowGcMs += ms;
             sysWindowMs += ms;
             windowCount++;
+        }
+        if (ms >= PAUSE_MS) {
+            lastPauseMs = ms;
+            lastPauseAtMs = System.currentTimeMillis();
         }
         if (ms >= PAUSE_MS)
             ReignOfNether.LOGGER.info("[GC] pause {} ms ({}, {}: {}); heap now {} MB of {} MB", ms, name, data.get("gcAction"),
