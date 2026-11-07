@@ -54,6 +54,8 @@ public class ClientLevelMixin {
             cancellable = true
     )
     public void playSeededSound(Player pPlayer, double pX, double pY, double pZ, Holder<SoundEvent> pSound, SoundSource pSource, float pVolume, float pPitch, long pSeed, CallbackInfo ci) {
+        // [Ears] (eyes runs only): from the server it comes for our own player, played locally with no player
+        com.solegendary.reignofnether.sounds.EarsCount.client(pSound.get(), pPlayer == this.minecraft.player && pPlayer != null, pX, pY, pZ);
         if (!OrthoviewClientEvents.isEnabled() || SoundClientEvents.STATIC_SOUNDS.contains(pSound.get()))
             return;
 
@@ -114,6 +116,8 @@ public class ClientLevelMixin {
                 !pSoundEvent.getLocation().getNamespace().contains("reignofnether"))
             return;
 
+        if (com.solegendary.reignofnether.sounds.EarsCount.ON && this.minecraft.player != null)
+            com.solegendary.reignofnether.sounds.EarsCount.played(pSoundEvent, this.minecraft.player.distanceToSqr(pX, pY, pZ));
         Vec3 soundPos = getOrthoviewSoundPos(new Vec3(pX, pY, pZ));
 
         double d0 = this.minecraft.gameRenderer.getMainCamera().getPosition().distanceToSqr(soundPos.x(), soundPos.y(), soundPos.z());
