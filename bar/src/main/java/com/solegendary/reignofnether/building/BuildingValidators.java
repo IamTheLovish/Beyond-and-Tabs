@@ -198,16 +198,20 @@ public class BuildingValidators {
     // also allow for a 1 block gap between buildings so units can spawn and stairs don't have their blockstates
     // messed up
     private static boolean isOverlappingAnyOtherBuilding(Level level, Building building, List<BuildingBlock> blocks) {
+        if (isBridge(building))
+            return false;   // a bridge may touch anything
         List<BuildingPlacement> buildings = BuildingUtils.getBuildingsList(level.isClientSide());
 
         BlockPos minPos = BuildingUtils.getMinCorner(blocks);//.offset(-1, -1, -1);
         BlockPos maxPos = BuildingUtils.getMaxCorner(blocks);//.offset(1, 1, 1);
 
         for (BuildingPlacement bpl : buildings) {
+            // every building on the map is asked on every placement try - a bot's site search makes up to 65 tries per
+            // think, a player's ghost one per cursor move - so a building whose blocks cannot reach the footprint is
+            // answered by its cached extent (six compares) and never walked block by block. Same result as the scan.
+            if (!bpl.blocksMayReach(minPos, maxPos))
+                continue;
             for (BuildingBlock block : bpl.blocks) {
-                if (isBridge(building)) {
-                    continue;
-                }
                 BlockPos bp = block.getBlockPos();
                 if (bp.getX() >= minPos.getX() && bp.getX() <= maxPos.getX() &&
                     bp.getY() >= minPos.getY() && bp.getY() <= maxPos.getY() &&
