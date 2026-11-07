@@ -24,6 +24,14 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
+import com.solegendary.reignofnether.hero.HeroTypes;
+import java.util.Comparator;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -59,6 +67,63 @@ import java.util.List;
 public class HeroAiV2GameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
+
+    // RED ONLY, never ships (#556): the measured race on old code, deterministically. The scenario plays in a fresh far
+    // chunk (never loaded before) held at FULL by a level-33 ticket alone - loaded, never entity-ticking (Itachi's
+    // 472816aa FULL_ONLY) - so the tick-2 order lands on a hero with tickCount 0 in a chunk that is not entity-ticking.
+    // A FORCED ticket (level 31) at tick 3 makes the chunk entity-tick. Both tickets go when the test ends.
+    static final TicketType<ChunkPos> RED556_FULL_ONLY = TicketType.create("red556_full_only", Comparator.comparingLong(ChunkPos::toLong));
+
+    /** Block (0, y, 0) of the far chunk, y the first air over a stone floor laid across the whole chunk. */
+    static BlockPos red556Far(GameTestHelper helper, int forcedAt) {
+        ServerLevel level = helper.getLevel();
+        BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+        int cx = (origin.getX() >> 4) - 256, cz = (origin.getZ() >> 4) - 256;   // ~4000 blocks off: never loaded before
+        ChunkPos pos = new ChunkPos(cx, cz);
+        level.getChunkSource().addRegionTicket(RED556_FULL_ONLY, pos, 0, pos);
+        TestCleanup.atEnd(helper, () -> {
+            level.getChunkSource().removeRegionTicket(RED556_FULL_ONLY, pos, 0, pos);
+            level.setChunkForced(cx, cz, false);
+        });
+        LevelChunk chunk = level.getChunk(cx, cz);   // to FULL, now
+        int top = level.getMinBuildHeight();
+        for (int x = 0; x < 16; x++)
+            for (int z = 0; z < 16; z++)
+                top = Math.max(top, chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z));
+        for (int x = 0; x < 16; x++)
+            for (int z = 0; z < 16; z++)
+                level.setBlock(new BlockPos((cx << 4) + x, top + 1, (cz << 4) + z), Blocks.STONE.defaultBlockState(), 3);
+        helper.runAfterDelay(forcedAt, () -> level.setChunkForced(cx, cz, true));
+        return new BlockPos(cx << 4, top + 2, cz << 4);
+    }
+
+    static Mob red556Spawn(GameTestHelper helper, EntityType<? extends Mob> type, String owner, BlockPos o, int x, int z) {
+        Mob m = type == null ? null : type.create(helper.getLevel());
+        if (m == null)
+            return null;
+        m.moveTo(o.getX() + x + 0.5, o.getY(), o.getZ() + z + 0.5, 0, 0);
+        ((Unit) m).setOwnerName(owner);
+        helper.getLevel().addFreshEntity(m);
+        return m;
+    }
+
+    static Mob red556Paladin(GameTestHelper helper, String owner, BlockPos o, int x, int z) {
+        HeroBot.setAiEnabled(owner, true);
+        return red556Spawn(helper, HeroTypes.typeOf(HeroKits.DAWN_PALADIN), owner, o, x, z);
+    }
+
+    static Mob red556Dummy(GameTestHelper helper, String owner, BlockPos o, int x, int z) {
+        Mob m = red556Spawn(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, o, x, z);
+        if (m != null) {
+            EngagementStance.set(m, EngagementStance.HOLD_FIRE);
+            m.setInvulnerable(true);
+        }
+        return m;
+    }
+
+    static String red556State(GameTestHelper helper, Mob hero) {
+        return "tickCount " + hero.tickCount + ", entity-ticking " + helper.getLevel().isPositionEntityTicking(hero.blockPosition());
+    }
 
     /** An enemy that stands where it is put and never fights back: a Vindicator on Hold fire, invulnerable. */
     static Mob dummy(GameTestHelper helper, String owner, int x, int z) {
@@ -356,26 +421,28 @@ public class HeroAiV2GameTests {
      */
     @GameTest(template = ARENA, batch = "hero_ai_v2_retreat", timeoutTicks = 400)
     public static void hero_ai_v2_flees_below_the_retreat_threshold_until_the_player_orders_again(GameTestHelper helper) {
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        BlockPos o = red556Far(helper, 3);
         String me = HeroGameTests.owner(helper, "v2_flee"), them = me + "_foe";
-        Mob hero = paladin(helper, me, 8, 1);
+        Mob hero = red556Paladin(helper, me, o, 8, 1);
         List<Mob> mobs = new ArrayList<>();
         mobs.add(hero);
         for (int[] xz : new int[][] { { 5, 11 }, { 11, 11 }, { 5, 13 }, { 11, 13 } })
-            mobs.add(dummy(helper, them, xz[0], xz[1]));
+            mobs.add(red556Dummy(helper, them, o, xz[0], xz[1]));
         if (!(hero instanceof FactionHero p) || mobs.contains(null)) {
             HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
             return;
         }
         HeroAiGameTests.learn(p, 1);   // Judgement: something to fight with
-        BlockPos dest = at(helper, 8, 15);
-        double front = helper.absolutePos(new BlockPos(0, 2, 11)).getZ();   // the enemies' near row (block corner)
+        BlockPos dest = o.offset(8, 0, 15);
+        double front = o.getZ() + 11;   // the enemies' near row (block corner)
         double startZ = hero.getZ();
         double[] z30 = { 0 };
         double[] deepest = { Double.NEGATIVE_INFINITY };
         double[] later = { 0 };
         List<String> problems = new ArrayList<>();
+        String[] red556 = { "not read" };
         helper.runAfterDelay(2, () -> {
+            red556[0] = red556State(helper, hero);
             hero.setHealth(hero.getMaxHealth() * 0.5f);
             order(helper, me, hero, UnitAction.MOVE, dest);
         });
@@ -390,7 +457,7 @@ public class HeroAiV2GameTests {
         helper.runAfterDelay(150, () -> {
             if (deepest[0] >= front)
                 problems.add(String.format("at a quarter health the hero walked on into the enemies (reached z %.1f, their row at %.1f) instead of fleeing",
-                    deepest[0] - helper.absolutePos(BlockPos.ZERO).getZ(), front - helper.absolutePos(BlockPos.ZERO).getZ()));
+                    deepest[0] - o.getZ(), front - o.getZ()));
             else if (hero.getZ() > deepest[0] - 1.5)
                 problems.add("at a quarter health the hero stopped short of the enemies but never ran from them");
             later[0] = hero.getZ();
@@ -404,7 +471,9 @@ public class HeroAiV2GameTests {
         helper.runAfterDelay(360, () -> {
             if (hero.isAlive() && closest[0] > 1.5)
                 problems.add(String.format("after the player ordered it on again the hero still did not obey (%.1f blocks short of the spot at best, from z %.1f)",
-                    closest[0], later[0] - helper.absolutePos(BlockPos.ZERO).getZ()));
+                    closest[0], later[0] - o.getZ()));
+            if (!problems.isEmpty())
+                problems.add("red stub: at the tick-2 order " + red556[0]);
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
     }
@@ -691,22 +760,26 @@ public class HeroAiV2GameTests {
      */
     @GameTest(template = ARENA, batch = "hero_ai_v2_select", timeoutTicks = 400)
     public static void hero_ai_v2_selecting_a_fleeing_hero_hands_it_back_to_its_order(GameTestHelper helper) {
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        BlockPos o = red556Far(helper, 3);
         String me = HeroGameTests.owner(helper, "v2_select"), them = me + "_foe";
-        Mob hero = paladin(helper, me, 8, 1);
+        Mob hero = red556Paladin(helper, me, o, 8, 1);
         List<Mob> mobs = mobs(hero);
         for (int[] xz : new int[][] { { 5, 11 }, { 11, 11 }, { 5, 13 }, { 11, 13 } })
-            mobs.add(dummy(helper, them, xz[0], xz[1]));
+            mobs.add(red556Dummy(helper, them, o, xz[0], xz[1]));
         if (!(hero instanceof FactionHero p) || mobs.contains(null)) {
             HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
             return;
         }
         HeroAiGameTests.learn(p, 1);
-        BlockPos dest = at(helper, 8, 15);
-        double front = helper.absolutePos(new BlockPos(0, 2, 11)).getZ();
+        BlockPos dest = o.offset(8, 0, 15);
+        double front = o.getZ() + 11;
         double[] deepest = { Double.NEGATIVE_INFINITY };
         List<String> problems = new ArrayList<>();
-        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        String[] red556 = { "not read" };
+        helper.runAfterDelay(2, () -> {
+            red556[0] = red556State(helper, hero);
+            order(helper, me, hero, UnitAction.MOVE, dest);
+        });
         helper.runAfterDelay(25, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
         for (int t = 26; t <= 130; t++)
             helper.runAfterDelay(t, () -> deepest[0] = Math.max(deepest[0], hero.getZ()));
@@ -723,6 +796,8 @@ public class HeroAiV2GameTests {
             if (hero.isAlive() && closest[0] > 1.5)
                 problems.add(String.format("selected, the hero did not go back to its move order (%.1f blocks short at best)",
                     closest[0]));
+            if (!problems.isEmpty())
+                problems.add("red stub: at the tick-2 order " + red556[0]);
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
     }
