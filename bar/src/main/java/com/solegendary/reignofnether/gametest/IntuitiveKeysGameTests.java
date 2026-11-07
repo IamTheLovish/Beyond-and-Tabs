@@ -94,8 +94,11 @@ public class IntuitiveKeysGameTests {
             problems.add("the commander button shows Ctrl+C");
         if (Keybindings.selectCommander.getDefaultKey() == GLFW.GLFW_KEY_END)
             problems.add("select commander must be off End (pause unit production)");
+        // End was freed for pause unit production (#228): it is the only default on End.
+        if (Keybindings.pauseUnits.getDefaultKey() != GLFW.GLFW_KEY_END)
+            problems.add("pause unit production ships on End");
         for (Keybinding kb : Keybindings.all())
-            if (kb.getTranslationKey() != null && kb.getDefaultKey() == GLFW.GLFW_KEY_END)
+            if (kb != Keybindings.pauseUnits && kb.getTranslationKey() != null && kb.getDefaultKey() == GLFW.GLFW_KEY_END)
                 problems.add(kb.getTranslationKey() + " still ships on End");
         if (!"^C".equals(ChordKeys.shortLabel(Chord.SELECT_COMMANDER)))
             problems.add("button corner label is ^C, got " + ChordKeys.shortLabel(Chord.SELECT_COMMANDER));

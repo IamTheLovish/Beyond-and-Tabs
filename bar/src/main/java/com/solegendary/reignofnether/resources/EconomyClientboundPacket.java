@@ -37,6 +37,8 @@ public class EconomyClientboundPacket {
     // Stormcallers Mana: energy/s drained by spells (part of energyExpense) and the owner's Overcharge state
     public float manaDrain;
     public boolean overcharge;
+    // "Pause unit production" (UnitProductionPause): the owner's unit queues are on hold
+    public boolean unitsPaused;
     // the economy-bar sliders (EconomyServerEvents.converterLevel / shareLevel), so the HUD draws its markers where the
     // server holds them
     public float converterLevel = EconomyServerEvents.CONVERSION_THRESHOLD, shareLevel = 1f;
@@ -61,6 +63,7 @@ public class EconomyClientboundPacket {
         packet.converterLevel = EconomyServerEvents.converterLevel(res.ownerName, eco);
         packet.shareLevel = eco.shareLevel;
         packet.overcharge = com.solegendary.reignofnether.mana.ManaServerEvents.isOvercharged(res.ownerName);
+        packet.unitsPaused = com.solegendary.reignofnether.building.production.UnitProductionPause.isPaused(res.ownerName);
         packet.pace = (byte) EconomyPace.codeOf(res.ownerName);
         packet.wind = Wind.strength();
         // 4x a second per side: the owner, their allies (resource sharing) and observers (not playing: the observer
@@ -125,6 +128,7 @@ public class EconomyClientboundPacket {
         this.wind = buffer.readFloat();
         this.converterLevel = buffer.readFloat();
         this.shareLevel = buffer.readFloat();
+        this.unitsPaused = buffer.readBoolean();
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -152,6 +156,7 @@ public class EconomyClientboundPacket {
         buffer.writeFloat(this.wind);
         buffer.writeFloat(this.converterLevel);
         buffer.writeFloat(this.shareLevel);
+        buffer.writeBoolean(this.unitsPaused);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {

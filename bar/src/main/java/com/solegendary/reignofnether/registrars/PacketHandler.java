@@ -599,6 +599,12 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.mana.ManaServerboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.mana.ManaServerboundPacket::handle)
                 .add();
+        // "Pause unit production": toggle the sender's own flag (state comes back in EconomyClientboundPacket)
+        register(com.solegendary.reignofnether.building.production.UnitProductionPauseServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.building.production.UnitProductionPauseServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.building.production.UnitProductionPauseServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.building.production.UnitProductionPauseServerboundPacket::handle)
+                .add();
         // BAR HUD pass 4: per-unit kill counters (once a second), the kill feed (every 5 ticks, vision-gated) and the
         // wreck metal for the reclaim labels (once a second, changed heaps only)
         register(com.solegendary.reignofnether.unit.packets.UnitKillsClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)

@@ -23,6 +23,8 @@ public class EconomyClientEvents {
         // Stormcallers Mana: energy/s drained by spells, and whether the owner is overcharged (ManaServerEvents)
         public float manaDrain = 0;
         public boolean overcharge = false;
+        // "Pause unit production" (building/production/UnitProductionPause): the owner's unit queues are on hold
+        public boolean unitsPaused = false;
         // the economy-bar sliders: converters run above this energy fill; metal above this fill goes to allies
         public float converterLevel = EconomyServerEvents.CONVERSION_THRESHOLD;
         public float shareLevel = 1f;
@@ -60,6 +62,7 @@ public class EconomyClientEvents {
         eco.energyWasted = packet.energyWasted;
         eco.manaDrain = packet.manaDrain;
         eco.overcharge = packet.overcharge;
+        eco.unitsPaused = packet.unitsPaused;
         eco.converterLevel = packet.converterLevel;
         eco.shareLevel = packet.shareLevel;
         Wind.setFromServer(packet.wind);
