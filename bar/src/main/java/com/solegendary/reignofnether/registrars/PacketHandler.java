@@ -710,6 +710,13 @@ public final class PacketHandler {
                 .consumerMainThread(com.solegendary.reignofnether.hero.wager.WagerClientboundPacket::handle)
                 .add();
 
+        // motion fluidity: the server's tick stamp, so the client draws units from stamped positions (unit/playback)
+        register(com.solegendary.reignofnether.unit.playback.UnitClockClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.unit.playback.UnitClockClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.unit.playback.UnitClockClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.unit.playback.UnitClockClientboundPacket::handle)
+                .add();
+
         // a packet registered with INSTANCE.messageBuilder directly would be missing from the hash: two jars that
         // differ in it would connect again. Fail at startup (every GameTest run) instead.
         if (TABLE.size() != index || PENDING.size() != index)

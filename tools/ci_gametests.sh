@@ -86,6 +86,12 @@ fi
 if grep -qE "\[(Latency|GraveyardExit)\]" gametest.log; then
   grep -oE "\[(Latency|GraveyardExit)\].*" gametest.log | head -20 | cut -c1-400 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Order latency]"} {printf "%%0A%s", $0} END{print ""}' || true
 fi
+# motion fluidity (gametest/MotionFluidityGameTests): one line a walk (the server's walk and packets, then the walk as
+# the client draws it under the jittery match-server clocks), folded into ONE notice (shard 8 already keeps 10 notices
+# a step; a second one was dropped) - only in a shard that ran those measurements
+if grep -q "\[Motion\]" gametest.log; then
+  grep -oE "\[Motion\].*" gametest.log | head -15 | cut -c1-300 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Motion]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
 # how fast a pile of units spreads (gametest/PerfPushGameTests): the tick it passed, so a flake-stress run shows the
 # margin to the 400-tick timeout (the Oct 27 flake). Last of the notices: a full shard, already at the 10-notice limit,
 # drops this one rather than another measurement
