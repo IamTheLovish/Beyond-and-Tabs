@@ -63,6 +63,8 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.essence.TombcallerServerEvents.class);
         // the Horde's Voodoo Shaman: hexed units deal no blows, Spirit Puppets go back on time
         vanillaEventBus.register(com.solegendary.reignofnether.unit.units.piglins.VoodooServerEvents.class);
+        // the Gravebound Tithe Binder's kill and assist credits (its weapon count)
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.units.monsters.TitheBinderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.units.piglins.SpiritPuppets.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.TreeClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingReclaim.class);   // Decommission (design/building_upgrades.md)

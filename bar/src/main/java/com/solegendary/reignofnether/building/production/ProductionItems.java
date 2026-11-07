@@ -271,6 +271,8 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd SOUL_ENGINEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_engineer"), new com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd());
     // the Horde essence caster (design/essence_casters.md): appended last too, so no existing item's id moves
     public static final com.solegendary.reignofnether.unit.units.piglins.VoodooShamanProd VOODOO_SHAMAN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "voodoo_shaman"), new com.solegendary.reignofnether.unit.units.piglins.VoodooShamanProd());
+    // the Gravebound Tithe Binder (T1 caster at the Graveyard): appended last, so no existing item's id moves
+    public static final com.solegendary.reignofnether.unit.units.monsters.TitheBinderProd TITHE_BINDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tithe_binder"), new com.solegendary.reignofnether.unit.units.monsters.TitheBinderProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -446,7 +448,8 @@ public class ProductionItems {
         SALVAGER,
         JADE_MENDER,
         PIONEER,
-        VOODOO_SHAMAN
+        VOODOO_SHAMAN,
+        TITHE_BINDER
     );
 
     @Nullable
