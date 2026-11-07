@@ -91,7 +91,7 @@ public final class HoverCards {
             cardStats = com.solegendary.reignofnether.building.BuildingStats.summaryLine(b, owned);
             cardName = buildingName(b) + com.solegendary.reignofnether.building.BuildingStats.titleSuffix(b);
         }
-        gg.drawString(font, cardName, x + PAD, ty, TITLE_COLOUR);
+        gg.drawString(font, NameFit.fit(cardName, CARD_W - PAD * 2, font::width), x + PAD, ty, TITLE_COLOUR);   // BAC-008: ellipsis, not a smaller font
         ty += 11;
         if (!cardOwner.isEmpty()) {
             gg.fill(x + PAD, ty, x + PAD + 4, ty + 7, 0xFF000000 | cardOwnerSwatch);
