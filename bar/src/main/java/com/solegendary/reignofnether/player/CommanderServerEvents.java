@@ -131,7 +131,7 @@ public class CommanderServerEvents {
     /**
      * The keys a commander's added abilities may take, best first. Every faction's build menu (Factions.registerBuildings)
      * and the command card's orders already own most keys, and which are left differs per faction, so each ability takes
-     * the first key of this list that its card does not use yet. Never WASD or the arrows (camera); A and F are not here
+     * the first key of this list that its card does not use yet. Never the arrows (camera); A and F are not here
      * (attack-move click, Fight).
      */
     private static final Keybinding[] COMMANDER_KEYS = {

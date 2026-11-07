@@ -21,7 +21,7 @@ import java.util.List;
  * The controls reference (design/onboarding.md): every control on one scrolling sheet, with the player's ACTUAL keys -
  * read from keybinds/Keybindings each time the sheet opens, so a rebind shows here (marked "changed") and "Change
  * keys..." goes straight to the vanilla Controls page to rebind. Mouse controls that have no binding are listed too,
- * with the alternatives a Mac mouse or a trackpad needs (no middle button: WASD / edges pan, Alt + WASD rotates).
+ * with the alternatives a Mac mouse or a trackpad needs (no middle button: arrows / edges pan, Alt + arrows rotates).
  *
  * Reachable from the title screen (the "?" beside Skirmish), the First Battle screen and the Match Menu (Controls).
  * Also carries the first-time tips switch.
@@ -85,27 +85,25 @@ public class ControlsReferenceScreen extends Screen {
         header("h_essentials");
         bind("possess", Keybindings.toggleCamera);
         mouse("possess_hover", t("ctrl") + " + " + k(Keybindings.toggleCamera));
-        mouse("possess_hop", k(Keybindings.tab) + " " + t("while_possessing"));
+        mouse("possess_hop", k(Keybindings.possessHop) + " " + t("while_possessing"));
         bind("stats", Keybindings.statsTable);
         bind("clean", Keybindings.cleanView);
         bind("hide_hud", Keybindings.getFnum(1));
         bind("last_alert", Keybindings.lastAlert);
-        bind("overview", Keybindings.overview);
+        mouse("overview", t("shift") + " + " + k(Keybindings.overview));   // OrthoviewClientEvents: Tab is select commander
         bind("idle_worker", Keybindings.idleWorker);
-        // keybinds/ChordKeys: BAR Legacy's fixed Ctrl chords (HudClientEvents.onKeyRelease)
-        mouse("idle_builder_ctrl_b", t("ctrl") + " + B");
-        mouse("idle_t2_builder_chord", t("ctrl") + " + " + t("shift") + " + B");
-        mouse("select_commander_ctrl_c", t("ctrl") + " + C");
+        // keybinds/ChordKeys: BAR's fixed Ctrl chords (HudClientEvents.onKeyRelease)
+        mouse("idle_builder_ctrl_tab", t("ctrl") + " + Tab");
+        mouse("idle_t2_builder_chord", t("ctrl") + " + " + t("shift") + " + Tab");
+        mouse("select_commander_ctrl_c", k(Keybindings.selectCommander) + "  /  " + t("ctrl") + " + C");
         bind("select_army", Keybindings.selectArmy);
-        mouse("select_army_ctrl_w", t("ctrl") + " + W");
         mouse("factory_guard_ctrl_g", t("ctrl") + " + G");   // HudClientEvents: hardcoded Ctrl+G, BAR's factoryguard
         bind("return_resources", Keybindings.returnResources);
 
         header("h_camera");
         mouse("zoom", t("wheel") + "  /  " + k(Keybindings.zoomIn) + " " + k(Keybindings.zoomOut));
-        mouse("pan", t("middle_drag") + "  /  " + k(Keybindings.panUp) + k(Keybindings.panLeft) + k(Keybindings.panDown)
-            + k(Keybindings.panRight) + "  /  " + t("edges"));
-        mouse("rotate", alt + " + " + t("middle_drag") + "  /  " + alt + " + " + k(Keybindings.panLeft) + k(Keybindings.panRight));
+        mouse("pan", t("middle_drag") + "  /  " + t("arrow_keys") + "  /  " + t("edges"));
+        mouse("rotate", alt + " + " + t("middle_drag") + "  /  " + alt + " + " + t("arrow_keys"));
         mouse("tilt", t("ctrl") + " + " + t("wheel"));
         bind("reset", Keybindings.reset);
         bind("toggle_camera", Keybindings.toggleCamera);
@@ -124,11 +122,11 @@ public class ControlsReferenceScreen extends Screen {
         mouse("double", t("double_click"));
         mouse("add", t("shift") + " + " + t("left_click"));
         mouse("remove", t("ctrl") + " + " + t("left_click"));
-        mouse("select_all_units_ctrl_a", t("ctrl") + " + A");
-        mouse("select_same_type_ctrl_z", t("ctrl") + " + Z");
+        mouse("select_all_units_ctrl_e", t("ctrl") + " + E");
+        mouse("select_same_type_ctrl_w", t("ctrl") + " + W");
         mouse("esc_cancel", "Esc");
         bind("deselect", Keybindings.deselect);
-        bind("cycle", Keybindings.tab);
+        mouse("cycle", k(Keybindings.tab) + "  /  " + k(Keybindings.cyclePrev));   // next / previous unit type
         mouse("groups", t("ctrl") + " + 0-9  /  0-9");
 
         header("h_orders");
@@ -155,9 +153,9 @@ public class ControlsReferenceScreen extends Screen {
         bind("build_tab_military", Keybindings.buildTabMilitary);
         bind("build_tab_defence", Keybindings.buildTabDefence);
         bind("build_tab_tech", Keybindings.buildTabTech);
-        slots("build_grid_row1", Keybindings.buildGrid[0], Keybindings.buildGrid[1], Keybindings.buildGrid[2], Keybindings.buildGrid[3]);
+        slots("build_grid_row1", Keybindings.buildGrid[8], Keybindings.buildGrid[9], Keybindings.buildGrid[10], Keybindings.buildGrid[11]);
         slots("build_grid_row2", Keybindings.buildGrid[4], Keybindings.buildGrid[5], Keybindings.buildGrid[6], Keybindings.buildGrid[7]);
-        slots("build_grid_row3", Keybindings.buildGrid[8], Keybindings.buildGrid[9], Keybindings.buildGrid[10], Keybindings.buildGrid[11]);
+        slots("build_grid_row3", Keybindings.buildGrid[0], Keybindings.buildGrid[1], Keybindings.buildGrid[2], Keybindings.buildGrid[3]);
         mouse("area_mex", t("left_drag"));
         mouse("place", t("left_click") + "  /  " + t("shift") + " + " + t("left_drag"));
         mouse("build_spacing", t("shift") + " + " + t("wheel"));   // BuildingLineClientEvents.onScroll

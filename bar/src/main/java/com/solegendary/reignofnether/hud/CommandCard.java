@@ -23,7 +23,7 @@ public final class CommandCard {
     public enum Order {
         ATTACK, FIGHT, MOVE, STOP, HOLD, BUILD, PATROL, GUARD, STANCE, GATHER, GARRISON, UNGARRISON;
 
-        /** The order's key, or null for a click-only toggle (the fire state cycles by click; gather lost G to Guard). */
+        /** The order's key, or null for a click-only toggle (gather lost its key to Guard). */
         public Keybinding key() {
             return switch (this) {
                 case ATTACK -> Keybindings.attack;
@@ -35,7 +35,8 @@ public final class CommandCard {
                 case PATROL -> Keybindings.patrol;
                 case GUARD -> Keybindings.guard;
                 case GARRISON, UNGARRISON -> Keybindings.garrison;
-                case STANCE, GATHER -> null;
+                case STANCE -> Keybindings.fireState;
+                case GATHER -> null;
             };
         }
     }

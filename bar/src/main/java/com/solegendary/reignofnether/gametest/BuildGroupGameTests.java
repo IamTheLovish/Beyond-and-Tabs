@@ -141,10 +141,11 @@ public class BuildGroupGameTests {
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 40)
     public static void grid_and_tab_keys_follow_bar_gridmenu(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
-        int[] grid = { org.lwjgl.glfw.GLFW.GLFW_KEY_Q, org.lwjgl.glfw.GLFW.GLFW_KEY_W, org.lwjgl.glfw.GLFW.GLFW_KEY_E,
-            org.lwjgl.glfw.GLFW.GLFW_KEY_R, org.lwjgl.glfw.GLFW.GLFW_KEY_A, org.lwjgl.glfw.GLFW.GLFW_KEY_S,
-            org.lwjgl.glfw.GLFW.GLFW_KEY_D, org.lwjgl.glfw.GLFW.GLFW_KEY_F, org.lwjgl.glfw.GLFW.GLFW_KEY_Z,
-            org.lwjgl.glfw.GLFW.GLFW_KEY_X, org.lwjgl.glfw.GLFW.GLFW_KEY_C, org.lwjgl.glfw.GLFW.GLFW_KEY_V };
+        // fill order, bottom row first (BAR gridmenu row 1 = Z X C V): Z X C V / A S D F / Q W E R
+        int[] grid = { org.lwjgl.glfw.GLFW.GLFW_KEY_Z, org.lwjgl.glfw.GLFW.GLFW_KEY_X, org.lwjgl.glfw.GLFW.GLFW_KEY_C,
+            org.lwjgl.glfw.GLFW.GLFW_KEY_V, org.lwjgl.glfw.GLFW.GLFW_KEY_A, org.lwjgl.glfw.GLFW.GLFW_KEY_S,
+            org.lwjgl.glfw.GLFW.GLFW_KEY_D, org.lwjgl.glfw.GLFW.GLFW_KEY_F, org.lwjgl.glfw.GLFW.GLFW_KEY_Q,
+            org.lwjgl.glfw.GLFW.GLFW_KEY_W, org.lwjgl.glfw.GLFW.GLFW_KEY_E, org.lwjgl.glfw.GLFW.GLFW_KEY_R };
         if (BuildGroup.SLOT_KEYS.size() != grid.length || BuildGroup.COLS != 4)
             problems.add(BuildGroup.SLOT_KEYS.size() + " grid keys on " + BuildGroup.COLS + " columns, BAR has 12 on 4");
         for (int i = 0; i < Math.min(grid.length, BuildGroup.SLOT_KEYS.size()); i++) {
@@ -154,9 +155,9 @@ public class BuildGroupGameTests {
             if (!Keybindings.all().contains(kb))
                 problems.add(kb.getTranslationKey() + " is not registered (no Controls entry)");
         }
-        // the tab keys are the grid's bottom row, by tab ordinal
+        // the tab keys are the grid's bottom row (the first four slots), by tab ordinal
         for (int i = 0; i < BuildGroup.TAB_KEYS.size(); i++)
-            if (BuildGroup.TAB_KEYS.get(i).getDefaultKey() != grid[8 + i])
+            if (BuildGroup.TAB_KEYS.get(i).getDefaultKey() != grid[i])
                 problems.add("tab key " + i + " is not the grid's bottom-row key " + i);
         if (problems.isEmpty())
             helper.succeed();

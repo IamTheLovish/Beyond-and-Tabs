@@ -23,7 +23,7 @@ public class Keybinding {
     // binding kept when its primary key moved to the BAR default (attack: A, with X still working)
     private int aliasKey = -1;
     // a fixed Ctrl chord that runs this binding (ChordKeys; HudClientEvents.onKeyRelease): shown as the label while the
-    // rebindable key is unbound (the commander's Ctrl+C, the idle T2 builder's Ctrl+Shift+B)
+    // rebindable key is unbound (the commander's Ctrl+C, the idle T2 builder's Ctrl+Shift+Tab)
     private ChordKeys.Chord chord = null;
 
     // Forge-backed binding: appears in vanilla Controls UI, persisted via options.txt

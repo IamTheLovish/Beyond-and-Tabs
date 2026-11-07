@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hud.CommandCard;
+import com.solegendary.reignofnether.keybinds.BarGridDefaults;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.player.CommanderServerEvents;
@@ -27,7 +28,7 @@ import java.util.List;
  * The worker's "Return resources" button was on hotkey5 (;), the metal extractor's build slot on all seven factions
  * (Lane C tester, Oct 21: "the metal extractor's key does nothing"). The button now reads Keybindings.returnResources;
  * this keeps that key off every card it can appear on: the orders, the abilities (a commander's included) and, for a
- * worker, its faction's whole build menu. Also off the camera and attack-move keys.
+ * worker, its faction's whole build menu. Also off the BAR order keys (BarGridDefaults) and the arrows.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -39,9 +40,8 @@ public class ReturnResourcesKeyGameTests {
         int code = ret.getKey();
         int alias = ret.getAliasKey();
         List<String> problems = new ArrayList<>();
-        if (code == GLFW.GLFW_KEY_A || code == GLFW.GLFW_KEY_F || code == GLFW.GLFW_KEY_W || code == GLFW.GLFW_KEY_S
-                || code == GLFW.GLFW_KEY_D || (code >= GLFW.GLFW_KEY_RIGHT && code <= GLFW.GLFW_KEY_UP))
-            problems.add("Return resources is on a key the camera or attack-move owns: " + ret.buttonLabel);
+        if (BarGridDefaults.isOrderKey(code) || (code >= GLFW.GLFW_KEY_RIGHT && code <= GLFW.GLFW_KEY_UP))
+            problems.add("Return resources is on a BAR order key or an arrow (camera): " + ret.buttonLabel);
         int checked = 0;
         int workers = 0;
         for (var type : ForgeRegistries.ENTITY_TYPES) {

@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hud.CommandCard;
+import com.solegendary.reignofnether.keybinds.BarGridDefaults;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.player.CommanderServerEvents;
@@ -61,10 +62,9 @@ public class CommanderKeyGameTests {
                         String prev = taken.putIfAbsent(code, what);
                         if (prev != null && !prev.equals(what))
                             clashes.add(prev + " and " + what + " both on " + kb.buttonLabel);
-                        if (what.startsWith("ability") && (code == GLFW.GLFW_KEY_A || code == GLFW.GLFW_KEY_F
-                                || code == GLFW.GLFW_KEY_W || code == GLFW.GLFW_KEY_S || code == GLFW.GLFW_KEY_D
+                        if (what.startsWith("ability") && (BarGridDefaults.isOrderKey(code)
                                 || code >= GLFW.GLFW_KEY_RIGHT && code <= GLFW.GLFW_KEY_UP))
-                            clashes.add(what + " is on a key the camera or attack-move owns: " + kb.buttonLabel);
+                            clashes.add(what + " is on a BAR order key or an arrow (camera): " + kb.buttonLabel);
                     }
                 };
                 for (var order : CommandCard.orders(e instanceof AttackerUnit, e instanceof WorkerUnit, true, false))

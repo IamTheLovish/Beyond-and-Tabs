@@ -36,7 +36,8 @@ public class StanceButton extends Button {
     private static final List<FormattedCharSequence>[] TOOLTIPS = new List[3];
 
     public StanceButton() {
-        super("Fire state", Button.itemIconSize, ICONS[EngagementStance.DEFAULT.ordinal()], null,
+        super("Fire state", Button.itemIconSize, ICONS[EngagementStance.DEFAULT.ordinal()],
+            com.solegendary.reignofnether.keybinds.Keybindings.fireState,
             () -> false, () -> false, () -> true,
             () -> cycle(true), () -> cycle(false), null);
         this.isActive = () -> current() != EngagementStance.DEFAULT;

@@ -27,30 +27,87 @@ class KeybindMigrationTest {
         return kb == null ? KeybindMigration.CUSTOM : kb.getDefaultKey();
     }
 
+    // what layout 4 shipped and layout 5 (BAC-007b 2a) moves: Space alert, F5 unbound, "." idle worker / observer toggle, "," Mass Burial, Ctrl+Tab cycle
+    private static final Map<String, Integer> OLD_LAYOUT_4 = Map.of(
+        "key.reignofnether.last_alert", GLFW.GLFW_KEY_SPACE, "key.reignofnether.fn_5", GLFW.GLFW_KEY_F5,
+        "key.reignofnether.idle_worker", GLFW.GLFW_KEY_PERIOD, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_PERIOD,
+        "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_COMMA, "key.reignofnether.tab", GLFW.GLFW_KEY_TAB);
+
     private static List<KeybindMigration.Move> plan(int version, Map<String, Integer> overrides) {
         return KeybindMigration.plan(version, name -> saved(overrides, name));
     }
 
     @Test
-    void attackDefaultIsX() {
-        // #39: A is pure camera pan-left
-        assertEquals(GLFW.GLFW_KEY_X, Keybindings.attack.getDefaultKey());
+    void attackDefaultIsA() {
+        // BAR Grid (BarGridDefaults, BAC-007b): WASD panning is gone, so A is Attack again
+        assertEquals(GLFW.GLFW_KEY_A, Keybindings.attack.getDefaultKey());
+        assertEquals(5, KeybindMigration.LAYOUT_VERSION);
     }
 
     @Test
-    void attackSavedOnTheOldDefaultAMovesToX() {
-        List<KeybindMigration.Move> moves = plan(0, Map.of(ATTACK, GLFW.GLFW_KEY_A));
+    void attackSavedOnTheOldDefaultXMovesToA() {
+        List<KeybindMigration.Move> moves = plan(0, Map.of(ATTACK, GLFW.GLFW_KEY_X));
         assertEquals(1, moves.size(), moves.toString());
-        assertEquals(new KeybindMigration.Move(ATTACK, GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_X), moves.get(0));
+        assertEquals(new KeybindMigration.Move(ATTACK, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_A), moves.get(0));
     }
 
     @Test
-    void stopSavedOnTheOldDefaultSIsUnbound() {
+    void aLayoutTwoInstallWithEveryOldOrderKeyGetsExactlyFourteenMoves() {
+        // layout 2 shipped Attack X, Stop S, Patrol P, Guard G, Hold H, Move M and an unbound commander key; the
+        // overview stays on Tab (it needs Shift now, no key moves). Layout 3 (main's Ctrl+S Stop) moves Stop S to unbound,
+        // layout 4 moves the order keys and Stop S to G, layout 5 adds the six keys layout 4 shipped (OLD_LAYOUT_4).
+        Map<String, Integer> old = new HashMap<>(OLD_LAYOUT_4);
+        old.putAll(Map.of(
+            ATTACK, GLFW.GLFW_KEY_X, STOP, GLFW.GLFW_KEY_S, "key.reignofnether.patrol", GLFW.GLFW_KEY_P,
+            "key.reignofnether.guard", GLFW.GLFW_KEY_G, "key.reignofnether.hold", GLFW.GLFW_KEY_H,
+            "key.reignofnether.move", GLFW.GLFW_KEY_M, "key.reignofnether.select_commander", -1));
+        List<KeybindMigration.Move> moves = plan(2, old);
+        assertEquals(14, moves.size(), moves.toString());
+        // Stop matches two rows from S (layouts 3 and 4); plan() sends every move to the binding's current default, so
+        // both are S -> G. Every binding lands on its BarGridDefaults row.
+        Map<String, Integer> landed = new HashMap<>();
+        for (KeybindMigration.Move m : moves)
+            landed.put(m.binding(), m.to());
+        for (Map.Entry<String, Integer> e : landed.entrySet())
+            assertEquals(KeybindMigration.bindings().get(e.getKey()).getDefaultKey(), e.getValue(), e.getKey());
+        assertEquals(2, moves.stream().filter(m -> m.equals(new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_G))).count(), moves.toString());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.move", GLFW.GLFW_KEY_M, -1)), moves.toString());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.select_commander", -1, GLFW.GLFW_KEY_TAB)), moves.toString());
+        assertEquals(List.of(), plan(5, old), "a layout 5 install is left alone");
+    }
+
+    @Test
+    void aLayoutFourInstallWithEveryOldKeyGetsExactlySixMoves() {
+        List<KeybindMigration.Move> moves = plan(4, OLD_LAYOUT_4);
+        assertEquals(6, moves.size(), moves.toString());
+        for (KeybindMigration.Move m : moves)
+            assertEquals(KeybindMigration.bindings().get(m.binding()).getDefaultKey(), m.to(), m.binding());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.last_alert", GLFW.GLFW_KEY_SPACE, GLFW.GLFW_KEY_F5)), moves.toString());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.tab", GLFW.GLFW_KEY_TAB, GLFW.GLFW_KEY_PERIOD)), moves.toString());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.fn_5", GLFW.GLFW_KEY_F5, -1)), moves.toString());
+        assertEquals(List.of(), plan(5, OLD_LAYOUT_4), "a layout 5 install is left alone");
+    }
+
+    @Test
+    void stopSavedOnTheOldDefaultSEndsOnG() {
         // Nov 3 (Nick): a short tap of S while WASD-panning fired Stop on the selected workers. Every install of the
-        // Oct 11 - Nov 3 builds saved Stop on S, so the new unbound default (Ctrl+S runs it) needs this move to reach them.
+        // Oct 11 - Nov 3 builds saved Stop on S. Rows of layouts 3 (main: unbound, Ctrl+S runs it) and 4 (G) both match S;
+        // plan() moves to the binding's current default, so both moves are S -> G (Ctrl+S still stops).
         List<KeybindMigration.Move> moves = plan(2, Map.of(STOP, GLFW.GLFW_KEY_S));
-        assertEquals(List.of(new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_UNKNOWN)), moves);
-        assertTrue(KeybindMigration.history(STOP).contains("Ctrl+S"), KeybindMigration.history(STOP));
+        assertEquals(List.of(
+            new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_G),
+            new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_G)), moves);
+        // the glue applies the moves in order, so the last one is where Stop ends
+        assertEquals(GLFW.GLFW_KEY_G, moves.get(moves.size() - 1).to());
+        // history() shows the newest layout's row; the layout-4 row from S is listed first
+        assertEquals("Stop S -> G (BAR Grid)", KeybindMigration.history(STOP));
+    }
+
+    @Test
+    void aLayoutThreeInstallWithStopUnboundGetsStopToG() {
+        // installs that ran main's layout 3: Stop was moved off S to unbound (Ctrl+S runs it) and must reach G now
+        assertEquals(List.of(new KeybindMigration.Move(STOP, GLFW.GLFW_KEY_UNKNOWN, GLFW.GLFW_KEY_G)),
+            plan(3, Map.of(STOP, GLFW.GLFW_KEY_UNKNOWN)));
     }
 
     @Test
@@ -67,8 +124,8 @@ class KeybindMigrationTest {
 
     @Test
     void anAlreadyMigratedInstallKeepsAnAChosenAfterwards() {
-        // layout 1 ran once; the player then put Attack back on A on purpose - the next launch must not undo that
-        assertEquals(List.of(), plan(KeybindMigration.LAYOUT_VERSION, Map.of(ATTACK, GLFW.GLFW_KEY_A)));
+        // the layout ran once; the player then put Attack back on X on purpose - the next launch must not undo that
+        assertEquals(List.of(), plan(KeybindMigration.LAYOUT_VERSION, Map.of(ATTACK, GLFW.GLFW_KEY_X)));
     }
 
     @Test

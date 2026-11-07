@@ -350,10 +350,8 @@ public class OnboardingClient {
         BotPlayer.Kit kit = ownKit();
         return switch (s) {
             case ZOOM -> new Object[] { Keybindings.zoomIn.getDisplayName(), Keybindings.zoomOut.getDisplayName() };
-            case PAN -> new Object[] { Keybindings.panUp.getDisplayName() + Keybindings.panLeft.getDisplayName()
-                + Keybindings.panDown.getDisplayName() + Keybindings.panRight.getDisplayName() };
             case ROTATE -> new Object[] { Keybindings.reset.getDisplayName() };
-            case OVERVIEW -> new Object[] { Keybindings.overview.getDisplayName() };
+            case OVERVIEW -> new Object[] { "Shift + " + Keybindings.overview.getDisplayName() };
             case EXTRACTOR -> new Object[] { kit != null ? buildingName(kit.extractor()) : "Metal Extractor" };
             case ENERGY -> new Object[] { kit != null ? buildingName(kit.wind()) : "Wind Generator" };
             case LAB, TRAIN -> new Object[] { kit != null ? buildingName(kit.armyBuilding()) : "lab" };
