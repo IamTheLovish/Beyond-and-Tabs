@@ -12,6 +12,10 @@ public interface RangedAttackerUnit {
 
     default RangedAttackGroundGoal<?> getRangedAttackGroundGoal() { return null; }
 
+    /** UnitRangedAttackGoal starts a wind-up at {@code target} (server, its first tick); a unit that animates the draw
+     *  itself hears it here (the Seraph Archer's client rig cue). */
+    default void onRangedWindup(LivingEntity target) { }
+
     default void performUnitRangedAttack(LivingEntity pTarget, float velocity) {
         double x = pTarget.getX();
         double y = pTarget.getY();

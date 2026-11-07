@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
@@ -73,6 +74,14 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
         return team == NONE ? null : team;
     }
 
+    /**
+     * The render type of a generated body's team mask: the body's own mipmapped cutout. A body that fades (the angels'
+     * arrival and death, AngelRenderer) draws it translucent instead, so the cloth fades with the body.
+     */
+    protected RenderType maskType(T entity, ResourceLocation team) {
+        return MipRenderTypes.body(team);
+    }
+
     @Override
     public void render(PoseStack pose, MultiBufferSource buffers, int light, T entity, float limbSwing, float limbSwingAmount,
                        float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
@@ -105,7 +114,7 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
             if (split != null)
                 split.beginPass(split.teamParts());
             try {
-                model.renderToBuffer(pose, buffers.getBuffer(MipRenderTypes.body(team)), light,
+                model.renderToBuffer(pose, buffers.getBuffer(maskType(entity, team)), light,
                         LivingEntityRenderer.getOverlayCoords(entity, 0f), dr, dg, db, 1f);
             } finally {
                 if (split != null)

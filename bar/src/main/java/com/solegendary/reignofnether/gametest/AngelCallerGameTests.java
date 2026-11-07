@@ -1044,4 +1044,127 @@ public class AngelCallerGameTests {
             finish(helper, problems);
         });
     }
+
+    // ------------------------------------------------------------------------------------------------ the rig's cues
+
+    /**
+     * The client rig's cues (AngelUnit's synced counters, AngelDrive): a Seraph Archer that shoots an enemy steps its
+     * wind-up cue when it draws and its contact cue on the release, aimed at that enemy - so the client winds the draw
+     * up before the release. Its own setup is asserted: the enemy really was hurt.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 240, batch = "angel_caller_archer_cue")
+    public static void angel_caller_seraph_archer_steps_its_cues_when_it_draws_and_fires(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "archercue"), foeOwner = owner(helper, "archercuefoe");
+        Mob caster = caller(helper, owner, 3, 3, CallAngel.Kind.ARCHER.essence);
+        Mob foe = still(helper, EntityRegistrar.IRON_GOLEM_UNIT.get(), foeOwner, 3, 10);
+        List<Mob> units = new ArrayList<>(java.util.Collections.singletonList(foe));
+        if (caster == null || foe == null) {
+            cleanUp(caster, units, List.of());
+            helper.fail("could not spawn the caster and the target");
+            return;
+        }
+        int cast = 2, end = 220;
+        AngelUnit[] angel = { null };
+        float foeStart = foe.getHealth();
+        int[] windup = { 0 }, contact = { 0 }, target = { -1 };
+        boolean[] hurt = { false };
+        helper.runAfterDelay(cast, () -> {
+            click(level, caster, CallAngel.Kind.ARCHER);
+            List<AngelUnit> as = angels(caster, CallAngel.Kind.ARCHER);
+            angel[0] = as.isEmpty() ? null : as.get(0);
+        });
+        for (int t = cast + 5; t < end; t += 5)
+            helper.runAfterDelay(t, () -> {
+                AngelUnit a = angel[0];
+                if (a == null || hurt[0])
+                    return;
+                if (foe.isAlive() && foe.getHealth() < foeStart) {
+                    hurt[0] = true;                 // the first shot landed: read the cues as they stand now
+                    windup[0] = a.getWindupCue();
+                    contact[0] = a.getContactCue();
+                    target[0] = a.getCueTargetId();
+                }
+            });
+        helper.runAfterDelay(end, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                if (angel[0] == null)
+                    problems.add("the Archer call made no Seraph Archer");
+                else if (!hurt[0])
+                    problems.add("setup: the Seraph Archer never hurt the enemy 7 blocks off (" + foeStart + " -> "
+                        + foe.getHealth() + " HP), so its cues cannot be judged");
+                else {
+                    if (windup[0] < 1)
+                        problems.add("the Seraph Archer shot the enemy but its wind-up cue stayed " + windup[0]);
+                    if (contact[0] < 1)
+                        problems.add("the Seraph Archer shot the enemy but its contact cue stayed " + contact[0]);
+                    if (target[0] != foe.getId())
+                        problems.add("the cue aimed at entity " + target[0] + ", not the enemy it shot (" + foe.getId() + ")");
+                }
+            } finally {
+                cleanUp(caster, units, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * A Mender Angel that heals a hurt friend steps its contact cue, aimed at that friend. Its own setup is asserted:
+     * the friend's health really went up.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "angel_caller_mender_cue")
+    public static void angel_caller_mender_angel_steps_its_cue_when_it_heals(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "mendercue");
+        Mob caster = caller(helper, owner, 3, 3, CallAngel.Kind.MENDER.essence);
+        Mob friend = still(helper, EntityRegistrar.VILLAGER_UNIT.get(), owner, 6, 4);
+        List<Mob> units = new ArrayList<>(java.util.Collections.singletonList(friend));
+        if (caster == null || friend == null) {
+            cleanUp(caster, units, List.of());
+            helper.fail("could not spawn the caster and the friend");
+            return;
+        }
+        friend.setHealth(friend.getMaxHealth() * 0.4f);
+        float friendStart = friend.getHealth();
+        int cast = 2, end = 180;
+        AngelUnit[] angel = { null };
+        int[] contact = { 0 }, target = { -1 };
+        boolean[] healed = { false };
+        helper.runAfterDelay(cast, () -> {
+            click(level, caster, CallAngel.Kind.MENDER);
+            List<AngelUnit> as = angels(caster, CallAngel.Kind.MENDER);
+            angel[0] = as.isEmpty() ? null : as.get(0);
+        });
+        for (int t = cast + 5; t < end; t += 5)
+            helper.runAfterDelay(t, () -> {
+                AngelUnit a = angel[0];
+                if (a == null || healed[0])
+                    return;
+                if (friend.isAlive() && friend.getHealth() > friendStart) {
+                    healed[0] = true;               // the first heal landed: read the cue as it stands now
+                    contact[0] = a.getContactCue();
+                    target[0] = a.getCueTargetId();
+                }
+            });
+        helper.runAfterDelay(end, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                if (angel[0] == null)
+                    problems.add("the Mender call made no Mender Angel");
+                else if (!healed[0])
+                    problems.add("setup: the Mender Angel never healed the hurt friend (" + friendStart + " -> "
+                        + friend.getHealth() + " HP), so its cue cannot be judged");
+                else {
+                    if (contact[0] < 1)
+                        problems.add("the Mender Angel healed the friend but its contact cue stayed " + contact[0]);
+                    if (target[0] != friend.getId())
+                        problems.add("the cue aimed at entity " + target[0] + ", not the friend it healed (" + friend.getId() + ")");
+                }
+            } finally {
+                cleanUp(caster, units, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
 }
