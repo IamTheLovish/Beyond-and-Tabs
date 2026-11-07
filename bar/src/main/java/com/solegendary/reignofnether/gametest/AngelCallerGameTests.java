@@ -956,12 +956,29 @@ public class AngelCallerGameTests {
     public static void angel_caller_sword_seraph_flies_dives_into_melee_and_fades_after_30s(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "sword"), foeOwner = owner(helper, "swordfoe");
-        Mob caster = caller(helper, owner, 3, 3, CallAngel.Kind.SWORD.essence);
+        // STUB ONLY, never ships (#566 paired stub): the caster is set up exactly as caller() does, but it joins the level
+        // only after 2000 ms of real time - for those 2 s it is not in the level and cannot tick, what an arena whose
+        // entity section is not entity-ticking yet does to it
+        Mob caster = EntityRegistrar.ANGEL_CALLER_UNIT.get().create(level);
         List<Mob> units = new ArrayList<>();
         if (caster == null) {
             helper.fail("could not spawn the caster");
             return;
         }
+        BlockPos stubAt = helper.absolutePos(new BlockPos(3, 2, 3));
+        caster.moveTo(stubAt.getX() + 0.5, stubAt.getY(), stubAt.getZ() + 0.5, 0, 0);
+        ((Unit) caster).setOwnerName(owner);
+        caster.setNoAi(true);
+        AutocastState.setAll((Unit) caster, false);
+        Essence.add(caster, CallAngel.Kind.SWORD.essence);
+        final long stubSince = System.nanoTime();
+        final boolean[] stubAdded = { false };
+        helper.onEachTick(() -> {
+            if (!stubAdded[0] && System.nanoTime() - stubSince >= 2_000_000_000L) {
+                stubAdded[0] = true;
+                level.addFreshEntity(caster);
+            }
+        });
         double groundY = caster.getY();
         int cast = 2, foeAt = 30, life = CallAngel.Kind.SWORD.lifeSeconds * 20;
         AngelUnit[] angel = { null };
