@@ -4,6 +4,8 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.barfx.BarFx;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
 import com.solegendary.reignofnether.registrars.PacketHandler;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -11,6 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -78,6 +81,21 @@ public final class GroundMemoryServer {
         int tick = 0;
         // running totals for the log line and the stress test
         long bytesSent = 0, updatesSent = 0, passes = 0, stamps = 0;
+        // trample (slice 2): each unit's position at the last sample, by entity id (two maps swapped every pass, the
+        // arrays reused, so a pass allocates nothing for a unit it has seen before)
+        Int2ObjectOpenHashMap<double[]> trampleLast = new Int2ObjectOpenHashMap<>(), trampleNext = new Int2ObjectOpenHashMap<>();
+        long tramplePasses = 0, trampleWalks = 0, trampleNanos = 0, trampleCells = 0;
+        // the sampler's chunk + field lookups, by chunk key: every walk of every unit asked the chunk map and Forge's
+        // capability dispatcher (flake-stress 42217883424: 2.2-3.3 us a walk against the 3.0 budget). Dropped on
+        // the chunk's unload, so a held chunk is always the loaded one
+        final Long2ObjectOpenHashMap<LevelChunk> trampleChunks = new Long2ObjectOpenHashMap<>();
+        final Long2ObjectOpenHashMap<GroundMemory> trampleFields = new Long2ObjectOpenHashMap<>();
+        // each held chunk's columns as this pass read them (TrampleColumnMemo); the epoch moves on every pass and every
+        // walk outside a pass, so a column is never answered from an earlier pass's world
+        final Long2ObjectOpenHashMap<TrampleColumnMemo> trampleMemos = new Long2ObjectOpenHashMap<>();
+        long trampleEpoch = 0;
+        // the cost GameTest's per-pass record (null, the normal case: a pass records nothing)
+        TramplePassLog passLog;
     }
 
     // a ConcurrentHashMap: chunk load events may arrive off the server thread and only queue a key
@@ -250,6 +268,199 @@ public final class GroundMemoryServer {
         return allowed;
     }
 
+    // ------------------------------------------------------------------ trample (slice 2)
+
+    /** A column whose top is further than this from the walker's feet is a ledge or a roof beside the path: unworn. */
+    public static final double TRAMPLE_REACH_Y = 1.5;
+
+    /**
+     * One walker's path since its last sample, (ax, az) to (bx, bz) with its feet at {@code footY}: the strip of
+     * {@link TrampleRules#radiusFor} its body width, worn by {@link TrampleRules#peakFor} times each column's surface
+     * wear, on the soft ground at the walker's own level (TrampleRules.surfaceOf; never water, stone or a roof beside
+     * it). The sampler calls this for every unit; the eyes scene calls it for its scripted march. Returns the cells
+     * changed.
+     */
+    public static int trampleSegment(ServerLevel level, double ax, double az, double bx, double bz, double footY, double bodyWidth) {
+        if (!enabled || level == null || level.isClientSide())
+            return 0;
+        LevelState st = state(level);
+        st.trampleEpoch++;   // a walk outside a pass: read the world afresh
+        return trampleSegment(level, st, ax, az, bx, bz, footY, bodyWidth);
+    }
+
+    private static int trampleSegment(ServerLevel level, LevelState st, double ax, double az, double bx, double bz,
+                                      double footY, double bodyWidth) {
+        if (!Double.isFinite(ax) || !Double.isFinite(az) || !Double.isFinite(bx) || !Double.isFinite(bz) || !Double.isFinite(footY))
+            return 0;
+        double radius = TrampleRules.radiusFor(bodyWidth);
+        long now = level.getGameTime();
+        int minCx = (int) Math.floor(Math.min(ax, bx) - radius) >> 4, maxCx = (int) Math.floor(Math.max(ax, bx) + radius) >> 4;
+        int minCz = (int) Math.floor(Math.min(az, bz) - radius) >> 4, maxCz = (int) Math.floor(Math.max(az, bz) + radius) >> 4;
+        Columns columns = COLUMNS;
+        columns.footY = footY;
+        columns.peak = TrampleRules.peakFor(bodyWidth);
+        columns.epoch = st.trampleEpoch;
+        int changedCells = 0;
+        for (int chunkX = minCx; chunkX <= maxCx; chunkX++)
+            for (int chunkZ = minCz; chunkZ <= maxCz; chunkZ++) {
+                long key = ChunkPos.asLong(chunkX, chunkZ);
+                LevelChunk chunk = st.trampleChunks.get(key);
+                GroundMemory mem;
+                TrampleColumnMemo memo;
+                if (chunk != null) {
+                    mem = st.trampleFields.get(key);
+                    memo = st.trampleMemos.get(key);
+                } else {
+                    chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                    mem = GroundMemoryCapability.of(chunk);
+                    if (mem == null)
+                        continue;   // not loaded (or no field): asked again next walk
+                    memo = new TrampleColumnMemo();   // once a chunk load, never a walk
+                    st.trampleChunks.put(key, chunk);
+                    st.trampleFields.put(key, mem);
+                    st.trampleMemos.put(key, memo);
+                }
+                columns.chunk = chunk;
+                columns.memo = memo;
+                mem.decayTo(now, params);
+                long[] changed = mem.addTrample(chunkX, chunkZ, ax, az, bx, bz, radius, columns, columns.changed);
+                // the scratch mask is reused by the next walk: a chunk not dirty yet keeps its own copy (once a sync window)
+                if (GroundMemory.anyBit(changed) && !st.dirty.containsKey(key))
+                    changed = changed.clone();
+                changedCells += markChanged(st, chunk, chunkX, chunkZ, changed);
+            }
+        columns.chunk = null;
+        columns.memo = null;
+        st.trampleCells += changedCells;
+        return changedCells;
+    }
+
+    /**
+     * Which columns a walk wears, asked only for the cells inside its strip: the top block (the same finder the decal mesh
+     * uses) must be within {@link #TRAMPLE_REACH_Y} of the feet and soft ground; the peak is scaled by the surface's
+     * wear. The world is read once a column a pass (TrampleColumnMemo: a marching block shares its columns). One reused
+     * instance (server thread only), so a walk allocates nothing for it.
+     */
+    private static final class Columns implements GroundMemory.TramplePeaks, TrampleColumnMemo.Ground {
+        LevelChunk chunk;
+        TrampleColumnMemo memo;
+        long epoch;
+        double footY;
+        int peak;
+        final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        final long[] changed = new long[4];   // the walk's changed-cell mask, reused (see trampleSegment)
+
+        @Override
+        public int peakAt(int x, int z) {
+            return memo.peakAt(x, z, epoch, footY, TRAMPLE_REACH_Y, peak, this);
+        }
+
+        @Override
+        public long topAndWear(int x, int z) {
+            int topBlock = GroundSurface.topBlockY(chunk, x & 15, z & 15, pos);
+            TrampleRules.Surface surface = TrampleSurfaces.of(chunk.getBlockState(pos.set(x, topBlock, z)));
+            return TrampleColumnMemo.pack(topBlock, surface.wear);
+        }
+    }
+
+    private static final Columns COLUMNS = new Columns();
+
+    /** Books a stamp's changed cells for the next sync pass; returns how many. */
+    private static int markChanged(LevelState st, LevelChunk chunk, int chunkX, int chunkZ, long[] changed) {
+        if (!GroundMemory.anyBit(changed))
+            return 0;
+        chunk.setUnsaved(true);
+        long key = ChunkPos.asLong(chunkX, chunkZ);
+        st.marked.add(key);
+        long[] dirty = st.dirty.get(key);
+        if (dirty == null)
+            st.dirty.put(key, changed);
+        else
+            for (int i = 0; i < 4; i++)
+                dirty[i] |= changed[i];
+        return GroundMemory.bitCount(changed);
+    }
+
+    /**
+     * The trample sample (every {@link TrampleRules#SAMPLE_TICKS}): one walk over every unit of the level - the shared
+     * entry every unit passes, never a hook in a unit class - and a {@link #trampleSegment} for each one standing on the
+     * ground that walked since the last sample (not flying, swimming or riding: the mount wears the ground, not its
+     * rider). Units gone since the last pass drop out of the position map.
+     */
+    static void tramplePass(ServerLevel level, LevelState st) {
+        TramplePassLog log = st.passLog;
+        long c0 = log == null ? 0 : threadCpuNanos();
+        long t0 = System.nanoTime();
+        st.trampleEpoch++;   // a new pass: every column is read again, once
+        Int2ObjectOpenHashMap<double[]> last = st.trampleLast, next = st.trampleNext;
+        next.clear();
+        int walks = 0;
+        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+            if (le == null || le.level() != level || le.isRemoved() || !le.isAlive())
+                continue;
+            double x = le.getX(), z = le.getZ();
+            double[] at = last.remove(le.getId());
+            if (at != null) {
+                double px = at[0], pz = at[1];
+                if (le.onGround() && !le.isPassenger() && !le.isInWater() && TrampleRules.walked(x - px, z - pz)) {
+                    trampleSegment(level, st, px, pz, x, z, le.getY(), le.getBbWidth());
+                    walks++;
+                }
+            } else
+                at = new double[2];
+            at[0] = x;
+            at[1] = z;
+            next.put(le.getId(), at);
+        }
+        st.trampleLast = next;
+        st.trampleNext = last;
+        st.tramplePasses++;
+        st.trampleWalks += walks;
+        long wall = System.nanoTime() - t0;
+        st.trampleNanos += wall;
+        if (log != null) {
+            long c1 = threadCpuNanos();
+            log.add(walks, wall, c0 < 0 || c1 < 0 ? -1 : c1 - c0);
+        }
+    }
+
+    private static final java.lang.management.ThreadMXBean THREADS = java.lang.management.ManagementFactory.getThreadMXBean();
+
+    /** This thread's CPU time in nanoseconds, or -1 where the JVM does not measure it. */
+    private static long threadCpuNanos() {
+        try {
+            return THREADS.isCurrentThreadCpuTimeSupported() && THREADS.isThreadCpuTimeEnabled() ? THREADS.getCurrentThreadCpuTime() : -1;
+        } catch (UnsupportedOperationException e) {
+            return -1;
+        }
+    }
+
+    /** Starts recording each trample pass of the level (the cost GameTest); replaces a running log. */
+    public static void startPassLog(ServerLevel level, int capacity) {
+        state(level).passLog = new TramplePassLog(capacity);
+    }
+
+    /** Stops recording and returns what was recorded (null if nothing was). */
+    public static TramplePassLog stopPassLog(ServerLevel level) {
+        LevelState st = STATES.get(level.dimension());
+        if (st == null)
+            return null;
+        TramplePassLog log = st.passLog;
+        st.passLog = null;
+        return log;
+    }
+
+    /** Runs one trample sample of the level now (the GameTests' cost measurement). */
+    public static void trampleNow(ServerLevel level) {
+        tramplePass(level, state(level));
+    }
+
+    /** Trample totals of a level so far: sample passes, walks stamped, nanoseconds in the passes, cells changed. */
+    public static long[] trampleTotals(ServerLevel level) {
+        LevelState st = STATES.get(level.dimension());
+        return st == null ? new long[] { 0, 0, 0, 0 } : new long[] { st.tramplePasses, st.trampleWalks, st.trampleNanos, st.trampleCells };
+    }
+
     // ------------------------------------------------------------------ the sync pass
 
     @SubscribeEvent
@@ -257,11 +468,18 @@ public final class GroundMemoryServer {
         if (evt.phase != TickEvent.Phase.END || !(evt.level instanceof ServerLevel level))
             return;
         LevelState st = STATES.get(level.dimension());
-        if (st == null)
-            return;
+        if (st == null) {
+            if (!enabled || UnitServerEvents.getAllUnits().isEmpty())
+                return;
+            st = state(level);   // units walking: trample needs the level's state before anything is stamped
+        }
         try {
             drainLoaded(level, st);
-            if (++st.tick % SYNC_TICKS == 0 && !st.marked.isEmpty())
+            ++st.tick;
+            // the trample sample sits half way between two sync passes, so its cells go out in the next one
+            if (enabled && st.tick % TrampleRules.SAMPLE_TICKS == SYNC_TICKS / 2)
+                tramplePass(level, st);
+            if (st.tick % SYNC_TICKS == 0 && !st.marked.isEmpty())
                 syncPass(level, st, LIVE);
         } catch (Exception e) {
             ReignOfNether.LOGGER.error("World memory: sync pass failed", e);
@@ -469,6 +687,9 @@ public final class GroundMemoryServer {
             long key = evt.getChunk().getPos().toLong();
             st.marked.remove(key);
             st.dirty.remove(key);
+            st.trampleChunks.remove(key);
+            st.trampleFields.remove(key);
+            st.trampleMemos.remove(key);
         }
     }
 

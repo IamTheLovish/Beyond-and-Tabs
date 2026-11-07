@@ -607,6 +607,7 @@ public final class EyesDirector {
     //   16_scars_rts_far      strategic zoom: does the battlefield still read
     //   16_scars_fp_crater    first person, a person's eye height, looking into the big crater
     //   16_scars_fp_steps     first person at the steps, slab row and snow
+    //   16_scars_trample_*    trampled ground (slice 2), each view off then on in this run (EyesTrampleScene)
     // The timeline is wall-clock seconds, not ticks (the shader lane's client runs 4-6 ticks a second, see CUES).
     static final boolean SCARS_ONLY = Boolean.getBoolean("bat.eyes.scars");
     static final int STEP_SCARS = 21;
@@ -757,6 +758,8 @@ public final class EyesDirector {
                 com.solegendary.reignofnether.worldmemory.GroundMemoryServer.collapse(level, scarsSite.getX() - 3, gy, scarsSite.getZ() - 11, 5f);
                 com.solegendary.reignofnether.worldmemory.GroundMemoryServer.blast(level, scarsSite.getX() - 4, gy, scarsSite.getZ() + 11, 7f,
                     com.solegendary.reignofnether.barfx.BarFx.K_BIG_FIREBALL);
+                // trampled ground (slice 2): a road, a squad's trail and a ravager's pass (EyesTrampleScene)
+                EyesTrampleScene.march(level, scarsSite, gy);
                 scarsMarkedChunks = com.solegendary.reignofnether.worldmemory.GroundMemoryServer.markedChunks(level);
                 scarsStamped = true;
             } catch (Exception e) {
@@ -816,6 +819,18 @@ public final class EyesDirector {
             case 0 -> {   // the site: chunks load under the camera, then the pad goes down
                 if (ticks == 1) {
                     scarsSite = scarsSite(mc);
+                    // a photo of the ground, not a match: the pad is 44 blocks out from the capitol, beyond its
+                    // vision. Under fog of war the server never sent the pad's blocks and only 2 of 9 marked chunks
+                    // reached the client, so the stills showed fogged map ground (eyes run 42185251420, Nov 6): fog
+                    // off on both sides and noon, as for scenes 15 and 20
+                    if (com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isEnabled())
+                        com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.setEnabled(false);
+                    var fogServer = mc.getSingleplayerServer();
+                    fogServer.execute(() -> {
+                        if (com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isEnabled())
+                            com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.setEnabled(false);
+                        fogServer.overworld().setDayTime(6000);
+                    });
                     OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(scarsSite));
                     ReignOfNether.LOGGER.info("[Eyes] 16 scars: pad at {} (capitol {}), fog of war on the client: {}",
                         scarsSite.toShortString(), capitolCentre.toShortString(),
@@ -907,7 +922,11 @@ public final class EyesDirector {
                 shot(mc, "16_scars_fp_steps");
                 ReignOfNether.LOGGER.info("[Eyes] 16 scars: done, client: {}",
                     com.solegendary.reignofnether.worldmemory.GroundMemoryClient.status());
-                afterScars();
+                scarsNext(9);
+            }
+            case 9 -> {   // trampled ground: off / on stills and the frame-cost A/B (EyesTrampleScene)
+                if (EyesTrampleScene.step(mc, scarsSite))
+                    afterScars();
             }
             default -> scarsEnd("unknown phase " + scarsPhase);
         }

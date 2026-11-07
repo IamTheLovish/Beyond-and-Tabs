@@ -13,6 +13,9 @@ RTS read keeps the darkening the vertex alpha asks for.
     scorch.png  ash with char flecks and burnt stubble
     crater.png  churned soil with pebbles and debris specks (the floor and the rim share it; the vertex colour tells
                 them apart)
+    trample.png trampled ground (slice 2, design/battlefield_effects.md): flattened blades lying in swirls, the soil
+                showing between them in specks and a few bare patches. Its RGB mean and alpha mean are the ones the
+                look's colour maths assumes (TrampleRules.TEXTURE_RGB_MEAN / TEXTURE_ALPHA_MEAN): checked here
 
 Deterministic (fixed seeds). Writes bar/src/main/resources/assets/reignofnether/textures/decals/ (in git: the mod's
 own assets) and, with --preview DIR, the tiles over grass at RTS scale for review.
@@ -32,7 +35,9 @@ from gen_blocks import Field  # noqa: E402  - periodic noise, Voronoi, blur (eve
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, "bar", "src", "main", "resources", "assets", "reignofnether", "textures", "decals")
 N = 512            # 4 blocks x 128 texels
-SEEDS = {"scorch": 7101, "crater": 7102}
+SEEDS = {"scorch": 7101, "crater": 7102, "trample": 7103}
+# TrampleRules.TEXTURE_RGB_MEAN and TEXTURE_ALPHA_MEAN: the look's colour maths (TrampleRulesTest) assumes these
+TRAMPLE_RGB_MEAN, TRAMPLE_ALPHA_MEAN, TRAMPLE_MEAN_TOL = 0.86, 0.90, 0.02
 
 
 def clip01(a):
@@ -108,6 +113,45 @@ def crater(seed):
     return r, g, b, alpha, height, dict(smooth=30, f0=10, pore=56)
 
 
+def trample(seed):
+    """Trampled ground: blades pressed flat in swirls (long thin strokes, along u in some patches and along v in
+    others, as a crowd's feet leave them), their light sheen, the soil showing between them in fine specks and a few
+    small bare patches. Light and nearly neutral like the others: the vertex colour (straw, then worn soil) carries the
+    stage. Height: the blades lie low, the bare soil a touch lower."""
+    f = Field(N, seed)
+    along_u = np.abs(f.noise(60, 140, 0.3, sx=6.0, sy=1.0))   # strokes long along u
+    along_v = np.abs(f.noise(60, 140, 0.3, sx=1.0, sy=6.0))   # ... and along v
+    swirl = smoothstep(-0.5, 0.5, f.fbm(3, 2, 0.6))           # which way the blades lie, patch by patch (~1-2 blocks)
+    blades = along_u * swirl + along_v * (1 - swirl)
+    blade = smoothstep(0.9, 2.0, blades)                      # the pressed blades' bright edges
+    grain = f.fbm(28, 3, 0.55)
+    soil = smoothstep(1.3, 1.9, f.fbm(40, 2, 0.6) + 0.3 * f.fbm(100, 1))   # specks of soil between the blades
+    bare = smoothstep(1.2, 1.6, f.fbm(7, 2, 0.6))                         # a few small bare patches
+
+    luma = 0.835 + 0.06 * grain + 0.20 * blade
+    luma = luma * (1 - 0.30 * soil) * (1 - 0.12 * bare)
+    luma = clip01(luma)
+    r = luma * (1.0 + 0.03 * soil)
+    g = luma * (1.0 + 0.01 * blade - 0.02 * soil)
+    b = luma * (0.97 - 0.04 * soil)
+    # alpha: nearly continuous (the corner alpha shapes the track); thinner along the blade gaps so the ground's own
+    # texture shows through as stripes at first-person distance
+    alpha = clip01(0.99 + 0.05 * grain - 0.16 * smoothstep(0.0, 0.6, 1.0 - blades) * (1 - bare))
+    height = clip01(0.45 + 0.08 * grain + 0.12 * blade - 0.10 * bare - 0.06 * soil)
+    return r, g, b, alpha, height, dict(smooth=26, f0=10, pore=60)
+
+
+def check_trample_means(maps):
+    """The texture must match what TrampleRules' colour maths assumes, or the look's tests prove a different picture."""
+    r, g, b, alpha = maps[0], maps[1], maps[2], maps[3]
+    rgb = float((r.mean() + g.mean() + b.mean()) / 3)
+    a = float(alpha.mean())
+    if abs(rgb - TRAMPLE_RGB_MEAN) > TRAMPLE_MEAN_TOL or abs(a - TRAMPLE_ALPHA_MEAN) > TRAMPLE_MEAN_TOL:
+        raise SystemExit("trample: RGB mean %.3f / alpha mean %.3f, TrampleRules assumes %.2f / %.2f (+-%.2f)"
+                         % (rgb, a, TRAMPLE_RGB_MEAN, TRAMPLE_ALPHA_MEAN, TRAMPLE_MEAN_TOL))
+    print("trample: RGB mean %.3f, alpha mean %.3f (TrampleRules assumes %.2f / %.2f)" % (rgb, a, TRAMPLE_RGB_MEAN, TRAMPLE_ALPHA_MEAN))
+
+
 def write(name, maps, out_dir, preview_dir):
     r, g, b, alpha, height, spec = maps
     rgba = np.empty((N, N, 4), dtype=np.uint8)
@@ -141,6 +185,9 @@ def preview(name, rgba, preview_dir):
     if name == "scorch":
         tint = np.array([64, 57, 50], dtype=np.float64)
         va = 0.66
+    elif name == "trample":
+        tint = np.array([160, 96, 58], dtype=np.float64)   # TrampleRules' worn soil at full wear
+        va = 0.78
     else:
         tint = np.array([150, 112, 78], dtype=np.float64)
         va = 0.62
@@ -162,6 +209,9 @@ def main():
     args = ap.parse_args()
     write("scorch", scorch(SEEDS["scorch"]), args.out, args.preview)
     write("crater", crater(SEEDS["crater"]), args.out, args.preview)
+    maps = trample(SEEDS["trample"])
+    check_trample_means(maps)
+    write("trample", maps, args.out, args.preview)
 
 
 if __name__ == "__main__":

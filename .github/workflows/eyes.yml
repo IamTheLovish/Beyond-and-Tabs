@@ -150,7 +150,7 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.heroes && 5 || inputs.forming && 8 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.heroes && 5 || inputs.forming && 8 || inputs.scars && 13 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
       SCARS: ${{ inputs.scars && '1' || '0' }}
       FOG: ${{ inputs.fog && '1' || '0' }}
       OVERLAYS: ${{ inputs.overlays && '1' || '0' }}
@@ -476,8 +476,12 @@ jobs:
           grep resourcePacks run/options.txt
       - name: Start the recorder (waits for the tour's Xvfb display, then films it)
         run: |
-          which ffmpeg || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
-          which xdotool || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xdotool
+          # the video is a bonus, the stills are the run: on Nov 6, 3 of 4 runs of one branch got an apt mirror at ~25 kB/s,
+          # spent 42 min on ffmpeg's 61 MB and hit the job's 45-min limit before the game started (42185251420 attempts
+          # 1-2, 42209052624) while other runs that hour fetched it at 11.5 MB/s. So each install gets 5 min; without
+          # ffmpeg the recorder records nothing and the clip step (continue-on-error) says "0 video clips"
+          which ffmpeg || timeout 300 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg || echo "::warning::[Eyes] ffmpeg did not install within 5 min (slow apt mirror): no video clips this run"
+          which xdotool || timeout 300 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xdotool || echo "::warning::[Eyes] xdotool did not install within 5 min"
           setsid nohup bash tools/eyes_record.sh "$PWD/eyes-rec" > /dev/null 2>&1 &
           echo "recorder pid $!"
           # memory and load every 30 s (published as mem.log): three tours lost their runner on Oct 15 ("lost
@@ -667,15 +671,16 @@ jobs:
             grep -h "20_forming_after: " out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -1 | sed 's/^/::notice::/' || true
             [ "$got" -ge 8 ] || { echo "::error::only $got forming stills (expected 8)"; exit 1; }
           fi
-          if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
+          if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the 13 stills of scene 16 (7 scars + 6 trample off / on)
             got=$(find out -name 'bat_eyes_16_scars_*.png' | wc -l)
             ls out | grep '^bat_eyes_16_' | sed 's/^/::notice::[Eyes] still /' || true
+            grep -h "16 trample A/B" out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -1 | sed 's/^/::notice::/' || true
             # the battle must leave marks: on the battlefield world (min_y 48) a y-0 load check refused every stamp and
             # the run still published clean stills (42217669387, Nov 6) - a scars run with nothing marked is a failure
             if grep -q "16 scars: 0 chunks marked on the server" out/eyes-lines.txt 2>/dev/null; then
               echo "::error::[Eyes] 16 scars: the scripted battle marked 0 chunks on the server (no scorch, no crater)"; exit 1
             fi
-            [ "$got" -ge 6 ] || { echo "::error::only $got scars stills (expected 6)"; exit 1; }
+            [ "$got" -ge 13 ] || { echo "::error::only $got scars stills (expected 13: 7 scars + 6 trample off / on)"; exit 1; }
           fi
           if [ -n "${STRUCTURE_STILLS:-}" ]; then   # a structure-photo run: five stills per structure
             got=$(find out -name 'bat_eyes_15_*.png' | wc -l)

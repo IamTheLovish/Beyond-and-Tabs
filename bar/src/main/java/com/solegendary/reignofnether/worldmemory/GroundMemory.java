@@ -13,7 +13,7 @@ import java.util.Arrays;
  * Channels (one byte each, {@link #CHANNELS} per cell, cell index = (localX << 4) | localZ):
  * <ul>
  *   <li>{@link #SCORCH}: 0-255 burnt ground (slice 1);</li>
- *   <li>{@link #TRAMPLE}: 0-255 worn ground (slice 2 writes it; the format and decay are here so it plugs in);</li>
+ *   <li>{@link #TRAMPLE}: 0-255 worn ground (slice 2: units walking, GroundMemoryServer.trampleSegment, TrampleRules);</li>
  *   <li>{@link #CRATER_STAIN}: high nibble crater depth 0-15 (slice 1), low nibble stain kind 0-15 (slice 6);</li>
  *   <li>{@link #STAIN}: 0-255 stain strength (slice 6).</li>
  * </ul>
@@ -184,6 +184,76 @@ public final class GroundMemory {
     /** Stamps a crater dish (depth 1-15 at the centre, a flat core then a smooth fall) the same way. */
     public long[] addCraterDisc(int chunkX, int chunkZ, double cx, double cz, double radius, int depth, long[] allowed) {
         return stampDisc(chunkX, chunkZ, cx, cz, radius, 0.3, depth, allowed, CRATER_STAIN);
+    }
+
+    /**
+     * Stamps one unit's walk since its last sample into THIS chunk's trample cells (slice 2, TrampleRules): every cell
+     * centre within {@code radius} across the segment (ax, az)-(bx, bz) - flat ends, so consecutive samples tile the
+     * path - gains {@code peak} times its weight (see addTrample), with saturation: once per pass, however
+     * fast the unit walked. {@code peaks} (256 entries, or null = {@code peak}
+     * everywhere) is the caller's per-cell peak (the surface's wear); {@code allowed} the column filter as for the discs.
+     * Returns the 256-bit mask of the cells that changed.
+     */
+    public long[] addTrampleCapsule(int chunkX, int chunkZ, double ax, double az, double bx, double bz, double radius,
+                                    int peak, int[] peaks, long[] allowed) {
+        if (peak <= 0 && peaks == null)
+            return new long[4];
+        int ox = chunkX << 4, oz = chunkZ << 4;
+        return addTrample(chunkX, chunkZ, ax, az, bx, bz, radius, (x, z) -> {
+            int cell = index(x - ox, z - oz);
+            if (allowed != null && !bit(allowed, cell))
+                return 0;
+            return peaks == null ? peak : peaks[cell];
+        });
+    }
+
+    /** A column's peak wear for one walk (0 = it takes none): the server's surface and height filter. */
+    public interface TramplePeaks {
+        int peakAt(int worldX, int worldZ);
+    }
+
+    /**
+     * The trample stamp itself. The strip's weight is worked out first, as cheap arithmetic: 1 in the core of the
+     * half-width, a smooth fall to its edge, flat ends, the segment's terms hoisted out of the loop. Only then is
+     * {@code peaks} (which reads the world on the server) asked, and only for the cells the walk really wears (the CI
+     * cost test measured 4.03 us a walk, budget 3.0, when every cell of the box read the world first). Returns the
+     * 256-bit mask of the cells that changed.
+     */
+    public long[] addTrample(int chunkX, int chunkZ, double ax, double az, double bx, double bz, double radius, TramplePeaks peaks) {
+        return addTrample(chunkX, chunkZ, ax, az, bx, bz, radius, peaks, new long[4]);
+    }
+
+    /** {@link #addTrample} into the caller's 4-long mask, cleared first (the server sampler reuses one: no allocation a walk). */
+    public long[] addTrample(int chunkX, int chunkZ, double ax, double az, double bx, double bz, double radius, TramplePeaks peaks,
+                             long[] changed) {
+        Arrays.fill(changed, 0L);
+        double vx = bx - ax, vz = bz - az, len2 = vx * vx + vz * vz;
+        if (radius <= 0 || len2 <= 1e-12)
+            return changed;
+        double inv = 1.0 / len2;
+        int ox = chunkX << 4, oz = chunkZ << 4;
+        int x0 = Math.max(ox, (int) Math.floor(Math.min(ax, bx) - radius)), x1 = Math.min(ox + 15, (int) Math.floor(Math.max(ax, bx) + radius));
+        int z0 = Math.max(oz, (int) Math.floor(Math.min(az, bz) - radius)), z1 = Math.min(oz + 15, (int) Math.floor(Math.max(az, bz) + radius));
+        for (int x = x0; x <= x1; x++)
+            for (int z = z0; z <= z1; z++) {
+                double px = x + 0.5 - ax, pz = z + 0.5 - az;
+                double t = (px * vx + pz * vz) * inv;
+                if (t <= 0 || t > 1)
+                    continue;   // flat ends: consecutive samples tile the path
+                double dx = px - t * vx, dz = pz - t * vz;
+                float w = discWeight(Math.sqrt(dx * dx + dz * dz), radius, TrampleRules.CORE);
+                if (w <= 0)
+                    continue;
+                int cell = index(x - ox, z - oz);
+                if (get(cell, TRAMPLE) == 255)
+                    continue;   // saturated: no walk can change it (add would return false), so the world is not asked
+                int p = peaks.peakAt(x, z);
+                if (p <= 0)
+                    continue;
+                if (add(cell, TRAMPLE, Math.round(p * w)))
+                    setBit(changed, cell);
+            }
+        return changed;
     }
 
     private long[] stampDisc(int chunkX, int chunkZ, double cx, double cz, double radius, double core, int peak,
