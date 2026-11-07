@@ -84,6 +84,14 @@ CAPPED = 0.80                   # >= 80 % of the tier-edge tops are caps (slab /
 FULL_LIGHTS = ("shroomlight", "glowstone", "sea_lantern", "ochre_froglight", "verdant_froglight",
                "pearlescent_froglight", "magma_block", "redstone_lamp")
 STALLS_MIN = 4                  # KEEP: >= 4 barred pen stalls in the south face between pilasters
+# review round (Nov 4, Fable review of PR #462; design/vehicle_labs/briefs/ashborn_review_nov4.md): the three faults
+# the round-3 stills still show at the RTS camera - "beast gate not yet" (the stalls are a flat barred plane), flat
+# tile bays on the tiers (one plane, 1-deep slots), "one orange spark" (ref29's terraces carry contained lava pools)
+MOUTH_DEPTH = 2                 # every pen stall: >= 2 cells of air behind its bars (a black mouth, real shadow)
+MOUTH_OVERSAIL = 1              # the pilasters and lintels stand >= 1 proud of the bars (an eave line, gate G1)
+POOLS_MIN = 2                   # >= 2 sunken ember pools on the terrace tops (ref29), each >= 2 cells, in the light zone
+POOL_SEEN = 100                 # rts pixels (step 2) each pool's floor shows: it is a pool, not a dot
+BUTTRESSES_MIN = 3              # >= 3 capped piers 1 proud of the ring's south face (its biggest flat tier wall)
 
 
 def sub_block(n):
@@ -534,6 +542,82 @@ class EmberPens(unittest.TestCase):
         for st in ("rts_close", "34"):
             seen = sum(1 for h in self.hits[st].values() if h[1] == "iron_bars" and h[0][2] >= SZ - 3 and h[0][1] <= 4)
             self.assertGreater(seen, 40, st)
+
+    # ------------------------------------------------------------------------------------------------ review round
+    def test_beast_mouths_are_deep(self):
+        """Review round (Nov 4): "beast gate not yet" (every round-3 critic) - the stalls were a barred plane flush with
+        the pilasters, 0 deep, so at the RTS camera the pens read as a stripe of bars. A pen is a MOUTH: >= 2 cells of
+        air behind every bar (a black recess that throws real shadow, lesson: form beats speckle), the pilasters and
+        lintels standing >= 1 proud of the bars (an eave line over every stall, gate G1), at L3 and L1."""
+        for n in (self.n, self.n1):
+            bars = [(x, y, z) for (x, y, z), b in n.items() if b == "iron_bars" and z >= SZ - 4 and 1 <= y <= 3]
+            self.assertTrue(bars, "no pen bars in the south face")
+            shallow = sorted(q for q in bars if any(full(n.get((q[0], q[1], q[2] - d), "air"))
+                                                    for d in range(1, MOUTH_DEPTH + 1)))   # a chain is not a wall
+            self.assertEqual(shallow[:8], [], len(shallow))
+            front = max(z for (_, _, z) in bars)
+            proud = {z for (x, y, z), b in n.items() if 1 <= y <= 4 and z > front and b != "iron_bars"}
+            self.assertTrue(proud and max(proud) - front >= MOUTH_OVERSAIL, (front, sorted(proud)))
+            bare = sorted({x for (x, y, z) in bars if not any((x, 4, zz) in n for zz in range(front + 1, SZ))})
+            self.assertEqual(bare, [], "stalls without a lintel proud of the bars")
+
+    def pools(self, n):
+        """Ember pools: full-cube lights open to the sky, grouped by adjacency, each with whether its rim (the cells
+        beside the pool one up) is closed all round (ref29: lava only in sunken courts and terrace pools)."""
+        top = tops(n)
+        lit = {q for q, b in n.items() if b in FULL_LIGHTS and top[(q[0], q[2])] == q[1]}
+        out = []
+        while lit:
+            q = lit.pop()
+            comp, todo = {q}, [q]
+            while todo:
+                x, y, z = todo.pop()
+                for a, c in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    p = (x + a, y, z + c)
+                    if p in lit:
+                        lit.discard(p)
+                        comp.add(p)
+                        todo.append(p)
+            rim = {(x + a, y + 1, z + c) for (x, y, z) in comp for a, c in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                   if (x + a, y, z + c) not in comp}
+            out.append((comp, all(r in n for r in rim)))
+        return out
+
+    def test_ember_pools_on_the_terraces(self):
+        """Review round (Nov 4): "one orange spark" - the faction's ember is 3 cells under the gate's head. ref29 (the
+        primary reference) carries its lava in sunken POOLS on the terrace tops, where the RTS camera looks. >= 2
+        contained pools (every rim cell solid: nothing spills), each >= 2 cells, every pool in the court / gate zone
+        (one glow story, not round 1's scatter), at L3 and L1; at the RTS still each pool's floor shows >= 100
+        pixels. The glow share stays inside test_one_glow_focus's band (0.5-2 %)."""
+        for n in (self.n, self.n1):
+            pools = self.pools(n)
+            spilt = [sorted(c)[:2] for c, ringed in pools if not ringed]
+            self.assertEqual(spilt, [], "an ember pool spills over its rim")
+            good = [c for c, _ in pools if len(c) >= 2]
+            self.assertGreaterEqual(len(good), POOLS_MIN, [(sorted(c)[0], len(c)) for c, _ in pools])
+            stray = sorted(q for c, _ in pools for q in c if not self.in_court_or_gate(q))
+            self.assertEqual(stray, [], "a pool outside the court / gate zone")
+        seen = Counter()
+        for h in self.hits["rts"].values():
+            if h[1] in FULL_LIGHTS and h[2] == "up":
+                seen[h[0]] += 1
+        for c, _ in self.pools(self.n):
+            self.assertGreaterEqual(sum(seen[q] for q in c), POOL_SEEN, sorted(c))
+
+    def test_ring_south_face_has_buttresses(self):
+        """Review round (Nov 4): "flat tile bays" (rounds 1-3) - the ring's south face (x 2..14 at z 14, y 7..10) is
+        the biggest tier wall the RTS camera sees and it was one plane with 1-deep slots. >= 3 full-block piers stand
+        1 proud of it (z 15, y 7..10), each ending in a cap (a pinnacle on every buttress), with no wall beside them
+        at z 16 (they are piers, not a thicker wall), at L3 and L1."""
+        for n in (self.n, self.n1):
+            piers = []
+            for x in range(3, SX - 2):
+                shaft = all((x, y, 15) in n and full(n[(x, y, 15)]) for y in range(7, 11))
+                cap = (x, 11, 15) in n and sub_block(n[(x, 11, 15)]) and not light(n[(x, 11, 15)])
+                free = not any((x, y, 16) in n and full(n[(x, y, 16)]) for y in range(7, 11))
+                if shaft and cap and free:
+                    piers.append(x)
+            self.assertGreaterEqual(len(piers), BUTTRESSES_MIN, piers)
 
 
 if __name__ == "__main__":

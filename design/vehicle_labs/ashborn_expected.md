@@ -56,3 +56,19 @@ jamb columns end in a light cap, the keep band's far sides are tuff (the paving:
 - 18/18 locally (no new block); glow 0.59 %, lights 5.0 %, walls 0.185, paving 0.334, gap plinth - walls 0.066 (as
   expected)
 - critics 20261031-021654 (a) / -021702 (b): 6 / 6.5 vs round 2 6 / 6 - kept as the final; detail rounds stop
+
+## Review round (Nov 4, Fable review of PR #462, branch claude/review-ashborn; control = round 3, ashborn_l3_r3.nbt)
+Three changes, each tied to a critic fault, tests first (tools/test_ashborn_lab.py: beast_mouths_are_deep,
+ember_pools_on_the_terraces, ring_south_face_has_buttresses - red on round 3 for the right reasons, then 21/21):
+(1) the pens are MOUTHS - bars 1 back (z 15) under the lintel, 2 cells of air with chains behind, the hide at z 12
+("beast gate not yet"); (2) two 1 x 3 ember pools sunk in the ring's top flanking the court on the gate axis, floors
+shroomlight, rims closed (ref29's terrace pools; "one orange spark"); (3) three capped piers 1 proud of the ring's
+south face at x 3, 7, 11 ("flat tile bays").
+Model numbers (rts / 34): glow 1.39 % / 0.38 % (round 3: 0.59 / 0.38; band 0.5-2); the pools' floors 340 / 336 rts px,
+the heart 503; lights 5.9 % (5.0); plinth 0.252, walls 0.189 (gap 0.063), paving 0.333, caps 0.503 (round 3 within
+0.002 of each); thin blocks west 0.37 / 0.37, south 0.36 / 0.38, up 0.39 / 0.44 (the 34 tops at the 0.45 ceiling - no
+more slabs / walls on tops); depth planes on the south face: plinth storey 0.65 / 0.35 (was 0.88 / 0.12), ring storey
+0.28 on its biggest plane (was 0.43); bars seen in 34: 46 (> 40); lead 8; gate 5 x 8. Expected from eyes: shroomlight
+pools read as two orange troughs at RTS and light the terraces at dusk (the offline renderer has no emissive light);
+offline score 5.5 vs round 3's 4.5 against the north star (the review's critique, PR body). Sheet:
+design/vehicle_labs/ashborn_review_nov4.png. Next-round brief: design/vehicle_labs/briefs/ashborn_review_nov4.md.
