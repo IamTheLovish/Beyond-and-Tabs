@@ -157,7 +157,10 @@ public final class MotionPass {
         float[] s = AnimStates.slab();
         try {
             float t = e.deathTime - 1 + partial;
-            DeathFall.pose(s, b, e.getId(), t, map.jointed, DEATH_OUT);
+            if (map.hoverPx > 0f)
+                DeathFall.poseHover(s, b, e.getId(), t, map.hoverPx, map.hoverHalfPx, DEATH_OUT);
+            else
+                DeathFall.pose(s, b, e.getId(), t, map.jointed, DEATH_OUT);
             s[b + AnimState.DEATH_DRAWN] = 1f;
             placeFall(map, ps, DeathFall.dropped(t, s[b + AnimState.DEATH_KIND], e.getId()));
         } catch (RuntimeException ex) {
