@@ -102,6 +102,45 @@ public final class GrassTint {
     static final double SOFT_LIGHT = 0.20;
     static final double SOFT_DARK = 0.22;
 
+    /**
+     * Round 8, grass only (Nov 5, lovish on the lawn of round 64: "too much going on it needs to be softer", "the blend
+     * needs to diffuse a bit better", "it looks too symettrical or patterned"; he picked mock "D1"). The blotches were
+     * one size, evenly spread - a camouflage print - and half of them came from here: the 2-7 block dark clumps and
+     * the 3.5-5 block value mottle. The lawn's sheet now carries only its grain, and this field carries every
+     * variation bigger than a block as broad drifts with no favourite size (1/f-like: 20, 8 and 3.5-block octaves,
+     * weights falling with the cell; the hue drifts over 12 and 6 blocks). No clumps, no value mottle. Leaves keep
+     * rounds 1-7 (the crowns were tuned on them). tools/test_lawn_r66.py, GrassTintTest.
+     */
+    static final double[] GRASS_CELLS = {20.0, 8.0, 3.5};
+    static final double[] GRASS_WEIGHTS = {1.0, 0.5, 0.2};   // round 9 (r70): {1, 0.7, 0.5} - the masses carry the contrast now
+    static final double GRASS_CONTRAST = 2.0;
+    static final double GRASS_VALUE = 0.10;                  // round 9 (r70): 0.15
+    static final double[] GRASS_HUE_CELLS = {12.0, 6.0};
+    static final double GRASS_HUE_MOTTLE = 0.05;
+    static final double GRASS_CLUMP_DARK = 0.0;
+    static final double GRASS_MOTTLE = 0.0;
+
+    /**
+     * Round 9, grass only (Nov 6, lawn round 70). lovish: "I want natural contrast that makes the grass look good like
+     * the realistic minecraft art I sent you". The r69 blind critic: the gap is "macro contrast" - his references set
+     * shade beside sunlit turf several blocks across, while round 8's drifts held block luma to about +-10% (7% of a
+     * meadow 10%+ below its median). lovish (03:12Z): "Allow big masses (Recommended)"; (03:30Z) "B: big soft masses
+     * (Recommended)". So the grass gets masses of light and shade on their own field: shaped octaves at 18 and 10
+     * blocks. The shade side darkens by up to GRASS_MASS_VALUE and turns a little cooler; the sunlit side lightens by
+     * GRASS_MASS_LIGHT of that and turns a little warmer. Symmetric (no bias, light = dark): the masses move light
+     * around and leave the meadow's average where it was, so the canopy stays a darker mass than the lawn under it
+     * (a shade-biased first try dimmed the whole lawn below the crowns). GRASS_WEIGHTS and GRASS_VALUE step back so
+     * the 2-6 block blotch scale stays calm. Inside the soft limit, the readability floor and the colour step.
+     * tools/test_lawn_r70.py.
+     */
+    static final double[] GRASS_MASS_CELLS = {18.0, 10.0};
+    static final double[] GRASS_MASS_WEIGHTS = {1.0, 0.2};
+    static final double GRASS_MASS_CONTRAST = 1.3;
+    static final double GRASS_MASS_BIAS = 0.0;
+    static final double GRASS_MASS_VALUE = 0.20;
+    static final double GRASS_MASS_LIGHT = 1.0;
+    static final double GRASS_MASS_HUE = 0.04;
+
     private GrassTint() {
     }
 
@@ -128,22 +167,34 @@ public final class GrassTint {
 
     /** rgb (0xRRGGBB) with the meadow's variation applied at block (x, z). */
     public static int apply(int rgb, int x, int z, int salt) {
-        double f = field(x, z, salt);
+        boolean grass = salt == GRASS;
+        double f = grass ? shape(octaves(x, z, salt * 8, GRASS_CELLS, GRASS_WEIGHTS), GRASS_CONTRAST) : field(x, z, salt);
         double dry = dryness(x, z, salt);
         double s = straw(x, z, salt, dry);
         double cl = octaves(x - 3001, z + 1777, (salt + 202) * 8, CLUMP_CELLS, CLUMP_WEIGHTS);
         double m = smooth(clamp01((cl - CLUMP_AT) / CLUMP_SOFT)) * clamp01((CLUMP_GATE - dry) / 0.4) * (1 - s);
         double mottle = octaves(x + 555, z - 777, salt * 8 + 40, MOTTLE_CELLS, MOTTLE_WEIGHTS);
-        double hm = HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, MOTTLE_CELLS, MOTTLE_WEIGHTS);
-        double v = (1 + VALUE * f) * (1 - CLUMP_DARK * m) * (1 + 0.10 * s)
-                * (1 + MOTTLE * (mottle > 0 ? mottle : 1.6 * mottle));
+        double hm = grass
+                ? GRASS_HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, GRASS_HUE_CELLS, MOTTLE_WEIGHTS)
+                : HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, MOTTLE_CELLS, MOTTLE_WEIGHTS);
+        double mv = 1, hw = 0;   // round 9: grass's masses of light and shade
+        if (grass) {
+            double mf = shape(octaves(x - 2203, z + 4421, salt * 8 + 80, GRASS_MASS_CELLS, GRASS_MASS_WEIGHTS),
+                    GRASS_MASS_CONTRAST);
+            mf = Math.max(-1, Math.min(1, mf + GRASS_MASS_BIAS));
+            mv = 1 + GRASS_MASS_VALUE * (mf > 0 ? GRASS_MASS_LIGHT * mf : mf);
+            hw = GRASS_MASS_HUE * mf;
+        }
+        double v = (1 + (grass ? GRASS_VALUE : VALUE) * f) * (1 - (grass ? GRASS_CLUMP_DARK : CLUMP_DARK) * m)
+                * (1 + 0.10 * s) * (1 + (grass ? GRASS_MOTTLE : MOTTLE) * (mottle > 0 ? mottle : 1.6 * mottle)) * mv;
         v = v > 1 ? 1 + SOFT_LIGHT * Math.tanh((v - 1) / SOFT_LIGHT) : 1 - SOFT_DARK * Math.tanh((1 - v) / SOFT_DARK);
         double dp = Math.max(dry, 0), dn = Math.min(dry, 0);
         double[] o = salt == GRASS ? OLIVE_GRASS : CANOPY;
         double r = ((rgb >> 16) & 0xFF) * o[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s)
-                * (1 - 0.02 * m);
+                * (1 - 0.02 * m) * (1 + hw);
         double g = ((rgb >> 8) & 0xFF) * o[1] * v * (1 - 0.01 * dp - 0.03 * dn) * (1 + 0.04 * s);
-        double b = (rgb & 0xFF) * o[2] * v * (1 - 0.9 * Math.max(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m);
+        double b = (rgb & 0xFF) * o[2] * v * (1 - 0.9 * Math.max(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m)
+                * (1 - hw);
         return (channel(r) << 16) | (channel(g) << 8) | channel(b);
     }
 

@@ -108,6 +108,47 @@ public class DisplaySettings {
         }
     }
 
+    /** Lawn sheet (environment/ground/GiantGroundBakedModel): the grass top as one N x N-block sheet (8x8 as the pack
+     * ships it). Read by the chunk
+     * mesher's threads; a change takes effect when the terrain is rebuilt. */
+    public static boolean lawnSheet() {
+        try {
+            return ReignOfNetherClientConfigs.LAWN_SHEET.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
+    /** Ground sheets (environment/ground/GiantGroundBakedModel): dirt, coarse dirt, path, gravel, mud and podzol tops
+     * as N x N-block sheets. Read by the chunk mesher's threads; a change takes effect when the terrain is rebuilt. */
+    public static boolean groundSheets() {
+        try {
+            return ReignOfNetherClientConfigs.GROUND_SHEETS.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
+    /** Clover layer (environment/ground/FloatingLayer): the floating clover carpet over three lawn blocks in four. Read
+     * by the chunk mesher's threads; a change takes effect when the terrain is rebuilt. */
+    public static boolean cloverLayer() {
+        try {
+            return ReignOfNetherClientConfigs.CLOVER_LAYER.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
+    /** Flower layer (environment/ground/FloatingLayer): the untinted flower drifts over ~6% of lawn blocks. Read by the
+     * chunk mesher's threads; a change takes effect when the terrain is rebuilt. */
+    public static boolean flowerLayer() {
+        try {
+            return ReignOfNetherClientConfigs.FLOWER_LAYER.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
     /** Building ambience (design/lively_buildings.md): the idle particles round capitols, energy buildings and labs. */
     public static boolean buildingAmbience() {
         try {

@@ -186,7 +186,11 @@ class GrassTintTest {
         // a BAND, not a floor (lessons Oct 29, #3: fixing one critic overshoots into the next): round 2's 0.022 read as
         // one blurred gradient, round 4's critic called finer, harder variation "pips"; rounds 6 and 7 hold 0.038.
         // Raising it further runs into darksKeepUnitsReadable and the colour step
-        assertTrue(std >= 0.035 && std <= 0.055, "4-block vs 16-block std " + std);
+        // Re-set Nov 6 (lawn round 70): the cap 0.055 -> 0.08, floor kept. Masses of light and shade 6-12 blocks across
+        // (the r69 critic's "macro contrast") vary 4-block patches against their 16-block surroundings by definition;
+        // softened to stay inside the colour step and the readability floor, they measure ~0.071. lovish (03:30Z, via
+        // Eris.16, shown the mock): "B: big soft masses (Recommended)".
+        assertTrue(std >= 0.035 && std <= 0.08, "4-block vs 16-block std " + std);
     }
 
     @Test
