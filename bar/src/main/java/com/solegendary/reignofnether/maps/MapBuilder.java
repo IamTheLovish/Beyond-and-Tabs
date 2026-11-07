@@ -6,7 +6,6 @@ import com.solegendary.reignofnether.startpos.CapturePointServerEvents;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.data.worldgen.features.TreeFeatures;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -51,6 +50,17 @@ public final class MapBuilder {
     /** Share of forest columns that grow a tree (sparse: reclaim lanes you can see through). */
     static final double TREE_DENSITY = 0.045;
 
+    /**
+     * The maps' trees: our own templates (tools/gen_trees.py) through reignofnether:template_tree, the same feature the
+     * battlefield biome grows (data/reignofnether/worldgen/configured_feature/). broadleaf = oak 2 : birch 1.
+     */
+    public static final ResourceKey<ConfiguredFeature<?, ?>> BROADLEAF_TREES = trees("broadleaf_trees"),
+        CONIFER_TREES = trees("conifer_trees"), ACACIA_TREES = trees("acacia_trees");
+
+    static ResourceKey<ConfiguredFeature<?, ?>> trees(String name) {
+        return ResourceKey.create(Registries.CONFIGURED_FEATURE, new net.minecraft.resources.ResourceLocation(ReignOfNether.MOD_ID, name));
+    }
+
     /** The blocks one map is made of. */
     public record Palette(BlockState top, BlockState grass, BlockState sand, BlockState sub, BlockState deep,
                           BlockState cliff, BlockState mesaTop, BlockState bridge, BlockState voidFloor,
@@ -65,10 +75,10 @@ public final class MapBuilder {
         return switch (p) {
             case ARCHIPELAGO -> new Palette(s(Blocks.GRASS_BLOCK), s(Blocks.GRASS_BLOCK), s(Blocks.SAND), s(Blocks.DIRT),
                 s(Blocks.STONE), s(Blocks.STONE), s(Blocks.GRASS_BLOCK), s(Blocks.OAK_PLANKS), s(Blocks.STONE),
-                s(Blocks.SAND), s(Blocks.STONE), TreeFeatures.OAK, 1);
+                s(Blocks.SAND), s(Blocks.STONE), BROADLEAF_TREES, 1);
             case HIGHLANDS -> new Palette(s(Blocks.GRASS_BLOCK), s(Blocks.GRASS_BLOCK), s(Blocks.COARSE_DIRT), s(Blocks.DIRT),
                 s(Blocks.STONE), s(Blocks.STONE), s(Blocks.GRASS_BLOCK), s(Blocks.STONE_BRICKS), s(Blocks.STONE),
-                s(Blocks.GRAVEL), s(Blocks.STONE), TreeFeatures.SPRUCE, 0);
+                s(Blocks.GRAVEL), s(Blocks.STONE), CONIFER_TREES, 0);
             case NETHER_RIFT -> new Palette(s(Blocks.NETHERRACK), s(Blocks.CRIMSON_NYLIUM), s(Blocks.SOUL_SOIL), s(Blocks.NETHERRACK),
                 s(Blocks.NETHERRACK), s(Blocks.BASALT), s(Blocks.NETHERRACK), s(Blocks.POLISHED_BLACKSTONE_BRICKS),
                 s(Blocks.BLACKSTONE), s(Blocks.BLACKSTONE), s(Blocks.BASALT), null, 3);
@@ -77,10 +87,10 @@ public final class MapBuilder {
                 s(Blocks.BLACK_CONCRETE), s(Blocks.END_STONE), s(Blocks.OBSIDIAN), null, 2);
             case VERDANT_VALLEY -> new Palette(s(Blocks.GRASS_BLOCK), s(Blocks.GRASS_BLOCK), s(Blocks.SAND), s(Blocks.DIRT),
                 s(Blocks.STONE), s(Blocks.MOSSY_COBBLESTONE), s(Blocks.GRASS_BLOCK), s(Blocks.OAK_PLANKS), s(Blocks.STONE),
-                s(Blocks.SAND), s(Blocks.STONE), TreeFeatures.OAK, 0);
+                s(Blocks.SAND), s(Blocks.STONE), BROADLEAF_TREES, 0);
             case DESERT_MESA -> new Palette(s(Blocks.SAND), s(Blocks.GRASS_BLOCK), s(Blocks.SAND), s(Blocks.SANDSTONE),
                 s(Blocks.SANDSTONE), s(Blocks.TERRACOTTA), s(Blocks.RED_SAND), s(Blocks.SMOOTH_SANDSTONE), s(Blocks.SANDSTONE),
-                s(Blocks.SAND), s(Blocks.TERRACOTTA), TreeFeatures.ACACIA, 1);
+                s(Blocks.SAND), s(Blocks.TERRACOTTA), ACACIA_TREES, 1);
             // sand is soul sand here (the slow valleys); the alternate top is warped nylium; no feature trees - the
             // builder grows its own short fungi (growFungus)
             case SOULFIRE_DELTAS -> new Palette(s(Blocks.NETHERRACK), s(Blocks.CRIMSON_NYLIUM), s(Blocks.SOUL_SAND),
@@ -91,7 +101,7 @@ public final class MapBuilder {
                 s(Blocks.BLACK_CONCRETE), s(Blocks.END_STONE), s(Blocks.OBSIDIAN), null, 2);
             default -> new Palette(s(Blocks.GRASS_BLOCK), s(Blocks.GRASS_BLOCK), s(Blocks.SAND), s(Blocks.DIRT),
                 s(Blocks.STONE), s(Blocks.STONE), s(Blocks.GRASS_BLOCK), s(Blocks.OAK_PLANKS), s(Blocks.STONE),
-                s(Blocks.SAND), s(Blocks.STONE), TreeFeatures.OAK, 0);
+                s(Blocks.SAND), s(Blocks.STONE), BROADLEAF_TREES, 0);
         };
     }
 
@@ -552,16 +562,13 @@ public final class MapBuilder {
         ServerLevel level = j.level;
         int grown = 0;
         if (j.pal.tree() != null) {
-            var holder = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(j.pal.tree());
-            var alt = j.layout.preset == MapPreset.VERDANT_VALLEY
-                ? level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(TreeFeatures.BIRCH)
-                : holder;
-            for (int i = 0; i < j.trees.size(); i++) {
-                BlockPos t = j.trees.get(i);
-                var h = (i % 3 == 0) ? alt : holder;
-                if (h.isPresent() && h.get().value().place(level, level.getChunkSource().getGenerator(), level.getRandom(), t))
+            // our templates through one feature (Verdant's birch is in the broadleaf mix, 1 in 3 as before)
+            var h = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(j.pal.tree());
+            if (h.isEmpty())
+                ReignOfNether.LOGGER.warn("[MapBuilder] no tree feature {} - no trees", j.pal.tree().location());
+            for (int i = 0; i < j.trees.size() && h.isPresent(); i++)
+                if (h.get().value().place(level, level.getChunkSource().getGenerator(), level.getRandom(), j.trees.get(i)))
                     grown++;
-            }
         }
         // desert scatter: cacti and dead bushes (StartAreaClearing clears them off the bases)
         for (int i = 0; i < j.decor.size(); i++) {

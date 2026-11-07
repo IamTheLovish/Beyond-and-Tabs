@@ -22,6 +22,7 @@ trunk with stubby limbs and a snag top, a mossy fallen log beside it; bare oaks 
 import math
 import os
 import random
+import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -29,6 +30,10 @@ from gen_structures import Structure  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "design", "trees")
+# the templates the game grows (maps/TreeTemplates: the battlefield biome and every pre-made map with trees) - copied
+# from OUT by ship(); tools/test_gen_trees_shipped.py keeps both copies byte-equal
+SHIP = os.path.join(ROOT, "bar", "src", "main", "resources", "data", "reignofnether", "structures", "trees")
+SHIPPED = ("oak", "birch", "spruce", "pine", "acacia")
 SIZE = 15            # template footprint (blocks); the trunk stands at the centre
 H = 16               # template height
 
@@ -317,7 +322,9 @@ def birch(seed, form="straight"):
         # columns read as stool legs): a dome of stacked rings, bites only on the outer ring, a 1-block rim hang
         # r17 (review: the hem + dark underside hid the white trunk to ~2 blocks; a flat + plateau on top): no hem, the
         # rings one block higher, and the top is 3-4 single-leaf bumps instead of a + stamp
-        dome_rings(t, top, rng, ((1, 2.4), (2, 2.3), (3, 1.6)))
+        # r27 (tree shapes lane, Nov 6: a 5 x 5 dome read as a leaf cube on a pole from the RTS camera - 0.80-0.89 of
+        # its box from above): a 7-wide dome, round from above
+        dome_rings(t, top, rng, ((1, 3.0), (2, 2.8), (3, 2.0)))
         for _ in range(rng.randint(3, 4)):
             a, r = rng.uniform(0, 2 * math.pi), rng.uniform(0, 1.3)
             t.leaf.add((round(top[0] + r * math.cos(a)), top[1] + 4, round(top[2] + r * math.sin(a))))
@@ -338,22 +345,36 @@ def spruce(seed, height=None):
     roots(t, rng, 2)
     # whorls 3 apart from 2 blocks up (bare trunk at the foot), shrinking upward, a gap of light between them (round 3
     # had them 2 apart with drooping edges filling the gap: a solid dark cone)
-    tiers = [(y, max(1.2, 3.2 * (1 - (y - 2) / (h - 1)))) for y in range(2, h - 2, 3)]
+    # r27: the bottom skirt 3.2 -> 4.0 in radius - at 3.2 it rounded to a 5 x 5 square from above
+    tiers = [(y, max(1.2, 4.0 * (1 - (y - 2) / (h - 1)))) for y in range(2, h - 2, 3)]
     for y, r in tiers:
+        angs = []
         for k in range(4 if r >= 2.2 else 0):            # no limbs in the small top tiers (they showed through)
             ang = k * math.pi / 2 + rng.uniform(-0.3, 0.3) + (y % 4) * math.pi / 4
+            angs.append(ang)
             reach = max(1, round(r - 1.8))        # limbs stay inside the skirt (they poked through, r1)
             t.line((C, y, C), (round(C + reach * math.cos(ang)), y, round(C + reach * math.sin(ang))))
         # round 5: every tier was the same centred "+" slab - a stacked pagoda from above; each tier now sits a little
         # off the trunk and has its own width and oval
         r = r * rng.uniform(0.85, 1.15)
         off = (rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5))
-        t.clump((C + off[0], y + 0.6, C + off[1]), r * rng.uniform(0.85, 1.0), 1.0, r * rng.uniform(0.85, 1.0), rng, 0.0)
+        # r27: the skirt's middle on a block layer (y + 0.9, was y + 0.6): between layers no layer took its full width
+        # and a ragged rim (holes grow toward the edge): from above a skirt of branch tips, not a slab
+        t.clump((C + off[0], y + 0.9, C + off[1]), r * rng.uniform(0.95, 1.1), 1.0, r * rng.uniform(0.95, 1.1), rng, 0.2)
         bite = rng.uniform(0, 2 * math.pi)                       # a missing chunk on one side: not a perfect cone
         for x in range(int(C - r - 1), int(C + r + 2)):
             for z in range(int(C - r - 1), int(C + r + 2)):
                 if math.hypot(x - C, z - C) > r - 0.9 and math.cos(math.atan2(z - C, x - C) - bite) > 0.85:
                     for yy in (y, y + 1):
+                        t.leaf.discard((x, yy, z))
+        # r27 (tree shapes lane: the skirt read as a disc / square from the RTS camera): the outer third of a limbed
+        # skirt survives only along its limbs - from above a soft star of branch tips round the trunk
+        for x in range(int(C - r - 2), int(C + r + 3)):
+            for z in range(int(C - r - 2), int(C + r + 3)):
+                d = math.hypot(x - C, z - C)
+                if angs and d > 0.62 * r and min(abs(math.remainder(math.atan2(z - C, x - C) - a, 2 * math.pi))
+                                                 for a in angs) > 0.42:
+                    for yy in (y, y + 1, y + 2):
                         t.leaf.discard((x, yy, z))
     t.clump((C, h - 0.5, C), 1.3, 1.8, 1.3, rng, 0.0)       # needles round the top of the trunk, not a bare spire
     t.clump((C, h + 0.5, C), 0.9, 1.4, 0.9, rng, 0.0)
@@ -392,10 +413,8 @@ def pine(seed):
     for y in range(3, int(h * 0.55)):                              # dead stubs on the bare trunk
         if rng.random() < 0.35:
             dx, dz = rng.choice(((1, 0), (-1, 0), (0, 1), (0, -1)))
-            side = {(1, 0): "west", (-1, 0): "east", (0, 1): "north", (0, -1): "south"}[(dx, dz)]
-            props = {"north": "false", "south": "false", "east": "false", "west": "false", "waterlogged": "false"}
-            props[side] = "true"                                  # joined to the trunk
-            t.plants[(C + dx, y, C + dz)] = ("spruce_fence", props)
+            # r27: a wood stub, not a fence - a fence is no log, so felling left it hanging in the air
+            t.put_log((C + dx, y, C + dz), "w")
     y = int(h * 0.55)
     ang = rng.uniform(0, 2 * math.pi)
     while y <= h - 1:
@@ -1073,6 +1092,7 @@ def main():
             if dropped:
                 print("  %s_%d: %d leaves further than 6 from a log were left out" % (name, v + 1, dropped))
             trees.append(tree)
+    ship()
     # two samplers for the eyes `structure` lane (one big grid was framed off-centre with trees cut off, reviewer):
     # tree_sampler_a = oak + birch rows, tree_sampler_b = spruce + acacia rows, 3 variants each, on grass
     gap = 10
@@ -1156,6 +1176,14 @@ def main():
         if clipped:
             print("  small_bare_sampler: tree %d lost %d blocks to the pad edge" % (i, clipped))
     s.write(os.path.join(OUT, "small_bare_sampler.nbt"))
+
+
+def ship():
+    """Copies the species templates the game grows into the mod's data (SHIP)."""
+    os.makedirs(SHIP, exist_ok=True)
+    for name in SHIPPED:
+        for v in range(VARIANTS):
+            shutil.copyfile(os.path.join(OUT, "%s_%d.nbt" % (name, v + 1)), os.path.join(SHIP, "%s_%d.nbt" % (name, v + 1)))
 
 
 def _write_piece(s, piece, ox, oz, lift=0):
