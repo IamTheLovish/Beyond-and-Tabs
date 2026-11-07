@@ -95,39 +95,23 @@ public class BlueprintClientEvents {
     /**
      * The friendly ghost (own or allied) the cursor points at, else null: right-clicking it with a builder sends the
      * builder to build it (or join the builder already on its way). A ghost has no blocks, so the cursor's picked block
-     * is the ground behind or under it; the test is the ray against the ghost's drawn box (GhostHit), nearest first.
+     * is the ground behind or under it; the test is the ray against the ghost's drawn box, nearest first. A friendly
+     * building still under construction counts too (same box test), so builders can assist it. The choice is
+     * GhostHit.target; this only feeds it the cursor ray. Called every frame a worker is selected.
      */
     @Nullable
     public static BuildingPlacement ghostUnderCursor() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || GHOSTS.isEmpty())
+        List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
+        if (mc.player == null || GHOSTS.isEmpty() && buildings.isEmpty())
             return null;
         String me = mc.player.getName().getString();
         // the cursor's world pos is where the ray hit the ground; the ray runs along the look vector through it
         Vector3d hit = CursorClientEvents.getCursorWorldPos();
         Vector3d look = MiscUtil.getPlayerLookVector(mc);
-        BlockPos picked = CursorClientEvents.getPreselectedBlockPos();
         double back = 200, ox = hit.x - look.x * back, oy = hit.y - look.y * back, oz = hit.z - look.z * back;
-        BuildingPlacement best = null;
-        double bestT = Double.MAX_VALUE;
-        for (int i = 0, n = GHOSTS.size(); i < n; i++) {
-            BuildingPlacement g = GHOSTS.get(i);
-            if (!sameSide(me, g.ownerName))
-                continue;
-            BlockPos lo = g.minCorner, hi = g.maxCorner;
-            double t = GhostHit.rayEntry(ox, oy, oz, look.x, look.y, look.z,
-                    lo.getX(), lo.getY(), lo.getZ(), hi.getX(), hi.getY(), hi.getZ());
-            boolean holds = picked != null && GhostHit.footprintHolds(lo.getX(), lo.getY(), lo.getZ(),
-                    hi.getX(), hi.getY(), hi.getZ(), picked.getX(), picked.getY(), picked.getZ());
-            if (!GhostHit.hits(t, back, holds))
-                continue;
-            double rank = t >= 0 ? t : back;
-            if (rank < bestT) {
-                bestT = rank;
-                best = g;
-            }
-        }
-        return best;
+        return GhostHit.target(ox, oy, oz, look.x, look.y, look.z, back, CursorClientEvents.getPreselectedBlockPos(),
+            GHOSTS, buildings, owner -> sameSide(me, owner));
     }
 
     @SubscribeEvent

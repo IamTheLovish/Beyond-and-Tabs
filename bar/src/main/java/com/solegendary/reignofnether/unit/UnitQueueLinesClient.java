@@ -68,6 +68,20 @@ public class UnitQueueLinesClient {
         return e == null ? 0 : e.length / UnitQueueSync.INTS_PER_ENTRY;
     }
 
+    /**
+     * Where the unit's queue ends (x, z of its last entry), or null with no queue or when the last entry is an entity
+     * target with no position. Area mex starts a Shift tour there, as BAR does (AreaMex.Builder.of).
+     */
+    public static int[] lastQueuedXZ(int unitId) {
+        int[] e = queues.get(unitId);
+        if (e == null || e.length < UnitQueueSync.INTS_PER_ENTRY)
+            return null;
+        int i = e.length - UnitQueueSync.INTS_PER_ENTRY;
+        if (e[i + 1] == 0 && e[i + 2] == 0 && e[i + 3] == 0 && e[i + 4] >= 0)
+            return null;
+        return new int[] { e[i + 1], e[i + 3] };
+    }
+
     public static void clear() {
         queues = new Int2ObjectOpenHashMap<>();
     }
