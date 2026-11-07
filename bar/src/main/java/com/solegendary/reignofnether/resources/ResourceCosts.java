@@ -309,6 +309,7 @@ public class ResourceCosts {
     public static final ResourceCost ORIFLAMME_ELEPHANT = new ResourceCost(ID, "ORIFLAMME_ELEPHANT");
     public static final ResourceCost GOREHORN_RHINO = new ResourceCost(ID, "GOREHORN_RHINO");
     public static final ResourceCost OSSUARY_BEHEMOTH = new ResourceCost(ID, "OSSUARY_BEHEMOTH");
+    public static final ResourceCost SOUL_PYRE = new ResourceCost(ID, "SOUL_PYRE");
     public static final ResourceCost MOSSBACK_BISON = new ResourceCost(ID, "MOSSBACK_BISON");
     public static final ResourceCost SUN_SPIRE = new ResourceCost(ID, "SUN_SPIRE");
     public static final ResourceCost NECROPOLIS = new ResourceCost(ID, "NECROPOLIS");
@@ -645,6 +646,7 @@ public class ResourceCosts {
         ORIFLAMME_ELEPHANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ORIFLAMME_ELEPHANT);
         GOREHORN_RHINO.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GOREHORN_RHINO);
         OSSUARY_BEHEMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OSSUARY_BEHEMOTH);
+        SOUL_PYRE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SOUL_PYRE);
         MOSSBACK_BISON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOSSBACK_BISON);
         SUN_SPIRE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.SUN_SPIRE);
         NECROPOLIS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.NECROPOLIS);

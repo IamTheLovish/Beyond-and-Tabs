@@ -127,6 +127,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.ORIFLAMME_ELEPHANT.define(BUILDER);
         UnitCosts.GOREHORN_RHINO.define(BUILDER);
         UnitCosts.OSSUARY_BEHEMOTH.define(BUILDER);
+        UnitCosts.SOUL_PYRE.define(BUILDER);
         UnitCosts.MOSSBACK_BISON.define(BUILDER);
         // beasts-2: the other three T2 beasts
         UnitCosts.SHELLBACK_TURTLE.define(BUILDER);
@@ -566,6 +567,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry ORIFLAMME_ELEPHANT = ResourceCostConfigEntry.Unit(720,100,320,80,9, ResourceCosts.ORIFLAMME_ELEPHANT, "Oriflamme Elephant Config");
         public static final ResourceCostConfigEntry GOREHORN_RHINO = ResourceCostConfigEntry.Unit(500,60,220,70,7, ResourceCosts.GOREHORN_RHINO, "Gorehorn Rhino Config");
         public static final ResourceCostConfigEntry OSSUARY_BEHEMOTH = ResourceCostConfigEntry.Unit(500,0,250,70,7, ResourceCosts.OSSUARY_BEHEMOTH, "Ossuary Behemoth Config");
+        // Gravebound's T2 siege (design/defences_tiers.md): 180 metal / 270 energy, ~1.5 Mortar Crawlers, 40 s
+        public static final ResourceCostConfigEntry SOUL_PYRE = ResourceCostConfigEntry.Unit(150,100,60,40,3, ResourceCosts.SOUL_PYRE, "Soul Pyre Config");
         public static final ResourceCostConfigEntry MOSSBACK_BISON = ResourceCostConfigEntry.Unit(420,80,190,60,6, ResourceCosts.MOSSBACK_BISON, "Mossback Bison Config");
         // beasts-2: ~2-2.1x their faction's T2 heavy - 545M/470E turtle (2.1x the Mortar Galley), 610M/520E qilin (2x
         // the Earthshaker), 630M/480E hauler (2x the Steam Juggernaut)

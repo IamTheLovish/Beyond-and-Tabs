@@ -1139,6 +1139,13 @@ public class EntityRegistrar {
                     .sized(EntityType.ZOGLIN.getWidth() * com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit.BASE_SCALE, EntityType.ZOGLIN.getHeight() * com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit.BASE_SCALE)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ossuary_behemoth_unit").toString()));
+    // the Soul Pyre (design/defences_tiers.md): Gravebound's T2 siege unit, on the siege lobber's frame (placeholder body)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.SoulPyreUnit>> SOUL_PYRE_UNIT = ENTITIES.register("soul_pyre_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.SoulPyreUnit::new, MobCategory.CREATURE)
+                    // a low, wide pit: wider and lower than the illager it borrows, still through a 2-wide gate or gap
+                    .sized(1.4f, 1.6f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_pyre_unit").toString()));
     // Alex's Mobs' bison (RenderBison) drawn x1.3
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit>> MOSSBACK_BISON_UNIT = ENTITIES.register("mossback_bison_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit::new, MobCategory.CREATURE)
@@ -1366,6 +1373,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd.itemName -> EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd.itemName -> EntityRegistrar.GOREHORN_RHINO_UNIT.get();
             case com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd.itemName -> EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.monsters.SoulPyreProd.itemName -> EntityRegistrar.SOUL_PYRE_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd.itemName -> EntityRegistrar.MOSSBACK_BISON_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleProd.itemName -> EntityRegistrar.SHELLBACK_TURTLE_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.JadeQilinProd.itemName -> EntityRegistrar.JADE_QILIN_UNIT.get();

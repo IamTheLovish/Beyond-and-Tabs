@@ -148,6 +148,7 @@ ROSTER = [
     ('Sunforged', 't2', 'villagers/OriflammeElephantUnit', 'beast'),
     ('Horde', 't2', 'piglins/GorehornRhinoUnit', 'beast'),
     ('Gravebound', 't2', 'monsters/OssuaryBehemothUnit', 'beast'),
+    ('Gravebound', 't2', 'monsters/SoulPyreUnit', 'artillery'),
     ('Verdant', 't2', 'verdant/MossbackBisonUnit', 'beast'),
     # beasts-2: a mooring fort with a deck battery, a walking Mana Well, a mobile machine foundry
     ('Tidewrought', 't2', 'tide/ShellbackTurtleUnit', 'beast'),
