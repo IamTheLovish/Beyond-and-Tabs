@@ -29,7 +29,7 @@ import java.util.function.ToIntFunction;
 public final class KeybindMigration {
 
     /** The key layout the saved bindings are moved to; stored in the client config as keybind_layout. */
-    public static final int LAYOUT_VERSION = 3;
+    public static final int LAYOUT_VERSION = 4;
 
     /** What {@code savedKey} returns for a binding that must not move: a modifier combo, a mouse button, not found. */
     public static final int CUSTOM = Integer.MIN_VALUE;
@@ -67,7 +67,10 @@ public final class KeybindMigration {
         // Oct 11 (c4d0b47) to Nov 3: Stop was S, sharing the key with pan-down by the tap/hold rule. Nick: a short tap
         // of S while panning stopped the selected workers. Stop is now the Ctrl+S chord, its own key unbound; listed after its layout-1 row so
         // history() names this, the newest move.
-        new Stale(3, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> Ctrl+S (a tap of S while panning stopped workers)")
+        new Stale(3, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "Stop S -> Ctrl+S (a tap of S while panning stopped workers)"),
+        // Oct 21 (b6e85bad): Select all military units moved K -> "-" because K is build slot 7. Layouts 1 to 3 forgot
+        // the row, so every install that saved K kept it, and K picked the building instead (Lane C tester, TESTER-ASKS 16).
+        new Stale(4, "key.reignofnether.select_army", GLFW.GLFW_KEY_K, "Select army K -> - (K is build slot 7)")
     );
 
     private KeybindMigration() { }

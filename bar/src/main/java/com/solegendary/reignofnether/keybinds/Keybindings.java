@@ -98,6 +98,10 @@ public class Keybindings {
         new Keybinding("key.reignofnether.build_grid_11", GLFW.GLFW_KEY_C, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "C"),
         new Keybinding("key.reignofnether.build_grid_12", GLFW.GLFW_KEY_V, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "V")
     };
+    /** The four BAR build-tab bindings (Z / X / C / V), for rules that keep a builder's card clear of them. */
+    public static List<Keybinding> buildCategoryKeys() {
+        return List.of(buildTabEconomy, buildTabMilitary, buildTabDefence, buildTabTech);
+    }
     public static final Keybinding hotkey1        = new Keybinding("key.reignofnether.hotkey_1",        GLFW.GLFW_KEY_V,             CATEGORY_RTS, "V");
     public static final Keybinding hotkey2        = new Keybinding("key.reignofnether.hotkey_2",        GLFW.GLFW_KEY_L,             CATEGORY_RTS, "L");
     public static final Keybinding minimapToggle  = new Keybinding("key.reignofnether.minimap_toggle",        GLFW.GLFW_KEY_M,             CATEGORY_RTS, "M");

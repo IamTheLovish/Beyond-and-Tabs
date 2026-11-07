@@ -2366,10 +2366,16 @@ public class HudClientEvents {
         boolean cardKey = isCardKey(key);
         // the stats table (I / F4) and clean view (=): quiet while the card has a button on the key
         HudPanels.onKey(key, cardKey);
+        // one key press does ONE thing: the first button that answers to it (an ability and a build slot on the same
+        // key used to fire together - Q armed the Mausoleum ghost AND cast; bugsweep 1, bug 2)
+        List<Button> pressable = new ArrayList<>();
         for (Button button : renderedButtons)
             // a build grid button's key is its cell's grid key, handled above (BuildTabs.onKey), never its own hotkey
             if ((!cardKey || cardButtons.contains(button)) && !BuildTabs.isGridButton(button) && !controlGroupButtons.contains(button))   // groups: on the press
-                button.checkPressed(key);
+                pressable.add(button);
+        Button pressed = com.solegendary.reignofnether.keybinds.KeyPress.firstThatFires(pressable, b -> b.firesOn(key));
+        if (pressed != null)
+            pressed.checkPressed(key);
         if (key == Keybindings.getFnum(10).getKey() && OrthoviewClientEvents.isEnabled())
             HelperButtons.cycleIdleWorker(false);
         // BAR: Space looks at the last "under attack" alert, unless the card uses the key (the item shop's Space)

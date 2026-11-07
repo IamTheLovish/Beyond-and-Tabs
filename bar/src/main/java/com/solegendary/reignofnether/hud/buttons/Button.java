@@ -407,6 +407,11 @@ public class Button {
         }
     }
 
+    /** Whether a press of {@code key} would run this button (enabled, in the RTS view, bound to the key). */
+    public boolean firesOn(int key) {
+        return OrthoviewClientEvents.isEnabled() && isEnabled.get() && hotkey != null && hotkey.matches(key);
+    }
+
     // must be done from key press event
     public void checkPressed(int key) {
         if (!OrthoviewClientEvents.isEnabled() || !isEnabled.get())
