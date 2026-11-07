@@ -135,6 +135,90 @@ public final class DeathFall {
         return hurtTime > 0 || (deathTime > 0 && !owned);
     }
 
+    // ---- a hovering body's death (the Light Grid's drones: HoverBody, BoneMap#fallsHovering) ----
+    // A drone does not topple over its feet like a man: its lift cuts out and it drops from its hover height, tipping
+    // away from the blow only as far as a crashed hull lies. Same latch, same kinds, down before deathTime 20, so the
+    // body is kept (Corpses) and the faction's finish plays on it.
+
+    /** Ticks of the jolt before the drop: a heavy blow 1, a blow 2, no blow 3 (the thrust sputters first). */
+    static float hoverReelTicks(float kind) {
+        return kind == HEAVY ? 1f : kind == BLOW ? 2f : 3f;
+    }
+
+    /** Ticks of the drop itself, the unit's own +-1. */
+    static float hoverFallTicks(float kind, int id) {
+        return (kind == HEAVY ? 8f : 9f) + (Desync.hash01(id, 7600) * 2f - 1f);
+    }
+
+    /** The tick a hovering body hits the ground. */
+    public static float hoverImpactTick(float kind, int id) {
+        return hoverReelTicks(kind) + hoverFallTicks(kind, id);
+    }
+
+    /** How far a hovering body has dropped at t ticks into its death, px: none in the jolt, then gravity (u^2). */
+    public static float hoverDropPx(float t, float kind, int id, float hoverPx) {
+        if (kind == ALIVE || !(t > 0f))
+            return 0f;
+        float u = Mth.clamp((t - hoverReelTicks(kind)) / hoverFallTicks(kind, id), 0f, 1f);
+        return hoverPx * u * u;
+    }
+
+    /** A crashed hull's tilt at rest, degrees: 22-36, the unit's own. */
+    static float hoverCrashDeg(int id) {
+        return 22f + 14f * Desync.hash01(id, 7700);
+    }
+
+    /** The hull's tilt away from the blow at t, degrees: the jolt, a growing tip in the drop, one rebound, rest. */
+    static float hoverTiltDeg(float t, float kind, int id) {
+        if (!(t > 0f))
+            return 0f;
+        float reel = hoverReelTicks(kind), fall = hoverFallTicks(kind, id), crash = hoverCrashDeg(id);
+        float jolt = kind == HEAVY ? 12f : kind == BLOW ? 8f : 3f;
+        if (t <= reel)
+            return jolt * Life.smooth(t / reel);
+        float u = (t - reel) / fall;
+        if (u < 1f)
+            return jolt + (crash - jolt) * (float) Math.pow(u, 1.5);
+        float after = t - reel - fall;
+        return crash - 6f * (float) Math.exp(-after / 3f) * Math.abs(Mth.sin(after * Mth.PI / 4f));
+    }
+
+    /** The hull's rebound off the ground after the impact, px: one small hop that dies away. */
+    static float hoverBouncePx(float t, float kind, int id) {
+        float after = t - hoverImpactTick(kind, id);
+        if (!(after > 0f))
+            return 0f;
+        return 1.6f * (float) Math.exp(-after / 3f) * Math.abs(Mth.sin(after * Mth.PI / 4f));
+    }
+
+    /**
+     * A hovering body's death at t ticks (deathTime - 1 + the partial tick) into {@code out} ({@link #OUT} floats):
+     * only the whole body moves (Motion.ROOT) - dropped {@link #hoverDropPx}, tipped {@link #hoverTiltDeg} along the
+     * latched fall direction about its feet (MotionPass.tilt), lifted by what that tip would push the hull's low edge
+     * into the ground ({@code hoverPx} its bottom's height at rest, {@code halfPx} its half width), so the edge lands
+     * on the ground and stays there; thrown a little along the blow. Nothing latched leaves it all zero.
+     */
+    public static void poseHover(float[] s, int b, int id, float t, float hoverPx, float halfPx, float[] out) {
+        for (int i = 0; i < OUT; i++)
+            out[i] = 0f;
+        float kind = s[b + DEATH_KIND];
+        if (kind == ALIVE || !Float.isFinite(t))
+            return;
+        t = Mth.clamp(t, 0f, END);
+        float az = Float.isFinite(s[b + DEATH_AZ]) ? s[b + DEATH_AZ] : 0f;
+        float fwd = Mth.cos(az), right = Mth.sin(az);
+        float tilt = hoverTiltDeg(t, kind, id) * D;
+        add(out, Motion.ROOT, Motion.RX, tilt * fwd);
+        add(out, Motion.ROOT, Motion.RZ, tilt * right);
+        float side = Desync.hash01(id, 7300) < 0.5f ? -1f : 1f;
+        add(out, Motion.ROOT, Motion.RY, side * 10f * Life.smooth(t / hoverImpactTick(kind, id)) * D);
+        float edge = hoverPx * (1f - Mth.cos(tilt)) + halfPx * Math.abs(Mth.sin(tilt));
+        add(out, Motion.ROOT, Motion.TY, -hoverDropPx(t, kind, id, hoverPx) + edge + hoverBouncePx(t, kind, id));
+        float slide = (kind == HEAVY ? 6f : kind == BLOW ? 3f : 1f) * Life.smooth(t / hoverImpactTick(kind, id));
+        add(out, Motion.ROOT, Motion.TZ, slide * fwd);
+        add(out, Motion.ROOT, Motion.TX, slide * right);
+    }
+
     /** How far the body has sunk at deathTime t, blocks: 0 until HOLD_END, then down to SINK_BLOCKS at END. */
     public static float sinkBlocks(float t) {
         if (!(t > HOLD_END))

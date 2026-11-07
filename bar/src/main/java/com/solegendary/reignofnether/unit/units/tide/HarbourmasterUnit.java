@@ -23,6 +23,12 @@ import javax.annotation.Nullable;
 public class HarbourmasterUnit extends ShipwrightUnit {
 
     public static final float BUILD_POWER = 2.0f;
+    /** None of its own: Draw Grid stays the Light Grid Builder Drone's alone (lovish, Nov 6: "Keep it for Light Grid
+     *  only"); the Harbourmaster, like every other builder, has no ability (AC-1, Oct 26). */
+    public static final com.solegendary.reignofnether.ability.Abilities ABILITIES = new com.solegendary.reignofnether.ability.Abilities();
+
+    @Override
+    protected com.solegendary.reignofnether.ability.Abilities baseAbilities() { return ABILITIES; }
 
     public HarbourmasterUnit(EntityType<? extends Vindicator> entityType, Level level) {
         super(entityType, level);
