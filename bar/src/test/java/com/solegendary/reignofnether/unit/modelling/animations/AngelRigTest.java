@@ -460,12 +460,16 @@ class AngelRigTest {
         return steps;
     }
 
+    /** The most a warm step may allocate, on average (bytes): HotSpot's counter reads 0 for an allocation-free loop. */
+    private static final double MAX_BYTES_PER_STEP = 64.0;
+
     /**
-     * The rig steps once per client tick for every angel on screen: once warm (classes loaded, the JIT done, every
-     * path taken once on other states), stepping allocates nothing. Measured with the thread's allocation counter over
-     * about 200 steps per kind; the bound is the counter's own noise, read over two back-to-back calls just before
-     * (0 bytes on HotSpot), never a number picked to pass. Skipped where the JVM has no such
-     * counter.
+     * The rig steps once per client tick for every angel on screen, so a step allocates nothing. Allocation, not time:
+     * after a warm-up of at least 200 steps (one tour of every clip per kind on other states: classes loaded, the key
+     * tables built), about 1000 steps of every clip of every kind on fresh states (made before the counter is read)
+     * must average under {@link #MAX_BYTES_PER_STEP} bytes, read with the thread's allocation counter. The allocating
+     * port measured ~15 KB per step here (8,498,448 bytes over 550 steps), so the cap is not fitted to the code.
+     * Skipped, not passed, where the JVM has no such counter.
      */
     @Test
     void step_allocates_nothing_once_warm() {
@@ -476,31 +480,32 @@ class AngelRigTest {
         bean.setThreadAllocatedMemoryEnabled(true);
         long tid = Thread.currentThread().getId();
         AngelRig.Kind[] kindsOf = AngelRig.Kind.values();
-        for (int round = 0; round < 3; round++)          // warm: every path, several times (the JIT)
-            for (int kind = 0; kind < 3; kind++)
-                tour(kind, new AngelRig.State(kindsOf[kind], SEED, false), new AngelRig.State(kindsOf[kind], SEED, true),
-                    new AngelRig.Inputs(), new AngelRig.Pose());
-        // fresh states and their inputs / poses, made before the counter is read
-        AngelRig.State[] st = new AngelRig.State[3], arrive = new AngelRig.State[3];
-        AngelRig.Inputs[] in = new AngelRig.Inputs[3];
-        AngelRig.Pose[] pose = new AngelRig.Pose[3];
-        for (int kind = 0; kind < 3; kind++) {
-            st[kind] = new AngelRig.State(kindsOf[kind], SEED, false);
-            arrive[kind] = new AngelRig.State(kindsOf[kind], SEED, true);
-            in[kind] = new AngelRig.Inputs();
-            pose[kind] = new AngelRig.Pose();
+        int warm = 0;
+        for (int kind = 0; kind < 3; kind++)
+            warm += tour(kind, new AngelRig.State(kindsOf[kind], SEED, false),
+                new AngelRig.State(kindsOf[kind], SEED, true), new AngelRig.Inputs(), new AngelRig.Pose());
+        assertTrue(warm >= 200, "the warm-up ran " + warm + " steps");
+        int rounds = 2;                                  // two tours of the three kinds: ~1100 steps
+        AngelRig.State[] st = new AngelRig.State[3 * rounds], arrive = new AngelRig.State[3 * rounds];
+        AngelRig.Inputs[] in = new AngelRig.Inputs[3 * rounds];
+        AngelRig.Pose[] pose = new AngelRig.Pose[3 * rounds];
+        for (int i = 0; i < 3 * rounds; i++) {
+            st[i] = new AngelRig.State(kindsOf[i % 3], SEED, false);
+            arrive[i] = new AngelRig.State(kindsOf[i % 3], SEED, true);
+            in[i] = new AngelRig.Inputs();
+            pose[i] = new AngelRig.Pose();
         }
-        long n0 = bean.getThreadAllocatedBytes(tid);   // the counter's own noise: two reads around nothing
-        long noise = bean.getThreadAllocatedBytes(tid) - n0;
         long before = bean.getThreadAllocatedBytes(tid);
         int steps = 0;
-        for (int kind = 0; kind < 3; kind++)
-            steps += tour(kind, st[kind], arrive[kind], in[kind], pose[kind]);
+        for (int i = 0; i < 3 * rounds; i++)
+            steps += tour(i % 3, st[i], arrive[i], in[i], pose[i]);
         long bytes = bean.getThreadAllocatedBytes(tid) - before;
-        System.out.println("AngelRigTest allocation: " + bytes + " bytes over " + steps + " steps (counter noise "
-            + noise + " bytes)");
-        assertTrue(bytes <= noise, bytes + " bytes allocated over " + steps + " warm steps (the counter's noise is "
-            + noise + "): the rig must not allocate per tick");
+        double perStep = bytes / (double) steps;
+        System.out.printf("AngelRigTest allocation: %d bytes over %d steps (%.1f per step; warm-up %d steps)%n", bytes,
+            steps, perStep, warm);
+        assertTrue(steps >= 1000, "measured " + steps + " steps");
+        assertTrue(perStep < MAX_BYTES_PER_STEP, String.format("%d bytes over %d warm steps = %.1f per step (cap %.0f): "
+            + "the rig must not allocate per tick", bytes, steps, perStep, MAX_BYTES_PER_STEP));
     }
 
     // ------------------------------------------------------------------ DSL -> ModelPart signs
