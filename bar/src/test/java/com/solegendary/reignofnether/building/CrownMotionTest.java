@@ -37,7 +37,7 @@ class CrownMotionTest {
         List<CrownMotion.Crown> crowns = CrownMotion.crowns(s.xs, s.ys, s.zs, new int[s.xs.length]);
         CrownMotion.Crown big = crowns.get(0);
         assertTrue(big.cells() >= 400, "the great cherry crown is one crown: " + big);
-        assertEquals(12, big.baseY(), "it sits on the trunk at y 12: " + big);
+        assertEquals(18, big.baseY(), "it sits on the trunk at y 18 (its blossom drips; the crown proper from y 21), lifted high over the roof (the tall tree, Nov 5; his references, Nov 5 evening; framed in the RTS view, Nov 6): " + big);
         assertTrue(big.radius() >= 7f && big.radius() <= 8.5f, "a ~15-block crown: " + big);
         // its pivot is over the trunk: wood within 1.5 blocks of it, in the crown's base layer or the two below
         assertTrue(s.woodNear(big.cx(), big.cz(), big.baseY() - 2, big.baseY(), 1.5f) > 0, "no trunk under " + big);
