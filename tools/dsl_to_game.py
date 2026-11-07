@@ -122,7 +122,7 @@ VALUE_CURVE = ((0, 0), (60, 48), (100, 78), (130, 112), (150, 172), (170, 212), 
 VALUE_CURVE_REAL = ((0, 0), (60, 48), (100, 78), (130, 112), (150, 166), (170, 198), (205, 226), (255, 240))
 # polished metal under Minecraft's flat entity light reads as metal by what it REFLECTS: a painted sky over a dark
 # horizon over the ground's bounce, on every upright face (the realism pass; strength per material)
-REFLECT = {"plate": 1.0, "blade": 1.25, "gold": 0.8}
+REFLECT = {"plate": 1.0, "blade": 1.25, "gold": 0.8, "carbon": 0.7}   # carbon: the Light Grid's gloss coat
 
 
 def reflection(t, horizon, strong=False):
@@ -695,6 +695,11 @@ def build(m, cls, team_colours, layer, density):
     # the painted base uses the game-value palette; the glow keeps its own colours (it is drawn full-bright)
     pal = {k: (rgb if k in set(m.get("emissive", [])) else game_value(realistic_colour(k, rgb))) for k, rgb in raw.items()}
     emissive = set(m.get("emissive", []))
+    # a TEAM LIGHT (the Light Grid's light lines, design/ai_faction.md): a colour both emissive and on --team is light in
+    # the owner's colour - painted bright grey into its own _team_glow image (GeneratedBodies.teamGlow multiplies it by
+    # the owner's colour, full-bright), never into the plain glow (white over the team colour) nor the cloth mask
+    team_light = set(team_colours) & emissive
+    cloth = [c for c in team_colours if c not in team_light]
 
     # 1. UV islands: one per cube, packed in model pixels
     cubes = []
@@ -713,11 +718,12 @@ def build(m, cls, team_colours, layer, density):
         width *= 2
     tw, th = width, 1 << max(5, math.ceil(math.log2(max(32, atlas.height()))))
     D = density
-    imgs = {k: Image.new("RGBA", (tw * D, th * D), (0, 0, 0, 0)) for k in ("base", "team", "glow")}
+    imgs = {k: Image.new("RGBA", (tw * D, th * D), (0, 0, 0, 0))
+            for k in ("base", "team", "glow") + (("team_glow",) if team_light else ())}
     paint = {k: Painter(img, D, keep_light=(k == "base"), mask=(k == "team")) for k, img in imgs.items()}
     pbr = PBRMaps(imgs["base"].size)
     hi, lo = TEAM_DYE if materials.REALISM else (255, 190)
-    team_grey = {col: ((hi,) * 3 if k == 0 else (lo,) * 3) for k, col in enumerate(team_colours)}
+    team_grey = {col: ((hi,) * 3 if k == 0 else (lo,) * 3) for k, col in enumerate(cloth)}
     # each bone's vertical extent (its unrotated cubes): the side faces shade by height in the bone
     extent = {}
     for b in m["bones"]:
@@ -749,7 +755,11 @@ def build(m, cls, team_colours, layer, density):
             # the mask carries the same light, shade and weave as the paint, in grey, so the owner's colour is too
             paint["team"].island(u, v, w, h, d, team_grey[col], material_of(col), seed=n, span=span, mat=mat,
                                  light=light, open_z=oz, style=style)
-        if col in emissive:
+        if col in team_light:
+            # bright and grey: the owner's colour times ~0.92 of itself, the same hue on every team
+            g = max(200, int(round(0.2126 * raw[col][0] + 0.7152 * raw[col][1] + 0.0722 * raw[col][2])))
+            paint["team_glow"].island(u, v, w, h, d, (g, g, g), flat=True)
+        elif col in emissive:
             paint["glow"].island(u, v, w, h, d, raw[col], flat="fruit" if "berry" in col else True)
 
     # 2. the part tree, checked against the concept renderer
@@ -773,7 +783,7 @@ def build(m, cls, team_colours, layer, density):
         upgrades=", ".join('"%s"' % t for t in upgrade_tags), density=D,
         cubes=len(cubes), parts=count_parts(root) - 1, collect="\n        ".join(collect_lines(root, m)),
         passes="\n        ".join(pass_lines(root, {uvs[(bn, i)]: c["color"] for (bn, i, c, _d) in cubes},
-                                            set(team_colours), emissive)),
+                                            set(cloth), emissive)),
         parents=",\n        ".join('Map.entry("%s", "%s")' % (b["name"], b.get("parent") or "") for b in m["bones"]))
     imgs["base_n"], imgs["base_s"] = pbr.images()
     return java, imgs, dict(root=root, tw=tw, th=th, cubes=len(cubes), parts=count_parts(root) - 1, worst=worst,
@@ -986,6 +996,8 @@ def main():
     if team:
         imgs["team"].save(os.path.join(TEX_DIR, a.texture + "_team.png"), optimize=True)
     imgs["glow"].save(os.path.join(TEX_DIR, a.texture + "_glow.png"), optimize=True)
+    if "team_glow" in imgs:
+        imgs["team_glow"].save(os.path.join(TEX_DIR, a.texture + "_team_glow.png"), optimize=True)
     # the LabPBR maps for shader packs: the base's, and the same maps again for the team overlay (drawn over the cloth
     # with its own texture, so a shader binds ITS maps there). Full size: the half-size copies (until Oct 15) dropped
     # every other texel's normal, so the owner's cloth lit flatter and blockier than the paint under it

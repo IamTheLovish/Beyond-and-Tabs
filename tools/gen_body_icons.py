@@ -34,7 +34,12 @@ ICON = {"radiant_paladin_unit": "iron_golem", "field_medic_unit": "witch", "halb
         "crossbow_levy_unit": "pillager", "squire_runner_unit": "militia",
         # Oct 21: the four Sunforged men off the villager body (tools/human_kit.py)
         "dome_cleric_unit": "evoker", "royal_architect_body_unit": "royal_architect",
-        "field_mason_body_unit": "field_mason", "dawn_paladin_body_unit": "dawn_paladin"}
+        "field_mason_body_unit": "field_mason", "dawn_paladin_body_unit": "dawn_paladin",
+        # Nov 6: the Light Grid's Builder Drone (the Shipwright converted in place: its icon keeps the old name)
+        "builder_drone_unit": "shipwright"}
+# Bodies with no head to crop (a drone): the whole body as the RTS camera sees it, in their faction's own frame -
+# (gradient top, gradient bottom, frame colour). The Light Grid: near-black glass and a cool light border.
+WHOLE = {"builder_drone_unit": ((34, 40, 52), (8, 10, 14), (120, 220, 255))}
 TEAM = (58 / 255, 96 / 255, 190 / 255)              # the HUD shows the owner's blue
 BG_TOP, BG_BOTTOM, FRAME = (88, 118, 170), (30, 40, 70), (226, 186, 80)   # the framed icons' house colours
 CROP = 1.4                                            # the square crop's side, in head sizes (the house icons: head ~70%)
@@ -65,21 +70,38 @@ def bust(model_path, team):
     return Image.fromarray(a).crop((cx - side // 2, top, cx - side // 2 + side, top + side))
 
 
-def portrait(crop):
+def whole(model_path, team):
+    """The whole body from the RTS view, cropped square round it (RGBA, transparent background)."""
+    m = render_concept.load_model(model_path)
+    m["_path"] = os.path.abspath(model_path)
+    _java, imgs, info = d2g.build(m, "Preview", team.split(","), "preview", d2g.DENSITY)
+    pose = {n: d2g.mc_rot(r) for n, r in m["pose"].items()}
+    owner = d2g.owner_dye(TEAM)
+    im, _box, mask, _ = gp.render(gp.faces_of(info["root"], pose, True, False), imgs, d2g.DENSITY, gp.VIEWS["rts"],
+                                  512, owner, None, with_mask=True)
+    ys, xs = np.where(mask)
+    side = int(max(ys.max() - ys.min(), xs.max() - xs.min()) * 1.02)
+    cx, cy = (xs.min() + xs.max()) // 2, (ys.min() + ys.max()) // 2
+    a = np.asarray(im.convert("RGBA")).copy()
+    a[..., 3] = mask * 255
+    return Image.fromarray(a).crop((cx - side // 2, cy - side // 2, cx - side // 2 + side, cy - side // 2 + side))
+
+
+def portrait(crop, bg_top=BG_TOP, bg_bottom=BG_BOTTOM, frame=FRAME):
     """32 x 32: the gradient, the bust (28 px, lightly sharpened so the helm edges hold), a gold frame with a dark
     inner line; shown at 64 x 64 (nearest), like the other framed icons."""
     c = Image.new("RGBA", (32, 32))
     px = c.load()
     for y in range(32):
-        col = mix(BG_TOP, BG_BOTTOM, y / 31) + (255,)
+        col = mix(bg_top, bg_bottom, y / 31) + (255,)
         for x in range(32):
             px[x, y] = col
     small = crop.resize((28, 28), Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=1, percent=60, threshold=2))
     c.alpha_composite(small, (2, 3))
-    dark = tuple(int(v * 0.55) for v in FRAME) + (255,)
+    dark = tuple(int(v * 0.55) for v in frame) + (255,)
     for i in range(32):
         for x, y in ((i, 0), (i, 31), (0, i), (31, i)):
-            px[x, y] = FRAME + (255,)
+            px[x, y] = tuple(frame) + (255,)
     for i in range(1, 31):
         for x, y in ((i, 1), (i, 30), (1, i), (30, i)):
             px[x, y] = dark
@@ -87,8 +109,8 @@ def portrait(crop):
 
 
 def icons(only=()):
-    return {ICON[tex]: portrait(bust(model, team)) for model, _cls, tex, team, *_ in export_bodies.BODIES
-            if not only or any(o in tex for o in only)}
+    return {ICON[tex]: (portrait(whole(model, team), *WHOLE[tex]) if tex in WHOLE else portrait(bust(model, team)))
+            for model, _cls, tex, team, *_ in export_bodies.BODIES if not only or any(o in tex for o in only)}
 
 
 def main():
