@@ -2099,28 +2099,10 @@ def assembly_works():
 
 
 def rail_battery():
-    """The Brassworks T2 defence: a rail cannon on a blackstone emplacement - a deepslate-brick plinth, a soot drum
-    with brass bands, the brass turret block on top with two lightning-rod rails pointing out over the -z side, a
-    glowing coil (a shroomlight in an iron-bar cage would trap nothing but read as a furnace: a redstone lamp instead).
-    3 x 6 x 3, solid all the way up: nothing to stand in."""
-    s = Structure(3, 6, 3)
-    for x in range(3):
-        for z in range(3):
-            s.set(x, 0, z, "deepslate_bricks")
-            s.set(x, 1, z, SOOT_B)
-    for x in range(3):
-        for z in range(3):
-            s.set(x, 2, z, BRASS if (x + z) % 2 == 0 else SOOT)
-    s.set(1, 3, 1, "redstone_lamp", lit="false")
-    for (x, z) in ((0, 1), (2, 1), (1, 0), (1, 2)):
-        s.set(x, 3, z, BRASS_ST, facing={(0, 1): "east", (2, 1): "west", (1, 0): "south", (1, 2): "north"}[(x, z)],
-              half="bottom", shape="straight", **DRY_)
-    s.set(1, 4, 1, BRASS)
-    s.set(0, 4, 1, "lightning_rod", facing="north", powered="false", waterlogged="false")
-    s.set(2, 4, 1, "lightning_rod", facing="north", powered="false", waterlogged="false")
-    s.set(1, 5, 1, BRASS_SL, type="bottom", **DRY_)
-    fill_air(s)
-    return s
+    """The Brassworks T2 defence: a coil mast on a blackstone plinth, drawn by tools/def_rail_battery.py (the blind
+    critic's Nov 2026 redraw; tests in tools/test_rail_battery.py)."""
+    import def_rail_battery
+    return def_rail_battery.build()
 
 
 # ---- Tidewrought / Stormcallers / Brassworks / Verdant economy: bespoke takes (design/building_detail.md) --------
