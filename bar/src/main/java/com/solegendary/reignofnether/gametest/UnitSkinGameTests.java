@@ -96,7 +96,10 @@ public class UnitSkinGameTests {
             return;
         }
         for (String body : bodies) {
-            for (String file : List.of(body + ".png", body + "_team.png", body + "_glow.png")) {
+            List<String> files = new ArrayList<>(List.of(body + ".png", body + "_team.png", body + "_glow.png"));
+            if (Files.exists(dir.resolve(body + "_team_glow.png")))
+                files.add(body + "_team_glow.png");   // a team light (the Light Grid's lines): mipped like the glow
+            for (String file : files) {
                 Path path = dir.resolve(file);
                 if (!Files.exists(path)) {
                     wrong.add(file + " is missing");

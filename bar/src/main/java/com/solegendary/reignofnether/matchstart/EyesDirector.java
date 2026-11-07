@@ -2464,6 +2464,11 @@ public final class EyesDirector {
         // nbt entry), so the wheel and the count halo are on screen
         { "TitheBinderUnit", "07za_tithe_binder_close", "07zb_tithe_binder_walk", "07zc_tithe_binder_volley", "tithe_binder_unit",
             "{BoundWeapons:6}" },
+        // the Light Grid's Builder Drone (Nov 6, design/ai_faction.md): the hover rig's bob, lean and bank, the arms'
+        // strike and the team light lines; then the Sunforged Field Mason, the best generated constructor body, in the
+        // same run as its yardstick (a critic compares the two inside one tour, never across runs)
+        { "ShipwrightUnit", "07zp_builder_drone_close", "07zq_builder_drone_walk", "07zr_builder_drone_attack", "shipwright_unit" },
+        { "FieldMasonUnit", "07zs_field_mason_close", "07zt_field_mason_walk", "07zu_field_mason_attack", "field_mason_unit" },
     };
     /** A CLOSE_UPS row may end in an nbt entry ("{...}") its stand-in is summoned with; it is not a numeric entry. */
     private static String nbtOf(String[] names) {

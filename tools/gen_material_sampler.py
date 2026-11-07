@@ -145,7 +145,63 @@ def terrain_sampler():
     return s, near
 
 
+# Wood sampler (Nov 5 2026 - lovish: "the tree looked terrible" / "the texture for it", playing with no shader pack):
+# every wood the pack's trees use, side by side, each also shot UP CLOSE (wood_sampler.nbt.near), as he looked at them
+# in creative. Per wood, 5 blocks apart along x (a crown is 5 wide), the camera on the +z side: a bare 3-high post (the bark) and a log
+# lying along z (its end grain facing the camera) in the front row, a 2x2x2 leaf cube in the middle, a small tree at
+# the back. The nether stems get a post and an end only; the azaleas a leaf cube each.
+WOODS = (("oak", "oak_log", "oak_leaves"), ("spruce", "spruce_log", "spruce_leaves"),
+         ("birch", "birch_log", "birch_leaves"), ("jungle", "jungle_log", "jungle_leaves"),
+         ("acacia", "acacia_log", "acacia_leaves"), ("dark_oak", "dark_oak_log", "dark_oak_leaves"),
+         ("mangrove", "mangrove_log", "mangrove_leaves"), ("cherry", "cherry_log", "cherry_leaves"),
+         ("crimson", "crimson_stem", None), ("warped", "warped_stem", None))
+EXTRA_LEAVES = ("azalea_leaves", "flowering_azalea_leaves")
+LEAF_PROPS = dict(persistent="true", distance="1", waterlogged="false")
+
+
+def wood_sampler():
+    n = len(WOODS) + len(EXTRA_LEAVES)
+    s = Structure(n * 5 + 1, 9, 12)
+    near = []
+    s.fill(0, 0, 0, n * 5, 0, 11, "grass_block", snowy="false")
+    for i, (wood, log, leaves) in enumerate(WOODS):
+        x0 = 1 + i * 5
+        for y in (1, 2, 3):                             # the post: bark on four sides
+            s.set(x0, y, 9, log, axis="y")
+        s.set(x0 + 2, 1, 9, log, axis="z")              # lying along z: the end grain faces the camera
+        near.append((wood + "_bark", x0 + 0.5, 2.5, 10.0))
+        near.append((wood + "_end", x0 + 2.5, 1.5, 10.0))
+        if leaves is None:
+            continue
+        s.fill(x0, 1, 5, x0 + 1, 2, 6, leaves, **LEAF_PROPS)
+        near.append((wood + "_leaves", x0 + 1.0, 2.0, 7.0))
+        for y in range(1, 5):                           # a small tree: a 4-block trunk, a crown on top
+            s.set(x0 + 1, y, 2, log, axis="y")
+        for dy, r in ((3, 2), (4, 2), (5, 1), (6, 0)):
+            for dx in range(-r, r + 1):
+                for dz in range(-r, r + 1):
+                    if dx * dx + dz * dz > r * r + 1 or (dx == 0 and dz == 0 and dy < 5):
+                        continue
+                    s.set(x0 + 1 + dx, dy, 2 + dz, leaves, **LEAF_PROPS)
+    for j, leaves in enumerate(EXTRA_LEAVES):
+        x0 = 1 + (len(WOODS) + j) * 5
+        s.fill(x0, 1, 5, x0 + 1, 2, 6, leaves, **LEAF_PROPS)
+        near.append((leaves, x0 + 1.0, 2.0, 7.0))
+    return s, near
+
+
+def write_near(path, near):
+    with open(path + ".near", "w") as f:
+        f.write("# close-up points for EyesDirector (name x y z, structure-local) - tools/gen_material_sampler.py\n")
+        for name, x, y, z in near:
+            f.write("%s %.2f %.2f %.2f\n" % (name, x, y, z))
+
+
 def main():
+    ws, wnear = wood_sampler()
+    wpath = os.path.join(os.path.dirname(OUT), "wood_sampler.nbt")
+    ws.write(wpath)
+    write_near(wpath, wnear)
     ts, near = terrain_sampler()
     tpath = os.path.join(os.path.dirname(OUT), "terrain_sampler.nbt")
     ts.write(tpath)

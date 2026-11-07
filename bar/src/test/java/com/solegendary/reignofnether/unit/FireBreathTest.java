@@ -57,6 +57,21 @@ class FireBreathTest {
         assertEquals(FireBreath.sweep(10), FireBreath.sweep(10.0), 1e-12, "the client's fractional sweep agrees on whole ticks");
     }
 
+    /** From the air the strafe starts ON the target and runs AIR_SWEEP past it, never short (eyes: 3-4 blocks short). */
+    @Test
+    void from_the_air_the_strafe_starts_on_the_target_and_runs_past_it() {
+        double[] off = new double[3];
+        FireBreath.airOffset(1, 0, off);
+        assertEquals(5.0, FireBreath.aim(false, 5.0, off[0], FireBreath.sweep(0)), 1e-9, "the first burn lands on the target");
+        assertEquals(5.0 + FireBreath.AIR_SWEEP, FireBreath.aim(false, 5.0, off[0], FireBreath.sweep(FireBreath.TICKS - 1)),
+            1e-9, "the last tick lands AIR_SWEEP past it");
+        for (int t = 0; t < FireBreath.TICKS; t++)
+            assertTrue(FireBreath.aim(false, 5.0, off[0], FireBreath.sweep(t)) >= 5.0 - 1e-9,
+                "tick " + t + ": the airborne aim falls short of the target");
+        // landed it still swings side to side across the target, as far each way
+        assertEquals(FireBreath.along(2.0, 1.5, 0.2), FireBreath.aim(true, 2.0, 1.5, 0.2), 1e-12, "the landed swing");
+    }
+
     @Test
     void from_the_air_the_target_burns_on_every_pulse_of_the_strafe() {
         for (double up : new double[] { 10.8, AIR_JAWS_UP, 16.8 }) {
@@ -70,7 +85,7 @@ class FireBreathTest {
                     if (!FireBreath.pulse(t))
                         continue;
                     double s = FireBreath.sweep(t);
-                    double ax = FireBreath.along(ahead, off[0], s), ay = -up, az = FireBreath.along(0, off[2], s);
+                    double ax = FireBreath.aim(false, ahead, off[0], s), ay = -up, az = FireBreath.aim(false, 0, off[2], s);
                     double[] d = unit(ax, ay, az);
                     double len = FireBreath.length(false, Math.sqrt(ax * ax + ay * ay + az * az));
                     assertTrue(FireBreath.reaches(0, 0, 0, d[0], d[1], d[2], len, FireBreath.tanHalf(false),
@@ -110,7 +125,7 @@ class FireBreathTest {
             if (!FireBreath.pulse(t))
                 continue;
             double s = FireBreath.sweep(t);
-            double ax = FireBreath.along(6, off[0], s), az = FireBreath.along(0, off[2], s);
+            double ax = FireBreath.aim(true, 6, off[0], s), az = FireBreath.aim(true, 0, off[2], s);
             double[] d = unit(ax, -jy, az);
             double len = FireBreath.length(true, Math.sqrt(ax * ax + jy * jy + az * az)), tan = FireBreath.tanHalf(true);
             assertEquals(FireBreath.GROUND_LENGTH, len, 1e-9, "the landed cone has its own length");

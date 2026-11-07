@@ -7,13 +7,15 @@ package com.solegendary.reignofnether.unit;
  * able to hit anything without bugging out", "bone dragon can use this fire breath on the ground as well").
  *
  * <p>One breath lasts {@link #TICKS} and burns every {@link #PULSE_TICKS} - one cone query per burn, never one per
- * flame drawn. Its cone runs from the jaws toward an AIM that sweeps over the breath ({@link #sweep}): the aim is a
- * base point (the target) plus an offset times (2 * sweep - 1), so it runs from base - offset to base + offset. The
- * server burns along exactly the cone the client draws from the same synced numbers, so what burns is what shows.
+ * flame drawn. Its cone runs from the jaws toward an AIM that sweeps over the breath ({@link #sweep}): a base point (the
+ * target) moved along an offset ({@link #aim}, THE shared entry: the server's burns and the client's flames both read
+ * it from the same synced numbers, so what burns is what shows).
  * <ul>
- *   <li><b>Airborne</b>: down from the jaws onto the ground. The aim strafes along the dragon's heading across its
- *   target, {@link #AIR_SWEEP} short of it to as far past - a line of fire, the RTS shot of a dragon over an army. A
- *   narrow cone ({@link #AIR_HALF_DEG}) that stops {@link #AIR_PAST} past the aim: no further into the ground.</li>
+ *   <li><b>Airborne</b>: down from the jaws onto the ground. The aim strafes along the dragon's heading from ON its
+ *   target to {@link #AIR_SWEEP} past it - a line of fire through an army, the RTS shot of a dragon over it. It used to
+ *   start AIR_SWEEP short (base - offset to base + offset): the first two of five burns fell between the dragon and
+ *   the squad and the splash drew 3-4 blocks short of it (eyes 42083382498, 42172015718). A narrow cone
+ *   ({@link #AIR_HALF_DEG}) that stops {@link #AIR_PAST} past the aim: no further into the ground.</li>
  *   <li><b>Landed</b>: a forward cone at ground level, {@link #GROUND_LENGTH} long and {@link #GROUND_HALF_DEG} to each
  *   side, swinging {@link #GROUND_SWEEP_DEG} side to side across the target.</li>
  * </ul>
@@ -87,6 +89,15 @@ public final class FireBreath {
     /** One coordinate of the aim at sweep s: base + offset * (2s - 1). */
     public static double along(double base, double offset, double sweep) {
         return base + offset * (2 * sweep - 1);
+    }
+
+    /**
+     * One coordinate of the breath's aim at sweep s - the server's burns (BoneDragonUnit.breathAim) and the client's
+     * flames (BreathFx) both come here. Landed: {@link #along}, swinging side to side across the target. Airborne: from
+     * the target (s = 0) to the offset past it (s = 1), along the heading - never short of it.
+     */
+    public static double aim(boolean landed, double base, double offset, double sweep) {
+        return landed ? along(base, offset, sweep) : base + offset * sweep;
     }
 
     /** The cone's length for an aim {@code dist} from the jaws. */
