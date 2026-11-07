@@ -108,6 +108,16 @@ public class DisplaySettings {
         }
     }
 
+    /** Lawn sheet (environment/lawn/GiantLawnBakedModel): the grass top as one 8x8-block sheet. Read by the chunk
+     * mesher's threads; a change takes effect when the terrain is rebuilt. */
+    public static boolean lawnSheet() {
+        try {
+            return ReignOfNetherClientConfigs.LAWN_SHEET.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
     /** Building ambience (design/lively_buildings.md): the idle particles round capitols, energy buildings and labs. */
     public static boolean buildingAmbience() {
         try {

@@ -92,6 +92,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> GROUND_SCARS;
     // ragged grass fringe over path / dirt / sand / gravel tops beside grass (environment/edge)
     public static final ForgeConfigSpec.ConfigValue<Boolean> PATH_EDGES;
+    // the lawn top as one 4x4-block sheet (environment/lawn): patches run across blocks
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LAWN_SHEET;
     // tree limbs swaying in the wind (environment/wind, design/branch_wind.md): 0 Off, 1 Near (within 60 blocks of the camera), 2 All
     public static final ForgeConfigSpec.ConfigValue<Integer> BRANCH_WIND;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
@@ -247,6 +249,8 @@ public class ReignOfNetherClientConfigs {
         GROUND_SCARS = BUILDER.define("ground_scars", true);
         BUILDER.comment("Path edges: a ragged grass fringe spills over paths, dirt, sand and gravel where they meet grass, so the border is not a straight tile line from the RTS camera. Built with the terrain (no per-frame cost); false = the plain square edges");
         PATH_EDGES = BUILDER.define("path_edges", true);
+        BUILDER.comment("Lawn sheet: the grass top is one texture over 8x8 blocks (a pack with the grass_block_top_g1..64 sprites), so its soft patches run across blocks and a field shows no per-block repeat. Built with the terrain (no per-frame cost); false = every block its own grass top. Takes effect when the terrain is rebuilt (F3+A)");
+        LAWN_SHEET = BUILDER.define("lawn_sheet", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
         BUILDER.comment("Living army (design/living_army.md): units breathe, shift their weight, fidget, lean into turns, rock on starts and stops and flinch from where a blow came from - realistic up close, a little larger from the RTS camera. false = the old motion. Client only.");
